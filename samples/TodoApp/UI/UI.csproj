@@ -47,8 +47,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Stl.Fusion.Blazor\Stl.Fusion.Blazor.csproj" />
-    <ProjectReference Include="..\..\..\src\Stl.Fusion.Blazor.Authentication\Stl.Fusion.Blazor.Authentication.csproj" />
+    <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Blazor\ActualLab.Fusion.Blazor.csproj" />
+    <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Blazor.Authentication\ActualLab.Fusion.Blazor.Authentication.csproj" />
     <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
     <ProjectReference Include="..\Services\Services.csproj" />
   </ItemGroup>

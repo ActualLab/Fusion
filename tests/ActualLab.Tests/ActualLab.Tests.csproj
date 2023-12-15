@@ -1,0 +1,73 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <!--  EF1001: X is an internal API that supports the Entity Framework Core infrastructure ... -->
+    <NoWarn>$(NoWarn);EF1001;</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="System.Drawing.Common" />
+    <PackageReference Include="System.Net.WebSockets.Client" />
+  </ItemGroup>
+
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
+    <PackageReference Include="MemoryPack.Generator" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" VersionOverride="$(EntityFrameworkCoreVersion7)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="$(EntityFrameworkCoreVersion7)" />
+    <PackageReference Include="System.Drawing.Common" VersionOverride="$(SystemXxxVersion7)" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net6'))">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" VersionOverride="$(EntityFrameworkCoreVersion6)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="$(EntityFrameworkCoreVersion6)" />
+    <PackageReference Include="System.Drawing.Common" VersionOverride="$(SystemXxxVersion6)" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net5')) or $(TargetFramework.StartsWith('netcore'))">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" VersionOverride="$(EntityFrameworkCoreVersion5)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="$(EntityFrameworkCoreVersion5)" />
+    <PackageReference Include="System.Drawing.Common" VersionOverride="$(SystemXxxVersion5)" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" VersionOverride="$(EntityFrameworkCoreVersion3)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="$(EntityFrameworkCoreVersion3)" />
+    <PackageReference Include="System.Drawing.Common" VersionOverride="$(SystemXxxVersion5)" />
+    <PackageReference Include="Microsoft.CSharp" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <PackageReference Include="IndexRange" />
+    <PackageReference Include="System.Memory" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.OwinSelfHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ActualLab.Core\ActualLab.Core.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.CommandR\ActualLab.CommandR.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Interception\ActualLab.Interception.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.RestEase\ActualLab.RestEase.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Rpc\ActualLab.Rpc.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Redis\ActualLab.Redis.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Fusion.EntityFramework\ActualLab.Fusion.EntityFramework.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Plugins\ActualLab.Plugins.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Testing\ActualLab.Testing.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
+    <ProjectReference Include="..\..\src\ActualLab.Rpc.Server\ActualLab.Rpc.Server.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <ProjectReference Include="..\..\src\ActualLab.Rpc.Server.NetFx\ActualLab.Rpc.Server.NetFx.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Fusion.Server.NetFx\ActualLab.Fusion.Server.NetFx.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="*.xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

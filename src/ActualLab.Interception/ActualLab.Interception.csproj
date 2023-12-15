@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion interception</PackageTags>
+    <Description>ActualLab.Interception - a set of helpers <!--
+    -->related to method call interception.<!--
+    --></Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Core\ActualLab.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
+    <PackageReference Include="MemoryPack.Generator" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="ArgumentList-Generated.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ArgumentList-Generated.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="ArgumentList-Generated.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>ArgumentList-Generated.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+</Project>

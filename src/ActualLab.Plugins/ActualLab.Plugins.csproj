@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0;net48;net471</TargetFrameworks>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion plugins</PackageTags>
+    <Description><!--
+      -->MEF-style plugin library that focuses on core capabilities <!--
+      -->needed to add plugins to your application - namely, <!--
+      -->building an IoC container hosting them. <!--
+      -->It is designed to load plugins on demand - the assemblies <!--
+      -->hosting plugins are loaded only once you access the plugins <!--
+      -->via IoC container. <!--
+      -->Despite that, it tries to create IoC container as quickly <!--
+      -->as possible by caching reflected infromation about the plugins, <!--
+      -->which is updated only once you change them (i.e. basically, <!--
+      -->the startup is typically quite fast).<!--
+      --></Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Core\ActualLab.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
+    <PackageReference Include="MemoryPack.Generator" />
+  </ItemGroup>
+
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
+    <PackageReference Include="System.Runtime.Loader" />
+  </ItemGroup>
+
+</Project>

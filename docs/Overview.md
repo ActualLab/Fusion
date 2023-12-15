@@ -406,7 +406,7 @@ I guess you anticipate there are some cases when it's hard to precisely
 pinpoint what to invalidate. Yes, there are, and here is a bit trickier
 example:
 ```cs
-// The code from ChatService.cs from Stl.Samples.Blazor.Server.
+// The code from ChatService.cs from ActualLab.Fusion.Samples.Blazor.Server.
 [ComputeMethod]
 public virtual async Task<ChatPage> GetChatTailAsync(int length)
 {
@@ -689,7 +689,7 @@ sample:
 This component inherits from `LiveComponentBase<T>`, which ensures
 it has `State` property (a [Live State]) and all the logic needed to recompute it
 once it changes; 
-[here you can read more about this](https://github.com/servicetitan/Stl.Fusion/blob/master/README.md#enough-talk-show-me-the-code).
+[here you can read more about this](https://github.com/ActualLab/Fusion/blob/master/README.md#enough-talk-show-me-the-code).
 
 The feature allowing to replicate [Compute Service] on the client is called
 [Replica Services]. Do such services differ from compute services? Yes and no:
@@ -698,15 +698,15 @@ The feature allowing to replicate [Compute Service] on the client is called
   so in particular, you can "consume" the values they produce in other 
   [Compute Services], and all the invalidation chains will just work.
   
-![](img/Stl-Fusion-Chat-Sample.gif)
+![](img/ActualLab-Fusion-Chat-Sample.gif)
 
 "Composition" sample (shown in a bottom-right window) proves exactly this. 
 It "composes" its own model by two different ways: 
 * First panel's UI model is 
-  [composed on the server-side](https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/src/Blazor/Server/Services/ComposerService.cs);
+  [composed on the server-side](https://github.com/ActualLab/Fusion.Samples/blob/master/src/Blazor/Server/Services/ComposerService.cs);
   its client-side replica is bound to the component displaying the panel
 * The second panel uses an UI model
-  [composed completely on the client](https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/src/Blazor/Client/Services/LocalComposerService.cs) 
+  [composed completely on the client](https://github.com/ActualLab/Fusion.Samples/blob/master/src/Blazor/Client/Services/LocalComposerService.cs) 
   by combining server-side replicas of all the values used there.
 * **The surprising part:** two above files are almost identical!
 
@@ -820,7 +820,7 @@ Let me list a few things about Blazor that impressed me the most:
   available for UIs nowadays.
 * Blazor is *extremely compatible* with `netstandard2.1` targets.
   For example, I totally didn't expect that a 
-  [code like this](https://github.com/servicetitan/Stl.Fusion/blob/master/src/Stl/Async/TaskSource.cs#L89)
+  [code like this](https://github.com/ActualLab/Fusion/blob/master/src/%3Aactuallab_fusion/Async/TaskSource.cs#L89)
   is going to run on Blazor without any modifications. For the sake of
   clarity, it compiles a runtime-generated lambda expression
   that doesn't even pass validation if constructed as usual, 
@@ -863,22 +863,21 @@ especially for the companies running their server-side code on .NET Core (or .NE
 ### Next Steps
 
 * Check out the [Tutorial] or go to [Documentation Home]
-* Join our [Discord Server] or [Gitter] to ask questions and track project updates.
+* Join our [Discord Server] to ask questions and track project updates.
 
 
-[Compute Services]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part01.md
-[Compute Service]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part01.md
-[`IComputed<T>`]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part02.md
-[Computed Value]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part02.md
-[Live State]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part03.md
-[Replica Services]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part04.md
+[Compute Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
+[Compute Service]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
+[`IComputed<T>`]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
+[Computed Value]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
+[Live State]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part03.md
+[Replica Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part04.md
 
 [Documentation Home]: README.md
 [Q/A]: QA.md
-[Samples]: https://github.com/servicetitan/Stl.Fusion.Samples
-[Tutorial]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/README.md
+[Samples]: https://github.com/ActualLab/Fusion.Samples
+[Tutorial]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/README.md
 [Fusion In Simple Terms]: https://medium.com/@alexyakunin/stl-fusion-in-simple-terms-65b1975967ab?source=friends_link&sk=04e73e75a52768cf7c3330744a9b1e38
 
-[Gitter]: https://gitter.im/Stl-Fusion/community
 [Discord Server]: https://discord.gg/EKEwv6d
 [Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6

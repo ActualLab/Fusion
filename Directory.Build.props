@@ -2,21 +2,21 @@
   <PropertyGroup>
     <RepoRoot>$([MSBuild]::EnsureTrailingSlash('$(MSBuildThisFileDirectory)'))</RepoRoot>
     <SolutionDir Condition="$(SolutionDir) == ''">$(RepoRoot)</SolutionDir>
-    <Authors>ServiceTitan, Inc.</Authors>
-    <Company>ServiceTitan, Inc.</Company>
-    <Copyright>Copyright ServiceTitan, Inc.</Copyright>
-    <PackageProjectUrl>https://github.com/servicetitan/Stl.Fusion</PackageProjectUrl>
+    <Authors>Actual Chat, Inc.</Authors>
+    <Company>Actual Chat, Inc.</Company>
+    <Copyright>Copyright Actual Chat, Inc., ServiceTitan, Inc.</Copyright>
+    <PackageProjectUrl>https://github.com/ActualLab/Fusion</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/servicetitan/Stl.Fusion</RepositoryUrl>
-    <PackageTags>servicetitan stl</PackageTags>
-    <Description>A part of ServiceTitan Library.</Description>
+    <RepositoryUrl>https://github.com/ActualLab/Fusion</RepositoryUrl>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion</PackageTags>
+    <Description>A part of Actual Chat, Inc. Library.</Description>
     <NoLogo>true</NoLogo>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
     <!--
     <ApplicationIcon>$(MSBuildThisFileDirectory)\docs\img\Logo128.jpg</ApplicationIcon>
     -->
-    <PackageIconUrl>https://github.com/servicetitan/Stl.Fusion/master/docs/img/Logo128.jpg</PackageIconUrl>
+    <PackageIconUrl>https://github.com/ActualLab/Fusion/master/docs/img/Logo128.jpg</PackageIconUrl>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoPackageAnalysis>false</NoPackageAnalysis>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>

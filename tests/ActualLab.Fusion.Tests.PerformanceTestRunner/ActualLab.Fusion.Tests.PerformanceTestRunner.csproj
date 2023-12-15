@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net7.0;net6.0;net5.0;netcoreapp3.1</TargetFrameworks>
+    <!--
+    <TargetFrameworks>net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;net48;net471</TargetFrameworks>
+    -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Fusion.Tests\ActualLab.Fusion.Tests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Remove="xunit.runner.visualstudio" />
+    <PackageReference Remove="Microsoft.NET.Test.Sdk" />
+  </ItemGroup>
+
+</Project>

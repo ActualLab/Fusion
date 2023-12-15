@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion blazor</PackageTags>
+    <Description>Core components of ActualLab.Fusion - <!--
+    -->a new implementation of "computed observables" <!--
+    -->designed to power distributed apps. Thread-safe, asynchronous, immutable,  <!--
+    -->and ready to serve replicas of computed instances to remote clients.<!--
+    --></Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
+    <PackageReference Include="MemoryPack.Generator" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
+    <PackageReference Include="System.Text.Json" VersionOverride="$(SystemXxxVersion7)" />
+  </ItemGroup>
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
+    <PackageReference Include="System.Text.Json" VersionOverride="$(SystemXxxVersion6)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Core\ActualLab.Core.csproj" />
+    <ProjectReference Include="..\ActualLab.CommandR\ActualLab.CommandR.csproj" />
+    <ProjectReference Include="..\ActualLab.Interception\ActualLab.Interception.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

@@ -95,29 +95,29 @@
     <Using Include="System.Runtime.InteropServices" />
     <Using Include="System.Runtime.Serialization" />
     <Using Include="System.Threading.Channels" />
-    <Using Include="Stl" />
-    <Using Include="Stl.Async" />
-    <Using Include="Stl.Channels" />
-    <Using Include="Stl.Collections" />
-    <Using Include="Stl.DependencyInjection" />
-    <Using Include="Stl.Mathematics" />
-    <Using Include="Stl.Serialization" />
-    <Using Include="Stl.Text" />
-    <Using Include="Stl.Time" />
-    <Using Include="Stl.Fusion" />
-    <Using Include="Stl.Fusion.Operations" />
-    <Using Include="Stl.CommandR" />
-    <Using Include="Stl.CommandR.Configuration" />
-    <Using Include="Stl.CommandR.Commands" />
+    <Using Include="ActualLab" />
+    <Using Include="ActualLab.Async" />
+    <Using Include="ActualLab.Channels" />
+    <Using Include="ActualLab.Collections" />
+    <Using Include="ActualLab.DependencyInjection" />
+    <Using Include="ActualLab.Mathematics" />
+    <Using Include="ActualLab.Serialization" />
+    <Using Include="ActualLab.Text" />
+    <Using Include="ActualLab.Time" />
+    <Using Include="ActualLab.Fusion" />
+    <Using Include="ActualLab.Fusion.Operations" />
+    <Using Include="ActualLab.CommandR" />
+    <Using Include="ActualLab.CommandR.Configuration" />
+    <Using Include="ActualLab.CommandR.Commands" />
     <Using Include="MemoryPack" />
     <Using Include="Microsoft.Extensions.DependencyInjection" />
     <Using Include="Microsoft.Extensions.Logging" />
     <Using Include="Microsoft.Extensions.Logging.Abstractions" />
 
     <!-- Testing-related global usings -->
-    <Using Include="Stl.Tests.TestHelpers" Static="True" />
+    <Using Include="ActualLab.Tests.TestHelpers" Static="True" />
     <Using Include="FluentAssertions" />
-    <Using Include="Stl.Testing" />
+    <Using Include="ActualLab.Testing" />
     <Using Include="Moq" />
     <Using Include="Xunit" />
     <Using Include="Xunit.Abstractions" />

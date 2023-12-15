@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion commandr</PackageTags>
+    <Description>ActualLab.CommandR - a MediatR-like library <!--
+    -->created to simplify CQRS implementations even further.<!--
+    --></Description>
+  </PropertyGroup>
+
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
+    <PackageReference Include="MemoryPack.Generator" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Core\ActualLab.Core.csproj" />
+    <ProjectReference Include="..\ActualLab.Interception\ActualLab.Interception.csproj" />
+    <ProjectReference Include="..\ActualLab.Rpc\ActualLab.Rpc.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

@@ -42,8 +42,8 @@
 
   <!--
   <ItemGroup>
-    <InternalsVisibleTo Include="Stl.Tests" />
-    <InternalsVisibleTo Include="Stl.Fusion.Tests" />
+    <InternalsVisibleTo Include="ActualLab.Tests" />
+    <InternalsVisibleTo Include="ActualLab.Fusion.Tests" />
   </ItemGroup>
   -->
 
@@ -70,16 +70,16 @@
     <Using Include="System.Text.Json" />
     <Using Include="System.Text.Json.Serialization" />
     <Using Include="System.Threading.Channels" />
-    <Using Include="Stl" />
-    <Using Include="Stl.Async" />
-    <Using Include="Stl.Collections" />
-    <Using Include="Stl.DependencyInjection" />
-    <Using Include="Stl.Diagnostics" />
-    <Using Include="Stl.Mathematics" />
-    <Using Include="Stl.Reflection" />
-    <Using Include="Stl.Serialization" />
-    <Using Include="Stl.Text" />
-    <Using Include="Stl.Time" />
+    <Using Include="ActualLab" />
+    <Using Include="ActualLab.Async" />
+    <Using Include="ActualLab.Collections" />
+    <Using Include="ActualLab.DependencyInjection" />
+    <Using Include="ActualLab.Diagnostics" />
+    <Using Include="ActualLab.Mathematics" />
+    <Using Include="ActualLab.Reflection" />
+    <Using Include="ActualLab.Serialization" />
+    <Using Include="ActualLab.Text" />
+    <Using Include="ActualLab.Time" />
     <Using Include="MemoryPack" />
     <Using Include="Microsoft.Extensions.DependencyInjection" />
     <Using Include="Microsoft.Extensions.Logging" />
@@ -87,19 +87,19 @@
   </ItemGroup>
 
   <!-- Extra global usings for CommandR projects -->
-  <ItemGroup Condition="$(MSBuildProjectFile.StartsWith('Stl.CommandR'))">
-    <Using Include="Stl.CommandR" />
-    <Using Include="Stl.CommandR.Configuration" />
-    <Using Include="Stl.CommandR.Commands" />
+  <ItemGroup Condition="$(MSBuildProjectFile.StartsWith('ActualLab.CommandR'))">
+    <Using Include="ActualLab.CommandR" />
+    <Using Include="ActualLab.CommandR.Configuration" />
+    <Using Include="ActualLab.CommandR.Commands" />
   </ItemGroup>
 
   <!-- Extra global usings for Fusion projects -->
-  <ItemGroup Condition="$(MSBuildProjectFile.StartsWith('Stl.Fusion'))">
-    <Using Include="Stl.Fusion" />
-    <Using Include="Stl.Fusion.Operations" />
-    <Using Include="Stl.CommandR" />
-    <Using Include="Stl.CommandR.Configuration" />
-    <Using Include="Stl.CommandR.Commands" />
+  <ItemGroup Condition="$(MSBuildProjectFile.StartsWith('ActualLab.Fusion'))">
+    <Using Include="ActualLab.Fusion" />
+    <Using Include="ActualLab.Fusion.Operations" />
+    <Using Include="ActualLab.CommandR" />
+    <Using Include="ActualLab.CommandR.Configuration" />
+    <Using Include="ActualLab.CommandR.Commands" />
   </ItemGroup>
 
   <!-- Packaging & SourceLink -->

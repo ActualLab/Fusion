@@ -5,60 +5,17 @@
 > Q: What's the best place to ask questions related to Fusion?
 
 [Discord Server] is currently the best place to ask questions and
-track project updates; [Gitter] is another option you can use.
+track project updates.
 
 [![Discord Server](https://img.shields.io/discord/729970863419424788.svg)](https://discord.gg/EKEwv6d) 
-[![Gitter](https://badges.gitter.im/Stl-Fusion/community.svg)](https://gitter.im/Stl-Fusion/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 > Q: Can I contribute to the project?
 
 Absolutely - just create your first 
-[pull request](https://github.com/servicetitan/Stl.Fusion/pulls) or 
-[report a bug](https://github.com/servicetitan/Stl.Fusion/issues).
+[pull request](https://github.com/ActualLab/Fusion/pulls) or 
+[report a bug](https://github.com/ActualLab/Fusion/issues).
 
 You can also contribute to [Fusion Samples].
-
-> Q: What "Stl" stands for?
-
-It's an acronym for "ServiceTitan Library". We certainly know about "STL" 
-in C++, but nothing similar is widely used on .NET, so we ended up taking it :)
-
-## Stability and production use
-
-> Q: How stable is Fusion?
-
-It looks fairly stable on samples and one of our internal apps 
-(~ runs for days without any issues for about a hundred users), 
-but its test coverage is still below desirable 75-80%:
-
-[![Build](https://github.com/servicetitan/Stl.Fusion/workflows/Build/badge.svg)](https://github.com/servicetitan/Stl.Fusion/actions?query=workflow%3A%22Build%22)
-[![codecov](https://codecov.io/gh/servicetitan/Stl.Fusion/branch/master/graph/badge.svg)](https://codecov.io/gh/servicetitan/Stl.Fusion)
-[![NuGetVersion](https://img.shields.io/nuget/v/Stl.Fusion)](https://www.nuget.org/packages?q=Owner%3Aservicetitan+Tags%3Astl_fusion) 
-
-
-So we definitely need more tests and more use cases to claim it's ready for production use.
-But if you love the concept, it's probably not the reason to wait till the moment
-we check all the boxes.
-
-What's fair to claim is that Fusion is ready for prototyping & internal use; 
-rapid prototyping of real-time UIs is another good use case for it right now.
-Note that you can save a fair amount of time by having much simpler invalidation
-logic in such prototypes (i.e. invalidating the data much more broadly), 
-assuming you tweak it to a more robust one later.
-
-> Q: Does ServiceTitan use Fusion now?
-
-Yes, but not in production. We're currently using it on our internal DevPortal web site, 
-which aggregates the information about all of our Kubernetes-based app instances.
-The intent is to turn DevPortal into a "home page" for all of our developers, 
-so it will aggregate much more useful information over time.
-
-This is actually pretty good, taking into account the following timeline:
-* End of March 2020: first lines of Fusion code were written
-* Late May 2020: "Server Time" sample was added, i.e. Fusion got its 
-  distributed state replication working
-* Mid-June 2020: We actually started to use it on DevPortal
-* July 6, 2020: This line was written :)    
 
 ## Comparison to other libraries
 
@@ -105,8 +62,7 @@ nearly real-time invalidation / minimum % of inconsistent reads.
 TBD.
 
 [Fusion Discord Server]: https://discord.gg/EKEwv6d
-[Fusion Samples]: https://github.com/servicetitan/Stl.Fusion.Samples
+[Fusion Samples]: https://github.com/ActualLab/Fusion.Samples
 
-[Gitter]: https://gitter.im/Stl-Fusion/community
 [Discord Server]: https://discord.gg/EKEwv6d
 [Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net7.0;net6.0;net5.0;net48;net471</TargetFrameworks>
+    <RootNamespace>ActualLab.Fusion.Server</RootNamespace>
+    <AssemblyName>ActualLab.Fusion.Server.NetFx</AssemblyName>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion server netfx</PackageTags>
+    <Description>.NET Framework version of ActualLab.Fusion.Server. <!--
+    -->Fusion is a new implementation of "computed observables" <!--
+    -->designed to power distributed apps. Thread-safe, asynchronous, immutable,  <!--
+    -->and ready to serve replicas of computed instances to remote clients.<!--
+    --></Description>
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNet.WebApi.Core" />
+    <PackageReference Include="Microsoft.Owin" />
+    <PackageReference Include="Owin" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Fusion.Ext.Services\ActualLab.Fusion.Ext.Services.csproj" />
+    <ProjectReference Include="..\ActualLab.Rpc.Server.NetFx\ActualLab.Rpc.Server.NetFx.csproj" />
+  </ItemGroup>
+
+</Project>

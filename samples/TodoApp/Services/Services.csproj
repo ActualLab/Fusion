@@ -6,12 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Stl.Fusion\Stl.Fusion.csproj" />
-    <ProjectReference Include="..\..\..\src\Stl.Fusion.Ext.Services\Stl.Fusion.Ext.Services.csproj" />
+    <ProjectReference Include="..\..\..\src\ActualLab.Fusion\ActualLab.Fusion.csproj" />
+    <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Ext.Services\ActualLab.Fusion.Ext.Services.csproj" />
     <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Stl.Generators\Stl.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

@@ -4,11 +4,11 @@
 
 1\. Clone [Fusion Samples] repository:
 ```
-git clone git@github.com:servicetitan/Stl.Fusion.Samples.git
+git clone git@github.com:ActualLab/Fusion.Samples.git
 ```
 
 2\. Follow the instructions in its
-[README.md](https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/README.md)
+[README.md](https://github.com/ActualLab/Fusion.Samples/blob/master/README.md)
 to build and run everything.
 
 ## Documentation
@@ -46,29 +46,15 @@ You can always ask for help here:
 
 ## Credits
 
-[ServiceTitan](https://www.servicetitan.com/) &ndash; for giving some of us
-an opportunity to work on this project.
-
-Contributors:
-* [Vladimir Chirikov](https://github.com/vchirikov) &ndash; build system & misc. fixes
-* [Alexey Ananyev](https://github.com/hypercodeplace) &ndash; misc. fixes
-* [Alexey Golub](https://github.com/Tyrrrz) &ndash; minor fixes; FYI we use his 
-  [CliWrap](https://github.com/Tyrrrz/CliWrap) in our build pipeline, and his
-* [Alex Yakunin](https://github.com/alexyakunin) ([Medium](https://medium.com/@alexyakunin)) &ndash; 
-  the creator of Fusion.
-
 Indirect contributors & everyone else who made Fusion possible:
-* [Steve Sanderson](http://blog.stevensanderson.com/) &ndash; 
-  for both [Knockout](https://knockoutjs.com/), which made "computed observable" abstraction popular, 
-  and [Blazor](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor) &ndash;
-  yeah, Steve is the creator of it as well!
+* [ServiceTitan](https://www.servicetitan.com/) &ndash; Fusion was originally created there. 
 * [Quora](https://www.quora.com/) — a huge part of the inspiration for Fusion was Quora's LiveNode framework
 * [Microsoft](microsoft.com) &ndash; for .NET Core and Blazor.
 
-[Slides]: https://alexyakunin.github.io/Stl.Fusion.Materials/Slides/Fusion_v2/Slides.html
+[Slides]: https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html
 [Overview]: Overview.md
-[Tutorial]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/README.md
-[Fusion Samples]: https://github.com/servicetitan/Stl.Fusion.Samples
+[Tutorial]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/README.md
+[Fusion Samples]: https://github.com/ActualLab/Fusion.Samples
 
 [Discord Server]: https://discord.gg/EKEwv6d
 [Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6

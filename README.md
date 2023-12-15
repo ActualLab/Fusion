@@ -1,16 +1,16 @@
 # 👾 Fusion: the "real-time on!" switch that actually exists
 
-[![Build](https://github.com/servicetitan/Stl.Fusion/workflows/Build/badge.svg)](https://github.com/servicetitan/Stl.Fusion/actions?query=workflow%3A%22Build%22)
-[![Coverage](https://codecov.io/gh/servicetitan/Stl.Fusion/branch/master/graph/badge.svg)](https://codecov.io/gh/servicetitan/Stl.Fusion)
-[![NuGet Version](https://img.shields.io/nuget/v/Stl.Fusion)](https://www.nuget.org/packages?q=Owner%3Aservicetitan+Tags%3Astl_fusion)
-[![MIT License](https://img.shields.io/github/license/servicetitan/Stl.Fusion?)](https://github.com/servicetitan/Stl.Fusion/blob/master/LICENSE)
+[![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22)
+[![NuGet Version](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=Owner%3Aactuallab+Tags%3Aactuallab_fusion)
+[![MIT License](https://img.shields.io/github/license/actuallab/Fusion?)](https://github.com/ActualLab/Fusion/blob/master/LICENSE)
 <br/>
 [![Discord Server](https://img.shields.io/discord/729970863419424788.svg)](https://discord.gg/EKEwv6d) 
-![Commit Activity](https://img.shields.io/github/commit-activity/m/servicetitan/Stl.Fusion)
-[![Downloads](https://img.shields.io/nuget/dt/Stl)](https://www.nuget.org/packages?q=Owner%3Aservicetitan+Tags%3Astl_fusion)
+![Commit Activity](https://img.shields.io/github/commit-activity/m/actuallab/Fusion)
+[![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=Owner%3Aactuallab+Tags%3Aactuallab_fusion)
 
-Fusion is a .NET library that implements 
- 🦄 **D**istributed **REA**ctive **M**emoization (**DREAM**) &ndash; a novel abstraction somewhat similar to MobX or Flux, but **designed to deal with an arbitrary large state** spanning across your backend microservices, API servers, and reaching even every client of your app.
+Fusion is a .NET library that implements 🦄 **D**istributed **REA**ctive **M**emoization (**DREAM**) &ndash; 
+a novel abstraction somewhat similar to MobX or Flux, but **designed to deal with an arbitrary large state** 
+spanning across your backend microservices, API servers, and reaching even every client of your app.
 
 Fusion solves a set of infamously hard problems with a single hammer:
 
@@ -92,12 +92,12 @@ So **Fusion abstracts away the "placement" of a service**, and does it much bett
 
 ## Documentation
 
-[<img align="right" width="150" src="./docs/img/FusionSlides.jpg"/>](https://alexyakunin.github.io/Stl.Fusion.Materials/Slides/Fusion_v2/Slides.html)
+[<img align="right" width="150" src="./docs/img/FusionSlides.jpg"/>](https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html)
 If you prefer slides, check out
-["Why real-time web apps need Blazor and Fusion?" talk](https://alexyakunin.github.io/Stl.Fusion.Materials/Slides/Fusion_v2/Slides.html) -
+["Why real-time web apps need Blazor and Fusion?" talk](https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html) -
 it explains how many problems we tackle are connected, how Fusion addresses the root cause, and how to code a simplified version of Fusion's key abstraction in C#.
 
-> The slides are slightly outdated - e.g. now Fusion clients use `Stl.Rpc` rather than HTTP to communicate with the server, but all the concepts they cover are still intact.
+> The slides are slightly outdated - e.g. now Fusion clients use `ActualLab.Rpc` rather than HTTP to communicate with the server, but all the concepts they cover are still intact.
 
 [Quick Start], [Cheat Sheet], and the [Tutorial] are the best places to start from.
 
@@ -123,10 +123,10 @@ Let's start with some big guns:
 
 Now, the samples:
 
-Below is [Fusion+Blazor Sample](https://github.com/servicetitan/Stl.Fusion.Samples#3-blazor-samples)
+Below is [Fusion+Blazor Sample](https://github.com/ActualLab/Fusion.Samples#3-blazor-samples)
 delivering real-time updates to 3 browser windows:
 
-![](docs/img/Stl-Fusion-Chat-Sample.gif)
+![](docs/img/ActualLab-Fusion-Chat-Sample.gif)
 
 <img src="https://img.shields.io/badge/-Live!-red" valign="middle"> Play with 
 [live version of this sample](https://fusion-samples.servicetitan.com) right now!
@@ -137,7 +137,7 @@ And even if you use different modes in different windows,
 Fusion still keeps in sync literally every bit of a shared state there,
 including the sign-in state:
 
-![](https://github.com/servicetitan/Stl.Fusion.Samples/raw/master/docs/img/Samples-Blazor-Auth.gif)
+![](https://github.com/ActualLab/Fusion.Samples/raw/master/docs/img/Samples-Blazor-Auth.gif)
 
 ## Is Fusion fast?
 
@@ -149,7 +149,7 @@ including the sign-in state:
 
 The next bump at ~ `4-5ms` is when the service actually goes to the DB - i.e. it's the time you'd expect to see without Fusion. The load would be way higher though, coz *the calls you see on this chart are the calls which "made it" to the server* - in other words, they weren't eliminated by the client / its Fusion services.
 
-[A small synthetic benchmark in Fusion test suite](https://github.com/servicetitan/Stl.Fusion/blob/master/tests/Stl.Fusion.Tests/PerformanceTest.cs) 
+[A small synthetic benchmark in Fusion test suite](https://github.com/ActualLab/Fusion/blob/master/tests/ActualLab.Fusion.Tests/PerformanceTest.cs) 
 compares "raw" [Entity Framework Core](https://docs.microsoft.com/en-us/ef/core/)-based
 Data Access Layer (DAL) against its version relying on Fusion:
 
@@ -171,10 +171,10 @@ And interestingly, even when there are no "layers" of dependencies (think only "
 - The concept itself is all about eliminating any unnecessary computation. Think `msbuild`, but for your method call results: what's computed and consistent is never recomputed.
 - Fusion caches call results in memory, so if it's a hit, they're instantly available. No round-trips to external caches, no serialization/deserialization, etc.
 - Moreover, there is also no cloning: what's cached is the .NET object or struct returned from a call, so any call result is "shared". It's way more CPU cache-friendly than e.g. deserializing a new copy on any hit.
-- Fusion uses its own `Stl.Interception` library to intercept method calls, and although there is no benchmark yet, these are the fastest call interceptors available on .NET - they're marginally faster than e.g. the ones provided by [Castle.DynamicProxy](http://www.castleproject.org/projects/dynamicproxy/). They don't box call arguments and require just 1 allocation per call.
-- The same is true about `Stl.Rpc` - a part of Fusion responsible for its RPC calls. Its [preliminary benchmark results](https://servicetitan.github.io/Stl.Fusion.Samples/rpc-benchmark) show it is ~ **1.5x faster than SignalR**, and ~ **3x faster than gRPC**.
-- `Stl.Rpc` uses the fastest serializers available on .NET &ndash; [MemoryPack](https://github.com/Cysharp/MemoryPack) by default (it doesn't require runtime IL Emit), though you can also use [MessagePack](https://github.com/MessagePack-CSharp/MessagePack-CSharp) (it's slightly faster, but requires IL Emit) or anything else you prefer.
-- All critical execution paths in Fusion are heavily optimized. [Archived version of this page](https://web.archive.org/web/20201212144353/https://github.com/servicetitan/Stl.Fusion) shows the performance on above test currently 3x better than it was 2 years ago.
+- Fusion uses its own `ActualLab.Interception` library to intercept method calls, and although there is no benchmark yet, these are the fastest call interceptors available on .NET - they're marginally faster than e.g. the ones provided by [Castle.DynamicProxy](http://www.castleproject.org/projects/dynamicproxy/). They don't box call arguments and require just 1 allocation per call.
+- The same is true about `ActualLab.Rpc` - a part of Fusion responsible for its RPC calls. Its [preliminary benchmark results](https://actuallab.github.io/Fusion.Samples/rpc-benchmark) show it is ~ **1.5x faster than SignalR**, and ~ **3x faster than gRPC**.
+- `ActualLab.Rpc` uses the fastest serializers available on .NET &ndash; [MemoryPack](https://github.com/Cysharp/MemoryPack) by default (it doesn't require runtime IL Emit), though you can also use [MessagePack](https://github.com/MessagePack-CSharp/MessagePack-CSharp) (it's slightly faster, but requires IL Emit) or anything else you prefer.
+- All critical execution paths in Fusion are heavily optimized. [Archived version of this page](https://web.archive.org/web/20201212144353/https://github.com/ActualLab/Fusion) shows the performance on above test currently 3x better than it was 2 years ago.
 
 ## Does Fusion scale?
 
@@ -186,7 +186,7 @@ And that's exactly what Fusion does:
 - Ensures the dependency graph backing this part of the state stays in memory while someone uses it
 - Destroys what's unobserved.
 
-Check out ["Scaling Fusion Services" part of the Tutorial](https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part08.md) to see a much more robust description of how Fusion scales.
+Check out ["Scaling Fusion Services" part of the Tutorial](https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part08.md) to see a much more robust description of how Fusion scales.
 
 ## Enough talk. Show me the code!
 
@@ -240,8 +240,8 @@ var fusion = services.AddFusion(); // It's ok to call it many times
 fusion.AddService<ExampleService>();
 ```
 
-Check out [CounterService](https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/src/HelloBlazorServer/Services/CounterService.cs)
-from [HelloBlazorServer sample](https://github.com/servicetitan/Stl.Fusion.Samples)
+Check out [CounterService](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Services/CounterService.cs)
+from [HelloBlazorServer sample](https://github.com/ActualLab/Fusion.Samples)
 to see the actual code of compute service.
 
 Now, I guess you're curious how the UI code looks like with Fusion You'll be surprised, but it's as simple as it could be:
@@ -264,19 +264,19 @@ Now, I guess you're curious how the UI code looks like with Fusion You'll be sur
 
 `MomentsAgoBadge` is Blazor component displays 
 `"N [seconds/minutes/...] ago"` string. The code above is *almost identical* to its 
-[actual code](https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/templates/TodoApp/UI/Shared/MomentsAgoBadge.razor), 
+[actual code](https://github.com/ActualLab/Fusion.Samples/blob/master/templates/TodoApp/UI/Shared/MomentsAgoBadge.razor), 
 which is a bit more complex due to `null` handling.
 
-You see it uses `IFusionTime` - one of built-in compute services that provides `GetUtcNow` and `GetMomentsAgo` methods. As you might guess,the results of these methods are invalidated automatically; check out [`FusionTime` service](https://github.com/servicetitan/Stl.Fusion/blob/master/src/Stl.Fusion/Extensions/Internal/FusionTime.cs#L46) to see how it works.
+You see it uses `IFusionTime` - one of built-in compute services that provides `GetUtcNow` and `GetMomentsAgo` methods. As you might guess,the results of these methods are invalidated automatically; check out [`FusionTime` service](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Extensions/Internal/FusionTime.cs#L46) to see how it works.
 
 But what's important here is that `MomentsAgoBadge` is inherited from 
-[ComputedStateComponent<T>](https://github.com/servicetitan/Stl.Fusion/blob/master/src/Stl.Fusion.Blazor/Components/ComputedStateComponent.cs) - 
+[ComputedStateComponent<T>](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/ComputedStateComponent.cs) - 
 an abstract type which provides `ComputeState` method. As you might guess, this method behaves like a [Compute Method].
 
 `ComputedStateComponent<T>` exposes `State` property (of `ComputedState<T>` type), 
 which allows you to get the most recent output of  `ComputeState()`' via its 
 `Value` property. "State" is another key Fusion abstraction - it implements a ["wait for invalidation and recompute" loop 
-similar to this one](https://github.com/servicetitan/Stl.Fusion/blob/master/samples/TodoApp/ConsoleClient/Program.cs#L18):
+similar to this one](https://github.com/ActualLab/Fusion/blob/master/samples/TodoApp/ConsoleClient/Program.cs#L18):
 ```cs
 var computed = await Computed.Capture(_ => service.Method(...));
 while (true) {
@@ -301,9 +301,9 @@ i.e. compute methods that are invalidated on changes.
 
 If you want to see a few more examples of similarly simple UI components,
 check out:
-- [Counter.razor](https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/src/HelloBlazorServer/Pages/Counter.razor) - a Blazor component that uses
-[CounterService](https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/src/HelloBlazorServer/Services/CounterService.cs)
-from [HelloBlazorServer sample](https://github.com/servicetitan/Stl.Fusion.Samples)
+- [Counter.razor](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Pages/Counter.razor) - a Blazor component that uses
+[CounterService](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Services/CounterService.cs)
+from [HelloBlazorServer sample](https://github.com/ActualLab/Fusion.Samples)
 - [ChatMessageCountBadge.razor](https://github.com/alexyakunin/BoardGames/blob/main/src/UI/Chat/ChatMessageCountBadge.razor) 
 and [AppUserBadge.razor](https://github.com/alexyakunin/BoardGames/blob/main/src/UI/Game/AppUserBadge.razor) from [Board Games].
 
@@ -385,26 +385,26 @@ kills the chattiness you'd expect from a regular client-side proxy.
 please help us to make it better by completing [Fusion Feedback Form] 
 (1&hellip;3 min).
 
-[Compute Services]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part01.md
-[Compute Service]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part01.md
-[`Computed<T>`]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part02.md
-[Computed Value]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part02.md
-[Computed Values]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part02.md
-[Compute Service Clients]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part04.md
-[Compute Service Client]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part04.md
-[Replica Services]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part04.md
-[Replica Service]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part04.md
-[State]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Part03.md
+[Compute Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
+[Compute Service]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
+[`Computed<T>`]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
+[Computed Value]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
+[Computed Values]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
+[Compute Service Clients]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part04.md
+[Compute Service Client]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part04.md
+[Replica Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part04.md
+[Replica Service]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part04.md
+[State]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part03.md
 
 [Overview]: docs/Overview.md
 [Documentation Home]: docs/README.md
-[Fusion Samples]: https://github.com/servicetitan/Stl.Fusion.Samples
-[Samples]: https://github.com/servicetitan/Stl.Fusion.Samples
+[Fusion Samples]: https://github.com/ActualLab/Fusion.Samples
+[Samples]: https://github.com/ActualLab/Fusion.Samples
 [Board Games]: https://github.com/alexyakunin/BoardGames
-[Tutorial]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/README.md
-[Quick Start]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/QuickStart.md
-[Cheat Sheet]: https://github.com/servicetitan/Stl.Fusion.Samples/blob/master/docs/tutorial/Fusion-Cheat-Sheet.md
-[Slides]: https://alexyakunin.github.io/Stl.Fusion.Materials/Slides/Fusion_v2/Slides.html
+[Tutorial]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/README.md
+[Quick Start]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/QuickStart.md
+[Cheat Sheet]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Fusion-Cheat-Sheet.md
+[Slides]: https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html
 [MMORPG]: https://en.wikipedia.org/wiki/Massively_multiplayer_online_role-playing_game
 [Actual Chat]: https://actual.chat
 
