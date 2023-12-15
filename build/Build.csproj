@@ -12,7 +12,7 @@
   <ItemGroup>
     <PackageReference Include="Bullseye" />
     <PackageReference Include="CliWrap" />
-    <PackageReference Include="Stl" />
+    <PackageReference Include="ActualLab.Core" />
     <PackageReference Include="System.CommandLine.DragonFruit" />
   </ItemGroup>
 

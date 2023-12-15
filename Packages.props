@@ -63,7 +63,6 @@
     <AspNetCoreMvcTestingVersionN4>$(AspNetCoreVersion5)</AspNetCoreMvcTestingVersionN4>
     <!-- Build & Samples -->
     <BlazoriseVersion>1.3.*</BlazoriseVersion>
-    <StlFusionVersion>6.7.*</StlFusionVersion>
     <FusionVersion>7.0.*</FusionVersion>
   </PropertyGroup>
 
@@ -171,7 +170,6 @@
 
     <!-- Build time only -->
     <PackageReference Update="ActualLab.Core" Version="$(FusionVersion)" />
-    <PackageReference Update="Stl" Version="$(StlFusionVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.Components.WebAssembly.Build" Version="$(BlazorVersion)" PrivateAssets="all" />
     <PackageReference Update="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(BlazorVersion)" PrivateAssets="all" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
