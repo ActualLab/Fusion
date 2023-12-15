@@ -1,11 +1,11 @@
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework.Internal;
-using Stl.Multitenancy;
-using Stl.Versioning;
+using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Multitenancy;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public class DbHub<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>

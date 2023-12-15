@@ -1,8 +1,8 @@
-using Stl.Fusion.Internal;
-using Stl.Locking;
-using Stl.Versioning;
+using ActualLab.Fusion.Internal;
+using ActualLab.Locking;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public interface IAnonymousComputedSource : IFunction
 {

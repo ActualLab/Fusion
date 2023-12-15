@@ -1,4 +1,4 @@
-namespace Stl.CommandR;
+namespace ActualLab.CommandR;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct CommandExecutionState(

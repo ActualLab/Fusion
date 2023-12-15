@@ -1,13 +1,13 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
+using ActualLab.Internal;
 using Errors = Stl.Serialization.Internal.Errors;
 
 #if NETSTANDARD2_0
 using MessagePack;
 #endif
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IByteSerializer
 {

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
-namespace Stl.Fusion.EntityFramework.Internal;
+namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public static class DatabaseFacadeExt
 {

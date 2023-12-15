@@ -1,11 +1,11 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Internal;
-using Stl.IO;
+using ActualLab.Interception;
+using ActualLab.Internal;
+using ActualLab.IO;
 using Errors = Stl.Rpc.Internal.Errors;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcArgumentSerializer
 {

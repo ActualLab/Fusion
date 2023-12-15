@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 public class Base64EncodedNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<Base64Encoded>
 {

@@ -1,9 +1,9 @@
-using Stl.Net;
-using Stl.Rpc;
-using Stl.Rpc.Internal;
-using Stl.Testing.Collections;
+using ActualLab.Net;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Internal;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Net;
+namespace ActualLab.Tests.Net;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class ConnectorTest(ITestOutputHelper @out) : TestBase(@out)

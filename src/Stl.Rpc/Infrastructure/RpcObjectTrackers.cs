@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Concurrency;
-using Stl.Internal;
-using Stl.OS;
+using ActualLab.Concurrency;
+using ActualLab.Internal;
+using ActualLab.OS;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcObjectTracker
 {

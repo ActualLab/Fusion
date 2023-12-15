@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Stl.Fusion.Server.Endpoints;
+using ActualLab.Fusion.Server.Endpoints;
 
-namespace Stl.Fusion.Server.Controllers;
+namespace ActualLab.Fusion.Server.Controllers;
 
 [Route("~/fusion/blazorMode")]
 public sealed class BlazorModeController(BlazorModeEndpoint handler) : ControllerBase

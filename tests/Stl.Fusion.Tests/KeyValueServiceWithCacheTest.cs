@@ -1,8 +1,8 @@
-using Stl.Fusion.Client.Caching;
-using Stl.Fusion.Client.Interception;
-using Stl.Fusion.Tests.Services;
+using ActualLab.Fusion.Client.Caching;
+using ActualLab.Fusion.Client.Interception;
+using ActualLab.Fusion.Tests.Services;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class KeyValueServiceWithCacheTest : FusionTestBase
 {

@@ -1,6 +1,6 @@
-using Stl.Testing.Collections;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Async;
+namespace ActualLab.Tests.Async;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class TaskExtTest(ITestOutputHelper @out) : TestBase(@out)

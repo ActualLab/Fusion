@@ -1,6 +1,6 @@
-using Stl.Versioning;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion.Blazor;
+namespace ActualLab.Fusion.Blazor;
 
 public sealed class ByVersionParameterComparer<TVersion> : ParameterComparer
     where TVersion : notnull

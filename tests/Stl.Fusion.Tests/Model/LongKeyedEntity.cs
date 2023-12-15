@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Stl.Fusion.Tests.Model;
+namespace ActualLab.Fusion.Tests.Model;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial record LongKeyedEntity : IHasId<long>

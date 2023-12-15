@@ -1,6 +1,6 @@
 using System.Reactive.PlatformServices;
 
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 public sealed class SystemClock : IMomentClock
 {

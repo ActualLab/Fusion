@@ -1,4 +1,4 @@
-namespace Stl.Conversion.Internal;
+namespace ActualLab.Conversion.Internal;
 
 public class InterfaceConverter<TSource, TTarget> : Converter<TSource, TTarget>
 {

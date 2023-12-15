@@ -1,7 +1,7 @@
 using System.Runtime.ExceptionServices;
-using Stl.IO;
+using ActualLab.IO;
 
-namespace Stl.Locking;
+namespace ActualLab.Locking;
 
 public class FileLock(FilePath path, IEnumerable<TimeSpan>? retryIntervals = null)
     : IAsyncLock<FileLock.Releaser>

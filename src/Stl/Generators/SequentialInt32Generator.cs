@@ -1,4 +1,4 @@
-namespace Stl.Generators;
+namespace ActualLab.Generators;
 
 public sealed class SequentialInt32Generator : Generator<int>
 {

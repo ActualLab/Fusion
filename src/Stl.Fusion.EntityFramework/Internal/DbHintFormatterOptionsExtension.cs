@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
-namespace Stl.Fusion.EntityFramework.Internal;
+namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public class DbHintFormatterOptionsExtension(
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type dbHintFormatterType)

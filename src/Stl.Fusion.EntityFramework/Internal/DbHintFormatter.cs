@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Stl.Fusion.EntityFramework.Internal;
+namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public interface IDbHintFormatter
 {

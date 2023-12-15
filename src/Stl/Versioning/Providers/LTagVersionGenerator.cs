@@ -1,6 +1,6 @@
-using Stl.Generators;
+using ActualLab.Generators;
 
-namespace Stl.Versioning.Providers;
+namespace ActualLab.Versioning.Providers;
 
 public sealed class LTagVersionGenerator : VersionGenerator<LTag>
 {

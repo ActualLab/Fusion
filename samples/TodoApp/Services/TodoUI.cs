@@ -1,5 +1,5 @@
-using Stl.DependencyInjection;
-using Stl.Fusion.Extensions;
+using ActualLab.DependencyInjection;
+using ActualLab.Fusion.Extensions;
 using Templates.TodoApp.Abstractions;
 
 namespace Templates.TodoApp.Services;

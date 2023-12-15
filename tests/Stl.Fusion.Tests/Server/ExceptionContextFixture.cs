@@ -12,9 +12,9 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 #endif
 
 using AutoFixture;
-using Stl.Fusion.Server;
+using ActualLab.Fusion.Server;
 
-namespace Stl.Fusion.Tests.Server;
+namespace ActualLab.Fusion.Tests.Server;
 
 public class ExceptionContextFixture : BaseFixture<
 #if NETFRAMEWORK

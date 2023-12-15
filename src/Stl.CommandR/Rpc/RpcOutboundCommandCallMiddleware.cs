@@ -1,6 +1,6 @@
-using Stl.Rpc.Infrastructure;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.CommandR.Rpc;
+namespace ActualLab.CommandR.Rpc;
 
 public class RpcOutboundCommandCallMiddleware : RpcOutboundMiddleware
 {

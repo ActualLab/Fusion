@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework.Operations;
-using Stl.Multitenancy;
-using Stl.Redis;
+using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.Multitenancy;
+using ActualLab.Redis;
 
-namespace Stl.Fusion.EntityFramework.Redis.Operations;
+namespace ActualLab.Fusion.EntityFramework.Redis.Operations;
 
 public class RedisOperationLogChangeNotifier<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>

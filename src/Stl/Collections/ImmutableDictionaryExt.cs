@@ -1,4 +1,4 @@
-namespace Stl.Collections;
+namespace ActualLab.Collections;
 
 public static class ImmutableDictionaryExt
 {

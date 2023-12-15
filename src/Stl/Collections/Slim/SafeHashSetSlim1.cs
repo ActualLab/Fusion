@@ -1,4 +1,4 @@
-namespace Stl.Collections.Slim;
+namespace ActualLab.Collections.Slim;
 
 public struct SafeHashSetSlim1<T> : IHashSetSlim<T>
     where T : notnull

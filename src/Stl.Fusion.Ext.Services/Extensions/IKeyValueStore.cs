@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Extensions;
+namespace ActualLab.Fusion.Extensions;
 
 public interface IKeyValueStore : IComputeService
 {

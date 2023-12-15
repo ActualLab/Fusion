@@ -1,8 +1,8 @@
-using Stl.Rpc;
-using Stl.Rpc.Diagnostics;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Tests.Rpc;
+namespace ActualLab.Tests.Rpc;
 
 public class TestRpcMethodTracer : RpcMethodTracer
 {

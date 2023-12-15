@@ -1,9 +1,9 @@
-using Stl.OS;
-using Stl.Rpc;
-using Stl.Rpc.Testing;
-using Stl.Testing.Collections;
+using ActualLab.OS;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Testing;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Rpc;
+namespace ActualLab.Tests.Rpc;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)

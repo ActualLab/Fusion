@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public class RpcConfiguration
 {

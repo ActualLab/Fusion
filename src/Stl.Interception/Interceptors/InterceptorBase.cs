@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Interception.Interceptors;
+namespace ActualLab.Interception.Interceptors;
 
 public abstract class InterceptorBase : Interceptor, IHasServices
 {

@@ -1,20 +1,20 @@
 using System.Reflection;
 using Microsoft.Extensions.Hosting;
-using Stl.Rpc;
-using Stl.Rpc.Infrastructure;
-using Stl.Rpc.Server;
-using Stl.Rpc.WebSockets;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Server;
+using ActualLab.Rpc.WebSockets;
 
 #if NETFRAMEWORK
 using Owin;
 using System.Web.Http;
-using Stl.Fusion.Server;
+using ActualLab.Fusion.Server;
 #else
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 #endif
 
-namespace Stl.Tests;
+namespace ActualLab.Tests;
 
 public class RpcWebHost : TestWebHostBase
 {

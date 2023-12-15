@@ -3,11 +3,11 @@ using Cysharp.Text;
 using Microsoft.Toolkit.HighPerformance;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using Stl.Internal;
-using Stl.Serialization.Internal;
+using ActualLab.Internal;
+using ActualLab.Serialization.Internal;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 #if !NET5_0
 [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

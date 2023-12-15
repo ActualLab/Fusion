@@ -1,7 +1,7 @@
 using Cysharp.Text;
 using Microsoft.Toolkit.HighPerformance;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 public enum DataFormat
 {

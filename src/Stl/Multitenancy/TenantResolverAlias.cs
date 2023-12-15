@@ -1,4 +1,4 @@
-namespace Stl.Multitenancy;
+namespace ActualLab.Multitenancy;
 
 // Resolves tenants from any ITenantResolver to TContext
 public class TenantResolverAlias<TContext>(ITenantResolver source) : ITenantResolver<TContext>

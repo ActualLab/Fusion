@@ -1,8 +1,8 @@
 using System.Reflection;
-using Stl.Interception;
-using Stl.Interception.Internal;
+using ActualLab.Interception;
+using ActualLab.Interception.Internal;
 
-namespace Stl.Tests.Generators;
+namespace ActualLab.Tests.Generators;
 
 public interface ITestInterfaceBase : IRequiresFullProxy
 {

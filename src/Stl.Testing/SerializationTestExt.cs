@@ -2,10 +2,10 @@ using System.Text;
 using FluentAssertions;
 using Microsoft.Toolkit.HighPerformance.Buffers;
 using Newtonsoft.Json;
-using Stl.IO;
+using ActualLab.IO;
 using Xunit.Abstractions;
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public static class SerializationTestExt
 {

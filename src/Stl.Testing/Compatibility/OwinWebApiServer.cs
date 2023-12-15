@@ -12,7 +12,7 @@ using Microsoft.Owin.Hosting;
 using Owin;
 
 // ReSharper disable once CheckNamespace
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 #pragma warning disable CA1812 // C is an internal class that is apparently never instantiated
 

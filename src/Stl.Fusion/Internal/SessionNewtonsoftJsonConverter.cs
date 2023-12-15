@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Stl.Fusion.Internal;
+namespace ActualLab.Fusion.Internal;
 
 public class SessionNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<Session>
 {

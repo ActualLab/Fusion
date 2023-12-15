@@ -1,4 +1,4 @@
-namespace Stl.Generators.Internal;
+namespace ActualLab.Generators.Internal;
 
 // [RS2008] Enable analyzer release tracking for the analyzer project containing rule 'STLG0001'
 #pragma warning disable RS2008

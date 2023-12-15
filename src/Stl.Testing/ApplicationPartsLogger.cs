@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.Hosting;
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public class ApplicationPartsLogger : IHostedService
 {

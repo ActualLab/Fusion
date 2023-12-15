@@ -1,6 +1,6 @@
 using System.Reflection.Emit;
 
-namespace Stl.Collections;
+namespace ActualLab.Collections;
 
 public static class ConcurrentDictionaryExt
 {

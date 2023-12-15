@@ -1,25 +1,25 @@
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Stl.IO;
-using Stl.Fusion.Authentication;
-using Stl.Fusion.Client.Caching;
-using Stl.Fusion.EntityFramework;
-using Stl.Fusion.EntityFramework.Npgsql;
-using Stl.Fusion.EntityFramework.Redis;
-using Stl.Fusion.Extensions;
-using Stl.Fusion.Server;
-using Stl.Fusion.Tests.Extensions;
-using Stl.Fusion.Tests.Model;
-using Stl.Fusion.Tests.Services;
-using Stl.Fusion.Tests.UIModels;
-using Stl.Locking;
-using Stl.Rpc;
-using Stl.Testing.Collections;
-using Stl.Tests;
+using ActualLab.IO;
+using ActualLab.Fusion.Authentication;
+using ActualLab.Fusion.Client.Caching;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework.Npgsql;
+using ActualLab.Fusion.EntityFramework.Redis;
+using ActualLab.Fusion.Extensions;
+using ActualLab.Fusion.Server;
+using ActualLab.Fusion.Tests.Extensions;
+using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.Fusion.Tests.UIModels;
+using ActualLab.Locking;
+using ActualLab.Rpc;
+using ActualLab.Testing.Collections;
+using ActualLab.Tests;
 using User = Stl.Fusion.Tests.Model.User;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public abstract class FusionTestBase : RpcTestBase

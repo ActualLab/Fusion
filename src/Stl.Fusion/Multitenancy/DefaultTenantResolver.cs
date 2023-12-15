@@ -1,6 +1,6 @@
-using Stl.Multitenancy;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.Multitenancy;
+namespace ActualLab.Fusion.Multitenancy;
 
 public class DefaultTenantResolver<TContext>(
         DefaultTenantResolver<TContext>.Options settings,

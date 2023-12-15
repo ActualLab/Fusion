@@ -1,6 +1,6 @@
-using Stl.Interception;
+using ActualLab.Interception;
 
-namespace Stl.Tests.Interception;
+namespace ActualLab.Tests.Interception;
 
 public interface ITestTypedFactory : IRequiresFullProxy
 {

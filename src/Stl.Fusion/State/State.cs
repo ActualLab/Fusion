@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Conversion;
-using Stl.Fusion.Internal;
-using Stl.Locking;
-using Stl.Versioning;
+using ActualLab.Conversion;
+using ActualLab.Fusion.Internal;
+using ActualLab.Locking;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public interface IState : IResult, IHasServices
 {

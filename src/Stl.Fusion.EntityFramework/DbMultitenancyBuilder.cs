@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Stl.Fusion.Multitenancy;
-using Stl.Multitenancy;
+using ActualLab.Fusion.Multitenancy;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public readonly struct DbMultitenancyBuilder<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>

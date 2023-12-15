@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Security;
 using System.Security.Claims;
-using Stl.Versioning;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion.Authentication;
+namespace ActualLab.Fusion.Authentication;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]

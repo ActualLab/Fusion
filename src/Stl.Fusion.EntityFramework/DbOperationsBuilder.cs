@@ -2,11 +2,11 @@ using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Stl.CommandR.Internal;
-using Stl.Fusion.EntityFramework.Internal;
-using Stl.Fusion.EntityFramework.Operations;
+using ActualLab.CommandR.Internal;
+using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Fusion.EntityFramework.Operations;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public readonly struct DbOperationsBuilder<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>

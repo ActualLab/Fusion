@@ -1,6 +1,6 @@
-using Stl.Conversion.Internal;
+using ActualLab.Conversion.Internal;
 
-namespace Stl.Conversion;
+namespace ActualLab.Conversion;
 
 public abstract class Converter
 {

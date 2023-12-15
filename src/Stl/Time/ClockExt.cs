@@ -1,6 +1,6 @@
 using System.Reactive.Linq;
 
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 public static class ClockExt
 {

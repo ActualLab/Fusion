@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Interception.Interceptors;
-using Stl.Rpc.Internal;
+using ActualLab.Interception;
+using ActualLab.Interception.Interceptors;
+using ActualLab.Rpc.Internal;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 #if !NET5_0
 [RequiresUnreferencedCode(UnreferencedCode.Rpc)]

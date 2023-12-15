@@ -1,9 +1,9 @@
-using Stl.Fusion.Tests.Services;
-using Stl.OS;
-using Stl.Rpc.Testing;
-using Stl.Testing.Collections;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.OS;
+using ActualLab.Rpc.Testing;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class ScreenshotServiceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)

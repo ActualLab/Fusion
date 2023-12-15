@@ -1,6 +1,6 @@
-using Stl.Tests.CommandR.Services;
+using ActualLab.Tests.CommandR.Services;
 
-namespace Stl.Tests.CommandR;
+namespace ActualLab.Tests.CommandR;
 
 public class BasicTest(ITestOutputHelper @out) : CommandRTestBase(@out)
 {

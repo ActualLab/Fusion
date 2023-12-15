@@ -3,7 +3,7 @@
 using System.Threading;
 using System.Web.Http;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 internal static class ControllerExt
 {
@@ -18,7 +18,7 @@ internal static class ControllerExt
 using System.Threading;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 internal static class ControllerExt
 {

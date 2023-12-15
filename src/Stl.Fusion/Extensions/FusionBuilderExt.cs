@@ -1,6 +1,6 @@
-using Stl.Fusion.Extensions.Internal;
+using ActualLab.Fusion.Extensions.Internal;
 
-namespace Stl.Fusion.Extensions;
+namespace ActualLab.Fusion.Extensions;
 
 public static class FusionBuilderExt
 {

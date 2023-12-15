@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework;
-using Stl.Fusion.Internal;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.Internal;
 
-namespace Stl.Fusion.Authentication.Services;
+namespace ActualLab.Fusion.Authentication.Services;
 
 public class DbSessionInfoConverter<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,

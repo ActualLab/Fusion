@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
-using Stl.Rpc;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Internal;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Fusion.Client.Internal;
+namespace ActualLab.Fusion.Client.Internal;
 
 public interface IRpcInboundComputeCall
 { }

@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Stl.Fusion.Tests.Services;
+namespace ActualLab.Fusion.Tests.Services;
 
 public interface ICounterService : IComputeService
 {

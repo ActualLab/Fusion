@@ -1,6 +1,6 @@
-using Stl.Rpc.Infrastructure;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public class RpcConnection(Channel<RpcMessage> channel, ImmutableOptionSet options)
 {

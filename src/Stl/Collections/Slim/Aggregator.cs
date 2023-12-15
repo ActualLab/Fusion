@@ -1,4 +1,4 @@
-namespace Stl.Collections.Slim;
+namespace ActualLab.Collections.Slim;
 
 public delegate void Aggregator<TState, in TArg>(ref TState state, TArg arg);
 public delegate void Aggregator<TState, in TArg1, in TArg2>(ref TState state, TArg1 arg1, TArg2 arg2);

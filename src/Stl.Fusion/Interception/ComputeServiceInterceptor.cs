@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Fusion.Internal;
+using ActualLab.Fusion.Internal;
 
-namespace Stl.Fusion.Interception;
+namespace ActualLab.Fusion.Interception;
 
 public class ComputeServiceInterceptor(ComputeServiceInterceptor.Options settings, IServiceProvider services)
     : ComputeServiceInterceptorBase(settings, services)

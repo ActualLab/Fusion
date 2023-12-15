@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using Stl.Rpc;
+using ActualLab.Rpc;
 
-namespace Stl.Tests.Rpc;
+namespace ActualLab.Tests.Rpc;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial record HelloCommand(

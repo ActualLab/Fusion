@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace Stl.DependencyInjection.Internal;
+namespace ActualLab.DependencyInjection.Internal;
 
 public class ConfigureAllNamedOptions<TOptions>: IConfigureNamedOptions<TOptions>
     where TOptions : class

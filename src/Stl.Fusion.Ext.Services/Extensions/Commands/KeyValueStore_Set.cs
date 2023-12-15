@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Extensions;
+namespace ActualLab.Fusion.Extensions;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 // ReSharper disable once InconsistentNaming

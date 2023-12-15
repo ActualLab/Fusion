@@ -1,7 +1,7 @@
 ﻿using AutoFixture;
 using AutoFixture.AutoMoq;
 
-namespace Stl.Fusion.Tests.Server;
+namespace ActualLab.Fusion.Tests.Server;
 
 public abstract class BaseFixture<T>
 {

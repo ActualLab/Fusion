@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Multitenancy;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.EntityFramework.Operations;
+namespace ActualLab.Fusion.EntityFramework.Operations;
 
 public class FileBasedDbOperationLogChangeNotifier<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>

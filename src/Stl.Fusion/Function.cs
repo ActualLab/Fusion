@@ -1,8 +1,8 @@
-using Stl.Fusion.Internal;
-using Stl.Internal;
-using Stl.Locking;
+using ActualLab.Fusion.Internal;
+using ActualLab.Internal;
+using ActualLab.Locking;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public interface IFunction : IHasServices
 {

@@ -1,4 +1,4 @@
-namespace Stl.Generators;
+namespace ActualLab.Generators;
 
 public abstract class ConcurrentGenerator<T> : Generator<T>
 {

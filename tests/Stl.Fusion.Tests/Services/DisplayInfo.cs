@@ -1,8 +1,8 @@
 using System.Drawing;
 using System.Globalization;
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Fusion.Tests.Services;
+namespace ActualLab.Fusion.Tests.Services;
 
 public static class DisplayInfo
 {

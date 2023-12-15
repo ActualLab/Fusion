@@ -1,6 +1,6 @@
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public static class FusionSettings
 {

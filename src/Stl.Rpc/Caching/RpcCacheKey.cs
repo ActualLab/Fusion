@@ -1,6 +1,6 @@
 using Microsoft.Toolkit.HighPerformance;
 
-namespace Stl.Rpc.Caching;
+namespace ActualLab.Rpc.Caching;
 
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]

@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Interception;
+namespace ActualLab.Interception;
 
 public static class ServiceProviderExt
 {

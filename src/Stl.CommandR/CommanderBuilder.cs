@@ -1,13 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Stl.CommandR.Diagnostics;
-using Stl.CommandR.Interception;
-using Stl.CommandR.Internal;
-using Stl.CommandR.Rpc;
-using Stl.Interception;
-using Stl.Rpc;
+using ActualLab.CommandR.Diagnostics;
+using ActualLab.CommandR.Interception;
+using ActualLab.CommandR.Internal;
+using ActualLab.CommandR.Rpc;
+using ActualLab.Interception;
+using ActualLab.Rpc;
 
-namespace Stl.CommandR;
+namespace ActualLab.CommandR;
 
 public readonly struct CommanderBuilder
 {

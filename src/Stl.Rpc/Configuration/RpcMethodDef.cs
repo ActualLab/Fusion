@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Interception.Interceptors;
-using Stl.Rpc.Diagnostics;
+using ActualLab.Interception;
+using ActualLab.Interception.Interceptors;
+using ActualLab.Rpc.Diagnostics;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public sealed class RpcMethodDef : MethodDef
 {

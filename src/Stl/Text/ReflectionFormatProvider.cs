@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Stl.Text;
+namespace ActualLab.Text;
 
 public sealed class ReflectionFormatProvider : IFormatProvider, ICustomFormatter {
     private static readonly char[] Separator = { ':' };

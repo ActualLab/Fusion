@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Plugins.Internal;
+using ActualLab.Plugins.Internal;
 
-namespace Stl.Plugins.Metadata;
+namespace ActualLab.Plugins.Metadata;
 
 public class PluginSetInfo
 {

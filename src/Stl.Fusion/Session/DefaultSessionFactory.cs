@@ -1,6 +1,6 @@
-using Stl.Generators;
+using ActualLab.Generators;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public sealed class DefaultSessionFactory
 {

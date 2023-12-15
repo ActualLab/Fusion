@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Interception;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Rpc.Internal;
+namespace ActualLab.Rpc.Internal;
 
 public static class RpcProxies
 {

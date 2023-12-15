@@ -1,4 +1,4 @@
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct AsyncChain(

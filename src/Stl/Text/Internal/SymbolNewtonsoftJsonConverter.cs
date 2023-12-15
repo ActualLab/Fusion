@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Stl.Text.Internal;
+namespace ActualLab.Text.Internal;
 
 public class SymbolNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<Symbol>
 {

@@ -1,4 +1,4 @@
-namespace Stl.Conversion;
+namespace ActualLab.Conversion;
 
 public interface ISourceConverterProvider
 {

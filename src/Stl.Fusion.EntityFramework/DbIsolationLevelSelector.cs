@@ -1,7 +1,7 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public class GlobalIsolationLevelSelector
 {

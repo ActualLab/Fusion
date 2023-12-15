@@ -1,12 +1,12 @@
-using Stl.DependencyInjection.Internal;
-using Stl.Interception;
-using Stl.Internal;
-using Stl.IO;
-using Stl.Reflection;
-using Stl.Rpc.Infrastructure;
+using ActualLab.DependencyInjection.Internal;
+using ActualLab.Interception;
+using ActualLab.Internal;
+using ActualLab.IO;
+using ActualLab.Reflection;
+using ActualLab.Rpc.Infrastructure;
 using TextOrBytes = Stl.Serialization.TextOrBytes;
 
-namespace Stl.Tests.Serialization;
+namespace ActualLab.Tests.Serialization;
 
 public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
 {

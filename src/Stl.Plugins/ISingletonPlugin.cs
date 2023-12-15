@@ -1,3 +1,3 @@
-namespace Stl.Plugins;
+namespace ActualLab.Plugins;
 
 public interface ISingletonPlugin;

@@ -1,7 +1,7 @@
-using Stl.Fusion.Tests.Services;
-using Stl.Fusion.Tests.UIModels;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.Fusion.Tests.UIModels;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class KeyValueModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {

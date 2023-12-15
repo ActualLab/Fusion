@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Internal;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Interception;
+using ActualLab.Internal;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 #pragma warning disable MA0055
 

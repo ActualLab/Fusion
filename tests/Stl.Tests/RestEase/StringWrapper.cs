@@ -1,3 +1,3 @@
-namespace Stl.Tests.RestEase;
+namespace ActualLab.Tests.RestEase;
 
 public record StringWrapper(string Body);

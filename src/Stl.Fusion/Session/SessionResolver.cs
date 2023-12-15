@@ -1,6 +1,6 @@
-using Stl.Fusion.Internal;
+using ActualLab.Fusion.Internal;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 #pragma warning disable VSTHRD104
 

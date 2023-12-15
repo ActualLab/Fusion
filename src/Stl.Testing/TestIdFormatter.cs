@@ -1,6 +1,6 @@
-using Stl.IO;
+using ActualLab.IO;
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public class TestIdFormatter(string testId)
 {

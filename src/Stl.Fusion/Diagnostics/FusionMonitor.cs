@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using Cysharp.Text;
 
-namespace Stl.Fusion.Diagnostics;
+namespace ActualLab.Fusion.Diagnostics;
 
 public sealed class FusionMonitor : WorkerBase
 {

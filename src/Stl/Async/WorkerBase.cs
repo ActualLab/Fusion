@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null)
     : ProcessorBase(stopTokenSource), IWorker

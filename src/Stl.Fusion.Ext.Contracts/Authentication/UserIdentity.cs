@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Authentication;
+namespace ActualLab.Fusion.Authentication;
 
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]

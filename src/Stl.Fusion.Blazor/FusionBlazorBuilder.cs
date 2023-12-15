@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Stl.Fusion.UI;
+using ActualLab.Fusion.UI;
 
-namespace Stl.Fusion.Blazor;
+namespace ActualLab.Fusion.Blazor;
 
 public readonly struct FusionBlazorBuilder
 {

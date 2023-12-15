@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Stl.Diagnostics;
+namespace ActualLab.Diagnostics;
 
 public static class ActivitySourceExt
 {

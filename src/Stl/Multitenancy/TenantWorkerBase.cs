@@ -1,4 +1,4 @@
-namespace Stl.Multitenancy;
+namespace ActualLab.Multitenancy;
 
 public abstract class TenantWorkerBase<TContext> : WorkerBase
 {

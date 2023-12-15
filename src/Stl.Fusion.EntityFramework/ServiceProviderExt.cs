@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public static class ServiceProviderExt
 {

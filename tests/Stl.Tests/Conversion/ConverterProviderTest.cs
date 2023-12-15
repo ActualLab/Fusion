@@ -1,6 +1,6 @@
-using Stl.Conversion;
+using ActualLab.Conversion;
 
-namespace Stl.Tests.Conversion;
+namespace ActualLab.Tests.Conversion;
 
 public class ConverterProviderTest(ITestOutputHelper @out) : TestBase(@out)
 {

@@ -1,3 +1,3 @@
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public delegate bool SessionValidator(Session session);

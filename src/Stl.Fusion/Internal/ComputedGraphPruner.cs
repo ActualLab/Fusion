@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Internal;
+namespace ActualLab.Fusion.Internal;
 
 public sealed class ComputedGraphPruner : WorkerBase
 {

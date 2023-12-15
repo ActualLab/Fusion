@@ -1,8 +1,8 @@
-using Stl.Diagnostics;
-using Stl.OS;
-using Stl.Testing.Collections;
+using ActualLab.Diagnostics;
+using ActualLab.OS;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Diagnostics;
+namespace ActualLab.Tests.Diagnostics;
 
 [Collection(nameof(PerformanceTests)), Trait("Category", nameof(PerformanceTests))]
 public class SamplerTest(ITestOutputHelper @out) : TestBase(@out)

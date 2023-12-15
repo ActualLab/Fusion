@@ -3,9 +3,9 @@
 // ReSharper disable ArrangeConstructorOrDestructorBody
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Interception;
+namespace ActualLab.Interception;
 
 #pragma warning disable MA0012
 #pragma warning disable CA2201
@@ -5014,4 +5014,3 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
         }
     }
 }
-

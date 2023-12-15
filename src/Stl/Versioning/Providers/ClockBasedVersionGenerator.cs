@@ -1,4 +1,4 @@
-namespace Stl.Versioning.Providers;
+namespace ActualLab.Versioning.Providers;
 
 public sealed class ClockBasedVersionGenerator : VersionGenerator<long>
 {

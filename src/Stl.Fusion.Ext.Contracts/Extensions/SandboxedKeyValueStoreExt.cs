@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Fusion.Authentication;
+using ActualLab.Fusion.Authentication;
 
-namespace Stl.Fusion.Extensions;
+namespace ActualLab.Fusion.Extensions;
 
 public static class SandboxedKeyValueStoreExt
 {

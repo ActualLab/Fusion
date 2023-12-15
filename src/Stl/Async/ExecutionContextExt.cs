@@ -1,4 +1,4 @@
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 public static class ExecutionContextExt
 {

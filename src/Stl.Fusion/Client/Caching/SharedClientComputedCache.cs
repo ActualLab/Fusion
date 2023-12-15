@@ -1,6 +1,6 @@
-using Stl.Rpc.Caching;
+using ActualLab.Rpc.Caching;
 
-namespace Stl.Fusion.Client.Caching;
+namespace ActualLab.Fusion.Client.Caching;
 
 public class SharedClientComputedCache : ClientComputedCache
 {

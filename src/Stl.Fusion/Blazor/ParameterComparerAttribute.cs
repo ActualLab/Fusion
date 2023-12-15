@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Blazor;
+namespace ActualLab.Fusion.Blazor;
 
 #pragma warning disable CA1813 // Consider making sealed
 

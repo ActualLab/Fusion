@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace Stl.Fusion.EntityFramework.Conversion;
+namespace ActualLab.Fusion.EntityFramework.Conversion;
 
 public class UlidToStringValueConverter(ConverterMappingHints mappingHints = null!)
     : ValueConverter<Ulid, string>(

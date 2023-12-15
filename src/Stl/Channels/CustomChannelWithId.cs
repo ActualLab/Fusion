@@ -1,4 +1,4 @@
-namespace Stl.Channels;
+namespace ActualLab.Channels;
 
 public class CustomChannelWithId<TId, TWrite, TRead> : Channel<TWrite, TRead>, IHasId<TId>
 {

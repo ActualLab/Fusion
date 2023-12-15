@@ -1,4 +1,4 @@
-namespace Stl.Pooling;
+namespace ActualLab.Pooling;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly struct Owned<TItem, TOwner>(

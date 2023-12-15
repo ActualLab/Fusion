@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
     where TRpcCall : RpcCall

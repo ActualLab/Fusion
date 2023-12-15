@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Requirements;
+namespace ActualLab.Requirements;
 
 public record MustExistRequirement<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>

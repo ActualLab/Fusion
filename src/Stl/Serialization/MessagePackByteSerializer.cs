@@ -1,11 +1,11 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using MessagePack;
-using Stl.Internal;
-using Stl.Serialization.Internal;
+using ActualLab.Internal;
+using ActualLab.Serialization.Internal;
 using Errors = Stl.Serialization.Internal.Errors;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 public class MessagePackByteSerializer(MessagePackSerializerOptions options) : IByteSerializer
 {

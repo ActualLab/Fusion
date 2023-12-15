@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Interception;
+namespace ActualLab.Fusion.Interception;
 
 public interface IComputeFunction
 {

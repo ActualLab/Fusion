@@ -1,4 +1,4 @@
-namespace Stl.Rpc.Internal;
+namespace ActualLab.Rpc.Internal;
 
 public static class UnreferencedCode
 {

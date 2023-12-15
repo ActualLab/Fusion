@@ -1,6 +1,6 @@
-using Stl.Rpc.Internal;
+using ActualLab.Rpc.Internal;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public class RpcInbound404Call<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
     : RpcInboundCall<TResult>(context, methodDef)

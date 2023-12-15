@@ -1,9 +1,9 @@
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
-using Stl.Serialization.Internal;
+using ActualLab.Internal;
+using ActualLab.Serialization.Internal;
 
-namespace Stl.Conversion.Internal;
+namespace ActualLab.Conversion.Internal;
 
 public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) : SourceConverterProvider<TSource>
 {

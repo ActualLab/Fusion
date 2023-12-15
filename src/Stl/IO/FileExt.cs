@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Stl.IO;
+namespace ActualLab.IO;
 
 public static class FileExt
 {

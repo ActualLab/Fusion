@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Stl.Tests.DependencyInjection;
+namespace ActualLab.Tests.DependencyInjection;
 
 public class ServiceCollectionExtTest(ITestOutputHelper @out) : TestBase(@out)
 {

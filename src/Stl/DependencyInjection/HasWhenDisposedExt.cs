@@ -1,6 +1,6 @@
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.DependencyInjection;
+namespace ActualLab.DependencyInjection;
 
 public static class HasWhenDisposedExt
 {

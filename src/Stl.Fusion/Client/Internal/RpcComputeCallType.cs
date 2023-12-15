@@ -1,6 +1,6 @@
-using Stl.Rpc;
+using ActualLab.Rpc;
 
-namespace Stl.Fusion.Client.Internal;
+namespace ActualLab.Fusion.Client.Internal;
 
 public static class RpcComputeCallType
 {

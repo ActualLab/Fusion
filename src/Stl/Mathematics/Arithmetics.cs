@@ -1,4 +1,4 @@
-namespace Stl.Mathematics;
+namespace ActualLab.Mathematics;
 
 // Just a tagging interface
 public interface IArithmetics;

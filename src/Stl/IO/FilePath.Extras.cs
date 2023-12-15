@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Stl.IO;
+namespace ActualLab.IO;
 
 public readonly partial struct FilePath
 {

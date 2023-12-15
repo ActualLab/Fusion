@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using Stl.Conversion;
-using Stl.Text.Internal;
+using ActualLab.Conversion;
+using ActualLab.Text.Internal;
 
-namespace Stl.Text;
+namespace ActualLab.Text;
 
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]

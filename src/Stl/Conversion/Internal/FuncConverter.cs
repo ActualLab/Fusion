@@ -1,4 +1,4 @@
-namespace Stl.Conversion.Internal;
+namespace ActualLab.Conversion.Internal;
 
 public class FuncConverter<TSource, TTarget> : Converter<TSource, TTarget>
 {

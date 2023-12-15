@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Multitenancy;
-using Stl.OS;
+using ActualLab.Multitenancy;
+using ActualLab.OS;
 
-namespace Stl.Fusion.EntityFramework.Operations;
+namespace ActualLab.Fusion.EntityFramework.Operations;
 
 public class DbOperationLogReader<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>

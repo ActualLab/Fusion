@@ -2,17 +2,17 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.WebSockets;
 using Microsoft.Owin;
-using Stl.Internal;
-using Stl.Rpc.Clients;
-using Stl.Rpc.Infrastructure;
-using Stl.Rpc.WebSockets;
+using ActualLab.Internal;
+using ActualLab.Rpc.Clients;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.WebSockets;
 using WebSocketAccept = System.Action<
     System.Collections.Generic.IDictionary<string, object>, // WebSocket Accept parameters
     System.Func< // WebSocketFunc callback
         System.Collections.Generic.IDictionary<string, object>, // WebSocket environment
         System.Threading.Tasks.Task>>;
 
-namespace Stl.Rpc.Server;
+namespace ActualLab.Rpc.Server;
 
 public class RpcWebSocketServer(
     RpcWebSocketServer.Options settings,

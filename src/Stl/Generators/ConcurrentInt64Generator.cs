@@ -1,7 +1,7 @@
-using Stl.Generators.Internal;
-using Stl.Time.Internal;
+using ActualLab.Generators.Internal;
+using ActualLab.Time.Internal;
 
-namespace Stl.Generators;
+namespace ActualLab.Generators;
 
 public static class ConcurrentInt64Generator
 {

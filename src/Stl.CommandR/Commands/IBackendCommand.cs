@@ -1,4 +1,4 @@
-namespace Stl.CommandR.Commands;
+namespace ActualLab.CommandR.Commands;
 
 /// <summary>
 /// A tagging interface for commands that can't be initiated by the client.

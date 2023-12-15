@@ -1,12 +1,12 @@
-using Stl.Concurrency;
-using Stl.Fusion.Interception;
-using Stl.Fusion.Internal;
-using Stl.Locking;
-using Stl.OS;
-using Stl.Time.Internal;
+using ActualLab.Concurrency;
+using ActualLab.Fusion.Interception;
+using ActualLab.Fusion.Internal;
+using ActualLab.Locking;
+using ActualLab.OS;
+using ActualLab.Time.Internal;
 using Errors = Stl.Fusion.Internal.Errors;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public sealed class ComputedRegistry : IDisposable
 {

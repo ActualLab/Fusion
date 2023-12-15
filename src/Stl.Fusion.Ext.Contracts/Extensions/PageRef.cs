@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Stl.Fusion.Extensions;
+namespace ActualLab.Fusion.Extensions;
 
 public abstract record PageRef : IHasJsonCompatibleToString
 {

@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 
-namespace Stl.Fusion.EntityFramework.Internal;
+namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public class FuncDbContextFactory<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>(Func<TDbContext> factory)

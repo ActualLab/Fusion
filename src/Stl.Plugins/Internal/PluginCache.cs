@@ -1,4 +1,4 @@
-namespace Stl.Plugins.Internal;
+namespace ActualLab.Plugins.Internal;
 
 public interface IPluginCache
 {

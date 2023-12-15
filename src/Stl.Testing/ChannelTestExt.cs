@@ -1,6 +1,6 @@
 using FluentAssertions;
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public static class ChannelTestExt
 {

@@ -1,7 +1,7 @@
 using System.Buffers;
-using Stl.Serialization.Internal;
+using ActualLab.Serialization.Internal;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 public static class ByteSerializer
 {

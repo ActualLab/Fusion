@@ -1,7 +1,7 @@
-using Stl.Fusion.Internal;
+using ActualLab.Fusion.Internal;
 using Errors = Stl.Internal.Errors;
 
-namespace Stl.Fusion.Interception;
+namespace ActualLab.Fusion.Interception;
 
 // Just a tagging interface
 public interface IComputedMethodComputed : IComputed;

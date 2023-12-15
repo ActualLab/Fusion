@@ -1,4 +1,4 @@
-namespace Stl.Text;
+namespace ActualLab.Text;
 
 public static class StringExt
 {

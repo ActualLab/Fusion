@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Text;
+namespace ActualLab.Text;
 
 public static class JsonFormatter
 {

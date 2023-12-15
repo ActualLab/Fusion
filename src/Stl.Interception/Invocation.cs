@@ -1,7 +1,7 @@
-using Stl.Interception.Internal;
-using Stl.OS;
+using ActualLab.Interception.Internal;
+using ActualLab.OS;
 
-namespace Stl.Interception;
+namespace ActualLab.Interception;
 
 public readonly record struct Invocation(
     object Proxy,
@@ -12,7 +12,7 @@ public readonly record struct Invocation(
     private static readonly MethodInfo InterceptedUntypedMethod = typeof(Invocation)
         .GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
         .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(InterceptedUntyped)));
-    private static readonly ConcurrentDictionary<Type, Func<Invocation, object?>> InterceptedUntypedCache 
+    private static readonly ConcurrentDictionary<Type, Func<Invocation, object?>> InterceptedUntypedCache
         = new(HardwareInfo.GetProcessorCountPo2Factor(4), 256);
 
     public object? ProxyTarget => (Proxy as InterfaceProxy)?.ProxyTarget;

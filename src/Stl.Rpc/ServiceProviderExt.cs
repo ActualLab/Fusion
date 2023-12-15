@@ -1,4 +1,4 @@
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public static class ServiceProviderExt
 {

@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Tests.Model;
+namespace ActualLab.Fusion.Tests.Model;
 
 public interface IHasKey<out TKey>
     where TKey : notnull

@@ -1,6 +1,6 @@
 using System.Net.WebSockets;
 
-namespace Stl.Rpc.WebSockets;
+namespace ActualLab.Rpc.WebSockets;
 
 public static class WebSocketExt
 {

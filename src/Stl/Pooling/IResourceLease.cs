@@ -1,4 +1,4 @@
-namespace Stl.Pooling;
+namespace ActualLab.Pooling;
 
 public interface IResourceLease<out T> : IDisposable
 {

@@ -1,4 +1,4 @@
-namespace Stl.Internal;
+namespace ActualLab.Internal;
 
 public abstract class ValueOf
 {

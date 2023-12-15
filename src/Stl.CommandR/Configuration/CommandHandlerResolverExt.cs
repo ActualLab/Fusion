@@ -1,4 +1,4 @@
-namespace Stl.CommandR.Configuration;
+namespace ActualLab.CommandR.Configuration;
 
 public static class CommandHandlerResolverExt
 {

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 public static class AsyncChainExt
 {

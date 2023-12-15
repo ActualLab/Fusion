@@ -1,6 +1,6 @@
 using System.Web.Http.Dependencies;
 
-namespace Stl.Fusion.Server;
+namespace ActualLab.Fusion.Server;
 
 public class DefaultDependencyResolver(IServiceProvider services) : IDependencyResolver
 {

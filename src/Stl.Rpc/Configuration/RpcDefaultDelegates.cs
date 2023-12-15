@@ -1,9 +1,9 @@
-using Stl.Generators;
-using Stl.Interception;
-using Stl.Rpc.Diagnostics;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Generators;
+using ActualLab.Interception;
+using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public delegate Symbol RpcServiceNameBuilder(Type serviceType);
 public delegate Symbol RpcMethodNameBuilder(RpcMethodDef method);

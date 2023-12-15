@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Collections;
+namespace ActualLab.Collections;
 
 public sealed class RecentlySeenMap<TKey, TValue>
     where TKey : notnull

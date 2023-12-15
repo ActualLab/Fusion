@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Stl.Tests.Collections;
+namespace ActualLab.Tests.Collections;
 
 public class ConcurrentDictionaryExtText
 {

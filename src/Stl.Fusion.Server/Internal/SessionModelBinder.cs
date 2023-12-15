@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Stl.Fusion.Authentication;
+using ActualLab.Fusion.Authentication;
 
-namespace Stl.Fusion.Server.Internal;
+namespace ActualLab.Fusion.Server.Internal;
 
 public class SessionModelBinder : IModelBinder
 {

@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Conversion;
-using Stl.Fusion.EntityFramework.Internal;
-using Stl.Generators;
+using ActualLab.Conversion;
+using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Generators;
 
-namespace Stl.Fusion.Authentication.Services;
+namespace ActualLab.Fusion.Authentication.Services;
 
 public interface IDbUserIdHandler<TDbUserId>
 {

@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Owin;
 using Owin;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Rpc.Server;
+namespace ActualLab.Rpc.Server;
 
 public static class EndpointRouteBuilderExt
 {

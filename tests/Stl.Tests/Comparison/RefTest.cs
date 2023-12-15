@@ -1,6 +1,6 @@
-using Stl.Comparison;
+using ActualLab.Comparison;
 
-namespace Stl.Tests.Comparison;
+namespace ActualLab.Tests.Comparison;
 
 public class RefTest
 {

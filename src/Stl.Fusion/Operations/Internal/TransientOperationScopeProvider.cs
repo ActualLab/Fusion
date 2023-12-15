@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Operations.Internal;
+namespace ActualLab.Fusion.Operations.Internal;
 
 /// <summary>
 /// The outermost, "catch-all" operation provider for commands

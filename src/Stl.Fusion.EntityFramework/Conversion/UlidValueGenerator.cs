@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
 
-namespace Stl.Fusion.EntityFramework.Conversion;
+namespace ActualLab.Fusion.EntityFramework.Conversion;
 
 public sealed class UlidValueGenerator : ValueGenerator<Ulid>
 {

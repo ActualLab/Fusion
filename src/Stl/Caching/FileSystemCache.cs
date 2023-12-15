@@ -1,8 +1,8 @@
 using System.Text;
 using Newtonsoft.Json;
-using Stl.IO;
+using ActualLab.IO;
 
-namespace Stl.Caching;
+namespace ActualLab.Caching;
 
 public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, TValue>
     where TKey : notnull

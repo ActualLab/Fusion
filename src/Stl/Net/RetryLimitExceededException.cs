@@ -1,4 +1,4 @@
-namespace Stl.Net;
+namespace ActualLab.Net;
 
 #pragma warning disable SYSLIB0051
 

@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Extensions.Internal;
+namespace ActualLab.Fusion.Extensions.Internal;
 
 public static class Errors
 {

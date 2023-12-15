@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Internal;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public abstract class RpcClient : RpcServiceBase
 {

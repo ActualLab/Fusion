@@ -1,8 +1,8 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 public sealed class AsymmetricByteSerializer(IByteSerializer reader, IByteSerializer writer) : IByteSerializer
 {

@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework;
-using Stl.IO;
-using Stl.Tests.CommandR.Services;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.IO;
+using ActualLab.Tests.CommandR.Services;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
-namespace Stl.Tests.CommandR;
+namespace ActualLab.Tests.CommandR;
 
 public class CommandRTestBase(ITestOutputHelper @out) : TestBase(@out)
 {

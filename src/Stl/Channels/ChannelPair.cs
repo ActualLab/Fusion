@@ -1,4 +1,4 @@
-namespace Stl.Channels;
+namespace ActualLab.Channels;
 
 public class ChannelPair<T>(Channel<T> channel1, Channel<T> channel2)
 {

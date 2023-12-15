@@ -1,4 +1,4 @@
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public interface IComputedState : IState, IDisposable, IHasWhenDisposed
 {

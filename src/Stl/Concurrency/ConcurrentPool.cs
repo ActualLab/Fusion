@@ -1,7 +1,7 @@
-using Stl.OS;
-using Stl.Pooling;
+using ActualLab.OS;
+using ActualLab.Pooling;
 
-namespace Stl.Concurrency;
+namespace ActualLab.Concurrency;
 
 public class ConcurrentPool<T>(Func<T> itemFactory, int capacity, int counterPrecision) : IPool<T>
 {

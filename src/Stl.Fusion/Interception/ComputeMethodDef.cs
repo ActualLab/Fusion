@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Interception.Interceptors;
+using ActualLab.Interception;
+using ActualLab.Interception.Interceptors;
 
-namespace Stl.Fusion.Interception;
+namespace ActualLab.Fusion.Interception;
 
 public sealed class ComputeMethodDef : MethodDef
 {

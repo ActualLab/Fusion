@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public static class SessionExt
 {

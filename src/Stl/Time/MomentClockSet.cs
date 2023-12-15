@@ -1,4 +1,4 @@
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 public class MomentClockSet(IMomentClock systemClock,
     IMomentClock cpuClock,

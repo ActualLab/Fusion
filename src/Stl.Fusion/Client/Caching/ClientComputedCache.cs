@@ -1,11 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
-using Stl.Fusion.Interception;
-using Stl.Rpc;
-using Stl.Rpc.Caching;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Fusion.Interception;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Caching;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Fusion.Client.Caching;
+namespace ActualLab.Fusion.Client.Caching;
 
 public abstract class ClientComputedCache : RpcServiceBase, IClientComputedCache
 {

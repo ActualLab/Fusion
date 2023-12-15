@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Stl.Time.Internal;
+namespace ActualLab.Time.Internal;
 
 public class MomentNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<Moment>
 {

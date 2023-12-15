@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Multitenancy;
+namespace ActualLab.Multitenancy;
 
 public class SingleTenantRegistry<TContext> : ITenantRegistry<TContext>
 {

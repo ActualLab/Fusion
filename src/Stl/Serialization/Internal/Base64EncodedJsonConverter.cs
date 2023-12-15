@@ -1,4 +1,4 @@
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 public class Base64EncodedJsonConverter : JsonConverter<Base64Encoded>
 {

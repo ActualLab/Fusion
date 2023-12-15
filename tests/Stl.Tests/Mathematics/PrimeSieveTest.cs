@@ -1,4 +1,4 @@
-namespace Stl.Tests.Mathematics;
+namespace ActualLab.Tests.Mathematics;
 
 public class PrimeSieveTest(ITestOutputHelper @out) : TestBase(@out)
 {

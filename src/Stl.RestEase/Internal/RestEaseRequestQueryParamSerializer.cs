@@ -1,7 +1,7 @@
 using System.Globalization;
 using RestEase;
 
-namespace Stl.RestEase.Internal;
+namespace ActualLab.RestEase.Internal;
 
 /// <summary>
 /// Serializes object parameters in a format compatible with ASP.NET Core MVC

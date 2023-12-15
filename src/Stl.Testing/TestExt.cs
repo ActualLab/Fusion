@@ -1,7 +1,7 @@
 using FluentAssertions;
 using FluentAssertions.Execution;
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public static class TestExt
 {

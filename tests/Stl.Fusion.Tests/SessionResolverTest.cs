@@ -1,7 +1,7 @@
-using Stl.Fusion.Authentication;
-using Stl.Generators;
+using ActualLab.Fusion.Authentication;
+using ActualLab.Generators;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class SessionResolverTest
 {

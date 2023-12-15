@@ -1,6 +1,6 @@
-using Stl.Versioning;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion.Interception;
+namespace ActualLab.Fusion.Interception;
 
 public interface IComputeMethodFunction : IComputeFunction;
 

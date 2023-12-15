@@ -1,6 +1,6 @@
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
-namespace Stl.Generators.Internal;
+namespace ActualLab.Generators.Internal;
 
 public static class GenerationExt
 {

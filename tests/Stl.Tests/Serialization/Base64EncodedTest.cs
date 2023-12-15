@@ -1,4 +1,4 @@
-namespace Stl.Tests.Serialization;
+namespace ActualLab.Tests.Serialization;
 
 public class Base64EncodedTest(ITestOutputHelper @out) : TestBase(@out)
 {

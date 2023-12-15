@@ -2,8 +2,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Toolkit.HighPerformance;
-using Stl.Internal;
-using Stl.OS;
+using ActualLab.Internal;
+using ActualLab.OS;
 
 namespace Stl;
 

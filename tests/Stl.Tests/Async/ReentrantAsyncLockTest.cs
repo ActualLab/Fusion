@@ -1,6 +1,6 @@
-using Stl.Locking;
+using ActualLab.Locking;
 
-namespace Stl.Tests.Async;
+namespace ActualLab.Tests.Async;
 
 public class ReentrantAsyncLockTest(ITestOutputHelper @out) : TestBase(@out)
 {

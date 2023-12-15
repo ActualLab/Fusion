@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Operations.Reprocessing;
+namespace ActualLab.Fusion.Operations.Reprocessing;
 
 public static class OperationReprocessorExt
 {

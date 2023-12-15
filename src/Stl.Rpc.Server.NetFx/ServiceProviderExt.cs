@@ -1,7 +1,7 @@
 using System.Web.Http.Dependencies;
-using Stl.Rpc.Server.Internal;
+using ActualLab.Rpc.Server.Internal;
 
-namespace Stl.Rpc.Server;
+namespace ActualLab.Rpc.Server;
 
 public static class ServiceProviderExt
 {

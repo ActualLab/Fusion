@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework.Internal;
+using ActualLab.Fusion.EntityFramework.Internal;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public static class ServiceCollectionExt
 {

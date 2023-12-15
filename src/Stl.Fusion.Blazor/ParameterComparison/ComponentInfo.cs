@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 
-namespace Stl.Fusion.Blazor;
+namespace ActualLab.Fusion.Blazor;
 
 public sealed class ComponentInfo
 {

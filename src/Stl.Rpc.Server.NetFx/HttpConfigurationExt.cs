@@ -1,6 +1,6 @@
 using System.Web.Http;
 
-namespace Stl.Rpc.Server;
+namespace ActualLab.Rpc.Server;
 
 public static class HttpConfigurationExt
 {

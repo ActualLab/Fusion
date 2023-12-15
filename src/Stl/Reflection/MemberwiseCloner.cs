@@ -1,4 +1,4 @@
-namespace Stl.Reflection;
+namespace ActualLab.Reflection;
 
 public static class MemberwiseCloner
 {

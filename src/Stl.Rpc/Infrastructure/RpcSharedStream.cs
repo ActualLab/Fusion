@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Rpc.Internal;
+using ActualLab.Rpc.Internal;
 using UnreferencedCode = Stl.Internal.UnreferencedCode;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 #pragma warning disable MA0042
 

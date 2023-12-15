@@ -1,6 +1,6 @@
 using System.Reactive.Linq;
 
-namespace Stl.IO;
+namespace ActualLab.IO;
 
 public static class FileSystemWatcherExt
 {

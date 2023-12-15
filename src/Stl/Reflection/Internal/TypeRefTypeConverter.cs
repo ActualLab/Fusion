@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Stl.Reflection.Internal;
+namespace ActualLab.Reflection.Internal;
 
 // Used by JSON.NET to serialize dictionary keys of this type
 public class TypeRefTypeConverter : TypeConverter

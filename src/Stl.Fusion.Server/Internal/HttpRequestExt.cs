@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 
-namespace Stl.Fusion.Server.Internal;
+namespace ActualLab.Fusion.Server.Internal;
 
 public static class HttpRequestExt
 {

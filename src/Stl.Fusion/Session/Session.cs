@@ -1,10 +1,10 @@
 using System.ComponentModel;
 using System.Globalization;
 using Microsoft.Toolkit.HighPerformance;
-using Stl.Conversion;
-using Stl.Fusion.Internal;
+using ActualLab.Conversion;
+using ActualLab.Fusion.Internal;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [JsonConverter(typeof(SessionJsonConverter))]

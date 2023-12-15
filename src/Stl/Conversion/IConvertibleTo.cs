@@ -1,4 +1,4 @@
-namespace Stl.Conversion;
+namespace ActualLab.Conversion;
 
 /// <summary>
 /// An interface that indicates its implementor can be

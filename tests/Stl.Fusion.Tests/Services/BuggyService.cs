@@ -1,7 +1,7 @@
-using Stl.Interception;
-using Stl.Rpc;
+using ActualLab.Interception;
+using ActualLab.Rpc;
 
-namespace Stl.Fusion.Tests.Services;
+namespace ActualLab.Fusion.Tests.Services;
 
 public interface IBuggyService
 {

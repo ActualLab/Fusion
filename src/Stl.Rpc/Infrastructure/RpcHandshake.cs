@@ -1,4 +1,4 @@
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record RpcHandshake(

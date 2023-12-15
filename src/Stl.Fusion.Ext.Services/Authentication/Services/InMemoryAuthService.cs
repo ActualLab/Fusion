@@ -1,7 +1,7 @@
-using Stl.Multitenancy;
-using Stl.Versioning;
+using ActualLab.Multitenancy;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion.Authentication.Services;
+namespace ActualLab.Fusion.Authentication.Services;
 
 public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAuthBackend
 {

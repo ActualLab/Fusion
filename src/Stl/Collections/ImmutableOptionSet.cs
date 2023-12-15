@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Collections;
+namespace ActualLab.Collections;
 
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]

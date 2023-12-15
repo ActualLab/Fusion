@@ -1,11 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Caching;
-using Stl.Fusion.Client.Internal;
-using Stl.Fusion.Interception;
-using Stl.Fusion.Internal;
-using Stl.Rpc.Caching;
+using ActualLab.Caching;
+using ActualLab.Fusion.Client.Internal;
+using ActualLab.Fusion.Interception;
+using ActualLab.Fusion.Internal;
+using ActualLab.Rpc.Caching;
 
-namespace Stl.Fusion.Client.Interception;
+namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD104
 #pragma warning disable MA0055

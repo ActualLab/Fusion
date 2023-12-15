@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Plugins.Metadata;
-using Stl.Plugins.Internal;
+using ActualLab.Plugins.Metadata;
+using ActualLab.Plugins.Internal;
 
-namespace Stl.Plugins;
+namespace ActualLab.Plugins;
 
 public static class PluginHostExt
 {

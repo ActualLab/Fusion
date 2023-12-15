@@ -1,9 +1,9 @@
 ﻿using Samples.MiniRpc;
-using Stl.CommandR;
-using Stl.Fusion;
-using Stl.Fusion.Server;
-using Stl.Rpc;
-using Stl.Rpc.Server;
+using ActualLab.CommandR;
+using ActualLab.Fusion;
+using ActualLab.Fusion.Server;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Server;
 using static System.Console;
 
 #pragma warning disable ASP0000

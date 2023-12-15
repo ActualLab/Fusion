@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Blazor.Internal;
+namespace ActualLab.Fusion.Blazor.Internal;
 
 public sealed class ComputedStateComponentState<T>(
     ComputedState<T>.Options settings,

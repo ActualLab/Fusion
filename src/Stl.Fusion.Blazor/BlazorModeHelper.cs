@@ -1,8 +1,8 @@
 using System.Web;
 using Microsoft.AspNetCore.Components;
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Fusion.Blazor;
+namespace ActualLab.Fusion.Blazor;
 
 public class BlazorModeHelper(NavigationManager navigator)
 {

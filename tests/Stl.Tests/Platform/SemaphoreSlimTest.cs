@@ -1,6 +1,6 @@
-using Stl.Testing.Collections;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Platform;
+namespace ActualLab.Tests.Platform;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class SemaphoreSlimTest(ITestOutputHelper @out) : TestBase(@out)

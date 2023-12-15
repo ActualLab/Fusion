@@ -1,7 +1,7 @@
-using Stl.Fusion.Tests.Services;
-using Stl.Rpc.Testing;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.Rpc.Testing;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class BuggyServiceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
 {

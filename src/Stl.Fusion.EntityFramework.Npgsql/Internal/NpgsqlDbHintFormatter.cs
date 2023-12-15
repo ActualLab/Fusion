@@ -1,7 +1,7 @@
 using Cysharp.Text;
-using Stl.Fusion.EntityFramework.Internal;
+using ActualLab.Fusion.EntityFramework.Internal;
 
-namespace Stl.Fusion.EntityFramework.Npgsql.Internal;
+namespace ActualLab.Fusion.EntityFramework.Npgsql.Internal;
 
 public class NpgsqlDbHintFormatter : DbHintFormatter
 {

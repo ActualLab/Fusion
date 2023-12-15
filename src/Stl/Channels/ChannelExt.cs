@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Channels;
+namespace ActualLab.Channels;
 
 public static partial class ChannelExt
 {

@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace Stl.Generators.Internal;
+namespace ActualLab.Generators.Internal;
 using static SyntaxFactory;
 
 public static class GenerationHelpers

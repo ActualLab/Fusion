@@ -1,6 +1,6 @@
-using Stl.Interception;
+using ActualLab.Interception;
 
-namespace Stl.CommandR;
+namespace ActualLab.CommandR;
 
 public static class CommandServiceExt
 {

@@ -1,4 +1,4 @@
-namespace Stl.Collections.Slim;
+namespace ActualLab.Collections.Slim;
 
 public struct RefHashSetSlim2<T> : IRefHashSetSlim<T>
     where T : class

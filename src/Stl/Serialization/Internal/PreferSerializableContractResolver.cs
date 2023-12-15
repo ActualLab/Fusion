@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Serialization;
 
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 public class PreferSerializableContractResolver : DefaultContractResolver
 {

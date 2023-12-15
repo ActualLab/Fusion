@@ -1,4 +1,4 @@
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 #pragma warning disable MA0062, CA2217
 

@@ -1,8 +1,8 @@
 using System.Reflection;
-using Stl.Caching;
-using Stl.IO;
+using ActualLab.Caching;
+using ActualLab.IO;
 
-namespace Stl.Tests.Caching;
+namespace ActualLab.Tests.Caching;
 
 public class FileSystemCacheTest(ITestOutputHelper @out) : TestBase(@out)
 {

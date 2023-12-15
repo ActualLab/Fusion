@@ -1,7 +1,7 @@
-using Stl.Channels;
+using ActualLab.Channels;
 using Xunit.Abstractions;
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public class TestChannelPair<T> : ChannelPair<T>
 {

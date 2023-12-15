@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using Stl.CommandR.Internal;
+using ActualLab.CommandR.Internal;
 
-namespace Stl.CommandR.Diagnostics;
+namespace ActualLab.CommandR.Diagnostics;
 
 public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand>
 {

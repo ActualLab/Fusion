@@ -1,11 +1,11 @@
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
-using Stl.Internal;
-using Stl.Reflection.Internal;
+using ActualLab.Internal;
+using ActualLab.Reflection.Internal;
 using Errors = Stl.Reflection.Internal.Errors;
 
-namespace Stl.Reflection;
+namespace ActualLab.Reflection;
 
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]

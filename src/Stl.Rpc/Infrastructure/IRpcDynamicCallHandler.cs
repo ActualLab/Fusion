@@ -1,6 +1,6 @@
-using Stl.Interception;
+using ActualLab.Interception;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public interface IRpcDynamicCallHandler
 {

@@ -1,4 +1,4 @@
-namespace Stl.Generators.Internal;
+namespace ActualLab.Generators.Internal;
 
 public sealed class ConcurrentFuncBasedGenerator<T> : ConcurrentGenerator<T>
 {

@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Rpc.Caching;
-using Stl.Rpc.Internal;
+using ActualLab.Rpc.Caching;
+using ActualLab.Rpc.Internal;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcOutboundCall(RpcOutboundContext context)
     : RpcCall(context.MethodDef!)

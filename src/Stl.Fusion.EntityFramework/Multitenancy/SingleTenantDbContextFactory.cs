@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework.Internal;
-using Stl.Multitenancy;
+using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public sealed class SingleTenantDbContextFactory<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]

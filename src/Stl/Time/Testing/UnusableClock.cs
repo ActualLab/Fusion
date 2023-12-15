@@ -1,7 +1,7 @@
 using System.Reactive.PlatformServices;
-using Stl.Time.Internal;
+using ActualLab.Time.Internal;
 
-namespace Stl.Time.Testing;
+namespace ActualLab.Time.Testing;
 
 public sealed class UnusableClock : IMomentClock
 {

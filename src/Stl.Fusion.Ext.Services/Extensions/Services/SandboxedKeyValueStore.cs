@@ -1,9 +1,9 @@
 using System.Globalization;
-using Stl.Fusion.Authentication;
-using Stl.Multitenancy;
-using Stl.Fusion.Extensions.Internal;
+using ActualLab.Fusion.Authentication;
+using ActualLab.Multitenancy;
+using ActualLab.Fusion.Extensions.Internal;
 
-namespace Stl.Fusion.Extensions.Services;
+namespace ActualLab.Fusion.Extensions.Services;
 
 public partial class SandboxedKeyValueStore(
         SandboxedKeyValueStore.Options settings,

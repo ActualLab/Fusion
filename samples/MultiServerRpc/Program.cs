@@ -1,12 +1,12 @@
 ﻿using Microsoft.Toolkit.HighPerformance;
 using Samples.MultiServerRpc;
-using Stl.CommandR;
-using Stl.Fusion;
-using Stl.Fusion.Server;
-using Stl.Rpc;
-using Stl.Rpc.Clients;
-using Stl.Rpc.Server;
-using Stl.Text;
+using ActualLab.CommandR;
+using ActualLab.Fusion;
+using ActualLab.Fusion.Server;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Clients;
+using ActualLab.Rpc.Server;
+using ActualLab.Text;
 using static System.Console;
 
 #pragma warning disable ASP0000

@@ -3,12 +3,12 @@ using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Stl.Fusion.EntityFramework.Internal;
-using Stl.Fusion.EntityFramework.Operations;
-using Stl.Multitenancy;
-using Stl.Locking;
+using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.Multitenancy;
+using ActualLab.Locking;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public interface IDbOperationScope : IOperationScope
 {

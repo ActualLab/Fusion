@@ -1,6 +1,6 @@
-using Stl.CommandR.Internal;
+using ActualLab.CommandR.Internal;
 
-namespace Stl.CommandR.Commands;
+namespace ActualLab.CommandR.Commands;
 
 public interface ILocalCommand : ICommand
 {

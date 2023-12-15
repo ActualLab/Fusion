@@ -1,4 +1,4 @@
-namespace Stl.Redis;
+namespace ActualLab.Redis;
 
 public class RedisSequenceSet
 {

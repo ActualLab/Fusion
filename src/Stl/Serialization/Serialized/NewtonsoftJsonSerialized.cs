@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 public static class NewtonsoftJsonSerialized
 {

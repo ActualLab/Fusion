@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 
-namespace Stl.Tests.DependencyInjection;
+namespace ActualLab.Tests.DependencyInjection;
 
 public class SettingsTest
 {

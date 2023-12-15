@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Controllers;
 
-namespace Stl.Fusion.Server.Internal;
+namespace ActualLab.Fusion.Server.Internal;
 
 public class ControllerFilter : ControllerFeatureProvider
 {

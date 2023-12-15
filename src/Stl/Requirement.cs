@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Requirements;
+using ActualLab.Requirements;
 
 namespace Stl;
 

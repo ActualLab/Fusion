@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
-namespace Stl.Diagnostics;
+namespace ActualLab.Diagnostics;
 
 public static class TypeExt
 {

@@ -1,4 +1,4 @@
-namespace Stl.IO.Internal;
+namespace ActualLab.IO.Internal;
 
 public class FilePathJsonConverter : JsonConverter<FilePath>
 {

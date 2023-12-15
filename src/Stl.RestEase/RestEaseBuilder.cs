@@ -2,9 +2,9 @@ using System.Globalization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
 using RestEase;
-using Stl.RestEase.Internal;
+using ActualLab.RestEase.Internal;
 
-namespace Stl.RestEase;
+namespace ActualLab.RestEase;
 
 public readonly struct RestEaseBuilder
 {

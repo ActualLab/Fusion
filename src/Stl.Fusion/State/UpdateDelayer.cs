@@ -1,6 +1,6 @@
-using Stl.Fusion.UI;
+using ActualLab.Fusion.UI;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public interface IUpdateDelayer
 {

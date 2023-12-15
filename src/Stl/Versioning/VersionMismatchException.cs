@@ -1,4 +1,4 @@
-namespace Stl.Versioning;
+namespace ActualLab.Versioning;
 
 #pragma warning disable SYSLIB0051
 

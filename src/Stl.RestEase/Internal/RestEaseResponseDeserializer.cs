@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using RestEase;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.RestEase.Internal;
+namespace ActualLab.RestEase.Internal;
 
 public class RestEaseResponseDeserializer : ResponseDeserializer
 {

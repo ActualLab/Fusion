@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Stl.Fusion.EntityFramework.Internal;
+namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public static class ExecutionStrategyExt
 {

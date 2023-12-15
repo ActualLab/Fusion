@@ -2,7 +2,7 @@ using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
 
-namespace Stl.Fusion.Server;
+namespace ActualLab.Fusion.Server;
 
 // Taken from https://stackoverflow.com/questions/25631970/how-to-post-plain-text-to-asp-net-web-api-endpoint
 // Without it, RestEase client quotes every result of type Task<string>.

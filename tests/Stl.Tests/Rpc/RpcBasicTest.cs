@@ -1,10 +1,10 @@
-using Stl.Rpc;
-using Stl.Rpc.Diagnostics;
-using Stl.Rpc.Infrastructure;
-using Stl.Rpc.Testing;
-using Stl.Testing.Collections;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Testing;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Rpc;
+namespace ActualLab.Tests.Rpc;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)

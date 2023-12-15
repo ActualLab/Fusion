@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
-using Stl.Redis;
+using ActualLab.Redis;
 
-namespace Stl.Fusion.EntityFramework.Redis;
+namespace ActualLab.Fusion.EntityFramework.Redis;
 
 public static class DbContextBuilderExt
 {

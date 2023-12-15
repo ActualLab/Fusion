@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json.Serialization;
-using Stl.Internal;
-using Stl.Serialization.Internal;
+using ActualLab.Internal;
+using ActualLab.Serialization.Internal;
 using Errors = Stl.Serialization.Internal.Errors;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 #if NET6_0_OR_GREATER
 [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

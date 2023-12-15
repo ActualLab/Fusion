@@ -1,4 +1,4 @@
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial record RetryDelaySeq(

@@ -1,4 +1,4 @@
-namespace Stl.Async.Internal;
+namespace ActualLab.Async.Internal;
 
 // Based on https://github.com/dotnet/runtime/issues/22144#issuecomment-1328319861
 

@@ -1,4 +1,4 @@
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 #pragma warning disable CA1813 // Consider making sealed
 

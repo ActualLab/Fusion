@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Operations;
+namespace ActualLab.Fusion.Operations;
 
 public interface IOperationScope : IAsyncDisposable, IRequirementTarget
 {

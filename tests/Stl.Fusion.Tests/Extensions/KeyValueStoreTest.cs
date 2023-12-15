@@ -1,8 +1,8 @@
-using Stl.Fusion.Extensions;
-using Stl.Multitenancy;
-using Stl.Time.Testing;
+using ActualLab.Fusion.Extensions;
+using ActualLab.Multitenancy;
+using ActualLab.Time.Testing;
 
-namespace Stl.Fusion.Tests.Extensions;
+namespace ActualLab.Fusion.Tests.Extensions;
 
 public class InMemoryKeyValueStoreTest(ITestOutputHelper @out) : KeyValueStoreTestBase(@out, true);
 

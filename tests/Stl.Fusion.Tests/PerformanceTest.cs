@@ -1,10 +1,10 @@
 using System.Text;
 using System.Text.Json;
-using Stl.Fusion.Tests.Model;
-using Stl.Fusion.Tests.Services;
-using Stl.OS;
+using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.OS;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public abstract class PerformanceTestBase : FusionTestBase
 {

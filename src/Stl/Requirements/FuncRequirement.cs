@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Requirements;
+namespace ActualLab.Requirements;
 
 public record FuncRequirement<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>

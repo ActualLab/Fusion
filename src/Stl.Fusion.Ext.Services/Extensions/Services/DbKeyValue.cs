@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Stl.Fusion.Extensions.Services;
+namespace ActualLab.Fusion.Extensions.Services;
 
 [Table("_KeyValues")]
 [Index(nameof(ExpiresAt))]

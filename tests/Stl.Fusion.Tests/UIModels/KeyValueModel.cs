@@ -1,7 +1,7 @@
-using Stl.Fusion.Tests.Services;
-using Stl.Fusion.UI;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.Fusion.UI;
 
-namespace Stl.Fusion.Tests.UIModels;
+namespace ActualLab.Fusion.Tests.UIModels;
 
 public class KeyValueModel<TValue>
 {

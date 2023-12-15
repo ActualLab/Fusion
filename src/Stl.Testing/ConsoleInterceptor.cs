@@ -1,8 +1,8 @@
 using System.Text;
-using Stl.Testing.Output;
+using ActualLab.Testing.Output;
 using Xunit.Abstractions;
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public static class ConsoleInterceptor
 {

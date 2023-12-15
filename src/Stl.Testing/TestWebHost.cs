@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Hosting;
-using Stl.IO;
+using ActualLab.IO;
 #if NETCOREAPP
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -11,7 +11,7 @@ using System.Net.Http;
 using System.Web.Http;
 #endif
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public interface ITestWebHost : IDisposable
 {

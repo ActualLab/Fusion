@@ -1,9 +1,9 @@
 using System.Net.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Filters;
-using Stl.Fusion.Authentication;
+using ActualLab.Fusion.Authentication;
 
-namespace Stl.Fusion.Server;
+namespace ActualLab.Fusion.Server;
 
 public sealed class UseDefaultSessionAttribute : ActionFilterAttribute
 {

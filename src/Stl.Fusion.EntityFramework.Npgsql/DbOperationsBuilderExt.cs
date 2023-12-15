@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Stl.Fusion.EntityFramework.Npgsql.Operations;
-using Stl.Fusion.EntityFramework.Operations;
+using ActualLab.Fusion.EntityFramework.Npgsql.Operations;
+using ActualLab.Fusion.EntityFramework.Operations;
 
-namespace Stl.Fusion.EntityFramework.Npgsql;
+namespace ActualLab.Fusion.EntityFramework.Npgsql;
 
 public static class DbOperationsBuilderExt
 {

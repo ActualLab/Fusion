@@ -1,4 +1,4 @@
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously) : IAsyncEnumerable<AsyncState<T>>
 {

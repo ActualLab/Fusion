@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Http;
-using Stl.Fusion.Server.Middlewares;
-using Stl.Rpc;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Fusion.Server.Middlewares;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Fusion.Server.Rpc;
+namespace ActualLab.Fusion.Server.Rpc;
 
 public class SessionBoundRpcConnectionFactory
 {

@@ -1,4 +1,4 @@
-namespace Stl.CommandR.Commands;
+namespace ActualLab.CommandR.Commands;
 
 public interface IPreparedCommand : ICommand
 {

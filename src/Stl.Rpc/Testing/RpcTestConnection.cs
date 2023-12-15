@@ -1,8 +1,8 @@
-using Stl.Channels;
-using Stl.Rpc.Infrastructure;
-using Stl.Rpc.Internal;
+using ActualLab.Channels;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
-namespace Stl.Rpc.Testing;
+namespace ActualLab.Rpc.Testing;
 
 public class RpcTestConnection
 {

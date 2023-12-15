@@ -1,8 +1,8 @@
-using Stl.Generators.Internal;
-using Stl.OS;
-using Stl.Time.Internal;
+using ActualLab.Generators.Internal;
+using ActualLab.OS;
+using ActualLab.Time.Internal;
 
-namespace Stl.Generators;
+namespace ActualLab.Generators;
 
 public static class ConcurrentInt32Generator
 {

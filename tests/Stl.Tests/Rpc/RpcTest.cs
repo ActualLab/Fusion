@@ -1,8 +1,8 @@
-using Stl.OS;
-using Stl.Rpc;
-using Stl.Testing.Collections;
+using ActualLab.OS;
+using ActualLab.Rpc;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Rpc;
+namespace ActualLab.Tests.Rpc;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcWebSocketTest(ITestOutputHelper @out) : RpcTestBase(@out)

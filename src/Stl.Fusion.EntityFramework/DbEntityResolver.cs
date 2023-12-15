@@ -5,11 +5,11 @@ using System.Globalization;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.Internal;
-using Stl.Fusion.EntityFramework.Internal;
-using Stl.Multitenancy;
-using Stl.Net;
+using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Multitenancy;
+using ActualLab.Net;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public interface IDbEntityResolver<TKey, TDbEntity>
     where TKey : notnull

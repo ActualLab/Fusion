@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using Stl.Internal;
-using Stl.IO.Internal;
+using ActualLab.Internal;
+using ActualLab.IO.Internal;
 
-namespace Stl.IO;
+namespace ActualLab.IO;
 
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]

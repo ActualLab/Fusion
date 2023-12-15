@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Stl.Time.Internal;
+namespace ActualLab.Time.Internal;
 
 public class MomentTypeConverter : TypeConverter
 {

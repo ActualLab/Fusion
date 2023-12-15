@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.CommandR.Internal;
+using ActualLab.CommandR.Internal;
 
-namespace Stl.CommandR;
+namespace ActualLab.CommandR;
 
 public static class CommanderExt
 {

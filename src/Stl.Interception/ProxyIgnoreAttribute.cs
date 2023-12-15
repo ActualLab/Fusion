@@ -1,4 +1,4 @@
-namespace Stl.Interception;
+namespace ActualLab.Interception;
 
 #pragma warning disable CA1813 // Consider making sealed
 

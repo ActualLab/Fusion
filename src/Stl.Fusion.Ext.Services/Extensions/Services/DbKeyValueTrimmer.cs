@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework;
-using Stl.Multitenancy;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.Extensions.Services;
+namespace ActualLab.Fusion.Extensions.Services;
 
 public class DbKeyValueTrimmer<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,

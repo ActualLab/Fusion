@@ -1,9 +1,9 @@
-using Stl.Fusion.Operations.Internal;
-using Stl.Generators;
-using Stl.OS;
+using ActualLab.Fusion.Operations.Internal;
+using ActualLab.Generators;
+using ActualLab.OS;
 using Errors = Stl.Internal.Errors;
 
-namespace Stl.Fusion.Operations.Reprocessing;
+namespace ActualLab.Fusion.Operations.Reprocessing;
 
 /// <summary>
 /// Tries to reprocess commands that failed with a reprocessable (transient) error.

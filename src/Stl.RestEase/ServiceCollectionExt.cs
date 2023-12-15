@@ -1,4 +1,4 @@
-namespace Stl.RestEase;
+namespace ActualLab.RestEase;
 
 public static class ServiceCollectionExt
 {

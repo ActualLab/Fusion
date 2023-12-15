@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.Authentication.Services;
-using Stl.Fusion.EntityFramework;
-using Stl.Fusion.EntityFramework.Operations;
-using Stl.Fusion.Extensions.Services;
+using ActualLab.Fusion.Authentication.Services;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.Fusion.Extensions.Services;
 
 namespace Templates.TodoApp.Services;
 

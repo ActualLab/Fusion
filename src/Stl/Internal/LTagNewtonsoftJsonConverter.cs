@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Stl.Internal;
+namespace ActualLab.Internal;
 
 public class LTagNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<LTag>
 {

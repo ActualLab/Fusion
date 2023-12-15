@@ -1,4 +1,4 @@
-namespace Stl.Channels;
+namespace ActualLab.Channels;
 
 public static class EnumerableExt
 {

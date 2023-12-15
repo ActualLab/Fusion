@@ -1,7 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-using Stl.Fusion.Tests;
-using Stl.Reflection;
+using ActualLab.Fusion.Tests;
+using ActualLab.Reflection;
 
 if (HasSwitch("PostgreSql") || HasSwitch("npgsql") || HasSwitchAll())
     await Run<PerformanceTest_PostgreSql>();

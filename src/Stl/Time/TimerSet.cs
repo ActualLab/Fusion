@@ -1,4 +1,4 @@
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 public record TimerSetOptions
 {

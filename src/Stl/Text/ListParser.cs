@@ -1,7 +1,7 @@
 using Cysharp.Text;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Text;
+namespace ActualLab.Text;
 
 [StructLayout(LayoutKind.Auto)]
 public ref struct ListParser

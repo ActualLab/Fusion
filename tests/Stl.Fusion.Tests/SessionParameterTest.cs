@@ -1,7 +1,7 @@
-using Stl.Fusion.Authentication;
-using Stl.Fusion.Tests.Services;
+using ActualLab.Fusion.Authentication;
+using ActualLab.Fusion.Tests.Services;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class SessionParameterTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
 {

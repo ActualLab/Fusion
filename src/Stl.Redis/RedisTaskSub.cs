@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using StackExchange.Redis;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Redis;
+namespace ActualLab.Redis;
 
 public sealed class RedisTaskSub : RedisSubBase
 {

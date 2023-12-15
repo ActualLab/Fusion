@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Fusion.Internal;
-using Stl.Interception;
-using Stl.Interception.Interceptors;
+using ActualLab.Fusion.Internal;
+using ActualLab.Interception;
+using ActualLab.Interception.Interceptors;
 
-namespace Stl.Fusion.Interception;
+namespace ActualLab.Fusion.Interception;
 
 public abstract class ComputeServiceInterceptorBase(
         ComputeServiceInterceptorBase.Options settings,

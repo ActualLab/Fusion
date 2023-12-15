@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Rpc.Caching;
-using Stl.Rpc.Internal;
+using ActualLab.Interception;
+using ActualLab.Rpc.Caching;
+using ActualLab.Rpc.Internal;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public sealed class RpcOutboundContext(List<RpcHeader>? headers = null)
 {

@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Requirements;
+namespace ActualLab.Requirements;
 
 public record ServiceExceptionWrapper<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>

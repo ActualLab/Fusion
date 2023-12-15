@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
+using ActualLab.Internal;
 using Errors = Stl.Serialization.Internal.Errors;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>

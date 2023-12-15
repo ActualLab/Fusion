@@ -1,4 +1,4 @@
-namespace Stl.Interception;
+namespace ActualLab.Interception;
 
 public interface IProxy : IRequiresAsyncProxy
 {

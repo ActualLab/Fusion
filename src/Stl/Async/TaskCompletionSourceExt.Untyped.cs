@@ -1,4 +1,4 @@
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 #pragma warning disable CA2016
 

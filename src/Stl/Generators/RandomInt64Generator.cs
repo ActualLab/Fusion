@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace Stl.Generators;
+namespace ActualLab.Generators;
 
 // Thread-safe!
 public sealed class RandomInt64Generator : Generator<long>

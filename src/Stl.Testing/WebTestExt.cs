@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public static class WebTestExt
 {

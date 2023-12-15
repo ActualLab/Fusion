@@ -1,6 +1,6 @@
 using System.Runtime.ExceptionServices;
 
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 public static partial class TaskExt
 {

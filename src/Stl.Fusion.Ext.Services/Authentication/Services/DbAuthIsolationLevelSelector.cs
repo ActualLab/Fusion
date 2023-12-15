@@ -1,8 +1,8 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework;
 
-namespace Stl.Fusion.Authentication.Services;
+namespace ActualLab.Fusion.Authentication.Services;
 
 public class DbAuthIsolationLevelSelector<TDbContext>() : DbIsolationLevelSelector<TDbContext>(null)
     where TDbContext : DbContext

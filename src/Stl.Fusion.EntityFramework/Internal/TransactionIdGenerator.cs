@@ -1,7 +1,7 @@
 using System.Globalization;
-using Stl.Generators;
+using ActualLab.Generators;
 
-namespace Stl.Fusion.EntityFramework.Internal;
+namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public class TransactionIdGenerator : Generator<string>
 {

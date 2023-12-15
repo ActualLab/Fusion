@@ -1,6 +1,6 @@
 using System.Buffers;
 
-namespace Stl.Pooling;
+namespace ActualLab.Pooling;
 
 public static class ArrayPoolExt
 {

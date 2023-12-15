@@ -1,4 +1,4 @@
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 [StructLayout(LayoutKind.Sequential)] // Important!
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]

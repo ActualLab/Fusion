@@ -1,4 +1,4 @@
-namespace Stl.Fusion.EntityFramework.Operations;
+namespace ActualLab.Fusion.EntityFramework.Operations;
 
 public abstract record DbOperationCompletionTrackingOptions
 {

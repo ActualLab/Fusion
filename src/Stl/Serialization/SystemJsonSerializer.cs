@@ -1,9 +1,9 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
-using Stl.Serialization.Internal;
+using ActualLab.Internal;
+using ActualLab.Serialization.Internal;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 public class SystemJsonSerializer : TextSerializerBase
 {

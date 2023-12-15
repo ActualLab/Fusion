@@ -1,10 +1,10 @@
-using Stl.Caching;
-using Stl.Plugins;
-using Stl.Reflection;
+using ActualLab.Caching;
+using ActualLab.Plugins;
+using ActualLab.Reflection;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
-namespace Stl.Tests.Plugins;
+namespace ActualLab.Tests.Plugins;
 
 public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
 {

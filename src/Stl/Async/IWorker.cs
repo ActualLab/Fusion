@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
 
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 public interface IWorker : IAsyncDisposable, IDisposable, IHasWhenDisposed, IHostedService
 {

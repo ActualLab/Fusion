@@ -1,6 +1,6 @@
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 #pragma warning disable CA2012
 

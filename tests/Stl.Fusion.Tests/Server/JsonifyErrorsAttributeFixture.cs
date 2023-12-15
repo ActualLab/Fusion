@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Mvc.Filters;
 #endif
 
 using AutoFixture;
-using Stl.Fusion.Server;
+using ActualLab.Fusion.Server;
 
-namespace Stl.Fusion.Tests.Server;
+namespace ActualLab.Fusion.Tests.Server;
 
 public class JsonifyErrorsAttributeFixture : BaseFixture<JsonifyErrorsAttribute>
 {

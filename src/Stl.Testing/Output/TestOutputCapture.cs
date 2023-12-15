@@ -3,7 +3,7 @@ using System.Text;
 using FluentAssertions.Primitives;
 using Xunit.Abstractions;
 
-namespace Stl.Testing.Output;
+namespace ActualLab.Testing.Output;
 
 public class TestOutputCapture : IStandardStreamWriter, ITestOutputHelper
 {

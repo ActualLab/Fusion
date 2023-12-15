@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.DependencyInjection;
+namespace ActualLab.DependencyInjection;
 
 public static class ServiceProviderExt
 {

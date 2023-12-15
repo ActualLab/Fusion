@@ -1,12 +1,12 @@
 using System.ComponentModel;
-using Stl.Conversion;
-using Stl.Serialization.Internal;
+using ActualLab.Conversion;
+using ActualLab.Serialization.Internal;
 
 #if !NETSTANDARD2_0
 using System.Diagnostics.CodeAnalysis;
 #endif
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [JsonConverter(typeof(JsonStringJsonConverter))]

@@ -1,6 +1,6 @@
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Interception.Interceptors;
+namespace ActualLab.Interception.Interceptors;
 
 public class TypedFactoryInterceptor(IServiceProvider services) : Interceptor
 {

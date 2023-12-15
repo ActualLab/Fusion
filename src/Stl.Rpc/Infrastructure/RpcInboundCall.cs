@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Rpc.Diagnostics;
-using Stl.Rpc.Internal;
+using ActualLab.Interception;
+using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.Internal;
 using Errors = Stl.Rpc.Internal.Errors;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 #pragma warning disable MA0022
 #pragma warning disable RCS1210

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using Stl.Fusion.Authentication;
+using ActualLab.Fusion.Authentication;
 
-namespace Stl.Fusion.Blazor.Authentication;
+namespace ActualLab.Fusion.Blazor.Authentication;
 
 public class AuthState(User? user, bool isSignOutForced = false)
     : AuthenticationState(user.OrGuest().ToClaimsPrincipal())

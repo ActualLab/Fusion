@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception.Interceptors;
+using ActualLab.Interception.Interceptors;
 
-namespace Stl.Interception;
+namespace ActualLab.Interception;
 
 public interface ITypeViewFactory
 {

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.Model;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class DbContextTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {

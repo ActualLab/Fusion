@@ -1,10 +1,10 @@
-using Stl.Fusion.Extensions;
-using Stl.Fusion.Tests.Services;
-using Stl.Rpc;
-using Stl.Rpc.Testing;
-using Stl.Testing.Collections;
+using ActualLab.Fusion.Extensions;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Testing;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)

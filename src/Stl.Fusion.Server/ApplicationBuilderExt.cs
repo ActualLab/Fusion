@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
-using Stl.Fusion.Server.Middlewares;
+using ActualLab.Fusion.Server.Middlewares;
 
-namespace Stl.Fusion.Server;
+namespace ActualLab.Fusion.Server;
 
 public static class ApplicationBuilderExt
 {

@@ -1,6 +1,6 @@
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Multitenancy;
+namespace ActualLab.Multitenancy;
 
 public static class TenantRegistryExt
 {

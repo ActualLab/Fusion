@@ -1,11 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Fusion.Client.Caching;
-using Stl.Fusion.Interception;
-using Stl.Interception;
-using Stl.Rpc;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Fusion.Client.Caching;
+using ActualLab.Fusion.Interception;
+using ActualLab.Interception;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Fusion.Client.Interception;
+namespace ActualLab.Fusion.Client.Interception;
 
 public class ClientComputeServiceInterceptor(
         ClientComputeServiceInterceptor.Options settings,

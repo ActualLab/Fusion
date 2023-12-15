@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using Cysharp.Text;
 
-namespace Stl.Reflection;
+namespace ActualLab.Reflection;
 
 public static partial class TypeExt
 {

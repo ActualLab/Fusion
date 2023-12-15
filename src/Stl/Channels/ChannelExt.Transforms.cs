@@ -1,6 +1,6 @@
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Channels;
+namespace ActualLab.Channels;
 
 public static partial class ChannelExt
 {

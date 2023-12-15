@@ -1,4 +1,4 @@
-namespace Stl.Tests;
+namespace ActualLab.Tests;
 
 public class TerminalErrorDetectorTest
 {

@@ -1,7 +1,7 @@
-using Stl.Interception;
+using ActualLab.Interception;
 using ServiceProviderExt = Stl.CommandR.ServiceProviderExt;
 
-namespace Stl.Tests.CommandR.Services;
+namespace ActualLab.Tests.CommandR.Services;
 
 public interface IMathService : ICommandService, IRequiresFullProxy
 {

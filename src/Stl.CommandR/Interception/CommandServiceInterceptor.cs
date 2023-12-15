@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.CommandR.Internal;
-using Stl.Interception;
-using Stl.Interception.Interceptors;
-using Stl.Rpc.Infrastructure;
+using ActualLab.CommandR.Internal;
+using ActualLab.Interception;
+using ActualLab.Interception.Interceptors;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.CommandR.Interception;
+namespace ActualLab.CommandR.Interception;
 
 #if !NET5_0
 [RequiresUnreferencedCode(UnreferencedCode.Commander)]

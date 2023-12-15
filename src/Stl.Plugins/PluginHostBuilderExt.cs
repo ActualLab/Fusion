@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Stl.Plugins.Metadata;
-using Stl.Plugins.Internal;
+using ActualLab.Plugins.Metadata;
+using ActualLab.Plugins.Internal;
 
-namespace Stl.Plugins;
+namespace ActualLab.Plugins;
 
 public static class PluginHostBuilderExt
 {

@@ -1,6 +1,6 @@
-using Stl.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework;
 
-namespace Stl.Tests.CommandR.Services;
+namespace ActualLab.Tests.CommandR.Services;
 
 public class UserService(IServiceProvider services) : DbServiceBase<TestDbContext>(services), ICommandService
 {

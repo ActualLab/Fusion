@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.CommandR.Interception;
-using Stl.Interception;
+using ActualLab.CommandR.Interception;
+using ActualLab.Interception;
 
-namespace Stl.CommandR.Internal;
+namespace ActualLab.CommandR.Internal;
 
 public static class CommanderProxies
 {

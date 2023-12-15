@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Server;
+namespace ActualLab.Fusion.Server;
 
 public static class FusionBuilderExt
 {

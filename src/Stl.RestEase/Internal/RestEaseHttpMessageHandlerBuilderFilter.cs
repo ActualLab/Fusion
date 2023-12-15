@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Http;
 
-namespace Stl.RestEase.Internal;
+namespace ActualLab.RestEase.Internal;
 
 // ReSharper disable once ClassNeverInstantiated.Global
 public class RestEaseHttpMessageHandlerBuilderFilter : IHttpMessageHandlerBuilderFilter

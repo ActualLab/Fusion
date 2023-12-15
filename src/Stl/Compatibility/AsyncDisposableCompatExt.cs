@@ -1,4 +1,4 @@
-using Stl.Compatibility;
+using ActualLab.Compatibility;
 
 // ReSharper disable once CheckNamespace
 namespace System;

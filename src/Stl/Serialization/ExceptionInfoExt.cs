@@ -1,4 +1,4 @@
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 public static class ExceptionInfoExt
 {

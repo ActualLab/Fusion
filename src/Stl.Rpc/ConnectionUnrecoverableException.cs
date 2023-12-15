@@ -1,4 +1,4 @@
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 #pragma warning disable SYSLIB0051
 

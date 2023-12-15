@@ -2,9 +2,9 @@ using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Cysharp.Text;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 public abstract class TextSerializerBase : ITextSerializer
 {

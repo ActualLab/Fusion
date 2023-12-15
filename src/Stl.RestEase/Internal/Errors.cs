@@ -1,4 +1,4 @@
-namespace Stl.RestEase.Internal;
+namespace ActualLab.RestEase.Internal;
 
 public static class Errors
 {

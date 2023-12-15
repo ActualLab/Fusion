@@ -1,4 +1,4 @@
-namespace Stl.Redis.Internal;
+namespace ActualLab.Redis.Internal;
 
 public static class Errors
 {

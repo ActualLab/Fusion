@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.CommandR.Internal;
-using Stl.Interception.Interceptors;
+using ActualLab.CommandR.Internal;
+using ActualLab.Interception.Interceptors;
 
-namespace Stl.CommandR.Interception;
+namespace ActualLab.CommandR.Interception;
 
 public sealed class CommandHandlerMethodDef : MethodDef
 {

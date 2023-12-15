@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 
-namespace Stl.Requirements;
+namespace ActualLab.Requirements;
 
 public readonly record struct ExceptionBuilder
 {

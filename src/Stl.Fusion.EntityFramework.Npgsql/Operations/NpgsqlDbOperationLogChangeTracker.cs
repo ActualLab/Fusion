@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using Stl.Fusion.EntityFramework.Operations;
-using Stl.Multitenancy;
+using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.EntityFramework.Npgsql.Operations;
+namespace ActualLab.Fusion.EntityFramework.Npgsql.Operations;
 
 #pragma warning disable EF1002
 

@@ -1,6 +1,6 @@
 using StackExchange.Redis;
 
-namespace Stl.Redis;
+namespace ActualLab.Redis;
 
 [StructLayout(LayoutKind.Auto)]
 [Serializable]

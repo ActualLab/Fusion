@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
-using Stl.Versioning;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion.Authentication.Services;
+namespace ActualLab.Fusion.Authentication.Services;
 
 [Table("Users")]
 [Index(nameof(Name))]

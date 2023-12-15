@@ -1,4 +1,4 @@
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public class ThreadSafe<T>
 {

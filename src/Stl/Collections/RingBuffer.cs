@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Collections;
+namespace ActualLab.Collections;
 
 public struct RingBuffer<T> : IReadOnlyList<T>
 {

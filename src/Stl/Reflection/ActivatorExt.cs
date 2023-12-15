@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Reflection;
+namespace ActualLab.Reflection;
 
 public static class ActivatorExt
 {

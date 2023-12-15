@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.Hosting;
 
-namespace Stl.Tests.DependencyInjection;
+namespace ActualLab.Tests.DependencyInjection;
 
 public class HostedServiceTest
 {

@@ -1,5 +1,5 @@
 using Samples.HelloCart.V2;
-using Stl.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework;
 
 namespace Samples.HelloCart.V3;
 

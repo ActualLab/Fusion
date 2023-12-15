@@ -1,8 +1,8 @@
-using Stl.Fusion.Internal;
-using Stl.Fusion.Tests.Model;
-using Stl.Fusion.Tests.Services;
+using ActualLab.Fusion.Internal;
+using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.Services;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {

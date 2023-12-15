@@ -3,7 +3,7 @@ using System.Diagnostics.Contracts;
 using Microsoft.Toolkit.HighPerformance;
 using Microsoft.Toolkit.HighPerformance.Buffers;
 
-namespace Stl.IO;
+namespace ActualLab.IO;
 
 public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity) : IBuffer<T>, IMemoryOwner<T>
 {

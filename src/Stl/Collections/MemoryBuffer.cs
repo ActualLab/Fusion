@@ -1,6 +1,6 @@
 using System.Buffers;
 
-namespace Stl.Collections;
+namespace ActualLab.Collections;
 
 // List-like struct that typically requires zero allocations
 // (it relies on MemoryPool<T>.Shared & disposes its buffer);

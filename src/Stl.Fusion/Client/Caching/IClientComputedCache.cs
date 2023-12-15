@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Fusion.Interception;
-using Stl.Rpc.Caching;
+using ActualLab.Fusion.Interception;
+using ActualLab.Rpc.Caching;
 
-namespace Stl.Fusion.Client.Caching;
+namespace ActualLab.Fusion.Client.Caching;
 
 public interface IClientComputedCache
 {

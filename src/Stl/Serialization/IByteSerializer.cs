@@ -1,8 +1,8 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 public interface IByteSerializer
 {

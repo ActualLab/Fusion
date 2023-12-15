@@ -1,4 +1,4 @@
-namespace Stl.DependencyInjection;
+namespace ActualLab.DependencyInjection;
 
 public abstract record MixedModeService<T>(T Service, IServiceProvider Services)
     where T : class

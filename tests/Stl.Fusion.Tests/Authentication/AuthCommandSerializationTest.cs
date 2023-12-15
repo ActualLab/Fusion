@@ -1,6 +1,6 @@
-using Stl.Fusion.Authentication;
+using ActualLab.Fusion.Authentication;
 
-namespace Stl.Fusion.Tests.Authentication;
+namespace ActualLab.Fusion.Tests.Authentication;
 
 public class AuthCommandSerializationTest(ITestOutputHelper @out) : TestBase(@out)
 {

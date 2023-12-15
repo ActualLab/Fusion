@@ -1,4 +1,4 @@
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public record RpcPeerRef(Symbol Key, bool IsServer = false)
 {

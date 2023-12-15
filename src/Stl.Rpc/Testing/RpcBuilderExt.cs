@@ -1,4 +1,4 @@
-namespace Stl.Rpc.Testing;
+namespace ActualLab.Rpc.Testing;
 
 public static class RpcBuilderExt
 {

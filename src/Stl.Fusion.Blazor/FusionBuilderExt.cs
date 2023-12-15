@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Blazor;
+namespace ActualLab.Fusion.Blazor;
 
 public static class FusionBuilderExt
 {

@@ -1,7 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Http;
 
-namespace Stl.Fusion.Server.Endpoints;
+namespace ActualLab.Fusion.Server.Endpoints;
 
 public class BlazorModeEndpoint
 {

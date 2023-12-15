@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
-using Stl.CommandR.Internal;
+using ActualLab.CommandR.Internal;
 
-namespace Stl.CommandR;
+namespace ActualLab.CommandR;
 
 public abstract class CommandContext(ICommander commander)
     : ICommandContext, IAsyncDisposable

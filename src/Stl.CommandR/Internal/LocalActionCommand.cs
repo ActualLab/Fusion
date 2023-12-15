@@ -1,4 +1,4 @@
-namespace Stl.CommandR.Internal;
+namespace ActualLab.CommandR.Internal;
 
 public sealed record LocalActionCommand : LocalCommand, ICommand<Unit>
 {

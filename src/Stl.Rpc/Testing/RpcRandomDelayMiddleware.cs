@@ -1,6 +1,6 @@
-using Stl.Rpc.Infrastructure;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Rpc.Testing;
+namespace ActualLab.Rpc.Testing;
 
 public class RpcRandomDelayMiddleware(IServiceProvider services) : RpcInboundMiddleware(services)
 {

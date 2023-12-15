@@ -1,7 +1,7 @@
-using Stl.Fusion.Internal;
+using ActualLab.Fusion.Internal;
 using Errors = Stl.Internal.Errors;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public interface IMutableState : IState, IMutableResult
 {

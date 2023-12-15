@@ -1,7 +1,7 @@
 using MessagePack;
 using MessagePack.Formatters;
 
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 public class UnitMessagePackFormatter : IMessagePackFormatter<Unit>, IFormatterResolver
 {
@@ -15,7 +15,7 @@ public class UnitMessagePackFormatter : IMessagePackFormatter<Unit>, IFormatterR
             ? (IMessagePackFormatter<T>)Instance
             : null;
 
-    public void Serialize(ref MessagePackWriter writer, Unit value, MessagePackSerializerOptions options) 
+    public void Serialize(ref MessagePackWriter writer, Unit value, MessagePackSerializerOptions options)
         => writer.WriteNil();
 
     public Unit Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)

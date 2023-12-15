@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
-namespace Stl.Rpc.Diagnostics;
+namespace ActualLab.Rpc.Diagnostics;
 
 public class RpcMethodActivityCounters
 {

@@ -1,6 +1,6 @@
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Collections;
+namespace ActualLab.Collections;
 
 public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
     where T : notnull

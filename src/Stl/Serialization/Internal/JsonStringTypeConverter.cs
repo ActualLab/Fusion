@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 // Used by JSON.NET to serialize dictionary keys of this type
 public class JsonStringTypeConverter : TypeConverter

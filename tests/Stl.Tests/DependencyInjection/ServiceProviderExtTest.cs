@@ -1,4 +1,4 @@
-namespace Stl.Tests.DependencyInjection;
+namespace ActualLab.Tests.DependencyInjection;
 
 public class ServiceProviderExtTest(ITestOutputHelper @out) : TestBase(@out)
 {

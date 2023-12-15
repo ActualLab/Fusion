@@ -1,4 +1,4 @@
-namespace Stl.Tests.Async;
+namespace ActualLab.Tests.Async;
 
 public class CancellationTokenSourceExtTest
 {

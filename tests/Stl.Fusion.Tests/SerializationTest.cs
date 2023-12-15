@@ -1,10 +1,10 @@
-using Stl.Fusion.Authentication;
-using Stl.Fusion.Tests.Model;
-using Stl.Fusion.Tests.Services;
-using Stl.Generators;
+using ActualLab.Fusion.Authentication;
+using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.Generators;
 using User = Stl.Fusion.Authentication.User;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
 {

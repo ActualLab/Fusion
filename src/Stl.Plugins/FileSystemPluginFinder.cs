@@ -3,12 +3,12 @@ using System.Text.RegularExpressions;
 #if !NETFRAMEWORK
 using System.Runtime.Loader;
 #endif
-using Stl.Caching;
-using Stl.IO;
-using Stl.Plugins.Internal;
-using Stl.Plugins.Metadata;
+using ActualLab.Caching;
+using ActualLab.IO;
+using ActualLab.Plugins.Internal;
+using ActualLab.Plugins.Metadata;
 
-namespace Stl.Plugins;
+namespace ActualLab.Plugins;
 
 public class FileSystemPluginFinder : CachingPluginFinderBase
 {

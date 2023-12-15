@@ -1,7 +1,7 @@
-using Stl.Testing.Collections;
-using Stl.Time.Internal;
+using ActualLab.Testing.Collections;
+using ActualLab.Time.Internal;
 
-namespace Stl.Tests.Benchmarks;
+namespace ActualLab.Tests.Benchmarks;
 
 [Collection(nameof(PerformanceTests)), Trait("Category", nameof(PerformanceTests))]
 public class BenchmarkTest(ITestOutputHelper @out) : TestBase(@out)

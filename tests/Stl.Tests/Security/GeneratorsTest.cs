@@ -1,6 +1,6 @@
-using Stl.Generators;
+using ActualLab.Generators;
 
-namespace Stl.Tests.Security;
+namespace ActualLab.Tests.Security;
 
 public class GeneratorsTest(ITestOutputHelper @out) : TestBase(@out)
 {

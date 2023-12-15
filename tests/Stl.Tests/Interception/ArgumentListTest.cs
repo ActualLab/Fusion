@@ -1,7 +1,7 @@
 using System.Reflection;
-using Stl.Interception;
+using ActualLab.Interception;
 
-namespace Stl.Tests.Interception;
+namespace ActualLab.Tests.Interception;
 
 public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
 {

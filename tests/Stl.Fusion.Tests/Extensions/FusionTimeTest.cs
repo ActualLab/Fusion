@@ -1,6 +1,6 @@
-using Stl.Fusion.Extensions;
+using ActualLab.Fusion.Extensions;
 
-namespace Stl.Fusion.Tests.Extensions;
+namespace ActualLab.Fusion.Tests.Extensions;
 
 public class FusionTimeTest : FusionTestBase
 {

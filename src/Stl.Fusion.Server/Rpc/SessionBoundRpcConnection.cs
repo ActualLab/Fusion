@@ -1,7 +1,7 @@
-using Stl.Rpc;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Fusion.Server.Rpc;
+namespace ActualLab.Fusion.Server.Rpc;
 
 public class SessionBoundRpcConnection(Channel<RpcMessage> channel, ImmutableOptionSet options, Session session)
     : RpcConnection(channel, options)

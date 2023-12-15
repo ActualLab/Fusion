@@ -1,8 +1,8 @@
-using Stl.Rpc.Infrastructure;
-using Stl.Rpc.Internal;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 using Errors = Stl.Internal.Errors;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 {

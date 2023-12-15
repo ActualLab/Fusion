@@ -1,4 +1,4 @@
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcServiceBase(IServiceProvider services) : IHasServices
 {

@@ -5,7 +5,7 @@ using System.Web.Http;
 using ControllerBase = System.Web.Http.ApiController;
 #endif
 
-namespace Stl.Tests.RestEase;
+namespace ActualLab.Tests.RestEase;
 
 public sealed class RestEaseController : ControllerBase
 {

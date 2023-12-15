@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Web.Http.Controllers;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Rpc.Server;
+namespace ActualLab.Rpc.Server;
 
 public static class AssemblyExt
 {

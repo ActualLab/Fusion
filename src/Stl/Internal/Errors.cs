@@ -1,6 +1,6 @@
-using Stl.IO;
+using ActualLab.IO;
 
-namespace Stl.Internal;
+namespace ActualLab.Internal;
 
 public static class Errors
 {

@@ -1,7 +1,7 @@
 using Xunit.Abstractions;
 using Xunit.DependencyInjection;
 
-namespace Stl.Testing.Output;
+namespace ActualLab.Testing.Output;
 
 public class TestOutputHelperAccessor(ITestOutputHelper? output) : ITestOutputHelperAccessor
 {

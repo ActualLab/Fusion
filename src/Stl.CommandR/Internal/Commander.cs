@@ -1,4 +1,4 @@
-namespace Stl.CommandR.Internal;
+namespace ActualLab.CommandR.Internal;
 
 public class Commander(IServiceProvider services) : ICommander
 {

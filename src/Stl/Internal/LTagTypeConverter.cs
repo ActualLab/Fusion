@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Stl.Internal;
+namespace ActualLab.Internal;
 
 public class LTagTypeConverter : TypeConverter
 {

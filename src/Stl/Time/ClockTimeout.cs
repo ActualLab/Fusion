@@ -1,4 +1,4 @@
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 public readonly record struct ClockTimeout(
     IMomentClock Clock,

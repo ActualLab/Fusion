@@ -1,4 +1,4 @@
-namespace Stl.Versioning;
+namespace ActualLab.Versioning;
 
 public abstract class VersionGenerator<TVersion>
     where TVersion : notnull

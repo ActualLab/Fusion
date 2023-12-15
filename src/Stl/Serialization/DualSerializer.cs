@@ -1,10 +1,10 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
-using Stl.IO;
-using Stl.Serialization.Internal;
+using ActualLab.Internal;
+using ActualLab.IO;
+using ActualLab.Serialization.Internal;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 public sealed record DualSerializer<T>(
     DataFormat DefaultFormat,

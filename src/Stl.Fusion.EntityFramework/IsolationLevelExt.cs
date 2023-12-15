@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public static class IsolationLevelExt
 {

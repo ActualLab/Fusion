@@ -1,7 +1,7 @@
-using Stl.Fusion.Authentication;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Fusion.Authentication;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Fusion.Server.Rpc;
+namespace ActualLab.Fusion.Server.Rpc;
 
 public class DefaultSessionReplacerRpcMiddleware(IServiceProvider services)
     : RpcInboundMiddleware(services)

@@ -1,6 +1,6 @@
-using Stl.Mathematics.Internal;
+using ActualLab.Mathematics.Internal;
 
-namespace Stl.Mathematics;
+namespace ActualLab.Mathematics;
 
 public abstract class ArithmeticsProvider
 {

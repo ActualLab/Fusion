@@ -1,19 +1,19 @@
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework.Operations;
-using Stl.Multitenancy;
-using Stl.Redis;
+using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.Multitenancy;
+using ActualLab.Redis;
 
-namespace Stl.Fusion.EntityFramework.Redis.Operations;
+namespace ActualLab.Fusion.EntityFramework.Redis.Operations;
 
-public class RedisOperationLogChangeTracker<TDbContext> 
+public class RedisOperationLogChangeTracker<TDbContext>
     : DbOperationCompletionTrackerBase<TDbContext, RedisOperationLogChangeTrackingOptions<TDbContext>>
     where TDbContext : DbContext
 {
     protected RedisDb RedisDb { get; }
 
     public RedisOperationLogChangeTracker(
-        RedisOperationLogChangeTrackingOptions<TDbContext> options, 
-        IServiceProvider services) 
+        RedisOperationLogChangeTrackingOptions<TDbContext> options,
+        IServiceProvider services)
         : base(options, services)
     {
         RedisDb = services.GetService<RedisDb<TDbContext>>() ?? services.GetRequiredService<RedisDb>();
@@ -21,12 +21,12 @@ public class RedisOperationLogChangeTracker<TDbContext>
         Log.LogInformation("Using pub/sub key = '{Key}'", redisPub.FullKey);
     }
 
-    protected override DbOperationCompletionTrackerBase.TenantWatcher CreateTenantWatcher(Symbol tenantId) 
+    protected override DbOperationCompletionTrackerBase.TenantWatcher CreateTenantWatcher(Symbol tenantId)
         => new TenantWatcher(this, tenantId);
 
     protected new class TenantWatcher : DbOperationCompletionTrackerBase.TenantWatcher
     {
-        public TenantWatcher(RedisOperationLogChangeTracker<TDbContext> owner, Symbol tenantId) 
+        public TenantWatcher(RedisOperationLogChangeTracker<TDbContext> owner, Symbol tenantId)
             : base(owner.TenantRegistry.Get(tenantId))
         {
             var agentInfo = owner.Services.GetRequiredService<AgentInfo>();

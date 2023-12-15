@@ -1,4 +1,4 @@
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDisposed
 {

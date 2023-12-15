@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
 
-namespace Stl.DependencyInjection;
+namespace ActualLab.DependencyInjection;
 
 /// <summary>
 /// Manages a group of <see cref="IHostedService"/>-s as a whole

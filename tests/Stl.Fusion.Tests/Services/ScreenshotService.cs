@@ -2,7 +2,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 
-namespace Stl.Fusion.Tests.Services;
+namespace ActualLab.Fusion.Tests.Services;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial record Screenshot

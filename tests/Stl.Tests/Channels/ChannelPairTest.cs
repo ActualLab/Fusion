@@ -1,6 +1,6 @@
-using Stl.Testing.Collections;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Channels;
+namespace ActualLab.Tests.Channels;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class ChannelPairTest(ITestOutputHelper @out) : TestBase(@out)

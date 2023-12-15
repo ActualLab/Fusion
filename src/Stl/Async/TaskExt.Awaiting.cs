@@ -1,6 +1,6 @@
-using Stl.Async.Internal;
+using ActualLab.Async.Internal;
 
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 public static partial class TaskExt
 {

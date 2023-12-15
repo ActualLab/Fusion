@@ -1,4 +1,4 @@
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcMiddlewares<TMiddleware>
     where TMiddleware : RpcMiddleware

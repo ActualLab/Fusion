@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Fusion.Interception;
+namespace ActualLab.Fusion.Interception;
 
 // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
 public class ComputedOptionsProvider

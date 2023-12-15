@@ -1,9 +1,9 @@
-using Stl.Generators;
-using Stl.Rpc;
+using ActualLab.Generators;
+using ActualLab.Rpc;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
-namespace Stl.Tests;
+namespace ActualLab.Tests;
 
 public static class TestHelpers
 {

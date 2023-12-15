@@ -1,4 +1,4 @@
-namespace Stl.Time.Testing;
+namespace ActualLab.Time.Testing;
 
 public static class TestClockExt
 {

@@ -1,7 +1,7 @@
-using Stl.Fusion.Tests.Services;
-using Stl.OS;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.OS;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class ScreenshotServiceClientTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {

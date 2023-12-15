@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework;
 
-namespace Stl.Fusion.Extensions.Services;
+namespace ActualLab.Fusion.Extensions.Services;
 
 public class DbKeyValueStore<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,

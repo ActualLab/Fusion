@@ -1,6 +1,6 @@
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 public record ConcurrentTimerSetOptions : TimerSetOptions
 {

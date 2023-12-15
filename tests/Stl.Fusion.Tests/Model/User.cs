@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Stl.Fusion.Tests.Model;
+namespace ActualLab.Fusion.Tests.Model;
 
 [Table("TestUsers")]
 [Index(nameof(Name))]

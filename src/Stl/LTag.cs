@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using Stl.Internal;
+using ActualLab.Internal;
 
 namespace Stl;
 

@@ -1,4 +1,4 @@
-namespace Stl.Tests.Collections;
+namespace ActualLab.Tests.Collections;
 
 public class RadixHeapSetTest(ITestOutputHelper @out) : TestBase(@out)
 {

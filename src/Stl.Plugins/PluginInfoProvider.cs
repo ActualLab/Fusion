@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Plugins.Internal;
+using ActualLab.Plugins.Internal;
 
-namespace Stl.Plugins;
+namespace ActualLab.Plugins;
 
 // Must be used as the only argument for plugin constructor invoked when
 // PluginInfo/PluginSetInfo queries for plugin capabilities and dependencies.

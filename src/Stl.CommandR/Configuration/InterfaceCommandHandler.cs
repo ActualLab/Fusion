@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.CommandR.Configuration;
+namespace ActualLab.CommandR.Configuration;
 
 public sealed record InterfaceCommandHandler<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TCommand>(

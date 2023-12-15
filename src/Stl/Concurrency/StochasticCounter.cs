@@ -1,6 +1,6 @@
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Concurrency;
+namespace ActualLab.Concurrency;
 
 [StructLayout(LayoutKind.Auto)]
 public struct StochasticCounter

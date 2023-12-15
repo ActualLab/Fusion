@@ -1,9 +1,9 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
-using Stl.IO;
+using ActualLab.Internal;
+using ActualLab.IO;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 public static class ByteSerializerExt
 {

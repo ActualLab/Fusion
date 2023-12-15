@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Internal;
+namespace ActualLab.Fusion.Internal;
 
 internal sealed class WhenInvalidatedClosure
 {

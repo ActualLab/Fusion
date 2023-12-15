@@ -1,4 +1,4 @@
-namespace Stl.Channels;
+namespace ActualLab.Channels;
 
 public class CustomChannel<TWrite, TRead> : Channel<TWrite, TRead>
 {

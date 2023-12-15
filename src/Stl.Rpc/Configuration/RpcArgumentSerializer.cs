@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Internal;
+using ActualLab.Interception;
+using ActualLab.Internal;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public abstract class RpcArgumentSerializer
 {

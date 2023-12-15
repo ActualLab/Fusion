@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework;
-using Stl.Fusion.Tests.Model;
-using Stl.Reflection;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.Tests.Model;
+using ActualLab.Reflection;
 
-namespace Stl.Fusion.Tests.Services;
+namespace ActualLab.Fusion.Tests.Services;
 
 public interface IUserService : IComputeService
 {

@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Internal;
+using ActualLab.Interception;
+using ActualLab.Internal;
 using Errors = Stl.Rpc.Internal.Errors;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 #pragma warning disable IL2046
 

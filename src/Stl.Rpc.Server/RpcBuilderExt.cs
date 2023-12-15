@@ -1,4 +1,4 @@
-namespace Stl.Rpc.Server;
+namespace ActualLab.Rpc.Server;
 
 public static class RpcBuilderExt
 {

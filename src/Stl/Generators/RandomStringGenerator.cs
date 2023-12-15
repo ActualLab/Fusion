@@ -1,7 +1,7 @@
 using System.Buffers;
 using System.Security.Cryptography;
 
-namespace Stl.Generators;
+namespace ActualLab.Generators;
 
 // Thread-safe!
 public class RandomStringGenerator : Generator<string>, IDisposable

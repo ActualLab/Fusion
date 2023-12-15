@@ -7,7 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 /// <summary>Represents a server.</summary>
 public interface IServer : IDisposable

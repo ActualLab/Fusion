@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Samples.HelloCart.V2;
-using Stl.Fusion.EntityFramework;
-using Stl.IO;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.IO;
 
 namespace Samples.HelloCart.V3;
 

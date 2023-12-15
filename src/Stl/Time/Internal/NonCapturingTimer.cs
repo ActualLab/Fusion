@@ -1,4 +1,4 @@
-namespace Stl.Time.Internal;
+namespace ActualLab.Time.Internal;
 
 public static class NonCapturingTimer
 {

@@ -1,7 +1,7 @@
-using Stl.Multitenancy;
-using Stl.IO;
+using ActualLab.Multitenancy;
+using ActualLab.IO;
 
-namespace Stl.Fusion.EntityFramework.Operations;
+namespace ActualLab.Fusion.EntityFramework.Operations;
 
 public record FileBasedDbOperationLogChangeTrackingOptions<TDbContext> : DbOperationCompletionTrackingOptions
 {

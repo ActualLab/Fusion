@@ -1,7 +1,7 @@
-using Stl.Testing.Collections;
+using ActualLab.Testing.Collections;
 using Xunit.Sdk;
 
-namespace Stl.Tests.Async;
+namespace ActualLab.Tests.Async;
 
 #pragma warning disable CS1998 // This async method lacks 'await' operators and will run synchronously.
 

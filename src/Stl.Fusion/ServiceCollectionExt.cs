@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Fusion.Internal;
-using Stl.Rpc;
+using ActualLab.Fusion.Internal;
+using ActualLab.Rpc;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public static class ServiceCollectionExt
 {

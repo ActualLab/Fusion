@@ -1,7 +1,7 @@
-using Stl.Diagnostics;
-using Stl.Fusion.Internal;
+using ActualLab.Diagnostics;
+using ActualLab.Fusion.Internal;
 
-namespace Stl.Fusion.Tests.Internal;
+namespace ActualLab.Fusion.Tests.Internal;
 
 public class InvalidatedHandlerSetTest(ITestOutputHelper @out) : TestBase(@out)
 {

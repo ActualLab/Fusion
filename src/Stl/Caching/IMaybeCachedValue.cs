@@ -1,4 +1,4 @@
-namespace Stl.Caching;
+namespace ActualLab.Caching;
 
 public interface IMaybeCachedValue
 {

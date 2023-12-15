@@ -1,6 +1,6 @@
-using Stl.Diagnostics;
+using ActualLab.Diagnostics;
 
-namespace Stl.Tests.Diagnostics;
+namespace ActualLab.Tests.Diagnostics;
 
 public class ActivitySourceTest(ITestOutputHelper @out) : TestBase(@out)
 {

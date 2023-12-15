@@ -1,7 +1,7 @@
 using System.Globalization;
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Fusion.Operations;
+namespace ActualLab.Fusion.Operations;
 
 public record AgentInfo(Symbol Id)
 {

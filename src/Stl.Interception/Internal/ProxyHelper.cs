@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Interception.Internal;
+namespace ActualLab.Interception.Internal;
 
 public static class ProxyHelper
 {

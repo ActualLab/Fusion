@@ -1,7 +1,7 @@
 using System.Net.WebSockets;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Rpc.WebSockets;
+namespace ActualLab.Rpc.WebSockets;
 
 public class WebSocketOwner(
     string name,

@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
+using ActualLab.Interception;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public sealed class RpcSystemCallSender(IServiceProvider services)
     : RpcServiceBase(services)

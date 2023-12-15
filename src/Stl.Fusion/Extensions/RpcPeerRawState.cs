@@ -1,6 +1,6 @@
-using Stl.Rpc.Infrastructure;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Fusion.Extensions;
+namespace ActualLab.Fusion.Extensions;
 
 // Any Moment below is derived with RpcHub.Clock, which is CpuClock
 

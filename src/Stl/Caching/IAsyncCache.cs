@@ -1,4 +1,4 @@
-namespace Stl.Caching;
+namespace ActualLab.Caching;
 
 public interface IAsyncKeyResolver<in TKey, TValue>
     where TKey : notnull

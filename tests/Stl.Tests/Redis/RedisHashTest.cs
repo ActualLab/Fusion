@@ -1,6 +1,6 @@
-﻿using Stl.Redis;
+﻿using ActualLab.Redis;
 
-namespace Stl.Tests.Redis;
+namespace ActualLab.Tests.Redis;
 
 public class RedisHashTest(ITestOutputHelper @out) : RedisTestBase(@out)
 {

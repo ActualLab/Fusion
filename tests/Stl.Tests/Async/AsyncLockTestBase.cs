@@ -1,8 +1,8 @@
-using Stl.Locking;
-using Stl.OS;
-using Stl.Testing.Collections;
+using ActualLab.Locking;
+using ActualLab.OS;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Async;
+namespace ActualLab.Tests.Async;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public abstract class AsyncLockTestBase(ITestOutputHelper @out) : TestBase(@out)

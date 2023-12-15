@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 
-namespace Stl.Fusion.Blazor;
+namespace ActualLab.Fusion.Blazor;
 
 /// <summary>
 /// Renders a "dynamically bound" component.

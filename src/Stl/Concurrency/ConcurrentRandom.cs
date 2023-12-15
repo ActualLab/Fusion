@@ -1,4 +1,4 @@
-namespace Stl.Concurrency;
+namespace ActualLab.Concurrency;
 
 public static class ConcurrentRandom
 {

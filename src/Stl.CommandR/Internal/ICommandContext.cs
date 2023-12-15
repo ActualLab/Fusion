@@ -1,4 +1,4 @@
-namespace Stl.CommandR.Internal;
+namespace ActualLab.CommandR.Internal;
 
 // This interface just lists all the methods CommandContext has;
 // you should always use CommandContext instead of it.

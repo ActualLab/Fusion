@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace Stl.Fusion.EntityFramework.Conversion;
+namespace ActualLab.Fusion.EntityFramework.Conversion;
 
 public class MomentToDateTimeValueConverter(ConverterMappingHints? mappingHints = null)
     : ValueConverter<Moment, DateTime>(

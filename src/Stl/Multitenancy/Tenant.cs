@@ -1,4 +1,4 @@
-namespace Stl.Multitenancy;
+namespace ActualLab.Multitenancy;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial record Tenant : IHasId<Symbol>

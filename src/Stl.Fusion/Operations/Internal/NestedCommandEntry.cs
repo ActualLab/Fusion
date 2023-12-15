@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Operations.Internal;
+namespace ActualLab.Fusion.Operations.Internal;
 
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor]
 public readonly struct NestedCommandEntry(ICommand command, OptionSet items)

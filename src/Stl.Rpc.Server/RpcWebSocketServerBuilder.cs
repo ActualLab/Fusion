@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Stl.Rpc.Server;
+namespace ActualLab.Rpc.Server;
 
 public readonly struct RpcWebSocketServerBuilder
 {

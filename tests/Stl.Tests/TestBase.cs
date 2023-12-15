@@ -1,6 +1,6 @@
-using Stl.Testing.Output;
+using ActualLab.Testing.Output;
 
-namespace Stl.Tests;
+namespace ActualLab.Tests;
 
 public abstract class TestBase : IAsyncLifetime
 {

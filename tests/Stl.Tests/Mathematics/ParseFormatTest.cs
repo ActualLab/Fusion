@@ -1,7 +1,7 @@
-using Stl.Generators;
-using Stl.Mathematics;
+using ActualLab.Generators;
+using ActualLab.Mathematics;
 
-namespace Stl.Tests.Mathematics;
+namespace ActualLab.Tests.Mathematics;
 
 public class ParseFormatTest
 {

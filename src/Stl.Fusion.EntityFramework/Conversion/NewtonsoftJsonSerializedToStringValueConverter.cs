@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace Stl.Fusion.EntityFramework.Conversion;
+namespace ActualLab.Fusion.EntityFramework.Conversion;
 
 public class NewtonsoftJsonSerializedToStringValueConverter<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>

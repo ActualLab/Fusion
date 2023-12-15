@@ -1,6 +1,6 @@
 using RestEase;
 
-namespace Stl.Tests.RestEase;
+namespace ActualLab.Tests.RestEase;
 
 [BasePath("restEase")]
 [SerializationMethods(Query = QuerySerializationMethod.Serialized)]

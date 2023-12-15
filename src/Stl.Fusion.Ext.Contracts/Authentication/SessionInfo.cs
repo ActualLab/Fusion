@@ -1,7 +1,7 @@
 using System.Security;
-using Stl.Versioning;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion.Authentication;
+namespace ActualLab.Fusion.Authentication;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial record SessionInfo : SessionAuthInfo, IHasVersion<long>

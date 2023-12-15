@@ -1,4 +1,4 @@
-namespace Stl.CommandR.Configuration;
+namespace ActualLab.CommandR.Configuration;
 
 #pragma warning disable CA1813 // Consider making sealed
 

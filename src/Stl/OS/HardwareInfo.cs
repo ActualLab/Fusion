@@ -1,4 +1,4 @@
-namespace Stl.OS;
+namespace ActualLab.OS;
 
 public static class HardwareInfo
 {

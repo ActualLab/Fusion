@@ -1,7 +1,7 @@
-using Stl.Interception;
-using Stl.Reflection;
+using ActualLab.Interception;
+using ActualLab.Reflection;
 
-namespace Stl.Tests.Generators;
+namespace ActualLab.Tests.Generators;
 
 public class ProxyTest(ITestOutputHelper @out) : TestBase(@out)
 {

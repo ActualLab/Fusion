@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace Stl.Fusion.EntityFramework.Operations;
+namespace ActualLab.Fusion.EntityFramework.Operations;
 
 #pragma warning disable RCS1194
 

@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework.Operations;
-using Stl.Locking;
-using Stl.Multitenancy;
+using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.Locking;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.EntityFramework.Npgsql.Operations;
+namespace ActualLab.Fusion.EntityFramework.Npgsql.Operations;
 
 public class NpgsqlDbOperationLogChangeNotifier<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>

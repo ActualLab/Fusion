@@ -1,6 +1,6 @@
-using Stl.Testing.Collections;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Time;
+namespace ActualLab.Tests.Time;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class ServerClockTest(ITestOutputHelper @out) : TestBase(@out)

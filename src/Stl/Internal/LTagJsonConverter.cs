@@ -1,4 +1,4 @@
-namespace Stl.Internal;
+namespace ActualLab.Internal;
 
 public class LTagJsonConverter : JsonConverter<LTag>
 {

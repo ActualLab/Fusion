@@ -1,4 +1,4 @@
-namespace Stl.Rpc.Caching;
+namespace ActualLab.Rpc.Caching;
 
 public static class RpcCacheInfoCaptureExt
 {

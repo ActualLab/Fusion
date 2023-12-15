@@ -1,8 +1,8 @@
-using Stl.Caching;
-using Stl.Fusion.Client.Interception;
-using Stl.Fusion.Internal;
+using ActualLab.Caching;
+using ActualLab.Fusion.Client.Interception;
+using ActualLab.Fusion.Internal;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public static partial class ComputedExt
 {

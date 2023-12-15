@@ -1,7 +1,7 @@
-using Stl.Redis;
-using Stl.Testing.Collections;
+using ActualLab.Redis;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Redis;
+namespace ActualLab.Tests.Redis;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RedisStreamerTest(ITestOutputHelper @out) : RedisTestBase(@out)

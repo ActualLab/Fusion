@@ -1,4 +1,4 @@
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public abstract record DbHint(Symbol Value);
 

@@ -1,8 +1,8 @@
-using Stl.Concurrency;
-using Stl.OS;
-using Stl.Testing.Collections;
+using ActualLab.Concurrency;
+using ActualLab.OS;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Concurrency;
+namespace ActualLab.Tests.Concurrency;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class StochasticCounterTest(ITestOutputHelper @out) : TestBase(@out)

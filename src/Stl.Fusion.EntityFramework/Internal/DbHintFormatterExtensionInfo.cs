@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
-namespace Stl.Fusion.EntityFramework.Internal;
+namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public sealed class DbHintFormatterExtensionInfo(IDbContextOptionsExtension extension)
     : DbContextOptionsExtensionInfo(extension)

@@ -1,4 +1,4 @@
-namespace Stl.Comparison;
+namespace ActualLab.Comparison;
 
 public class HasIdEqualityComparer<T> : IEqualityComparer<IHasId<T>>
 {

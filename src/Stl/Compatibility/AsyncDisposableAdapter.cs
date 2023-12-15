@@ -1,4 +1,4 @@
-namespace Stl.Compatibility;
+namespace ActualLab.Compatibility;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly struct AsyncDisposableAdapter<T> : IAsyncDisposable

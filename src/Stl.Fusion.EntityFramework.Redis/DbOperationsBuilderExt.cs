@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Stl.Fusion.EntityFramework.Operations;
-using Stl.Fusion.EntityFramework.Redis.Operations;
+using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.Fusion.EntityFramework.Redis.Operations;
 
-namespace Stl.Fusion.EntityFramework.Redis;
+namespace ActualLab.Fusion.EntityFramework.Redis;
 
 public static class DbOperationsBuilderExt
 {

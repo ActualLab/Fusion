@@ -1,6 +1,6 @@
-using Stl.Collections.Slim;
+using ActualLab.Collections.Slim;
 
-namespace Stl.Tests.Collections;
+namespace ActualLab.Tests.Collections;
 
 public class HashSetSlimTest
 {

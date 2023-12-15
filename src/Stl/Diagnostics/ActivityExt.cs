@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using Stl.Multitenancy;
+using ActualLab.Multitenancy;
 
-namespace Stl.Diagnostics;
+namespace ActualLab.Diagnostics;
 
 public static class ActivityExt
 {

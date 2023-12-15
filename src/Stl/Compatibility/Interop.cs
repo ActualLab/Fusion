@@ -4,7 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Stl.Compatibility;
+namespace ActualLab.Compatibility;
 
 internal static class Interop
 {

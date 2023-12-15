@@ -1,7 +1,7 @@
-using Stl.Fusion.Extensions;
-using Stl.Multitenancy;
+using ActualLab.Fusion.Extensions;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.Tests.Extensions;
+namespace ActualLab.Fusion.Tests.Extensions;
 
 public class NestedOperationLoggerTest : FusionTestBase
 {

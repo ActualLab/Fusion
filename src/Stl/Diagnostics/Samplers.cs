@@ -1,7 +1,7 @@
 using System.Globalization;
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Diagnostics;
+namespace ActualLab.Diagnostics;
 
 public sealed record Sampler(
     string Id,

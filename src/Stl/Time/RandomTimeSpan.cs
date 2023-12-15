@@ -1,6 +1,6 @@
-using Stl.Generators;
+using ActualLab.Generators;
 
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 [StructLayout(LayoutKind.Sequential)] // Important!
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]

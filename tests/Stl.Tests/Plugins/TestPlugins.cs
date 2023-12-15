@@ -1,6 +1,6 @@
-using Stl.Plugins;
+using ActualLab.Plugins;
 
-namespace Stl.Tests.Plugins;
+namespace ActualLab.Tests.Plugins;
 
 public interface ITestPlugin
 {

@@ -1,4 +1,4 @@
-namespace Stl.Fusion.UI;
+namespace ActualLab.Fusion.UI;
 
 public static class ServiceProviderExt
 {

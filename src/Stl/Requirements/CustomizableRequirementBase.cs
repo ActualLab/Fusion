@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Requirements;
+namespace ActualLab.Requirements;
 
 public abstract record CustomizableRequirementBase<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>

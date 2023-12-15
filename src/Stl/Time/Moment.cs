@@ -1,8 +1,8 @@
 using System.ComponentModel;
 using System.Globalization;
-using Stl.Time.Internal;
+using ActualLab.Time.Internal;
 
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 [DataContract]
 [JsonConverter(typeof(MomentJsonConverter))]

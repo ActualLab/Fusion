@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Reflection;
+namespace ActualLab.Reflection;
 
 public record MemberwiseCopier<[
     DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>

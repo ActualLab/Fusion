@@ -1,6 +1,6 @@
-using Stl.Fusion.Tests.Services;
+using ActualLab.Fusion.Tests.Services;
 
-namespace Stl.Fusion.Tests.UIModels;
+namespace ActualLab.Fusion.Tests.UIModels;
 
 public class ServerTimeModel1State(IServiceProvider services)
     : ComputedState<ServerTimeModel1>(new() { InitialValue = new(default) }, services)

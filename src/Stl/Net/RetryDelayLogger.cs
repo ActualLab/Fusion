@@ -1,4 +1,4 @@
-namespace Stl.Net;
+namespace ActualLab.Net;
 
 public readonly record struct RetryDelayLogger(
     string Action,

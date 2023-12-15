@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Stl.Text.Internal;
+namespace ActualLab.Text.Internal;
 
 // Used by JSON.NET to serialize dictionary keys of this type
 public class SymbolTypeConverter : TypeConverter

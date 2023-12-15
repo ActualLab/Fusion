@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Stl.Text;
+namespace ActualLab.Text;
 
 // StringBuilder caching.
 // Prefer ZString.CreateStringBuilder instead, if possible.

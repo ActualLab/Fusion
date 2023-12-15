@@ -1,4 +1,4 @@
-namespace Stl.Text.Internal;
+namespace ActualLab.Text.Internal;
 
 public class SymbolJsonConverter : JsonConverter<Symbol>
 {

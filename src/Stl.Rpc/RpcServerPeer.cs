@@ -1,7 +1,7 @@
-using Stl.Rpc.Infrastructure;
-using Stl.Rpc.Internal;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public class RpcServerPeer(RpcHub hub, RpcPeerRef @ref) : RpcPeer(hub, @ref)
 {

@@ -1,6 +1,6 @@
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Tests.OS;
+namespace ActualLab.Tests.OS;
 
 public class MiscInfoTest(ITestOutputHelper @out) : TestBase(@out)
 {

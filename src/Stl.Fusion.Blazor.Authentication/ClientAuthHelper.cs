@@ -1,7 +1,7 @@
 using Microsoft.JSInterop;
-using Stl.Fusion.Authentication;
+using ActualLab.Fusion.Authentication;
 
-namespace Stl.Fusion.Blazor.Authentication;
+namespace ActualLab.Fusion.Blazor.Authentication;
 
 public class ClientAuthHelper(IServiceProvider services) : IHasServices
 {

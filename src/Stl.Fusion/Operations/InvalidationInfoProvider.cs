@@ -1,6 +1,6 @@
-using Stl.Interception.Internal;
+using ActualLab.Interception.Internal;
 
-namespace Stl.Fusion.Operations;
+namespace ActualLab.Fusion.Operations;
 
 public class InvalidationInfoProvider
 {

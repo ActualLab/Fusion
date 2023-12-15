@@ -1,4 +1,4 @@
-namespace Stl.Plugins.Metadata;
+namespace ActualLab.Plugins.Metadata;
 
 public class PluginSetConstructionInfo
 {

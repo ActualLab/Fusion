@@ -1,10 +1,10 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using Stl.Fusion.Authentication;
-using Stl.Fusion.Server.Internal;
-using Stl.Multitenancy;
+using ActualLab.Fusion.Authentication;
+using ActualLab.Fusion.Server.Internal;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.Server.Authentication;
+namespace ActualLab.Fusion.Server.Authentication;
 
 public class ServerAuthHelper : IHasServices
 {

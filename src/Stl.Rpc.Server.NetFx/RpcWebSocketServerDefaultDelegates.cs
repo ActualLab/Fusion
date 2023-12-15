@@ -1,6 +1,6 @@
 using Microsoft.Owin;
 
-namespace Stl.Rpc.Server;
+namespace ActualLab.Rpc.Server;
 
 public delegate RpcPeerRef RpcWebSocketServerPeerRefFactory(RpcWebSocketServer server, IOwinContext context);
 

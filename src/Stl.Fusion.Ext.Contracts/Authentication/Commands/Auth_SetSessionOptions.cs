@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Authentication;
+namespace ActualLab.Fusion.Authentication;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 // ReSharper disable once InconsistentNaming

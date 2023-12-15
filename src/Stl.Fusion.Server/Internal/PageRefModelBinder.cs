@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Stl.Fusion.Extensions;
+using ActualLab.Fusion.Extensions;
 
-namespace Stl.Fusion.Server.Internal;
+namespace ActualLab.Fusion.Server.Internal;
 
 public class PageRefModelBinder : IModelBinder
 {

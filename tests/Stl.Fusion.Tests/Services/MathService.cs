@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Tests.Services;
+namespace ActualLab.Fusion.Tests.Services;
 
 public class MathService : IComputeService
 {

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace Stl.Fusion.EntityFramework.Internal;
+namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public static class Errors
 {

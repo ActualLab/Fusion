@@ -1,7 +1,7 @@
 using System.ComponentModel;
-using Stl.Serialization.Internal;
+using ActualLab.Serialization.Internal;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 [StructLayout(LayoutKind.Sequential)] // Important!
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]

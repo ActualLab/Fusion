@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Stl.IO;
-using Stl.Multitenancy;
+using ActualLab.IO;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.EntityFramework.Operations;
+namespace ActualLab.Fusion.EntityFramework.Operations;
 
 public class FileBasedDbOperationLogChangeTracker<TDbContext>(
     FileBasedDbOperationLogChangeTrackingOptions<TDbContext> options,

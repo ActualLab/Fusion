@@ -2,7 +2,7 @@ using MessagePack;
 using MessagePack.Formatters;
 using MessagePack.Resolvers;
 
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 public class DefaultMessagePackResolver : IFormatterResolver
 {

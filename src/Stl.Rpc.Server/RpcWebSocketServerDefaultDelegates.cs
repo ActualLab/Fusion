@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 
-namespace Stl.Rpc.Server;
+namespace ActualLab.Rpc.Server;
 
 public delegate RpcPeerRef RpcWebSocketServerPeerRefFactory(RpcWebSocketServer server, HttpContext context);
 

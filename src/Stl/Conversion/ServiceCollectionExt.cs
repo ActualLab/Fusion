@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Stl.Conversion.Internal;
+using ActualLab.Conversion.Internal;
 
-namespace Stl.Conversion;
+namespace ActualLab.Conversion;
 
 public static class ServiceCollectionExt
 {

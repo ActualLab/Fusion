@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security;
-using Stl.Fusion.Authentication;
+using ActualLab.Fusion.Authentication;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class RequireTest(ITestOutputHelper @out) : TestBase(@out)
 {

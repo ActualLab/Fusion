@@ -1,8 +1,8 @@
-using Stl.Fusion.Internal;
-using Stl.Fusion.Tests.Services;
-using Stl.Testing.Collections;
+using ActualLab.Fusion.Internal;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class CounterServiceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)

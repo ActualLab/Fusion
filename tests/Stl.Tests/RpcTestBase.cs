@@ -1,16 +1,16 @@
-using Stl.Diagnostics;
-using Stl.Locking;
-using Stl.RestEase;
-using Stl.Rpc;
-using Stl.Rpc.Clients;
-using Stl.Rpc.Infrastructure;
-using Stl.Rpc.WebSockets;
-using Stl.Testing.Collections;
-using Stl.Time.Testing;
+using ActualLab.Diagnostics;
+using ActualLab.Locking;
+using ActualLab.RestEase;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Clients;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.WebSockets;
+using ActualLab.Testing.Collections;
+using ActualLab.Time.Testing;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
-namespace Stl.Tests;
+namespace ActualLab.Tests;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsyncLifetime

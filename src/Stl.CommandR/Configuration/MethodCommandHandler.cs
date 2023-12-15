@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.CommandR.Internal;
+using ActualLab.CommandR.Internal;
 
-namespace Stl.CommandR.Configuration;
+namespace ActualLab.CommandR.Configuration;
 
 public sealed record MethodCommandHandler<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TCommand>

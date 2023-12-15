@@ -2,12 +2,12 @@ using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.WebSockets;
 using Microsoft.Toolkit.HighPerformance;
-using Stl.Internal;
-using Stl.IO;
-using Stl.IO.Internal;
+using ActualLab.Internal;
+using ActualLab.IO;
+using ActualLab.IO.Internal;
 using Errors = Stl.Rpc.Internal.Errors;
 
-namespace Stl.Rpc.WebSockets;
+namespace ActualLab.Rpc.WebSockets;
 
 public sealed class WebSocketChannel<T> : Channel<T>
     where T : class

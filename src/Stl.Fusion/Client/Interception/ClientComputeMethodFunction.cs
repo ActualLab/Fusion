@@ -1,16 +1,16 @@
 using System.Diagnostics.CodeAnalysis;
 using Cysharp.Text;
-using Stl.Fusion.Client.Caching;
-using Stl.Fusion.Client.Internal;
-using Stl.Fusion.Interception;
-using Stl.Fusion.Internal;
-using Stl.Internal;
-using Stl.Rpc.Caching;
-using Stl.Rpc.Infrastructure;
-using Stl.Versioning;
+using ActualLab.Fusion.Client.Caching;
+using ActualLab.Fusion.Client.Internal;
+using ActualLab.Fusion.Interception;
+using ActualLab.Fusion.Internal;
+using ActualLab.Internal;
+using ActualLab.Rpc.Caching;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Versioning;
 using Errors = Stl.Internal.Errors;
 
-namespace Stl.Fusion.Client.Interception;
+namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD103
 

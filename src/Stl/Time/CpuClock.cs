@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Reactive.PlatformServices;
 
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 public sealed class CpuClock : IMomentClock
 {

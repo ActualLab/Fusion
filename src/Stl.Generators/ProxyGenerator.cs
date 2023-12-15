@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Stl.Generators;
+namespace ActualLab.Generators;
 using static DiagnosticsHelpers;
 using static GenerationHelpers;
 

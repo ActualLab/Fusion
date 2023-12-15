@@ -1,6 +1,6 @@
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Net;
+namespace ActualLab.Net;
 
 public sealed class Connector<TConnection> : WorkerBase
     where TConnection : class

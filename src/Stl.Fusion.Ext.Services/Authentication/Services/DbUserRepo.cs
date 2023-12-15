@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework;
-using Stl.Multitenancy;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.Authentication.Services;
+namespace ActualLab.Fusion.Authentication.Services;
 
 // ReSharper disable once TypeParameterCanBeVariant
 public interface IDbUserRepo<in TDbContext, TDbUser, TDbUserId>

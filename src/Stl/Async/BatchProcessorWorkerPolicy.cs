@@ -1,6 +1,6 @@
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Async;
+namespace ActualLab.Async;
 
 public interface IBatchProcessorWorkerPolicy
 {

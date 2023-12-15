@@ -2,7 +2,7 @@
 using System.Runtime.Intrinsics.X86;
 #endif
 
-namespace Stl.Mathematics;
+namespace ActualLab.Mathematics;
 
 public static class Bits
 {

@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using Stl.Generators;
+using ActualLab.Generators;
 
-namespace Stl.Time.Internal;
+namespace ActualLab.Time.Internal;
 
 public static class CoarseClockHelper
 {

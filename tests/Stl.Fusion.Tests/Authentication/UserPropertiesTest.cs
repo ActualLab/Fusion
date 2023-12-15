@@ -1,8 +1,8 @@
 using System.Security;
 using System.Security.Claims;
-using Stl.Fusion.Authentication;
+using ActualLab.Fusion.Authentication;
 
-namespace Stl.Fusion.Tests.Authentication;
+namespace ActualLab.Fusion.Tests.Authentication;
 
 public class UserPropertiesTest : FusionTestBase
 {

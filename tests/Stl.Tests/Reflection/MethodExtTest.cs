@@ -1,8 +1,8 @@
 using System.ComponentModel;
 using System.Reflection;
-using Stl.Reflection;
+using ActualLab.Reflection;
 
-namespace Stl.Tests.Reflection;
+namespace ActualLab.Tests.Reflection;
 
 public class MethodExtTest
 {

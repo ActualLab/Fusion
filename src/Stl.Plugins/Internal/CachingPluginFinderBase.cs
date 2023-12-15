@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Caching;
-using Stl.Plugins.Metadata;
+using ActualLab.Caching;
+using ActualLab.Plugins.Metadata;
 
-namespace Stl.Plugins.Internal;
+namespace ActualLab.Plugins.Internal;
 
 public abstract class CachingPluginFinderBase : IPluginFinder
 {

@@ -1,7 +1,7 @@
 using Cysharp.Text;
-using Stl.Net;
+using ActualLab.Net;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public class RpcClientPeerReconnectDelayer : RetryDelayer, IHasServices
 {

@@ -1,8 +1,8 @@
-using Stl.Fusion.Internal;
-using Stl.Multitenancy;
-using Stl.Versioning;
+using ActualLab.Fusion.Internal;
+using ActualLab.Multitenancy;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion.Authentication.Services;
+namespace ActualLab.Fusion.Authentication.Services;
 
 public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserId>
 {

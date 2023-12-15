@@ -1,6 +1,6 @@
-using Stl.Testing.Collections;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class MinCacheDurationTestService : IComputeService
 {

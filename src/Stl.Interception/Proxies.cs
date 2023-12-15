@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Cysharp.Text;
-using Stl.Interception.Interceptors;
-using Stl.Interception.Internal;
+using ActualLab.Interception.Interceptors;
+using ActualLab.Interception.Internal;
 
-namespace Stl.Interception;
+namespace ActualLab.Interception;
 
 public static class Proxies
 {

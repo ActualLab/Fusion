@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
-namespace Stl.Fusion.Server.Internal;
+namespace ActualLab.Fusion.Server.Internal;
 
 public class MomentModelBinder : IModelBinder
 {

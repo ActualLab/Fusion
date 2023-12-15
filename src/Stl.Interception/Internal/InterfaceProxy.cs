@@ -1,4 +1,4 @@
-namespace Stl.Interception.Internal;
+namespace ActualLab.Interception.Internal;
 
 public abstract class InterfaceProxy
 {

@@ -1,4 +1,4 @@
-namespace Stl.Reflection.Internal;
+namespace ActualLab.Reflection.Internal;
 
 public class TypeRefJsonConverter : JsonConverter<TypeRef>
 {

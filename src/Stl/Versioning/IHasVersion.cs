@@ -1,4 +1,4 @@
-namespace Stl.Versioning;
+namespace ActualLab.Versioning;
 
 public interface IHasVersion<out TVersion>
     where TVersion : notnull

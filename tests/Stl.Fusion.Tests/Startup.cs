@@ -1,7 +1,7 @@
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class Startup
 {

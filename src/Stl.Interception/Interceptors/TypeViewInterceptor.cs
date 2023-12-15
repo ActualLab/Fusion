@@ -1,7 +1,7 @@
-using Stl.Conversion;
-using Stl.Interception.Internal;
+using ActualLab.Conversion;
+using ActualLab.Interception.Internal;
 
-namespace Stl.Interception.Interceptors;
+namespace ActualLab.Interception.Interceptors;
 
 public class TypeViewInterceptor : Interceptor
 {

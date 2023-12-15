@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 public class JsonStringNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<JsonString>
 {

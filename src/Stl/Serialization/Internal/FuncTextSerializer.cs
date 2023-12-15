@@ -2,9 +2,9 @@ using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Cysharp.Text;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 public class FuncTextSerializer<T>(Func<string, T> reader, Func<T, string> writer) : ITextSerializer<T>
 {

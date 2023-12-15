@@ -1,6 +1,6 @@
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
-namespace Stl.Generators;
+namespace ActualLab.Generators;
 using static GenerationHelpers;
 
 public class ProxyTypeGenerator

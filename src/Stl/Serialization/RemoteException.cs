@@ -1,4 +1,4 @@
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 #pragma warning disable SYSLIB0051
 

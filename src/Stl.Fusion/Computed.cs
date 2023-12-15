@@ -1,12 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Collections.Slim;
-using Stl.Conversion;
-using Stl.Fusion.Internal;
-using Stl.Fusion.Operations.Internal;
-using Stl.Versioning;
+using ActualLab.Collections.Slim;
+using ActualLab.Conversion;
+using ActualLab.Fusion.Internal;
+using ActualLab.Fusion.Operations.Internal;
+using ActualLab.Versioning;
 using Errors = Stl.Fusion.Internal.Errors;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public interface IComputed : IResult, IHasVersion<LTag>
 {

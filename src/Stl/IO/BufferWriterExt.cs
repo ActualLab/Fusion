@@ -1,6 +1,6 @@
 using System.Buffers;
 
-namespace Stl.IO;
+namespace ActualLab.IO;
 
 public static class BufferWriterExt
 {

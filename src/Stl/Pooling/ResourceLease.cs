@@ -1,4 +1,4 @@
-namespace Stl.Pooling;
+namespace ActualLab.Pooling;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly struct ResourceLease<T> : IResourceLease<T>, IEquatable<ResourceLease<T>>

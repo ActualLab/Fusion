@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
-using Stl.Reflection;
+using ActualLab.Reflection;
 
-namespace Stl.Tests.Reflection;
+namespace ActualLab.Tests.Reflection;
 
 public class TypeExtTest(ITestOutputHelper @out) : TestBase(@out)
 {

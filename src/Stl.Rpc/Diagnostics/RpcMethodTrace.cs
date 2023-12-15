@@ -1,6 +1,6 @@
-using Stl.Rpc.Infrastructure;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Rpc.Diagnostics;
+namespace ActualLab.Rpc.Diagnostics;
 
 public abstract class RpcMethodTrace
 {

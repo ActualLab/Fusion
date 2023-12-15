@@ -1,8 +1,8 @@
-using Stl.Fusion.Client.Interception;
-using Stl.Fusion.Tests.Services;
-using Stl.Interception;
+using ActualLab.Fusion.Client.Interception;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.Interception;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {

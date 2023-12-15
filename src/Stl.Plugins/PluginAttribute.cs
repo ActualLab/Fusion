@@ -1,4 +1,4 @@
-namespace Stl.Plugins;
+namespace ActualLab.Plugins;
 
 #pragma warning disable CA1813 // Consider making sealed
 

@@ -1,4 +1,4 @@
-namespace Stl.Tests.Serialization;
+namespace ActualLab.Tests.Serialization;
 
 public class ExceptionInfoTest(ITestOutputHelper @out) : TestBase(@out)
 {

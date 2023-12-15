@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Stl.IO.Internal;
+namespace ActualLab.IO.Internal;
 
 public class FilePathNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<FilePath>
 {

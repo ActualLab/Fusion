@@ -1,4 +1,4 @@
-namespace Stl.Mathematics.Internal;
+namespace ActualLab.Mathematics.Internal;
 
 public sealed class MomentArithmetics : Arithmetics<Moment>
 {

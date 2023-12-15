@@ -1,11 +1,11 @@
 using System.Security;
-using Stl.Fusion.Authentication;
-using Stl.Fusion.Authentication.Services;
-using Stl.Fusion.Tests.Model;
-using Stl.Reflection;
+using ActualLab.Fusion.Authentication;
+using ActualLab.Fusion.Authentication.Services;
+using ActualLab.Fusion.Tests.Model;
+using ActualLab.Reflection;
 using User = Stl.Fusion.Authentication.User;
 
-namespace Stl.Fusion.Tests.Authentication;
+namespace ActualLab.Fusion.Tests.Authentication;
 
 public class SqliteAuthServiceTest : AuthServiceTestBase
 {

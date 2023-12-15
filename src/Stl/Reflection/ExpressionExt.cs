@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Reflection;
+namespace ActualLab.Reflection;
 
 public static class ExpressionExt
 {

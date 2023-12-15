@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Rpc.Infrastructure;
-using Stl.Rpc.Internal;
+using ActualLab.Interception;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 {

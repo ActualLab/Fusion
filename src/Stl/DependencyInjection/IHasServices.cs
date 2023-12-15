@@ -1,4 +1,4 @@
-namespace Stl.DependencyInjection;
+namespace ActualLab.DependencyInjection;
 
 public interface IHasServices
 {

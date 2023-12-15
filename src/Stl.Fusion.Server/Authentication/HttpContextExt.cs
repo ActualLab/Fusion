@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 
-namespace Stl.Fusion.Server.Authentication;
+namespace ActualLab.Fusion.Server.Authentication;
 
 public static class HttpContextExt
 {

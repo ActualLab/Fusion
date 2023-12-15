@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Blazor.Authentication.Internal;
+namespace ActualLab.Fusion.Blazor.Authentication.Internal;
 
 public static class Errors
 {

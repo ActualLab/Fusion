@@ -1,7 +1,7 @@
 using System.Net.WebSockets;
 using System.Security;
 
-namespace Stl.Fusion.Internal;
+namespace ActualLab.Fusion.Internal;
 
 public static class Errors
 {

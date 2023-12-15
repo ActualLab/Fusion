@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using Stl.Fusion.Authentication;
-using Stl.Fusion.UI;
+using ActualLab.Fusion.Authentication;
+using ActualLab.Fusion.UI;
 
-namespace Stl.Fusion.Blazor.Authentication;
+namespace ActualLab.Fusion.Blazor.Authentication;
 
 public class AuthStateProvider : AuthenticationStateProvider, IDisposable
 {

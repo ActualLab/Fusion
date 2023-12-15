@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Tests.Model;
+namespace ActualLab.Fusion.Tests.Model;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial record HasStringId(

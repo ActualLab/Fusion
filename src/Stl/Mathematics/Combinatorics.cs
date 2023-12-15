@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Stl.Mathematics;
+namespace ActualLab.Mathematics;
 
 public static class Combinatorics
 {

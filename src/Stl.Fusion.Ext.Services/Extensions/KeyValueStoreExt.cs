@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Fusion.Extensions;
+namespace ActualLab.Fusion.Extensions;
 
 public static class KeyValueStoreExt
 {

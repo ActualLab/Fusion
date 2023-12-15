@@ -1,6 +1,6 @@
-using Stl.Rpc;
+using ActualLab.Rpc;
 
-namespace Stl.Tests.Rpc;
+namespace ActualLab.Tests.Rpc;
 
 public interface ITestRpcBackend : ICommandService, IBackendService
 {

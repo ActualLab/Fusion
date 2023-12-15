@@ -1,7 +1,7 @@
-using Stl.Caching;
-using Stl.Testing.Collections;
+using ActualLab.Caching;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Caching;
+namespace ActualLab.Tests.Caching;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RefHolderTest

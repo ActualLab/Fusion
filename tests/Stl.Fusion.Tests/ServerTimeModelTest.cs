@@ -1,6 +1,6 @@
-using Stl.Fusion.Tests.UIModels;
+using ActualLab.Fusion.Tests.UIModels;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {

@@ -1,15 +1,15 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net.WebSockets;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Stl.Interception;
-using Stl.Rpc.Caching;
-using Stl.Rpc.Clients;
-using Stl.Rpc.Diagnostics;
-using Stl.Rpc.Infrastructure;
-using Stl.Rpc.Internal;
+using ActualLab.Interception;
+using ActualLab.Rpc.Caching;
+using ActualLab.Rpc.Clients;
+using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 using Errors = Stl.Rpc.Internal.Errors;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public readonly struct RpcBuilder
 {

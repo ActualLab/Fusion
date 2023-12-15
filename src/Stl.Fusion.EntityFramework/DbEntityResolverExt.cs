@@ -1,6 +1,6 @@
-using Stl.Multitenancy;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public static class DbEntityResolverExt
 {

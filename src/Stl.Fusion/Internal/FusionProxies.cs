@@ -1,12 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Fusion.Interception;
-using Stl.Fusion.Client.Interception;
-using Stl.Interception;
-using Stl.Rpc;
-using Stl.Rpc.Infrastructure;
-using Stl.Rpc.Internal;
+using ActualLab.Fusion.Interception;
+using ActualLab.Fusion.Client.Interception;
+using ActualLab.Interception;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
-namespace Stl.Fusion.Internal;
+namespace ActualLab.Fusion.Internal;
 
 public static class FusionProxies
 {

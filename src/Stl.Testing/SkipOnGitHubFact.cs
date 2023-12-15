@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public sealed class SkipOnGitHubFact : FactAttribute
 {

@@ -1,6 +1,6 @@
-using Stl.RestEase;
+using ActualLab.RestEase;
 
-namespace Stl.Tests.RestEase;
+namespace ActualLab.Tests.RestEase;
 
 // Checks different request patterns with RestEase
 public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)

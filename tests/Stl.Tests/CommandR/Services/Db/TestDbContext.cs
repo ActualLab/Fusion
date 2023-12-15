@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework;
-using Stl.Fusion.EntityFramework.Operations;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework.Operations;
 
-namespace Stl.Tests.CommandR.Services;
+namespace ActualLab.Tests.CommandR.Services;
 
 public class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options)
 {

@@ -1,4 +1,4 @@
-namespace Stl.Tests.Collections;
+namespace ActualLab.Tests.Collections;
 
 public class FenwickTreeTest(ITestOutputHelper @out) : TestBase(@out)
 {

@@ -1,6 +1,6 @@
-using Stl.Rpc;
+using ActualLab.Rpc;
 
-namespace Stl.Fusion.Extensions;
+namespace ActualLab.Fusion.Extensions;
 
 public class RpcPeerStateMonitor : WorkerBase
 {

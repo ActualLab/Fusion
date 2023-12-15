@@ -1,4 +1,4 @@
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 /// <summary>
 /// This interface indicates that a certain service is available only on backend.

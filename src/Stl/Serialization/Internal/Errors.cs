@@ -1,4 +1,4 @@
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 public static class Errors
 {

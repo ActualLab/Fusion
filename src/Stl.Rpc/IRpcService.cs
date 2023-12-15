@@ -1,5 +1,5 @@
-using Stl.Interception;
+using ActualLab.Interception;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public interface IRpcService : IRequiresAsyncProxy;

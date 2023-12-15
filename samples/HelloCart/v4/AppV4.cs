@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Samples.HelloCart.V2;
-using Stl.Fusion.EntityFramework;
-using Stl.Fusion.EntityFramework.Redis;
-using Stl.Fusion.Server;
-using Stl.IO;
-using Stl.Rpc;
-using Stl.Rpc.Server;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework.Redis;
+using ActualLab.Fusion.Server;
+using ActualLab.IO;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Server;
 
 namespace Samples.HelloCart.V4;
 

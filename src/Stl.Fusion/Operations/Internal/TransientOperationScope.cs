@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Operations.Internal;
+namespace ActualLab.Fusion.Operations.Internal;
 
 /// <summary>
 /// This scope serves as the outermost, "catch-all" operation scope for

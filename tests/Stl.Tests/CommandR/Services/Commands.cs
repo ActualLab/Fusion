@@ -1,4 +1,4 @@
-namespace Stl.Tests.CommandR.Services;
+namespace ActualLab.Tests.CommandR.Services;
 
 public record LogCommand : ICommand<Unit>
 {

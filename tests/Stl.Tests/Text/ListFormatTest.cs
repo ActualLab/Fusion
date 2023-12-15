@@ -1,4 +1,4 @@
-namespace Stl.Tests.Text;
+namespace ActualLab.Tests.Text;
 
 public class ListFormatTest(ITestOutputHelper @out) : TestBase(@out)
 {

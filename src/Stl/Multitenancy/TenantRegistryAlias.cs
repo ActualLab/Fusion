@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Multitenancy;
+namespace ActualLab.Multitenancy;
 
 // Exposes tenants from any ITenantRegistry to TContext
 public class TenantRegistryAlias<TContext>(ITenantRegistry source) : ITenantRegistry<TContext>

@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Stl.IO.Internal;
+namespace ActualLab.IO.Internal;
 
 // Used by JSON.NET to serialize dictionary keys of this type
 public class FilePathTypeConverter : TypeConverter

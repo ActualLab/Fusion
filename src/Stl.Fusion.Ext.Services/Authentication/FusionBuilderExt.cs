@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.Authentication.Services;
-using Stl.Internal;
+using ActualLab.Fusion.Authentication.Services;
+using ActualLab.Internal;
 using UnreferencedCode = Stl.Fusion.Internal.UnreferencedCode;
 
-namespace Stl.Fusion.Authentication;
+namespace ActualLab.Fusion.Authentication;
 
 public static class FusionBuilderExt
 {

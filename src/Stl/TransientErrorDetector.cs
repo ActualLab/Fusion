@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security;
 using System.Security.Authentication;
-using Stl.Versioning;
+using ActualLab.Versioning;
 
 namespace Stl;
 

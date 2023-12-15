@@ -1,4 +1,4 @@
-namespace Stl.Locking;
+namespace ActualLab.Locking;
 
 public static class SemaphoreSlimExt
 {

@@ -1,10 +1,10 @@
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Stl.Multitenancy;
-using Stl.Versioning;
+using ActualLab.Multitenancy;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public abstract class DbServiceBase<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>

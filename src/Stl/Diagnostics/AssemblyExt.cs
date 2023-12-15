@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Diagnostics;
+namespace ActualLab.Diagnostics;
 
 public static class AssemblyExt
 {

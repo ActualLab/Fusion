@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 public interface IMultitenantDbContextFactory<out TDbContext>
     where TDbContext : DbContext

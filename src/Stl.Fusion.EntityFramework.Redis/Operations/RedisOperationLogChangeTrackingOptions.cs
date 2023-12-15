@@ -1,7 +1,7 @@
-using Stl.Fusion.EntityFramework.Operations;
-using Stl.Multitenancy;
+using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.Multitenancy;
 
-namespace Stl.Fusion.EntityFramework.Redis.Operations;
+namespace ActualLab.Fusion.EntityFramework.Redis.Operations;
 
 public record RedisOperationLogChangeTrackingOptions<TDbContext> : DbOperationCompletionTrackingOptions
 {

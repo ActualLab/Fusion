@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 
-namespace Stl.Fusion.Server.Endpoints;
+namespace ActualLab.Fusion.Server.Endpoints;
 
 public class AuthEndpoints(AuthEndpoints.Options settings)
 {

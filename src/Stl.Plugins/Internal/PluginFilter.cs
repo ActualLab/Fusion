@@ -1,6 +1,6 @@
-using Stl.Plugins.Metadata;
+using ActualLab.Plugins.Metadata;
 
-namespace Stl.Plugins.Internal;
+namespace ActualLab.Plugins.Internal;
 
 public interface IPluginFilter
 {

@@ -1,7 +1,7 @@
 using System.Web.Http.Controllers;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Fusion.Server;
+namespace ActualLab.Fusion.Server;
 
 public static class HttpActionContextExt
 {

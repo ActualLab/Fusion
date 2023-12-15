@@ -1,7 +1,7 @@
 using System.Reactive.PlatformServices;
-using Stl.Time.Internal;
+using ActualLab.Time.Internal;
 
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 public sealed class CoarseSystemClock : IMomentClock
 {

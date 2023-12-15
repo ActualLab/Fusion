@@ -1,4 +1,4 @@
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcOutboundMiddleware(IServiceProvider services)
     : RpcMiddleware(services)

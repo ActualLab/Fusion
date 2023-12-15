@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Serialization.Internal;
+namespace ActualLab.Serialization.Internal;
 
 #if !NET5_0
 [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

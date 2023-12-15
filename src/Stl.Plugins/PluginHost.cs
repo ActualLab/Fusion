@@ -1,6 +1,6 @@
-using Stl.Plugins.Metadata;
+using ActualLab.Plugins.Metadata;
 
-namespace Stl.Plugins;
+namespace ActualLab.Plugins;
 
 public interface IPluginHost : IServiceProvider, IAsyncDisposable, IDisposable
 {

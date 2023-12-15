@@ -2,12 +2,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Stl.Fusion.Authentication.Services;
-using Stl.Fusion.EntityFramework;
-using Stl.Fusion.EntityFramework.Internal;
-using Stl.Fusion.Internal;
+using ActualLab.Fusion.Authentication.Services;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Fusion.Internal;
 
-namespace Stl.Fusion.Authentication;
+namespace ActualLab.Fusion.Authentication;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly struct DbAuthServiceBuilder<

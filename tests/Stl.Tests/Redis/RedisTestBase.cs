@@ -1,7 +1,7 @@
 using StackExchange.Redis;
-using Stl.Redis;
+using ActualLab.Redis;
 
-namespace Stl.Tests.Redis;
+namespace ActualLab.Tests.Redis;
 
 public class RedisTestBase(ITestOutputHelper @out) : TestBase(@out)
 {

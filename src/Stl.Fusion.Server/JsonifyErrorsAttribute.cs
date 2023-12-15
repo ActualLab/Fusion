@@ -2,9 +2,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Fusion.Server;
+namespace ActualLab.Fusion.Server;
 
 public sealed class JsonifyErrorsAttribute : ExceptionFilterAttribute
 {

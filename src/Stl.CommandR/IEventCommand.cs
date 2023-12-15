@@ -1,4 +1,4 @@
-namespace Stl.CommandR;
+namespace ActualLab.CommandR;
 
 public interface IEventCommand : ICommand<Unit>
 {

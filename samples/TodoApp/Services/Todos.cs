@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.Extensions;
-using Stl.Rpc;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Fusion.Extensions;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 using Templates.TodoApp.Abstractions;
 
 namespace Templates.TodoApp.Services;

@@ -1,9 +1,9 @@
 using System.Runtime.Serialization;
 using MemoryPack;
-using Stl.Fusion.Blazor;
-using Stl.Fusion.Extensions;
-using Stl.Rpc;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Fusion.Blazor;
+using ActualLab.Fusion.Extensions;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 
 namespace Templates.TodoApp.Abstractions;
 

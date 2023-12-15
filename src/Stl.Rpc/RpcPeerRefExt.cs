@@ -1,6 +1,6 @@
-using Stl.Rpc.Internal;
+using ActualLab.Rpc.Internal;
 
-namespace Stl.Rpc;
+namespace ActualLab.Rpc;
 
 public static class RpcPeerRefExt
 {

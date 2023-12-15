@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework.Npgsql.Internal;
+using ActualLab.Fusion.EntityFramework.Npgsql.Internal;
 
-namespace Stl.Fusion.EntityFramework.Npgsql;
+namespace ActualLab.Fusion.EntityFramework.Npgsql;
 
 public static class DbContextOptionsBuilderExt
 {

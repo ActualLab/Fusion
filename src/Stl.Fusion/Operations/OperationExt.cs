@@ -1,6 +1,6 @@
-using Stl.Fusion.Operations.Internal;
+using ActualLab.Fusion.Operations.Internal;
 
-namespace Stl.Fusion.Operations;
+namespace ActualLab.Fusion.Operations;
 
 public static class OperationExt
 {

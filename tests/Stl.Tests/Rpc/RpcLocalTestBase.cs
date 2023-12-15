@@ -1,9 +1,9 @@
-using Stl.Rpc;
-using Stl.Rpc.Testing;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Testing;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
-namespace Stl.Tests.Rpc;
+namespace ActualLab.Tests.Rpc;
 
 public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
 {

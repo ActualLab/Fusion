@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Client.Interception;
+namespace ActualLab.Fusion.Client.Interception;
 
 internal static class AlwaysSynchronized
 {

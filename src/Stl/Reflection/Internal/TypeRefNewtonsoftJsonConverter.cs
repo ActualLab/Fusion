@@ -1,11 +1,11 @@
 using Newtonsoft.Json;
 
-namespace Stl.Reflection.Internal;
+namespace ActualLab.Reflection.Internal;
 
 public class TypeRefNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<TypeRef>
 {
     public override void WriteJson(
-        JsonWriter writer, TypeRef value, 
+        JsonWriter writer, TypeRef value,
         Newtonsoft.Json.JsonSerializer serializer)
         => writer.WriteValue(value.AssemblyQualifiedName.Value);
 

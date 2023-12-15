@@ -1,7 +1,7 @@
-using Stl.Fusion.Blazor.Internal;
-using Stl.OS;
+using ActualLab.Fusion.Blazor.Internal;
+using ActualLab.OS;
 
-namespace Stl.Fusion.Blazor;
+namespace ActualLab.Fusion.Blazor;
 
 public static class ComputedStateComponent
 {

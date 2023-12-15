@@ -1,6 +1,6 @@
-using Stl.Fusion.Tests.Services;
+using ActualLab.Fusion.Tests.Services;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class ComputedInterceptorTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {

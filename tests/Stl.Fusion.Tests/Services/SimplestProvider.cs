@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Tests.Services;
+namespace ActualLab.Fusion.Tests.Services;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial record SetValueCommand : ICommand<Unit>

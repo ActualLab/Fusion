@@ -1,4 +1,4 @@
-namespace Stl.Collections;
+namespace ActualLab.Collections;
 
 #pragma warning disable CA1710
 

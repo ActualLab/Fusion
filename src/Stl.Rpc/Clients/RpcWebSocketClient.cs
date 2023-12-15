@@ -1,11 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net.WebSockets;
 using System.Text.Encodings.Web;
-using Stl.Rpc.Infrastructure;
-using Stl.Rpc.Internal;
-using Stl.Rpc.WebSockets;
+using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
+using ActualLab.Rpc.WebSockets;
 
-namespace Stl.Rpc.Clients;
+namespace ActualLab.Rpc.Clients;
 
 public class RpcWebSocketClient(
     RpcWebSocketClient.Options settings,

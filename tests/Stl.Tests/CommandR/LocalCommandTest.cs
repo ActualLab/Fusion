@@ -1,4 +1,4 @@
-namespace Stl.Tests.CommandR;
+namespace ActualLab.Tests.CommandR;
 
 #pragma warning disable MA0012
 

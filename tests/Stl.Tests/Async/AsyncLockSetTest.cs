@@ -1,9 +1,9 @@
 using System.Reflection;
-using Stl.Locking;
-using Stl.Generators;
-using Stl.Testing.Collections;
+using ActualLab.Locking;
+using ActualLab.Generators;
+using ActualLab.Testing.Collections;
 
-namespace Stl.Tests.Async;
+namespace ActualLab.Tests.Async;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class AsyncLockSetTest(ITestOutputHelper @out) : AsyncLockTestBase(@out)

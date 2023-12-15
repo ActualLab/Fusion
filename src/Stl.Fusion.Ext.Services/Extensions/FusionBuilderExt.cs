@@ -1,11 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Stl.CommandR.Internal;
-using Stl.Fusion.EntityFramework;
-using Stl.Fusion.Extensions.Services;
+using ActualLab.CommandR.Internal;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.Extensions.Services;
 
-namespace Stl.Fusion.Extensions;
+namespace ActualLab.Fusion.Extensions;
 
 public static class FusionBuilderExt
 {

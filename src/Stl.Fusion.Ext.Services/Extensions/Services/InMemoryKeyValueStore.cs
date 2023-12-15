@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Extensions.Services;
+namespace ActualLab.Fusion.Extensions.Services;
 
 public class InMemoryKeyValueStore(
         InMemoryKeyValueStore.Options settings,

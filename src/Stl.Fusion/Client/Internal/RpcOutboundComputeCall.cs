@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Rpc.Infrastructure;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Fusion.Client.Internal;
+namespace ActualLab.Fusion.Client.Internal;
 
 public interface IRpcOutboundComputeCall
 {

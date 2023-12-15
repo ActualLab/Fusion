@@ -2,7 +2,7 @@ using System.Buffers;
 using System.Text;
 using Cysharp.Text;
 
-namespace Stl.Text;
+namespace ActualLab.Text;
 
 #if NETSTANDARD2_0
 public static unsafe class DecoderExt

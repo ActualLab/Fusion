@@ -1,4 +1,4 @@
-namespace Stl.Tests.Rpc;
+namespace ActualLab.Tests.Rpc;
 
 public class RetryDelaySeqTest(ITestOutputHelper @out) : TestBase(@out)
 {

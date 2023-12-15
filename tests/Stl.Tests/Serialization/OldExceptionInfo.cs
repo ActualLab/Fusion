@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
-using Stl.Reflection;
-using Stl.Serialization.Internal;
+using ActualLab.Reflection;
+using ActualLab.Serialization.Internal;
 
-namespace Stl.Tests.Serialization;
+namespace ActualLab.Tests.Serialization;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>

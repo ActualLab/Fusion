@@ -1,6 +1,6 @@
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Collections;
+namespace ActualLab.Collections;
 
 public static class EnumerableExt
 {

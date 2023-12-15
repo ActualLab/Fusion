@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Fusion.Blazor;
+namespace ActualLab.Fusion.Blazor;
 
 public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
 {

@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using StackExchange.Redis;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Redis;
+namespace ActualLab.Redis;
 
 public class RedisPub
 {

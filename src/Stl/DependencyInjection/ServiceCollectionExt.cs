@@ -3,10 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using Stl.DependencyInjection.Internal;
-using Stl.Internal;
+using ActualLab.DependencyInjection.Internal;
+using ActualLab.Internal;
 
-namespace Stl.DependencyInjection;
+namespace ActualLab.DependencyInjection;
 
 public static class ServiceCollectionExt
 {

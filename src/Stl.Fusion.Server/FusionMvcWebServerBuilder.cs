@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Stl.Fusion.Server.Controllers;
-using Stl.Fusion.Server.Internal;
-using Stl.Internal;
+using ActualLab.Fusion.Server.Controllers;
+using ActualLab.Fusion.Server.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Fusion.Server;
+namespace ActualLab.Fusion.Server;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly struct FusionMvcWebServerBuilder

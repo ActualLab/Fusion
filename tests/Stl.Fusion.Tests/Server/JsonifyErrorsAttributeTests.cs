@@ -1,4 +1,4 @@
-﻿namespace Stl.Fusion.Tests.Server;
+﻿namespace ActualLab.Fusion.Tests.Server;
 
 public class JsonifyErrorsAttributeTests
 {

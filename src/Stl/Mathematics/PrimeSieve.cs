@@ -1,4 +1,4 @@
-namespace Stl.Mathematics;
+namespace ActualLab.Mathematics;
 
 public class PrimeSieve
 {

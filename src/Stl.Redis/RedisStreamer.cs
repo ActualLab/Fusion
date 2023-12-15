@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using StackExchange.Redis;
-using Stl.Internal;
+using ActualLab.Internal;
 using Errors = Stl.Redis.Internal.Errors;
 
-namespace Stl.Redis;
+namespace ActualLab.Redis;
 
 public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<T>.Options? settings = null)
 {

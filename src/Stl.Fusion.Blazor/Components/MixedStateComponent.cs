@@ -1,6 +1,6 @@
-﻿using Stl.Internal;
+﻿using ActualLab.Internal;
 
-namespace Stl.Fusion.Blazor;
+namespace ActualLab.Fusion.Blazor;
 
 public abstract class MixedStateComponent<TState, TMutableState> : ComputedStateComponent<TState>
 {

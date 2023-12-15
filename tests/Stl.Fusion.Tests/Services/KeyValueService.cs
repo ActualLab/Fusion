@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using Stl.Reflection;
+using ActualLab.Reflection;
 
-namespace Stl.Fusion.Tests.Services;
+namespace ActualLab.Fusion.Tests.Services;
 
 public interface IKeyValueService<TValue> : IComputeService
 {

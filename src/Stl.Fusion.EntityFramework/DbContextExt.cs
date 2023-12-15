@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
-using Stl.Fusion.EntityFramework.Internal;
+using ActualLab.Fusion.EntityFramework.Internal;
 
-namespace Stl.Fusion.EntityFramework;
+namespace ActualLab.Fusion.EntityFramework;
 
 #pragma warning disable EF1001
 

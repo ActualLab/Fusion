@@ -1,4 +1,4 @@
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 public static class TimeSpanExt
 {
@@ -33,5 +33,5 @@ public static class TimeSpanExt
         if (absValue < TimeSpan.FromMinutes(60))
             return $"{value.TotalMinutes:N0}m {value.Seconds:N3}s";
         return $"{value.TotalHours:N0}h {value.Minutes:N0}m {value.Seconds:N3}s";
-    } 
+    }
 }

@@ -1,6 +1,6 @@
-using Stl.Tests.Rpc;
+using ActualLab.Tests.Rpc;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public abstract class SimpleFusionTestBase(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 {

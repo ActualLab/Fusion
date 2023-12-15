@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Rpc.Internal;
+using ActualLab.Rpc.Internal;
 using Errors = Stl.Rpc.Internal.Errors;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public class RpcInboundContext
 {

@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Stl.Fusion.Internal;
+namespace ActualLab.Fusion.Internal;
 
 // Used by JSON.NET to serialize dictionary keys of this type
 public class SessionTypeConverter : TypeConverter

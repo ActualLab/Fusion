@@ -1,4 +1,4 @@
-namespace Stl.Caching;
+namespace ActualLab.Caching;
 
 public abstract class AsyncCacheBase<TKey, TValue> : AsyncKeyResolverBase<TKey, TValue>, IAsyncCache<TKey, TValue>
     where TKey : notnull

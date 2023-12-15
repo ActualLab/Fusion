@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception.Internal;
+using ActualLab.Interception.Internal;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public record ComputedOptions
 {

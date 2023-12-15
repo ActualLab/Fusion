@@ -1,4 +1,4 @@
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 /// <summary>
 /// Indicates that type's ToString() can be deserialized

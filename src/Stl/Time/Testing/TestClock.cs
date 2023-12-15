@@ -1,7 +1,7 @@
 using System.Reactive.PlatformServices;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Time.Testing;
+namespace ActualLab.Time.Testing;
 
 public sealed class TestClock : ITestClock, IDisposable
 {

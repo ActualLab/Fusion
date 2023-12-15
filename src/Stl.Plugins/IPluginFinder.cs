@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Plugins.Internal;
-using Stl.Plugins.Metadata;
+using ActualLab.Plugins.Internal;
+using ActualLab.Plugins.Metadata;
 
-namespace Stl.Plugins;
+namespace ActualLab.Plugins;
 
 public interface IPluginFinder
 {

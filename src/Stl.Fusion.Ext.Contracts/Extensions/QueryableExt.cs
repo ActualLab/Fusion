@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 
-namespace Stl.Fusion.Extensions;
+namespace ActualLab.Fusion.Extensions;
 
 public static class QueryableExt
 {

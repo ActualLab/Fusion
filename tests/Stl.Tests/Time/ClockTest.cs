@@ -1,8 +1,8 @@
 using System.Reactive.Linq;
-using Stl.Testing.Collections;
-using Stl.Time.Testing;
+using ActualLab.Testing.Collections;
+using ActualLab.Time.Testing;
 
-namespace Stl.Tests.Time;
+namespace ActualLab.Tests.Time;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class ClockTest(ITestOutputHelper @out) : TestBase(@out)

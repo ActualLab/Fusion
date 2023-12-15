@@ -1,6 +1,6 @@
-using Stl.OS;
+using ActualLab.OS;
 
-namespace Stl.Caching;
+namespace ActualLab.Caching;
 
 public class RefHolder
 {

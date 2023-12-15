@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Requirements;
+namespace ActualLab.Requirements;
 
 public record JointRequirement<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>

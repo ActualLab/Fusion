@@ -1,7 +1,7 @@
-using Stl.Testing.Collections;
-using Stl.Time.Internal;
+using ActualLab.Testing.Collections;
+using ActualLab.Time.Internal;
 
-namespace Stl.Tests.Platform;
+namespace ActualLab.Tests.Platform;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class TaskDelayTest(ITestOutputHelper @out) : TestBase(@out)

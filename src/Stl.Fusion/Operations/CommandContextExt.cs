@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Fusion.Operations;
+namespace ActualLab.Fusion.Operations;
 
 public static class CommandContextExt
 {

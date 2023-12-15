@@ -1,4 +1,4 @@
-namespace Stl.Concurrency;
+namespace ActualLab.Concurrency;
 
 public sealed class GCHandlePool(GCHandlePool.Options settings) : IDisposable
 {

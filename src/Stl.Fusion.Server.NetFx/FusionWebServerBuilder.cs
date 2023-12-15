@@ -1,6 +1,6 @@
-using Stl.Rpc.Server;
+using ActualLab.Rpc.Server;
 
-namespace Stl.Fusion.Server;
+namespace ActualLab.Fusion.Server;
 
 public readonly struct FusionWebServerBuilder
 {

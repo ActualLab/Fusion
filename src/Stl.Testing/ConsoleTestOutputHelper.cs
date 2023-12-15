@@ -1,6 +1,6 @@
 ﻿using Xunit.Abstractions;
 
-namespace Stl.Testing;
+namespace ActualLab.Testing;
 
 public class ConsoleTestOutputHelper : ITestOutputHelper
 {

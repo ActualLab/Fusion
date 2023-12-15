@@ -2,7 +2,7 @@
 using System.Globalization;
 #endif
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcCall(RpcMethodDef methodDef)
 {

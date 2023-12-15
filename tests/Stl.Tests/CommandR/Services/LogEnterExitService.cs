@@ -1,4 +1,4 @@
-namespace Stl.Tests.CommandR.Services;
+namespace ActualLab.Tests.CommandR.Services;
 
 public class LogEnterExitService(IServiceProvider services) : ServiceBase(services), ICommandService
 {

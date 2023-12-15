@@ -1,4 +1,4 @@
-namespace Stl.Collections;
+namespace ActualLab.Collections;
 
 public class BinaryHeap<TPriority, TValue> : IEnumerable<(TPriority Priority, TValue Value)>
 {

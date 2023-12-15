@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Stl.Mathematics;
+namespace ActualLab.Mathematics;
 
 /// <summary>
 /// Defines the boundaries of a continuous span of items

@@ -1,4 +1,4 @@
-namespace Stl.Plugins;
+namespace ActualLab.Plugins;
 
 public interface IHasDependencies
 {

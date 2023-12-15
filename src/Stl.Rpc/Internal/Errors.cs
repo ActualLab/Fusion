@@ -1,6 +1,6 @@
-using Stl.Rpc.Infrastructure;
+using ActualLab.Rpc.Infrastructure;
 
-namespace Stl.Rpc.Internal;
+namespace ActualLab.Rpc.Internal;
 
 public static class Errors
 {

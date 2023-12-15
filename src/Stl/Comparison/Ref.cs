@@ -1,4 +1,4 @@
-namespace Stl.Comparison;
+namespace ActualLab.Comparison;
 
 // Shouldn't be serializable!
 public readonly struct Ref<T> : IEquatable<Ref<T>>

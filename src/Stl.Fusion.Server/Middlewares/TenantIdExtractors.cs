@@ -1,8 +1,8 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Http;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Fusion.Server.Middlewares;
+namespace ActualLab.Fusion.Server.Middlewares;
 
 public static class TenantIdExtractors
 {

@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Fusion.Internal;
+using ActualLab.Fusion.Internal;
 
-namespace Stl.Fusion;
+namespace ActualLab.Fusion;
 
 public class ComputeContext
 {

@@ -1,8 +1,8 @@
-using Stl.Concurrency;
-using Stl.OS;
-using Stl.Pooling;
+using ActualLab.Concurrency;
+using ActualLab.OS;
+using ActualLab.Pooling;
 
-namespace Stl.Locking;
+namespace ActualLab.Locking;
 
 #pragma warning disable CA2002
 

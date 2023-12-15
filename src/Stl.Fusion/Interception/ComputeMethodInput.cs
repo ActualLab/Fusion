@@ -1,7 +1,7 @@
 using Cysharp.Text;
-using Stl.Interception;
+using ActualLab.Interception;
 
-namespace Stl.Fusion.Interception;
+namespace ActualLab.Fusion.Interception;
 
 public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethodInput>
 {

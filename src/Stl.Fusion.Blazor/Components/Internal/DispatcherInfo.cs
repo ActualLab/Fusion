@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 
-namespace Stl.Fusion.Blazor.Internal;
+namespace ActualLab.Fusion.Blazor.Internal;
 
 public static class DispatcherInfo
 {

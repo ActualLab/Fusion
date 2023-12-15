@@ -1,4 +1,4 @@
-namespace Stl.Collections.Slim;
+namespace ActualLab.Collections.Slim;
 
 public sealed class ReferenceEqualityComparer<T> : IEqualityComparer<T>
     where T : class

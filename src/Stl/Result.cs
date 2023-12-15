@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
-using Stl.Conversion;
-using Stl.Internal;
+using ActualLab.Conversion;
+using ActualLab.Internal;
 
 namespace Stl;
 

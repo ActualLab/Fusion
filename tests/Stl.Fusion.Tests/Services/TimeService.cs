@@ -1,6 +1,6 @@
 using FluentAssertions.Extensions;
 
-namespace Stl.Fusion.Tests.Services;
+namespace ActualLab.Fusion.Tests.Services;
 
 public interface ITimeServer : IComputeService
 {

@@ -1,6 +1,6 @@
 using System.Reflection.Emit;
 
-namespace Stl.Interception;
+namespace ActualLab.Interception;
 
 public abstract partial record ArgumentList
 {

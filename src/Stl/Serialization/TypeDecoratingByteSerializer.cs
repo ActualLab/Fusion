@@ -1,10 +1,10 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
-using Stl.Serialization.Internal;
+using ActualLab.Internal;
+using ActualLab.Serialization.Internal;
 using Errors = Stl.Serialization.Internal.Errors;
 
-namespace Stl.Serialization;
+namespace ActualLab.Serialization;
 
 public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type, bool>? typeFilter = null)
     : ByteSerializerBase

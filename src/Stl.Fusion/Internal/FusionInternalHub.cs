@@ -1,9 +1,9 @@
-using Stl.CommandR.Interception;
-using Stl.Fusion.Interception;
-using Stl.Rpc;
-using Stl.Versioning;
+using ActualLab.CommandR.Interception;
+using ActualLab.Fusion.Interception;
+using ActualLab.Rpc;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion.Internal;
+namespace ActualLab.Fusion.Internal;
 
 #pragma warning disable CS9124
 

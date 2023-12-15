@@ -1,4 +1,4 @@
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class AnonymousComputedTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
 {

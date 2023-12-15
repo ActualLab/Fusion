@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Stl.Fusion.EntityFramework;
-using Stl.Tests.CommandR.Services;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Tests.CommandR.Services;
 
-namespace Stl.Tests.CommandR;
+namespace ActualLab.Tests.CommandR;
 
 public class DbOperationTest : CommandRTestBase
 {

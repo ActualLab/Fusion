@@ -1,6 +1,6 @@
-using Stl.Fusion.Blazor.Authentication;
+using ActualLab.Fusion.Blazor.Authentication;
 
-namespace Stl.Fusion.Tests.Blazor;
+namespace ActualLab.Fusion.Tests.Blazor;
 
 public class CascadingAuthStateTest
 {

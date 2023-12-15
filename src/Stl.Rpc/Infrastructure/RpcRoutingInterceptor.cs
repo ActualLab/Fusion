@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Interception;
-using Stl.Interception.Interceptors;
+using ActualLab.Interception;
+using ActualLab.Interception.Interceptors;
 
-namespace Stl.Rpc.Infrastructure;
+namespace ActualLab.Rpc.Infrastructure;
 
 public class RpcRoutingInterceptor : RpcInterceptorBase
 {

@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Serialization;
 
-namespace Stl.Reflection;
+namespace ActualLab.Reflection;
 
 public static class TypeNameHelpers
 {

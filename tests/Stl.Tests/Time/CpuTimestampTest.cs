@@ -1,4 +1,4 @@
-namespace Stl.Tests.Time;
+namespace ActualLab.Tests.Time;
 
 public class CpuTimestampTest(ITestOutputHelper @out) : TestBase(@out)
 {

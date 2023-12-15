@@ -1,7 +1,7 @@
-using Stl.Fusion.Tests.Services;
-using Stl.Rpc;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.Rpc;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {

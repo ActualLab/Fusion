@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using Stl.Fusion.Authentication;
+using ActualLab.Fusion.Authentication;
 
-namespace Stl.Fusion.Tests.Services;
+namespace ActualLab.Fusion.Tests.Services;
 
 public class PerUserCounterService : IComputeService
 {

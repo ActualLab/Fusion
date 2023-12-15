@@ -1,6 +1,6 @@
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Locking;
+namespace ActualLab.Locking;
 
 public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unchecked)
     : IAsyncLock<AsyncLock.Releaser>

@@ -1,9 +1,9 @@
-using Stl.Fusion.Client.Caching;
-using Stl.Fusion.Client.Interception;
-using Stl.Fusion.Tests.Services;
-using Stl.OS;
+using ActualLab.Fusion.Client.Caching;
+using ActualLab.Fusion.Client.Interception;
+using ActualLab.Fusion.Tests.Services;
+using ActualLab.OS;
 
-namespace Stl.Fusion.Tests;
+namespace ActualLab.Fusion.Tests;
 
 public class ScreenshotServiceClientWithCacheTest : FusionTestBase
 {

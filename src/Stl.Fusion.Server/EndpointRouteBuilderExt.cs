@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Stl.Fusion.Server.Endpoints;
-using Stl.Internal;
+using ActualLab.Fusion.Server.Endpoints;
+using ActualLab.Internal;
 
-namespace Stl.Fusion.Server;
+namespace ActualLab.Fusion.Server;
 
 #if NET7_0_OR_GREATER
 

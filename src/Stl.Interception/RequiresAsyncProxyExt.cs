@@ -1,6 +1,6 @@
-using Stl.Interception.Internal;
+using ActualLab.Interception.Internal;
 
-namespace Stl.Interception;
+namespace ActualLab.Interception;
 
 public static class RequiresAsyncProxyExt
 {

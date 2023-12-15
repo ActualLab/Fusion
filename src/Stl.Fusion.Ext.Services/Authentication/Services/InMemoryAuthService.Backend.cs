@@ -1,8 +1,8 @@
 using System.Globalization;
-using Stl.Fusion.Internal;
-using Stl.Versioning;
+using ActualLab.Fusion.Internal;
+using ActualLab.Versioning;
 
-namespace Stl.Fusion.Authentication.Services;
+namespace ActualLab.Fusion.Authentication.Services;
 
 public partial class InMemoryAuthService
 {

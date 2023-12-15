@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Cysharp.Text;
 
-namespace Stl.Time;
+namespace ActualLab.Time;
 
 public readonly record struct CpuTimestamp(long Value) : IComparable<CpuTimestamp>
 {

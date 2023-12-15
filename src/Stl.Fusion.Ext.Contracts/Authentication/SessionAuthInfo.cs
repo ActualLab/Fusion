@@ -1,6 +1,6 @@
 using System.Security;
 
-namespace Stl.Fusion.Authentication;
+namespace ActualLab.Fusion.Authentication;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial record SessionAuthInfo : IRequirementTarget

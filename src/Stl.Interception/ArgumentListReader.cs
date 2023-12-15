@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Stl.Internal;
+using ActualLab.Internal;
 
-namespace Stl.Interception;
+namespace ActualLab.Interception;
 
 public abstract class ArgumentListReader
 {
