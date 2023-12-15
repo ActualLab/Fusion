@@ -10,7 +10,7 @@ public class ActivitySourceTest(ITestOutputHelper @out) : TestBase(@out)
         var a = typeof(Result).GetActivitySource();
         Out.WriteLine(a.Name);
         Out.WriteLine(a.Version);
-        a.Name.Should().Be("ActualLab");
+        a.Name.Should().Be("ActualLab.Core");
         a.Version.Should().StartWith("7.");
         a.Version.Should().Contain("+");
 
