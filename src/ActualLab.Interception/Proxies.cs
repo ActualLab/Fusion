@@ -142,7 +142,7 @@ public static class Proxies
             }
             var proxyTypeName = ZString.Concat(
                 type1.Namespace,
-                ".StlInterceptionProxies.",
+                ".ActualLabProxies.",
                 namePrefix,
                 "Proxy",
                 nameSuffix);

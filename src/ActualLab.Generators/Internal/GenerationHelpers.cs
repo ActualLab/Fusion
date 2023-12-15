@@ -5,25 +5,25 @@ using static SyntaxFactory;
 
 public static class GenerationHelpers
 {
-    public const string StlInterceptionNs = "ActualLab.Interception";
-    public const string StlInterceptionInternalNs = "ActualLab.Interception.Internal";
-    public const string StlInterceptionGns = $"global::{StlInterceptionNs}";
-    public const string StlInterceptionInternalGns = $"global::{StlInterceptionInternalNs}";
-    public const string RequiresFullProxyInterfaceName = $"{StlInterceptionNs}.IRequiresFullProxy";
-    public const string RequireAsyncProxyInterfaceName = $"{StlInterceptionNs}.IRequiresAsyncProxy";
-    public const string ProxyIgnoreAttributeName = $"{StlInterceptionNs}.ProxyIgnoreAttribute";
+    public const string InterceptionNs = "ActualLab.Interception";
+    public const string InterceptionInternalNs = "ActualLab.Interception.Internal";
+    public const string InterceptionGns = $"global::{InterceptionNs}";
+    public const string InterceptionInternalGns = $"global::{InterceptionInternalNs}";
+    public const string RequiresFullProxyInterfaceName = $"{InterceptionNs}.IRequiresFullProxy";
+    public const string RequireAsyncProxyInterfaceName = $"{InterceptionNs}.IRequiresAsyncProxy";
+    public const string ProxyIgnoreAttributeName = $"{InterceptionNs}.ProxyIgnoreAttribute";
     public const string ProxyClassSuffix = "Proxy";
-    public const string ProxyNamespaceSuffix = "StlInterceptionProxies";
+    public const string ProxyNamespaceSuffix = "ActualLabProxies";
 
     // Types
-    public static readonly IdentifierNameSyntax ProxyInterfaceTypeName = IdentifierName($"{StlInterceptionGns}.IProxy");
-    public static readonly IdentifierNameSyntax InterfaceProxyBaseTypeName = IdentifierName($"{StlInterceptionInternalGns}.InterfaceProxy");
-    public static readonly IdentifierNameSyntax InterceptorTypeName = IdentifierName($"{StlInterceptionGns}.Interceptor");
-    public static readonly IdentifierNameSyntax ProxyHelperTypeName = IdentifierName($"{StlInterceptionInternalGns}.ProxyHelper");
-    public static readonly IdentifierNameSyntax ArgumentListTypeName = IdentifierName($"{StlInterceptionGns}.ArgumentList");
+    public static readonly IdentifierNameSyntax ProxyInterfaceTypeName = IdentifierName($"{InterceptionGns}.IProxy");
+    public static readonly IdentifierNameSyntax InterfaceProxyBaseTypeName = IdentifierName($"{InterceptionInternalGns}.InterfaceProxy");
+    public static readonly IdentifierNameSyntax InterceptorTypeName = IdentifierName($"{InterceptionGns}.Interceptor");
+    public static readonly IdentifierNameSyntax ProxyHelperTypeName = IdentifierName($"{InterceptionInternalGns}.ProxyHelper");
+    public static readonly IdentifierNameSyntax ArgumentListTypeName = IdentifierName($"{InterceptionGns}.ArgumentList");
     public static readonly GenericNameSyntax ArgumentListGenericTypeName = GenericName(ArgumentListTypeName.Identifier.Text);
-    public static readonly IdentifierNameSyntax InvocationTypeName = IdentifierName($"{StlInterceptionGns}.Invocation");
-    public static readonly IdentifierNameSyntax ErrorsTypeName = IdentifierName($"{StlInterceptionInternalGns}.Errors");
+    public static readonly IdentifierNameSyntax InvocationTypeName = IdentifierName($"{InterceptionGns}.Invocation");
+    public static readonly IdentifierNameSyntax ErrorsTypeName = IdentifierName($"{InterceptionInternalGns}.Errors");
     public static readonly TypeSyntax NullableMethodInfoType = NullableType(typeof(MethodInfo).ToTypeRef());
     // Methods
     public static readonly IdentifierNameSyntax ArgumentListNewMethodName = IdentifierName("New");

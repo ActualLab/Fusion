@@ -204,7 +204,7 @@ public static partial class TypeExt
 
     public static Type DefaultNonProxyTypeResolver(Type type)
     {
-        const string proxyNamespaceSuffix = ".StlInterceptionProxies";
+        const string proxyNamespaceSuffix = ".ActualLabProxies";
         const string proxy = "Proxy";
 
         var @namespace = type.Namespace ?? "";

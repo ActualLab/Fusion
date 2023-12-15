@@ -50,9 +50,9 @@ public class TypeRefTest(ITestOutputHelper @out) : TestBase(@out)
         r = (TypeRef)typeof(Option<int>);
         r1 = r.WithoutAssemblyVersions();
 #if !NETFRAMEWORK
-        r1.AssemblyQualifiedName.Should().Be("ActualLab.Option`1[[System.Int32, System.Private.CoreLib]], Stl");
+        r1.AssemblyQualifiedName.Should().Be("ActualLab.Option`1[[System.Int32, System.Private.CoreLib]], ActualLab.Core");
 #else
-        r1.AssemblyQualifiedName.Should().Be("ActualLab.Option`1[[System.Int32, mscorlib]], Stl");
+        r1.AssemblyQualifiedName.Should().Be("ActualLab.Option`1[[System.Int32, mscorlib]], ActualLab.Core");
 #endif
         r1.Resolve().Should().Be(typeof(Option<int>));
     }
