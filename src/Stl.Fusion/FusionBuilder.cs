@@ -241,11 +241,11 @@ public readonly struct FusionBuilder
         bool addCommandHandlers = true)
     {
         if (!serviceType.IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
         if (!typeof(IComputeService).IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
         if (lifetime == ServiceLifetime.Scoped && !typeof(IHasIsDisposed).IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustImplement<IHasIsDisposed>(implementationType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustImplement<IHasIsDisposed>(implementationType, nameof(implementationType));
 
         if (lifetime != ServiceLifetime.Singleton)
             return AddServiceImpl(serviceType, implementationType, lifetime);
@@ -272,9 +272,9 @@ public readonly struct FusionBuilder
         bool addCommandHandlers = true)
     {
         if (!serviceType.IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
         if (!typeof(IComputeService).IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
 
         AddServiceImpl(serviceType, implementationType, addCommandHandlers);
         Rpc.Service(serviceType).HasServer(serviceType).HasName(name);
@@ -290,9 +290,9 @@ public readonly struct FusionBuilder
         Symbol name = default, bool addCommandHandlers = true)
     {
         if (!serviceType.IsInterface)
-            throw Stl.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
+            throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IComputeService).IsAssignableFrom(serviceType))
-            throw Stl.Internal.Errors.MustImplement<IComputeService>(serviceType, nameof(serviceType));
+            throw ActualLab.Internal.Errors.MustImplement<IComputeService>(serviceType, nameof(serviceType));
 
         Services.AddSingleton(serviceType, c => FusionProxies.NewClientProxy(c, serviceType));
         if (addCommandHandlers)
@@ -313,11 +313,11 @@ public readonly struct FusionBuilder
         bool addCommandHandlers = true)
     {
         if (!serviceType.IsInterface)
-            throw Stl.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
+            throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!serviceType.IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
         if (!typeof(IComputeService).IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
 
         var serverResolver = ServiceResolver.New(c => FusionProxies.NewServiceProxy(c, implementationType));
         Services.AddSingleton(serviceType, c => FusionProxies.NewRoutingProxy(c, serviceType, serverResolver));
@@ -357,11 +357,11 @@ public readonly struct FusionBuilder
         bool addCommandHandlers = true)
     {
         if (!serviceType.IsInterface)
-            throw Stl.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
+            throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!serviceType.IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
         if (!typeof(IComputeService).IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
 
         Services.AddSingleton(implementationType, c => FusionProxies.NewServiceProxy(c, implementationType));
         Services.AddSingleton(serviceType, c => FusionProxies.NewRoutingProxy(c, serviceType, implementationType));

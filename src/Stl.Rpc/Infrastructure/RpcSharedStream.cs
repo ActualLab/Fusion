@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Internal;
-using UnreferencedCode = Stl.Internal.UnreferencedCode;
+using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -28,12 +28,12 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     Task IRpcObject.Reconnect(CancellationToken cancellationToken)
-        => throw Stl.Internal.Errors.InternalError(
+        => throw ActualLab.Internal.Errors.InternalError(
             $"This method should never be called on {nameof(RpcSharedStream)}.");
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     void IRpcObject.Disconnect()
-        => throw Stl.Internal.Errors.InternalError(
+        => throw ActualLab.Internal.Errors.InternalError(
             $"This method should never be called on {nameof(RpcSharedStream)}.");
 
     public void KeepAlive()

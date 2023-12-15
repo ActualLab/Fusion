@@ -4,7 +4,7 @@ public static class Errors
 {
     public static Exception NoProxyType(Type type)
         => new InvalidOperationException(
-            $"Type '{type.GetName()}' doesn't have a proxy type generated for it. Please verify that 'Stl.Generators' package is referenced.");
+            $"Type '{type.GetName()}' doesn't have a proxy type generated for it. Please verify that 'ActualLab.Generators' package is referenced.");
 
     public static Exception InvalidProxyType(Type? type, Type expectedType)
         => new InvalidOperationException(

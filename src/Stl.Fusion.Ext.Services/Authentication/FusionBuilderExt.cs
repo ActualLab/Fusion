@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Internal;
-using UnreferencedCode = Stl.Fusion.Internal.UnreferencedCode;
+using UnreferencedCode = ActualLab.Fusion.Internal.UnreferencedCode;
 
 namespace ActualLab.Fusion.Authentication;
 

@@ -17,7 +17,7 @@ using ActualLab.Locking;
 using ActualLab.Rpc;
 using ActualLab.Testing.Collections;
 using ActualLab.Tests;
-using User = Stl.Fusion.Tests.Model.User;
+using User = ActualLab.Fusion.Tests.Model.User;
 
 namespace ActualLab.Fusion.Tests;
 

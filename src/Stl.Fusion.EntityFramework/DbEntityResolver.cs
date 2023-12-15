@@ -193,7 +193,7 @@ public class DbEntityResolver<
     {
         var batchProcessors = _batchProcessors;
         if (batchProcessors == null)
-            throw Stl.Internal.Errors.AlreadyDisposed(GetType());
+            throw ActualLab.Internal.Errors.AlreadyDisposed(GetType());
 
         return batchProcessors.GetOrAdd(tenantId,
             static (tenantId1, self) => self.CreateBatchProcessor(tenantId1), this);

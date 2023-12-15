@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Internal;
-using Errors = Stl.Rpc.Internal.Errors;
+using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
 

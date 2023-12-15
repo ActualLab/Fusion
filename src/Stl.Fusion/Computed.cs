@@ -4,7 +4,7 @@ using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Versioning;
-using Errors = Stl.Fusion.Internal.Errors;
+using Errors = ActualLab.Fusion.Internal.Errors;
 
 namespace ActualLab.Fusion;
 

@@ -46,7 +46,7 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<ICo
     protected override IComputedState<TState> CreateState()
     {
         // Synchronizes ComputeState call as per:
-        // https://github.com/servicetitan/Stl.Fusion/issues/202
+        // https://github.com/servicetitan/ActualLab.Fusion/issues/202
         var stateOptions = GetStateOptions();
         Func<IComputedState<TState>, CancellationToken, Task<TState>> computer =
             (Options & ComputedStateComponentOptions.SynchronizeComputeState) == 0

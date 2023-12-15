@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json.Serialization;
 using ActualLab.Internal;
 using ActualLab.Serialization.Internal;
-using Errors = Stl.Serialization.Internal.Errors;
+using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
@@ -73,7 +73,7 @@ public class TypeDecoratingTextSerializer : TextSerializerBase
         else {
             var actualType = value.GetType();
             if (!type.IsAssignableFrom(actualType))
-                throw Stl.Internal.Errors.MustBeAssignableTo(actualType, type, nameof(type));
+                throw ActualLab.Internal.Errors.MustBeAssignableTo(actualType, type, nameof(type));
             if (!TypeFilter(actualType))
                 throw Errors.UnsupportedSerializedType(actualType);
 

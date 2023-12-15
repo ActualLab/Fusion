@@ -26,7 +26,7 @@ public class SessionResolver(IServiceProvider services) : ISessionResolver
 #pragma warning disable CA1721
     public Session Session {
 #pragma warning restore CA1721
-        get => HasSession ? SessionTask.Result : throw Stl.Internal.Errors.NotInitialized(nameof(Session));
+        get => HasSession ? SessionTask.Result : throw ActualLab.Internal.Errors.NotInitialized(nameof(Session));
         set {
             if (!Services.IsScoped())
                 throw Errors.SessionResolverSessionCannotBeSetForRootInstance();

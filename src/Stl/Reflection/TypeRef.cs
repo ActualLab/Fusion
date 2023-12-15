@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using ActualLab.Internal;
 using ActualLab.Reflection.Internal;
-using Errors = Stl.Reflection.Internal.Errors;
+using Errors = ActualLab.Reflection.Internal.Errors;
 
 namespace ActualLab.Reflection;
 

@@ -1,7 +1,7 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
-using Errors = Stl.Serialization.Internal.Errors;
+using Errors = ActualLab.Serialization.Internal.Errors;
 
 #if NETSTANDARD2_0
 using MessagePack;

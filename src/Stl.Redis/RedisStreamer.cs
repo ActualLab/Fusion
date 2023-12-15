@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using StackExchange.Redis;
 using ActualLab.Internal;
-using Errors = Stl.Redis.Internal.Errors;
+using Errors = ActualLab.Redis.Internal.Errors;
 
 namespace ActualLab.Redis;
 

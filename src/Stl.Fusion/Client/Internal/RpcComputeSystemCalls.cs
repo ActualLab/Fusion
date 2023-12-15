@@ -6,7 +6,7 @@ namespace ActualLab.Fusion.Client.Internal;
 
 public interface IRpcComputeSystemCalls : IRpcSystemService
 {
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     Task<RpcNoWait> Invalidate();
 }
 
@@ -15,7 +15,7 @@ public class RpcComputeSystemCalls(IServiceProvider services)
 {
     public static readonly Symbol Name = "$sys-c";
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public Task<RpcNoWait> Invalidate()
     {
         var context = RpcInboundContext.GetCurrent();

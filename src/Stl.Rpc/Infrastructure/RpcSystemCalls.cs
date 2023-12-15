@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Internal;
-using Errors = Stl.Rpc.Internal.Errors;
+using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
 

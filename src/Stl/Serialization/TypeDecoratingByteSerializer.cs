@@ -2,7 +2,7 @@ using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
 using ActualLab.Serialization.Internal;
-using Errors = Stl.Serialization.Internal.Errors;
+using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 

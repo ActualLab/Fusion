@@ -48,9 +48,9 @@ public class Startup(IConfiguration cfg, IWebHostEnvironment environment)
                 logging.AddFilter("Microsoft.AspNetCore.Hosting", LogLevel.Information);
                 logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Information);
                 // logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Transaction", LogLevel.Debug);
-                logging.AddFilter("Stl.Fusion.Operations", LogLevel.Information);
-                logging.AddFilter("Stl.Fusion.EntityFramework", LogLevel.Debug);
-                logging.AddFilter("Stl.Fusion.EntityFramework.Operations", LogLevel.Debug);
+                logging.AddFilter("ActualLab.Fusion.Operations", LogLevel.Information);
+                logging.AddFilter("ActualLab.Fusion.EntityFramework", LogLevel.Debug);
+                logging.AddFilter("ActualLab.Fusion.EntityFramework.Operations", LogLevel.Debug);
             }
         });
 

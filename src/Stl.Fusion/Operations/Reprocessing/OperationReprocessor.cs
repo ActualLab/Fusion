@@ -1,7 +1,7 @@
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Generators;
 using ActualLab.OS;
-using Errors = Stl.Internal.Errors;
+using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Operations.Reprocessing;
 

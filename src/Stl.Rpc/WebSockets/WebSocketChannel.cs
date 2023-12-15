@@ -5,7 +5,7 @@ using Microsoft.Toolkit.HighPerformance;
 using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
-using Errors = Stl.Rpc.Internal.Errors;
+using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.WebSockets;
 

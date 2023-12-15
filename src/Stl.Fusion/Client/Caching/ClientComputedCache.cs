@@ -51,7 +51,7 @@ public abstract class ClientComputedCache : RpcServiceBase, IClientComputedCache
         Set(VersionKey, expectedValue);
     }
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public async ValueTask<(T Value, TextOrBytes Data)?> Get<T>(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
     {
         var serviceDef = Hub.ServiceRegistry.Get(key.Service);

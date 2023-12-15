@@ -48,7 +48,7 @@ public sealed class RpcOutboundContext(List<RpcHeader>? headers = null)
     public RpcOutboundCall? PrepareCall(RpcMethodDef methodDef, ArgumentList arguments)
     {
         if (MethodDef != null)
-            throw Stl.Internal.Errors.AlreadyInvoked(nameof(PrepareCall));
+            throw ActualLab.Internal.Errors.AlreadyInvoked(nameof(PrepareCall));
 
         // MethodDef, Arguments, CancellationToken
         MethodDef = methodDef;

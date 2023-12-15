@@ -8,7 +8,7 @@ using ActualLab.Internal;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Versioning;
-using Errors = Stl.Internal.Errors;
+using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Client.Interception;
 
@@ -32,7 +32,7 @@ public class ClientComputeMethodFunction<T>(
     public override string ToString()
         => _toString ??= ZString.Concat('*', base.ToString());
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
 #pragma warning disable IL2046
     protected override ValueTask<Computed<T>> Compute(
 #pragma warning restore IL2046
@@ -64,7 +64,7 @@ public class ClientComputeMethodFunction<T>(
             cacheEntry, call, synchronizedSource);
     }
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     private async ValueTask<Computed<T>> ComputeCachedOrRpc(
         ComputeMethodInput input,
         IClientComputedCache cache,

@@ -85,7 +85,7 @@ public class AppV4 : AppBase
             logging.AddConsole();
             logging.SetMinimumLevel(LogLevel.Error);
             // logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Information);
-            // logging.AddFilter("Stl.Fusion.Operations", LogLevel.Information);
+            // logging.AddFilter("ActualLab.Fusion.Operations", LogLevel.Information);
         });
     }
 

@@ -1,6 +1,6 @@
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
-using Errors = Stl.Internal.Errors;
+using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Rpc;
 

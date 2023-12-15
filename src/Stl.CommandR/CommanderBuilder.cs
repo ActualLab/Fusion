@@ -89,7 +89,7 @@ public readonly struct CommanderBuilder
         double? priorityOverride = null)
     {
         if (!serviceType.IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
 
         var interfaceMethods = new HashSet<MethodInfo>();
 
@@ -177,9 +177,9 @@ public readonly struct CommanderBuilder
         double? priorityOverride = null)
     {
         if (!serviceType.IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
         if (!typeof(ICommandService).IsAssignableFrom(implementationType))
-            throw Stl.Internal.Errors.MustImplement<ICommandService>(implementationType, nameof(implementationType));
+            throw ActualLab.Internal.Errors.MustImplement<ICommandService>(implementationType, nameof(implementationType));
 
         var descriptor = new ServiceDescriptor(serviceType, c => CommanderProxies.NewServiceProxy(c, implementationType), lifetime);
         Services.TryAdd(descriptor);

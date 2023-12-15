@@ -19,7 +19,7 @@ public sealed class RpcComputeSystemCallSender(IServiceProvider services)
     private RpcMethodDef InvalidateMethodDef => _invalidateMethodDef
         ??= ComputeSystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcComputeSystemCalls.Invalidate)));
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public Task Invalidate(RpcPeer peer, long callId, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {

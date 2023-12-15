@@ -89,12 +89,12 @@ public class TypeExtTest(ITestOutputHelper @out) : TestBase(@out)
         typeof(Tuple<Tuple<int>>).GetName(true, true).Should().Be("System.Tuple<System.Tuple<System.Int32>>");
 
         typeof(Nested).GetName().Should().Be("TypeExtTest+Nested");
-        typeof(Nested).GetName(true).Should().Be("Stl.Tests.Reflection.TypeExtTest+Nested");
+        typeof(Nested).GetName(true).Should().Be("ActualLab.Tests.Reflection.TypeExtTest+Nested");
 
         typeof(NestedGeneric<>).GetName().Should().Be("TypeExtTest+NestedGeneric<T>");
-        typeof(NestedGeneric<>).GetName(true).Should().Be("Stl.Tests.Reflection.TypeExtTest+NestedGeneric<T>");
+        typeof(NestedGeneric<>).GetName(true).Should().Be("ActualLab.Tests.Reflection.TypeExtTest+NestedGeneric<T>");
 
         typeof(NestedGeneric<>.InnerNested).GetName().Should().Be("TypeExtTest+NestedGeneric<T>+InnerNested<T>");
-        typeof(NestedGeneric<>.InnerNested).GetName(true).Should().Be("Stl.Tests.Reflection.TypeExtTest+NestedGeneric<T>+InnerNested<T>");
+        typeof(NestedGeneric<>.InnerNested).GetName(true).Should().Be("ActualLab.Tests.Reflection.TypeExtTest+NestedGeneric<T>+InnerNested<T>");
     }
 }

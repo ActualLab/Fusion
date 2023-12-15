@@ -101,7 +101,7 @@ public class AnonymousComputedSource<T> : ComputedInput,
 
     public virtual async ValueTask<T> Use(CancellationToken cancellationToken = default)
     {
-        var usedBy = Stl.Fusion.Computed.GetCurrent();
+        var usedBy = ActualLab.Fusion.Computed.GetCurrent();
         var context = ComputeContext.Current;
         if ((context.CallOptions & CallOptions.GetExisting) != 0) // Both GetExisting & Invalidate
             throw Errors.InvalidContextCallOptions(context.CallOptions);

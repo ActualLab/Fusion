@@ -12,9 +12,9 @@ public enum RpcObjectKind
 public interface IRpcObject : IHasId<RpcObjectId>
 {
     RpcObjectKind Kind { get; }
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     Task Reconnect(CancellationToken cancellationToken);
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     void Disconnect();
 }
 

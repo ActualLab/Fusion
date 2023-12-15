@@ -7,7 +7,7 @@ using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
-using Errors = Stl.Rpc.Internal.Errors;
+using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc;
 
@@ -181,11 +181,11 @@ public readonly struct RpcBuilder
         Symbol name = default)
     {
         if (!serviceType.IsInterface)
-            throw Stl.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
+            throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IRpcService).IsAssignableFrom(serviceType))
-            throw Stl.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
+            throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
         if (!serviceType.IsAssignableFrom(serverType))
-            throw Stl.Internal.Errors.MustBeAssignableTo(serverType, serviceType, nameof(serverType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(serverType, serviceType, nameof(serverType));
 
         Service(serviceType).HasServer(serverType).HasName(name);
         if (!serverType.IsInterface)
@@ -215,11 +215,11 @@ public readonly struct RpcBuilder
         Symbol name = default)
     {
         if (!serviceType.IsInterface)
-            throw Stl.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
+            throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IRpcService).IsAssignableFrom(serviceType))
-            throw Stl.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
+            throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
         if (!serviceType.IsAssignableFrom(clientType))
-            throw Stl.Internal.Errors.MustBeAssignableTo(clientType, serviceType, nameof(clientType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(clientType, serviceType, nameof(clientType));
 
         Service(serviceType).HasName(name);
         Services.AddSingleton(clientType, c => RpcProxies.NewClientProxy(c, serviceType, clientType));
@@ -245,9 +245,9 @@ public readonly struct RpcBuilder
         ServiceResolver serverResolver, Symbol name = default)
     {
         if (!serviceType.IsInterface)
-            throw Stl.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
+            throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IRpcService).IsAssignableFrom(serviceType))
-            throw Stl.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
+            throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
 
         Service(serviceType).HasName(name);
         Services.AddSingleton(serviceType, c => RpcProxies.NewRoutingProxy(c, serviceType, serverResolver));
@@ -280,7 +280,7 @@ public readonly struct RpcBuilder
         Func<IServiceProvider, object>? factory = null)
     {
         if (!typeof(RpcInboundMiddleware).IsAssignableFrom(middlewareType))
-            throw Stl.Internal.Errors.MustBeAssignableTo<RpcInboundMiddleware>(middlewareType, nameof(middlewareType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcInboundMiddleware>(middlewareType, nameof(middlewareType));
 
         var descriptor = factory != null
             ? ServiceDescriptor.Singleton(typeof(RpcInboundMiddleware), factory)
@@ -296,7 +296,7 @@ public readonly struct RpcBuilder
     public RpcBuilder RemoveInboundMiddleware(Type middlewareType)
     {
         if (!typeof(RpcInboundMiddleware).IsAssignableFrom(middlewareType))
-            throw Stl.Internal.Errors.MustBeAssignableTo<RpcInboundMiddleware>(middlewareType, nameof(middlewareType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcInboundMiddleware>(middlewareType, nameof(middlewareType));
 
         Services.RemoveAll(d =>
             d.ImplementationType == middlewareType
@@ -315,7 +315,7 @@ public readonly struct RpcBuilder
         Func<IServiceProvider, object>? factory = null)
     {
         if (!typeof(RpcOutboundMiddleware).IsAssignableFrom(middlewareType))
-            throw Stl.Internal.Errors.MustBeAssignableTo<RpcOutboundMiddleware>(middlewareType, nameof(middlewareType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcOutboundMiddleware>(middlewareType, nameof(middlewareType));
 
         var descriptor = factory != null
             ? ServiceDescriptor.Singleton(typeof(RpcOutboundMiddleware), factory)
@@ -331,7 +331,7 @@ public readonly struct RpcBuilder
     public RpcBuilder RemoveOutboundMiddleware(Type middlewareType)
     {
         if (!typeof(RpcOutboundMiddleware).IsAssignableFrom(middlewareType))
-            throw Stl.Internal.Errors.MustBeAssignableTo<RpcOutboundMiddleware>(middlewareType, nameof(middlewareType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcOutboundMiddleware>(middlewareType, nameof(middlewareType));
 
         Services.RemoveAll(d =>
             d.ImplementationType == middlewareType

@@ -8,7 +8,7 @@ public interface IClientComputedCache
 {
     Task WhenInitialized { get; }
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     ValueTask<(T Value, TextOrBytes Data)?> Get<T>(
         ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken);
     ValueTask<TextOrBytes?> Get(RpcCacheKey key, CancellationToken cancellationToken = default);

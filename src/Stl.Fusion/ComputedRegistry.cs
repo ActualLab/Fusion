@@ -4,7 +4,7 @@ using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 using ActualLab.OS;
 using ActualLab.Time.Internal;
-using Errors = Stl.Fusion.Internal.Errors;
+using Errors = ActualLab.Fusion.Internal.Errors;
 
 namespace ActualLab.Fusion;
 

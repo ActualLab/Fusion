@@ -16,7 +16,7 @@ public class TestDbContext : DbContextBase
     public DbSet<Message> Messages { get; protected set; } = null!;
     public DbSet<Chat> Chats { get; protected set; } = null!;
 
-    // Stl.Fusion.EntityFramework tables
+    // ActualLab.Fusion.EntityFramework tables
     public DbSet<DbOperation> Operations { get; protected set; } = null!;
     public DbSet<DbAuthUser> AuthUsers { get; protected set; } = null!;
     public DbSet<DbUserIdentity<long>> AuthUserIdentities { get; protected set; } = null!;

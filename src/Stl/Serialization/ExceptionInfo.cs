@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
-using Errors = Stl.Serialization.Internal.Errors;
+using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 

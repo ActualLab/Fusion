@@ -113,7 +113,7 @@ public static class MethodCommandHandler
             .Invoke(null, new object[] { serviceType, method, isFilter, order })!;
     }
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Reflection)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Reflection)]
     public static CommandHandlerAttribute? GetAttribute(MethodInfo method)
 #pragma warning disable IL2026
         => method.GetAttribute<CommandHandlerAttribute>(true, true);

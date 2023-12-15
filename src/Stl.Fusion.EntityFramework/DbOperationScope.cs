@@ -127,7 +127,7 @@ public class DbOperationScope<
 
         Tenant = tenant;
         if (IsClosed)
-            throw Stl.Fusion.Operations.Internal.Errors.OperationScopeIsAlreadyClosed();
+            throw ActualLab.Fusion.Operations.Internal.Errors.OperationScopeIsAlreadyClosed();
 
         if (MasterDbContext == null)
             await CreateMasterDbContext(cancellationToken).ConfigureAwait(false);
@@ -155,7 +155,7 @@ public class DbOperationScope<
         if (IsClosed) {
             if (IsConfirmed == true)
                 return;
-            throw Stl.Fusion.Operations.Internal.Errors.OperationScopeIsAlreadyClosed();
+            throw ActualLab.Fusion.Operations.Internal.Errors.OperationScopeIsAlreadyClosed();
         }
 
         releaser.MarkLockedLocally();
@@ -167,7 +167,7 @@ public class DbOperationScope<
 
             Operation.CommitTime = Clocks.SystemClock.Now;
             if (Operation.Command == null)
-                throw Stl.Fusion.Operations.Internal.Errors.OperationHasNoCommand();
+                throw ActualLab.Fusion.Operations.Internal.Errors.OperationHasNoCommand();
 
             var dbContext = MasterDbContext!;
             dbContext.EnableChangeTracking(false); // Just to speed up things a bit
@@ -216,7 +216,7 @@ public class DbOperationScope<
             if (IsConfirmed == false)
                 return;
 
-            throw Stl.Fusion.Operations.Internal.Errors.OperationScopeIsAlreadyClosed();
+            throw ActualLab.Fusion.Operations.Internal.Errors.OperationScopeIsAlreadyClosed();
         }
 
         releaser.MarkLockedLocally();
@@ -308,7 +308,7 @@ public class DbOperationScope<
         if (!database.IsInMemory()) {
             Connection = database.GetDbConnection();
             if (Connection == null)
-                throw Stl.Internal.Errors.InternalError("No DbConnection.");
+                throw ActualLab.Internal.Errors.InternalError("No DbConnection.");
         }
         MasterDbContext = dbContext;
         CommandContext.Items.Replace<IOperationScope?>(null, this);

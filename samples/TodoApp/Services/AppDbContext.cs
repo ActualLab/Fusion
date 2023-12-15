@@ -8,7 +8,7 @@ namespace Templates.TodoApp.Services;
 
 public class AppDbContext(DbContextOptions options) : DbContextBase(options)
 {
-    // Stl.Fusion.EntityFramework tables
+    // ActualLab.Fusion.EntityFramework tables
     public DbSet<DbUser<string>> Users { get; protected set; } = null!;
     public DbSet<DbUserIdentity<string>> UserIdentities { get; protected set; } = null!;
     public DbSet<DbSessionInfo<string>> Sessions { get; protected set; } = null!;

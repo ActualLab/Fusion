@@ -82,11 +82,11 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
         if (UseLogging)
             services.AddLogging(logging => {
                 var debugCategories = new List<string> {
-                    "Stl.Rpc",
-                    "Stl.Fusion",
-                    "Stl.CommandR",
-                    "Stl.Tests",
-                    "Stl.Tests.Fusion",
+                    "ActualLab.Rpc",
+                    "ActualLab.Fusion",
+                    "ActualLab.CommandR",
+                    "ActualLab.Tests",
+                    "ActualLab.Tests.Fusion",
                     // DbLoggerCategory.Database.Transaction.Name,
                     // DbLoggerCategory.Database.Connection.Name,
                     // DbLoggerCategory.Database.Command.Name,

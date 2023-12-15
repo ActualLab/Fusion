@@ -7,11 +7,11 @@ public class MomentClockSet(IMomentClock systemClock,
     IMomentClock coarseCpuClock)
 {
     public static MomentClockSet Default { get; set; } = new(
-        Stl.Time.SystemClock.Instance,
-        Stl.Time.CpuClock.Instance,
-        new ServerClock(Stl.Time.CpuClock.Instance),
-        Stl.Time.CoarseSystemClock.Instance,
-        Stl.Time.CoarseCpuClock.Instance);
+        ActualLab.Time.SystemClock.Instance,
+        ActualLab.Time.CpuClock.Instance,
+        new ServerClock(ActualLab.Time.CpuClock.Instance),
+        ActualLab.Time.CoarseSystemClock.Instance,
+        ActualLab.Time.CoarseCpuClock.Instance);
 
     public IMomentClock SystemClock { get; init; } = systemClock;
     public IMomentClock CpuClock { get; init; } = cpuClock;

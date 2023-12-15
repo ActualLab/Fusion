@@ -51,7 +51,7 @@ public class RpcClientInterceptor(
         };
     }
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     private static async Task<T> GetResultTaskWithConnectTimeout<T>(RpcOutboundCall call)
     {
         var cancellationToken = call.Context.CancellationToken;

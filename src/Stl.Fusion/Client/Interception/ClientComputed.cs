@@ -63,11 +63,11 @@ public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
         StartAutoInvalidation();
     }
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     ~ClientComputed()
         => Dispose();
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
 #pragma warning disable IL2046
     public void Dispose()
 #pragma warning restore IL2046

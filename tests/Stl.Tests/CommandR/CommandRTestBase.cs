@@ -31,8 +31,8 @@ public class CommandRTestBase(ITestOutputHelper @out) : TestBase(@out)
     {
         services.AddLogging(logging => {
             var debugCategories = new List<string> {
-                "Stl.CommandR",
-                "Stl.Tests.CommandR",
+                "ActualLab.CommandR",
+                "ActualLab.Tests.CommandR",
             };
 
             bool LogFilter(string? category, LogLevel level)

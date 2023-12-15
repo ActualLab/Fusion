@@ -30,7 +30,7 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
     public void ThrowIfDisposed()
     {
         if (IsDisposed)
-            throw Stl.Internal.Errors.AlreadyDisposed(GetDisposedType());
+            throw ActualLab.Internal.Errors.AlreadyDisposed(GetDisposedType());
     }
 
     // Equality

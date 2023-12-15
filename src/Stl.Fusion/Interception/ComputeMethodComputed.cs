@@ -1,5 +1,5 @@
 using ActualLab.Fusion.Internal;
-using Errors = Stl.Internal.Errors;
+using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Interception;
 

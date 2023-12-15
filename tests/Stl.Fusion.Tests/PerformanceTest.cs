@@ -55,7 +55,7 @@ public abstract class PerformanceTestBase : FusionTestBase
 
         Out.WriteLine($".NET: {RuntimeInfo.DotNetCore.VersionString ?? RuntimeInformation.FrameworkDescription}");
         Out.WriteLine($"Database: {DbType}" + (UseEntityResolver ? " (with DbEntityResolver)" : ""));
-        Out.WriteLine("With Stl.Fusion:");
+        Out.WriteLine("With ActualLab.Fusion:");
         if (enableSerialization)
             await Test("Multiple readers + serialization, 1 mutator", users, withSerialization, true,
                 fusionReaderCount, fusionIterationCount / 2);
@@ -64,7 +64,7 @@ public abstract class PerformanceTestBase : FusionTestBase
         await Test("Single reader, no mutators", users, withoutSerialization, false,
             1, fusionOpCountPerCore);
 
-        Out.WriteLine("Without Stl.Fusion:");
+        Out.WriteLine("Without ActualLab.Fusion:");
         if (enableSerialization)
             await Test("Multiple readers + serialization, 1 mutator", plainUsers, withSerialization, true,
                 nonFusionReaderCount, nonFusionIterationCount);

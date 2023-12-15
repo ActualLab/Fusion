@@ -33,7 +33,7 @@ public class DbOperationScopeProvider<
 
         var tScope = typeof(DbOperationScope<TDbContext>);
         if (context.Items[tScope] != null) // Safety check
-            throw Stl.Internal.Errors.InternalError($"'{tScope}' scope is already provided. Duplicate handler?");
+            throw ActualLab.Internal.Errors.InternalError($"'{tScope}' scope is already provided. Duplicate handler?");
 
         var scope = context.Services.Activate<DbOperationScope<TDbContext>>();
         await using var _ = scope.ConfigureAwait(false);

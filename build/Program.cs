@@ -57,7 +57,7 @@ internal static class Program
         if (int.TryParse(publicBuildEnvVar, out var vi))
             isPublicRelease = vi != 0;
 
-        SetDefaults("Stl.Fusion.sln", isPublicRelease);
+        SetDefaults("ActualLab.Fusion.sln", isPublicRelease);
         var options = new Options {
             Clear = clear,
             DryRun = dryRun,

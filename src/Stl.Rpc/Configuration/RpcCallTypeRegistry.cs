@@ -30,9 +30,9 @@ public static class RpcCallTypeRegistry
     public static void Register(byte callTypeId, Type inboundCallType, Type outboundCallType)
     {
         if (!typeof(RpcInboundCall).IsAssignableFrom(inboundCallType))
-            throw Stl.Internal.Errors.MustBeAssignableTo<RpcInboundCall>(inboundCallType, nameof(inboundCallType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcInboundCall>(inboundCallType, nameof(inboundCallType));
         if (!typeof(RpcOutboundCall).IsAssignableFrom(outboundCallType))
-            throw Stl.Internal.Errors.MustBeAssignableTo<RpcOutboundCall>(outboundCallType, nameof(outboundCallType));
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcOutboundCall>(outboundCallType, nameof(outboundCallType));
 
         if (!inboundCallType.IsGenericType || inboundCallType.GetGenericArguments().Length != 1)
             throw new ArgumentOutOfRangeException(nameof(inboundCallType));
@@ -49,7 +49,7 @@ public static class RpcCallTypeRegistry
                 return;
 
             if (existingItem.InboundCallType != null)
-                throw Stl.Internal.Errors.KeyAlreadyExists();
+                throw ActualLab.Internal.Errors.KeyAlreadyExists();
 
             _callTypes[callTypeId] = item;
         }

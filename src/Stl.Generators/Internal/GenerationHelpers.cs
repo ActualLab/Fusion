@@ -5,8 +5,8 @@ using static SyntaxFactory;
 
 public static class GenerationHelpers
 {
-    public const string StlInterceptionNs = "Stl.Interception";
-    public const string StlInterceptionInternalNs = "Stl.Interception.Internal";
+    public const string StlInterceptionNs = "ActualLab.Interception";
+    public const string StlInterceptionInternalNs = "ActualLab.Interception.Internal";
     public const string StlInterceptionGns = $"global::{StlInterceptionNs}";
     public const string StlInterceptionInternalGns = $"global::{StlInterceptionInternalNs}";
     public const string RequiresFullProxyInterfaceName = $"{StlInterceptionNs}.IRequiresFullProxy";

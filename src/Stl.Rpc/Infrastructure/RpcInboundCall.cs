@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Internal;
-using Errors = Stl.Rpc.Internal.Errors;
+using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -75,10 +75,10 @@ public abstract class RpcInboundCall : RpcCall
 
     // Protected methods
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected abstract Task StartCompletion();
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected bool PrepareToStart()
     {
         var inboundCalls = Context.Peer.InboundCalls;
@@ -160,7 +160,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
 
     // Protected methods
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected ArgumentList? DeserializeArguments()
     {
         var peer = Context.Peer;
@@ -212,7 +212,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         return (Task<TResult>)methodDef.Invoker.Invoke(server, Arguments!);
     }
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected override Task StartCompletion()
     {
         if (!ResultTask.IsCompleted)
@@ -222,14 +222,14 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         return Task.CompletedTask;
     }
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected async Task Complete()
     {
         await ResultTask.SilentAwait(false);
         _ = CompleteSendResult();
     }
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected virtual Task CompleteSendResult()
     {
         var mustSendResult = !CancellationToken.IsCancellationRequested;
@@ -239,7 +239,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             : Task.CompletedTask;
     }
 
-    [RequiresUnreferencedCode(Stl.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected Task SendResult()
     {
         var resultTask = ResultTask;
@@ -266,6 +266,6 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     // Private methods
 
     private static Result<TResult> InvocationIsStillInProgressErrorResult() =>
-        new(default!, Stl.Internal.Errors.InternalError(
+        new(default!, ActualLab.Internal.Errors.InternalError(
             "Something is off: remote method isn't completed yet, but the result is requested to be sent."));
 }

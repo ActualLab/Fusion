@@ -1,5 +1,5 @@
 using ActualLab.Interception;
-using ServiceProviderExt = Stl.CommandR.ServiceProviderExt;
+using ServiceProviderExt = ActualLab.CommandR.ServiceProviderExt;
 
 namespace ActualLab.Tests.CommandR.Services;
 

@@ -3,7 +3,7 @@ using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.Tests.Model;
 using ActualLab.Reflection;
-using User = Stl.Fusion.Authentication.User;
+using User = ActualLab.Fusion.Authentication.User;
 
 namespace ActualLab.Fusion.Tests.Authentication;
 

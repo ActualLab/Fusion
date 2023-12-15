@@ -4,7 +4,7 @@ using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.Reflection;
 using ActualLab.Rpc.Infrastructure;
-using TextOrBytes = Stl.Serialization.TextOrBytes;
+using TextOrBytes = ActualLab.Serialization.TextOrBytes;
 
 namespace ActualLab.Tests.Serialization;
 

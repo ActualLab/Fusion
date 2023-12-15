@@ -75,7 +75,7 @@ public static class DiagnosticsHelpers
         /*
         for (var i = 0; i < 5; i++) {
             try {
-                File.AppendAllText("C:/Temp/Stl.Generators.txt", message + Environment.NewLine, Encoding.UTF8);
+                File.AppendAllText("C:/Temp/ActualLab.Generators.txt", message + Environment.NewLine, Encoding.UTF8);
                 return;
             }
             catch (IOException) {
