@@ -140,9 +140,9 @@ internal static class Program
 
         Target("publish", DependsOn("clean-nupkg", "pack"), async () => {
             const string feed = "https://api.nuget.org/v3/index.json";
-            var nugetOrgApiKey = Environment.GetEnvironmentVariable("NUGET_ORG_API_KEY") ?? "";
-            if (string.IsNullOrWhiteSpace(nugetOrgApiKey))
-                throw new InvalidOperationException("NUGET_ORG_API_KEY env. var isn't set.");
+            var nugetApiKey = Environment.GetEnvironmentVariable("ActualChat_NuGet_API_Key") ?? "";
+            if (string.IsNullOrWhiteSpace(nugetApiKey))
+                throw new InvalidOperationException("ActualChat_NuGet_API_Key env. var isn't set.");
             var nupkgPaths = Directory
                 .EnumerateFiles(nupkgPath.FullPath, "*.nupkg", SearchOption.TopDirectoryOnly)
                 .Select(FilePath.New)
@@ -154,7 +154,7 @@ internal static class Program
                         nupkgPath,
                         "--force-english-output",
                         "--timeout", "60",
-                        "--api-key", nugetOrgApiKey,
+                        "--api-key", nugetApiKey,
                         "--source", feed,
                         "--skip-duplicate"
                     })
