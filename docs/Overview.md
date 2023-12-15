@@ -3,7 +3,7 @@
 ## What is "Real-time User Interface"?
 
 > It is the UI displaying always up-to-date content, which 
-gets updated even if user doesn't take actions. 
+gets updated even when the user doesn't take any actions. 
 
 Let's look at seemingly unrelated problem first: 
 **caching with real-time entry invalidation**. 
@@ -660,7 +660,7 @@ sample:
     ```razor
     @page "/serverTime"
     @using System.Threading
-    @inherits LiveComponentBase<DateTime>
+    @inherits ComputedStateComponent<DateTime>
     @inject ITimeService TimeService
 
     @{
@@ -681,7 +681,7 @@ sample:
     <button class="btn btn-primary" @onclick="() => State.Invalidate(true)">Refresh</button>
 
     @code {
-        protected override Task<DateTime> ComputeStateAsync(CancellationToken cancellationToken)
+        protected override Task<DateTime> ComputeState(CancellationToken cancellationToken)
             => TimeService.GetTimeAsync(cancellationToken);
     }
     ```  

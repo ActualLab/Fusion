@@ -1,12 +1,12 @@
 # 👾 Fusion: the "real-time on!" switch that actually exists
 
 [![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22)
-[![NuGet Version](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=Owner%3Aactuallab+Tags%3Aactuallab_fusion)
+[![NuGet Version](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 [![MIT License](https://img.shields.io/github/license/actuallab/Fusion?)](https://github.com/ActualLab/Fusion/blob/master/LICENSE)
 <br/>
 [![Discord Server](https://img.shields.io/discord/729970863419424788.svg)](https://discord.gg/EKEwv6d) 
 ![Commit Activity](https://img.shields.io/github/commit-activity/m/actuallab/Fusion)
-[![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=Owner%3Aactuallab+Tags%3Aactuallab_fusion)
+[![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 
 Fusion is a .NET library that implements 🦄 **D**istributed **REA**ctive **M**emoization (**DREAM**) &ndash; 
 a novel abstraction somewhat similar to MobX or Flux, but **designed to deal with an arbitrary large state** 
