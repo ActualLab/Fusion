@@ -8,4 +8,4 @@ if "%runtime%"=="" (
   set runtime=net8.0
 )
 shift
-dotnet run --no-launch-profile -c:Release -f:%runtime% --project tests/Stl.Fusion.Tests.PerformanceTestRunner/Stl.Fusion.Tests.PerformanceTestRunner.csproj -- %*
+dotnet run --no-launch-profile -c:Release -f:%runtime% --project tests/ActualLab.Fusion.Tests.PerformanceTestRunner/ActualLab.Fusion.Tests.PerformanceTestRunner.csproj -- %*
