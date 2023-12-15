@@ -250,10 +250,10 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
     private sealed class Batcher(RpcSharedStream<T> stream)
     {
-        private const int BatchSize = 64;
+        private const int BatchSize = 256;
 
         private readonly bool _isPolymorphic = !(typeof(T).IsValueType || typeof(T).IsSealed);
-        private readonly List<T> _items = new(BatchSize);
+        private readonly List<T> _items = new(BatchSize / 4); // Our chance to fully fill the batch is low
         private Type? _itemType;
 
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
