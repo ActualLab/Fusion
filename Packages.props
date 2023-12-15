@@ -64,7 +64,7 @@
     <!-- Build & Samples -->
     <BlazoriseVersion>1.3.*</BlazoriseVersion>
     <StlFusionVersion>6.7.*</StlFusionVersion>
-    <ActualLabFusionVersion>7.0.*</ActualLabFusionVersion>
+    <FusionVersion>7.0.*</FusionVersion>
   </PropertyGroup>
 
   <ItemGroup Label="Package Versions">
@@ -170,7 +170,8 @@
     <PackageReference Update="xunit.runner.visualstudio" Version="2.5.4" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
 
     <!-- Build time only -->
-    <PackageReference Update="ActualLab" Version="$(StlFusionVersion)" />
+    <PackageReference Update="ActualLab.Core" Version="$(FusionVersion)" />
+    <PackageReference Update="Stl" Version="$(StlFusionVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.Components.WebAssembly.Build" Version="$(BlazorVersion)" PrivateAssets="all" />
     <PackageReference Update="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(BlazorVersion)" PrivateAssets="all" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
