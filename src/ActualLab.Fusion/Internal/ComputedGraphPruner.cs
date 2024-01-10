@@ -87,7 +87,7 @@ public sealed class ComputedGraphPruner : WorkerBase
     private AsyncChain CreatePruneDisposedInstancesChain()
     {
         var activitySource = GetType().GetActivitySource();
-        return new AsyncChain(nameof(PruneDisposedInstances) + "()", PruneDisposedInstances)
+        return new AsyncChain(nameof(PruneDisposedInstances), PruneDisposedInstances)
             .Trace(() => activitySource.StartActivity(nameof(PruneDisposedInstances)), Log)
             .Silence();
     }
@@ -95,7 +95,7 @@ public sealed class ComputedGraphPruner : WorkerBase
     private AsyncChain CreatePruneEdgesChain()
     {
         var activitySource = GetType().GetActivitySource();
-        return new AsyncChain(nameof(PruneEdges) + "()", PruneEdges)
+        return new AsyncChain(nameof(PruneEdges), PruneEdges)
             .Trace(() => activitySource.StartActivity(nameof(PruneEdges)), Log)
             .Silence();
     }

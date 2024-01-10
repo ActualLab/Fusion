@@ -91,9 +91,9 @@ public class DbOperationLogReader<
             await notifyTasks
                 .Collect(HardwareInfo.GetProcessorCountFactor(64, 64))
                 .ConfigureAwait(false);
-        }).Trace(() => activitySource.StartActivity("Read").AddTenantTags(tenant), Log);
+        }).Trace(() => activitySource.StartActivity(nameof(Read)).AddTenantTags(tenant), Log);
 
-        var waitForChangesChain = new AsyncChain("WaitForChanges()", async cancellationToken1 => {
+        var waitForChangesChain = new AsyncChain("WaitForChanges", async cancellationToken1 => {
             if (lastOperationCount == batchSize) {
                 await Clocks.CpuClock.Delay(Settings.MinDelay, cancellationToken1).ConfigureAwait(false);
                 return;

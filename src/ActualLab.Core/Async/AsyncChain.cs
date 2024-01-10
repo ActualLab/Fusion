@@ -16,6 +16,14 @@ public readonly record struct AsyncChain(
 
     // Constructor-like methods
 
+    public static AsyncChain From(
+        Func<CancellationToken, Task> start,
+#if NETCOREAPP3_1_OR_GREATER
+        [CallerArgumentExpression(nameof(start))]
+#endif
+        string name = "Unknown")
+        => new(name, start);
+
     public static AsyncChain Delay(TimeSpan timeSpan, IMomentClock? clock = null)
         => new($"Delay({timeSpan.ToString()})",
             ct => (clock ?? MomentClockSet.Default.CpuClock).Delay(timeSpan, ct));

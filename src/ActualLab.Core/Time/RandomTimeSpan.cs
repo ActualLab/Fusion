@@ -30,9 +30,6 @@ public readonly partial record struct RandomTimeSpan(
             ? Origin.ToString()
             : $"({Origin.ToShortString()} ± {MaxDelta.ToShortString()})";
 
-    public AsyncChain ToDelayChain(IMomentClock? clock = null)
-        => AsyncChain.Delay(this, clock);
-
     public static implicit operator RandomTimeSpan(TimeSpan origin) => new(origin);
     public static implicit operator RandomTimeSpan(double originInSeconds) => new(originInSeconds);
     public static implicit operator RandomTimeSpan((TimeSpan Origin, TimeSpan MaxDelta) pair) => new(pair.Origin, pair.MaxDelta);
