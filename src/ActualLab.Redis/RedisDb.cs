@@ -6,34 +6,36 @@ namespace ActualLab.Redis;
 
 public class RedisDb
 {
+    public static string DefaultKeyDelimiter { get; set; } = ".";
+
     public IConnectionMultiplexer Redis { get; }
     public string KeyPrefix { get; }
+    public string KeyDelimiter { get; }
     public IDatabase Database { get; }
 
-    public RedisDb(IConnectionMultiplexer redis, string? keyPrefix = null)
+    public RedisDb(IConnectionMultiplexer redis, string keyPrefix = "", string? keyDelimiter = null)
     {
         Redis = redis;
-        KeyPrefix = keyPrefix ?? "";
+        KeyPrefix = keyPrefix;
+        KeyDelimiter = keyDelimiter ?? DefaultKeyDelimiter;
         Database = Redis.GetDatabase();
         if (!KeyPrefix.IsNullOrEmpty())
-            Database = Database.WithKeyPrefix(KeyPrefix);
+            Database = Database.WithKeyPrefix(ZString.Concat(KeyPrefix, KeyDelimiter));
     }
 
     public override string ToString()
-        => $"{GetType().GetName()}(KeyPrefix = {KeyPrefix})";
+        => $"{GetType().GetName()}(KeyPrefix = {KeyPrefix}, KeyDelimiter = {KeyDelimiter})";
 
     public string FullKey(string keySuffix)
         => KeyPrefix.IsNullOrEmpty()
             ? keySuffix
-            : keySuffix.IsNullOrEmpty()
-                ? KeyPrefix
-                : ZString.Concat(KeyPrefix, '.', keySuffix);
+            : ZString.Concat(KeyPrefix, KeyDelimiter, keySuffix);
 
     public RedisDb WithKeyPrefix(string keyPrefix)
         => keyPrefix.IsNullOrEmpty()
             ? this
-            : new RedisDb(Redis, FullKey(keyPrefix));
+            : new RedisDb(Redis, FullKey(keyPrefix), KeyDelimiter);
 }
 
-public class RedisDb<TContext>(IConnectionMultiplexer redis, string? keyPrefix = null)
-    : RedisDb(redis, keyPrefix);
+public class RedisDb<TContext>(IConnectionMultiplexer redis, string keyPrefix = "", string? keyDelimiter = null)
+    : RedisDb(redis, keyPrefix, keyDelimiter);
