@@ -22,11 +22,7 @@ public sealed class RecentlySeenMap<TKey, TValue>
         _map = new Dictionary<TKey, TValue>(capacity + 1); // we may add one extra item, so "+ 1"
     }
 
-#if NETSTANDARD2_0
-    public bool TryGet(TKey key, out TValue? existingValue)
-#else
     public bool TryGet(TKey key, [MaybeNullWhen(false)] out TValue existingValue)
-#endif
         => _map.TryGetValue(key, out existingValue);
 
     public bool TryAdd(TKey key, TValue value = default!)

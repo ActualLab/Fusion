@@ -88,11 +88,7 @@ public struct RingBuffer<T> : IReadOnlyList<T>
     public T PullHead()
         => TryPullHead(out var head) ? head! : throw Errors.CollectionIsEmpty();
 
-#if NETSTANDARD2_0
-    public bool TryPullHead(out T head)
-#else
     public bool TryPullHead([MaybeNullWhen(false)] out T head)
-#endif
     {
         if (IsEmpty) {
             head = default!;
@@ -109,11 +105,7 @@ public struct RingBuffer<T> : IReadOnlyList<T>
     public T PullTail()
         => TryPullTail(out var tail) ? tail! : throw Errors.CollectionIsEmpty();
 
-#if NETSTANDARD2_0
-    public bool TryPullTail(out T tail)
-#else
     public bool TryPullTail([MaybeNullWhen(false)] out T tail)
-#endif
     {
         if (IsEmpty) {
             tail = default!;

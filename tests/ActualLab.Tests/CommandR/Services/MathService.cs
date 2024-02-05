@@ -53,7 +53,7 @@ public class MathService(IServiceProvider services) : ServiceBase(services), IMa
             return 0;
 
         var tailCommand = new RecSumCommand() {
-            Arguments = command.Arguments[1..],
+            Arguments = command.Arguments.Skip(1).ToArray(),
         };
 
         var tailSum = await Commander.Call(tailCommand, cancellationToken).ConfigureAwait(false);

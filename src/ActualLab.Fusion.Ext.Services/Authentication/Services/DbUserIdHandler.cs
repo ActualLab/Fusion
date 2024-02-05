@@ -10,13 +10,8 @@ public interface IDbUserIdHandler<TDbUserId>
     TDbUserId New();
     TDbUserId None { get; }
 
-#if NETSTANDARD2_0
-    bool IsNone(TDbUserId? userId);
-    void Require(TDbUserId? userId);
-#else
     bool IsNone([NotNullWhen(false)] TDbUserId? userId);
     void Require([NotNull] TDbUserId? userId);
-#endif
 
     Symbol Format(TDbUserId? userId);
     TDbUserId Parse(Symbol userId, bool allowNone);
@@ -51,19 +46,11 @@ public class DbUserIdHandler<TDbUserId> : IDbUserIdHandler<TDbUserId>
     public virtual TDbUserId New()
         => Generator();
 
-#if NETSTANDARD2_0
-    public virtual bool IsNone(TDbUserId? userId)
-#else
     public virtual bool IsNone([NotNullWhen(false)] TDbUserId? userId)
-#endif
         => EqualityComparer<TDbUserId>.Default.Equals(userId!, None)
             || EqualityComparer<TDbUserId>.Default.Equals(userId!, default!);
 
-#if NETSTANDARD2_0
-    public void Require(TDbUserId? userId)
-#else
     public void Require([NotNull] TDbUserId? userId)
-#endif
     {
         if (IsNone(userId))
             throw Errors.UserIdRequired();

@@ -10,10 +10,6 @@ public record CustomizableRequirement<
         : this(baseRequirement)
         => ExceptionBuilder = exceptionBuilder;
 
-#if NETSTANDARD2_0
-    public override bool IsSatisfied(T? value)
-#else
     public override bool IsSatisfied([NotNullWhen(true)] T? value)
-#endif
         => BaseRequirement.IsSatisfied(value);
 }

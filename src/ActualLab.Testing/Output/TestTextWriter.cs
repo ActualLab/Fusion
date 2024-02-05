@@ -3,7 +3,7 @@ using Xunit.Abstractions;
 
 namespace ActualLab.Testing.Output;
 
-public class TestTextWriter : TextWriter, ITestOutputHelper
+public class TestTextWriter(ITestOutputHelper? downstream = null) : TextWriter, ITestOutputHelper
 {
     protected static readonly string EnvNewLine = Environment.NewLine;
     protected static readonly char LastEnvNewLineChar = EnvNewLine[^1];
@@ -11,10 +11,7 @@ public class TestTextWriter : TextWriter, ITestOutputHelper
 
     protected StringBuilder Prefix = new();
     public override Encoding Encoding { get; } = Encoding.UTF8;
-    public ITestOutputHelper? Downstream { get; }
-
-    public TestTextWriter(ITestOutputHelper? downstream = null)
-        => Downstream = downstream;
+    public ITestOutputHelper? Downstream { get; } = downstream;
 
     public override void Write(char value)
     {
@@ -28,6 +25,7 @@ public class TestTextWriter : TextWriter, ITestOutputHelper
     {
         if (value == null)
             throw new ArgumentNullException(nameof(value));
+
         Prefix.Append(value);
 #if NETCOREAPP3_1_OR_GREATER
         if (!value.Contains(LastEnvNewLineChar, StringComparison.Ordinal))
@@ -35,9 +33,11 @@ public class TestTextWriter : TextWriter, ITestOutputHelper
         if (!value.Contains(LastEnvNewLineChar))
 #endif
             return;
+
         var lines = Prefix.ToString().Split(EnvNewLine);
+        // lines.Length >= 1 here for sure
         if (Downstream != null)
-            foreach (var line in lines[..^1])
+            foreach (var line in lines.Take(lines.Length))
                 Downstream.WriteLine(line);
         Prefix.Clear();
         Prefix.Append(lines[^1]);

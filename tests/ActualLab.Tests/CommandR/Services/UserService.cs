@@ -28,7 +28,7 @@ public class UserService(IServiceProvider services) : DbServiceBase<TestDbContex
             return;
 
         await Services.Commander().Call(
-                new RecAddUsersCommand() { Users = command.Users[1..] },
+                new RecAddUsersCommand() { Users = command.Users.Skip(1).ToArray() },
                 cancellationToken)
             .ConfigureAwait(false);
 

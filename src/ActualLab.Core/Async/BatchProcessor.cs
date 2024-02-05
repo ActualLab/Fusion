@@ -343,7 +343,7 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
         { }
 
         public override string ToString()
-            => $"{GetType().GetName()}({Input}, {CancellationToken}) -> {ResultTask}";
+            => $"{GetType().GetName()}({Input}) -> {ResultTask}";
 
         public void SetResult(TResult result)
             => ResultSource.TrySetResult(result);

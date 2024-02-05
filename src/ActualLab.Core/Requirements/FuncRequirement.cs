@@ -14,10 +14,6 @@ public record FuncRequirement<
     public static implicit operator FuncRequirement<T>(Func<T?, bool> validator)
         => new(validator);
 
-#if NETSTANDARD2_0
-    public override bool IsSatisfied(T? value)
-#else
     public override bool IsSatisfied([NotNullWhen(true)] T? value)
-#endif
         => Validator.Invoke(value);
 }

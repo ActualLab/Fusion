@@ -7,6 +7,8 @@
     <OutputPath>$(SolutionDir)artifacts\bin\$(MSBuildProjectName)</OutputPath>
     <PublishConfiguration>Release</PublishConfiguration>
     <IsPackable>true</IsPackable>
+    <!-- PolySharp -->
+    <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
     <!-- Signing -->
     <DefineConstants Condition="'$(PUBLIC_BUILD)' != ''">$(DefineConstants);SIGN_ASSEMBLIES</DefineConstants>
   </PropertyGroup>
@@ -47,6 +49,12 @@
   </ItemGroup>
   -->
 
+  <!-- Polyfills -->
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net8')))">
+    <PackageReference Include="PolySharp" />
+  </ItemGroup>
+
+  <!-- Analyzers -->
   <ItemGroup>
     <PackageReference Include="Nerdbank.GitVersioning" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" />

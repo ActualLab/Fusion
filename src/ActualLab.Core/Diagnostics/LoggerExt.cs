@@ -5,11 +5,7 @@ namespace ActualLab.Diagnostics;
 public static class LoggerExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#if NETSTANDARD2_0
-    public static bool IsLogging(this ILogger? log, LogLevel logLevel)
-#else
     public static bool IsLogging([NotNullWhen(true)] this ILogger? log, LogLevel logLevel)
-#endif
         => logLevel != LogLevel.None && log?.IsEnabled(logLevel) == true;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
