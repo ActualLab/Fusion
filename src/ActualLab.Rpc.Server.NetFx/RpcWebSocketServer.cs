@@ -80,7 +80,7 @@ public class RpcWebSocketServer(
                 OwnsWebSocketOwner = false,
             };
             var options = ImmutableOptionSet.Empty
-                .Set(peer)
+                .Set((RpcPeer)peer)
                 .Set(context)
                 .Set(webSocket);
             var connection = await ServerConnectionFactory

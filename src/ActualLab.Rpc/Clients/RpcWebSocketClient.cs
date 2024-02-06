@@ -114,7 +114,7 @@ public class RpcWebSocketClient(
 
         var channel = new WebSocketChannel<RpcMessage>(Settings.WebSocketChannelOptions, webSocketOwner);
         var options = ImmutableOptionSet.Empty
-            .Set(peer)
+            .Set((RpcPeer)peer)
             .Set(uri)
             .Set(webSocketOwner)
             .Set(webSocketOwner.WebSocket);
