@@ -9,6 +9,7 @@ public sealed class RpcServiceDef
     private readonly Dictionary<MethodInfo, RpcMethodDef> _methods;
     private readonly Dictionary<Symbol, RpcMethodDef> _methodByName;
     private object? _server;
+    private string? _toStringCached;
 
     public RpcHub Hub { get; }
     public Type Type { get; }
@@ -66,8 +67,17 @@ public sealed class RpcServiceDef
 
     public override string ToString()
     {
-        var serverInfo = HasServer  ? "" : $", Serving: {ServerResolver}";
-        return $"{GetType().Name}({Type.GetName()}, Name: '{Name}', {Methods.Count} method(s){serverInfo})";
+        if (_toStringCached != null)
+            return _toStringCached;
+
+        var serverInfo = HasServer  ? $" -> {ServerResolver}" : "";
+        var kindInfo = (IsSystem, IsBackend) switch {
+            (true, true) => " [System,Backend]",
+            (true, false) => " [System]",
+            (false, true) => " [Backend]",
+            _ => "",
+        };
+        return _toStringCached = $"'{Name}'{kindInfo}: {Type.GetName()}{serverInfo}, {Methods.Count} method(s)";
     }
 
     public RpcMethodDef? Get(MethodInfo method) => _methods.GetValueOrDefault(method);

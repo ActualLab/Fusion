@@ -15,7 +15,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcMethodNameBuilder MethodNameBuilder;
     internal readonly RpcCallRouter CallRouter;
     internal readonly RpcArgumentSerializer ArgumentSerializer;
-    internal readonly RpcLocalServiceFilter LocalServiceFilter;
+    internal readonly RpcInboundCallFilter InboundCallFilter;
     internal readonly RpcInboundContextFactory InboundContextFactory;
     internal readonly RpcInboundMiddlewares InboundMiddlewares;
     internal readonly RpcOutboundMiddlewares OutboundMiddlewares;
@@ -51,7 +51,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         MethodNameBuilder = services.GetRequiredService<RpcMethodNameBuilder>();
         CallRouter = services.GetRequiredService<RpcCallRouter>();
         ArgumentSerializer = services.GetRequiredService<RpcArgumentSerializer>();
-        LocalServiceFilter = services.GetRequiredService<RpcLocalServiceFilter>();
+        InboundCallFilter = services.GetRequiredService<RpcInboundCallFilter>();
         InboundContextFactory = services.GetRequiredService<RpcInboundContextFactory>();
         InboundMiddlewares = services.GetRequiredService<RpcInboundMiddlewares>();
         OutboundMiddlewares = services.GetRequiredService<RpcOutboundMiddlewares>();

@@ -16,17 +16,15 @@ using Microsoft.AspNetCore.Hosting;
 
 namespace ActualLab.Tests;
 
-public class RpcWebHost : TestWebHostBase
+public class RpcWebHost(
+    IServiceCollection baseServices,
+    Assembly? controllerAssembly = null
+    ) : TestWebHostBase
 {
-    public IServiceCollection BaseServices { get; }
-    public Assembly? ControllerAssembly { get; set; }
+    public IServiceCollection BaseServices { get; } = baseServices;
+    public Assembly? ControllerAssembly { get; set; } = controllerAssembly;
     public TimeSpan WebSocketWriteDelay { get; set; }
-
-    public RpcWebHost(IServiceCollection baseServices, Assembly? controllerAssembly = null)
-    {
-        BaseServices = baseServices;
-        ControllerAssembly = controllerAssembly;
-    }
+    public bool ExposeBackend { get; set; } = false;
 
     protected override void ConfigureHost(IHostBuilder builder)
     {
@@ -40,6 +38,7 @@ public class RpcWebHost : TestWebHostBase
             webSocketServer.Configure(_ => {
                 var defaultOptions = RpcWebSocketServer.Options.Default;
                 return defaultOptions with {
+                    ExposeBackend = ExposeBackend,
                     WebSocketChannelOptions = defaultOptions.WebSocketChannelOptions with {
                         WriteDelay = WebSocketWriteDelay,
                     },

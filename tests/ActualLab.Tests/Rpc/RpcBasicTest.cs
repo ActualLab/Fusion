@@ -24,8 +24,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         services.AddSingleton<RpcPeerFactory>(_ => static (hub, peerRef) => {
             return peerRef.IsServer
                 ? new RpcServerPeer(hub, peerRef) {
-                    LocalServiceFilter = static (peer, serviceDef)
-                        => !serviceDef.IsBackend || serviceDef.Type == typeof(ITestRpcBackend),
+                    InboundCallFilter = static (peer, method)
+                        => !method.Service.IsBackend || method.Service.Type == typeof(ITestRpcBackend),
                 }
                 : new RpcClientPeer(hub, peerRef);
         });

@@ -71,8 +71,7 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     {
 #pragma warning disable MA0011, MA0028, CA1305
         foreach (var serviceDef in _serviceByName.Values.OrderBy(s => s.Name)) {
-            var serverInfo = serviceDef.HasServer  ? $" -> {serviceDef.ServerResolver}" : "";
-            sb.AppendLine($"{indent}'{serviceDef.Name}': {serviceDef.Type.GetName()}{serverInfo}, {serviceDef.Methods.Count} method(s)");
+            sb.Append(indent).Append(serviceDef).AppendLine();
             if (!dumpMethods)
                 continue;
 

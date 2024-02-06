@@ -17,7 +17,9 @@ public class RpcWebSocketServer(
     {
         public static Options Default { get; set; } = new();
 
-        public string RoutePattern { get; init; } = RpcWebSocketClient.Options.Default.RequestPath;
+        public bool ExposeBackend { get; init; } = false;
+        public string RequestPath { get; init; } = RpcWebSocketClient.Options.Default.RequestPath;
+        public string BackendRequestPath { get; init; } = RpcWebSocketClient.Options.Default.BackendRequestPath;
         public string ClientIdParameterName { get; init; } = RpcWebSocketClient.Options.Default.ClientIdParameterName;
         public WebSocketChannel<RpcMessage>.Options WebSocketChannelOptions { get; init; } = WebSocketChannel<RpcMessage>.Options.Default;
 #if NET6_0_OR_GREATER
@@ -32,7 +34,7 @@ public class RpcWebSocketServer(
         = services.GetRequiredService<RpcServerConnectionFactory>();
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public async Task Invoke(HttpContext context)
+    public async Task Invoke(HttpContext context, bool isBackend)
     {
         var cancellationToken = context.RequestAborted;
         if (!context.WebSockets.IsWebSocketRequest) {
@@ -40,7 +42,7 @@ public class RpcWebSocketServer(
             return;
         }
 
-        var peerRef = PeerRefFactory.Invoke(this, context).RequireServer();
+        var peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
         var peer = Hub.GetServerPeer(peerRef);
 
 #if NET6_0_OR_GREATER

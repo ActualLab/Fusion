@@ -23,7 +23,9 @@ public class RpcWebSocketServer(
     {
         public static Options Default { get; set; } = new();
 
-        public string RoutePattern { get; init; } = RpcWebSocketClient.Options.Default.RequestPath;
+        public bool ExposeBackend { get; init; } = false;
+        public string RequestPath { get; init; } = RpcWebSocketClient.Options.Default.RequestPath;
+        public string BackendRequestPath { get; init; } = RpcWebSocketClient.Options.Default.BackendRequestPath;
         public string ClientIdParameterName { get; init; } = RpcWebSocketClient.Options.Default.ClientIdParameterName;
         public WebSocketChannel<RpcMessage>.Options WebSocketChannelOptions { get; init; } = WebSocketChannel<RpcMessage>.Options.Default;
     }
@@ -35,7 +37,7 @@ public class RpcWebSocketServer(
         = services.GetRequiredService<RpcServerConnectionFactory>();
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public HttpStatusCode Invoke(IOwinContext context)
+    public HttpStatusCode Invoke(IOwinContext context, bool isBackend)
     {
         // Based on https://stackoverflow.com/questions/41848095/websockets-using-owin
 
@@ -43,7 +45,7 @@ public class RpcWebSocketServer(
         if (acceptToken == null)
             return HttpStatusCode.BadRequest;
 
-        var peerRef = PeerRefFactory.Invoke(this, context).RequireServer();
+        var peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
         _ = Hub.GetServerPeer(peerRef);
 
         var requestHeaders =
@@ -58,16 +60,16 @@ public class RpcWebSocketServer(
 
         acceptToken(acceptOptions, wsEnv => {
             var wsContext = (WebSocketContext)wsEnv["System.Net.WebSockets.WebSocketContext"];
-            return HandleWebSocket(context, wsContext);
+            return HandleWebSocket(context, wsContext, isBackend);
         });
 
         return HttpStatusCode.SwitchingProtocols;
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    private async Task HandleWebSocket(IOwinContext context, WebSocketContext wsContext)
+    private async Task HandleWebSocket(IOwinContext context, WebSocketContext wsContext, bool isBackend)
     {
-        var peerRef = PeerRefFactory.Invoke(this, context);
+        var peerRef = PeerRefFactory.Invoke(this, context, isBackend);
         var peer = Hub.GetServerPeer(peerRef);
         var cancellationToken = context.Request.CallCancelled;
         try {

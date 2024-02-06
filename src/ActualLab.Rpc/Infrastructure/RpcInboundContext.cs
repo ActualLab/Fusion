@@ -43,14 +43,15 @@ public class RpcInboundContext
 
     private RpcMethodDef? GetMethodDef()
     {
-        var serviceDef = Peer.Hub.ServiceRegistry.Get(Message.Service);
-        if (serviceDef == null)
+        var service = Peer.Hub.ServiceRegistry.Get(Message.Service);
+        if (service is not { HasServer: true })
             return null;
 
-        if (!serviceDef.IsSystem && !Peer.LocalServiceFilter.Invoke(Peer, serviceDef))
-            return null;
+        var method = service.Get(Message.Method);
+        if (service.IsSystem || method == null)
+            return method;
 
-        return serviceDef.Get(Message.Method);
+        return Peer.InboundCallFilter.Invoke(Peer, method) ? method : null;
     }
 
     public readonly struct Scope : IDisposable

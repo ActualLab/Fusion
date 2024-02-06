@@ -26,6 +26,7 @@ public class RpcWebSocketClient(
             = WebSocketChannel<RpcMessage>.Options.Default;
 
         public string RequestPath { get; init; } = "/rpc/ws";
+        public string BackendRequestPath { get; init; } = "/backend/rpc/ws";
         public string ClientIdParameterName { get; init; } = "clientId";
 
         public static string DefaultHostUrlResolver(RpcWebSocketClient client, RpcClientPeer peer)
@@ -44,7 +45,10 @@ public class RpcWebSocketClient(
                     url = "wss://" + url[8..];
                 else
                     url = "wss://" + url;
-                url += settings.RequestPath;
+                var requestPath = peer.Ref.IsBackend
+                    ? settings.BackendRequestPath
+                    : settings.RequestPath;
+                url += requestPath;
             }
 
             var uriBuilder = new UriBuilder(url);
