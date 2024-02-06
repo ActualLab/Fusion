@@ -58,7 +58,10 @@ public class RpcWebSocketServer(
                 Settings.WebSocketChannelOptions, webSocketOwner, cancellationToken) {
                 OwnsWebSocketOwner = false,
             };
-            var options = ImmutableOptionSet.Empty.Set(context).Set(webSocket);
+            var options = ImmutableOptionSet.Empty
+                .Set(peer)
+                .Set(context)
+                .Set(webSocket);
             var connection = await ServerConnectionFactory
                 .Invoke(peer, channel, options, cancellationToken)
                 .ConfigureAwait(false);

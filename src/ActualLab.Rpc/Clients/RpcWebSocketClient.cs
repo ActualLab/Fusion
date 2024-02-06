@@ -67,9 +67,16 @@ public class RpcWebSocketClient(
     public Options Settings { get; } = settings;
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public override async Task<RpcConnection> CreateConnection(RpcClientPeer peer, CancellationToken cancellationToken)
+    public override Task<RpcConnection> CreateConnection(RpcClientPeer peer, CancellationToken cancellationToken)
     {
         var uri = Settings.ConnectionUriResolver(this, peer);
+        return CreateConnection(peer, uri, cancellationToken);
+    }
+
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    public virtual async Task<RpcConnection> CreateConnection(
+        RpcClientPeer peer, Uri uri, CancellationToken cancellationToken)
+    {
         var hub = peer.Hub;
         var connectCts = new CancellationTokenSource();
         var connectToken = connectCts.Token;
@@ -107,6 +114,7 @@ public class RpcWebSocketClient(
 
         var channel = new WebSocketChannel<RpcMessage>(Settings.WebSocketChannelOptions, webSocketOwner);
         var options = ImmutableOptionSet.Empty
+            .Set(peer)
             .Set(uri)
             .Set(webSocketOwner)
             .Set(webSocketOwner.WebSocket);
