@@ -84,7 +84,7 @@ public class ServerAuthHelper : IHasServices
     {
         var httpUser = httpContext.User;
         var httpAuthenticationSchema = httpUser.Identity?.AuthenticationType ?? "";
-        var httpIsAuthenticated = !httpAuthenticationSchema.IsNullOrEmpty();
+        var httpIsSignedIn = !httpAuthenticationSchema.IsNullOrEmpty();
 
         var ipAddress = httpContext.GetRemoteIPAddress()?.ToString() ?? "";
         var userAgent = httpContext.Request.Headers.TryGetValue("User-Agent", out var userAgentValues)
@@ -102,26 +102,22 @@ public class ServerAuthHelper : IHasServices
                 .ConfigureAwait(false);
 
         var user = await GetUser(session, sessionInfo, cancellationToken).ConfigureAwait(false);
+        var isSignedIn = IsSignedIn(user);
         try {
-            if (httpIsAuthenticated) {
-                if (user != null && IsSameUser(user, httpUser, httpAuthenticationSchema))
-                    return;
+            if (httpIsSignedIn) {
+                if (isSignedIn && IsSameUser(user, httpUser, httpAuthenticationSchema))
+                    return; // Nothing to change
 
-                var isSignInAllowed = user == null
+                var isSignInAllowed = !isSignedIn
                     ? Settings.AllowSignIn(this, httpContext)
                     : Settings.AllowChange(this, httpContext);
                 if (!isSignInAllowed)
-                    return;
+                    return; // Sign-in or user change is not allowed for the current location
 
-                await SignIn(session, sessionInfo, user, httpUser, httpAuthenticationSchema, cancellationToken)
-                    .ConfigureAwait(false);
+                await SignIn(session, sessionInfo, user, httpUser, httpAuthenticationSchema, cancellationToken).ConfigureAwait(false);
             }
-            else {
-                if (user == null || !Settings.AllowSignOut(this, httpContext))
-                    return;
-
+            else if (isSignedIn && Settings.AllowSignOut(this, httpContext))
                 await SignOut(session, sessionInfo, cancellationToken).ConfigureAwait(false);
-            }
         }
         finally {
             // This should be done once important things are completed
@@ -185,8 +181,14 @@ public class ServerAuthHelper : IHasServices
         return Task.CompletedTask;
     }
 
-    protected virtual bool IsSameUser(User user, ClaimsPrincipal httpUser, string schema)
+    protected virtual bool IsSignedIn(User? user)
+        => user?.IsAuthenticated() == true;
+
+    protected virtual bool IsSameUser(User? user, ClaimsPrincipal httpUser, string schema)
     {
+        if (user == null)
+            return false;
+
         var httpUserIdentityName = httpUser.Identity?.Name ?? "";
         var claims = httpUser.Claims.ToImmutableDictionary(c => c.Type, c => c.Value);
         var id = FirstClaimOrDefault(claims, Settings.IdClaimKeys) ?? httpUserIdentityName;
