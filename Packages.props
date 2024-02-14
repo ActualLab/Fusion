@@ -23,7 +23,7 @@
     <MicrosoftExtensionsVersion>$(AspNetCoreVersion)</MicrosoftExtensionsVersion>
     <MicrosoftExtensionsVersion7>$(AspNetCoreVersion7)</MicrosoftExtensionsVersion7>
     <MicrosoftExtensionsVersion6>$(AspNetCoreVersion6)</MicrosoftExtensionsVersion6>
-    <CSharpVersion>4.7.*</CSharpVersion>
+    <CSharpVersion>4.4.*</CSharpVersion>
     <!-- EF Core -->
     <EntityFrameworkCoreVersion>$(AspNetCoreVersion)</EntityFrameworkCoreVersion>
     <EntityFrameworkCoreVersion7>$(AspNetCoreVersion7)</EntityFrameworkCoreVersion7>
