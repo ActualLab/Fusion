@@ -77,14 +77,14 @@ public class ServerAuthHelper : IHasServices
 
     public Task UpdateAuthState(HttpContext httpContext, CancellationToken cancellationToken = default)
         => UpdateAuthState(SessionResolver.Session, httpContext, false, cancellationToken);
-    public Task UpdateAuthState(HttpContext httpContext, bool skipIsAllowedCheck, CancellationToken cancellationToken = default)
-        => UpdateAuthState(SessionResolver.Session, httpContext, skipIsAllowedCheck, cancellationToken);
+    public Task UpdateAuthState(HttpContext httpContext, bool assumeAllowed, CancellationToken cancellationToken = default)
+        => UpdateAuthState(SessionResolver.Session, httpContext, assumeAllowed, cancellationToken);
     public Task UpdateAuthState(Session session, HttpContext httpContext, CancellationToken cancellationToken = default)
         => UpdateAuthState(session, httpContext, false, cancellationToken);
     public virtual async Task UpdateAuthState(
         Session session,
         HttpContext httpContext,
-        bool skipIsAllowedCheck,
+        bool assumeAllowed,
         CancellationToken cancellationToken = default)
     {
         var httpUser = httpContext.User;
@@ -114,14 +114,14 @@ public class ServerAuthHelper : IHasServices
                     return; // Nothing to change
 
                 var isSignInAllowed = !isSignedIn
-                    ? skipIsAllowedCheck || Settings.AllowSignIn(this, httpContext)
-                    : skipIsAllowedCheck || Settings.AllowChange(this, httpContext);
+                    ? assumeAllowed || Settings.AllowSignIn(this, httpContext)
+                    : assumeAllowed || Settings.AllowChange(this, httpContext);
                 if (!isSignInAllowed)
                     return; // Sign-in or user change is not allowed for the current location
 
                 await SignIn(session, sessionInfo, user, httpUser, httpAuthenticationSchema, cancellationToken).ConfigureAwait(false);
             }
-            else if (isSignedIn && (skipIsAllowedCheck || Settings.AllowSignOut(this, httpContext)))
+            else if (isSignedIn && (assumeAllowed || Settings.AllowSignOut(this, httpContext)))
                 await SignOut(session, sessionInfo, cancellationToken).ConfigureAwait(false);
         }
         finally {
