@@ -225,6 +225,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         && !cancellationToken.IsCancellationRequested;
                     error = isReaderAbort ? null : e;
                 }
+                // Inbound calls are auto-aborted via peerChangedToken from OnRun,
+                // which becomes RpcInboundCallContext.CancellationToken.
+                InboundCalls.Clear();
                 connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
             }
         }
@@ -279,8 +282,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         if (isStopped)
             await OutboundCalls.Abort(error).ConfigureAwait(false);
         // Inbound calls are auto-aborted via peerChangedToken from OnRun,
-        // which becomes RpcInboundCallContext.CancellationToken, so here
-        // we must just clear them.
+        // which becomes RpcInboundCallContext.CancellationToken.
+        // We clear them on Reset mostly "just in case": they're cleared
+        // on every disconnect anyway.
         InboundCalls.Clear();
         Log.LogInformation("'{PeerRef}': {Action}", Ref, isStopped ? "Stopped" : "Peer changed");
     }
