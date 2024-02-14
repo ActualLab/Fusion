@@ -4,14 +4,8 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
-public abstract class RpcClient : RpcServiceBase
+public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(services)
 {
-    public string ClientId { get; init; }
-
-    protected RpcClient(IServiceProvider services)
-        : base(services)
-        => ClientId = Hub.ClientIdGenerator.Invoke();
-
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public abstract Task<RpcConnection> CreateConnection(RpcClientPeer peer, CancellationToken cancellationToken);
+    public abstract Task<RpcConnection> Connect(RpcClientPeer peer, CancellationToken cancellationToken);
 }

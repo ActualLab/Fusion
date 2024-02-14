@@ -27,6 +27,7 @@ public class RpcWebSocketServer(
         public string RequestPath { get; init; } = RpcWebSocketClient.Options.Default.RequestPath;
         public string BackendRequestPath { get; init; } = RpcWebSocketClient.Options.Default.BackendRequestPath;
         public string ClientIdParameterName { get; init; } = RpcWebSocketClient.Options.Default.ClientIdParameterName;
+        public TimeSpan ChangeConnectionDelay { get; init; } = TimeSpan.FromSeconds(1);
         public WebSocketChannel<RpcMessage>.Options WebSocketChannelOptions { get; init; } = WebSocketChannel<RpcMessage>.Options.Default;
     }
 
@@ -69,10 +70,17 @@ public class RpcWebSocketServer(
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async Task HandleWebSocket(IOwinContext context, WebSocketContext wsContext, bool isBackend)
     {
-        var peerRef = PeerRefFactory.Invoke(this, context, isBackend);
-        var peer = Hub.GetServerPeer(peerRef);
         var cancellationToken = context.Request.CallCancelled;
         try {
+            var peerRef = PeerRefFactory.Invoke(this, context, isBackend);
+            var peer = Hub.GetServerPeer(peerRef);
+            if (peer.ConnectionState.Value.IsConnected()) {
+                var delay = Settings.ChangeConnectionDelay;
+                Log.LogWarning("{Peer} is already connected, will change its connection in {Delay}...",
+                    peer, delay.ToShortString());
+                await peer.Hub.Clock.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
+
             var webSocket = wsContext.WebSocket;
             var webSocketOwner = new WebSocketOwner(peer.Ref.Key, webSocket, Services);
             var channel = new WebSocketChannel<RpcMessage>(
@@ -86,7 +94,6 @@ public class RpcWebSocketServer(
             var connection = await ServerConnectionFactory
                 .Invoke(peer, channel, options, cancellationToken)
                 .ConfigureAwait(false);
-
             peer.SetConnection(connection);
             await channel.WhenClosed.ConfigureAwait(false);
         }

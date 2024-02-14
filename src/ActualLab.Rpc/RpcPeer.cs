@@ -31,7 +31,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public LogLevel CallLogLevel { get; init; } = LogLevel.None;
     public AsyncState<RpcPeerConnectionState> ConnectionState => _connectionState;
     public RpcPeerInternalServices InternalServices => new(this);
-    public Guid Id { get; init; } = Guid.NewGuid();
+    public Guid Id { get; } = Guid.NewGuid();
 
     protected RpcPeer(RpcHub hub, RpcPeerRef @ref)
     {
@@ -55,6 +55,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         SharedObjects = services.GetRequiredService<RpcSharedObjectTracker>();
         SharedObjects.Initialize(this);
     }
+
+    public override string ToString()
+        => $"{GetType().Name}({Ref}, #{GetHashCode()})";
 
     public Task Send(RpcMessage message, ChannelWriter<RpcMessage>? sender = null)
     {

@@ -52,7 +52,7 @@ public class RpcWebSocketClient(
             }
 
             var uriBuilder = new UriBuilder(url);
-            var queryTail = $"{settings.ClientIdParameterName}={UrlEncoder.Default.Encode(client.ClientId)}";
+            var queryTail = $"{settings.ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}";
             if (!uriBuilder.Query.IsNullOrEmpty())
                 uriBuilder.Query += "&" + queryTail;
             else
@@ -67,14 +67,14 @@ public class RpcWebSocketClient(
     public Options Settings { get; } = settings;
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public override Task<RpcConnection> CreateConnection(RpcClientPeer peer, CancellationToken cancellationToken)
+    public override Task<RpcConnection> Connect(RpcClientPeer peer, CancellationToken cancellationToken)
     {
         var uri = Settings.ConnectionUriResolver(this, peer);
-        return CreateConnection(peer, uri, cancellationToken);
+        return Connect(peer, uri, cancellationToken);
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public virtual async Task<RpcConnection> CreateConnection(
+    public virtual async Task<RpcConnection> Connect(
         RpcClientPeer peer, Uri uri, CancellationToken cancellationToken)
     {
         var hub = peer.Hub;

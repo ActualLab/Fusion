@@ -1,4 +1,3 @@
-using ActualLab.Generators;
 using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
@@ -18,7 +17,6 @@ public delegate Task<RpcConnection> RpcClientConnectionFactory(
     RpcClientPeer peer, CancellationToken cancellationToken);
 public delegate Task<RpcConnection> RpcServerConnectionFactory(
     RpcServerPeer peer, Channel<RpcMessage> channel, ImmutableOptionSet options, CancellationToken cancellationToken);
-public delegate string RpcClientIdGenerator();
 public delegate bool RpcUnrecoverableErrorDetector(Exception error, CancellationToken cancellationToken);
 public delegate RpcMethodTracer? RpcMethodTracerFactory(RpcMethodDef method);
 
@@ -53,14 +51,11 @@ public static class RpcDefaultDelegates
 
     public static RpcClientConnectionFactory ClientConnectionFactory { get; set; } =
 #pragma warning disable IL2026
-        static (peer, cancellationToken) => peer.Hub.Client.CreateConnection(peer, cancellationToken);
+        static (peer, cancellationToken) => peer.Hub.Client.Connect(peer, cancellationToken);
 #pragma warning restore IL2026
 
     public static RpcServerConnectionFactory ServerConnectionFactory { get; set; } =
         static (peer, channel, options, cancellationToken) => Task.FromResult(new RpcConnection(channel, options));
-
-    public static RpcClientIdGenerator ClientIdGenerator { get; set; } =
-        static () => RandomStringGenerator.Default.Next(32);
 
     public static RpcUnrecoverableErrorDetector UnrecoverableErrorDetector { get; set; } =
         static (error, cancellationToken)
