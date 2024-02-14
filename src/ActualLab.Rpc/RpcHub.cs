@@ -11,8 +11,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     private RpcSystemCallSender? _systemCallSender;
     private RpcClient? _client;
 
-    internal readonly RpcServiceNameBuilder ServiceNameBuilder;
-    internal readonly RpcMethodNameBuilder MethodNameBuilder;
+    internal readonly RpcServiceDefBuilder ServiceDefBuilder;
+    internal readonly RpcMethodDefBuilder MethodDefBuilder;
     internal readonly RpcCallRouter CallRouter;
     internal readonly RpcArgumentSerializer ArgumentSerializer;
     internal readonly RpcInboundCallFilter InboundCallFilter;
@@ -47,8 +47,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         Configuration.Freeze();
 
         // Delegates
-        ServiceNameBuilder = services.GetRequiredService<RpcServiceNameBuilder>();
-        MethodNameBuilder = services.GetRequiredService<RpcMethodNameBuilder>();
+        ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
+        MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
         CallRouter = services.GetRequiredService<RpcCallRouter>();
         ArgumentSerializer = services.GetRequiredService<RpcArgumentSerializer>();
         InboundCallFilter = services.GetRequiredService<RpcInboundCallFilter>();

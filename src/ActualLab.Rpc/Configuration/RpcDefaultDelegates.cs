@@ -5,9 +5,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
-public delegate Symbol RpcServiceNameBuilder(Type serviceType);
-public delegate Symbol RpcMethodNameBuilder(RpcMethodDef method);
-public delegate bool RpcBackendServiceDetector(Type serviceType, Symbol serviceName);
+public delegate RpcServiceDef RpcServiceDefBuilder(RpcHub hub, RpcServiceBuilder service);
+public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodInfo method);
+public delegate bool RpcBackendServiceDetector(Type serviceType);
 public delegate RpcPeer? RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
 public delegate void RpcPeerTracker(RpcPeer peer);
 public delegate RpcPeer RpcPeerFactory(RpcHub hub, RpcPeerRef peerRef);
@@ -24,17 +24,16 @@ public delegate RpcMethodTracer? RpcMethodTracerFactory(RpcMethodDef method);
 
 public static class RpcDefaultDelegates
 {
-    public static RpcServiceNameBuilder ServiceNameBuilder { get; set; } =
-        static serviceType => serviceType.GetName();
+    public static RpcServiceDefBuilder ServiceDefBuilder { get; set; } =
+        static (hub, service) => new RpcServiceDef(hub, service);
 
-    public static RpcMethodNameBuilder MethodNameBuilder { get; set; } =
-        static methodDef => $"{methodDef.Method.Name}:{methodDef.ParameterTypes.Length}";
+    public static RpcMethodDefBuilder MethodDefBuilder { get; set; } =
+        static (service, method) => new RpcMethodDef(service, service.Type, method);
 
     public static RpcBackendServiceDetector BackendServiceDetector { get; set; } =
-        static (serviceType, serviceName) =>
+        static serviceType =>
             typeof(IBackendService).IsAssignableFrom(serviceType)
-            || serviceType.Name.EndsWith("Backend", StringComparison.Ordinal)
-            || serviceName.Value.StartsWith("backend.", StringComparison.Ordinal);
+            || serviceType.Name.EndsWith("Backend", StringComparison.Ordinal);
 
     public static RpcCallRouter CallRouter { get; set; } =
         static (method, arguments) => method.Hub.GetPeer(RpcPeerRef.Default);

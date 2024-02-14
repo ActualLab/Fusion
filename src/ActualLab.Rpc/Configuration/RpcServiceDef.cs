@@ -6,17 +6,17 @@ namespace ActualLab.Rpc;
 
 public sealed class RpcServiceDef
 {
-    private readonly Dictionary<MethodInfo, RpcMethodDef> _methods;
-    private readonly Dictionary<Symbol, RpcMethodDef> _methodByName;
+    private Dictionary<MethodInfo, RpcMethodDef> _methods = null!;
+    private Dictionary<Symbol, RpcMethodDef> _methodByName = null!;
     private object? _server;
     private string? _toStringCached;
 
     public RpcHub Hub { get; }
     public Type Type { get; }
-    public ServiceResolver? ServerResolver { get; }
-    public Symbol Name { get; }
-    public bool IsSystem { get; }
-    public bool IsBackend { get; }
+    public ServiceResolver? ServerResolver { get; init; }
+    public Symbol Name { get; init; }
+    public bool IsSystem { get; init; }
+    public bool IsBackend { get; init; }
     public bool HasServer => ServerResolver != null;
     public object Server => _server ??= ServerResolver.Resolve(Hub.Services);
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
@@ -24,19 +24,25 @@ public sealed class RpcServiceDef
     public RpcMethodDef this[MethodInfo method] => Get(method) ?? throw Errors.NoMethod(Type, method);
     public RpcMethodDef this[Symbol methodName] => Get(methodName) ?? throw Errors.NoMethod(Type, methodName);
 
-    public RpcServiceDef(
-        RpcHub hub, Symbol name, RpcServiceBuilder source,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType)
+    public RpcServiceDef(RpcHub hub, RpcServiceBuilder service)
     {
-        if (serviceType != source.Type)
-            throw new ArgumentOutOfRangeException(nameof(serviceType));
+        var name = service.Name;
+        if (name.IsEmpty)
+            name = service.Type.GetName();
 
         Hub = hub;
         Name = name;
-        Type = source.Type;
-        ServerResolver = source.ServerResolver;
+        Type = service.Type;
+        ServerResolver = service.ServerResolver;
         IsSystem = typeof(IRpcSystemService).IsAssignableFrom(Type);
-        IsBackend = hub.BackendServiceDetector.Invoke(Type, name);
+        IsBackend = hub.BackendServiceDetector.Invoke(service.Type);
+    }
+
+    internal void BuildMethods(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType)
+    {
+        if (serviceType != Type)
+            throw new ArgumentOutOfRangeException(nameof(serviceType));
 
         _methods = new Dictionary<MethodInfo, RpcMethodDef>();
         _methodByName = new Dictionary<Symbol, RpcMethodDef>();
@@ -53,15 +59,14 @@ public sealed class RpcServiceDef
             if (method.IsGenericMethodDefinition)
                 continue;
 
-            var methodDef = new RpcMethodDef(this, serviceType, method);
+            var methodDef = Hub.MethodDefBuilder.Invoke(this, method);
             if (!methodDef.IsValid)
                 continue;
 
-            if (_methodByName.ContainsKey(methodDef.Name))
+            if (!_methodByName.TryAdd(methodDef.Name, methodDef))
                 throw Errors.MethodNameConflict(methodDef);
 
             _methods.Add(method, methodDef);
-            _methodByName.Add(methodDef.Name, methodDef);
         }
     }
 

@@ -8,20 +8,30 @@ namespace ActualLab.Rpc;
 public sealed class RpcMethodDef : MethodDef
 {
     private string? _toStringCached;
+    private readonly Symbol _name;
 
     public RpcHub Hub { get; }
     public RpcServiceDef Service { get; }
-    public Symbol Name { get; }
-    public new Symbol FullName { get; }
+    public Symbol Name {
+        get => _name;
+        init {
+            if (value.IsEmpty)
+                throw new ArgumentOutOfRangeException(nameof(value));
+
+            _name = value;
+            FullName = $"{Service.Name.Value}.{Name.Value}";
+        }
+    }
+    public new Symbol FullName { get; private init; }
 
     public Type ArgumentListType { get; }
     public bool HasObjectTypedArguments { get; }
-    public bool AllowArgumentPolymorphism { get; }
-    public bool AllowResultPolymorphism { get; }
     public Func<ArgumentList> ArgumentListFactory { get; }
     public Func<ArgumentList> ResultListFactory { get; }
     public bool NoWait { get; }
-    public RpcMethodTracer? Tracer { get; }
+    public bool AllowArgumentPolymorphism { get; init; }
+    public bool AllowResultPolymorphism { get; init; }
+    public RpcMethodTracer? Tracer { get; init; }
 
     public RpcMethodDef(
         RpcServiceDef service,
@@ -40,8 +50,7 @@ public sealed class RpcMethodDef : MethodDef
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);
 
         Service = service;
-        Name = Hub.MethodNameBuilder.Invoke(this);
-        FullName = $"{service.Name.Value}.{Name.Value}";
+        Name =  $"{Method.Name}:{ParameterTypes.Length}";
         AllowResultPolymorphism = AllowArgumentPolymorphism = service.IsSystem || service.IsBackend;
 
 #pragma warning disable IL2055, IL2072
@@ -58,12 +67,12 @@ public sealed class RpcMethodDef : MethodDef
     }
 
     public override string ToString()
-    {
-        if (_toStringCached != null)
-            return _toStringCached;
+        => _toStringCached ??= ToString(useShortName: false);
 
+    public string ToString(bool useShortName)
+    {
         var arguments = ParameterTypes.Select(t => t.GetName()).ToDelimitedString();
         var returnType = UnwrappedReturnType.GetName();
-        return _toStringCached = $"'{Name}': ({arguments}) -> {returnType}{(IsValid ? "" : " - invalid")}";
+        return  $"'{(useShortName ? Name : FullName)}': ({arguments}) -> {returnType}{(IsValid ? "" : " - invalid")}";
     }
 }
