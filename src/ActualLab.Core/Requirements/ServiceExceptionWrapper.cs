@@ -12,11 +12,7 @@ public record ServiceExceptionWrapper<
     public override bool IsSatisfied(T? value)
         => BaseRequirement.IsSatisfied(value);
 
-#if NETSTANDARD2_0
-    public override T Check(T? value)
-#else
     public override T Check([NotNull] T? value)
-#endif
     {
         try {
             return BaseRequirement.Check(value);

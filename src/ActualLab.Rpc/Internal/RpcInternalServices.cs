@@ -4,8 +4,8 @@ namespace ActualLab.Rpc.Internal;
 
 public readonly record struct RpcInternalServices(RpcHub Hub)
 {
-    public RpcServiceNameBuilder ServiceNameBuilder => Hub.ServiceNameBuilder;
-    public RpcMethodNameBuilder MethodNameBuilder => Hub.MethodNameBuilder;
+    public RpcServiceDefBuilder ServiceDefBuilder => Hub.ServiceDefBuilder;
+    public RpcMethodDefBuilder MethodDefBuilder => Hub.MethodDefBuilder;
     public RpcCallRouter CallRouter => Hub.CallRouter;
     public RpcArgumentSerializer ArgumentSerializer => Hub.ArgumentSerializer;
     public RpcInboundContextFactory InboundContextFactory => Hub.InboundContextFactory;
@@ -13,7 +13,6 @@ public readonly record struct RpcInternalServices(RpcHub Hub)
     public RpcOutboundMiddlewares OutboundMiddlewares => Hub.OutboundMiddlewares;
     public RpcPeerFactory PeerFactory => Hub.PeerFactory;
     public RpcClientConnectionFactory ClientConnectionFactory => Hub.ClientConnectionFactory;
-    public RpcClientIdGenerator ClientIdGenerator => Hub.ClientIdGenerator;
     public RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer => Hub.ClientPeerReconnectDelayer;
     public RpcUnrecoverableErrorDetector UnrecoverableErrorDetector => Hub.UnrecoverableErrorDetector;
     public IEnumerable<RpcPeerTracker> PeerTrackers => Hub.PeerTrackers;

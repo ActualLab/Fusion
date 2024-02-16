@@ -65,7 +65,7 @@ public class RpcTestClient(
     }
 
 #pragma warning disable IL2046
-    public override async Task<RpcConnection> CreateConnection(RpcClientPeer peer, CancellationToken cancellationToken)
+    public override async Task<RpcConnection> Connect(RpcClientPeer peer, CancellationToken cancellationToken)
 #pragma warning restore IL2046
     {
         var channel = await this[peer].PullClientChannel(cancellationToken).ConfigureAwait(false);

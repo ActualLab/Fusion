@@ -23,4 +23,17 @@ public static class GuidExt
         return fullSpan.ToString();
 #endif
     }
+
+    public static string ToBase64Url(this Guid guid)
+        => Base64UrlEncoder.Encode(guid.ToByteArray());
+
+    public static Guid FromBase64Url(string source)
+    {
+        var bytes = Base64UrlEncoder.Decode(source);
+#if !NETSTANDARD2_0
+        return new Guid(bytes);
+#else
+        return new Guid(bytes.ToArray());
+#endif
+    }
 }

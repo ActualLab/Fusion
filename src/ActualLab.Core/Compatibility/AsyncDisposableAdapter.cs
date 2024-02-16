@@ -1,17 +1,14 @@
 namespace ActualLab.Compatibility;
 
 [StructLayout(LayoutKind.Auto)]
-public readonly struct AsyncDisposableAdapter<T> : IAsyncDisposable
+public readonly struct AsyncDisposableAdapter<T>(T target) : IAsyncDisposable
 #if !NETSTANDARD2_0
     where T : IAsyncDisposable?
 #else
     where T : IDisposable?
 #endif
 {
-    public T Target { get; }
-
-    public AsyncDisposableAdapter(T target)
-        => Target = target;
+    public T Target { get; } = target;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask DisposeAsync()

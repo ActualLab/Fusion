@@ -18,11 +18,7 @@ public sealed record RpcPeerConnectionState(
         => Connection != null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#if NETSTANDARD2_0
-    public bool IsConnected(out RpcConnection? connection)
-#else
     public bool IsConnected([NotNullWhen(true)] out RpcConnection? connection)
-#endif
     {
         connection = Connection;
         return connection != null;

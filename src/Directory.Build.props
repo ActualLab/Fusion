@@ -7,6 +7,8 @@
     <OutputPath>$(SolutionDir)artifacts\bin\$(MSBuildProjectName)</OutputPath>
     <PublishConfiguration>Release</PublishConfiguration>
     <IsPackable>true</IsPackable>
+    <!-- PolySharp -->
+    <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
     <!-- Signing -->
     <DefineConstants Condition="'$(PUBLIC_BUILD)' != ''">$(DefineConstants);SIGN_ASSEMBLIES</DefineConstants>
   </PropertyGroup>
@@ -38,6 +40,10 @@
     <!-- [VSTHRD110] Observe the awaitable result of this method call by awaiting it, assigning to a variable, or passing it to another method. -->
     <!-- [VSTHRD200] Use "Async" suffix in names of methods that return an awaitable type. -->
     <NoWarn>$(NoWarn);VSTHRD003;VSTHRD002;VSTHRD103;VSTHRD110;VSTHRD200</NoWarn>
+
+    <!-- Conditional for .NET Core 3.1 -->
+    <!-- [ILXXXX] Don't play any role on this platform -->
+    <NoWarn Condition="$(TargetFramework.StartsWith('netcore'))">$(NoWarn);IL2046;IL2092;IL2095</NoWarn>
   </PropertyGroup>
 
   <!--
@@ -47,6 +53,12 @@
   </ItemGroup>
   -->
 
+  <!-- Polyfills -->
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net8')))">
+    <PackageReference Include="PolySharp" />
+  </ItemGroup>
+
+  <!-- Analyzers -->
   <ItemGroup>
     <PackageReference Include="Nerdbank.GitVersioning" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" />

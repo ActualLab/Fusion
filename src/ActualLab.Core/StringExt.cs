@@ -10,11 +10,7 @@ namespace ActualLab;
 public static class StringExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#if NETSTANDARD2_0
-    public static bool IsNullOrEmpty(this string? source)
-#else
     public static bool IsNullOrEmpty([NotNullWhen(false)] this string? source)
-#endif
         => string.IsNullOrEmpty(source);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

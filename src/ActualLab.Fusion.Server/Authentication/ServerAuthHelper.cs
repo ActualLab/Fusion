@@ -12,11 +12,19 @@ public class ServerAuthHelper : IHasServices
     {
         public static Options Default { get; set; } = new();
 
-        public string[] IdClaimKeys { get; init; } = { ClaimTypes.NameIdentifier };
-        public string[] NameClaimKeys { get; init; } = { ClaimTypes.Name };
+        public string[] IdClaimKeys { get; init; } = [ ClaimTypes.NameIdentifier ];
+        public string[] NameClaimKeys { get; init; } = [ ClaimTypes.Name ];
         public string CloseWindowRequestPath { get; init; } = "/fusion/close";
         public TimeSpan SessionInfoUpdatePeriod { get; init; } = TimeSpan.FromSeconds(30);
-        public bool KeepSignedIn { get; init; }
+        public Func<ServerAuthHelper, HttpContext, bool> AllowSignIn = AllowAnywhere;
+        public Func<ServerAuthHelper, HttpContext, bool> AllowChange = AllowOnCloseWindowRequest;
+        public Func<ServerAuthHelper, HttpContext, bool> AllowSignOut = AllowOnCloseWindowRequest;
+
+        public static bool AllowAnywhere(ServerAuthHelper serverAuthHelper, HttpContext httpContext)
+            => true;
+
+        public static bool AllowOnCloseWindowRequest(ServerAuthHelper serverAuthHelper, HttpContext httpContext)
+            => serverAuthHelper.IsCloseWindowRequest(httpContext);
     }
 
     protected IAuth Auth { get; }
@@ -68,16 +76,20 @@ public class ServerAuthHelper : IHasServices
     }
 
     public Task UpdateAuthState(HttpContext httpContext, CancellationToken cancellationToken = default)
-        => UpdateAuthState(SessionResolver.Session, httpContext, cancellationToken);
-
+        => UpdateAuthState(SessionResolver.Session, httpContext, false, cancellationToken);
+    public Task UpdateAuthState(HttpContext httpContext, bool assumeAllowed, CancellationToken cancellationToken = default)
+        => UpdateAuthState(SessionResolver.Session, httpContext, assumeAllowed, cancellationToken);
+    public Task UpdateAuthState(Session session, HttpContext httpContext, CancellationToken cancellationToken = default)
+        => UpdateAuthState(session, httpContext, false, cancellationToken);
     public virtual async Task UpdateAuthState(
         Session session,
         HttpContext httpContext,
+        bool assumeAllowed,
         CancellationToken cancellationToken = default)
     {
         var httpUser = httpContext.User;
         var httpAuthenticationSchema = httpUser.Identity?.AuthenticationType ?? "";
-        var httpIsAuthenticated = !httpAuthenticationSchema.IsNullOrEmpty();
+        var httpIsSignedIn = !httpAuthenticationSchema.IsNullOrEmpty();
 
         var ipAddress = httpContext.GetRemoteIPAddress()?.ToString() ?? "";
         var userAgent = httpContext.Request.Headers.TryGetValue("User-Agent", out var userAgentValues)
@@ -95,16 +107,22 @@ public class ServerAuthHelper : IHasServices
                 .ConfigureAwait(false);
 
         var user = await GetUser(session, sessionInfo, cancellationToken).ConfigureAwait(false);
+        var isSignedIn = IsSignedIn(user);
         try {
-            if (httpIsAuthenticated) {
-                if (IsSameUser(user, httpUser, httpAuthenticationSchema))
-                    return;
-                await SignIn(session, sessionInfo, user, httpUser, httpAuthenticationSchema, cancellationToken)
-                    .ConfigureAwait(false);
+            if (httpIsSignedIn) {
+                if (isSignedIn && IsSameUser(user, httpUser, httpAuthenticationSchema))
+                    return; // Nothing to change
+
+                var isSignInAllowed = !isSignedIn
+                    ? assumeAllowed || Settings.AllowSignIn(this, httpContext)
+                    : assumeAllowed || Settings.AllowChange(this, httpContext);
+                if (!isSignInAllowed)
+                    return; // Sign-in or user change is not allowed for the current location
+
+                await SignIn(session, sessionInfo, user, httpUser, httpAuthenticationSchema, cancellationToken).ConfigureAwait(false);
             }
-            else if (user != null && !Settings.KeepSignedIn) {
+            else if (isSignedIn && (assumeAllowed || Settings.AllowSignOut(this, httpContext)))
                 await SignOut(session, sessionInfo, cancellationToken).ConfigureAwait(false);
-            }
         }
         finally {
             // This should be done once important things are completed
@@ -112,6 +130,8 @@ public class ServerAuthHelper : IHasServices
         }
     }
 
+    public bool IsCloseWindowRequest(HttpContext httpContext)
+        => IsCloseWindowRequest(httpContext, out _);
     public virtual bool IsCloseWindowRequest(HttpContext httpContext, out string closeWindowFlowName)
     {
         var request = httpContext.Request;
@@ -166,9 +186,13 @@ public class ServerAuthHelper : IHasServices
         return Task.CompletedTask;
     }
 
+    protected virtual bool IsSignedIn(User? user)
+        => user?.IsAuthenticated() == true;
+
     protected virtual bool IsSameUser(User? user, ClaimsPrincipal httpUser, string schema)
     {
-        if (user == null) return false;
+        if (user == null)
+            return false;
 
         var httpUserIdentityName = httpUser.Identity?.Name ?? "";
         var claims = httpUser.Claims.ToImmutableDictionary(c => c.Type, c => c.Value);

@@ -2,12 +2,9 @@ using ActualLab.Fusion.Extensions;
 
 namespace ActualLab.Fusion.Tests.Extensions;
 
-public class NestedOperationLoggerTester : IComputeService
+public class NestedOperationLoggerTester(IKeyValueStore keyValueStore) : IComputeService
 {
-    private IKeyValueStore KeyValueStore { get; }
-
-    public NestedOperationLoggerTester(IKeyValueStore keyValueStore)
-        => KeyValueStore = keyValueStore;
+    private IKeyValueStore KeyValueStore { get; } = keyValueStore;
 
     [CommandHandler]
     public virtual async Task SetMany(NestedOperationLoggerTester_SetMany command, CancellationToken cancellationToken = default)
@@ -17,7 +14,7 @@ public class NestedOperationLoggerTester : IComputeService
         if (first == null)
             return;
         await KeyValueStore.Set(default, first, valuePrefix + keys.Length, cancellationToken);
-        var nextCommand = new NestedOperationLoggerTester_SetMany(keys[1..], valuePrefix);
+        var nextCommand = new NestedOperationLoggerTester_SetMany(keys.Skip(1).ToArray(), valuePrefix);
         var commander = this.GetCommander();
         await commander.Call(nextCommand, cancellationToken).ConfigureAwait(false);
     }

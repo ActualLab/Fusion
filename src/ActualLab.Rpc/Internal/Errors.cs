@@ -89,6 +89,8 @@ public static class Errors
         => new ArgumentOutOfRangeException(argumentName, "Client RpcPeerRef is expected.");
     public static Exception ServerRpcPeerRefExpected(string argumentName)
         => new ArgumentOutOfRangeException(argumentName, "Server RpcPeerRef is expected.");
+    public static Exception BackendRpcPeerRefExpected(string argumentName)
+        => new ArgumentOutOfRangeException(argumentName, "Backend RpcPeerRef is expected.");
 
     public static Exception InvalidRpcObjectKind(RpcObjectKind expectedKind)
         => new InvalidOperationException($"Invalid IRpcObject kind (expected: {expectedKind}).");

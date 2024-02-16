@@ -22,8 +22,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public RpcPeerRef Ref { get; }
     public int InboundConcurrencyLevel { get; init; } = 0; // 0 = no concurrency limit, 1 = one call at a time, etc.
     public RpcArgumentSerializer ArgumentSerializer { get; init; }
-    public RpcLocalServiceFilter LocalServiceFilter { get; init; }
     public RpcInboundContextFactory InboundContextFactory { get; init; }
+    public RpcInboundCallFilter InboundCallFilter { get; init; }
     public RpcInboundCallTracker InboundCalls { get; init; }
     public RpcOutboundCallTracker OutboundCalls { get; init; }
     public RpcRemoteObjectTracker RemoteObjects { get; init; }
@@ -31,7 +31,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public LogLevel CallLogLevel { get; init; } = LogLevel.None;
     public AsyncState<RpcPeerConnectionState> ConnectionState => _connectionState;
     public RpcPeerInternalServices InternalServices => new(this);
-    public Guid Id { get; init; } = Guid.NewGuid();
+    public Guid Id { get; } = Guid.NewGuid();
 
     protected RpcPeer(RpcHub hub, RpcPeerRef @ref)
     {
@@ -44,8 +44,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         _callLogLazy = new Lazy<ILogger?>(() => Log.IfEnabled(CallLogLevel), LazyThreadSafetyMode.PublicationOnly);
 
         ArgumentSerializer = Hub.ArgumentSerializer;
-        LocalServiceFilter = Hub.LocalServiceFilter;
         InboundContextFactory = Hub.InboundContextFactory;
+        InboundCallFilter = Hub.InboundCallFilter;
         InboundCalls = services.GetRequiredService<RpcInboundCallTracker>();
         InboundCalls.Initialize(this);
         OutboundCalls = services.GetRequiredService<RpcOutboundCallTracker>();
@@ -55,6 +55,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         SharedObjects = services.GetRequiredService<RpcSharedObjectTracker>();
         SharedObjects.Initialize(this);
     }
+
+    public override string ToString()
+        => $"{GetType().Name}({Ref}, #{GetHashCode()})";
 
     public Task Send(RpcMessage message, ChannelWriter<RpcMessage>? sender = null)
     {
@@ -225,6 +228,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         && !cancellationToken.IsCancellationRequested;
                     error = isReaderAbort ? null : e;
                 }
+                // Inbound calls are auto-aborted via peerChangedToken from OnRun,
+                // which becomes RpcInboundCallContext.CancellationToken.
+                InboundCalls.Clear();
                 connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
             }
         }
@@ -279,8 +285,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         if (isStopped)
             await OutboundCalls.Abort(error).ConfigureAwait(false);
         // Inbound calls are auto-aborted via peerChangedToken from OnRun,
-        // which becomes RpcInboundCallContext.CancellationToken, so here
-        // we must just clear them.
+        // which becomes RpcInboundCallContext.CancellationToken.
+        // We clear them on Reset mostly "just in case": they're cleared
+        // on every disconnect anyway.
         InboundCalls.Clear();
         Log.LogInformation("'{PeerRef}': {Action}", Ref, isStopped ? "Stopped" : "Peer changed");
     }

@@ -17,6 +17,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
 {
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
     protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.Default;
+    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.Default with { IsBackend = true };
 
     private IServiceProvider? _services;
     private IServiceProvider? _clientServices;
@@ -27,6 +28,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
     public bool UseLogging { get; init; } = true;
     public bool UseTestClock { get; init; }
     public bool IsLogEnabled { get; init; } = true;
+    public bool ExposeBackend { get; init; } = false;
 
     public IServiceProvider Services => _services ??= CreateServices();
     public IServiceProvider ClientServices => _clientServices ??= CreateServices(true);
@@ -115,6 +117,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
         var rpc = services.AddRpc();
         if (!isClient) {
             services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly) {
+                ExposeBackend = ExposeBackend,
                 WebSocketWriteDelay = WebSocketWriteDelay,
             });
         }
@@ -124,6 +127,14 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
                 WebSocketChannelOptions = WebSocketChannel<RpcMessage>.Options.Default with {
                     WriteDelay = WebSocketWriteDelay,
                 },
+            });
+            services.AddSingleton<RpcCallRouter>(_ => {
+                RpcHub? rpcHub = null;
+                return (method, arguments) => {
+                    rpcHub ??= method.Hub;
+                    var peerRef = method.Service.IsBackend ? BackendClientPeerRef : ClientPeerRef;
+                    return rpcHub.GetClientPeer(peerRef);
+                };
             });
             var restEase = services.AddRestEase();
             restEase.ConfigureHttpClient((_, _, options) => {

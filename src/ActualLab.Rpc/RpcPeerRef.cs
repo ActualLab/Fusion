@@ -1,16 +1,16 @@
 namespace ActualLab.Rpc;
 
-public record RpcPeerRef(Symbol Key, bool IsServer = false)
+public record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBackend = false)
 {
     public static RpcPeerRef Default { get; set; } = NewClient("default");
 
-    public static RpcPeerRef NewServer(Symbol key)
-        => new(key, true);
-    public static RpcPeerRef NewClient(Symbol key)
-        => new(key);
+    public static RpcPeerRef NewServer(Symbol key, bool isBackend = false)
+        => new(key, true, isBackend);
+    public static RpcPeerRef NewClient(Symbol key, bool isBackend = false)
+        => new(key, false, isBackend);
 
     public override string ToString()
-        => $"{(IsServer ? "server" : "client")}:{Key}";
+        => $"{(IsBackend ? "backend-" : "")}{(IsServer ? "server" : "client")}:{Key}";
 
     // Operators
 

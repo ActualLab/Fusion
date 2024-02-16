@@ -18,14 +18,16 @@ public class TestConsole : IConsole
 
     public TestConsole(ITestOutputHelper? testOutput = null)
     {
-        if (testOutput != null) {
-            var testTextWriter = new TestTextWriter(testOutput);
-            Out.Downstream = testTextWriter;
-            Error.Downstream = testTextWriter;
-        }
+        if (testOutput == null)
+            return;
+
+        var testTextWriter = new TestTextWriter(testOutput);
+        Out.Downstream = testTextWriter;
+        Error.Downstream = testTextWriter;
     }
 
-    public override string ToString() => Out.ToString();
+    public override string ToString()
+        => Out.ToString();
 
     public TestConsole Clear()
     {
@@ -34,5 +36,6 @@ public class TestConsole : IConsole
         return this;
     }
 
-    public StringAssertions Should() => new StringAssertions(ToString());
+    public StringAssertions Should()
+        => new(ToString());
 }

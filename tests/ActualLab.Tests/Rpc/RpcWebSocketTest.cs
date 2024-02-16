@@ -5,8 +5,11 @@ using ActualLab.Testing.Collections;
 namespace ActualLab.Tests.Rpc;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
-public class RpcWebSocketTest(ITestOutputHelper @out) : RpcTestBase(@out)
+public class RpcWebSocketTest : RpcTestBase
 {
+    public RpcWebSocketTest(ITestOutputHelper @out) : base(@out)
+        => ExposeBackend = true;
+
     protected override void ConfigureServices(IServiceCollection services, bool isClient)
     {
         base.ConfigureServices(services, isClient);
@@ -24,14 +27,6 @@ public class RpcWebSocketTest(ITestOutputHelper @out) : RpcTestBase(@out)
             commander.AddService<TestRpcService>();
             rpc.AddServer<ITestRpcBackend, TestRpcBackend>();
             commander.AddService<TestRpcBackend>();
-            services.AddSingleton<RpcPeerFactory>(c => static (hub, peerRef) => {
-                return peerRef.IsServer
-                    ? new RpcServerPeer(hub, peerRef) {
-                        LocalServiceFilter = static (peer, serviceDef)
-                            => !serviceDef.IsBackend || serviceDef.Type == typeof(ITestRpcBackend),
-                    }
-                    : new RpcClientPeer(hub, peerRef);
-            });
         }
     }
 
@@ -146,9 +141,10 @@ public class RpcWebSocketTest(ITestOutputHelper @out) : RpcTestBase(@out)
     {
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
-        var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
         var client = ClientServices.GetRequiredService<ITestRpcServiceClient>();
         var backendClient = ClientServices.GetRequiredService<ITestRpcBackendClient>();
+        var clientPeer = services.RpcHub().GetClientPeer(ClientPeerRef);
+        var backendClientPeer = services.RpcHub().GetClientPeer(BackendClientPeerRef);
 
         var t = new Tuple<int>(1);
         var t1 = await backendClient.Polymorph(t);
@@ -160,7 +156,8 @@ public class RpcWebSocketTest(ITestOutputHelper @out) : RpcTestBase(@out)
         await Assert.ThrowsAnyAsync<Exception>(
             async () => await client.PolymorphResult(2));
 
-        await AssertNoCalls(peer);
+        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(backendClientPeer);
     }
 
     [Fact]

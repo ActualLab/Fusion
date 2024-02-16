@@ -7,6 +7,7 @@ public class RpcClientPeer : RpcPeer
 {
     private volatile AsyncState<Moment> _reconnectAt = new(default, true);
 
+    public Symbol ClientId { get; protected init; }
     public RpcClientConnectionFactory ConnectionFactory { get; init; }
     public RpcClientPeerReconnectDelayer ReconnectDelayer { get; init; }
 
@@ -15,6 +16,7 @@ public class RpcClientPeer : RpcPeer
     public RpcClientPeer(RpcHub hub, RpcPeerRef @ref)
         : base(hub, @ref)
     {
+        ClientId = Id.ToBase64Url();
         ConnectionFactory = Hub.ClientConnectionFactory;
         ReconnectDelayer = Hub.ClientPeerReconnectDelayer;
     }

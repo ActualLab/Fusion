@@ -11,17 +11,16 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     private RpcSystemCallSender? _systemCallSender;
     private RpcClient? _client;
 
-    internal readonly RpcServiceNameBuilder ServiceNameBuilder;
-    internal readonly RpcMethodNameBuilder MethodNameBuilder;
+    internal readonly RpcServiceDefBuilder ServiceDefBuilder;
+    internal readonly RpcMethodDefBuilder MethodDefBuilder;
     internal readonly RpcCallRouter CallRouter;
     internal readonly RpcArgumentSerializer ArgumentSerializer;
-    internal readonly RpcLocalServiceFilter LocalServiceFilter;
+    internal readonly RpcInboundCallFilter InboundCallFilter;
     internal readonly RpcInboundContextFactory InboundContextFactory;
     internal readonly RpcInboundMiddlewares InboundMiddlewares;
     internal readonly RpcOutboundMiddlewares OutboundMiddlewares;
     internal readonly RpcPeerFactory PeerFactory;
     internal readonly RpcClientConnectionFactory ClientConnectionFactory;
-    internal readonly RpcClientIdGenerator ClientIdGenerator;
     internal readonly RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer;
     internal readonly RpcBackendServiceDetector BackendServiceDetector;
     internal readonly RpcUnrecoverableErrorDetector UnrecoverableErrorDetector;
@@ -47,17 +46,16 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         Configuration.Freeze();
 
         // Delegates
-        ServiceNameBuilder = services.GetRequiredService<RpcServiceNameBuilder>();
-        MethodNameBuilder = services.GetRequiredService<RpcMethodNameBuilder>();
+        ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
+        MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
         CallRouter = services.GetRequiredService<RpcCallRouter>();
         ArgumentSerializer = services.GetRequiredService<RpcArgumentSerializer>();
-        LocalServiceFilter = services.GetRequiredService<RpcLocalServiceFilter>();
+        InboundCallFilter = services.GetRequiredService<RpcInboundCallFilter>();
         InboundContextFactory = services.GetRequiredService<RpcInboundContextFactory>();
         InboundMiddlewares = services.GetRequiredService<RpcInboundMiddlewares>();
         OutboundMiddlewares = services.GetRequiredService<RpcOutboundMiddlewares>();
         PeerFactory = services.GetRequiredService<RpcPeerFactory>();
         ClientConnectionFactory = services.GetRequiredService<RpcClientConnectionFactory>();
-        ClientIdGenerator = services.GetRequiredService<RpcClientIdGenerator>();
         ClientPeerReconnectDelayer = services.GetRequiredService<RpcClientPeerReconnectDelayer>();
         BackendServiceDetector = services.GetRequiredService<RpcBackendServiceDetector>();
         UnrecoverableErrorDetector = services.GetRequiredService<RpcUnrecoverableErrorDetector>();
