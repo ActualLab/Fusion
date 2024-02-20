@@ -158,7 +158,7 @@
 
     <!-- Test time only -->
     <PackageReference Update="AutoFixture.AutoMoq" Version="4.18.*" />
-    <PackageReference Update="coverlet.collector" Version="6.0.0" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageReference Update="coverlet.collector" Version="6.0.1" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
     <PackageReference Update="FluentAssertions" Version="6.12.*" />
     <PackageReference Update="ILogger.Moq" Version="1.1.*" />
     <PackageReference Update="Microsoft.AspNetCore.Mvc.Testing" Version="$(AspNetCoreMvcTestingVersion)" />
