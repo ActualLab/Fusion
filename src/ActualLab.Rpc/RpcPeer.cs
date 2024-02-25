@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
+using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 
@@ -8,14 +9,15 @@ namespace ActualLab.Rpc;
 public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 {
     private ILogger? _log;
-    private readonly Lazy<ILogger?> _callLogLazy;
+    private RpcCallLogger? _callLogger;
     private AsyncState<RpcPeerConnectionState> _connectionState = new(RpcPeerConnectionState.Disconnected, true);
     private bool _resetTryIndex;
     private ChannelWriter<RpcMessage>? _sender;
 
     protected IServiceProvider Services => Hub.Services;
     protected internal ILogger Log => _log ??= Services.LogFor(GetType());
-    protected internal ILogger? CallLog => _callLogLazy.Value;
+    protected internal RpcCallLogger CallLogger
+        => _callLogger ??= Hub.CallLoggerFactory.Invoke(this, Hub.CallLoggerFilter, Log, CallLogLevel);
     protected internal ChannelWriter<RpcMessage>? Sender => _sender;
 
     public RpcHub Hub { get; }
@@ -41,7 +43,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         var services = hub.Services;
         Hub = hub;
         Ref = @ref;
-        _callLogLazy = new Lazy<ILogger?>(() => Log.IfEnabled(CallLogLevel), LazyThreadSafetyMode.PublicationOnly);
 
         ArgumentSerializer = Hub.ArgumentSerializer;
         InboundContextFactory = Hub.InboundContextFactory;

@@ -19,6 +19,8 @@ public delegate Task<RpcConnection> RpcServerConnectionFactory(
     RpcServerPeer peer, Channel<RpcMessage> channel, ImmutableOptionSet options, CancellationToken cancellationToken);
 public delegate bool RpcUnrecoverableErrorDetector(Exception error, CancellationToken cancellationToken);
 public delegate RpcMethodTracer? RpcMethodTracerFactory(RpcMethodDef method);
+public delegate RpcCallLogger RpcCallLoggerFactory(RpcPeer peer, RpcCallLoggerFilter filter, ILogger log, LogLevel logLevel);
+public delegate bool RpcCallLoggerFilter(RpcPeer peer, RpcCall call);
 
 public static class RpcDefaultDelegates
 {
@@ -64,4 +66,11 @@ public static class RpcDefaultDelegates
 
     public static RpcMethodTracerFactory MethodTracerFactory { get; set; } =
         static method => null;
+
+    public static RpcCallLoggerFactory CallLoggerFactory { get; set; } =
+        static (peer, filter, log, logLevel) => new RpcCallLogger(peer, filter, log, logLevel);
+
+    private static readonly Symbol KeepAliveMethodName = (Symbol)$"{nameof(IRpcSystemCalls.KeepAlive)}:1";
+    public static RpcCallLoggerFilter CallLoggerFilter { get; set; } =
+        static (peer, call) => !(call.ServiceDef.IsSystem && call.MethodDef.Name == KeepAliveMethodName);
 }

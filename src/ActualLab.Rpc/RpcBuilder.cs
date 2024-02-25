@@ -78,6 +78,8 @@ public readonly struct RpcBuilder
         services.TryAddSingleton(_ => RpcDefaultDelegates.BackendServiceDetector);
         services.TryAddSingleton(_ => RpcDefaultDelegates.UnrecoverableErrorDetector);
         services.TryAddSingleton(_ => RpcDefaultDelegates.MethodTracerFactory);
+        services.TryAddSingleton(_ => RpcDefaultDelegates.CallLoggerFactory);
+        services.TryAddSingleton(_ => RpcDefaultDelegates.CallLoggerFilter);
         services.TryAddSingleton(_ => RpcArgumentSerializer.Default);
         services.TryAddSingleton(c => new RpcInboundMiddlewares(c));
         services.TryAddSingleton(c => new RpcOutboundMiddlewares(c));

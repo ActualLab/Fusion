@@ -118,7 +118,8 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
 
                 var peer = Context.Peer;
-                peer.CallLog?.Log(peer.CallLogLevel, "'{PeerRef}': <- {Call}", peer.Ref, this);
+                if (peer.CallLogger.IsLogged(this))
+                    peer.CallLogger.LogInbound(this);
                 return InvokeTarget();
             }
             catch (Exception error) {
@@ -139,7 +140,8 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
 
                 // Before call
                 var peer = Context.Peer;
-                peer.CallLog?.Log(peer.CallLogLevel, "'{PeerRef}': <- {Call}", peer.Ref, this);
+                if (peer.CallLogger.IsLogged(this))
+                    peer.CallLogger.LogInbound(this);
                 if (MethodDef.Tracer is { } tracer && tracer.Sampler.Next.Invoke())
                     trace = tracer.TryStartTrace(this);
 

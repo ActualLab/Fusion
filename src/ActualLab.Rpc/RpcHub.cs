@@ -1,3 +1,4 @@
+using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using Errors = ActualLab.Internal.Errors;
@@ -25,6 +26,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcBackendServiceDetector BackendServiceDetector;
     internal readonly RpcUnrecoverableErrorDetector UnrecoverableErrorDetector;
     internal readonly RpcMethodTracerFactory MethodTracerFactory;
+    internal readonly RpcCallLoggerFactory CallLoggerFactory;
+    internal readonly RpcCallLoggerFilter CallLoggerFilter;
     internal IEnumerable<RpcPeerTracker> PeerTrackers => _peerTrackers ??= Services.GetRequiredService<IEnumerable<RpcPeerTracker>>();
     internal RpcSystemCallSender SystemCallSender => _systemCallSender ??= Services.GetRequiredService<RpcSystemCallSender>();
     internal RpcClient Client => _client ??= Services.GetRequiredService<RpcClient>();
@@ -60,6 +63,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         BackendServiceDetector = services.GetRequiredService<RpcBackendServiceDetector>();
         UnrecoverableErrorDetector = services.GetRequiredService<RpcUnrecoverableErrorDetector>();
         MethodTracerFactory = services.GetRequiredService<RpcMethodTracerFactory>();
+        CallLoggerFactory = services.GetRequiredService<RpcCallLoggerFactory>();
+        CallLoggerFilter = services.GetRequiredService<RpcCallLoggerFilter>();
         Limits = services.GetRequiredService<RpcLimits>();
         Clock = services.Clocks().CpuClock;
     }
