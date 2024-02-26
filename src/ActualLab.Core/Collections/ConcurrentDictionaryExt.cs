@@ -28,7 +28,7 @@ public static class ConcurrentDictionaryExt
 #pragma warning restore IL2075
 
             var m = new DynamicMethod("_CapacityReader",
-                typeof(int), new [] { typeof(ConcurrentDictionary<TKey, TValue>)},
+                typeof(int), [typeof(ConcurrentDictionary<TKey, TValue>)],
                 true);
             var il = m.GetILGenerator();
             il.Emit(OpCodes.Ldarg_0);

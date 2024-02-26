@@ -53,6 +53,6 @@ public static class InterfaceCommandHandler
             .GetConstructors()
             .Single();
         // ReSharper disable once HeapView.BoxingAllocation
-        return (CommandHandler)ctor.Invoke(new object[] { serviceType, isFilter, priority });
+        return (CommandHandler)ctor.Invoke([serviceType, isFilter, priority]);
     }
 }

@@ -78,7 +78,7 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
                 nameof(bool.TryParse),
                 BindingFlags.Static | BindingFlags.Public,
                 null,
-                new [] {typeof(string), typeof(TTarget).MakeByRefType()},
+                [typeof(string), typeof(TTarget).MakeByRefType()],
                 null);
             if (mTryParse != null && mTryParse.ReturnType == typeof(bool)) {
                 var tryParseFn = (TryParseFunc<TTarget>)mTryParse.CreateDelegate(typeof(TryParseFunc<TTarget>));
@@ -96,7 +96,7 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
                 nameof(bool.Parse),
                 BindingFlags.Static | BindingFlags.Public,
                 null,
-                new [] {typeof(string)},
+                [typeof(string)],
                 null);
             if (mParse != null && mParse.ReturnType == tTarget) {
                 var fn = (Func<TSource, TTarget>)mParse.CreateDelegate(typeof(Func<TSource, TTarget>));

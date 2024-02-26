@@ -16,8 +16,8 @@ var serverUrls = Enumerable.Range(0, serverCount).Select(i => $"http://localhost
 var clientPeerRefs = Enumerable.Range(0, serverCount).Select(i => new RpcPeerRef(serverUrls[i])).ToArray();
 
 await (args switch {
-    [ "server" ] => RunServers(),
-    [ "client" ] => RunClient(),
+    ["server"] => RunServers(),
+    ["client"] => RunClient(),
     _ => Task.WhenAll(RunServers(), RunClient()),
 });
 

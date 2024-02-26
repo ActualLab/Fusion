@@ -149,21 +149,21 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     public void RpcMessageSerialization()
     {
         Test(new RpcMessage(0, 3, "s", "m",
-            new TextOrBytes(new byte[] { 1, 2, 3 }),
+            new TextOrBytes([1, 2, 3]),
             null));
 
         Test(new RpcMessage(1, 3, "s", "m",
-            new TextOrBytes(new byte[] { 1, 2, 3 }),
+            new TextOrBytes([1, 2, 3]),
             new()));
 
         Test(new RpcMessage(2, 3, "s", "m",
-            new TextOrBytes(new byte[] { 1, 2, 3 }),
+            new TextOrBytes([1, 2, 3]),
             new List<RpcHeader>() {
                 new("v", "@OVhtp0TRc"),
             }));
 
         Test(new RpcMessage(0, 3, "s", "m",
-            new TextOrBytes(new byte[] { 1, 2, 3 }),
+            new TextOrBytes([1, 2, 3]),
             new List<RpcHeader>() {
                 new("a", "b"),
                 new("v", "@OVhtp0TRc"),
@@ -207,8 +207,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         Test(default);
         Test(new Base64Encoded(null!));
         Test(new Base64Encoded(Array.Empty<byte>()));
-        Test(new Base64Encoded(new byte[] {1}));
-        Test(new Base64Encoded(new byte[] {1, 2}));
+        Test(new Base64Encoded([1]));
+        Test(new Base64Encoded([1, 2]));
 
         void Test(Base64Encoded src) {
             var dst = src.PassThroughAllSerializers(Out);
@@ -228,8 +228,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
 
         Test(TextOrBytes.EmptyBytes);
         Test(new TextOrBytes(Array.Empty<byte>()));
-        Test(new TextOrBytes(new byte[] {1}));
-        Test(new TextOrBytes(new byte[] {1, 2}));
+        Test(new TextOrBytes([1]));
+        Test(new TextOrBytes([1, 2]));
 
         void Test(TextOrBytes src) {
             var dst = src.PassThroughAllSerializers(Out);

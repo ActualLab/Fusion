@@ -150,7 +150,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         await using var _ = dbContext.ConfigureAwait(false);
 
         var user = await dbContext.Users
-            .FindAsync(new[] {(object) userId}, cancellationToken)
+            .FindAsync([(object)userId], cancellationToken)
             .ConfigureAwait(false);
         return user;
     }

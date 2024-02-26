@@ -16,7 +16,7 @@ public class PageRefModelBinder : IModelBinder
             var sValue = bindingContext.ValueProvider.GetValue(bindingContext.ModelName).FirstValue ?? "";
             var result = ParseMethod
                 .MakeGenericMethod(bindingContext.ModelType.GetGenericArguments()[0])
-                .Invoke(null, new object[] { sValue });
+                .Invoke(null, [sValue]);
             bindingContext.Result = ModelBindingResult.Success(result);
         }
         catch (Exception) {

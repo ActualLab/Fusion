@@ -100,7 +100,7 @@ public static class ComponentExt
         RenderHandleGetter = fRenderHandle.GetGetter<ComponentBase, RenderHandle>();
         StateHasChangedInvoker = (Action<ComponentBase>)mStateHasChanged.CreateDelegate(typeof(Action<ComponentBase>));
 
-        var m = new DynamicMethod("_GetOptionalComponentState", typeof(object), new [] { typeof(RenderHandle) }, true);
+        var m = new DynamicMethod("_GetOptionalComponentState", typeof(object), [typeof(RenderHandle)], true);
         var il = m.GetILGenerator();
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Ldfld, fRenderer);

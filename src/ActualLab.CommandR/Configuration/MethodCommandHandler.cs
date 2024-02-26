@@ -110,7 +110,7 @@ public static class MethodCommandHandler
 
         return (CommandHandler)CreateMethod
             .MakeGenericMethod(pCommand.ParameterType)
-            .Invoke(null, new object[] { serviceType, method, isFilter, order })!;
+            .Invoke(null, [serviceType, method, isFilter, order])!;
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Reflection)]

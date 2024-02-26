@@ -81,7 +81,7 @@ public class TypeViewInterceptor : Interceptor
             if (rtSource != null && rtTarget != null) {
                 result = (Func<Invocation, object?>?) _createTaskConvertingHandlerMethod
                     .MakeGenericMethod(rtSource, rtTarget)
-                    .Invoke(this, new object[] {initialInvocation, mTarget});
+                    .Invoke(this, [initialInvocation, mTarget]);
                 if (result != null)
                     return result;
             }
@@ -92,7 +92,7 @@ public class TypeViewInterceptor : Interceptor
             if (rtSource != null && rtTarget != null) {
                 result = (Func<Invocation, object?>?) _createValueTaskConvertingHandlerMethod
                     .MakeGenericMethod(rtSource, rtTarget)
-                    .Invoke(this, new object[] {initialInvocation, mTarget});
+                    .Invoke(this, [initialInvocation, mTarget]);
                 if (result != null)
                     return result;
             }
@@ -102,7 +102,7 @@ public class TypeViewInterceptor : Interceptor
             rtTarget = mTarget.ReturnType;
             result = (Func<Invocation, object?>?) _createConvertingHandlerMethod
                 .MakeGenericMethod(rtSource, rtTarget)
-                .Invoke(this, new object[] {initialInvocation, mTarget});
+                .Invoke(this, [initialInvocation, mTarget]);
             if (result != null)
                 return result;
         }

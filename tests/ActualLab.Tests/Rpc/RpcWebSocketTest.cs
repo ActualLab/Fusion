@@ -228,6 +228,37 @@ public class RpcWebSocketTest : RpcTestBase
     }
 
     [Fact]
+    public async Task StreamLagTest()
+    {
+        await using var _ = await WebHost.Serve();
+        var services = ClientServices;
+        var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
+        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var systemClock = services.Clocks().SystemClock;
+
+        (await client.Div(6, 2)).Should().Be(3); // To make sure everything is set up
+        var tasks = new List<Task>();
+        var countRandom = new Random(31);
+        for (var iteration = 0; iteration < 200; iteration++) {
+            var count = countRandom.Next(30);
+            var stream = RpcStream.New(GetStream(iteration, count));
+            tasks.Add(client.CheckLag(stream, count));
+        }
+        await Task.WhenAll(tasks);
+        return;
+
+        async IAsyncEnumerable<Moment> GetStream(int iteration, int count)
+        {
+            var random = new Random(33 + iteration);
+            for (var i = 0; i < count; i++) {
+                if (random.NextDouble() < 0.2)
+                    await Task.Delay(200);
+                yield return systemClock.Now;
+            }
+        }
+    }
+
+    [Fact]
     public async Task StreamDebugTest()
     {
         WebSocketWriteDelay = default;

@@ -103,7 +103,7 @@ public abstract class InterceptorBase : Interceptor, IHasServices
 
         return (Func<Invocation, object?>)CreateTypedHandlerMethod
             .MakeGenericMethod(methodDef.UnwrappedReturnType)
-            .Invoke(this, new object[] { initialInvocation, methodDef })!;
+            .Invoke(this, [initialInvocation, methodDef])!;
     }
 
     // Abstract methods

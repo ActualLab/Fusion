@@ -52,9 +52,9 @@ public class PluginInfoProvider : IPluginInfoProvider
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type pluginType)
         => _pluginCache.GetOrAdd(pluginType, static (type, self) => {
 #pragma warning disable IL2070
-            var ctor = type.GetConstructor(new [] {typeof(IPluginInfoProvider.Query)});
+            var ctor = type.GetConstructor([typeof(IPluginInfoProvider.Query)]);
             if (ctor != null)
-                return ctor.Invoke(new object[] { IPluginInfoProvider.Query.Instance });
+                return ctor.Invoke([IPluginInfoProvider.Query.Instance]);
             ctor = type.GetConstructor(Type.EmptyTypes);
             return ctor?.Invoke(Array.Empty<object>());
 #pragma warning restore IL2070

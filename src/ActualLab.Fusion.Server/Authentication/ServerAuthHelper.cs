@@ -12,8 +12,8 @@ public class ServerAuthHelper : IHasServices
     {
         public static Options Default { get; set; } = new();
 
-        public string[] IdClaimKeys { get; init; } = [ ClaimTypes.NameIdentifier ];
-        public string[] NameClaimKeys { get; init; } = [ ClaimTypes.Name ];
+        public string[] IdClaimKeys { get; init; } = [ClaimTypes.NameIdentifier];
+        public string[] NameClaimKeys { get; init; } = [ClaimTypes.Name];
         public string CloseWindowRequestPath { get; init; } = "/fusion/close";
         public TimeSpan SessionInfoUpdatePeriod { get; init; } = TimeSpan.FromSeconds(30);
         public Func<ServerAuthHelper, HttpContext, bool> AllowSignIn = AllowAnywhere;

@@ -27,7 +27,7 @@ public abstract class AppBase
         var pApple = new Product { Id = "apple", Price = 2M };
         var pBanana = new Product { Id = "banana", Price = 0.5M };
         var pCarrot = new Product { Id = "carrot", Price = 1M };
-        ExistingProducts = new [] { pApple, pBanana, pCarrot };
+        ExistingProducts = [pApple, pBanana, pCarrot];
         foreach (var product in ExistingProducts)
             await commander.Call(new EditCommand<Product>(product));
 
@@ -41,7 +41,7 @@ public abstract class AppBase
                 .Add(pBanana.Id, 1)
                 .Add(pCarrot.Id, 1)
         };
-        ExistingCarts = new [] { cart1, cart2 };
+        ExistingCarts = [cart1, cart2];
         foreach (var cart in ExistingCarts)
             await commander.Call(new EditCommand<Cart>(cart));
     }

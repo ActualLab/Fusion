@@ -25,6 +25,7 @@ public interface ITestRpcService : ICommandService
     Task<RpcStream<int>> StreamInt32(int count, int failAt = -1, RandomTimeSpan delay = default);
     Task<RpcStream<ITuple>> StreamTuples(int count, int failAt = -1, RandomTimeSpan delay = default);
     Task<int> Count(RpcStream<int> items, CancellationToken cancellationToken = default);
+    Task CheckLag(RpcStream<Moment> items, int expectedCount, CancellationToken cancellationToken = default);
 
     [CommandHandler]
     Task<string> OnHello(HelloCommand command, CancellationToken cancellationToken = default);
@@ -35,10 +36,13 @@ public interface ITestRpcServiceClient : ITestRpcService, IRpcService
     Task<int> NoSuchMethod(int i1, int i2, int i3, int i4, CancellationToken cancellationToken = default);
 }
 
-public class TestRpcService : ITestRpcService
+public class TestRpcService(IServiceProvider services) : ITestRpcService
 {
     private volatile int _cancellationCount;
     private readonly ConcurrentDictionary<string, string> _values = new();
+
+    private IMomentClock SystemClock { get; } = services.Clocks().SystemClock;
+    private ILogger Log { get; } = services.LogFor<TestRpcService>();
 
     public Task<int?> Div(int? a, int b)
         => Task.FromResult(a / b);
@@ -94,6 +98,22 @@ public class TestRpcService : ITestRpcService
 
     public Task<int> Count(RpcStream<int> items, CancellationToken cancellationToken = default)
         => items.CountAsync(cancellationToken).AsTask();
+
+    public async Task CheckLag(RpcStream<Moment> items, int expectedCount, CancellationToken cancellationToken = default)
+    {
+        var count = 0;
+        var deltas = new List<TimeSpan>();
+        await foreach (var item in items.ConfigureAwait(false)) {
+            deltas.Add(SystemClock.Now - item);
+            count++;
+        }
+        Log.LogInformation("CheckLag: {CountDelta}, {Deltas}",
+            count - expectedCount,
+            deltas.Select(x => x.ToShortString()).ToDelimitedString());
+        count.Should().Be(expectedCount);
+        if (count > 0)
+            deltas.Should().AllSatisfy(x => x.Should().BeLessThan(TimeSpan.FromMilliseconds(100)));
+    }
 
     public virtual async Task<string> OnHello(HelloCommand command, CancellationToken cancellationToken = default)
     {

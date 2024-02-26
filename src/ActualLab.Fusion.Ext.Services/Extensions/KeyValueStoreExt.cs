@@ -33,7 +33,7 @@ public static class KeyValueStoreExt
     public static Task Set(this IKeyValueStore keyValueStore,
         Symbol tenantId, string key, string value, Moment? expiresAt, CancellationToken cancellationToken = default)
     {
-        var command = new KeyValueStore_Set(tenantId, new[] { (key, value, expiresAt) });
+        var command = new KeyValueStore_Set(tenantId, [(key, value, expiresAt)]);
         return keyValueStore.GetCommander().Call(command, cancellationToken);
     }
 
@@ -51,7 +51,7 @@ public static class KeyValueStoreExt
     public static Task Remove(this IKeyValueStore keyValueStore,
         Symbol tenantId, string key, CancellationToken cancellationToken = default)
     {
-        var command = new KeyValueStore_Remove(tenantId, new[] { key });
+        var command = new KeyValueStore_Remove(tenantId, [key]);
         return keyValueStore.GetCommander().Call(command, cancellationToken);
     }
 

@@ -84,7 +84,7 @@ public sealed partial record ArgumentList0 : ArgumentList
             var declaringType = method1.DeclaringType!;
             var m = new DynamicMethod("_Invoke",
                 typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
+                [typeof(object), typeof(ArgumentList)],
                 true);
             var il = m.GetILGenerator();
 

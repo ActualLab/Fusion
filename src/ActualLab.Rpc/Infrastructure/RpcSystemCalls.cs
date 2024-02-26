@@ -105,7 +105,7 @@ public class RpcSystemCalls(IServiceProvider services)
         if (peer.SharedObjects.Get(localId) is RpcSharedStream stream)
             await stream.OnAck(nextIndex, hostId).ConfigureAwait(false);
         else
-            await peer.Hub.SystemCallSender.Disconnect(peer, new[] { localId }).ConfigureAwait(false);
+            await peer.Hub.SystemCallSender.Disconnect(peer, [localId]).ConfigureAwait(false);
         return default;
     }
 

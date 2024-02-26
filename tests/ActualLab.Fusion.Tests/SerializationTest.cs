@@ -52,7 +52,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             Width = 10,
             Height = 20,
             CapturedAt = SystemClock.Now,
-            Image = new byte[] { 1, 2, 3 },
+            Image = [1, 2, 3],
         };
         var t = s.PassThroughAllSerializers();
         t.Width.Should().Be(s.Width);
@@ -64,7 +64,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void Base64EncodedSerialization()
     {
-        var s = new Base64Encoded(new byte[] { 1, 2, 3 });
+        var s = new Base64Encoded([1, 2, 3]);
         s.AssertPassesThroughAllSerializers();
     }
 

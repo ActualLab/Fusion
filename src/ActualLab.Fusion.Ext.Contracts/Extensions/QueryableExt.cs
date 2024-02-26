@@ -29,7 +29,7 @@ public static class QueryableExt
                 BindingFlags.Public | BindingFlags.Static);
             var mCompare = tComparer.GetMethod(
                 nameof(Comparer<TKey>.Default.Compare),
-                new[] {typeof(TKey), typeof(TKey)});
+                [typeof(TKey), typeof(TKey)]);
 
             var eCompare = Expression.Call(
                 Expression.Property(null, pComparerDefault!),

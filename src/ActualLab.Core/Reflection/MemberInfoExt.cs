@@ -60,7 +60,7 @@ public static class MemberInfoExt
             if (!isStatic && declaringType.IsAssignableFrom(sourceType) && valueType == pi.PropertyType)
                 return pi.GetMethod!.CreateDelegate(funcType);
 
-            m = new DynamicMethod("_Getter", valueType, new[] { sourceType }, true);
+            m = new DynamicMethod("_Getter", valueType, [sourceType], true);
             il = m.GetILGenerator();
             if (isStatic)
                 il.Emit(OpCodes.Call, pi.GetMethod!);
@@ -71,7 +71,7 @@ public static class MemberInfoExt
             }
         }
         else if (propertyOrField is FieldInfo fi) {
-            m = new DynamicMethod("_Getter", valueType, new[] { sourceType }, true);
+            m = new DynamicMethod("_Getter", valueType, [sourceType], true);
             il = m.GetILGenerator();
             if (fi.IsStatic)
                 il.Emit(OpCodes.Ldsfld, fi);
@@ -103,7 +103,7 @@ public static class MemberInfoExt
             if (!isStatic && declaringType.IsAssignableFrom(sourceType) && valueType == pi.PropertyType)
                 return pi.SetMethod!.CreateDelegate(funcType);
 
-            m = new DynamicMethod("_Setter", null, new[] { sourceType, valueType }, true);
+            m = new DynamicMethod("_Setter", null, [sourceType, valueType], true);
             il = m.GetILGenerator();
             if (isStatic) {
                 il.Emit(OpCodes.Ldarg_1);
@@ -119,7 +119,7 @@ public static class MemberInfoExt
             }
         }
         else if (propertyOrField is FieldInfo fi) {
-            m = new DynamicMethod("_Setter", null, new[] { sourceType, valueType }, true);
+            m = new DynamicMethod("_Setter", null, [sourceType, valueType], true);
             il = m.GetILGenerator();
             if (fi.IsStatic) {
                 il.Emit(OpCodes.Ldarg_1);

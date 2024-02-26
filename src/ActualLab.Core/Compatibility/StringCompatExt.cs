@@ -21,7 +21,7 @@ public static class StringCompatExt
     public static string[] Split(this string self,
         string? separator,
         StringSplitOptions options = StringSplitOptions.None)
-        => self.Split(new[] {separator}, options);
+        => self.Split([separator], options);
 }
 
 #endif

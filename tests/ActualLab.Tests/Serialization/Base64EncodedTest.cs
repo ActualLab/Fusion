@@ -16,7 +16,7 @@ public class Base64EncodedTest(ITestOutputHelper @out) : TestBase(@out)
         b0a.Encode().Should().Be("");
         Equals(b0, b0a).Should().BeTrue();
 
-        var b1 = new Base64Encoded(new byte[] {1});
+        var b1 = new Base64Encoded([1]);
         b1.Count.Should().Be(1);
         b1.Data.Length.Should().Be(1);
         Equals(b0, b1).Should().BeFalse();

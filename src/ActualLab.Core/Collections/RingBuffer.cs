@@ -13,6 +13,8 @@ public struct RingBuffer<T> : IReadOnlyList<T>
     public readonly bool IsEmpty => _start == _end;
     public readonly bool IsFull => Count == Capacity;
     public int Capacity { get; }
+    public int RemainingCapacity => Capacity - Count;
+    public bool HasRemainingCapacity => RemainingCapacity > 0;
     public readonly bool IsReadOnly => false;
 
     public T this[int index] {

@@ -22,8 +22,7 @@ public class NestedOperationLoggerTest : FusionTestBase
         c3.Value.Should().BeNull();
 
         var commander = Services.Commander();
-        var command = new NestedOperationLoggerTester_SetMany(
-            new[] {"1", "2", "3"}, "v");
+        var command = new NestedOperationLoggerTester_SetMany(["1", "2", "3"], "v");
         await commander.Call(command);
 
         c1.IsInvalidated().Should().BeTrue();

@@ -71,7 +71,7 @@ public abstract class KeyValueStoreTestBase : FusionTestBase
         (await kvs.ListKeySuffixes(tenantId, "1", PageRef.New(0, "1/2/3b"), SortDirection.Descending))
             .Should().BeEquivalentTo();
 
-        await kvs.Remove(tenantId, new[] { "1/2/3c", "1/2/3b" });
+        await kvs.Remove(tenantId, ["1/2/3c", "1/2/3b"]);
         (await kvs.Count(tenantId, "1")).Should().Be(2);
         (await kvs.ListKeySuffixes(tenantId, "1", 100)).Length.Should().Be(2);
         (await kvs.Count(tenantId, "1/2")).Should().Be(2);
@@ -79,10 +79,10 @@ public abstract class KeyValueStoreTestBase : FusionTestBase
         (await kvs.Count(tenantId, "1/2/3a")).Should().Be(1);
         (await kvs.ListKeySuffixes(tenantId, "1/2/3a", 100)).Length.Should().Be(1);
 
-        await kvs.Set(tenantId, new[] {
-            ("a/b", "ab", default(Moment?)),
-            ("a/c", "ac", default),
-        });
+        await kvs.Set(tenantId, [
+            ("a/b", "ab", default),
+            ("a/c", "ac", default)
+        ]);
         (await kvs.Count(tenantId, "1")).Should().Be(2);
         (await kvs.Count(tenantId, "a")).Should().Be(2);
         (await kvs.Count(tenantId, "")).Should().Be(4);

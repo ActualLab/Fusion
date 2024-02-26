@@ -10,8 +10,8 @@ using static System.Console;
 
 var baseUrl = "http://localhost:22222/";
 await (args switch {
-    [ "server" ] => RunServer(),
-    [ "client" ] => RunClient(),
+    ["server"] => RunServer(),
+    ["client"] => RunClient(),
     _ => Task.WhenAll(RunServer(), RunClient()),
 });
 

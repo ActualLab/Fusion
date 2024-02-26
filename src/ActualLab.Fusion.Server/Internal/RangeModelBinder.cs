@@ -15,7 +15,7 @@ public class RangeModelBinder : IModelBinder
             var result = typeof(Range<>)
                 .MakeGenericType(bindingContext.ModelType.GetGenericArguments()[0])
                 .GetMethod(nameof(Range<long>.Parse))!
-                .Invoke(null, new object[] { sValue });
+                .Invoke(null, [sValue]);
 #pragma warning restore IL2026
             bindingContext.Result = ModelBindingResult.Success(result);
         }
