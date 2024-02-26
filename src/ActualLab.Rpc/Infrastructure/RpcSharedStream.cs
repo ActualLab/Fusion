@@ -188,7 +188,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                     }
 
                     // 3.2. Add all buffered items to batcher
-                    while (bufferIndex < buffer.Count) {
+                    while (index < maxIndex && bufferIndex < buffer.Count) {
                         item = buffer[bufferIndex++];
                         await _batcher.Add(index++, item).ConfigureAwait(false);
                         if (item.HasError) {
