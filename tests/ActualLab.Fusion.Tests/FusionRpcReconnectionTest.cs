@@ -108,7 +108,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     }
 
     [Fact]
-    public async Task Case4()
+    public async Task Case4Test()
     {
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
@@ -130,7 +130,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     }
 
     [Fact]
-    public async Task Case5()
+    public async Task Case5Test()
     {
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
