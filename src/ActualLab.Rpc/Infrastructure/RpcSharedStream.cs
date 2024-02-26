@@ -9,7 +9,7 @@ namespace ActualLab.Rpc.Infrastructure;
 public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcSharedObject
 {
 #pragma warning disable CA2201
-    protected static readonly Exception NoError = new();
+    protected static readonly Exception NoMoreItemTag = new();
 #pragma warning restore CA2201
 
     private ILogger? _log;
@@ -107,7 +107,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         IAsyncEnumerator<T>? enumerator = null;
         try {
             enumerator = Stream.GetLocalSource().GetAsyncEnumerator(cancellationToken);
-            var isEnumerationEnded = false;
+            var isFullyBuffered = false;
             var ackReader = _acks.Reader;
             var buffer = new RingBuffer<Result<T>>(Stream.AckAdvance + 1);
             var bufferStart = 0L;
@@ -117,7 +117,8 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
             var whenMovedNextAsTask = (Task<bool>?)null;
             while (true) {
                 nextAck:
-                // 1. Await for acknowledgement & process accumulated acknowledgements
+                // 1. Await for an acknowledgement & process accumulated acknowledgements
+                await _batcher.Flush(index).ConfigureAwait(false);
                 (long NextIndex, bool MustReset) ack = (-1L, false);
                 if (!whenAckReady.IsCompleted) {
                     // Debug.WriteLine($"{Id}: ?ACK");
@@ -137,12 +138,13 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                     goto nextAck;
 
                 // 2. Remove what's useless from buffer
-                var bufferOffset = (int)(ack.NextIndex - bufferStart).Clamp(0, buffer.Count);
-                buffer.MoveHead(bufferOffset);
-                bufferStart += bufferOffset;
+                {
+                    var bufferShift = (int)(ack.NextIndex - bufferStart).Clamp(0, buffer.Count);
+                    buffer.MoveHead(bufferShift);
+                    bufferStart += bufferShift;
+                }
 
                 // 3. Recalculate the next range to send
-                var maxIndex = ack.NextIndex + Stream.AckAdvance;
                 if (index < bufferStart) {
                     // The requested item is somewhere before the buffer start position
                     await SendInvalidPosition(index).ConfigureAwait(false);
@@ -151,63 +153,61 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                 var bufferIndex = (int)(index - bufferStart);
 
                 // 3. Send as much as we can
+                var maxIndex = ack.NextIndex + Stream.AckAdvance;
                 while (index < maxIndex) {
                     Result<T> item;
-                    // Add enough items to buffer
-                    var missingCount = 1 + bufferIndex - buffer.Count;
-                    while (missingCount-- > 0) {
-                        if (isEnumerationEnded) {
-                            // The requested item is somewhere after the sequence's end
-                            await _batcher.Flush(index).ConfigureAwait(false);
-                            await SendInvalidPosition(index).ConfigureAwait(false);
-                            goto nextAck;
+
+                    // 3.1. Buffer as much as we can
+                    while (buffer.HasRemainingCapacity && !isFullyBuffered) {
+                        if (whenAckReady.IsCompleted)
+                            goto nextAck; // Got Ack, must restart
+
+                        if (!whenMovedNext.IsCompleted) {
+                            // Both tasks aren't completed yet.
+                            whenMovedNextAsTask ??= whenMovedNext.AsTask();
+                            break;
                         }
 
                         try {
-                            if (whenAckReady.IsCompleted) {
-                                await _batcher.Flush(index).ConfigureAwait(false);
-                                goto nextAck; // Got Ack, must restart
-                            }
-                            if (!whenMovedNext.IsCompleted) {
-                                // Both tasks aren't completed yet
-                                whenMovedNextAsTask ??= whenMovedNext.AsTask();
-                                var completedTask = await Task
-                                    .WhenAny(whenAckReady, whenMovedNextAsTask)
-                                    .ConfigureAwait(false);
-                                if (completedTask == whenAckReady) {
-                                    await _batcher.Flush(index).ConfigureAwait(false);
-                                    goto nextAck; // Got Ack, must restart
-                                }
-                            }
-                            var canMove = whenMovedNext.Result;
-                            if (canMove) {
+                            if (whenMovedNext.Result) {
                                 item = enumerator.Current;
-                                whenMovedNextAsTask = null;
                                 whenMovedNext = SafeMoveNext(enumerator);
+                                whenMovedNextAsTask = null; // Must go after SafeMoveNext call (which may fail)
                             }
                             else
-                                item = Result.Error<T>(NoError);
+                                item = Result.Error<T>(NoMoreItemTag);
                         }
                         catch (Exception e) {
-                            var error = e.IsCancellationOf(cancellationToken)
+                            item = Result.Error<T>(e.IsCancellationOf(cancellationToken)
                                 ? Errors.RpcStreamNotFound()
-                                : e;
-                            item = Result.Error<T>(error);
+                                : e);
                         }
 
-                        isEnumerationEnded |= item.HasError;
                         buffer.PushTail(item);
+                        isFullyBuffered |= item.HasError;
                     }
 
-                    item = buffer[bufferIndex++];
-                    await _batcher.Add(index++, item).ConfigureAwait(false);
-                    if (item.HasError) {
-                        // It's the last item -> all we can do now is to wait for Ack;
-                        // Note that Batcher.Add automatically flushes on error.
-                        goto nextAck;
+                    // 3.2. Add all buffered items to batcher
+                    while (bufferIndex < buffer.Count) {
+                        item = buffer[bufferIndex++];
+                        await _batcher.Add(index++, item).ConfigureAwait(false);
+                        if (item.HasError) {
+                            // It's the last item -> all we can do now is to wait for Ack;
+                            // Note that Batcher.Add automatically flushes on error.
+                            goto nextAck;
+                        }
                     }
+                    if (whenMovedNextAsTask == null)
+                        continue;
+
+                    // 3.3. Flush & await for the whenMovedNextAsTask
+                    await _batcher.Flush(index).ConfigureAwait(false);
+                    var completedTask = await Task
+                        .WhenAny(whenAckReady, whenMovedNextAsTask)
+                        .ConfigureAwait(false);
+                    if (completedTask == whenAckReady)
+                        goto nextAck; // Got Ack, must restart
                 }
-                await _batcher.Flush(index).ConfigureAwait(false);
             }
         }
         finally {
@@ -218,7 +218,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private Task SendMissing()
-        => _systemCallSender.Disconnect(Peer, new[] { Id.LocalId });
+        => _systemCallSender.Disconnect(Peer, [Id.LocalId]);
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private Task SendInvalidPosition(long index)
@@ -231,7 +231,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         if (item.IsValue(out var value))
             return _systemCallSender.Item(Peer, Id.LocalId, index, value);
 
-        var error = ReferenceEquals(item.Error, NoError) ? null : item.Error;
+        var error = ReferenceEquals(item.Error, NoMoreItemTag) ? null : item.Error;
         return _systemCallSender.End(Peer, Id.LocalId, index, error);
     }
 

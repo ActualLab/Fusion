@@ -1,8 +1,8 @@
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Internal;
 using ActualLab.Rpc.Infrastructure;
+using Errors = ActualLab.Internal.Errors;
+using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc;
 
@@ -268,7 +268,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private Task SendCloseFromLock()
     {
-        _nextIndex = int.MaxValue;
+        _nextIndex = long.MaxValue;
         return SendAckFromLock(_nextIndex, true);
     }
 
@@ -356,6 +356,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                     await taskToAwait.SilentAwait(false);
                 try {
                     if (!await _reader.WaitToReadAsync(_cancellationToken).ConfigureAwait(false)) {
+                        _nextIndex++;
                         _isEnded = true;
                         return false;
                     }
@@ -369,6 +370,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                 }
                 catch (Exception e) {
                     _current = Result.Error<T>(e);
+                    _nextIndex++;
                     _isEnded = true;
                     return true;
                 }
