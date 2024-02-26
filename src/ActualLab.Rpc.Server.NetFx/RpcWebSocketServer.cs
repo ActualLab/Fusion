@@ -71,6 +71,8 @@ public class RpcWebSocketServer(
     private async Task HandleWebSocket(IOwinContext context, WebSocketContext wsContext, bool isBackend)
     {
         var cancellationToken = context.Request.CallCancelled;
+        WebSocket? webSocket = null;
+        RpcConnection? connection = null;
         try {
             var peerRef = PeerRefFactory.Invoke(this, context, isBackend);
             var peer = Hub.GetServerPeer(peerRef);
@@ -81,7 +83,7 @@ public class RpcWebSocketServer(
                 await peer.Hub.Clock.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
 
-            var webSocket = wsContext.WebSocket;
+            webSocket = wsContext.WebSocket;
             var webSocketOwner = new WebSocketOwner(peer.Ref.Key, webSocket, Services);
             var channel = new WebSocketChannel<RpcMessage>(
                 Settings.WebSocketChannelOptions, webSocketOwner, cancellationToken) {
@@ -91,14 +93,27 @@ public class RpcWebSocketServer(
                 .Set((RpcPeer)peer)
                 .Set(context)
                 .Set(webSocket);
-            var connection = await ServerConnectionFactory
+            connection = await ServerConnectionFactory
                 .Invoke(peer, channel, options, cancellationToken)
                 .ConfigureAwait(false);
             peer.SetConnection(connection);
             await channel.WhenClosed.ConfigureAwait(false);
         }
-        catch (Exception e) when (e.IsCancellationOf(cancellationToken)) {
-            // Intended: this is typically a normal connection termination
+        catch (Exception e) {
+            if (connection != null || e.IsCancellationOf(cancellationToken))
+                return; // Intended: this is typically a normal connection termination
+
+            var request = context.Request;
+            Log.LogWarning(e, "Failed to accept RPC connection: {Path}{Query}", request.Path, request.QueryString);
+            if (webSocket != null)
+                return;
+
+            try {
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            }
+            catch {
+                // Intended
+            }
         }
     }
 
