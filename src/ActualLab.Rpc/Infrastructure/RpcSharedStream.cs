@@ -133,8 +133,12 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                     if (ack.MustReset || index < ack.NextIndex)
                         index = ack.NextIndex;
                 }
+                if (ack.NextIndex < 0) {
+                    Log.LogWarning("Something is off: couldn't read an acknowledgement");
+                    return;
+                }
                 whenAckReady = ackReader.WaitToReadAsync(cancellationToken).AsTask();
-                if (ack.NextIndex < 0)
+                if (whenAckReady.IsCompleted)
                     goto nextAck;
 
                 // 2. Remove what's useless from buffer
@@ -159,9 +163,6 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
                     // 3.1. Buffer as much as we can
                     while (buffer.HasRemainingCapacity && !isFullyBuffered) {
-                        if (whenAckReady.IsCompleted)
-                            goto nextAck; // Got Ack, must restart
-
                         if (!whenMovedNext.IsCompleted) {
                             // Both tasks aren't completed yet.
                             whenMovedNextAsTask ??= whenMovedNext.AsTask();
@@ -174,17 +175,18 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                                 whenMovedNext = SafeMoveNext(enumerator);
                                 whenMovedNextAsTask = null; // Must go after SafeMoveNext call (which may fail)
                             }
-                            else
+                            else {
                                 item = Result.Error<T>(NoMoreItemTag);
+                                isFullyBuffered = true;
+                            }
                         }
                         catch (Exception e) {
                             item = Result.Error<T>(e.IsCancellationOf(cancellationToken)
                                 ? Errors.RpcStreamNotFound()
                                 : e);
+                            isFullyBuffered = true;
                         }
-
                         buffer.PushTail(item);
-                        isFullyBuffered |= item.HasError;
                     }
 
                     // 3.2. Add all buffered items to batcher
@@ -197,10 +199,12 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                             goto nextAck;
                         }
                     }
+                    if (isFullyBuffered)
+                        goto nextAck;
                     if (whenMovedNextAsTask == null)
                         continue;
 
-                    // 3.3. Flush & await for the whenMovedNextAsTask
+                    // 3.3. Flush & await whenMovedNextAsTask or whenAckReady
                     await _batcher.Flush(index).ConfigureAwait(false);
                     var completedTask = await Task
                         .WhenAny(whenAckReady, whenMovedNextAsTask)
