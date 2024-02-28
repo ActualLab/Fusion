@@ -36,7 +36,7 @@ public static class StartupHelper
         // You may comment this out - the call below just enables RPC call logging
         services.AddSingleton<RpcPeerFactory>(_ =>
             static (hub, peerRef) => peerRef.IsServer
-                ? throw new NotSupportedException("No server peers on the client.")
+                ? throw new NotSupportedException("No server peers are allowed on the client.")
                 : new RpcClientPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
             );
 

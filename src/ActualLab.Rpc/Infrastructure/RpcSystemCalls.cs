@@ -24,6 +24,7 @@ public interface IRpcSystemCalls : IRpcSystemService
 
     // Streams
     Task<RpcNoWait> Ack(long nextIndex, Guid hostId = default);
+    Task<RpcNoWait> AckEnd(Guid hostId = default);
     Task<RpcNoWait> I(long index, object? item);
     Task<RpcNoWait> B(long index, object? items);
     Task<RpcNoWait> End(long index, ExceptionInfo error);
@@ -108,6 +109,10 @@ public class RpcSystemCalls(IServiceProvider services)
             await peer.Hub.SystemCallSender.Disconnect(peer, [localId]).ConfigureAwait(false);
         return default;
     }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public Task<RpcNoWait> AckEnd(Guid hostId = default)
+        => Ack(long.MaxValue, hostId);
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task<RpcNoWait> I(long index, object? item)

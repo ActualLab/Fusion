@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Internal;
-using Errors = ActualLab.Rpc.Internal.Errors;
+using Cysharp.Text;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -16,6 +16,7 @@ public abstract class RpcInboundCall : RpcCall
 
     protected readonly CancellationTokenSource? CancellationTokenSource;
     protected ILogger Log => Context.Peer.Log;
+    protected override string DebugTypeName => "<-";
 
     public readonly RpcInboundContext Context;
     public readonly CancellationToken CancellationToken;
@@ -64,8 +65,21 @@ public abstract class RpcInboundCall : RpcCall
         var message = Context.Message;
         var headers = message.Headers.OrEmpty();
         var arguments = Arguments != null ? Arguments.ToString() : $"ArgumentData: {message.ArgumentData}";
-        return $"{GetType().GetName()} #{message.RelatedId}: {MethodDef.Name}{arguments}"
-            + (headers.Count > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
+        var relatedId = message.RelatedId;
+        var relatedObject = relatedId == 0 ? (object?)null
+            : MethodDef.IsStream
+                ? Context.Peer.RemoteObjects.Get(relatedId)
+                : Context.Peer.OutboundCalls.Get(relatedId);
+
+        return ZString.Concat(
+            DebugTypeName,
+            MethodDef.IsStream ? " ~" : " #",
+            relatedId,
+            ' ',
+            MethodDef.FullName,
+            arguments,
+            headers.Count > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",
+            relatedObject != null ? $" for {relatedObject}" : "");
     }
 
     public abstract Task Run();

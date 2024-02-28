@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Internal;
+using Cysharp.Text;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -8,6 +9,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     : RpcCall(context.MethodDef!)
 {
     private static readonly ConcurrentDictionary<(byte, Type), Func<RpcOutboundContext, RpcOutboundCall>> FactoryCache = new();
+
+    protected override string DebugTypeName => "->";
 
     public readonly RpcOutboundContext Context = context;
     public readonly RpcPeer Peer = context.Peer!; // Calls
@@ -35,8 +38,17 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var ctIndex = methodDef?.CancellationTokenIndex ?? -1;
         if (ctIndex >= 0)
             arguments = arguments?.Remove(ctIndex);
-        return $"{GetType().GetName()} #{Id}: {methodDef?.Name ?? "n/a"}{arguments?.ToString() ?? "(n/a)"}"
-            + (headers.Count > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
+
+        var isStream = methodDef?.IsStream == true;
+        var relatedId = context.RelatedId;
+        return ZString.Concat(
+            DebugTypeName,
+            isStream ? " ~" : " #",
+            relatedId != 0 ? relatedId : Id,
+            ' ',
+            methodDef?.FullName ?? "n/a",
+            arguments?.ToString() ?? "(n/a)",
+            headers.Count > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
@@ -60,7 +72,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public Task SendNoWait(bool allowPolymorphism, ChannelWriter<RpcMessage>? sender = null)
     {
-        var message = CreateMessage(Context.RelatedCallId, allowPolymorphism);
+        var message = CreateMessage(Context.RelatedId, allowPolymorphism);
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
         return Peer.Send(message, sender);

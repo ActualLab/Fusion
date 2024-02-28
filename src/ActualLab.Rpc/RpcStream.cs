@@ -39,7 +39,7 @@ public abstract partial class RpcStream : IRpcObject
         => new(outgoingSource.ToAsyncEnumerable());
 
     public override string ToString()
-        => $"{GetType().GetName()}(#{Id} @ {Peer?.Ref}, {Kind})";
+        => $"{GetType().GetName()}({Id} @ {Peer?.Ref}, {Kind})";
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     Task IRpcObject.Reconnect(CancellationToken cancellationToken)
@@ -286,9 +286,12 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     private Task SendAckFromLock(long index, bool mustReset = false)
     {
         // Debug.WriteLine($"{Id}: <- ACK: ({index}, {mustReset})");
-        return !_isDisconnected
+        if (_isDisconnected)
+            return Task.CompletedTask;
+
+        return index != long.MaxValue
             ? Peer!.Hub.SystemCallSender.Ack(Peer, Id.LocalId, index, mustReset ? Id.HostId : default)
-            : Task.CompletedTask;
+            : Peer!.Hub.SystemCallSender.AckEnd(Peer, Id.LocalId, mustReset ? Id.HostId : default);
     }
 
     // Nested types

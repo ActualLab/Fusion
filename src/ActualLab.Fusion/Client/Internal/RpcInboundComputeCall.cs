@@ -12,6 +12,8 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
 {
     private CancellationTokenSource? _stopCompletionSource;
 
+    protected override string DebugTypeName => "<=";
+
     public Computed<TResult>? Computed { get; protected set; }
 
     public RpcInboundComputeCall(RpcInboundContext context, RpcMethodDef methodDef)

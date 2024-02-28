@@ -132,7 +132,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
                 RpcHub? rpcHub = null;
                 return (method, arguments) => {
                     rpcHub ??= method.Hub;
-                    var peerRef = method.Service.IsBackend ? BackendClientPeerRef : ClientPeerRef;
+                    var peerRef = method.IsBackend ? BackendClientPeerRef : ClientPeerRef;
                     return rpcHub.GetClientPeer(peerRef);
                 };
             });

@@ -16,6 +16,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     private RpcMethodDef? _keepAliveMethodDef;
     private RpcMethodDef? _disconnectMethodDef;
     private RpcMethodDef? _ackMethodDef;
+    private RpcMethodDef? _ackEndMethodDef;
     private RpcMethodDef? _itemMethodDef;
     private RpcMethodDef? _batchMethodDef;
     private RpcMethodDef? _endMethodDef;
@@ -40,6 +41,8 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Disconnect)));
     public RpcMethodDef AckMethodDef => _ackMethodDef
         ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Ack)));
+    public RpcMethodDef AckEndMethodDef => _ackEndMethodDef
+        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.AckEnd)));
     public RpcMethodDef ItemMethodDef => _itemMethodDef
         ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.I)));
     public RpcMethodDef BatchMethodDef => _batchMethodDef
@@ -82,7 +85,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         try {
             var context = new RpcOutboundContext(headers) {
                 Peer = peer,
-                RelatedCallId = callId,
+                RelatedId = callId,
             };
             var call = context.PrepareCall(OkMethodDef, ArgumentList.New(result))!;
             return call.SendNoWait(allowPolymorphism);
@@ -104,7 +107,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     {
         var context = new RpcOutboundContext(headers) {
             Peer = peer,
-            RelatedCallId = callId,
+            RelatedId = callId,
         };
         var call = context.PrepareCall(ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()))!;
         return call.SendNoWait(false);
@@ -115,7 +118,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     {
         var context = new RpcOutboundContext(headers) {
             Peer = peer,
-            RelatedCallId = callId,
+            RelatedId = callId,
         };
         var call = context.PrepareCall(CancelMethodDef, ArgumentList.Empty)!;
         return call.SendNoWait(false);
@@ -150,9 +153,20 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     {
         var context = new RpcOutboundContext(headers) {
             Peer = peer,
-            RelatedCallId = localId,
+            RelatedId = localId,
         };
         var call = context.PrepareCall(AckMethodDef, ArgumentList.New(nextIndex, hostId))!;
+        return call.SendNoWait(false);
+    }
+
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    public Task AckEnd(RpcPeer peer, long localId, Guid hostId, List<RpcHeader>? headers = null)
+    {
+        var context = new RpcOutboundContext(headers) {
+            Peer = peer,
+            RelatedId = localId,
+        };
+        var call = context.PrepareCall(AckEndMethodDef, ArgumentList.New(hostId))!;
         return call.SendNoWait(false);
     }
 
@@ -161,7 +175,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     {
         var context = new RpcOutboundContext(headers) {
             Peer = peer,
-            RelatedCallId = localId,
+            RelatedId = localId,
         };
         var call = context.PrepareCall(ItemMethodDef, ArgumentList.New(index, item))!;
         return call.SendNoWait(true);
@@ -172,7 +186,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     {
         var context = new RpcOutboundContext(headers) {
             Peer = peer,
-            RelatedCallId = localId,
+            RelatedId = localId,
         };
         var call = context.PrepareCall(BatchMethodDef, ArgumentList.New(index, items))!;
         return call.SendNoWait(true);
@@ -183,7 +197,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     {
         var context = new RpcOutboundContext(headers) {
             Peer = peer,
-            RelatedCallId = localId,
+            RelatedId = localId,
         };
         // An optimized version of Client.Error(result):
         var call = context.PrepareCall(EndMethodDef, ArgumentList.New(index, error.ToExceptionInfo()))!;

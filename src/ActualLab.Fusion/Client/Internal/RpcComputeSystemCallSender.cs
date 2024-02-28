@@ -24,7 +24,7 @@ public sealed class RpcComputeSystemCallSender(IServiceProvider services)
     {
         var context = new RpcOutboundContext(headers) {
             Peer = peer,
-            RelatedCallId = callId,
+            RelatedId = callId,
         };
         // An optimized version of Client.Error(result):
         var call = context.PrepareCall(InvalidateMethodDef, ArgumentList.Empty)!;

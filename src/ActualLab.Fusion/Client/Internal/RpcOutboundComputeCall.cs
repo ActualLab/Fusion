@@ -17,6 +17,8 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
     protected readonly TaskCompletionSource<Unit> WhenInvalidatedSource
         = TaskCompletionSourceExt.New<Unit>(); // Must not allow synchronous continuations!
 
+    protected override string DebugTypeName => "=>";
+
     public LTag ResultVersion { get; protected set; }
     // ReSharper disable once InconsistentlySynchronizedField
     public Task WhenInvalidated => WhenInvalidatedSource.Task;

@@ -25,7 +25,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
             return peerRef.IsServer
                 ? new RpcServerPeer(hub, peerRef) {
                     InboundCallFilter = static (peer, method)
-                        => !method.Service.IsBackend || method.Service.Type == typeof(ITestRpcBackend),
+                        => !method.IsBackend || method.Service.Type == typeof(ITestRpcBackend),
                 }
                 : new RpcClientPeer(hub, peerRef);
         });

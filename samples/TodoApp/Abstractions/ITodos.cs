@@ -41,6 +41,7 @@ public interface ITodos : IComputeService
 {
     Task<RpcObjectId> GetTestObjectId();
     Task<RpcStream<int>> GetTestStream();
+    Task<int> SumTestStream(RpcStream<int> stream, CancellationToken cancellationToken = default);
 
     // Commands
     [CommandHandler]

@@ -7,6 +7,9 @@ namespace ActualLab.Rpc;
 
 public sealed class RpcMethodDef : MethodDef
 {
+    private static readonly HashSet<string> StreamMethodNames
+        = new(StringComparer.Ordinal) { "Ack", "AckEnd", "B", "I", "End" };
+
     private string? _toStringCached;
     private readonly Symbol _name;
 
@@ -19,7 +22,7 @@ public sealed class RpcMethodDef : MethodDef
                 throw new ArgumentOutOfRangeException(nameof(value));
 
             _name = value;
-            FullName = $"{Service.Name.Value}.{Name.Value}";
+            FullName = $"{Service.Name.Value}.{value}";
         }
     }
     public new Symbol FullName { get; private init; }
@@ -29,6 +32,9 @@ public sealed class RpcMethodDef : MethodDef
     public Func<ArgumentList> ArgumentListFactory { get; }
     public Func<ArgumentList> ResultListFactory { get; }
     public bool NoWait { get; }
+    public bool IsSystem { get; }
+    public bool IsBackend { get; }
+    public bool IsStream { get; }
     public bool AllowArgumentPolymorphism { get; init; }
     public bool AllowResultPolymorphism { get; init; }
     public RpcMethodTracer? Tracer { get; init; }
@@ -48,10 +54,13 @@ public sealed class RpcMethodDef : MethodDef
             : ArgumentList.Types[Parameters.Length].MakeGenericType(ParameterTypes);
         HasObjectTypedArguments = ParameterTypes.Any(type => typeof(object) == type);
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);
+        IsSystem = service.IsSystem;
+        IsBackend = service.IsBackend;
+        IsStream = IsSystem && StreamMethodNames.Contains(method.Name);
 
         Service = service;
         Name =  $"{Method.Name}:{ParameterTypes.Length}";
-        AllowResultPolymorphism = AllowArgumentPolymorphism = service.IsSystem || service.IsBackend;
+        AllowResultPolymorphism = AllowArgumentPolymorphism = IsSystem || IsBackend;
 
 #pragma warning disable IL2055, IL2072
         ArgumentListFactory = (Func<ArgumentList>)ArgumentListType.GetConstructorDelegate()!;

@@ -1,5 +1,6 @@
 @page "/todo"
 @using System.Globalization
+@using ActualLab.Rpc
 @using Templates.TodoApp.Services
 @inherits ComputedStateComponent<Todo[]>
 @inject Session Session
@@ -87,9 +88,9 @@
         var objectId = await Todos.GetTestObjectId();
         Log.LogInformation("Test ObjectId: {ObjectId}", objectId);
         var stream = await Todos.GetTestStream();
-        Log.LogInformation("Test stream: {Stream}", stream);
-        var itemCount = await stream.CountAsync();
-        Log.LogInformation("Test stream item count: {Count}", itemCount);
+        var list = await stream.ToListAsync();
+        var sum = await Todos.SumTestStream(RpcStream.New(list));
+        Log.LogInformation("Test stream: {Stream} = [{List}], sum = {Sum}", stream, list.ToDelimitedString(), sum);
     }
 
     protected override async Task<Todo[]> ComputeState(CancellationToken cancellationToken)

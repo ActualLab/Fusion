@@ -1,7 +1,3 @@
-#if NET7_0_OR_GREATER
-using System.Globalization;
-#endif
-
 namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcCall(RpcMethodDef methodDef)
@@ -10,6 +6,8 @@ public abstract class RpcCall(RpcMethodDef methodDef)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this;
     }
+
+    protected abstract string DebugTypeName { get; }
 
     public readonly RpcMethodDef MethodDef = methodDef;
 

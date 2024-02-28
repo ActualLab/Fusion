@@ -13,13 +13,15 @@ public class RpcCallLogger(RpcPeer peer, RpcCallLoggerFilter filter, ILogger? lo
         => Log != null && Filter.Invoke(Peer, call);
 
     public virtual void LogInbound(RpcInboundCall call)
-        => Log?.Log(LogLevel, "'{PeerRef}': <- {Call}", Peer.Ref, call);
+        => Log?.Log(LogLevel, "'{PeerRef}': {Call}", Peer.Ref, call);
 
     public virtual void LogOutbound(RpcOutboundCall call, RpcMessage message)
     {
-        if (!call.ServiceDef.IsSystem)
-            Log?.Log(LogLevel, "'{PeerRef}': -> {Call}", Peer.Ref, call);
-        else
-            Log?.Log(LogLevel, "'{PeerRef}': -> {Call} to #{RelatedId}", Peer.Ref, call, message.RelatedId);
+        var connectionState = Peer.ConnectionState;
+        if (connectionState.IsFinal)
+            return;
+
+        var callState = connectionState.Value.IsConnected() ? "" : " - queued";
+        Log?.Log(LogLevel, "'{PeerRef}': {Call}{State}", Peer.Ref, call, callState);
     }
 }

@@ -48,7 +48,7 @@ public class RpcInboundContext
             return null;
 
         var method = service.Get(Message.Method);
-        if (service.IsSystem || method == null)
+        if (method == null || method.IsSystem)
             return method;
 
         return Peer.InboundCallFilter.Invoke(Peer, method) ? method : null;

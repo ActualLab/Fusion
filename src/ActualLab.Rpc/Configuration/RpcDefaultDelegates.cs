@@ -49,7 +49,7 @@ public static class RpcDefaultDelegates
 #pragma warning restore IL2026
 
     public static RpcInboundCallFilter InboundCallFilter { get; set; } =
-        static (peer, method) => !method.Service.IsBackend || peer.Ref.IsBackend;
+        static (peer, method) => !method.IsBackend || peer.Ref.IsBackend;
 
     public static RpcClientConnectionFactory ClientConnectionFactory { get; set; } =
 #pragma warning disable IL2026
@@ -72,5 +72,8 @@ public static class RpcDefaultDelegates
 
     private static readonly Symbol KeepAliveMethodName = (Symbol)$"{nameof(IRpcSystemCalls.KeepAlive)}:1";
     public static RpcCallLoggerFilter CallLoggerFilter { get; set; } =
-        static (peer, call) => !(call.ServiceDef.IsSystem && call.MethodDef.Name == KeepAliveMethodName);
+        static (peer, call) => {
+            var methodDef = call.MethodDef;
+            return !(methodDef.IsSystem && methodDef.Name == KeepAliveMethodName);
+        };
 }

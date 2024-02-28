@@ -20,7 +20,7 @@ public sealed class RpcOutboundContext(List<RpcHeader>? headers = null)
     public byte CallTypeId;
     public RpcOutboundCall? Call { get; private set; }
     public RpcPeer? Peer;
-    public long RelatedCallId;
+    public long RelatedId;
     public RpcCacheInfoCapture? CacheInfoCapture;
 
     public static RpcOutboundContext GetCurrent()

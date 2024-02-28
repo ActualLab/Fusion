@@ -17,6 +17,9 @@ public class SimpleTodos : ITodos
     public Task<RpcStream<int>> GetTestStream()
         => Task.FromResult(new RpcStream<int>(Enumerable.Range(0, 5).ToAsyncEnumerable()));
 
+    public Task<int> SumTestStream(RpcStream<int> stream, CancellationToken cancellationToken = default)
+        => stream.SumAsync(cancellationToken).AsTask();
+
     // Commands
 
     public virtual async Task<Todo> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default)

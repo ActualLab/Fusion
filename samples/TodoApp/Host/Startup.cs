@@ -38,20 +38,10 @@ public class Startup(IConfiguration cfg, IWebHostEnvironment environment)
     {
         // Logging
         services.AddLogging(logging => {
+            // Use appsettings.*.json to change log filters
             logging.ClearProviders();
             logging.AddConsole();
-            logging.SetMinimumLevel(LogLevel.Information);
-            if (Env.IsDevelopment()) {
-                logging.SetMinimumLevel(LogLevel.Debug);
-                logging.AddFilter(typeof(App).Namespace, LogLevel.Information);
-                logging.AddFilter("Microsoft", LogLevel.Warning);
-                logging.AddFilter("Microsoft.AspNetCore.Hosting", LogLevel.Information);
-                logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Information);
-                // logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Transaction", LogLevel.Debug);
-                logging.AddFilter("ActualLab.Fusion.Operations", LogLevel.Information);
-                logging.AddFilter("ActualLab.Fusion.EntityFramework", LogLevel.Debug);
-                logging.AddFilter("ActualLab.Fusion.EntityFramework.Operations", LogLevel.Debug);
-            }
+            logging.SetMinimumLevel(LogLevel.Debug);
         });
 
         // IComputeService validation should be off in release
@@ -106,6 +96,12 @@ public class Startup(IConfiguration cfg, IWebHostEnvironment environment)
         // Fusion services
         var fusion = services.AddFusion(RpcServiceMode.Server, true);
         var fusionServer = fusion.AddWebServer();
+        // You may comment this out - the call below just enables RPC call logging
+        services.AddSingleton<RpcPeerFactory>(_ =>
+            static (hub, peerRef) => !peerRef.IsServer
+                ? throw new NotSupportedException("No client peers are allowed on the server.")
+                : new RpcServerPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
+        );
 #if false
         // Enable this to test how the client behaves w/ a delay
         fusion.Rpc.AddInboundMiddleware(c => new RpcRandomDelayMiddleware(c) {
