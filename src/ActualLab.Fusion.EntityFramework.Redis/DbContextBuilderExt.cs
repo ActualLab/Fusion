@@ -36,8 +36,8 @@ public static class DbContextBuilderExt
     public static IServiceCollection AddRedisDb<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
         (this DbContextBuilder<TDbContext> dbContextBuilder,
-            IConnectionMultiplexer connectionMultiplexer,
+            Func<Task<IConnectionMultiplexer>> multiplexerFactory,
             string? keyPrefix = null)
         where TDbContext : DbContext
-        => dbContextBuilder.Services.AddRedisDb<TDbContext>(connectionMultiplexer, keyPrefix);
+        => dbContextBuilder.Services.AddRedisDb<TDbContext>(multiplexerFactory, keyPrefix);
 }

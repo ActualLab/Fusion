@@ -4,15 +4,14 @@ using ActualLab.Internal;
 
 namespace ActualLab.Redis;
 
-public sealed class RedisActionSub : RedisSubBase
+public sealed class RedisActionSub(
+    RedisDb redisDb,
+    RedisSubKey key,
+    Action<RedisChannel, RedisValue> messageHandler,
+    TimeSpan? subscribeTimeout = null
+    ) : RedisSubBase(redisDb, key, subscribeTimeout)
 {
-    private Action<RedisChannel, RedisValue> MessageHandler { get; }
-
-    public RedisActionSub(RedisDb redisDb, RedisSubKey key,
-        Action<RedisChannel, RedisValue> messageHandler,
-        TimeSpan? subscribeTimeout = null)
-        : base(redisDb, key, subscribeTimeout)
-        => MessageHandler = messageHandler;
+    private Action<RedisChannel, RedisValue> MessageHandler { get; } = messageHandler;
 
     protected override void OnMessage(RedisChannel redisChannel, RedisValue redisValue)
         => MessageHandler(redisChannel, redisValue);
