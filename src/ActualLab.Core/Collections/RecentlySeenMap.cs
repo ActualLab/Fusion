@@ -2,25 +2,18 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Collections;
 
-public sealed class RecentlySeenMap<TKey, TValue>
+public sealed class RecentlySeenMap<TKey, TValue>(
+    int capacity,
+    TimeSpan duration,
+    IMomentClock? clock = null)
     where TKey : notnull
 {
-    private readonly BinaryHeap<Moment, TKey> _heap;
-    private readonly Dictionary<TKey, TValue> _map;
+    private readonly BinaryHeap<Moment, TKey> _heap = new(capacity + 1); // we may add one extra item, so "+ 1"
+    private readonly Dictionary<TKey, TValue> _map = new(capacity + 1); // we may add one extra item, so "+ 1"
 
-    public int Capacity { get; }
-    public TimeSpan Duration { get; }
-    public IMomentClock Clock { get; }
-
-    public RecentlySeenMap(int capacity, TimeSpan duration, IMomentClock? clock = null)
-    {
-        Capacity = capacity;
-        Duration = duration;
-        Clock = clock ?? MomentClockSet.Default.SystemClock;
-
-        _heap = new BinaryHeap<Moment, TKey>(capacity + 1); // we may add one extra item, so "+ 1"
-        _map = new Dictionary<TKey, TValue>(capacity + 1); // we may add one extra item, so "+ 1"
-    }
+    public int Capacity { get; } = capacity;
+    public TimeSpan Duration { get; } = duration;
+    public IMomentClock Clock { get; } = clock ?? MomentClockSet.Default.SystemClock;
 
     public bool TryGet(TKey key, [MaybeNullWhen(false)] out TValue existingValue)
         => _map.TryGetValue(key, out existingValue);
@@ -38,17 +31,20 @@ public sealed class RecentlySeenMap<TKey, TValue>
         return true;
     }
 
+    public bool TryRemove(TKey key)
+        => _map.Remove(key);
+
     public void Prune()
     {
         // Removing some items while there are too many
-        while (_map.Count >= Capacity) {
+        while (_heap.Count > Capacity) {
             if (_heap.ExtractMin().IsSome(out var entry))
                 _map.Remove(entry.Value);
             else
                 break;
         }
 
-        // Removing too old operations
+        // Removing too old items
         var minTimestamp = Clock.Now - Duration;
         while (_heap.PeekMin().IsSome(out var entry) && entry.Priority < minTimestamp) {
             _heap.ExtractMin();
