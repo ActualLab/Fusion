@@ -69,7 +69,7 @@
   <ItemGroup Label="Package Versions">
     <PackageReference Update="AspNet.Security.OAuth.GitHub" Version="$(AspNetCoreVersion)" />
     <PackageReference Update="Blazorise" Version="$(BlazoriseVersion)" />
-    <PackageReference Update="Blazorise.Bootstrap" Version="$(BlazoriseVersion)" />
+    <PackageReference Update="Blazorise.Bootstrap5" Version="$(BlazoriseVersion)" />
     <PackageReference Update="Blazorise.DataGrid" Version="$(BlazoriseVersion)" />
     <PackageReference Update="Blazorise.Icons.FontAwesome" Version="$(BlazoriseVersion)" />
     <PackageReference Update="Blazorise.Sidebar" Version="$(BlazoriseVersion)" />

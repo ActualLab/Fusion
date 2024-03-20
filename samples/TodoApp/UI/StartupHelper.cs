@@ -1,6 +1,4 @@
 using Blazorise;
-using Blazorise.Bootstrap;
-using Blazorise.Icons.FontAwesome;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using ActualLab.Fusion.Blazor;
 using ActualLab.Fusion.Blazor.Authentication;
@@ -10,6 +8,8 @@ using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.UI;
 using ActualLab.OS;
 using ActualLab.Rpc;
+using Blazorise.Bootstrap5;
+using Blazorise.Icons.FontAwesome;
 using Templates.TodoApp.Abstractions;
 using Templates.TodoApp.Services;
 
@@ -63,7 +63,9 @@ public static class StartupHelper
         IComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
 
         // Blazorise
-        services.AddBlazorise().AddBootstrapProviders().AddFontAwesomeIcons();
+        services.AddBlazorise(options => options.Immediate = true)
+            .AddBootstrap5Providers()
+            .AddFontAwesomeIcons();
 
         // Other UI-related services
         var fusion = services.AddFusion();

@@ -32,7 +32,7 @@
 
   <ItemGroup>
     <PackageReference Include="Blazorise" />
-    <PackageReference Include="Blazorise.Bootstrap" />
+    <PackageReference Include="Blazorise.Bootstrap5" />
     <PackageReference Include="Blazorise.DataGrid" />
     <PackageReference Include="Blazorise.Icons.FontAwesome" />
     <PackageReference Include="Blazorise.Sidebar" />
