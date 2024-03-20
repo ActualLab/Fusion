@@ -6,8 +6,4 @@ public partial record Auth_SetSessionOptions(
     [property: DataMember, MemoryPackOrder(0)] Session Session,
     [property: DataMember, MemoryPackOrder(1)] ImmutableOptionSet Options,
     [property: DataMember, MemoryPackOrder(2)] long? ExpectedVersion = null
-) : ISessionCommand<Unit>, IHasCommandId
-{
-    [DataMember, MemoryPackOrder(250)]
-    public Ulid CommandId { get; init; } = Ulid.NewUlid();
-}
+) : ISessionCommand<Unit>;

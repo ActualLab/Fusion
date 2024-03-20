@@ -115,6 +115,7 @@ public sealed partial class OptionSet
         var currentValue = (T?) this[key];
         if (!EqualityComparer<T>.Default.Equals(currentValue!, expectedValue))
             return false;
+
         this[key] = value;
         return true;
     }
@@ -128,6 +129,7 @@ public sealed partial class OptionSet
                 ref _items, ImmutableDictionary<Symbol, object>.Empty, items);
             if (oldItems == items || oldItems.Count == 0)
                 return;
+
             items = oldItems;
             spinWait.SpinOnce(); // Safe for WASM
         }

@@ -11,15 +11,16 @@ namespace ActualLab.Collections;
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial record struct ImmutableOptionSet
 {
-    public static readonly ImmutableOptionSet Empty = new(ImmutableDictionary<Symbol, object>.Empty);
+    private static readonly ImmutableDictionary<Symbol, object> EmptyItems = ImmutableDictionary<Symbol, object>.Empty;
+
+    public static readonly ImmutableOptionSet Empty;
 
     private readonly ImmutableDictionary<Symbol, object>? _items;
 
     // Computed properties
 
     [JsonIgnore, MemoryPackIgnore]
-    public ImmutableDictionary<Symbol, object> Items
-        => _items ?? ImmutableDictionary<Symbol, object>.Empty;
+    public ImmutableDictionary<Symbol, object> Items => _items ?? EmptyItems;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     [JsonPropertyName(nameof(Items)), Newtonsoft.Json.JsonIgnore]
@@ -36,7 +37,7 @@ public readonly partial record struct ImmutableOptionSet
     [Newtonsoft.Json.JsonConstructor]
     // ReSharper disable once ConvertToPrimaryConstructor
     public ImmutableOptionSet(ImmutableDictionary<Symbol, object>? items)
-        => _items = items ?? ImmutableDictionary<Symbol, object>.Empty;
+        => _items = items;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [JsonConstructor, MemoryPackConstructor]

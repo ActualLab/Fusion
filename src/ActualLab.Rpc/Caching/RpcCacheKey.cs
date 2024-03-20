@@ -2,8 +2,8 @@ using Microsoft.Toolkit.HighPerformance;
 
 namespace ActualLab.Rpc.Caching;
 
-[StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
 {
     private readonly int _hashCode;

@@ -9,7 +9,6 @@ public interface ILocalCommand : ICommand
 
 public abstract record LocalCommand : ILocalCommand
 {
-    public Ulid CommandId { get; init; } = Ulid.NewUlid();
     public string Title { get; init; } = "";
 
     public static LocalActionCommand New(Func<CancellationToken, Task> handler)

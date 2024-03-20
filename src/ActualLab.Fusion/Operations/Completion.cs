@@ -14,7 +14,6 @@ public record Completion<TCommand>(TCommand Command, IOperation Operation)
     : ICompletion<TCommand>
     where TCommand : class, ICommand
 {
-    public Ulid CommandId { get; init; } = Ulid.NewUlid();
     public ICommand UntypedCommand => Command;
 
     public Completion(IOperation operation)
