@@ -1,6 +1,6 @@
 namespace ActualLab.Fusion.Authentication;
 
-// [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
 // ReSharper disable once InconsistentNaming
 public partial record AuthBackend_SignIn(
