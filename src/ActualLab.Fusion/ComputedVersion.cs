@@ -1,28 +1,30 @@
+using ActualLab.OS;
+using Microsoft.Toolkit.HighPerformance;
+
 namespace ActualLab.Fusion;
 
 public static class ComputedVersion
 {
-    private const ulong Increment = 100_003; // Prime
+    private static readonly long LocalVersionCount;
     private static readonly string FormatDigits = MathExt.Digits32;
 
-    private static readonly object Lock = new();
-    private static ulong _lastThreadId;
-    [ThreadStatic] private static ulong _threadId;
-    [ThreadStatic] private static ulong _lastLocal;
+    private static readonly LocalVersion[] LocalVersions;
+    [ThreadStatic] private static LocalVersion? _localVersion;
+
+    static ComputedVersion()
+    {
+        var localVersionCount = HardwareInfo.GetProcessorCountFactor(4).Clamp(1, 1024);
+        var primeSieve = FusionSettings.GetPrimeSieve(localVersionCount + 16);
+        while (!primeSieve.IsPrime(localVersionCount))
+            localVersionCount--;
+        LocalVersionCount = localVersionCount;
+        LocalVersions = new LocalVersion[localVersionCount];
+        for (var i = 0; i < LocalVersions.Length; i++)
+            LocalVersions[i] = new LocalVersion(i);
+    }
 
     public static ulong Next()
-    {
-        // Double-check locking
-        if (_lastLocal != 0) return _lastLocal += Increment;
-        lock (Lock) {
-            if (_lastLocal != 0) return _lastLocal += Increment;
-
-            if (_threadId == 0)
-                _threadId = ++_lastThreadId;
-            _lastLocal = _threadId;
-            return _lastLocal;
-        }
-    }
+        => (_localVersion ??= LocalVersions[GetLocalVersionIndex()]).Next();
 
     public static string Format(ulong version)
     {
@@ -49,6 +51,14 @@ public static class ComputedVersion
 
     // Private methods
 
+    private static int GetLocalVersionIndex()
+    {
+        var m = Environment.CurrentManagedThreadId % LocalVersionCount;
+        if (m < 0)
+            m += LocalVersionCount;
+        return (int)m;
+    }
+
     private static int FormatBase32(ulong n, Span<char> buffer)
     {
         const ulong mask = 31;
@@ -67,5 +77,25 @@ public static class ComputedVersion
         var tail = buffer[index..];
         tail.CopyTo(buffer);
         return tail.Length;
+    }
+
+    // Nested types
+
+    private class LocalVersion
+    {
+        private long _version;
+
+        // ReSharper disable once ConvertToPrimaryConstructor
+        public LocalVersion(long initialVersion)
+            => _version = initialVersion;
+
+        // ReSharper disable once MemberHidesStaticFromOuterClass
+        public ulong Next()
+        {
+            var result = Interlocked.Add(ref _version, LocalVersionCount);
+            if (result == 0)
+                result = Interlocked.Add(ref _version, LocalVersionCount);
+            return (ulong)result;
+        }
     }
 }
