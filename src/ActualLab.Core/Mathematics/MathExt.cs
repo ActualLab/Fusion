@@ -149,8 +149,6 @@ public static class MathExt
         var radix = (ulong)digits.Length;
         if (radix < 2)
             throw new ArgumentOutOfRangeException(nameof(digits));
-        if (Bits.IsPowerOf2(radix))
-            return FormatPo2To(number, digits, buffer);
 
         if (number == 0) {
             buffer[0] = digits[0];
@@ -161,25 +159,6 @@ public static class MathExt
             var digit = (int)(number % radix);
             buffer[--index] = digits[digit];
             number /= radix;
-        }
-        var tail = buffer[index..];
-        tail.CopyTo(buffer);
-        return buffer[..tail.Length];
-    }
-
-    private static Span<char> FormatPo2To(ulong number, ReadOnlySpan<char> digits, Span<char> buffer)
-    {
-        var mask = (ulong)(digits.Length - 1);
-        var shift = Bits.PopCount(mask);
-        if (number == 0) {
-            buffer[0] = digits[0];
-            return buffer[..1];
-        }
-        var index = buffer.Length;
-        while (number != 0)  {
-            var digit = (int)(number & mask);
-            buffer[--index] = digits[digit];
-            number >>= shift;
         }
         var tail = buffer[index..];
         tail.CopyTo(buffer);

@@ -61,7 +61,8 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
             computed = Computed;
             if (computed != null) {
                 var versionHeader = FusionRpcHeaders.Version with {
-                    Value = computed.FormatVersion(),
+                    // '@' is required to make it compatible with pre-v7.2 versions
+                    Value = ComputedVersion.Format('@', computed.Version),
                 };
                 ResultHeaders = ResultHeaders.TryAdd(versionHeader);
             }
