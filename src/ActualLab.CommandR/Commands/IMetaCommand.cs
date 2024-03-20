@@ -12,8 +12,4 @@ public interface IMetaCommand<out TCommand> : IMetaCommand
     where TCommand : class, ICommand
 {
     TCommand Command { get; }
-
-#if !NETSTANDARD2_0
-    ICommand IMetaCommand.UntypedCommand => Command;
-#endif
 }

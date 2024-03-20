@@ -9,14 +9,13 @@ namespace ActualLab.Collections;
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[method: Newtonsoft.Json.JsonConstructor]
-public readonly partial struct ImmutableOptionSet(
-    ImmutableDictionary<Symbol, object>? items
-    ) : IServiceProvider, IEquatable<ImmutableOptionSet>
+public readonly partial record struct ImmutableOptionSet
 {
     public static readonly ImmutableOptionSet Empty = new(ImmutableDictionary<Symbol, object>.Empty);
 
-    private readonly ImmutableDictionary<Symbol, object>? _items = items ?? ImmutableDictionary<Symbol, object>.Empty;
+    private readonly ImmutableDictionary<Symbol, object>? _items;
+
+    // Computed properties
 
     [JsonIgnore, MemoryPackIgnore]
     public ImmutableDictionary<Symbol, object> Items
@@ -30,19 +29,22 @@ public readonly partial struct ImmutableOptionSet(
             p => NewtonsoftJsonSerialized.New(p.Value),
             StringComparer.Ordinal);
 
+    // ReSharper disable once CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
     public object? this[Symbol key] => Items.TryGetValue(key, out var v) ? v : null;
     public object? this[Type optionType] => this[optionType.ToSymbol()];
+
+    [Newtonsoft.Json.JsonConstructor]
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public ImmutableOptionSet(ImmutableDictionary<Symbol, object>? items)
+        => _items = items ?? ImmutableDictionary<Symbol, object>.Empty;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [JsonConstructor, MemoryPackConstructor]
     public ImmutableOptionSet(Dictionary<string, NewtonsoftJsonSerialized<object>>? jsonCompatibleItems)
-        : this(jsonCompatibleItems?.ToImmutableDictionary(
-            p => (Symbol) p.Key,
-            p => p.Value.Value))
-    { }
+        => _items = jsonCompatibleItems?.ToImmutableDictionary(p => (Symbol) p.Key, p => p.Value.Value);
 
-    public object? GetService(Type serviceType)
-        => this[serviceType];
+    public override string ToString()
+        => $"{nameof(ImmutableOptionSet)}({Items.Count} item(s))";
 
     public bool Contains(Type optionType)
         => this[optionType] != null;
@@ -97,16 +99,13 @@ public readonly partial struct ImmutableOptionSet(
     {
         var key = typeof(T).ToSymbol();
         var currentValue = (T?) this[key];
-        if (!EqualityComparer<T>.Default.Equals(currentValue!, expectedValue))
-            return this;
-        return Set(key, value);
+        return !EqualityComparer<T>.Default.Equals(currentValue!, expectedValue)
+            ? this
+            : Set(key, value);
     }
 
     // Equality
 
     public bool Equals(ImmutableOptionSet other) => Equals(Items, other.Items);
-    public override bool Equals(object? obj) => obj is ImmutableOptionSet other && Equals(other);
     public override int GetHashCode() => Items.GetHashCode();
-    public static bool operator ==(ImmutableOptionSet left, ImmutableOptionSet right) => left.Equals(right);
-    public static bool operator !=(ImmutableOptionSet left, ImmutableOptionSet right) => !left.Equals(right);
 }

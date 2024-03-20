@@ -8,7 +8,7 @@ namespace ActualLab.Serialization;
 [JsonConverter(typeof(Base64EncodedJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(Base64EncodedNewtonsoftJsonConverter))]
 [TypeConverter(typeof(Base64EncodedTypeConverter))]
-[method: MemoryPackConstructor]
+[method: MemoryPackConstructor] // Has JsonConverters
 #pragma warning disable CA1710
 public readonly partial struct Base64Encoded(byte[] data)
 #pragma warning restore CA1710

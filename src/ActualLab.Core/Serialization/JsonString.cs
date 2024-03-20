@@ -12,7 +12,7 @@ namespace ActualLab.Serialization;
 [JsonConverter(typeof(JsonStringJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(JsonStringNewtonsoftJsonConverter))]
 [TypeConverter(typeof(JsonStringTypeConverter))]
-[method: MemoryPackConstructor]
+[method: MemoryPackConstructor] // Has JsonConverters
 public partial class JsonString(string value) :
     IEquatable<JsonString>,
     IComparable<JsonString>,

@@ -62,8 +62,8 @@
     <AspNetCoreMvcTestingVersion3>$(AspNetCoreVersion3)</AspNetCoreMvcTestingVersion3>
     <AspNetCoreMvcTestingVersionN4>$(AspNetCoreVersion5)</AspNetCoreMvcTestingVersionN4>
     <!-- Build & Samples -->
-    <BlazoriseVersion>1.4.*</BlazoriseVersion>
-    <FusionVersion>7.0.*</FusionVersion>
+    <BlazoriseVersion>1.5.*</BlazoriseVersion>
+    <FusionVersion>7.1.*</FusionVersion>
   </PropertyGroup>
 
   <ItemGroup Label="Package Versions">
@@ -158,15 +158,15 @@
 
     <!-- Test time only -->
     <PackageReference Update="AutoFixture.AutoMoq" Version="4.18.*" />
-    <PackageReference Update="coverlet.collector" Version="6.0.0" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageReference Update="coverlet.collector" Version="6.0.*" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
     <PackageReference Update="FluentAssertions" Version="6.12.*" />
     <PackageReference Update="ILogger.Moq" Version="1.1.*" />
     <PackageReference Update="Microsoft.AspNetCore.Mvc.Testing" Version="$(AspNetCoreMvcTestingVersion)" />
     <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageReference Update="Moq" Version="4.20.*" />
-    <PackageReference Update="xunit" Version="2.6.6" />
-    <PackageReference Update="Xunit.DependencyInjection.Logging" Version="8.1.*" />
-    <PackageReference Update="xunit.runner.visualstudio" Version="2.5.6" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageReference Update="xunit" Version="2.7.0" />
+    <PackageReference Update="Xunit.DependencyInjection.Logging" Version="8.*" />
+    <PackageReference Update="xunit.runner.visualstudio" Version="2.5.7" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
 
     <!-- Build time only -->
     <PackageReference Update="ActualLab.Core" Version="$(FusionVersion)" />
@@ -180,9 +180,9 @@
 
     <!-- Analyzers -->
     <PackageReference Update="Moq.Analyzers" Version="0.0.9" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers"/>
-    <PackageReference Update="xunit.analyzers" Version="1.10.0" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
-    <PackageReference Update="Microsoft.VisualStudio.Threading.Analyzers" Version="17.8.*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
-    <PackageReference Update="Roslynator.Analyzers" Version="4.6.*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers"/>
+    <PackageReference Update="xunit.analyzers" Version="1.11.0" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageReference Update="Microsoft.VisualStudio.Threading.Analyzers" Version="17.9.*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageReference Update="Roslynator.Analyzers" Version="4.12.*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers"/>
     <PackageReference Update="Meziantou.Analyzer" Version="2.0.*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers"/>
 
     <!-- Generators -->

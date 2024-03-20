@@ -8,7 +8,7 @@ namespace ActualLab.Collections;
 #endif
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public partial class OptionSet : IServiceProvider
+public sealed partial class OptionSet
 {
     private volatile ImmutableDictionary<Symbol, object> _items;
 
@@ -27,6 +27,7 @@ public partial class OptionSet : IServiceProvider
             StringComparer.Ordinal);
 
     public object? this[Symbol key] {
+        // ReSharper disable once CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
         get => _items.TryGetValue(key, out var v) ? v : null;
         set {
             var spinWait = new SpinWait();
@@ -62,8 +63,8 @@ public partial class OptionSet : IServiceProvider
         : this(jsonCompatibleItems?.ToImmutableDictionary(p => (Symbol) p.Key, p => p.Value.Value))
     { }
 
-    public object? GetService(Type serviceType)
-        => this[serviceType];
+    public override string ToString()
+        => $"{nameof(OptionSet)}({Items.Count} item(s))";
 
     public bool Contains(Type optionType)
         => this[optionType] != null;

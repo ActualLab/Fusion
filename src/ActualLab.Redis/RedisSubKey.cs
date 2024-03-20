@@ -6,16 +6,28 @@ namespace ActualLab.Redis;
 [Serializable]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[method: Newtonsoft.Json.JsonConstructor, JsonConstructor, MemoryPackConstructor]
-public readonly partial struct RedisSubKey(string key, RedisChannel.PatternMode patternMode)
+public readonly partial struct RedisSubKey
 {
+    private readonly string _key;
+    private readonly RedisChannel.PatternMode _patternMode;
+
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    public string Key { get; } = key;
+    public string Key { get; }
 
     [DataMember(Order = 1), MemoryPackOrder(1)]
-    public RedisChannel.PatternMode PatternMode { get; } = patternMode;
+    public RedisChannel.PatternMode PatternMode { get; }
 
     public RedisSubKey(string key) : this(key, RedisChannel.PatternMode.Auto) { }
+
+    [Newtonsoft.Json.JsonConstructor, JsonConstructor, MemoryPackConstructor]
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public RedisSubKey(string key, RedisChannel.PatternMode patternMode)
+    {
+        _key = key;
+        _patternMode = patternMode;
+        Key = key;
+        PatternMode = patternMode;
+    }
 
     public override string ToString()
         => $"`{Key}`, {PatternMode})";

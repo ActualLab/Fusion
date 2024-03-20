@@ -11,20 +11,21 @@ public enum DataFormat
 
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-public readonly partial record struct TextOrBytes(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)]
-    DataFormat Format,
-    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
-    ReadOnlyMemory<byte> Data)
+public readonly partial record struct TextOrBytes
 {
     public static readonly TextOrBytes EmptyBytes = new(DataFormat.Bytes, default!);
     public static readonly TextOrBytes EmptyText = new(DataFormat.Text, default!);
 
     private readonly byte[]? _data; // This field is used solely to avoid .ToArray() calls in Bytes property
 
+    [DataMember(Order = 0), MemoryPackOrder(0)]
+    public DataFormat Format { get; init; }
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    public ReadOnlyMemory<byte> Data { get; init; }
+
+    // Computed properties
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public byte[] Bytes => _data ?? Data.ToArray();
-
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public bool IsEmpty => Data.Length == 0;
 
@@ -41,6 +42,13 @@ public readonly partial record struct TextOrBytes(
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
     public TextOrBytes(DataFormat format, byte[] bytes)
         : this(format, bytes.AsMemory()) { }
+
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public TextOrBytes(DataFormat format, ReadOnlyMemory<byte> data)
+    {
+        Format = format;
+        Data = data;
+    }
 
     public override string ToString()
         => ToString(64);
@@ -97,4 +105,10 @@ public readonly partial record struct TextOrBytes(
 
     public bool DataEquals(TextOrBytes other)
         => Data.Span.SequenceEqual(other.Data.Span);
+
+    public void Deconstruct(out DataFormat Format, out ReadOnlyMemory<byte> Data)
+    {
+        Format = this.Format;
+        Data = this.Data;
+    }
 }
