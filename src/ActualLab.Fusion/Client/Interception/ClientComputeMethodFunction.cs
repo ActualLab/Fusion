@@ -101,7 +101,7 @@ public class ClientComputeMethodFunction<T>(
         return cachedComputed;
     }
 
-    private async Task ApplyRpcUpdate(
+    private static async Task ApplyRpcUpdate(
         ComputeMethodInput input,
         IClientComputedCache cache,
         ClientComputed<T> cachedComputed)

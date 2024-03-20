@@ -1,5 +1,4 @@
 using ActualLab.OS;
-using Microsoft.Toolkit.HighPerformance;
 
 namespace ActualLab.Fusion;
 
