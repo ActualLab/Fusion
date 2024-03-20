@@ -33,10 +33,10 @@ public abstract class FunctionBase<T>(IServiceProvider services) : IFunction<T>
     protected static AsyncLockSet<ComputedInput> InputLocks => ComputedRegistry.Instance.InputLocks;
 
     private ILogger? _log;
-    private ValueOf<ILogger?>? _debugLog;
+    private Boxed<ILogger?>? _debugLog;
 
     protected ILogger Log => _log ??= Services.LogFor(GetType());
-    protected ILogger? DebugLog => (_debugLog ??= ValueOf.New(Log.IfEnabled(LogLevel.Debug))).Value;
+    protected ILogger? DebugLog => (_debugLog ??= Boxed.New(Log.IfEnabled(LogLevel.Debug))).Value;
 
     public IServiceProvider Services { get; } = services;
 

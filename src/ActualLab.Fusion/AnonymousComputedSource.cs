@@ -7,7 +7,6 @@ namespace ActualLab.Fusion;
 public interface IAnonymousComputedSource : IFunction
 {
     ComputedOptions ComputedOptions { get; init; }
-    VersionGenerator<LTag> VersionGenerator { get; init; }
 }
 
 public class AnonymousComputedSource<T> : ComputedInput,
@@ -32,7 +31,6 @@ public class AnonymousComputedSource<T> : ComputedInput,
     }
 
     public ComputedOptions ComputedOptions { get; init; }
-    public VersionGenerator<LTag> VersionGenerator { get; init; }
     public Func<AnonymousComputedSource<T>, CancellationToken, ValueTask<T>> Computer
         => _computer ?? throw new ObjectDisposedException(ToString());
     public event Action<AnonymousComputed<T>>? Invalidated;
@@ -65,7 +63,6 @@ public class AnonymousComputedSource<T> : ComputedInput,
         _category = category;
 
         ComputedOptions = ComputedOptions.Default;
-        VersionGenerator = services.VersionGenerator<LTag>();
         AsyncLock = new AsyncLock(LockReentryMode.CheckedFail);
         Initialize(this, RuntimeHelpers.GetHashCode(this));
     }
@@ -179,7 +176,7 @@ public class AnonymousComputedSource<T> : ComputedInput,
 
     private async ValueTask<AnonymousComputed<T>> GetComputed(CancellationToken cancellationToken)
     {
-        var computed = new AnonymousComputed<T>(ComputedOptions, this, VersionGenerator.NextVersion());
+        var computed = new AnonymousComputed<T>(ComputedOptions, this);
         Computed = computed;
         using var _ = Fusion.Computed.ChangeCurrent(computed);
         try {

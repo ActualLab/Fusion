@@ -136,7 +136,7 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>
 
     protected override StateBoundComputed<T> CreateComputed()
     {
-        var computed = new StateBoundComputed<T>(ComputedOptions, this, VersionGenerator.NextVersion());
+        var computed = new StateBoundComputed<T>(ComputedOptions, this);
         lock (Lock)
             _computingComputed = computed;
         return computed;

@@ -4,11 +4,13 @@ namespace ActualLab.Fusion.Client.Internal;
 
 public static class RpcInboundContextExt
 {
-    public static LTag GetResultVersion(this RpcInboundContext? context)
+    public static string? GetResultVersion(this RpcInboundContext? context)
     {
-        var versionHeader = context?.Message.Headers.GetOrDefault(FusionRpcHeaders.Version.Name);
-        return versionHeader is { } vVersionHeader
-            ? LTag.TryParse(vVersionHeader.Value, out var v) ? v : default
-            : default;
+        if (context == null)
+            return null;
+
+        return context.Message.Headers.TryGet(FusionRpcHeaders.Version.Name, out var versionHeader)
+            ? versionHeader.Value
+            : null;
     }
 }

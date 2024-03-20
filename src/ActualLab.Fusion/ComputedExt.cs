@@ -1,5 +1,4 @@
 using ActualLab.Caching;
-using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;

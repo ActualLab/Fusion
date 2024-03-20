@@ -9,6 +9,7 @@ public static class CoarseClockHelper
     public static readonly Moment Start;
     public static readonly long StartEpochOffsetTicks;
 
+    // ReSharper disable once NotAccessedField.Local
     private static readonly Timer Timer;
     private static readonly Stopwatch Stopwatch;
     private static readonly RandomInt64Generator Rng = new();

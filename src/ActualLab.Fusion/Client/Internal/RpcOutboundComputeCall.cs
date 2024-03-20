@@ -5,7 +5,7 @@ namespace ActualLab.Fusion.Client.Internal;
 
 public interface IRpcOutboundComputeCall
 {
-    LTag ResultVersion { get; }
+    string? ResultVersion { get; }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     void SetInvalidated(RpcInboundContext context);
@@ -19,7 +19,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
 
     protected override string DebugTypeName => "=>";
 
-    public LTag ResultVersion { get; protected set; }
+    public string? ResultVersion { get; protected set; }
     // ReSharper disable once InconsistentlySynchronizedField
     public Task WhenInvalidated => WhenInvalidatedSource.Task;
 
@@ -54,8 +54,8 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             }
 
             if (!ResultSource.TrySetResult(typedResult)) {
-                // Result is already set
-                if (context == null || ResultVersion != resultVersion)  // Non-peer set or version mismatch
+                // Result was set earlier; let's check for non-peer set or version mismatch
+                if (resultVersion == null || !resultVersion.Equals(ResultVersion, StringComparison.Ordinal))
                     SetInvalidatedUnsafe(true);
                 return;
             }
@@ -78,8 +78,8 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
                 ? ResultSource.TrySetCanceled(cancellationToken)
                 : ResultSource.TrySetException(error);
             if (!isResultSet) {
-                // Result was set earlier
-                if (context == null || ResultVersion != resultVersion)  // Non-peer set or version mismatch
+                // Result was set earlier; let's check for non-peer set or version mismatch
+                if (resultVersion == null || !resultVersion.Equals(ResultVersion, StringComparison.Ordinal))
                     SetInvalidatedUnsafe(!assumeCancelled);
                 return;
             }

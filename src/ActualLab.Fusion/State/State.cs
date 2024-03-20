@@ -59,7 +59,6 @@ public abstract class State<T> : ComputedInput,
     private string? _category;
     private ILogger? _log;
 
-    protected VersionGenerator<LTag> VersionGenerator { get; set; } = null!;
     protected ComputedOptions ComputedOptions { get; private set; } = null!;
     protected AsyncLock AsyncLock { get; } = new(LockReentryMode.CheckedFail);
     protected object Lock => AsyncLock;
@@ -175,7 +174,6 @@ public abstract class State<T> : ComputedInput,
     {
         _category = settings.Category;
         ComputedOptions = settings.ComputedOptions;
-        VersionGenerator = Services.VersionGenerator<LTag>();
         settings.EventConfigurator?.Invoke(this);
         var untypedOptions = (IState.IOptions) settings;
         untypedOptions.EventConfigurator?.Invoke(this);
@@ -360,5 +358,5 @@ public abstract class State<T> : ComputedInput,
     protected abstract Task<T> Compute(CancellationToken cancellationToken);
 
     protected virtual StateBoundComputed<T> CreateComputed()
-        => new(ComputedOptions, this, VersionGenerator.NextVersion());
+        => new(ComputedOptions, this);
 }

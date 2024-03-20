@@ -3,7 +3,7 @@ namespace ActualLab.Fusion.Internal;
 public interface IComputedImpl : IComputed
 {
     IComputedImpl[] Used { get; }
-    (ComputedInput Input, LTag Version)[] UsedBy { get; }
+    (ComputedInput Input, int Version)[] UsedBy { get; }
 
     void AddUsed(IComputedImpl used);
     bool AddUsedBy(IComputedImpl usedBy); // Should be called only from AddUsed
