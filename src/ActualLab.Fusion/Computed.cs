@@ -38,14 +38,37 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
     // ReSharper disable once InconsistentNaming
     private InvalidatedHandlerSet _invalidated;
 
-    protected ComputedFlags Flags => _flags;
-    protected object Lock => this;
+    protected object Lock {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this;
+    }
 
-    public ComputedOptions Options => _options;
+    protected ComputedFlags Flags {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _flags;
+    }
+
+    // IComputed properties
+
+    public ComputedOptions Options {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _options;
+    }
+
     public ComputedInput Input { get; }
-    public ConsistencyState ConsistencyState => (ConsistencyState)_state;
-    public IFunction<T> Function => (IFunction<T>) Input.Function;
-    public int Version => RuntimeHelpers.GetHashCode(this);
+
+    public ConsistencyState ConsistencyState {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => (ConsistencyState)_state;
+    }
+
+    public IFunction<T> Function => (IFunction<T>)Input.Function;
+
+    public int Version {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => RuntimeHelpers.GetHashCode(this);
+    }
+
     public Type OutputType => typeof(T);
 
     public virtual Result<T> Output {
@@ -59,6 +82,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         get {
             if (_outputAsTask != null)
                 return _outputAsTask;
+
             lock (Lock) {
                 this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
                 return _outputAsTask ??= _output.AsTask();
