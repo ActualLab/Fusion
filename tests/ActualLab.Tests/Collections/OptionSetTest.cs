@@ -13,21 +13,18 @@ public class OptionSetTest
         options = options.PassThroughAllSerializers();
         options.Get<string>().Should().Be("A");
         options.GetOrDefault("").Should().Be("A");
-        options.GetRequiredService<string>().Should().Be("A");
         options.Items.Count.Should().Be(1);
 
         options.Set("B");
         options = options.PassThroughAllSerializers();
         options.Get<string>().Should().Be("B");
         options.GetOrDefault("").Should().Be("B");
-        options.GetRequiredService<string>().Should().Be("B");
         options.Items.Count.Should().Be(1);
 
         options.Remove<string>();
         options = options.PassThroughAllSerializers();
         options.Get<string>().Should().BeNull();
         options.GetOrDefault("").Should().Be("");
-        options.GetService<string?>().Should().Be(null);
         options.Items.Count.Should().Be(0);
 
         options.Set("C");
@@ -49,14 +46,12 @@ public class OptionSetTest
         options = options.PassThroughAllSerializers();
         options.GetOrDefault<long>().Should().Be(1L);
         options.GetOrDefault(-1L).Should().Be(1L);
-        options.GetRequiredService<long>().Should().Be(1L);
         options.Items.Count.Should().Be(1);
 
         options.Set(2L);
         options = options.PassThroughAllSerializers();
         options.GetOrDefault<long>().Should().Be(2L);
         options.GetOrDefault(-1L).Should().Be(2L);
-        options.GetRequiredService<long>().Should().Be(2L);
         options.Items.Count.Should().Be(1);
 
         options.Remove<long>();

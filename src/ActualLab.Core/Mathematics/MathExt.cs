@@ -73,6 +73,8 @@ public static class MathExt
     // Format & parse for arbitrary radix
 
     public static readonly string Digits64 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
+    public static readonly string Digits32 = Digits64[..32];
+    public static readonly string Digits16 = Digits64[..16];
 
     public static string Format(long number, int radix)
         => radix <= 64

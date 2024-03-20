@@ -27,7 +27,11 @@ public partial record Auth_SignOut: ISessionCommand<Unit>
     }
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public Auth_SignOut(Session session, string? kickUserSessionHash, bool kickAllUserSessions, bool force)
+    public Auth_SignOut(
+        Session session,
+        string? kickUserSessionHash,
+        bool kickAllUserSessions,
+        bool force)
     {
         Session = session;
         KickUserSessionHash = kickUserSessionHash;

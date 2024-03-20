@@ -1,13 +1,18 @@
 using System.Collections.Concurrent;
+using System.Text.Json.Serialization;
 using ActualLab.Rpc;
 
 namespace ActualLab.Tests.Rpc;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
 public partial record HelloCommand(
     [property: DataMember, MemoryPackOrder(0)] string Name,
-    [property: DataMember, MemoryPackOrder(1)] TimeSpan Delay = default
-) : ICommand<string>;
+    [property: DataMember, MemoryPackOrder(1)] TimeSpan Delay
+) : ICommand<string>
+{
+    public HelloCommand(string name) : this(name, default) { }
+}
 
 public interface ITestRpcService : ICommandService
 {

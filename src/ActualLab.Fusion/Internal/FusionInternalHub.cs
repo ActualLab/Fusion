@@ -9,7 +9,6 @@ namespace ActualLab.Fusion.Internal;
 
 public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
 {
-    private VersionGenerator<LTag>? _lTagVersionGenerator;
     private VersionGenerator<long>? _longVersionGenerator;
     private CommandServiceInterceptor? _commandServiceInterceptor;
     private ComputeServiceInterceptor? _computeServiceInterceptor;
@@ -18,8 +17,6 @@ public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
     public MomentClockSet Clocks { get; } = services.Clocks();
     public ComputedOptionsProvider ComputedOptionsProvider { get; } = services.GetRequiredService<ComputedOptionsProvider>();
 
-    public VersionGenerator<LTag> LTagVersionGenerator
-        => _lTagVersionGenerator ??= services.GetRequiredService<VersionGenerator<LTag>>();
     public VersionGenerator<long> LongVersionGenerator
         => _longVersionGenerator ??= services.GetRequiredService<VersionGenerator<long>>();
 

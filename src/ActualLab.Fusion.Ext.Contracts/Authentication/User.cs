@@ -30,6 +30,8 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public ImmutableDictionary<UserIdentity, string> Identities { get; init; }
 
+    // Computed properties
+
     [DataMember(Name = nameof(Identities)), MemoryPackOrder(4)]
     [JsonPropertyName(nameof(Identities)),  Newtonsoft.Json.JsonProperty(nameof(Identities))]
     public Dictionary<string, string> JsonCompatibleIdentities {

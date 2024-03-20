@@ -5,30 +5,36 @@ public class ImmutableOptionSetTest
     [Fact]
     public void StringTest()
     {
-        var options = new ImmutableOptionSet();
-        options = options.PassThroughAllSerializers();
-        options.Items.Count.Should().Be(0);
+        var o = new ImmutableOptionSet();
+        o = o.PassThroughAllSerializers();
+        o.Items.Count.Should().Be(0);
+        o.Should().Be(o);
 
-        options = options.Set("A");
-        options = options.PassThroughAllSerializers();
-        options.Get<string>().Should().Be("A");
-        options.GetOrDefault("").Should().Be("A");
-        options.GetRequiredService<string>().Should().Be("A");
-        options.Items.Count.Should().Be(1);
+        var o1 = o.Set("A");
+        o1 = o1.PassThroughAllSerializers();
+        o1.Get<string>().Should().Be("A");
+        o1.GetOrDefault("").Should().Be("A");
+        o1.Items.Count.Should().Be(1);
+        o1.Should().Be(o1);
+        o1.Should().NotBe(o);
 
-        options = options.Set("B");
-        options = options.PassThroughAllSerializers();
-        options.Get<string>().Should().Be("B");
-        options.GetOrDefault("").Should().Be("B");
-        options.GetRequiredService<string>().Should().Be("B");
-        options.Items.Count.Should().Be(1);
+        var o2 = o1.Set("B");
+        o2 = o2.PassThroughAllSerializers();
+        o2.Get<string>().Should().Be("B");
+        o2.GetOrDefault("").Should().Be("B");
+        o2.Items.Count.Should().Be(1);
+        o2.Should().Be(o2);
+        o2.Should().NotBe(o1);
+        o2.Should().NotBe(o);
 
-        options = options.Remove<string>();
-        options = options.PassThroughAllSerializers();
-        options.Get<string>().Should().BeNull();
-        options.GetOrDefault("").Should().Be("");
-        options.GetService<string>().Should().Be(null);
-        options.Items.Count.Should().Be(0);
+        var o3 = o2.Remove<string>();
+        o3 = o3.PassThroughAllSerializers();
+        o3.Get<string>().Should().BeNull();
+        o3.GetOrDefault("").Should().Be("");
+        o3.Items.Count.Should().Be(0);
+        o3.Should().Be(o);
+        o3.Should().NotBe(o1);
+        o3.Should().NotBe(o2);
     }
 
     [Fact]
@@ -45,14 +51,12 @@ public class ImmutableOptionSetTest
         options = options.PassThroughAllSerializers();
         options.GetOrDefault<long>().Should().Be(1L);
         options.GetOrDefault(-1L).Should().Be(1L);
-        options.GetRequiredService<long>().Should().Be(1L);
         options.Items.Count.Should().Be(1);
 
         options = options.Set(2L);
         options = options.PassThroughAllSerializers();
         options.GetOrDefault<long>().Should().Be(2L);
         options.GetOrDefault(-1L).Should().Be(2L);
-        options.GetRequiredService<long>().Should().Be(2L);
         options.Items.Count.Should().Be(1);
 
         options = options.Remove<long>();

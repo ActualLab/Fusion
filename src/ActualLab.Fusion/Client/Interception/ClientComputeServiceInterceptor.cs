@@ -40,7 +40,7 @@ public class ClientComputeServiceInterceptor(
     }
 
     protected override ComputeFunctionBase<T> CreateFunction<T>(ComputeMethodDef method)
-        => new ClientComputeMethodFunction<T>(method, Hub.LTagVersionGenerator, Cache, Services);
+        => new ClientComputeMethodFunction<T>(method, Cache, Services);
 
     protected override void ValidateTypeInternal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)

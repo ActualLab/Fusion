@@ -1,22 +1,16 @@
 namespace ActualLab.Rpc.Infrastructure;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-public partial class RpcMessage(
-    byte callTypeId,
-    long relatedId,
-    string service,
-    string method,
-    TextOrBytes argumentData,
-    List<RpcHeader>? headers)
-{
-    [JsonInclude, DataMember(Order = 0), MemoryPackOrder(0)] public byte CallTypeId = callTypeId;
-    [JsonInclude, DataMember(Order = 1), MemoryPackOrder(1)] public long RelatedId = relatedId;
-    [JsonInclude, DataMember(Order = 2), MemoryPackOrder(2)] public string Service = service;
-    [JsonInclude, DataMember(Order = 3), MemoryPackOrder(3)] public string Method = method;
-    [JsonInclude, DataMember(Order = 4), MemoryPackOrder(4)] public TextOrBytes ArgumentData = argumentData;
-    [JsonInclude, DataMember(Order = 5), MemoryPackOrder(5)] public List<RpcHeader>? Headers = headers;
-
+public sealed partial record RpcMessage(
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] byte CallTypeId,
+    [property: DataMember(Order = 1), MemoryPackOrder(1)] long RelatedId,
+    [property: DataMember(Order = 2), MemoryPackOrder(2)] string Service,
+    [property: DataMember(Order = 3), MemoryPackOrder(3)] string Method,
+    [property: DataMember(Order = 4), MemoryPackOrder(4)] TextOrBytes ArgumentData,
+    [property: DataMember(Order = 5), MemoryPackOrder(5)] List<RpcHeader>? Headers
+) {
     public override string ToString()
     {
         var headers = Headers.OrEmpty();
@@ -24,4 +18,8 @@ public partial class RpcMessage(
             + $"ArgumentData: {ArgumentData.ToString(16)}"
             + (headers.Count > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
     }
+
+    // This record relies on referential equality
+    public bool Equals(RpcMessage? other) => ReferenceEquals(this, other);
+    public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 }

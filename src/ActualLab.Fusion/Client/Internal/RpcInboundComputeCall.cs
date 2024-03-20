@@ -5,8 +5,7 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Client.Internal;
 
-public interface IRpcInboundComputeCall
-{ }
+public interface IRpcInboundComputeCall;
 
 public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInboundComputeCall
 {
@@ -61,7 +60,10 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
             // 3. Retrieve Computed + update ResultHeaders
             computed = Computed;
             if (computed != null) {
-                var versionHeader = FusionRpcHeaders.Version with { Value = computed.Version.ToString() };
+                var versionHeader = FusionRpcHeaders.Version with {
+                    // '@' is required to make it compatible with pre-v7.2 versions
+                    Value = ComputedVersion.Format('@', computed.Version),
+                };
                 ResultHeaders = ResultHeaders.TryAdd(versionHeader);
             }
         }

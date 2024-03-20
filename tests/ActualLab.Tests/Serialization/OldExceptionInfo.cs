@@ -7,8 +7,8 @@ namespace ActualLab.Tests.Serialization;
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
 {
-    private static readonly Type[] ExceptionCtorArgumentTypes1 = { typeof(string), typeof(Exception) };
-    private static readonly Type[] ExceptionCtorArgumentTypes2 = { typeof(string) };
+    private static readonly Type[] ExceptionCtorArgumentTypes1 = [typeof(string), typeof(Exception)];
+    private static readonly Type[] ExceptionCtorArgumentTypes2 = [typeof(string)];
 
     public static readonly OldExceptionInfo None = default;
     public static Func<OldExceptionInfo, Exception?> ToExceptionConverter { get; set; } = DefaultToExceptionConverter;
@@ -27,11 +27,18 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
     public bool HasWrappedTypeRef => !WrappedTypeRef.AssemblyQualifiedName.IsEmpty;
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public OldExceptionInfo(TypeRef typeRef, string? message, TypeRef wrappedTypeRef = default)
+    public OldExceptionInfo(TypeRef typeRef, string? message, TypeRef wrappedTypeRef)
     {
         TypeRef = typeRef;
         _message = message ?? "";
         WrappedTypeRef = wrappedTypeRef;
+    }
+
+    public OldExceptionInfo(TypeRef typeRef, string? message)
+    {
+        TypeRef = typeRef;
+        _message = message ?? "";
+        WrappedTypeRef = default;
     }
 
     public OldExceptionInfo(Exception? exception)

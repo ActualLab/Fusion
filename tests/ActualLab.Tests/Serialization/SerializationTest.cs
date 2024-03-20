@@ -85,15 +85,6 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void LTagSerialization()
-    {
-        default(LTag).AssertPassesThroughAllSerializers(Out);
-        LTag.Default.AssertPassesThroughAllSerializers(Out);
-        new LTag(3).AssertPassesThroughAllSerializers(Out);
-        new LTag(-5).AssertPassesThroughAllSerializers(Out);
-    }
-
-    [Fact]
     public void SymbolSerialization()
     {
         default(Symbol).AssertPassesThroughAllSerializers(Out);
@@ -276,10 +267,10 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     {
         Test<int>(null);
         Test<string>(null);
-        Test(ValueOf.New(1));
-        Test(ValueOf.New("1"));
+        Test(Boxed.New(1));
+        Test(Boxed.New("1"));
 
-        void Test<T>(ValueOf<T>? src) {
+        void Test<T>(Boxed<T>? src) {
             var dst = src.PassThroughAllSerializers(Out);
             if (src == null)
                 dst.Should().BeNull();

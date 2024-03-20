@@ -14,9 +14,7 @@ public record Completion<TCommand>(TCommand Command, IOperation Operation)
     : ICompletion<TCommand>
     where TCommand : class, ICommand
 {
-#if NETSTANDARD2_0
-    ICommand IMetaCommand.UntypedCommand => Command;
-#endif
+    public ICommand UntypedCommand => Command;
 
     public Completion(IOperation operation)
         : this((TCommand)(operation.Command ?? throw Errors.OperationHasNoCommand(nameof(operation))), operation)
@@ -43,5 +41,5 @@ public static class Completion
 
     // Nested types
 
-    private sealed record DummyCommand : ICommand;
+    private sealed record DummyCommand : ICommand<Unit>;
 }

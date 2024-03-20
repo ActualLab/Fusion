@@ -30,10 +30,9 @@ public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
-        LTag version,
         RpcCacheEntry? cacheEntry,
         TaskCompletionSource<Unit>? synchronizedSource = null)
-        : base(options, input, output, version, true, SkipComputedRegistration.Option)
+        : base(options, input, output, true, SkipComputedRegistration.Option)
     {
         CallSource = TaskCompletionSourceExt.New<RpcOutboundComputeCall<T>?>();
         CacheEntry = cacheEntry;
@@ -46,11 +45,10 @@ public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
-        LTag version,
         RpcCacheEntry? cacheEntry,
         RpcOutboundComputeCall<T> call,
         TaskCompletionSource<Unit>? synchronizedSource = null)
-        : base(options, input, output, version, true, SkipComputedRegistration.Option)
+        : base(options, input, output, true, SkipComputedRegistration.Option)
     {
         CallSource = TaskCompletionSourceExt.New<RpcOutboundComputeCall<T>?>().WithResult(call);
         CacheEntry = cacheEntry;

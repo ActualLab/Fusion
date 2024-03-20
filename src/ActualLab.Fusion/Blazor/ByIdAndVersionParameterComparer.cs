@@ -14,13 +14,13 @@ public sealed class ByIdAndVersionParameterComparer<TId, TVersion> : ParameterCo
         if (newValue == null)
             return false;
 
-        var oldVersion = ((IHasVersion<TVersion>) oldValue).Version;
-        var newVersion = ((IHasVersion<TVersion>) newValue).Version;
+        var oldVersion = ((IHasVersion<TVersion>)oldValue).Version;
+        var newVersion = ((IHasVersion<TVersion>)newValue).Version;
         if (!EqualityComparer<TVersion>.Default.Equals(oldVersion, newVersion))
             return false;
 
-        var oldId = ((IHasId<TId>) oldValue).Id;
-        var newId = ((IHasId<TId>) newValue).Id;
+        var oldId = ((IHasId<TId>)oldValue).Id;
+        var newId = ((IHasId<TId>)newValue).Id;
         return EqualityComparer<TId>.Default.Equals(oldId, newId);
     }
 }

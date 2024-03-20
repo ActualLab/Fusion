@@ -12,19 +12,17 @@ public enum DataFormat
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public readonly partial record struct TextOrBytes(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)]
-    DataFormat Format,
-    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
-    ReadOnlyMemory<byte> Data)
-{
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] DataFormat Format,
+    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore] ReadOnlyMemory<byte> Data
+) {
     public static readonly TextOrBytes EmptyBytes = new(DataFormat.Bytes, default!);
     public static readonly TextOrBytes EmptyText = new(DataFormat.Text, default!);
 
     private readonly byte[]? _data; // This field is used solely to avoid .ToArray() calls in Bytes property
 
+    // Computed properties
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public byte[] Bytes => _data ?? Data.ToArray();
-
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public bool IsEmpty => Data.Length == 0;
 

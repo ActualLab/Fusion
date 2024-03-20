@@ -1,5 +1,4 @@
 using ActualLab.Fusion.Internal;
-using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Interception;
 
@@ -8,20 +7,15 @@ public interface IComputedMethodComputed : IComputed;
 
 public class ComputeMethodComputed<T> : Computed<T>, IComputedMethodComputed
 {
-    public ComputeMethodComputed(ComputedOptions options, ComputeMethodInput input, LTag version)
-        : base(options, input, version)
+    public ComputeMethodComputed(ComputedOptions options, ComputeMethodInput input)
+        : base(options, input)
     {
         input.ThrowIfDisposed();
         ComputedRegistry.Instance.Register(this);
     }
 
-    protected ComputeMethodComputed(
-        ComputedOptions options,
-        ComputeMethodInput input,
-        Result<T> output,
-        LTag version,
-        bool isConsistent = true)
-        : base(options, input, output, version, isConsistent)
+    protected ComputeMethodComputed(ComputedOptions options, ComputeMethodInput input, Result<T> output, bool isConsistent = true)
+        : base(options, input, output, isConsistent)
     {
         if (!isConsistent)
             return;
@@ -34,10 +28,9 @@ public class ComputeMethodComputed<T> : Computed<T>, IComputedMethodComputed
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
-        LTag version,
         bool isConsistent,
         SkipComputedRegistration _)
-        : base(options, input, output, version, isConsistent)
+        : base(options, input, output, isConsistent)
     { }
 
     protected override void OnInvalidated()

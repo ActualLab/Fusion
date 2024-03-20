@@ -43,7 +43,7 @@ public static class FusionSettings
         ComputedGraphPrunerBatchSize = cpuCountPo2 * 512;
     }
 
-    private static PrimeSieve GetPrimeSieve(int limit)
+    internal static PrimeSieve GetPrimeSieve(int limit)
         => _primeSieve?.Limit >= limit
             ? _primeSieve
             : _primeSieve = new PrimeSieve(limit);

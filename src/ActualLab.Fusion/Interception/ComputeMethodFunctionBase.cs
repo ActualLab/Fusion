@@ -4,20 +4,17 @@ namespace ActualLab.Fusion.Interception;
 
 public interface IComputeMethodFunction : IComputeFunction;
 
-public abstract class ComputeMethodFunctionBase<T>(ComputeMethodDef methodDef,
-    IServiceProvider services,
-    VersionGenerator<LTag> versionGenerator
+public abstract class ComputeMethodFunctionBase<T>(
+    ComputeMethodDef methodDef,
+    IServiceProvider services
     ) : ComputeFunctionBase<T>(methodDef, services), IComputeMethodFunction
 {
-    protected VersionGenerator<LTag> VersionGenerator = versionGenerator;
-
     protected override async ValueTask<Computed<T>> Compute(
         ComputedInput input, Computed<T>? existing,
         CancellationToken cancellationToken)
     {
         var typedInput = (ComputeMethodInput) input;
-        var version = VersionGenerator.NextVersion(existing?.Version ?? default);
-        var computed = CreateComputed(typedInput, version);
+        var computed = CreateComputed(typedInput);
         try {
             using var _ = Computed.ChangeCurrent(computed);
             var result = typedInput.InvokeOriginalFunction(cancellationToken);
@@ -48,5 +45,5 @@ public abstract class ComputeMethodFunctionBase<T>(ComputeMethodDef methodDef,
         return computed;
     }
 
-    protected abstract Computed<T> CreateComputed(ComputeMethodInput input, LTag tag);
+    protected abstract Computed<T> CreateComputed(ComputeMethodInput input);
 }

@@ -8,7 +8,7 @@ using Errors = ActualLab.Fusion.Internal.Errors;
 
 namespace ActualLab.Fusion;
 
-public interface IComputed : IResult, IHasVersion<LTag>
+public interface IComputed : IResult, IHasVersion<ulong>
 {
     ComputedOptions Options { get; }
     ComputedInput Input { get; }
@@ -34,18 +34,36 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
     private Result<T> _output;
     private Task<T>? _outputAsTask;
     private RefHashSetSlim3<IComputedImpl> _used;
-    private HashSetSlim3<(ComputedInput Input, LTag Version)> _usedBy;
+    private HashSetSlim3<(ComputedInput Input, ulong Version)> _usedBy;
     // ReSharper disable once InconsistentNaming
     private InvalidatedHandlerSet _invalidated;
 
-    protected ComputedFlags Flags => _flags;
-    protected object Lock => this;
+    protected object Lock {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this;
+    }
 
-    public ComputedOptions Options => _options;
+    protected ComputedFlags Flags {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _flags;
+    }
+
+    // IComputed properties
+
+    public ComputedOptions Options {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _options;
+    }
+
     public ComputedInput Input { get; }
-    public ConsistencyState ConsistencyState => (ConsistencyState)_state;
-    public IFunction<T> Function => (IFunction<T>) Input.Function;
-    public LTag Version { get; }
+
+    public ConsistencyState ConsistencyState {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => (ConsistencyState)_state;
+    }
+
+    public IFunction<T> Function => (IFunction<T>)Input.Function;
+    public ulong Version { get; } = ComputedVersion.Next();
     public Type OutputType => typeof(T);
 
     public virtual Result<T> Output {
@@ -59,6 +77,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         get {
             if (_outputAsTask != null)
                 return _outputAsTask;
+
             lock (Lock) {
                 this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
                 return _outputAsTask ??= _output.AsTask();
@@ -104,39 +123,38 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         }
     }
 
-    protected Computed(ComputedOptions options, ComputedInput input, LTag version)
+    protected Computed(ComputedOptions options, ComputedInput input)
     {
         _options = options;
         Input = input;
-        Version = version;
     }
 
-    protected Computed(
-        ComputedOptions options,
-        ComputedInput input,
-        Result<T> output,
-        LTag version,
-        bool isConsistent)
+    protected Computed(ComputedOptions options, ComputedInput input, Result<T> output, bool isConsistent)
     {
         _options = options;
         Input = input;
         _state = (int)(isConsistent ? ConsistencyState.Consistent : ConsistencyState.Invalidated);
         _output = output;
-        Version = version;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Deconstruct(out T value, out Exception? error)
         => Output.Deconstruct(out value, out error);
 
-    public void Deconstruct(out T value, out Exception? error, out LTag version)
+    public void Deconstruct(out T value, out Exception? error, out ulong version)
     {
         Output.Deconstruct(out value, out error);
         version = Version;
     }
 
     public override string ToString()
-        => $"{GetType().GetName()}({Input} {Version}, State: {ConsistencyState})";
+        => $"{GetType().GetName()}({Input} v.{ComputedVersion.Format(Version)}, State: {ConsistencyState})";
+
+    // GetHashCode
+
+    public override int GetHashCode() => (int)Version;
+
+    // TrySetOutput
 
     public bool TrySetOutput(Result<T> output)
     {
@@ -158,6 +176,8 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         StartAutoInvalidation();
         return true;
     }
+
+    // Invalidate
 
     public void Invalidate(bool immediately = false)
     {
@@ -310,10 +330,10 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         }
     }
 
-    (ComputedInput Input, LTag Version)[] IComputedImpl.UsedBy => UsedBy;
-    protected internal (ComputedInput Input, LTag Version)[] UsedBy {
+    (ComputedInput Input, ulong Version)[] IComputedImpl.UsedBy => UsedBy;
+    protected internal (ComputedInput Input, ulong Version)[] UsedBy {
         get {
-            var result = new (ComputedInput Input, LTag Version)[_usedBy.Count];
+            var result = new (ComputedInput Input, ulong Version)[_usedBy.Count];
             lock (Lock) {
                 _usedBy.CopyTo(result);
                 return result;
@@ -387,7 +407,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
                 // _used/_usedBy once invalidation flag is set
                 return (0, 0);
 
-            var replacement = new HashSetSlim3<(ComputedInput Input, LTag Version)>();
+            var replacement = new HashSetSlim3<(ComputedInput Input, ulong Version)>();
             var oldCount = _usedBy.Count;
             foreach (var entry in _usedBy.Items) {
                 var c = entry.Input.GetExistingComputed();

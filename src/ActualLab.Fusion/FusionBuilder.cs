@@ -68,7 +68,6 @@ public readonly struct FusionBuilder
         services.AddConverters();
         services.TryAddSingleton(_ => MomentClockSet.Default);
         services.TryAddSingleton(c => c.GetRequiredService<MomentClockSet>().SystemClock);
-        services.TryAddSingleton(_ => LTagVersionGenerator.Default);
         services.TryAddSingleton(_ => ClockBasedVersionGenerator.DefaultCoarse);
         services.TryAddSingleton(c => new FusionInternalHub(c));
 

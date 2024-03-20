@@ -19,14 +19,12 @@ public interface IClientComputeMethodFunction : IComputeMethodFunction
 
 public class ClientComputeMethodFunction<T>(
     ComputeMethodDef methodDef,
-    VersionGenerator<LTag> versionGenerator,
     IClientComputedCache? cache,
     IServiceProvider services
     ) : ComputeFunctionBase<T>(methodDef, services), IClientComputeMethodFunction
 {
     private string? _toString;
 
-    protected readonly VersionGenerator<LTag> VersionGenerator = versionGenerator;
     protected readonly IClientComputedCache? Cache = cache;
 
     public override string ToString()
@@ -60,7 +58,7 @@ public class ClientComputeMethodFunction<T>(
         var synchronizedSource = existing?.SynchronizedSource ?? AlwaysSynchronized.Source;
         return new ClientComputed<T>(
             input.MethodDef.ComputedOptions,
-            input, result, VersionGenerator.NextVersion(),
+            input, result,
             cacheEntry, call, synchronizedSource);
     }
 
@@ -84,7 +82,7 @@ public class ClientComputeMethodFunction<T>(
         var cacheEntry = new RpcCacheEntry(cacheKey, cacheResult.Data);
         var cachedComputed = new ClientComputed<T>(
             input.MethodDef.ComputedOptions,
-            input, cacheResult.Value, VersionGenerator.NextVersion(),
+            input, cacheResult.Value,
             cacheEntry);
 
         // We suppress execution context flow here to ensure that
@@ -103,7 +101,7 @@ public class ClientComputeMethodFunction<T>(
         return cachedComputed;
     }
 
-    private async Task ApplyRpcUpdate(
+    private static async Task ApplyRpcUpdate(
         ComputeMethodInput input,
         IClientComputedCache cache,
         ClientComputed<T> cachedComputed)
@@ -145,7 +143,7 @@ public class ClientComputeMethodFunction<T>(
         // 6. Create the new computed - it invalidates the cached one upon registering
         var computed = new ClientComputed<T>(
             input.MethodDef.ComputedOptions,
-            input, result, VersionGenerator.NextVersion(),
+            input, result,
             cacheEntry, call, synchronizedSource);
         computed.RenewTimeouts(true);
     }

@@ -9,7 +9,7 @@ public class ComputeServiceInterceptor(ComputeServiceInterceptor.Options setting
     public new record Options : ComputeServiceInterceptorBase.Options;
 
     protected override ComputeFunctionBase<T> CreateFunction<T>(ComputeMethodDef method)
-        => new ComputeMethodFunction<T>(method, Services, Hub.LTagVersionGenerator);
+        => new ComputeMethodFunction<T>(method, Services);
 
     protected override void ValidateTypeInternal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
