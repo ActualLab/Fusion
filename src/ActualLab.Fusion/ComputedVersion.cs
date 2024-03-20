@@ -80,7 +80,7 @@ public static class ComputedVersion
 
     // Nested types
 
-    private class LocalVersion
+    private sealed class LocalVersion
     {
         private long _version;
 

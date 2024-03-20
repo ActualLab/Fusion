@@ -44,7 +44,7 @@ public class ClientComputeMethodFunction<T>(
             : ComputeRpc(typedInput, cache, (ClientComputed<T>)existing!, cancellationToken).ToValueTask();
     }
 
-    private async Task<Computed<T>> ComputeRpc(
+    private static async Task<Computed<T>> ComputeRpc(
         ComputeMethodInput input,
         IClientComputedCache? cache,
         ClientComputed<T>? existing,
