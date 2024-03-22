@@ -4,39 +4,6 @@ using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Concurrency;
 
-public class LazySlimTest(ITestOutputHelper @out) : TestBase(@out)
-{
-    [Fact]
-    public void BasicTest()
-    {
-        var fn = JustOnce();
-        var l = (ILazySlim<Unit>)LazySlim.New(fn);
-        _ = l.Value;
-        _ = l.Value;
-
-        fn = JustOnce();
-        // ReSharper disable once HeapView.CanAvoidClosure
-        l = LazySlim.New(0, _ => fn());
-        _ = l.Value;
-        _ = l.Value;
-
-        fn = JustOnce();
-        // ReSharper disable once HeapView.CanAvoidClosure
-        l = LazySlim.New(0, 1, (_, _) => fn());
-        _ = l.Value;
-        _ = l.Value;
-    }
-
-    private Func<Unit> JustOnce()
-    {
-        var count = 0;
-        return () => {
-            Interlocked.Increment(ref count).Should().Be(1);
-            return default;
-        };
-    }
-}
-
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class StochasticCounterTest(ITestOutputHelper @out) : TestBase(@out)
 {
@@ -65,7 +32,6 @@ public class StochasticCounterTest(ITestOutputHelper @out) : TestBase(@out)
         var c = new StochasticCounter(StochasticCounter.DefaultPrecision);
         c.Precision.Should().Be(HardwareInfo.ProcessorCountPo2);
         c.Value.Should().Be(0);
-
 
         const int iterationCount = 5_000_000;
         const int runCount = 10;

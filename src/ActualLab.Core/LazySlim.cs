@@ -1,4 +1,4 @@
-namespace ActualLab.Concurrency;
+namespace ActualLab;
 
 #pragma warning disable CA2002, RCS1059
 
@@ -12,6 +12,7 @@ public static class LazySlim
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static LazySlim<TValue> New<TValue>(TValue value)
         => new(value);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static LazySlim<TValue> New<TValue>(Func<TValue> factory)
         => new(factory);

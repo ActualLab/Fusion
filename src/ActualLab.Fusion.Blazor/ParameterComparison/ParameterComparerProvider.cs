@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Concurrency;
 using ActualLab.Internal;
 
 namespace ActualLab.Fusion.Blazor;

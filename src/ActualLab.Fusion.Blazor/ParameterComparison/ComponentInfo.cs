@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Concurrency;
 using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
