@@ -46,6 +46,7 @@ public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLeve
             var asyncLock = entry.TryBeginUse();
             if (asyncLock != null)
                 return (asyncLock, entry);
+
             spinWait.SpinOnce(); // Safe for WASM
         }
     }

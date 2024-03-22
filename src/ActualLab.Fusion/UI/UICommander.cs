@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Fusion.UI;
 
 public class UICommander(IServiceProvider services) : IHasServices

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Concurrency;
 using ActualLab.Plugins.Internal;
 
 namespace ActualLab.Plugins;
@@ -26,7 +27,7 @@ public interface IPluginInfoProvider
 
 public class PluginInfoProvider : IPluginInfoProvider
 {
-    private readonly ConcurrentDictionary<Type, object?> _pluginCache = new();
+    private readonly ConcurrentDictionary<Type, LazySlim<Type, object?>> _pluginCache = new();
 
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     public virtual ImmutableHashSet<TypeRef> GetDependencies(Type pluginType)
@@ -50,13 +51,13 @@ public class PluginInfoProvider : IPluginInfoProvider
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     protected virtual object? GetPlugin(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type pluginType)
-        => _pluginCache.GetOrAdd(pluginType, static (type, self) => {
+        => _pluginCache.GetOrAdd(pluginType, static pluginType1 => {
 #pragma warning disable IL2070
-            var ctor = type.GetConstructor([typeof(IPluginInfoProvider.Query)]);
+            var ctor = pluginType1.GetConstructor([typeof(IPluginInfoProvider.Query)]);
             if (ctor != null)
                 return ctor.Invoke([IPluginInfoProvider.Query.Instance]);
-            ctor = type.GetConstructor(Type.EmptyTypes);
+            ctor = pluginType1.GetConstructor(Type.EmptyTypes);
             return ctor?.Invoke(Array.Empty<object>());
 #pragma warning restore IL2070
-        }, this);
+        });
 }

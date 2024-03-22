@@ -42,9 +42,10 @@
 // ReSharper disable ArrangeConstructorOrDestructorBody
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
-using Stl.Internal;
+using ActualLab.Concurrency;
+using ActualLab.Internal;
 
-namespace Stl.Interception;
+namespace ActualLab.Interception;
 
 #pragma warning disable MA0012
 #pragma warning disable CA2201

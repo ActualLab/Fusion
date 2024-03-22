@@ -1,8 +1,9 @@
-﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
+// ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable ArrangeConstructorOrDestructorBody
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
+using ActualLab.Concurrency;
 using ActualLab.Internal;
 
 namespace ActualLab.Interception;

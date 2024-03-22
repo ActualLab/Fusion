@@ -1,11 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Concurrency;
 using ActualLab.Internal;
 
 namespace ActualLab.Fusion.Blazor;
 
 public class ParameterComparerProvider
 {
-    private static readonly ConcurrentDictionary<Type, ParameterComparer> Cache = new();
+    private static readonly ConcurrentDictionary<Type, LazySlim<Type, ParameterComparer>> Cache = new();
 
     public static ParameterComparerProvider Instance { get; set; } = new();
 

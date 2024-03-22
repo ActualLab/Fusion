@@ -1,6 +1,4 @@
-using ActualLab.DependencyInjection.Internal;
 using ActualLab.Interception;
-using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.Reflection;
 using ActualLab.Rpc.Infrastructure;
@@ -121,7 +119,6 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             hs.RemotePeerId.Should().Be(h.RemotePeerId);
         }
     }
-
 
     [Fact]
     public void RpcObjectIdSerialization()
@@ -260,22 +257,5 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         s = s.Set((1, "X"));
         var s1 = s.PassThroughAllSerializers(Out);
         s1.Items.Should().BeEquivalentTo(s.Items);
-    }
-
-    [Fact]
-    public void ValueOfSerialization()
-    {
-        Test<int>(null);
-        Test<string>(null);
-        Test(Boxed.New(1));
-        Test(Boxed.New("1"));
-
-        void Test<T>(Boxed<T>? src) {
-            var dst = src.PassThroughAllSerializers(Out);
-            if (src == null)
-                dst.Should().BeNull();
-            else
-                dst!.Value.Should().Be(src.Value);
-        }
     }
 }

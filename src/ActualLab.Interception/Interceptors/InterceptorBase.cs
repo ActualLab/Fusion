@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Concurrency;
 
 namespace ActualLab.Interception.Interceptors;
 

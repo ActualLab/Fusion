@@ -1,10 +1,13 @@
 using System.Reflection.Emit;
+using ActualLab.Concurrency;
 
 namespace ActualLab.Interception;
 
 public abstract partial record ArgumentList
 {
-    protected static readonly ConcurrentDictionary<(Type, MethodInfo), Func<object, ArgumentList, object?>> InvokerCache = new();
+    protected static readonly ConcurrentDictionary<
+        (Type, MethodInfo),
+        LazySlim<(Type, MethodInfo), Func<object, ArgumentList, object?>>> InvokerCache = new();
 
     public static readonly ArgumentList Empty = new ArgumentList0();
 

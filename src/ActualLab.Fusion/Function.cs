@@ -1,5 +1,5 @@
+using ActualLab.Concurrency;
 using ActualLab.Fusion.Internal;
-using ActualLab.Internal;
 using ActualLab.Locking;
 
 namespace ActualLab.Fusion;
@@ -33,10 +33,10 @@ public abstract class FunctionBase<T>(IServiceProvider services) : IFunction<T>
     protected static AsyncLockSet<ComputedInput> InputLocks => ComputedRegistry.Instance.InputLocks;
 
     private ILogger? _log;
-    private Boxed<ILogger?>? _debugLog;
+    private LazySlim<ILogger?>? _debugLog;
 
     protected ILogger Log => _log ??= Services.LogFor(GetType());
-    protected ILogger? DebugLog => (_debugLog ??= Boxed.New(Log.IfEnabled(LogLevel.Debug))).Value;
+    protected ILogger? DebugLog => (_debugLog ??= LazySlim.New(Log.IfEnabled(LogLevel.Debug))).Value;
 
     public IServiceProvider Services { get; } = services;
 

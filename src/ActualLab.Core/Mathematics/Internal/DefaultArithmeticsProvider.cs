@@ -5,7 +5,7 @@ public class DefaultArithmeticsProvider : ArithmeticsProvider
     private readonly ConcurrentDictionary<Type, IArithmetics> _cache = new();
 
     public sealed override Arithmetics<T> Get<T>()
-        => (Arithmetics<T>) _cache.GetOrAdd(typeof(T), Create);
+        => (Arithmetics<T>)_cache.GetOrAdd(typeof(T), Create);
 
     public static IArithmetics Create(Type type)
         => type switch {

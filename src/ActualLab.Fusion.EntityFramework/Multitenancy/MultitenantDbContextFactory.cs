@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Concurrency;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Locking;
 using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.EntityFramework;
@@ -16,7 +18,10 @@ public class MultitenantDbContextFactory<
         public Action<IServiceProvider, Tenant, ServiceCollection> DbServiceCollectionBuilder { get; init; } = null!;
     }
 
-    private readonly ConcurrentDictionary<Symbol, IDbContextFactory<TDbContext>> _factories = new();
+    private readonly ConcurrentDictionary<
+        Symbol,
+        LazySlim<(MultitenantDbContextFactory<TDbContext> Self, Tenant Tenant), IDbContextFactory<TDbContext>>>
+        _factories = new();
     private ITenantRegistry<TDbContext>? _tenantRegistry;
 
     protected Options Settings { get; } = settings;
@@ -36,7 +41,7 @@ public class MultitenantDbContextFactory<
     // Protected methods
 
     protected virtual IDbContextFactory<TDbContext> GetDbContextFactory(Tenant tenant)
-        => _factories.GetOrAdd(tenant.Id, static (_, state) => {
+        => _factories.GetOrAdd(tenant.Id, static state => {
             var (self, tenant1) = state;
             var services = new ServiceCollection();
             self.Settings.DbServiceCollectionBuilder.Invoke(self.Services, tenant1, services);

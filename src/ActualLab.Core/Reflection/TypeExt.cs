@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
+using ActualLab.Concurrency;
 using Cysharp.Text;
 
 namespace ActualLab.Reflection;
@@ -24,9 +25,9 @@ public static partial class TypeExt
 #endif
 
     private static readonly ConcurrentDictionary<Type, Type> NonProxyTypeCache = new();
-    private static readonly ConcurrentDictionary<(Type, bool, bool), Symbol> GetNameCache = new();
-    private static readonly ConcurrentDictionary<(Type, bool, bool), Symbol> ToIdentifierNameCache = new();
-    private static readonly ConcurrentDictionary<Type, Symbol> ToSymbolCache = new();
+    private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), Symbol>> GetNameCache = new();
+    private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), Symbol>> ToIdentifierNameCache = new();
+    private static readonly ConcurrentDictionary<Type, LazySlim<Type, Symbol>> ToSymbolCache = new();
     private static readonly ConcurrentDictionary<Type, Type?> GetTaskOrValueTaskTypeCache = new();
     private static Func<Type, Type> _nonProxyTypeResolver = DefaultNonProxyTypeResolver;
 

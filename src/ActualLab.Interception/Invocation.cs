@@ -33,17 +33,15 @@ public readonly record struct Invocation(
     }
 
     public object? InterceptedUntyped()
-        => InterceptedUntypedCache
-            .GetOrAdd(Method.ReturnType, static returnType => {
-                return returnType == typeof(void)
-                    ? invocation => {
-                        invocation.Intercepted();
-                        return null;
-                    }
-                    : (Func<Invocation, object?>)InterceptedUntypedMethod
-                        .MakeGenericMethod(returnType)
-                        .CreateDelegate(typeof(Func<Invocation, object?>));
-            }).Invoke(this);
+        => InterceptedUntypedCache.GetOrAdd(Method.ReturnType,
+            static returnType => returnType == typeof(void)
+                ? invocation => {
+                    invocation.Intercepted();
+                    return null;
+                }
+                : (Func<Invocation, object?>)InterceptedUntypedMethod
+                    .MakeGenericMethod(returnType)
+                    .CreateDelegate(typeof(Func<Invocation, object?>))).Invoke(this);
 
     // Private methods
 
