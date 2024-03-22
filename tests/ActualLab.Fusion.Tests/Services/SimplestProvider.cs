@@ -27,7 +27,7 @@ public interface ISimplestProvider
 
 public class SimplestProvider : ISimplestProvider, IHasId<Type>, IComputeService, IHasIsDisposed
 {
-    private static volatile string _value = "";
+    private static string _value = "";
     private readonly bool _isCaching;
 
     public Type Id => GetType();
@@ -47,7 +47,7 @@ public class SimplestProvider : ISimplestProvider, IHasId<Type>, IComputeService
     public virtual Task<string> GetValue()
     {
         GetValueCallCount++;
-        return Task.FromResult(_value);
+        return Task.FromResult(Volatile.Read(ref _value));
     }
 
     public virtual async Task<int> GetCharCount()
