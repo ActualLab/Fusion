@@ -24,19 +24,19 @@ public abstract class AppBase
 
         var commander = services.Commander();
 
-        var pApple = new Product { Id = "apple", Price = 2M };
-        var pBanana = new Product { Id = "banana", Price = 0.5M };
-        var pCarrot = new Product { Id = "carrot", Price = 1M };
+        var pApple = new Product("apple", 2);
+        var pBanana = new Product("banana", 0.5M);
+        var pCarrot = new Product("carrot", 1);
         ExistingProducts = [pApple, pBanana, pCarrot];
         foreach (var product in ExistingProducts)
             await commander.Call(new EditCommand<Product>(product));
 
-        var cart1 = new Cart() { Id = "cart:apple=1,banana=2",
+        var cart1 = new Cart("cart:apple=1,banana=2") {
             Items = ImmutableDictionary<string, decimal>.Empty
                 .Add(pApple.Id, 1)
                 .Add(pBanana.Id, 2)
         };
-        var cart2 = new Cart() { Id = "cart:banana=1,carrot=1",
+        var cart2 = new Cart("cart:banana=1,carrot=1") {
             Items = ImmutableDictionary<string, decimal>.Empty
                 .Add(pBanana.Id, 1)
                 .Add(pCarrot.Id, 1)

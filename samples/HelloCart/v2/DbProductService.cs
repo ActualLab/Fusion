@@ -40,6 +40,6 @@ public class DbProductService : IProductService
         var dbProduct = await dbContext.Products.FindAsync(DbKey.Compose(id), cancellationToken);
         if (dbProduct == null)
             return null;
-        return new Product() { Id = dbProduct.Id, Price = dbProduct.Price };
+        return new Product(dbProduct.Id, dbProduct.Price);
     }
 }

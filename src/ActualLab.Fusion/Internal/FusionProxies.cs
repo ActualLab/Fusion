@@ -28,29 +28,29 @@ public static class FusionProxies
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType)
     {
         var rpcHub = services.RpcHub();
-        var client = RpcProxies.NewClientProxy(services, serviceType, serviceType);
+        var client = RpcProxies.NewClientProxy(services, serviceType);
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
 
-        var clientInterceptor = services.GetRequiredService<ClientComputeServiceInterceptor>();
-        clientInterceptor.Setup(serviceDef);
-        clientInterceptor.ValidateType(serviceType);
-        var clientProxy = Proxies.New(serviceType, clientInterceptor, client);
+        var interceptor = services.GetRequiredService<ClientComputeServiceInterceptor>();
+        interceptor.Setup(serviceDef);
+        interceptor.ValidateType(serviceType);
+        var clientProxy = Proxies.New(serviceType, interceptor, client);
         return clientProxy;
     }
 
-    public static object NewRoutingProxy(
+    public static object NewSwitchProxy(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        ServiceResolver serverResolver)
+        ServiceResolver localServiceResolver)
     {
         var rpcHub = services.RpcHub();
-        var server = serverResolver.Resolve(services);
+        var localService = localServiceResolver.Resolve(services);
         var client = NewClientProxy(services, serviceType);
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
 
-        var routingInterceptor = services.GetRequiredService<RpcRoutingInterceptor>();
-        routingInterceptor.Setup(serviceDef, server, client);
-        var routingProxy = Proxies.New(serviceType, routingInterceptor);
-        return routingProxy;
+        var interceptor = services.GetRequiredService<RpcSwitchInterceptor>();
+        interceptor.Setup(serviceDef, localService, client);
+        var proxy = Proxies.New(serviceType, interceptor);
+        return proxy;
     }
 }

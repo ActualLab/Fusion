@@ -4,10 +4,9 @@ public enum RpcServiceMode
 {
     Default = 0,
     None,
+    Switch,
     Server,
-    Router,
-    RoutingServer,
-    ServingRouter,
+    ServerSwitch,
 }
 
 public static class RpcServiceShareModeExt

@@ -4,6 +4,7 @@ using System.Text.Encodings.Web;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.WebSockets;
+using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Clients;
 
@@ -22,12 +23,14 @@ public class RpcWebSocketClient(
             = DefaultConnectionUriResolver;
         public Func<RpcWebSocketClient, RpcClientPeer, WebSocketOwner> WebSocketOwnerFactory { get; init; }
             = DefaultWebSocketOwnerFactory;
-        public WebSocketChannel<RpcMessage>.Options WebSocketChannelOptions { get; init; }
-            = WebSocketChannel<RpcMessage>.Options.Default;
 
         public string RequestPath { get; init; } = "/rpc/ws";
         public string BackendRequestPath { get; init; } = "/backend/rpc/ws";
         public string ClientIdParameterName { get; init; } = "clientId";
+#pragma warning disable IL2026
+        public Func<RpcWebSocketClient, WebSocketOwner, ImmutableOptionSet, WebSocketChannel<RpcMessage>>
+            WebSocketChannelFactory { get; init; } = DefaultWebSocketChannelFactory;
+#pragma warning restore IL2026
 
         public static string DefaultHostUrlResolver(RpcWebSocketClient client, RpcClientPeer peer)
             => peer.Ref.Key.Value;
@@ -62,18 +65,23 @@ public class RpcWebSocketClient(
 
         public static WebSocketOwner DefaultWebSocketOwnerFactory(RpcWebSocketClient client, RpcClientPeer peer)
             => new(peer.Ref.Key, new ClientWebSocket(), client.Services);
+
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public static WebSocketChannel<RpcMessage> DefaultWebSocketChannelFactory(
+            RpcWebSocketClient client, WebSocketOwner webSocketOwner, ImmutableOptionSet options)
+            => new(WebSocketChannel<RpcMessage>.Options.Default, webSocketOwner);
     }
 
     public Options Settings { get; } = settings;
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override Task<RpcConnection> Connect(RpcClientPeer peer, CancellationToken cancellationToken)
     {
         var uri = Settings.ConnectionUriResolver(this, peer);
         return Connect(peer, uri, cancellationToken);
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public virtual async Task<RpcConnection> Connect(
         RpcClientPeer peer, Uri uri, CancellationToken cancellationToken)
     {
@@ -112,12 +120,12 @@ public class RpcWebSocketClient(
             throw;
         }
 
-        var channel = new WebSocketChannel<RpcMessage>(Settings.WebSocketChannelOptions, webSocketOwner);
         var options = ImmutableOptionSet.Empty
             .Set((RpcPeer)peer)
             .Set(uri)
             .Set(webSocketOwner)
             .Set(webSocketOwner.WebSocket);
+        var channel = Settings.WebSocketChannelFactory.Invoke(this, webSocketOwner, options);
         return new RpcConnection(channel, options);
     }
 }

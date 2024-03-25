@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using ActualLab.Fusion.Interception;
+using ActualLab.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
@@ -51,7 +52,7 @@ public abstract class ClientComputedCache : RpcServiceBase, IClientComputedCache
         Set(VersionKey, expectedValue);
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async ValueTask<(T Value, TextOrBytes Data)?> Get<T>(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
     {
         var serviceDef = Hub.ServiceRegistry.Get(key.Service);

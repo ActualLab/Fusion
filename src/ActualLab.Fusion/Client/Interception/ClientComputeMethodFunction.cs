@@ -4,18 +4,16 @@ using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
-using ActualLab.Internal;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Versioning;
 using Errors = ActualLab.Internal.Errors;
+using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD103
 
-public interface IClientComputeMethodFunction : IComputeMethodFunction
-{ }
+public interface IClientComputeMethodFunction : IComputeMethodFunction;
 
 public class ClientComputeMethodFunction<T>(
     ComputeMethodDef methodDef,
@@ -30,7 +28,7 @@ public class ClientComputeMethodFunction<T>(
     public override string ToString()
         => _toString ??= ZString.Concat('*', base.ToString());
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
 #pragma warning disable IL2046
     protected override ValueTask<Computed<T>> Compute(
 #pragma warning restore IL2046
@@ -62,8 +60,8 @@ public class ClientComputeMethodFunction<T>(
             cacheEntry, call, synchronizedSource);
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    private async ValueTask<Computed<T>> ComputeCachedOrRpc(
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    private static async ValueTask<Computed<T>> ComputeCachedOrRpc(
         ComputeMethodInput input,
         IClientComputedCache cache,
         CancellationToken cancellationToken)
@@ -216,11 +214,9 @@ public class ClientComputeMethodFunction<T>(
         scope.Context.CacheInfoCapture = cacheInfoCapture;
         input.InvokeOriginalFunction(cancellationToken);
         var call = (RpcOutboundComputeCall<T>?)scope.Context.Call;
-        if (call == null)
-            throw Errors.InternalError(
-                "No call is sent, which means the service behind this proxy isn't an RPC client proxy (misconfiguration), " +
-                "or RpcPeerResolver routes the call to a local service, which shouldn't happen at this point.");
-        return call;
+        return call ?? throw Errors.InternalError(
+            "No call is sent, which means the service behind this proxy isn't an RPC client proxy (misconfiguration), " +
+            "or RpcPeerResolver routed the call to a local service, which shouldn't happen at this point.");
     }
 
     private static RpcCacheEntry? UpdateCache(

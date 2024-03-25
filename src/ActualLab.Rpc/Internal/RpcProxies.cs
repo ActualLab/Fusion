@@ -9,30 +9,31 @@ public static class RpcProxies
     public static object NewClientProxy(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type clientType)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type? proxyType = null)
     {
         var rpcHub = services.RpcHub();
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
+        proxyType ??= serviceType;
 
         var interceptor = services.GetRequiredService<RpcClientInterceptor>();
         interceptor.Setup(serviceDef);
-        var proxy = Proxies.New(clientType, interceptor);
+        var proxy = Proxies.New(proxyType, interceptor);
         return proxy;
     }
 
-    public static object NewRoutingProxy(
+    public static object NewSwitchProxy(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        ServiceResolver serverResolver)
+        ServiceResolver localServiceResolver)
     {
         var rpcHub = services.RpcHub();
-        var server = serverResolver.Resolve(services);
-        var client = NewClientProxy(services, serviceType, serviceType);
+        var localService = localServiceResolver.Resolve(services);
+        var client = NewClientProxy(services, serviceType);
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
 
-        var routingInterceptor = services.GetRequiredService<RpcRoutingInterceptor>();
-        routingInterceptor.Setup(serviceDef, server, client);
-        var routingProxy = Proxies.New(serviceType, routingInterceptor);
-        return routingProxy;
+        var interceptor = services.GetRequiredService<RpcSwitchInterceptor>();
+        interceptor.Setup(serviceDef, localService, client);
+        var proxy = Proxies.New(serviceType, interceptor);
+        return proxy;
     }
 }

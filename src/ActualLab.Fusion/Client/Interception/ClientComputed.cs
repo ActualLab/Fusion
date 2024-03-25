@@ -4,6 +4,7 @@ using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Rpc.Caching;
+using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Fusion.Client.Interception;
 
@@ -61,11 +62,11 @@ public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
         StartAutoInvalidation();
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     ~ClientComputed()
         => Dispose();
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
 #pragma warning disable IL2046
     public void Dispose()
 #pragma warning restore IL2046

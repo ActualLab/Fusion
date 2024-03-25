@@ -24,7 +24,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
     private RpcWebHost? _webHost;
     private ILogger? _log;
 
-    public TimeSpan WebSocketWriteDelay { get; set; } = TimeSpan.FromMilliseconds(1);
+    public Func<Task>? WebSocketWriteDelayFactory { get; set; } = () => Task.Delay(1);
     public bool UseLogging { get; init; } = true;
     public bool UseTestClock { get; init; }
     public bool IsLogEnabled { get; init; } = true;
@@ -118,15 +118,18 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
         if (!isClient) {
             services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly) {
                 ExposeBackend = ExposeBackend,
-                WebSocketWriteDelay = WebSocketWriteDelay,
+                WebSocketWriteDelayFactory = WebSocketWriteDelayFactory,
             });
         }
         else {
             rpc.AddWebSocketClient(_ => RpcWebSocketClient.Options.Default with {
                 HostUrlResolver = (_, _) => WebHost.ServerUri.ToString(),
-                WebSocketChannelOptions = WebSocketChannel<RpcMessage>.Options.Default with {
-                    WriteDelay = WebSocketWriteDelay,
-                },
+                WebSocketChannelFactory = (client, webSocketOwner, options) => {
+                    var channelOptions = WebSocketChannel<RpcMessage>.Options.Default with {
+                        WriteDelayFactory = WebSocketWriteDelayFactory,
+                    };
+                    return new WebSocketChannel<RpcMessage>(channelOptions, webSocketOwner);
+                }
             });
             services.AddSingleton<RpcCallRouter>(_ => {
                 RpcHub? rpcHub = null;

@@ -60,8 +60,7 @@ public class DbCartService2(
     public virtual async Task<Cart?> Get(string id, CancellationToken cancellationToken = default)
     {
         var dbCart = await cartResolver.Get(id, cancellationToken);
-        return dbCart == null ? null : new Cart() {
-            Id = dbCart.Id,
+        return dbCart == null ? null : new Cart(dbCart.Id) {
             Items = dbCart.Items.ToImmutableDictionary(i => i.DbProductId, i => i.Quantity),
         };
     }

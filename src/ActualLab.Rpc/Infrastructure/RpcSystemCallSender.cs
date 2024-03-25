@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
+using ActualLab.Internal;
+using static ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -52,7 +54,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
 
     // Handshake
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Handshake(
         RpcPeer peer,
         ChannelWriter<RpcMessage> sender, // Handshake is sent before exposing the Sender, so we pass it directly
@@ -68,7 +70,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
 
     // Regular calls
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Complete<TResult>(RpcPeer peer, long callId,
         Result<TResult> result, bool allowPolymorphism,
         List<RpcHeader>? headers = null)
@@ -76,7 +78,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
             ? Ok(peer, callId, value, allowPolymorphism, headers)
             : Error(peer, callId, result.Error!, headers);
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Ok<TResult>(RpcPeer peer, long callId,
         TResult result, bool allowPolymorphism,
         List<RpcHeader>? headers = null)
@@ -102,7 +104,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         }
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Error(RpcPeer peer, long callId, Exception error, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
@@ -113,7 +115,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         return call.SendNoWait(false);
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Cancel(RpcPeer peer, long callId, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
@@ -126,7 +128,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
 
     // Objects
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task KeepAlive(RpcPeer peer, long[] localIds, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
@@ -136,7 +138,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         return call.SendNoWait(false);
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Disconnect(RpcPeer peer, long[] localIds, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
@@ -148,7 +150,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
 
     // Streams
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Ack(RpcPeer peer, long localId, long nextIndex, Guid hostId, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
@@ -159,7 +161,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         return call.SendNoWait(false);
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task AckEnd(RpcPeer peer, long localId, Guid hostId, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
@@ -170,7 +172,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         return call.SendNoWait(false);
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Item<TItem>(RpcPeer peer, long localId, long index, TItem item, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
@@ -181,7 +183,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         return call.SendNoWait(true);
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Batch<TItem>(RpcPeer peer, long localId, long index, TItem[] items, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
@@ -192,7 +194,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         return call.SendNoWait(true);
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task End(RpcPeer peer, long localId, long index, Exception? error, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {

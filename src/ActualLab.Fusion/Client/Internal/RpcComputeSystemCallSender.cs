@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
+using ActualLab.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 
@@ -19,7 +20,7 @@ public sealed class RpcComputeSystemCallSender(IServiceProvider services)
     private RpcMethodDef InvalidateMethodDef => _invalidateMethodDef
         ??= ComputeSystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcComputeSystemCalls.Invalidate)));
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Invalidate(RpcPeer peer, long callId, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {

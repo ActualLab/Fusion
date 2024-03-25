@@ -36,9 +36,6 @@ public class DbProductService2(
     public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)
     {
         var dbProduct = await productResolver.Get(id, cancellationToken);
-        return dbProduct == null ? null : new Product() {
-            Id = dbProduct.Id,
-            Price = dbProduct.Price
-        };
+        return dbProduct == null ? null : new Product(dbProduct.Id, dbProduct.Price);
     }
 }

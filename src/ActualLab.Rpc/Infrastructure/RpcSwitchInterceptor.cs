@@ -4,7 +4,7 @@ using ActualLab.Interception.Interceptors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public class RpcRoutingInterceptor : RpcInterceptorBase
+public class RpcSwitchInterceptor : RpcInterceptorBase
 {
     public new record Options : RpcInterceptorBase.Options
     {
@@ -16,7 +16,7 @@ public class RpcRoutingInterceptor : RpcInterceptorBase
     public object LocalService { get; private set; } = null!;
     public object RemoteService { get; private set; } = null!;
 
-    public RpcRoutingInterceptor(Options settings, IServiceProvider services)
+    public RpcSwitchInterceptor(Options settings, IServiceProvider services)
         : base(settings, services)
         => RpcCallRouter = Hub.CallRouter;
 

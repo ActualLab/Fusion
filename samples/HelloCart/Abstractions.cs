@@ -5,40 +5,30 @@ using Newtonsoft.Json;
 namespace Samples.HelloCart;
 
 [DataContract, MemoryPackable]
-public partial record Product : IHasId<string>
-{
-    [DataMember] public string Id { get; init; } = "";
-    [DataMember] public decimal Price { get; init; } = 0;
-}
+[method: JsonConstructor, MemoryPackConstructor]
+public partial record Product(
+    [property: DataMember] string Id,
+    [property: DataMember] decimal Price
+) : IHasId<string>;
 
 [DataContract, MemoryPackable]
-public partial record Cart : IHasId<string>
+[method: JsonConstructor, MemoryPackConstructor]
+public partial record Cart(
+    [property: DataMember] string Id
+) : IHasId<string>
 {
-    [DataMember] public string Id { get; init; } = "";
     [DataMember] public ImmutableDictionary<string, decimal> Items { get; init; } = ImmutableDictionary<string, decimal>.Empty;
 }
 
 [DataContract, MemoryPackable]
-public partial record EditCommand<TItem> : ICommand<Unit>
+[method: JsonConstructor, MemoryPackConstructor]
+public partial record EditCommand<TItem>(
+    [property: DataMember] string Id,
+    [property: DataMember] TItem? Item
+    ) : ICommand<Unit>
     where TItem : class, IHasId<string>
 {
-    [DataMember] public string Id { get; init; }
-    [DataMember] public TItem? Item { get; init; }
-
     public EditCommand(TItem value) : this(value.Id, value) { }
-
-    [JsonConstructor, MemoryPackConstructor]
-    public EditCommand(string id, TItem item)
-    {
-        Id = id;
-        Item = item;
-    }
-
-    public void Deconstruct(out string id, out TItem? item)
-    {
-        id = Id;
-        item = Item;
-    }
 }
 
 public interface IProductService: IComputeService

@@ -1,5 +1,3 @@
-using ActualLab.Versioning;
-
 namespace ActualLab.Fusion.Interception;
 
 public class ComputeMethodFunction<T>(

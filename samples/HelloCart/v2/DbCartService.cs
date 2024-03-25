@@ -70,8 +70,7 @@ public class DbCartService : ICartService
         if (dbCart == null)
             return null;
         await dbContext.Entry(dbCart).Collection(c => c.Items).LoadAsync(cancellationToken);
-        return new Cart() {
-            Id = dbCart.Id,
+        return new Cart(dbCart.Id) {
             Items = dbCart.Items.ToImmutableDictionary(i => i.DbProductId, i => i.Quantity),
         };
     }
