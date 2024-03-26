@@ -23,7 +23,7 @@ public static class FusionProxies
         return proxy;
     }
 
-    [RequiresUnreferencedCode(Rpc.Internal.UnreferencedCode.Rpc)]
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static IProxy NewClientProxy(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
@@ -47,7 +47,7 @@ public static class FusionProxies
         return proxy;
     }
 
-    [RequiresUnreferencedCode(Rpc.Internal.UnreferencedCode.Rpc)]
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static IProxy NewHybridProxy(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,

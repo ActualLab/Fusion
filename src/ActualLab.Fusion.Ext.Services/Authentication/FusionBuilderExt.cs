@@ -10,6 +10,7 @@ public static class FusionBuilderExt
 {
     // InMemoryAuthService
 
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static FusionBuilder AddInMemoryAuthService(this FusionBuilder fusion)
         => fusion.AddAuthService(typeof(InMemoryAuthService));
 
@@ -41,12 +42,14 @@ public static class FusionBuilderExt
 
     // Custom auth service
 
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static FusionBuilder AddAuthService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TAuthService>
         (this FusionBuilder fusion)
         where TAuthService : class, IAuthBackend
         => fusion.AddAuthService(typeof(TAuthService));
 
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static FusionBuilder AddAuthService(
         this FusionBuilder fusion,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType)

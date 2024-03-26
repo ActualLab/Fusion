@@ -16,7 +16,7 @@ public readonly struct RpcBuilder
     public IServiceCollection Services { get; }
     public RpcConfiguration Configuration { get; }
 
-#if NET5_0_OR_GREATER
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Proxies))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcDefaultDelegates))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcMethodDef))]
@@ -46,8 +46,6 @@ public readonly struct RpcBuilder
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcCacheInfoCapture))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcCacheEntry))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcSystemCalls))]
-#endif
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     internal RpcBuilder(
         IServiceCollection services,
         Action<RpcBuilder>? configure)
@@ -130,11 +128,13 @@ public readonly struct RpcBuilder
 
     // Share, Connect, Route
 
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
         (RpcServiceMode mode, Symbol name = default)
         where TService : class
         => AddService(typeof(TService), mode, name);
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TServer>
@@ -142,10 +142,12 @@ public readonly struct RpcBuilder
         where TService : class
         where TServer : class, TService
         => AddService(typeof(TService), typeof(TServer), mode, name);
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         RpcServiceMode mode, Symbol name = default)
         => AddService(serviceType, serviceType, mode, name);
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serverType,
@@ -158,21 +160,25 @@ public readonly struct RpcBuilder
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
 
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
         (Symbol name = default)
         where TService : class
         => AddClient(typeof(TService), typeof(TService), name);
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TClient>
         (Symbol name = default)
         where TService : class
         => AddClient(typeof(TService), typeof(TClient), name);
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         Symbol name = default)
         => AddClient(serviceType, serviceType, name);
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type clientType,
@@ -224,6 +230,7 @@ public readonly struct RpcBuilder
         return this;
     }
 
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddHybrid<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TServer>
@@ -231,6 +238,7 @@ public readonly struct RpcBuilder
         where TService : class
         where TServer : class, TService
         => AddHybrid(typeof(TService), typeof(TServer), name);
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddHybrid(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serverType,
@@ -238,6 +246,7 @@ public readonly struct RpcBuilder
         => serviceType == serverType
             ? throw new ArgumentOutOfRangeException(nameof(serverType))
             : AddHybrid(serviceType, ServiceResolver.New(serverType), name);
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddHybrid(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         ServiceResolver serverResolver, Symbol name = default)

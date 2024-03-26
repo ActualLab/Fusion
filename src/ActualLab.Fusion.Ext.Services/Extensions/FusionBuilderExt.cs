@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ActualLab.CommandR.Internal;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Extensions.Services;
+using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion.Extensions;
 
@@ -11,6 +11,7 @@ public static class FusionBuilderExt
 {
     // SandboxedKeyValueStore
 
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static FusionBuilder AddSandboxedKeyValueStore(
         this FusionBuilder fusion,
         Func<IServiceProvider, SandboxedKeyValueStore.Options>? optionsFactory = null)
@@ -23,6 +24,7 @@ public static class FusionBuilderExt
 
     // InMemoryKeyValueStore
 
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static FusionBuilder AddInMemoryKeyValueStore(
         this FusionBuilder fusion,
         Func<IServiceProvider, InMemoryKeyValueStore.Options>? optionsFactory = null)
@@ -36,7 +38,7 @@ public static class FusionBuilderExt
 
     // DbKeyValueStore
 
-    [RequiresUnreferencedCode(Fusion.Internal.UnreferencedCode.Fusion)]
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static FusionBuilder AddDbKeyValueStore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>(
         this FusionBuilder fusion,
@@ -44,7 +46,7 @@ public static class FusionBuilderExt
         where TDbContext : DbContext
         => fusion.AddDbKeyValueStore<TDbContext, DbKeyValue>(keyValueTrimmerOptionsFactory);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Commander)]
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static FusionBuilder AddDbKeyValueStore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbKeyValue>(

@@ -17,15 +17,13 @@ public readonly struct CommanderBuilder
     public IServiceCollection Services { get; }
     public HashSet<CommandHandler> Handlers { get; }
 
-#if NET5_0_OR_GREATER
+    [RequiresUnreferencedCode(UnreferencedCode.Commander)]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Proxies))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CommandHandlerMethodDef))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(MethodCommandHandler<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(InterfaceCommandHandler<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CommandServiceInterceptor))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CommandContext<>))]
-#endif
-    [RequiresUnreferencedCode(UnreferencedCode.Commander)]
     internal CommanderBuilder(
         IServiceCollection services,
         Action<CommanderBuilder>? configure)
