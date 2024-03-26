@@ -70,7 +70,7 @@ public class RpcSystemCalls(IServiceProvider services)
         var inboundCall = peer.InboundCalls.Get(inboundCallId);
         if (inboundCall != null) {
             peer.Log.IfEnabled(LogLevel.Debug)
-                ?.LogDebug("Remote call cancelled on the client side: {Call}", inboundCallId);
+                ?.LogDebug("Remote call cancelled on the client side: {Call}", inboundCall);
             inboundCall.Cancel();
         }
         return RpcNoWait.Tasks.Completed;
