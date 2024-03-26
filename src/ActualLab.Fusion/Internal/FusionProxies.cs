@@ -9,7 +9,7 @@ namespace ActualLab.Fusion.Internal;
 
 public static class FusionProxies
 {
-    public static IProxy NewLocalProxy(
+    public static IProxy NewProxy(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         bool initialize = true)
