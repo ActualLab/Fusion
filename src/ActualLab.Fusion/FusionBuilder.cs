@@ -61,7 +61,7 @@ public readonly struct FusionBuilder
         services.RemoveAll<FusionTag>();
         services.Insert(0, new ServiceDescriptor(
             typeof(FusionTag),
-            new FusionTag(setDefaultServiceMode ? ServiceMode : RpcServiceMode.None)));
+            new FusionTag(setDefaultServiceMode ? ServiceMode : RpcServiceMode.Local)));
 
         // Common services
         services.AddOptions();
@@ -187,20 +187,22 @@ public readonly struct FusionBuilder
     // ComputeService
 
     public FusionBuilder AddService<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
-        (RpcServiceMode mode, bool addCommandHandlers = true)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>(
+        RpcServiceMode mode = RpcServiceMode.Default,
+        bool addCommandHandlers = true)
         where TService : class, IComputeService
         => AddService(typeof(TService), typeof(TService), ServiceLifetime.Singleton, mode, addCommandHandlers);
     public FusionBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (RpcServiceMode mode, bool addCommandHandlers = true)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>(
+        RpcServiceMode mode = RpcServiceMode.Default,
+        bool addCommandHandlers = true)
         where TService : class
         where TImplementation : class, TService, IComputeService
         => AddService(typeof(TService), typeof(TImplementation), ServiceLifetime.Singleton, mode, addCommandHandlers);
     public FusionBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>(
-        ServiceLifetime lifetime = ServiceLifetime.Singleton,
+        ServiceLifetime lifetime,
         RpcServiceMode mode = RpcServiceMode.Default,
         bool addCommandHandlers = true)
         where TService : class, IComputeService
@@ -208,7 +210,7 @@ public readonly struct FusionBuilder
     public FusionBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>(
-        ServiceLifetime lifetime = ServiceLifetime.Singleton,
+        ServiceLifetime lifetime,
         RpcServiceMode mode = RpcServiceMode.Default,
         bool addCommandHandlers = true)
         where TService : class
@@ -217,53 +219,82 @@ public readonly struct FusionBuilder
 
     public FusionBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        RpcServiceMode mode,
+        RpcServiceMode mode = RpcServiceMode.Default,
         bool addCommandHandlers = true)
         => AddService(serviceType, serviceType, ServiceLifetime.Singleton, mode, addCommandHandlers);
     public FusionBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        RpcServiceMode mode,
+        RpcServiceMode mode = RpcServiceMode.Default,
         bool addCommandHandlers = true)
         => AddService(serviceType, implementationType, ServiceLifetime.Singleton, mode, addCommandHandlers);
     public FusionBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        ServiceLifetime lifetime = ServiceLifetime.Singleton,
+        ServiceLifetime lifetime,
         RpcServiceMode mode = RpcServiceMode.Default,
         bool addCommandHandlers = true)
         => AddService(serviceType, serviceType, lifetime, mode, addCommandHandlers);
     public FusionBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        ServiceLifetime lifetime = ServiceLifetime.Singleton,
+        ServiceLifetime lifetime,
         RpcServiceMode mode = RpcServiceMode.Default,
+        bool addCommandHandlers = true)
+    {
+        if (lifetime != ServiceLifetime.Singleton) {
+            if (!(mode is RpcServiceMode.Local or RpcServiceMode.Default))
+                throw new ArgumentOutOfRangeException(nameof(mode));
+
+            return AddLocal(serviceType, implementationType, lifetime);
+        }
+
+        mode = mode.Or(ServiceMode);
+        return mode switch {
+            RpcServiceMode.Local => AddLocal(serviceType, implementationType, addCommandHandlers),
+            RpcServiceMode.Server => AddServer(serviceType, implementationType, default, addCommandHandlers),
+            RpcServiceMode.Hybrid => AddHybrid(serviceType, implementationType, default, addCommandHandlers),
+            RpcServiceMode.HybridServer => AddHybridServer(serviceType, implementationType, default, addCommandHandlers),
+            _ => throw new ArgumentOutOfRangeException(nameof(mode)),
+        };
+    }
+
+    public FusionBuilder AddLocal<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+        (bool addCommandHandlers = true)
+        => AddLocal(typeof(TService), typeof(TImplementation), ServiceLifetime.Singleton, addCommandHandlers);
+    public FusionBuilder AddLocal<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+        (ServiceLifetime lifetime, bool addCommandHandlers = true)
+        => AddLocal(typeof(TService), typeof(TImplementation), lifetime, addCommandHandlers);
+    public FusionBuilder AddLocal(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
+        bool addCommandHandlers = true)
+        => AddLocal(serviceType, implementationType, ServiceLifetime.Singleton, addCommandHandlers);
+    public FusionBuilder AddLocal(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
+        ServiceLifetime lifetime,
         bool addCommandHandlers = true)
     {
         if (!serviceType.IsAssignableFrom(implementationType))
             throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
         if (!typeof(IComputeService).IsAssignableFrom(implementationType))
             throw ActualLab.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
-        if (lifetime == ServiceLifetime.Scoped && !typeof(IHasIsDisposed).IsAssignableFrom(implementationType))
+        if (lifetime != ServiceLifetime.Singleton && !typeof(IHasIsDisposed).IsAssignableFrom(implementationType))
             throw ActualLab.Internal.Errors.MustImplement<IHasIsDisposed>(implementationType, nameof(implementationType));
 
-        if (lifetime != ServiceLifetime.Singleton) {
-            if (!(mode is RpcServiceMode.None or RpcServiceMode.Default))
-                throw new ArgumentOutOfRangeException(nameof(mode));
-            return AddServiceImpl(serviceType, implementationType, lifetime);
-        }
-
-        mode = mode.Or(ServiceMode);
-        return mode switch {
-            RpcServiceMode.None => AddServiceImpl(serviceType, implementationType, addCommandHandlers),
-            RpcServiceMode.Server => AddServer(serviceType, implementationType, default, addCommandHandlers),
-            RpcServiceMode.Switch => AddSwitch(serviceType, implementationType, default, addCommandHandlers),
-            RpcServiceMode.ServerSwitch => AddServerSwitch(serviceType, implementationType, default, addCommandHandlers),
-            _ => throw new ArgumentOutOfRangeException(nameof(mode)),
-        };
+        var descriptor = new ServiceDescriptor(serviceType, c => FusionProxies.NewProxy(c, implementationType), lifetime);
+        Services.Add(descriptor);
+        if (addCommandHandlers)
+            Commander.AddHandlers(serviceType, implementationType);
+        return this;
     }
 
     public FusionBuilder AddClient<
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
         (Symbol name = default, bool addCommandHandlers = true)
         => AddClient(typeof(TService), name, addCommandHandlers);
     public FusionBuilder AddClient(
@@ -293,22 +324,17 @@ public readonly struct FusionBuilder
         Symbol name = default,
         bool addCommandHandlers = true)
     {
-        if (!serviceType.IsAssignableFrom(implementationType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
-        if (!typeof(IComputeService).IsAssignableFrom(implementationType))
-            throw ActualLab.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
-
-        AddServiceImpl(serviceType, implementationType, addCommandHandlers);
+        AddLocal(serviceType, implementationType, addCommandHandlers);
         Rpc.Service(serviceType).HasServer(serviceType).HasName(name);
         return this;
     }
 
-    public FusionBuilder AddSwitch<
+    public FusionBuilder AddHybrid<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
         (Symbol name = default, bool addCommandHandlers = true)
-        => AddSwitch(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
-    public FusionBuilder AddSwitch(
+        => AddHybrid(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
+    public FusionBuilder AddHybrid(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         Symbol name = default,
@@ -321,38 +347,28 @@ public readonly struct FusionBuilder
         if (!typeof(IComputeService).IsAssignableFrom(implementationType))
             throw ActualLab.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
 
-        var serverResolver = ServiceResolver.New(c => FusionProxies.NewServiceProxy(c, implementationType));
-        Services.AddSingleton(serviceType, c => FusionProxies.NewSwitchProxy(c, serviceType, serverResolver));
+        Services.AddSingleton(implementationType, c => FusionProxies.NewProxy(c, implementationType));
+        Services.AddSingleton(serviceType, c => FusionProxies.NewHybridProxy(c, serviceType, implementationType));
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType);
         Rpc.Service(serviceType).HasName(name);
         return this;
     }
 
-    public FusionBuilder AddServerSwitch<
+    public FusionBuilder AddHybridServer<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>(
         Symbol name = default,
         bool addCommandHandlers = true)
-        => AddServerSwitch(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
-    public FusionBuilder AddServerSwitch(
+        => AddHybridServer(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
+    public FusionBuilder AddHybridServer(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         Symbol name = default,
         bool addCommandHandlers = true)
     {
-        if (!serviceType.IsInterface)
-            throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
-        if (!serviceType.IsAssignableFrom(implementationType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
-        if (!typeof(IComputeService).IsAssignableFrom(implementationType))
-            throw ActualLab.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
-
-        Services.AddSingleton(implementationType, c => FusionProxies.NewServiceProxy(c, implementationType));
-        Services.AddSingleton(serviceType, c => FusionProxies.NewSwitchProxy(c, serviceType, implementationType));
-        if (addCommandHandlers)
-            Commander.AddHandlers(serviceType);
-        Rpc.Service(serviceType).HasServer(implementationType).HasName(name);
+        AddHybrid(serviceType, implementationType, name, addCommandHandlers);
+        Rpc.Service(serviceType).HasServer(implementationType);
         return this;
     }
 
@@ -427,26 +443,6 @@ public readonly struct FusionBuilder
         services.AddSingleton(c => new ComputedGraphPruner(
             c.GetRequiredService<ComputedGraphPruner.Options>(), c));
         services.AddHostedService(c => c.GetRequiredService<ComputedGraphPruner>());
-        return this;
-    }
-
-    // Private methods
-
-    private FusionBuilder AddServiceImpl(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        bool addCommandHandlers = true)
-        => AddServiceImpl(serviceType, implementationType, ServiceLifetime.Singleton, addCommandHandlers);
-    private FusionBuilder AddServiceImpl(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        ServiceLifetime lifetime = ServiceLifetime.Singleton,
-        bool addCommandHandlers = true)
-    {
-        var descriptor = new ServiceDescriptor(serviceType, c => FusionProxies.NewServiceProxy(c, implementationType), lifetime);
-        Services.Add(descriptor);
-        if (addCommandHandlers)
-            Commander.AddHandlers(serviceType, implementationType);
         return this;
     }
 

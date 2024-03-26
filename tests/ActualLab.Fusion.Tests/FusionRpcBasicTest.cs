@@ -13,7 +13,7 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddService<ICounterService, CounterService>(RpcServiceMode.ServerSwitch);
+        fusion.AddService<ICounterService, CounterService>(RpcServiceMode.HybridServer);
     }
 
     [Fact]

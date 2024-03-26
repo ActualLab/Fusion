@@ -21,7 +21,7 @@ public static class RpcProxies
         return proxy;
     }
 
-    public static object NewSwitchProxy(
+    public static object NewHybridProxy(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         ServiceResolver localServiceResolver)
@@ -31,9 +31,8 @@ public static class RpcProxies
         var client = NewClientProxy(services, serviceType);
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
 
-        var interceptor = services.GetRequiredService<RpcSwitchInterceptor>();
-        interceptor.Setup(serviceDef, localService, client);
-        var proxy = Proxies.New(serviceType, interceptor);
-        return proxy;
+        var interceptor = services.GetRequiredService<RpcHybridInterceptor>();
+        interceptor.Setup(serviceDef, localService, client, reuseClientProxy: true);
+        return client;
     }
 }

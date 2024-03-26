@@ -27,7 +27,7 @@ public readonly struct RpcBuilder
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcMethodTracer))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcMethodActivityCounters))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcClientInterceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcSwitchInterceptor))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcHybridInterceptor))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundContext))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundContextFactory))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcOutboundContext))]
@@ -93,8 +93,8 @@ public readonly struct RpcBuilder
         // Interceptors
         services.TryAddSingleton(_ => RpcClientInterceptor.Options.Default);
         services.TryAddTransient(c => new RpcClientInterceptor(c.GetRequiredService<RpcClientInterceptor.Options>(), c));
-        services.TryAddSingleton(_ => RpcSwitchInterceptor.Options.Default);
-        services.TryAddTransient(c => new RpcSwitchInterceptor(c.GetRequiredService<RpcSwitchInterceptor.Options>(), c));
+        services.TryAddSingleton(_ => RpcHybridInterceptor.Options.Default);
+        services.TryAddTransient(c => new RpcHybridInterceptor(c.GetRequiredService<RpcHybridInterceptor.Options>(), c));
 
         // System services
         if (!Configuration.Services.ContainsKey(typeof(IRpcSystemCalls))) {
@@ -153,10 +153,10 @@ public readonly struct RpcBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serverType,
         RpcServiceMode mode, Symbol name = default)
         => mode switch {
-            RpcServiceMode.None => Service(serverType).HasName(name).Rpc,
+            RpcServiceMode.Local => Service(serverType).HasName(name).Rpc,
             RpcServiceMode.Server => AddServer(serviceType, serverType, name),
-            RpcServiceMode.Switch => AddSwitch(serviceType, serverType, name),
-            RpcServiceMode.ServerSwitch => AddSwitch(serviceType, serverType).AddServer(serviceType, serverType, name),
+            RpcServiceMode.Hybrid => AddHybrid(serviceType, serverType, name),
+            RpcServiceMode.HybridServer => AddHybrid(serviceType, serverType).AddServer(serviceType, serverType, name),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
 
@@ -226,21 +226,21 @@ public readonly struct RpcBuilder
         return this;
     }
 
-    public RpcBuilder AddSwitch<
+    public RpcBuilder AddHybrid<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TServer>
         (Symbol name = default)
         where TService : class
         where TServer : class, TService
-        => AddSwitch(typeof(TService), typeof(TServer), name);
-    public RpcBuilder AddSwitch(
+        => AddHybrid(typeof(TService), typeof(TServer), name);
+    public RpcBuilder AddHybrid(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serverType,
         Symbol name = default)
         => serviceType == serverType
             ? throw new ArgumentOutOfRangeException(nameof(serverType))
-            : AddSwitch(serviceType, ServiceResolver.New(serverType), name);
-    public RpcBuilder AddSwitch(
+            : AddHybrid(serviceType, ServiceResolver.New(serverType), name);
+    public RpcBuilder AddHybrid(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         ServiceResolver serverResolver, Symbol name = default)
     {
@@ -250,7 +250,7 @@ public readonly struct RpcBuilder
             throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
 
         Service(serviceType).HasName(name);
-        Services.AddSingleton(serviceType, c => RpcProxies.NewSwitchProxy(c, serviceType, serverResolver));
+        Services.AddSingleton(serviceType, c => RpcProxies.NewHybridProxy(c, serviceType, serverResolver));
         return this;
     }
 

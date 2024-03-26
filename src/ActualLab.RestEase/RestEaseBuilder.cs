@@ -64,11 +64,14 @@ public readonly struct RestEaseBuilder
     // User-defined client-side services
 
     public RestEaseBuilder AddClient<TClient>(
-        string? clientName = null, ServiceLifetime lifetime = ServiceLifetime.Transient)
+        string? clientName = null,
+        ServiceLifetime lifetime = ServiceLifetime.Transient)
         => AddClient(typeof(TClient), clientName, lifetime);
 
     public RestEaseBuilder AddClient(
-        Type clientType, string? clientName = null, ServiceLifetime lifetime = ServiceLifetime.Transient)
+        Type clientType,
+        string? clientName = null,
+        ServiceLifetime lifetime = ServiceLifetime.Transient)
     {
         if (!(clientType is { IsInterface: true, IsVisible: true }))
             throw Errors.InterfaceTypeExpected(clientType, true, nameof(clientType));

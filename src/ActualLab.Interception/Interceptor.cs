@@ -9,6 +9,7 @@ public class Interceptor
         proxy.SetInterceptor(this);
         if (proxyTarget != null)
             proxy.RequireProxy<InterfaceProxy>().ProxyTarget = proxyTarget;
+        // ReSharper disable once SuspiciousTypeConversion.Global
         if (proxy is INotifyInitialized notifyInitialized)
             notifyInitialized.Initialized();
     }
