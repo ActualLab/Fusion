@@ -90,11 +90,9 @@ public readonly struct RpcBuilder
         services.TryAddSingleton(c => new RpcClientPeerReconnectDelayer(c));
         services.TryAddSingleton(_ => RpcLimits.Default);
 
-        // Interceptors
+        // Interceptor options (the instances are created by RpcProxies)
         services.TryAddSingleton(_ => RpcClientInterceptor.Options.Default);
-        services.TryAddTransient(c => new RpcClientInterceptor(c.GetRequiredService<RpcClientInterceptor.Options>(), c));
         services.TryAddSingleton(_ => RpcHybridInterceptor.Options.Default);
-        services.TryAddTransient(c => new RpcHybridInterceptor(c.GetRequiredService<RpcHybridInterceptor.Options>(), c));
 
         // System services
         if (!Configuration.Services.ContainsKey(typeof(IRpcSystemCalls))) {

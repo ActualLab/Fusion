@@ -20,7 +20,4 @@ public static class Errors
 
     public static Exception NoInterceptor()
         => new InvalidOperationException("This proxy has no interceptor - you must call SetInterceptor method first.");
-
-    public static Exception InterceptorIsAlreadyBound()
-        => new InvalidOperationException("Interceptor is already bound.");
 }

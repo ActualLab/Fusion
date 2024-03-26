@@ -6,33 +6,40 @@ namespace ActualLab.Rpc.Internal;
 
 public static class RpcProxies
 {
-    public static object NewClientProxy(
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
+    public static IProxy NewClientProxy(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type? proxyType = null)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type? proxyType = null,
+        bool initialize = true)
     {
         var rpcHub = services.RpcHub();
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
         proxyType ??= serviceType;
 
-        var interceptor = services.GetRequiredService<RpcClientInterceptor>();
-        interceptor.Setup(serviceDef);
-        var proxy = Proxies.New(proxyType, interceptor);
+        var interceptor = new RpcClientInterceptor(
+            services.GetRequiredService<RpcClientInterceptor.Options>(), services, serviceDef);
+        var proxy = Proxies.New(proxyType, interceptor, initialize);
         return proxy;
     }
 
-    public static object NewHybridProxy(
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
+    public static IProxy NewHybridProxy(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        ServiceResolver localServiceResolver)
+        ServiceResolver localServiceResolver,
+        bool initialize = true)
     {
         var rpcHub = services.RpcHub();
-        var localService = localServiceResolver.Resolve(services);
-        var client = NewClientProxy(services, serviceType);
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
+        var client = NewClientProxy(services, serviceType, initialize: false);
 
-        var interceptor = services.GetRequiredService<RpcHybridInterceptor>();
-        interceptor.Setup(serviceDef, localService, client, reuseClientProxy: true);
+        // Replacing client's interceptor with RpcHybridInterceptor
+        var localService = localServiceResolver.Resolve(services);
+        var interceptor = new RpcHybridInterceptor(
+            services.GetRequiredService<RpcHybridInterceptor.Options>(), services,
+            serviceDef, localService, client, true);
+        interceptor.BindTo(client, null, initialize);
         return client;
     }
 }

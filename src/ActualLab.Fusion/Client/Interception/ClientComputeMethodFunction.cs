@@ -4,6 +4,7 @@ using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
+using ActualLab.Interception;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
 using Errors = ActualLab.Internal.Errors;
@@ -212,7 +213,22 @@ public class ClientComputeMethodFunction<T>(
     {
         using var scope = RpcOutboundContext.Use(RpcComputeCallType.Id);
         scope.Context.CacheInfoCapture = cacheInfoCapture;
-        input.InvokeOriginalFunction(cancellationToken);
+
+        // The block below triggers RPC call by invoking RpcClientInterceptor
+        var invocation = input.Invocation;
+        var proxy = (IProxy)invocation.Proxy;
+        var interceptor = proxy.Interceptor;
+        if (interceptor is RpcHybridInterceptor hybridInterceptor)
+            interceptor = hybridInterceptor.ClientInterceptor!;
+        var clientInterceptor = ((ClientComputeServiceInterceptor)interceptor).ClientInterceptor;
+        var ctIndex = input.MethodDef.CancellationTokenIndex;
+        if (ctIndex >= 0) {
+            var newArguments = invocation.Arguments with { };
+            newArguments.SetCancellationToken(ctIndex, cancellationToken);
+            invocation = invocation with { Arguments = newArguments };
+        }
+        clientInterceptor.ChainIntercept<T>(input.MethodDef, invocation);
+
         var call = (RpcOutboundComputeCall<T>?)scope.Context.Call;
         return call ?? throw Errors.InternalError(
             "No call is sent, which means the service behind this proxy isn't an RPC client proxy (misconfiguration), " +

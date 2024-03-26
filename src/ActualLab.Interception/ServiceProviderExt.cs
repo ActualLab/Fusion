@@ -9,26 +9,28 @@ public static class ServiceProviderExt
     public static TType ActivateProxy<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TType>(
         this IServiceProvider services,
-        Interceptor interceptor, TType? proxyTarget = null)
+        Interceptor interceptor, TType? proxyTarget = null, bool initialize = true)
         where TType : class, IRequiresAsyncProxy
     {
         var proxyType = Proxies.GetProxyType<TType>();
 #pragma warning disable IL2072
         var proxy = (TType)services.Activate(proxyType);
 #pragma warning restore IL2072
-        return interceptor.BindTo(proxy, proxyTarget);
+        interceptor.BindTo(proxy, proxyTarget, initialize);
+        return proxy;
     }
 
     public static IProxy ActivateProxy(
         this IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
-        Interceptor interceptor, object? proxyTarget = null)
+        Interceptor interceptor, object? proxyTarget = null, bool initialize = true)
     {
         var proxyType = Proxies.GetProxyType(type);
 #pragma warning disable IL2072
         var proxy = (IProxy)services.Activate(proxyType);
 #pragma warning restore IL2072
-        return InterceptorExt.BindTo(interceptor, proxy, proxyTarget);
+        interceptor.BindTo(proxy, proxyTarget, initialize);
+        return proxy;
     }
 
     // GetTypeViewFactory

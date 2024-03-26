@@ -30,14 +30,13 @@ public static class GenerationHelpers
     public static readonly IdentifierNameSyntax GetMethodInfoMethodName = IdentifierName("GetMethodInfo");
     public static readonly IdentifierNameSyntax InterceptMethodName = IdentifierName("Intercept");
     public static readonly GenericNameSyntax InterceptGenericMethodName = GenericName(InterceptMethodName.Identifier.Text);
-    public static readonly IdentifierNameSyntax SetInterceptorMethodName = IdentifierName("SetInterceptor");
     public static readonly IdentifierNameSyntax NoInterceptorMethodName = IdentifierName("NoInterceptor");
-    public static readonly IdentifierNameSyntax InterceptorIsAlreadyBoundMethodName = IdentifierName("InterceptorIsAlreadyBound");
     // Properties, fields, locals
     public static readonly IdentifierNameSyntax ProxyTargetPropertyName = IdentifierName("ProxyTarget");
     public static readonly IdentifierNameSyntax InterceptorPropertyName = IdentifierName("Interceptor");
     public static readonly IdentifierNameSyntax InterceptorFieldName = IdentifierName("__interceptor");
     public static readonly IdentifierNameSyntax InterceptorParameterName = IdentifierName("interceptor");
+    public static readonly IdentifierNameSyntax ValueParameterName = IdentifierName("value");
     public static readonly IdentifierNameSyntax InterceptedVarName = IdentifierName("intercepted");
     public static readonly IdentifierNameSyntax InvocationVarName = IdentifierName("invocation");
 
@@ -142,6 +141,10 @@ public static class GenerationHelpers
         }
         return SeparatedList<TNode>(NodeOrTokenList(list));
     }
+
+    public static SyntaxList<TNode> SyntaxList<TNode>(params TNode[] nodes)
+        where TNode : SyntaxNode
+        => new(nodes);
 
     public static IdentifierNameSyntax VarIdentifierDef()
         => IdentifierName(

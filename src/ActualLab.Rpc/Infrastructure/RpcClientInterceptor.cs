@@ -8,10 +8,11 @@ namespace ActualLab.Rpc.Infrastructure;
 #if !NET5_0
 [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
 #endif
-public class RpcClientInterceptor(
+public sealed class RpcClientInterceptor(
     RpcClientInterceptor.Options settings,
-    IServiceProvider services
-    ) : RpcInterceptorBase(settings, services)
+    IServiceProvider services,
+    RpcServiceDef serviceDef
+    ) : RpcInterceptorBase(settings, services, serviceDef)
 {
     public new record Options : RpcInterceptorBase.Options
     {

@@ -4,32 +4,34 @@ using ActualLab.Interception.Interceptors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public class RpcHybridInterceptor : RpcInterceptorBase
+public sealed class RpcHybridInterceptor : RpcInterceptorBase
 {
     public new record Options : RpcInterceptorBase.Options
     {
         public static Options Default { get; set; } = new();
     }
 
-    protected readonly RpcCallRouter RpcCallRouter;
+    public readonly RpcCallRouter CallRouter;
+    public readonly object LocalService;
+    public readonly object Client;
+    public readonly Interceptor? ClientInterceptor;
 
-    public object LocalService { get; private set; } = null!;
-    public object Client { get; private set; } = null!;
-    public Interceptor? ClientInterceptor { get; private set; }
-
-    public RpcHybridInterceptor(Options settings, IServiceProvider services)
-        : base(settings, services)
-        => RpcCallRouter = Hub.CallRouter;
-
-    public void Setup(RpcServiceDef serviceDef, object localService, object client, bool reuseClientProxy = false)
+    public RpcHybridInterceptor(
+        Options settings,
+        IServiceProvider services,
+        RpcServiceDef serviceDef,
+        object localService,
+        object client,
+        bool reuseClientProxy = false)
+        : base(settings, services, serviceDef)
     {
-        base.Setup(serviceDef);
+        CallRouter = Hub.CallRouter;
         LocalService = localService;
         Client = client;
         if (reuseClientProxy) {
             var clientProxy = (IProxy)client;
             ClientInterceptor = clientProxy.Interceptor;
-            clientProxy.SetInterceptor(this);
+            clientProxy.Interceptor = this;
         }
     }
 
@@ -37,21 +39,20 @@ public class RpcHybridInterceptor : RpcInterceptorBase
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
         (Invocation initialInvocation, MethodDef methodDef)
     {
+        var rpcMethodDef = (RpcMethodDef)methodDef;
         if (ClientInterceptor == null)
             return invocation => {
-                var rpcMethodDef = (RpcMethodDef)methodDef;
-                var peer = RpcCallRouter.Invoke(rpcMethodDef, invocation.Arguments);
+                var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
                 var service = peer == null ? LocalService : Client;
                 return rpcMethodDef.Invoker.Invoke(service, invocation.Arguments);
             };
 
-        Func<Invocation, T> clientIntercept = ClientInterceptor.Intercept<T>;
+        var chainIntercept = ClientInterceptor.ChainIntercept<T>(methodDef);
         return invocation => {
-            var rpcMethodDef = (RpcMethodDef)methodDef;
-            var peer = RpcCallRouter.Invoke(rpcMethodDef, invocation.Arguments);
+            var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
             return peer == null
                 ? rpcMethodDef.Invoker.Invoke(LocalService, invocation.Arguments)
-                : clientIntercept.Invoke(invocation);
+                : chainIntercept.Invoke(invocation);
         };
     }
 

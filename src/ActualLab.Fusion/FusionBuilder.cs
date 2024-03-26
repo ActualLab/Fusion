@@ -155,10 +155,8 @@ public readonly struct FusionBuilder
             RpcComputeCallType.Register();
         }
 
-        // Compute call interceptor
+        // Interceptor options (the instances are created by FusionProxies)
         services.TryAddSingleton(_ => new ClientComputeServiceInterceptor.Options());
-        services.TryAddTransient(c => new ClientComputeServiceInterceptor(
-            c.GetRequiredService<ClientComputeServiceInterceptor.Options>(), c));
 
         configure?.Invoke(this);
     }
@@ -286,7 +284,7 @@ public readonly struct FusionBuilder
         if (lifetime != ServiceLifetime.Singleton && !typeof(IHasIsDisposed).IsAssignableFrom(implementationType))
             throw ActualLab.Internal.Errors.MustImplement<IHasIsDisposed>(implementationType, nameof(implementationType));
 
-        var descriptor = new ServiceDescriptor(serviceType, c => FusionProxies.NewProxy(c, implementationType), lifetime);
+        var descriptor = new ServiceDescriptor(serviceType, c => FusionProxies.NewLocalProxy(c, implementationType), lifetime);
         Services.Add(descriptor);
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType, implementationType);
@@ -347,7 +345,7 @@ public readonly struct FusionBuilder
         if (!typeof(IComputeService).IsAssignableFrom(implementationType))
             throw ActualLab.Internal.Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
 
-        Services.AddSingleton(implementationType, c => FusionProxies.NewProxy(c, implementationType));
+        Services.AddSingleton(implementationType, c => FusionProxies.NewLocalProxy(c, implementationType));
         Services.AddSingleton(serviceType, c => FusionProxies.NewHybridProxy(c, serviceType, implementationType));
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType);
