@@ -47,7 +47,7 @@ public sealed class RpcHybridInterceptor : RpcInterceptorBase
                 return rpcMethodDef.Invoker.Invoke(service, invocation.Arguments);
             };
 
-        var chainIntercept = ClientInterceptor.ChainIntercept<T>(methodDef);
+        var chainIntercept = ClientInterceptor.GetChainInterceptFunc<T>(methodDef);
         return invocation => {
             var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
             return peer == null

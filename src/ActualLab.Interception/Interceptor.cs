@@ -21,6 +21,8 @@ public class Interceptor
     public virtual TResult Intercept<TResult>(Invocation invocation)
         => invocation.Intercepted<TResult>();
 
+    // Helpers allowing to properly invoke Intercept<T> from other interceptors
+
     public object? ChainIntercept<TUnwrappedResult>(MethodDef methodDef, Invocation invocation)
         => !methodDef.IsAsyncMethod
             ? Intercept<TUnwrappedResult>(invocation)
@@ -28,7 +30,7 @@ public class Interceptor
                 ? Intercept<Task<TUnwrappedResult>>(invocation)
                 : Intercept<ValueTask<TUnwrappedResult>>(invocation);
 
-    public Func<Invocation, object?> ChainIntercept<TUnwrappedResult>(MethodDef methodDef)
+    public Func<Invocation, object?> GetChainInterceptFunc<TUnwrappedResult>(MethodDef methodDef)
         => !methodDef.IsAsyncMethod
             ? invocation => Intercept<TUnwrappedResult>(invocation)
             : methodDef.ReturnsTask
