@@ -1,5 +1,7 @@
 namespace ActualLab.Fusion.Tests.Services;
 
+#pragma warning disable CA1024
+
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial record SetValueCommand : ICommand<Unit>
 {
@@ -27,7 +29,7 @@ public interface ISimplestProvider
 
 public class SimplestProvider : ISimplestProvider, IHasId<Type>, IComputeService, IHasIsDisposed
 {
-    private static string _value = "";
+    private static volatile string? _value;
     private readonly bool _isCaching;
 
     public Type Id => GetType();
@@ -47,7 +49,7 @@ public class SimplestProvider : ISimplestProvider, IHasId<Type>, IComputeService
     public virtual Task<string> GetValue()
     {
         GetValueCallCount++;
-        return Task.FromResult(Volatile.Read(ref _value));
+        return Task.FromResult(_value ?? "");
     }
 
     public virtual async Task<int> GetCharCount()
