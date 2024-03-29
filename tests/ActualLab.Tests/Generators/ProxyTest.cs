@@ -94,7 +94,7 @@ public class ProxyTest(ITestOutputHelper @out) : TestBase(@out)
     {
         action(Math.Min(1, opCount / 10));
         var sw = Stopwatch.StartNew();
-        _ = action(opCount);
+        _ = action.Invoke(opCount);
         sw.Stop();
         var rate = opCount / sw.Elapsed.TotalSeconds;
         Out.WriteLine($"{title} ({opCount}): {rate:N3} ops/s");

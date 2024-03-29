@@ -8,7 +8,7 @@ public static class ServiceProviderExt
 
     // Logging extensions
 
-    public static ILoggerFactory Logs(this IServiceProvider services)
+    public static ILoggerFactory LoggerFactory(this IServiceProvider services)
     {
         try {
             return services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
@@ -21,15 +21,15 @@ public static class ServiceProviderExt
     }
 
     public static ILogger<T> LogFor<T>(this IServiceProvider services)
-        => services.Logs().CreateLogger<T>();
+        => new Logger<T>(services.LoggerFactory());
     public static ILogger LogFor(this IServiceProvider services, Type type)
-        => services.Logs().CreateLogger(type.NonProxyType());
+        => services.LoggerFactory().CreateLogger(type.NonProxyType());
     public static ILogger LogFor(this IServiceProvider services, string category)
-        => services.Logs().CreateLogger(category);
+        => services.LoggerFactory().CreateLogger(category);
 
-    // Get HostedServiceGroupManager
+    // Get HostedServiceSet
 
-    public static HostedServiceGroupManager HostedServices(this IServiceProvider services)
+    public static HostedServiceSet HostedServices(this IServiceProvider services)
         => new(services);
 
     // GetOrActivate

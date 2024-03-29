@@ -15,9 +15,9 @@ public interface ISimplestProvider
     int GetValueCallCount { get; }
     int GetCharCountCallCount { get; }
 
-    void SetValue(string value);
+    void SetValue(string? value);
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<string> GetValue();
+    Task<string?> GetValue();
     [ComputeMethod(MinCacheDuration = 0.5, TransientErrorInvalidationDelay = 0.5)]
     Task<int> GetCharCount();
     [ComputeMethod(TransientErrorInvalidationDelay = 0.5)]
@@ -40,16 +40,16 @@ public class SimplestProvider : ISimplestProvider, IHasId<Type>, IComputeService
     public SimplestProvider()
         => _isCaching = GetType().Name.EndsWith("Proxy");
 
-    public void SetValue(string value)
+    public void SetValue(string? value)
     {
         Interlocked.Exchange(ref _value, value);
         Invalidate();
     }
 
-    public virtual Task<string> GetValue()
+    public virtual Task<string?> GetValue()
     {
         GetValueCallCount++;
-        return Task.FromResult(_value ?? "");
+        return Task.FromResult(_value);
     }
 
     public virtual async Task<int> GetCharCount()
@@ -57,7 +57,7 @@ public class SimplestProvider : ISimplestProvider, IHasId<Type>, IComputeService
         GetCharCountCallCount++;
         try {
             var value = await GetValue().ConfigureAwait(false);
-            return value.Length;
+            return value!.Length;
         }
         catch (NullReferenceException e) {
             throw new TransientException(null, e);

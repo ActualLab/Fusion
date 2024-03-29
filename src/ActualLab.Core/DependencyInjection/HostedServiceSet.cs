@@ -6,7 +6,8 @@ namespace ActualLab.DependencyInjection;
 /// Manages a group of <see cref="IHostedService"/>-s as a whole
 /// allowing to start or stop all of them.
 /// </summary>
-public class HostedServiceGroupManager(IServiceProvider services) : IHasServices, IEnumerable<IHostedService>
+public class HostedServiceSet(IServiceProvider services)
+    : IHasServices, IEnumerable<IHostedService>
 {
     public IServiceProvider Services { get; } = services;
 
