@@ -34,8 +34,6 @@ public class CompletionProducer : IOperationCompletionListener
             var isLocal = commandContext != null;
             var operationType = isLocal ? "Local" : "External";
             try {
-                // if (command is IBackendCommand backendCommand)
-                //     backendCommand.MarkValid();
                 await Commander.Call(Completion.New(operation), true).ConfigureAwait(false);
                 if (command is not INotLogged || Settings.IgnoreNotLogged)
                     Log.IfEnabled(Settings.LogLevel)?.Log(Settings.LogLevel,

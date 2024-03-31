@@ -20,7 +20,7 @@ public abstract class ComputeServiceInterceptorBase(
         if (handler == null)
             invocation.Intercepted();
         else
-            handler(invocation);
+            handler.Invoke(invocation);
     }
 
     public override TResult Intercept<TResult>(Invocation invocation)

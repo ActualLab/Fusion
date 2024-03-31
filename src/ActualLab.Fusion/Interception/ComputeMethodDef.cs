@@ -1,12 +1,15 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Interception.Interceptors;
 
 namespace ActualLab.Fusion.Interception;
 
 public sealed class ComputeMethodDef : MethodDef
 {
+    private object? _defaultResult;
+
     public ComputedOptions ComputedOptions { get; init; } = ComputedOptions.Default;
+    public object DefaultResult => _defaultResult ??= GetDefaultResult();
+
     public readonly bool IsDisposable;
 
     public ComputeMethodDef(
@@ -32,4 +35,11 @@ public sealed class ComputeMethodDef : MethodDef
 
     public ComputeMethodInput CreateInput(IFunction function, Invocation invocation)
         => new(function, this, invocation);
+
+    // Private methods
+
+    private object GetDefaultResult()
+        => ReturnsValueTask
+            ? ValueTaskExt.FromDefaultResult(UnwrappedReturnType)
+            : TaskExt.FromDefaultResult(UnwrappedReturnType);
 }

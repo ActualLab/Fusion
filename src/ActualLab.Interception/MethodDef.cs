@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace ActualLab.Interception.Interceptors;
+namespace ActualLab.Interception;
 
 public abstract class MethodDef
 {

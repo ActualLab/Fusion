@@ -28,10 +28,23 @@ public class ClientComputeServiceInterceptor(
 
     public override TResult Intercept<TResult>(Invocation invocation)
     {
-        var handler = GetHandler(invocation) ?? ClientInterceptor.GetHandler(invocation);
-        return handler == null
-            ? invocation.Intercepted<TResult>()
-            : (TResult)handler.Invoke(invocation)!;
+        var handler = GetHandler(invocation);
+        if (handler == null) {
+            // If we're here, it's not a compute method, so we route the call to ClientInterceptor
+            handler = ClientInterceptor.GetHandler(invocation);
+            return handler == null
+                ? invocation.Intercepted<TResult>()
+                : (TResult)handler.Invoke(invocation)!;
+        }
+
+        // If we're here, it's a compute method
+        if (!Computed.IsInvalidating())
+            return (TResult)handler.Invoke(invocation)!;
+
+        // And we're inside Computed.Invalidate() block
+        Log.LogWarning("Remote invalidation suppressed: {Invocation}", invocation.Format());
+        var computeMethodDef = (ComputeMethodDef)GetMethodDef(invocation)!;
+        return (TResult)computeMethodDef.DefaultResult;
     }
 
     protected override ComputeFunctionBase<T> CreateFunction<T>(ComputeMethodDef method)

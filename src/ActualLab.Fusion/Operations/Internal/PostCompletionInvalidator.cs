@@ -102,8 +102,6 @@ public class PostCompletionInvalidator(
     {
         foreach (var commandEntry in nestedCommands) {
             var (command, items) = commandEntry;
-            // if (command is IBackendCommand backendCommand)
-            //     backendCommand.MarkValid();
             if (InvalidationInfoProvider.RequiresInvalidation(command)) {
                 operation.Items = items;
                 await context.Commander.Call(command, cancellationToken).ConfigureAwait(false);

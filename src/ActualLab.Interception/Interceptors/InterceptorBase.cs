@@ -58,7 +58,7 @@ public abstract class InterceptorBase : Interceptor, IHasServices
         if (handler == null)
             invocation.Intercepted();
         else
-            handler(invocation);
+            handler.Invoke(invocation);
     }
 
     public override TResult Intercept<TResult>(Invocation invocation)
@@ -94,10 +94,9 @@ public abstract class InterceptorBase : Interceptor, IHasServices
         }, this);
     }
 
-    protected virtual Func<Invocation, object?>? CreateHandlerUntyped(MethodInfo method, Invocation initialInvocation)
+    protected Func<Invocation, object?>? CreateHandlerUntyped(MethodInfo method, Invocation initialInvocation)
     {
-        var proxyMethodInfo = initialInvocation.Method;
-        var methodDef = _methodDefCache.GetOrAdd(proxyMethodInfo, _createMethodDef, initialInvocation);
+        var methodDef = GetMethodDef(initialInvocation);
         if (methodDef == null)
             return null;
 
@@ -105,6 +104,9 @@ public abstract class InterceptorBase : Interceptor, IHasServices
             .MakeGenericMethod(methodDef.UnwrappedReturnType)
             .Invoke(this, [initialInvocation, methodDef])!;
     }
+
+    protected MethodDef? GetMethodDef(Invocation initialInvocation)
+        => _methodDefCache.GetOrAdd(initialInvocation.Method, _createMethodDef, initialInvocation);
 
     // Abstract methods
 

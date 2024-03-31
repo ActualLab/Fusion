@@ -4,7 +4,7 @@ namespace ActualLab.Async;
 
 #pragma warning disable CA2012
 
-public static class ValueTaskExt
+public static partial class ValueTaskExt
 {
     public static readonly ValueTask NeverEndingTask = TaskExt.NeverEndingTask.ToValueTask();
     public static readonly ValueTask<Unit> NeverEndingUnitTask = TaskExt.NeverEndingUnitTask.ToValueTask();

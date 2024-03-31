@@ -17,6 +17,12 @@ public readonly record struct Invocation(
 
     public object? ProxyTarget => (Proxy as InterfaceProxy)?.ProxyTarget;
 
+    public override string ToString()
+        => $"{nameof(Invocation)}({Proxy}, {Method.Name}, {Arguments})";
+
+    public string Format()
+        => $"{Proxy.GetType().NonProxyType().GetName()}.{Method.Name}{Arguments}";
+
     public void Intercepted()
     {
         if (InterceptedDelegate is Action<ArgumentList> action)

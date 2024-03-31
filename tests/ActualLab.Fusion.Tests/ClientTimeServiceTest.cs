@@ -51,7 +51,23 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
         for (int i = 0; i < 20; i++) {
             var time = await service.GetTime();
             (DateTime.Now - time).Should().BeLessThan(epsilon);
+            time = await service.GetTimeAsValueTask();
+            (DateTime.Now - time).Should().BeLessThan(epsilon);
             await Task.Delay(TimeSpan.FromSeconds(0.1));
+        }
+    }
+
+    [Fact]
+    public async Task TestInvalidation()
+    {
+        await using var serving = await WebHost.Serve();
+        var service = ClientServices.GetRequiredService<ITimeService>();
+
+        using (Computed.Invalidate()) {
+            var time = await service.GetTime();
+            time.Should().Be(default);
+            time = await service.GetTimeAsValueTask();
+            time.Should().Be(default);
         }
     }
 

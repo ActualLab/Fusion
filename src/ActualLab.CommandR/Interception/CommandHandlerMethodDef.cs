@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
-using ActualLab.Interception.Interceptors;
+using ActualLab.Interception;
 
 namespace ActualLab.CommandR.Interception;
 
