@@ -12,8 +12,12 @@ public class ClientComputeServiceInterceptor(
     RpcClientInterceptor clientInterceptor
     ) : ComputeServiceInterceptorBase(settings, services)
 {
-    public new record Options : ComputeServiceInterceptorBase.Options;
+    public new record Options : ComputeServiceInterceptorBase.Options
+    {
+        public bool WarnOnRemoteInvalidation { get; init; }
+    }
 
+    public readonly Options Settings = settings;
     public readonly RpcClientInterceptor ClientInterceptor = clientInterceptor;
     public readonly IClientComputedCache? Cache = services.GetService<IClientComputedCache>();
 
@@ -42,7 +46,8 @@ public class ClientComputeServiceInterceptor(
             return (TResult)handler.Invoke(invocation)!;
 
         // And we're inside Computed.Invalidate() block
-        Log.LogWarning("Remote invalidation suppressed: {Invocation}", invocation.Format());
+        if (Settings.WarnOnRemoteInvalidation)
+            Log.LogWarning("Remote invalidation suppressed: {Invocation}", invocation.Format());
         var computeMethodDef = (ComputeMethodDef)GetMethodDef(invocation)!;
         return (TResult)computeMethodDef.DefaultResult;
     }
