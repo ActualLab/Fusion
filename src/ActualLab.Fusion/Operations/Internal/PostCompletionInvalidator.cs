@@ -19,6 +19,10 @@ public class PostCompletionInvalidator(
         public LogLevel LogLevel { get; init; } = LogLevel.Debug;
     }
 
+    private static readonly MethodInfo ArgumentListNewMethod = typeof(ArgumentList)
+        .GetMethods(BindingFlags.Static | BindingFlags.Public)
+        .SingleOrDefault(m => Equals(m.Name, nameof(ArgumentList.New)) && m.GetGenericArguments().Length == 2)!;
+
     private ActivitySource? _activitySource;
     private CommandHandlerResolver? _commandHandlerResolver;
     private ILogger? _log;
@@ -78,8 +82,8 @@ public class PostCompletionInvalidator(
         if (finalHandler is not IMethodCommandHandler methodCommandHandler)
             return false;
 
-        var methodParameters = methodCommandHandler.Parameters;
-        if (methodParameters.Length != 2)
+        var parameterTypes = methodCommandHandler.ParameterTypes;
+        if (parameterTypes.Length != 2)
             return false;
 
         var service = Services.GetService(finalHandler.GetHandlerServiceType());
@@ -99,9 +103,9 @@ public class PostCompletionInvalidator(
         if (clientInterceptor.GetMethodDef(methodCommandHandler.Method, service.GetType()) is not RpcMethodDef rpcMethodDef)
             return false;
 
-        var arguments = (ArgumentList)ArgumentList.Types[2]
-            .MakeGenericType(methodParameters[0].ParameterType, methodParameters[1].ParameterType)
-            .CreateInstance(command, default(CancellationToken));
+        var arguments = (ArgumentList)ArgumentListNewMethod
+            .MakeGenericMethod(parameterTypes)
+            .Invoke(null, [command, default(CancellationToken)])!;
         var rpcPeer = hybridInterceptor.CallRouter.Invoke(rpcMethodDef, arguments);
         return rpcPeer == null;
     }

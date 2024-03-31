@@ -8,6 +8,7 @@ public interface IMethodCommandHandler : ICommandHandler
     Type ServiceType { get; }
     MethodInfo Method { get; }
     ParameterInfo[] Parameters { get; }
+    Type[] ParameterTypes { get; }
 }
 
 public sealed record MethodCommandHandler<
@@ -19,8 +20,10 @@ public sealed record MethodCommandHandler<
     where TCommand : class, ICommand
 {
     private ParameterInfo[]? _parameters;
+    private Type[]? _parameterTypes;
 
     public ParameterInfo[] Parameters => _parameters ??= Method.GetParameters();
+    public Type[] ParameterTypes => _parameterTypes ??= Parameters.Select(p => p.ParameterType).ToArray();
 
     public override Type GetHandlerServiceType()
         => ServiceType;
