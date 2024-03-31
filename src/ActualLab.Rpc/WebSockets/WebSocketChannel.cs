@@ -148,8 +148,11 @@ public sealed class WebSocketChannel<T> : Channel<T>
         try {
             await foreach (var item in ReadAll(cancellationToken).ConfigureAwait(false)) {
                 while (!writer.TryWrite(item))
-                    if (!await writer.WaitToWriteAsync(cancellationToken).ConfigureAwait(false))
+                    if (!await writer.WaitToWriteAsync(cancellationToken).ConfigureAwait(false)) {
+                        // This is a normal closure in most of cases,
+                        // so we don't want to report it as an error
                         return;
+                    }
             }
         }
         catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) {
@@ -158,7 +161,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
         catch (Exception e) {
             writer.TryComplete(e);
-            throw;
         }
         finally {
             writer.TryComplete(); // We do this no matter what

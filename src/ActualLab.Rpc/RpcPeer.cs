@@ -387,11 +387,14 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         // !!! This method should never fail
         try {
             // If we're here, WaitToWriteAsync call is required to continue
-            if (await sender.WaitToWriteAsync(StopToken).ConfigureAwait(false))
-                sender.TryWrite(message);
+            while (await sender.WaitToWriteAsync(StopToken).ConfigureAwait(false))
+                if (sender.TryWrite(message))
+                    return;
+
+            throw new ChannelClosedException();
         }
 #pragma warning disable RCS1075
-        catch (Exception e) {
+        catch (Exception e) when (!e.IsCancellationOf(StopToken)) {
             Log.LogError(e, "Send failed");
         }
 #pragma warning restore RCS1075
