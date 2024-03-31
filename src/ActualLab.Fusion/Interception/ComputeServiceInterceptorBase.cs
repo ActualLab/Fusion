@@ -61,9 +61,9 @@ public abstract class ComputeServiceInterceptorBase(
     protected abstract ComputeFunctionBase<T> CreateFunction<T>(ComputeMethodDef method);
 
     // We don't need to decorate this method with any dynamic access attributes
-    protected override MethodDef? CreateMethodDef(MethodInfo method, Invocation initialInvocation)
+    protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
     {
-        var type = initialInvocation.Proxy.GetType().NonProxyType();
+        var type = proxyType.NonProxyType();
 #pragma warning disable IL2072
         var options = Hub.ComputedOptionsProvider.GetComputedOptions(type, method);
         if (options == null)

@@ -1,6 +1,13 @@
 using System.Diagnostics;
+using ActualLab.Fusion.Client.Interception;
+using ActualLab.Fusion.Interception;
+using ActualLab.Interception;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
+
+#pragma warning disable IL2055, IL2072
 
 public class PostCompletionInvalidator(
         PostCompletionInvalidator.Options settings,
@@ -13,15 +20,15 @@ public class PostCompletionInvalidator(
     }
 
     private ActivitySource? _activitySource;
-    private InvalidationInfoProvider? _invalidationInfoProvider;
+    private CommandHandlerResolver? _commandHandlerResolver;
     private ILogger? _log;
 
     protected IServiceProvider Services { get; } = services;
     protected Options Settings { get; } = settings;
     protected ActivitySource ActivitySource
         => _activitySource ??= GetType().GetActivitySource();
-    protected InvalidationInfoProvider InvalidationInfoProvider
-        => _invalidationInfoProvider ??= Services.GetRequiredService<InvalidationInfoProvider>();
+    protected CommandHandlerResolver CommandHandlerResolver
+        => _commandHandlerResolver ??= Services.GetRequiredService<CommandHandlerResolver>();
     protected ILogger Log
         => _log ??= Services.LogFor(GetType());
 
@@ -30,7 +37,7 @@ public class PostCompletionInvalidator(
     {
         var originalCommand = command.UntypedCommand;
         var requiresInvalidation =
-            InvalidationInfoProvider.RequiresInvalidation(originalCommand)
+            RequiresInvalidation(originalCommand)
             && !Computed.IsInvalidating();
         if (!requiresInvalidation) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
@@ -44,27 +51,10 @@ public class PostCompletionInvalidator(
         try {
             var log = Log.IfEnabled(Settings.LogLevel);
             using var activity = StartActivity(originalCommand);
-            var finalHandler = context.ExecutionState.FindFinalHandler();
-            var useOriginalCommandHandler = finalHandler == null
-                || finalHandler.GetHandlerService(command, context) is CompletionTerminator;
-            if (useOriginalCommandHandler) {
-                if (InvalidationInfoProvider.IsClientComputeServiceCommand(originalCommand)) {
-                    log?.Log(Settings.LogLevel,
-                        "No invalidation for client compute service command '{CommandType}'",
-                        originalCommand.GetType());
-                    return;
-                }
-                log?.Log(Settings.LogLevel,
-                    "Invalidating via original command handler for '{CommandType}'",
-                    originalCommand.GetType());
-                await context.Commander.Call(originalCommand, cancellationToken).ConfigureAwait(false);
-            }
-            else {
-                log?.Log(Settings.LogLevel,
-                    "Invalidating via dedicated command handler for '{CommandType}'",
-                    command.GetType());
-                await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
-            }
+            log?.Log(Settings.LogLevel,
+                "Invalidating via original command handler for '{CommandType}'",
+                originalCommand.GetType());
+            await context.Commander.Call(originalCommand, cancellationToken).ConfigureAwait(false);
 
             var operationItems = operation.Items;
             try {
@@ -80,6 +70,40 @@ public class PostCompletionInvalidator(
             context.SetOperation(oldOperation);
             invalidateScope.Dispose();
         }
+    }
+
+    public virtual bool RequiresInvalidation(ICommand command)
+    {
+        var finalHandler = CommandHandlerResolver.GetCommandHandlerChain(command).FinalHandler;
+        if (finalHandler is not IMethodCommandHandler methodCommandHandler)
+            return false;
+
+        var methodParameters = methodCommandHandler.Parameters;
+        if (methodParameters.Length != 2)
+            return false;
+
+        var service = Services.GetService(finalHandler.GetHandlerServiceType());
+        if (service is not IComputeService)
+            return false;
+
+        var interceptor = (service as IProxy)?.Interceptor;
+        if (interceptor is ComputeServiceInterceptor)
+            return true; // Pure compute service
+
+        if (interceptor is not RpcHybridInterceptor hybridInterceptor)
+            return false;
+        if (hybridInterceptor.ClientInterceptor is not ClientComputeServiceInterceptor clientComputeServiceInterceptor)
+            return false;
+
+        var clientInterceptor = clientComputeServiceInterceptor.ClientInterceptor;
+        if (clientInterceptor.GetMethodDef(methodCommandHandler.Method, service.GetType()) is not RpcMethodDef rpcMethodDef)
+            return false;
+
+        var arguments = (ArgumentList)ArgumentList.Types[2]
+            .MakeGenericType(methodParameters[0].ParameterType, methodParameters[1].ParameterType)
+            .CreateInstance(command, default(CancellationToken));
+        var rpcPeer = hybridInterceptor.CallRouter.Invoke(rpcMethodDef, arguments);
+        return rpcPeer == null;
     }
 
     protected virtual Activity? StartActivity(ICommand originalCommand)
@@ -102,7 +126,7 @@ public class PostCompletionInvalidator(
     {
         foreach (var commandEntry in nestedCommands) {
             var (command, items) = commandEntry;
-            if (InvalidationInfoProvider.RequiresInvalidation(command)) {
+            if (RequiresInvalidation(command)) {
                 operation.Items = items;
                 await context.Commander.Call(command, cancellationToken).ConfigureAwait(false);
             }

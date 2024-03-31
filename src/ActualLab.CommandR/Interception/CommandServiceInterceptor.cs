@@ -61,10 +61,10 @@ public class CommandServiceInterceptor(CommandServiceInterceptor.Options setting
         };
 
     // We don't need to decorate this method with any dynamic access attributes
-    protected override MethodDef? CreateMethodDef(MethodInfo method, Invocation initialInvocation)
+    protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
     {
         try {
-            var type = initialInvocation.Proxy.GetType().NonProxyType();
+            var type = proxyType.NonProxyType();
 #pragma warning disable IL2072
             var methodDef = new CommandHandlerMethodDef(type, method);
 #pragma warning restore IL2072

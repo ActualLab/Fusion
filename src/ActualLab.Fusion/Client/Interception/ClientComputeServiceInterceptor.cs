@@ -48,7 +48,7 @@ public class ClientComputeServiceInterceptor(
         // And we're inside Computed.Invalidate() block
         if (Settings.WarnOnRemoteInvalidation)
             Log.LogWarning("Remote invalidation suppressed: {Invocation}", invocation.Format());
-        var computeMethodDef = (ComputeMethodDef)GetMethodDef(invocation)!;
+        var computeMethodDef = (ComputeMethodDef)GetMethodDef(invocation.Method, invocation.Proxy.GetType())!;
         return (TResult)computeMethodDef.DefaultResult;
     }
 

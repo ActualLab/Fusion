@@ -57,6 +57,6 @@ public sealed class RpcHybridInterceptor : RpcInterceptorBase
     }
 
     // We don't need to decorate this method with any dynamic access attributes
-    protected override MethodDef? CreateMethodDef(MethodInfo method, Invocation initialInvocation)
+    protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
         => ServiceDef.Methods.FirstOrDefault(m => m.Method == method);
 }

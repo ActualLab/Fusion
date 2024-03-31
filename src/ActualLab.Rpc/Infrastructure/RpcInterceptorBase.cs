@@ -18,7 +18,7 @@ public abstract class RpcInterceptorBase(
     public readonly RpcServiceDef ServiceDef = serviceDef;
 
     // We don't need to decorate this method with any dynamic access attributes
-    protected override MethodDef? CreateMethodDef(MethodInfo method, Invocation initialInvocation)
+    protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
         => ServiceDef.Methods.FirstOrDefault(m => m.Method == method);
 
     protected override void ValidateTypeInternal(

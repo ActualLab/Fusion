@@ -23,7 +23,7 @@ public abstract class InterceptorBase : Interceptor, IHasServices
         .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateHandler)));
 
     private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandlerUntyped;
-    private readonly Func<MethodInfo, Invocation, MethodDef?> _createMethodDef;
+    private readonly Func<MethodInfo, Type, MethodDef?> _createMethodDef;
     private readonly ConcurrentDictionary<MethodInfo, MethodDef?> _methodDefCache = new();
     private readonly ConcurrentDictionary<MethodInfo, Func<Invocation, object?>?> _handlerCache = new(1, 64);
     private readonly ConcurrentDictionary<Type, Unit> _validateTypeCache = new();
@@ -73,6 +73,9 @@ public abstract class InterceptorBase : Interceptor, IHasServices
     public Func<Invocation, object?>? GetHandler(Invocation invocation)
         => _handlerCache.GetOrAdd(invocation.Method, _createHandlerUntyped, invocation);
 
+    public MethodDef? GetMethodDef(MethodInfo method, Type proxyType)
+        => _methodDefCache.GetOrAdd(method, _createMethodDef, proxyType);
+
     public void ValidateType(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
     {
@@ -96,7 +99,7 @@ public abstract class InterceptorBase : Interceptor, IHasServices
 
     protected Func<Invocation, object?>? CreateHandlerUntyped(MethodInfo method, Invocation initialInvocation)
     {
-        var methodDef = GetMethodDef(initialInvocation);
+        var methodDef = GetMethodDef(method, initialInvocation.Proxy.GetType());
         if (methodDef == null)
             return null;
 
@@ -105,9 +108,6 @@ public abstract class InterceptorBase : Interceptor, IHasServices
             .Invoke(this, [initialInvocation, methodDef])!;
     }
 
-    protected MethodDef? GetMethodDef(Invocation initialInvocation)
-        => _methodDefCache.GetOrAdd(initialInvocation.Method, _createMethodDef, initialInvocation);
-
     // Abstract methods
 
     protected abstract Func<Invocation, object?> CreateHandler<
@@ -115,7 +115,7 @@ public abstract class InterceptorBase : Interceptor, IHasServices
         Invocation initialInvocation, MethodDef methodDef);
     // We don't need to decorate this method with any dynamic access attributes
     protected abstract MethodDef? CreateMethodDef(
-        MethodInfo method, Invocation initialInvocation);
+        MethodInfo method, Type proxyType);
     protected abstract void ValidateTypeInternal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type);
 }

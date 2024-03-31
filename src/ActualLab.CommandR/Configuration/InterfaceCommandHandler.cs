@@ -2,13 +2,22 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.CommandR.Configuration;
 
+public interface IInterfaceCommandHandler : ICommandHandler
+{
+    Type ServiceType { get; }
+}
+
 public sealed record InterfaceCommandHandler<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TCommand>(
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type ServiceType,
-    bool IsFilter = false, double Priority = 0)
-    : CommandHandler<TCommand>($"{ServiceType.GetName(true, true)} via interface", IsFilter, Priority)
+    bool IsFilter = false, double Priority = 0
+    ) : CommandHandler<TCommand>($"{ServiceType.GetName(true, true)} via interface", IsFilter, Priority),
+        IInterfaceCommandHandler
     where TCommand : class, ICommand
 {
+    public override Type GetHandlerServiceType()
+        => ServiceType;
+
     public override object GetHandlerService(ICommand command, CommandContext context)
         => context.Services.GetRequiredService(ServiceType);
 

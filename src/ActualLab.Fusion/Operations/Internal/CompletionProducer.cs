@@ -1,6 +1,7 @@
 namespace ActualLab.Fusion.Operations.Internal;
 
-public class CompletionProducer : IOperationCompletionListener
+public class CompletionProducer(CompletionProducer.Options settings, ICommander commander)
+    : IOperationCompletionListener
 {
     public record Options
     {
@@ -11,17 +12,12 @@ public class CompletionProducer : IOperationCompletionListener
     private AgentInfo? _agentInfo;
     private ILogger? _log;
 
-    protected Options Settings { get; }
-    protected ICommander Commander { get; }
+    protected Options Settings { get; } = settings;
+    protected ICommander Commander { get; } = commander;
     protected IServiceProvider Services => Commander.Services;
-    protected AgentInfo AgentInfo => _agentInfo ??= Services.GetRequiredService<AgentInfo>();
+    protected AgentInfo AgentInfo
+        => _agentInfo ??= Services.GetRequiredService<AgentInfo>();
     protected ILogger Log => _log ??= Services.LogFor(GetType());
-
-    public CompletionProducer(Options settings, ICommander commander, AgentInfo agentInfo)
-    {
-        Settings = settings;
-        Commander = commander;
-    }
 
     public bool IsReady()
         => true;

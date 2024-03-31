@@ -35,7 +35,7 @@ public static class Completion
         var command = (ICommand?)operation.Command
             ?? throw Errors.OperationHasNoCommand(nameof(operation));
         var tCompletion = typeof(Completion<>).MakeGenericType(command.GetType());
-        var completion = (ICompletion)tCompletion.CreateInstance(operation)!;
+        var completion = (ICompletion)tCompletion.CreateInstance(operation);
         return completion;
     }
 

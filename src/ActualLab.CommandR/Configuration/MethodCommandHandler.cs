@@ -3,14 +3,27 @@ using ActualLab.CommandR.Internal;
 
 namespace ActualLab.CommandR.Configuration;
 
+public interface IMethodCommandHandler : ICommandHandler
+{
+    Type ServiceType { get; }
+    MethodInfo Method { get; }
+    ParameterInfo[] Parameters { get; }
+}
+
 public sealed record MethodCommandHandler<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TCommand>
     ([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type ServiceType,
-    MethodInfo Method, bool IsFilter = false, double Priority = 0)
-    : CommandHandler<TCommand>($"{ServiceType.GetName(true, true)}.{Method.Name}", IsFilter, Priority)
+    MethodInfo Method, bool IsFilter = false, double Priority = 0
+    ) : CommandHandler<TCommand>($"{ServiceType.GetName(true, true)}.{Method.Name}", IsFilter, Priority),
+        IMethodCommandHandler
     where TCommand : class, ICommand
 {
-    private ParameterInfo[]? _cachedParameters;
+    private ParameterInfo[]? _parameters;
+
+    public ParameterInfo[] Parameters => _parameters ??= Method.GetParameters();
+
+    public override Type GetHandlerServiceType()
+        => ServiceType;
 
     public override object GetHandlerService(ICommand command, CommandContext context)
         => context.Services.GetRequiredService(ServiceType);
@@ -21,7 +34,7 @@ public sealed record MethodCommandHandler<
     {
         var services = context.Services;
         var service = GetHandlerService(command, context);
-        var parameters = _cachedParameters ??= Method.GetParameters();
+        var parameters = Parameters;
         var arguments = new object[parameters.Length];
         arguments[0] = command;
         // ReSharper disable once HeapView.BoxingAllocation
@@ -32,7 +45,7 @@ public sealed record MethodCommandHandler<
             arguments[i] = value;
         }
         try {
-            return (Task) Method.Invoke(service, arguments)!;
+            return (Task)Method.Invoke(service, arguments)!;
         }
         catch (TargetInvocationException tie) {
             if (tie.InnerException != null)

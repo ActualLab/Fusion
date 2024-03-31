@@ -32,7 +32,7 @@ public class Commander(IServiceProvider services) : ICommander
     {
         try {
             var command = context.UntypedCommand;
-            var handlers = HandlerResolver.GetHandlerChain(command);
+            var handlers = HandlerResolver.GetCommandHandlerChain(command);
             context.ExecutionState = new CommandExecutionState(handlers);
             if (handlers.Length == 0)
                 await OnUnhandledCommand(command, context, cancellationToken).ConfigureAwait(false);

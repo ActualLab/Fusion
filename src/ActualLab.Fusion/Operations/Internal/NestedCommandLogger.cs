@@ -7,13 +7,13 @@ namespace ActualLab.Fusion.Operations.Internal;
 /// </summary>
 public class NestedCommandLogger(IServiceProvider services) : ICommandHandler<ICommand>
 {
-    private InvalidationInfoProvider? _invalidationInfoProvider;
+    private PostCompletionInvalidator? _postCompletionInvalidator;
     private ILogger? _log;
 
     protected IServiceProvider Services { get; } = services;
 
-    protected InvalidationInfoProvider InvalidationInfoProvider
-        => _invalidationInfoProvider ??= Services.GetRequiredService<InvalidationInfoProvider>();
+    protected PostCompletionInvalidator PostCompletionInvalidator
+        => _postCompletionInvalidator ??= Services.GetRequiredService<PostCompletionInvalidator>();
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.NestedCommandLogger)]
@@ -22,7 +22,7 @@ public class NestedCommandLogger(IServiceProvider services) : ICommandHandler<IC
         var operation = context.OuterContext != null ? context.Items.Get<IOperation>() : null;
         var mustBeLogged =
             operation != null // Should be a nested context inside a context w/ operation
-            && InvalidationInfoProvider.RequiresInvalidation(command) // Command requires invalidation
+            && PostCompletionInvalidator.RequiresInvalidation(command) // Command requires invalidation
             && !Computed.IsInvalidating();
         if (!mustBeLogged) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);

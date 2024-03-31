@@ -92,8 +92,6 @@ public readonly struct FusionBuilder
         // CommandR, command completion and invalidation
         var commander = Commander;
         services.TryAddSingleton(_ => new AgentInfo());
-        services.TryAddSingleton(c => new InvalidationInfoProvider(
-            c.Commander(), c.GetRequiredService<CommandHandlerResolver>()));
 
         // Transient operation scope & its provider
         if (!services.HasService<TransientOperationScopeProvider>()) {

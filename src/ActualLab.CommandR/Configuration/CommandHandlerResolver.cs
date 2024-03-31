@@ -44,7 +44,7 @@ public class CommandHandlerResolver
                 where handler.CommandType == typeEntry.Type && self.Filter.Invoke(handler, commandType1)
                 orderby handler.Priority descending, typeEntry.Index descending
                 select handler
-            ).Distinct().ToList();
+            ).Distinct().ToArray();
 
             var logLevel = self.Settings.HandlerLogLevel;
             if (self.Log.IfEnabled(logLevel) is { } log) {
@@ -59,8 +59,8 @@ public class CommandHandlerResolver
                 // IEventCommand
                 var handlerChains = (
                     from nonFilterHandler in nonFilterHandlers
-                    let handlerSubset = handlers.Where(h => h.IsFilter || h == nonFilterHandler).ToImmutableArray()
-                    select KeyValuePair.Create(nonFilterHandler.Id, handlerSubset)
+                    let handlerSubset = handlers.Where(h => h.IsFilter || h == nonFilterHandler).ToArray()
+                    select KeyValuePair.Create(nonFilterHandler.Id, new CommandHandlerChain(handlerSubset))
                 ).ToImmutableDictionary();
                 return new CommandHandlerSet(commandType1, handlerChains);
             }
@@ -73,6 +73,6 @@ public class CommandHandlerResolver
                     commandType1, handlers.ToDelimitedString());
                 throw e;
             }
-            return new CommandHandlerSet(commandType1, handlers.ToImmutableArray());
+            return new CommandHandlerSet(commandType1, new CommandHandlerChain(handlers));
         }, this);
 }
