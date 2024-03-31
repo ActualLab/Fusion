@@ -387,9 +387,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         // !!! This method should never fail
         try {
             // If we're here, WaitToWriteAsync call is required to continue
-            await sender.WaitToWriteAsync(StopToken).ConfigureAwait(false);
-            while (!sender.TryWrite(message))
-                await sender.WaitToWriteAsync(StopToken).ConfigureAwait(false);
+            if (await sender.WaitToWriteAsync(StopToken).ConfigureAwait(false))
+                sender.TryWrite(message);
         }
 #pragma warning disable RCS1075
         catch (Exception e) {
