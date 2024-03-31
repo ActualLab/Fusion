@@ -6,7 +6,7 @@ public sealed record InterfaceCommandHandler<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TCommand>(
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type ServiceType,
     bool IsFilter = false, double Priority = 0)
-    : CommandHandler<TCommand>($"{ServiceType.GetName(true)} via interface", IsFilter, Priority)
+    : CommandHandler<TCommand>($"{ServiceType.GetName(true, true)} via interface", IsFilter, Priority)
     where TCommand : class, ICommand
 {
     public override object GetHandlerService(ICommand command, CommandContext context)

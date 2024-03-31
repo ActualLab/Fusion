@@ -7,7 +7,7 @@ public sealed record MethodCommandHandler<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TCommand>
     ([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type ServiceType,
     MethodInfo Method, bool IsFilter = false, double Priority = 0)
-    : CommandHandler<TCommand>($"{ServiceType.GetName(true)}.{Method.Name}", IsFilter, Priority)
+    : CommandHandler<TCommand>($"{ServiceType.GetName(true, true)}.{Method.Name}", IsFilter, Priority)
     where TCommand : class, ICommand
 {
     private ParameterInfo[]? _cachedParameters;

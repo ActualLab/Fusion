@@ -43,7 +43,9 @@ public readonly struct CommanderBuilder
         services.TryAddSingleton<ICommander>(c => new Commander(c));
         services.TryAddSingleton(new HashSet<CommandHandler>());
         services.TryAddSingleton(c => new CommandHandlerRegistry(c));
-        services.TryAddSingleton(c => new CommandHandlerResolver(c));
+        services.TryAddSingleton(_ => new CommandHandlerResolver.Options());
+        services.TryAddSingleton(c => new CommandHandlerResolver(
+            c.GetRequiredService<CommandHandlerResolver.Options>(), c));
 
         // Command services & their dependencies
         Services.TryAddSingleton(_ => new CommandServiceInterceptor.Options());

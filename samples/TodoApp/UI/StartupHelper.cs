@@ -25,6 +25,7 @@ public static class StartupHelper
         builder.Logging.AddFilter(typeof(App).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(Computed).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(RpcHub).Namespace, LogLevel.Debug);
+        builder.Logging.AddFilter(typeof(CommandHandlerResolver).Namespace, LogLevel.Debug);
 
         // Fusion services
         var fusion = services.AddFusion();
