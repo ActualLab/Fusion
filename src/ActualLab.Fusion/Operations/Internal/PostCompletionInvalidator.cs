@@ -9,7 +9,7 @@ public class PostCompletionInvalidator(
 {
     public record Options
     {
-        public LogLevel LogLevel { get; init; } = LogLevel.None;
+        public LogLevel LogLevel { get; init; } = LogLevel.Debug;
     }
 
     private ActivitySource? _activitySource;
