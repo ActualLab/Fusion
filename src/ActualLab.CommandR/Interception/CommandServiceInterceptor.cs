@@ -51,7 +51,9 @@ public class CommandServiceInterceptor(CommandServiceInterceptor.Options setting
                 // and current inbound Rpc call isn't "ours"
                 throw Errors.DirectCommandHandlerCallsAreNotAllowed();
             }
-            if (!ReferenceEquals(command, context.UntypedCommand)) {
+
+            var contextCommand = context.UntypedCommand;
+            if (!ReferenceEquals(command, contextCommand) && contextCommand is not IMetaCommand) {
                 // We're outside the ICommander pipeline
                 throw Errors.DirectCommandHandlerCallsAreNotAllowed();
             }

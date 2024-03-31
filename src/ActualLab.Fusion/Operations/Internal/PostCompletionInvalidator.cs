@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Interception;
 using ActualLab.Interception;
@@ -39,11 +40,11 @@ public class PostCompletionInvalidator(
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.PostCompletionInvalidator)]
     public async Task OnCommand(ICompletion command, CommandContext context, CancellationToken cancellationToken)
     {
-        var originalCommand = command.UntypedCommand;
-        var requiresInvalidation =
-            RequiresInvalidation(originalCommand)
+        var completedCommand = command.UntypedCommand;
+        var mayRequireInvalidation =
+            MayRequireInvalidation(completedCommand)
             && !Computed.IsInvalidating();
-        if (!requiresInvalidation) {
+        if (!mayRequireInvalidation) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
         }
@@ -53,22 +54,7 @@ public class PostCompletionInvalidator(
         context.SetOperation(operation);
         var invalidateScope = Computed.Invalidate();
         try {
-            var log = Log.IfEnabled(Settings.LogLevel);
-            using var activity = StartActivity(originalCommand);
-            log?.Log(Settings.LogLevel,
-                "Invalidating via original command handler for '{CommandType}'",
-                originalCommand.GetType());
-            await context.Commander.Call(originalCommand, cancellationToken).ConfigureAwait(false);
-
-            var operationItems = operation.Items;
-            try {
-                var nestedCommands = operationItems.GetOrDefault(ImmutableList<NestedCommandEntry>.Empty);
-                if (!nestedCommands.IsEmpty)
-                    await InvokeNestedCommands(context, operation, nestedCommands, cancellationToken).ConfigureAwait(false);
-            }
-            finally {
-                operation.Items = operationItems;
-            }
+            await TryInvalidate(context, completedCommand, operation.Items, null, cancellationToken).ConfigureAwait(false);
         }
         finally {
             context.SetOperation(oldOperation);
@@ -76,14 +62,22 @@ public class PostCompletionInvalidator(
         }
     }
 
-    public virtual bool RequiresInvalidation(ICommand command)
+    public virtual bool MayRequireInvalidation(ICommand command)
     {
-        var finalHandler = CommandHandlerResolver.GetCommandHandlerChain(command).FinalHandler;
-        if (finalHandler is not IMethodCommandHandler methodCommandHandler)
+        var finalHandler = CommandHandlerResolver.GetCommandHandlerChain(command).FinalHandler as IMethodCommandHandler;
+        if (finalHandler == null || finalHandler.ParameterTypes.Length != 2)
             return false;
 
-        var parameterTypes = methodCommandHandler.ParameterTypes;
-        if (parameterTypes.Length != 2)
+        var service = Services.GetService(finalHandler.GetHandlerServiceType());
+        return service is IComputeService;
+    }
+
+    public virtual bool RequiresInvalidation(
+        ICommand command,
+        [MaybeNullWhen(false)] out IMethodCommandHandler finalHandler)
+    {
+        finalHandler = CommandHandlerResolver.GetCommandHandlerChain(command).FinalHandler as IMethodCommandHandler;
+        if (finalHandler == null || finalHandler.ParameterTypes.Length != 2)
             return false;
 
         var service = Services.GetService(finalHandler.GetHandlerServiceType());
@@ -100,43 +94,61 @@ public class PostCompletionInvalidator(
             return false;
 
         var clientInterceptor = clientComputeServiceInterceptor.ClientInterceptor;
-        if (clientInterceptor.GetMethodDef(methodCommandHandler.Method, service.GetType()) is not RpcMethodDef rpcMethodDef)
+        if (clientInterceptor.GetMethodDef(finalHandler.Method, service.GetType()) is not RpcMethodDef rpcMethodDef)
             return false;
 
         var arguments = (ArgumentList)ArgumentListNewMethod
-            .MakeGenericMethod(parameterTypes)
+            .MakeGenericMethod(finalHandler.ParameterTypes)
             .Invoke(null, [command, default(CancellationToken)])!;
         var rpcPeer = hybridInterceptor.CallRouter.Invoke(rpcMethodDef, arguments);
         return rpcPeer == null;
     }
 
-    protected virtual Activity? StartActivity(ICommand originalCommand)
+    protected virtual async ValueTask TryInvalidate(
+        CommandContext context,
+        ICommand command,
+        OptionSet operationItems,
+        Activity? activity,
+        CancellationToken cancellationToken)
     {
-        var operationName = originalCommand.GetType().GetOperationName("Invalidate");
+        var operation = context.Operation();
+        var oldOperationItems = operation.Items;
+        var oldActivity = activity;
+        operation.Items = operationItems;
+        try {
+            if (RequiresInvalidation(command, out var finalHandler)) {
+                activity ??= StartActivity(command);
+                Log.IfEnabled(Settings.LogLevel)
+                    ?.Log(Settings.LogLevel, "Invalidating: {Command}", command);
+                try {
+                    await finalHandler.Invoke(command, context, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+                    Log.LogError(e, "Failed to invalidate {Command}", command);
+                }
+            }
+
+            var nestedCommands = operationItems.GetOrDefault(ImmutableList<NestedCommandEntry>.Empty);
+            foreach (var (nestedCommand, nestedOperationItems) in nestedCommands)
+                await TryInvalidate(context, nestedCommand, nestedOperationItems, activity, cancellationToken)
+                    .ConfigureAwait(false);
+        }
+        finally {
+            if (oldActivity != activity)
+                activity?.Dispose();
+            operation.Items = oldOperationItems;
+        }
+    }
+
+    protected virtual Activity? StartActivity(ICommand command)
+    {
+        var operationName = command.GetType().GetOperationName("Invalidate");
         var activity = ActivitySource.StartActivity(operationName);
         if (activity != null) {
-            var tags = new ActivityTagsCollection { { "originalCommand", originalCommand.ToString() } };
+            var tags = new ActivityTagsCollection { { "command", command.ToString() } };
             var activityEvent = new ActivityEvent(operationName, tags: tags);
             activity.AddEvent(activityEvent);
         }
         return activity;
-    }
-
-    protected virtual async ValueTask InvokeNestedCommands(
-        CommandContext context,
-        IOperation operation,
-        ImmutableList<NestedCommandEntry> nestedCommands,
-        CancellationToken cancellationToken)
-    {
-        foreach (var commandEntry in nestedCommands) {
-            var (command, items) = commandEntry;
-            if (RequiresInvalidation(command)) {
-                operation.Items = items;
-                await context.Commander.Call(command, cancellationToken).ConfigureAwait(false);
-            }
-            var subcommands = items.GetOrDefault(ImmutableList<NestedCommandEntry>.Empty);
-            if (!subcommands.IsEmpty)
-                await InvokeNestedCommands(context, operation, subcommands, cancellationToken).ConfigureAwait(false);
-        }
     }
 }

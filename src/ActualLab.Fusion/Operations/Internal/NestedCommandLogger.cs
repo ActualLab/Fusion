@@ -22,7 +22,7 @@ public class NestedCommandLogger(IServiceProvider services) : ICommandHandler<IC
         var operation = context.OuterContext != null ? context.Items.Get<IOperation>() : null;
         var mustBeLogged =
             operation != null // Should be a nested context inside a context w/ operation
-            && PostCompletionInvalidator.RequiresInvalidation(command) // Command requires invalidation
+            && PostCompletionInvalidator.MayRequireInvalidation(command) // Command may require invalidation
             && !Computed.IsInvalidating();
         if (!mustBeLogged) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
