@@ -56,12 +56,12 @@ public class DbOperationLogReader<
 
             // Fetching potentially new operations
             var minCommitTime = (maxKnownCommitTime - Settings.MaxCommitDuration).ToDateTime();
-            var operations = await DbOperationLog
+            var dbOperations = await DbOperationLog
                 .ListNewlyCommitted(tenant, minCommitTime, batchSize, cancellationToken1)
                 .ConfigureAwait(false);
 
             // Updating important stuff
-            lastOperationCount = operations.Count;
+            lastOperationCount = dbOperations.Count;
             if (lastOperationCount == 0) {
                 maxKnownCommitTime = now;
                 return;
@@ -74,7 +74,7 @@ public class DbOperationLogReader<
                 Log.LogDebug("Read: fetched {Count}/{BatchSize} operation(s), CommitTime >= {MinCommitTime}",
                     lastOperationCount, batchSize, minCommitTime);
 
-            var maxCommitTime = operations.Max(o => o.CommitTime).ToMoment();
+            var maxCommitTime = dbOperations.Max(o => o.CommitTime).ToMoment();
             maxKnownCommitTime = Moment.Max(maxKnownCommitTime, maxCommitTime);
 
             // Run completion notifications:
@@ -84,9 +84,10 @@ public class DbOperationLogReader<
             // pipeline, which makes it possible to see command completing
             // prior to its invalidation logic completion.
             var notifyTasks =
-                from operation in operations
-                let isLocal = StringComparer.Ordinal.Equals(operation.AgentId, AgentInfo.Id.Value)
+                from dbOperation in dbOperations
+                let isLocal = StringComparer.Ordinal.Equals(dbOperation.AgentId, AgentInfo.Id.Value)
                 where !isLocal
+                let operation = dbOperation.ToModel()
                 select OperationCompletionNotifier.NotifyCompleted(operation, null);
             await notifyTasks
                 .Collect(HardwareInfo.GetProcessorCountFactor(64, 64))

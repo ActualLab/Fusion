@@ -100,9 +100,9 @@ public readonly struct FusionBuilder
         }
 
         // Nested command logger
-        if (!services.HasService<NestedCommandLogger>()) {
-            services.AddSingleton(c => new NestedCommandLogger(c));
-            commander.AddHandlers<NestedCommandLogger>();
+        if (!services.HasService<NestedOperationLogger>()) {
+            services.AddSingleton(c => new NestedOperationLogger(c));
+            commander.AddHandlers<NestedOperationLogger>();
         }
 
         // Operation completion - notifier & producer

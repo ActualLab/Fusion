@@ -49,7 +49,7 @@ public class PostCompletionInvalidator(
             return;
         }
 
-        var oldOperation = context.Items.Get<IOperation>();
+        var oldOperation = context.Items.Get<Operation>();
         var operation = command.Operation;
         context.SetOperation(operation);
         var invalidateScope = Computed.Invalidate();
@@ -64,6 +64,9 @@ public class PostCompletionInvalidator(
 
     public virtual bool MayRequireInvalidation(ICommand command)
     {
+        if (command is IApiCommand)
+            return false;
+
         var finalHandler = CommandHandlerResolver.GetCommandHandlerChain(command).FinalHandler as IMethodCommandHandler;
         if (finalHandler == null || finalHandler.ParameterTypes.Length != 2)
             return false;
@@ -76,6 +79,11 @@ public class PostCompletionInvalidator(
         ICommand command,
         [MaybeNullWhen(false)] out IMethodCommandHandler finalHandler)
     {
+        if (command is IApiCommand) {
+            finalHandler = null;
+            return false;
+        }
+
         finalHandler = CommandHandlerResolver.GetCommandHandlerChain(command).FinalHandler as IMethodCommandHandler;
         if (finalHandler == null || finalHandler.ParameterTypes.Length != 2)
             return false;
@@ -128,7 +136,7 @@ public class PostCompletionInvalidator(
                 }
             }
 
-            var nestedCommands = operationItems.GetOrDefault(ImmutableList<NestedCommandEntry>.Empty);
+            var nestedCommands = operationItems.GetOrDefault(ImmutableList<NestedOperation>.Empty);
             foreach (var (nestedCommand, nestedOperationItems) in nestedCommands)
                 await TryInvalidate(context, nestedCommand, nestedOperationItems, activity, cancellationToken)
                     .ConfigureAwait(false);

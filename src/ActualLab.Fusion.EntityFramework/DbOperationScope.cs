@@ -43,8 +43,7 @@ public class DbOperationScope<
     public string? TransactionId { get; protected set; }
     public IsolationLevel IsolationLevel { get; set; } = IsolationLevel.Unspecified;
 
-    IOperation IOperationScope.Operation => Operation;
-    public DbOperation Operation { get; protected init; }
+    public Operation Operation { get; protected init; }
     public CommandContext CommandContext { get; protected init; }
     public bool IsUsed => MasterDbContext != null;
     public bool IsClosed { get; private set; }
@@ -62,6 +61,7 @@ public class DbOperationScope<
 
     // Services
     protected IServiceProvider Services { get; }
+    protected AgentInfo AgentInfo { get; }
     protected ITenantRegistry<TDbContext> TenantRegistry { get; }
     protected IMultitenantDbContextFactory<TDbContext> DbContextFactory { get; }
     protected IDbOperationLog<TDbContext> DbOperationLog { get; }
@@ -76,12 +76,18 @@ public class DbOperationScope<
         Services = services;
         Log = Services.LogFor(GetType());
         Clocks = Services.Clocks();
+
+        AgentInfo = services.GetRequiredService<AgentInfo>();
         TenantRegistry = Services.GetRequiredService<ITenantRegistry<TDbContext>>();
         DbContextFactory = Services.GetRequiredService<IMultitenantDbContextFactory<TDbContext>>();
         DbOperationLog = Services.GetRequiredService<IDbOperationLog<TDbContext>>();
         TransactionIdGenerator = Services.GetRequiredService<TransactionIdGenerator<TDbContext>>();
         AsyncLock = new AsyncLock(LockReentryMode.CheckedPass);
-        Operation = DbOperationLog.New();
+        Operation = new Operation() {
+            Id = Ulid.NewUlid().ToString(),
+            AgentId = AgentInfo.Id,
+            StartTime = Clocks.SystemClock.Now,
+        };
         CommandContext = CommandContext.GetCurrent();
     }
 

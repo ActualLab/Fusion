@@ -1,20 +1,36 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using ActualLab.Fusion.Operations.Internal;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
+#pragma warning disable IL2026
+
 [Table("_Operations")]
-[Index(nameof(StartTime), Name = "IX_StartTime")]
-[Index(nameof(CommitTime), Name = "IX_CommitTime")]
-public class DbOperation : IOperation
+[Index(nameof(Id), nameof(Index), Name = "IX_OperationId")]
+[Index(nameof(StartTime), nameof(Index), Name = "IX_StartTime")]
+[Index(nameof(CommitTime), nameof(Index), Name = "IX_CommitTime")]
+public class DbOperation : IHasId<long>, IHasId<string>
 {
-    private readonly NewtonsoftJsonSerialized<object?> _command = NewtonsoftJsonSerialized.New(default(object?));
-    private readonly NewtonsoftJsonSerialized<OptionSet> _items = NewtonsoftJsonSerialized.New(new OptionSet());
+    public static ITextSerializer Serializer { get; set; } = new NewtonsoftJsonSerializer();
+
+    private long? _index;
     private DateTime _startTime;
     private DateTime _commitTime;
 
-    [Key] public string Id { get; set; } = "";
+    long IHasId<long>.Id => Index;
+    string IHasId<string>.Id => Id;
+
+    [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public long Index {
+        get => _index ?? 0;
+        set => _index = value;
+    }
+    [NotMapped]
+    public bool HasIndex => _index.HasValue;
+
+    public string Id { get; set; } = "";
     public string AgentId { get; set; } = "";
 
     public DateTime StartTime {
@@ -27,33 +43,36 @@ public class DbOperation : IOperation
         set => _commitTime = value.DefaultKind(DateTimeKind.Utc);
     }
 
-    public string CommandJson {
-#pragma warning disable IL2026
-        get => _command.Data;
-#pragma warning restore IL2026
-        set => _command.Data = value;
+    public string CommandJson { get; set; } = "";
+    public string ItemsJson { get; set; } = "";
+    public string NestedOperationsJson { get; set; } = "";
+
+    public virtual Operation ToModel()
+    {
+        var command = CommandJson.IsNullOrEmpty()
+            ? null
+            : Serializer.Read<ICommand>(CommandJson);
+        var items = ItemsJson.IsNullOrEmpty()
+            ? new()
+            : Serializer.Read<OptionSet>(ItemsJson);
+        var nestedOperations = NestedOperationsJson.IsNullOrEmpty()
+            ? new()
+            : Serializer.Read<List<NestedOperation>>(NestedOperationsJson);
+        return new Operation(Id, AgentId, StartTime, CommitTime, command!, items, nestedOperations) {
+            Index = HasIndex ? Index : null,
+        };
     }
 
-    public string ItemsJson {
-#pragma warning disable IL2026
-        get => _items.Data;
-#pragma warning restore IL2026
-        set => _items.Data = value;
-    }
-
-    [NotMapped]
-    public object? Command {
-#pragma warning disable IL2026
-        get => _command.Value;
-#pragma warning restore IL2026
-        set => _command.Value = value;
-    }
-
-    [NotMapped]
-    public OptionSet Items {
-#pragma warning disable IL2026
-        get => _items.Value;
-#pragma warning restore IL2026
-        set => _items.Value = value;
+    public virtual void UpdateFrom(Operation operation)
+    {
+        if (operation.Index is { } index)
+            Index = index;
+        Id = operation.Id;
+        AgentId = operation.AgentId;
+        StartTime = operation.StartTime;
+        CommitTime = operation.CommitTime;
+        CommandJson = Serializer.Write(operation.Command);
+        ItemsJson = operation.Items.Items.Count == 0 ? "" : Serializer.Write(operation.Items);
+        NestedOperationsJson = operation.NestedOperations.Count == 0 ? "" : Serializer.Write(operation.NestedOperations);
     }
 }

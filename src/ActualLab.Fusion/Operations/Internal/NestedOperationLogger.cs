@@ -2,10 +2,10 @@ namespace ActualLab.Fusion.Operations.Internal;
 
 /// <summary>
 /// This handler captures invocations of nested commands inside
-/// operations and logs them into context.Operation().Items
+/// operations and logs them into context.Operation().NestedCommands
 /// so that invalidation for them could be auto-replayed too.
 /// </summary>
-public class NestedCommandLogger(IServiceProvider services) : ICommandHandler<ICommand>
+public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<ICommand>
 {
     private PostCompletionInvalidator? _postCompletionInvalidator;
     private ILogger? _log;
@@ -19,7 +19,7 @@ public class NestedCommandLogger(IServiceProvider services) : ICommandHandler<IC
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.NestedCommandLogger)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
-        var operation = context.OuterContext != null ? context.Items.Get<IOperation>() : null;
+        var operation = context.OuterContext != null ? context.Items.Get<Operation>() : null;
         var mustBeLogged =
             operation != null // Should be a nested context inside a context w/ operation
             && PostCompletionInvalidator.MayRequireInvalidation(command) // Command may require invalidation
@@ -29,9 +29,8 @@ public class NestedCommandLogger(IServiceProvider services) : ICommandHandler<IC
             return;
         }
 
-        var operationItems = operation!.Items;
-        var commandItems = new OptionSet();
-        operation.Items = commandItems;
+        var oldOperationItems = operation!.Items;
+        var operationItems = operation.Items = new OptionSet();
         Exception? error = null;
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
@@ -41,18 +40,13 @@ public class NestedCommandLogger(IServiceProvider services) : ICommandHandler<IC
             throw;
         }
         finally {
-            operation.Items = operationItems;
+            operation.Items = oldOperationItems;
             if (error == null) {
-                var newOperation = context.Operation();
-                if (newOperation != operation) {
-                    // The operation might be changed by nested command in case
-                    // it's the one that started to use DbOperationScope first
-                    commandItems = newOperation.Items;
-                    newOperation.Items = operationItems = new OptionSet();
-                }
-                var nestedCommands = operationItems.GetOrDefault(ImmutableList<NestedCommandEntry>.Empty);
-                nestedCommands = nestedCommands.Add(new NestedCommandEntry(command, commandItems));
-                operationItems.Set(nestedCommands);
+                // Downstream handler may change Operation to its own one.
+                // This means that current command is logged as part of that operation,
+                // so we don't have to log it as nested as the part of the current one.
+                if (ReferenceEquals(operation, context.Operation()))
+                    operation.NestedOperations.Add(new(command, operationItems));
             }
         }
     }

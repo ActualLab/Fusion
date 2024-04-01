@@ -4,11 +4,11 @@ namespace ActualLab.Fusion.Operations;
 
 public static class OperationExt
 {
-    public static ClosedDisposable<(IOperation, ImmutableList<NestedCommandEntry>?)> SuppressNestedCommandLogging(
-        this IOperation operation)
+    public static ClosedDisposable<(Operation, ImmutableList<NestedOperation>?)> SuppressNestedCommandLogging(
+        this Operation operation)
     {
-        var nestedCommands = operation.Items.Get<ImmutableList<NestedCommandEntry>>();
-        operation.Items.Remove<ImmutableList<NestedCommandEntry>>();
+        var nestedCommands = operation.Items.Get<ImmutableList<NestedOperation>>();
+        operation.Items.Remove<ImmutableList<NestedOperation>>();
         return Disposable.NewClosed(
             (operation, nestedCommands),
             state => state.operation.Items.Set(state.nestedCommands));

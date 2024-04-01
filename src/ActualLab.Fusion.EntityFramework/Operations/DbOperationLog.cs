@@ -8,8 +8,7 @@ public interface IDbOperationLog<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] in TDbContext>
     where TDbContext : DbContext
 {
-    DbOperation New(string? id = null, string? agentId = null, object? command = null);
-    Task<DbOperation> Add(TDbContext dbContext, IOperation operation, CancellationToken cancellationToken);
+    Task<DbOperation> Add(TDbContext dbContext, Operation operation, CancellationToken cancellationToken);
     Task<DbOperation?> Get(TDbContext dbContext, string id, CancellationToken cancellationToken);
 
     Task<List<DbOperation>> ListNewlyCommitted(Tenant tenant, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken);
@@ -27,20 +26,13 @@ public class DbOperationLog<
 {
     protected AgentInfo AgentInfo { get; } = services.GetRequiredService<AgentInfo>();
 
-    public DbOperation New(string? id = null, string? agentId = null, object? command = null)
-        => new TDbOperation() {
-            Id = id ?? Ulid.NewUlid().ToString()!,
-            AgentId = agentId ?? AgentInfo.Id,
-            StartTime = Clocks.SystemClock.Now,
-            Command = command,
-        };
-
     public virtual async Task<DbOperation> Add(TDbContext dbContext,
-        IOperation operation, CancellationToken cancellationToken)
+        Operation operation, CancellationToken cancellationToken)
     {
         // dbContext shouldn't use tracking!
-        var dbOperation = (TDbOperation) operation;
-        await dbContext.AddAsync((object) dbOperation, cancellationToken).ConfigureAwait(false);
+        var dbOperation = new DbOperation();
+        dbOperation.UpdateFrom(operation);
+        await dbContext.AddAsync((object)dbOperation, cancellationToken).ConfigureAwait(false);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return dbOperation;
     }

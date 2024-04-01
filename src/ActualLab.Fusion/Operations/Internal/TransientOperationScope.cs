@@ -13,7 +13,7 @@ public sealed class TransientOperationScope : AsyncDisposableBase, IOperationSco
     private MomentClockSet Clocks { get; }
     private ILogger Log => _log ??= Services.LogFor(GetType());
 
-    IOperation IOperationScope.Operation => Operation;
+    Operation IOperationScope.Operation => Operation;
     public TransientOperation Operation { get; }
     public CommandContext CommandContext { get; }
     public bool IsUsed { get; private set; }
@@ -25,7 +25,7 @@ public sealed class TransientOperationScope : AsyncDisposableBase, IOperationSco
         Services = services;
         Clocks = services.Clocks();
         AgentInfo = services.GetRequiredService<AgentInfo>();
-        Operation = new TransientOperation(true) {
+        Operation = new TransientOperation() {
             AgentId = AgentInfo.Id,
             StartTime = Clocks.SystemClock.Now,
         };

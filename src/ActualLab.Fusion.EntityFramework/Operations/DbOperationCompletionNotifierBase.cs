@@ -62,7 +62,7 @@ public abstract class DbOperationCompletionNotifierBase<
     public bool IsReady()
         => WhenDisposed == null;
 
-    public Task OnOperationCompleted(IOperation operation, CommandContext? commandContext)
+    public Task OnOperationCompleted(Operation operation, CommandContext? commandContext)
     {
         if (commandContext == null)
             return Task.CompletedTask; // Not a local command

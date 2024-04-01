@@ -2,7 +2,7 @@ namespace ActualLab.Fusion.Operations;
 
 public interface IOperationScope : IAsyncDisposable, IRequirementTarget
 {
-    IOperation Operation { get; }
+    Operation Operation { get; }
     CommandContext CommandContext { get; }
     bool IsUsed { get; }
     bool IsClosed { get; }

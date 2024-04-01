@@ -22,10 +22,11 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
     public bool IsReady()
         => true;
 
-    public virtual Task OnOperationCompleted(IOperation operation, CommandContext? commandContext)
+    public virtual Task OnOperationCompleted(Operation operation, CommandContext? commandContext)
     {
         if (operation.Command is not ICommand command)
             return Task.CompletedTask; // We can't complete non-commands
+
         return Task.Run(async () => {
             var isLocal = commandContext != null;
             var operationType = isLocal ? "Local" : "External";

@@ -2,21 +2,10 @@ using System.Globalization;
 
 namespace ActualLab.Fusion.Operations.Internal;
 
-public class TransientOperation : IOperation
+public class TransientOperation : Operation
 {
-    private static long _operationId;
+    private static long _lastId;
 
-    public string Id { get; set; } = "";
-    public string AgentId { get; set; } = "";
-    public DateTime StartTime { get; set; }
-    public DateTime CommitTime { get; set; }
-    public object? Command { get; set; }
-    public OptionSet Items { get; set; } = new();
-
-    public TransientOperation() { }
-    public TransientOperation(bool autogenerateId)
-    {
-        if (autogenerateId)
-            Id = "Local-" + Interlocked.Increment(ref _operationId).ToString(CultureInfo.InvariantCulture);
-    }
+    public TransientOperation()
+        => Id = "Local-" + Interlocked.Increment(ref _lastId).ToString(CultureInfo.InvariantCulture);
 }

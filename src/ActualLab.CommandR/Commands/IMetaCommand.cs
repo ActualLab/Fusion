@@ -5,7 +5,7 @@ namespace ActualLab.CommandR.Commands;
 // "second-order" commands
 public interface IMetaCommand : ICommand<Unit>
 {
-    public ICommand UntypedCommand { get; }
+    ICommand UntypedCommand { get; }
 }
 
 public interface IMetaCommand<out TCommand> : IMetaCommand
