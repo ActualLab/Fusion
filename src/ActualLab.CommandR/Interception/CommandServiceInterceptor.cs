@@ -53,7 +53,7 @@ public class CommandServiceInterceptor(CommandServiceInterceptor.Options setting
             }
 
             var contextCommand = context.UntypedCommand;
-            if (!ReferenceEquals(command, contextCommand) && contextCommand is not IMetaCommand) {
+            if (!ReferenceEquals(command, contextCommand) && contextCommand is not ISystemCommand) {
                 // We're outside the ICommander pipeline
                 throw Errors.DirectCommandHandlerCallsAreNotAllowed();
             }

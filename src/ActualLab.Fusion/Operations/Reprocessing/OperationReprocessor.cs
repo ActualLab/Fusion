@@ -112,7 +112,7 @@ public class OperationReprocessor(
     {
         var isReprocessingAllowed =
             context.IsOutermost // Should be a top-level command
-            && command is not IMetaCommand // No reprocessing for meta commands
+            && command is not ISystemCommand // No reprocessing for system commands
             && !Computed.IsInvalidating()
             && Options.Filter.Invoke(command, context);
         if (!isReprocessingAllowed) {

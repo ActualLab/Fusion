@@ -35,7 +35,7 @@ public abstract class CommandContext(ICommander commander)
     public static CommandContext New(
         ICommander commander, ICommand command, bool isOutermost)
     {
-        if (!isOutermost && Current?.UntypedCommand is IApiCommand)
+        if (!isOutermost && (command is IOutermostCommand || Current?.UntypedCommand is IApiCommand))
             isOutermost = true;
 
         var tCommandResult = command.GetResultType();

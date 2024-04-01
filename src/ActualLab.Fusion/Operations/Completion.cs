@@ -2,26 +2,16 @@ using ActualLab.Fusion.Operations.Internal;
 
 namespace ActualLab.Fusion.Operations;
 
-public interface ICompletion : IMetaCommand, IBackendCommand
+public interface ICompletion : ISystemCommand, IBackendCommand
 {
     Operation Operation { get; }
 }
 
-public interface ICompletion<out TCommand> : IMetaCommand<TCommand>, ICompletion
+public interface ICompletion<TCommand> : ICompletion
     where TCommand : class, ICommand;
 
-public record Completion<TCommand>(
-    TCommand Command,
-    Operation Operation
-    ) : ICompletion<TCommand>
-    where TCommand : class, ICommand
-{
-    public ICommand UntypedCommand => Command;
-
-    public Completion(Operation operation)
-        : this((TCommand)(operation.Command ?? throw Errors.OperationHasNoCommand(nameof(operation))), operation)
-    { }
-}
+public record Completion<TCommand>(Operation Operation) : ICompletion<TCommand>
+    where TCommand : class, ICommand;
 
 public static class Completion
 {

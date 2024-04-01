@@ -5,7 +5,7 @@ namespace ActualLab.Fusion.Operations.Internal;
 /// operations and logs them into context.Operation().NestedCommands
 /// so that invalidation for them could be auto-replayed too.
 /// </summary>
-public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<ICommand>
+public class NestedCommandLogger(IServiceProvider services) : ICommandHandler<ICommand>
 {
     private PostCompletionInvalidator? _postCompletionInvalidator;
     private ILogger? _log;
@@ -42,11 +42,11 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
         finally {
             operation.Items = oldOperationItems;
             if (error == null) {
-                // Downstream handler may change Operation to its own one.
-                // This means that current command is logged as part of that operation,
-                // so we don't have to log it as nested as the part of the current one.
-                if (ReferenceEquals(operation, context.Operation()))
-                    operation.NestedOperations.Add(new(command, operationItems));
+                // Downstream handler may change Operation to its own one,
+                // current command must be logged as part of that operation.
+                operation = context.Operation();
+                if (operation.Scope is { IsClosed: false })
+                    operation.NestedCommands.Add(new(command, operationItems));
             }
         }
     }

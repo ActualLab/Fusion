@@ -9,7 +9,7 @@ public class Operation(
     Moment commitTime,
     ICommand command,
     OptionSet items,
-    List<NestedOperation> nestedOperations
+    List<NestedCommand> nestedCommands
     ) : IRequirementTarget
 {
     public long? Index { get; set; }
@@ -19,7 +19,9 @@ public class Operation(
     public Moment CommitTime { get; set; } = commitTime; // Always UTC
     public ICommand Command { get; set; } = command;
     public OptionSet Items { get; set; } = items;
-    public List<NestedOperation> NestedOperations { get; set; } = nestedOperations;
+    public List<NestedCommand> NestedCommands { get; set; } = nestedCommands;
+
+    public IOperationScope? Scope { get; set; }
 
     public Operation()
         : this(default, default, default, default, null!, new(), new())

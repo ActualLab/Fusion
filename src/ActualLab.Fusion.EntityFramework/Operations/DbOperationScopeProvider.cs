@@ -24,7 +24,7 @@ public class DbOperationScopeProvider<
     {
         var isOperationRequired =
             context.IsOutermost // Should be a top-level command
-            && command is not IMetaCommand // No operations for meta commands
+            && command is not ISystemCommand // No operations for system commands
             && !Computed.IsInvalidating();
         if (!isOperationRequired) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);

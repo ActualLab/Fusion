@@ -30,6 +30,9 @@ public static class Errors
     public static Exception EntityNotFound(Type entityType)
         => new KeyNotFoundException($"Requested {entityType.GetName()} entity is not found.");
 
+    public static Exception NoOperationIndex()
+        => new InvalidOperationException("DbOperation.Index is not assigned on save.");
+
     public static Exception InvalidUserId()
         => new FormatException("Invalid UserId.");
     public static Exception UserIdRequired()

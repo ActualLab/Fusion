@@ -24,8 +24,8 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
 
     public virtual Task OnOperationCompleted(Operation operation, CommandContext? commandContext)
     {
-        if (operation.Command is not ICommand command)
-            return Task.CompletedTask; // We can't complete non-commands
+        if (operation.Command is not { } command)
+            return Task.CompletedTask; // We skip operations w/o Command
 
         return Task.Run(async () => {
             var isLocal = commandContext != null;

@@ -87,6 +87,7 @@ public class DbOperationScope<
             Id = Ulid.NewUlid().ToString(),
             AgentId = AgentInfo.Id,
             StartTime = Clocks.SystemClock.Now,
+            Scope = this,
         };
         CommandContext = CommandContext.GetCurrent();
     }
@@ -177,9 +178,11 @@ public class DbOperationScope<
 
             var dbContext = MasterDbContext!;
             dbContext.EnableChangeTracking(false); // Just to speed up things a bit
-            var operation = await DbOperationLog
+            var dbOperation = await DbOperationLog
                 .Add(dbContext, Operation, cancellationToken)
                 .ConfigureAwait(false);
+            if (!Operation.Index.HasValue)
+                throw Errors.NoOperationIndex();
             try {
                 await Transaction!.CommitAsync(cancellationToken).ConfigureAwait(false);
                 IsConfirmed = true;
@@ -196,10 +199,10 @@ public class DbOperationScope<
 #else
                     verifierDbContext.Database.AutoTransactionsEnabled = true;
 #endif
-                    var committedOperation = await DbOperationLog
-                        .Get(verifierDbContext, operation.Id, cancellationToken)
+                    var committedDbOperation = await DbOperationLog
+                        .Get(verifierDbContext, dbOperation.Id, cancellationToken)
                         .ConfigureAwait(false);
-                    if (committedOperation != null)
+                    if (committedDbOperation != null)
                         IsConfirmed = true;
                 }
                 catch {

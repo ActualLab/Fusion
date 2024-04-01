@@ -59,9 +59,9 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
         if (context.IsOutermost)
             return true;
 
-        // Do not trace meta commands & any nested command they run
+        // Do not trace system commands & any nested command they run
         for (var c = context; c != null; c = c.OuterContext)
-            if (c.UntypedCommand is IMetaCommand)
+            if (c.UntypedCommand is ISystemCommand)
                 return false;
 
         // Trace the rest

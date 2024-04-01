@@ -45,7 +45,7 @@ public class DbOperation : IHasId<long>, IHasId<string>
 
     public string CommandJson { get; set; } = "";
     public string ItemsJson { get; set; } = "";
-    public string NestedOperationsJson { get; set; } = "";
+    public string NestedCommandsJson { get; set; } = "";
 
     public virtual Operation ToModel()
     {
@@ -55,12 +55,18 @@ public class DbOperation : IHasId<long>, IHasId<string>
         var items = ItemsJson.IsNullOrEmpty()
             ? new()
             : Serializer.Read<OptionSet>(ItemsJson);
-        var nestedOperations = NestedOperationsJson.IsNullOrEmpty()
+        var nestedCommands = NestedCommandsJson.IsNullOrEmpty()
             ? new()
-            : Serializer.Read<List<NestedOperation>>(NestedOperationsJson);
-        return new Operation(Id, AgentId, StartTime, CommitTime, command!, items, nestedOperations) {
+            : Serializer.Read<List<NestedCommand>>(NestedCommandsJson);
+        return new Operation(Id, AgentId, StartTime, CommitTime, command!, items, nestedCommands) {
             Index = HasIndex ? Index : null,
         };
+    }
+
+    public virtual void Update(Operation operation)
+    {
+        if (HasIndex)
+            operation.Index = Index;
     }
 
     public virtual void UpdateFrom(Operation operation)
@@ -73,6 +79,6 @@ public class DbOperation : IHasId<long>, IHasId<string>
         CommitTime = operation.CommitTime;
         CommandJson = Serializer.Write(operation.Command);
         ItemsJson = operation.Items.Items.Count == 0 ? "" : Serializer.Write(operation.Items);
-        NestedOperationsJson = operation.NestedOperations.Count == 0 ? "" : Serializer.Write(operation.NestedOperations);
+        NestedCommandsJson = operation.NestedCommands.Count == 0 ? "" : Serializer.Write(operation.NestedCommands);
     }
 }

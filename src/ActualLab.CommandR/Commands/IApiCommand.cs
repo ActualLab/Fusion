@@ -6,8 +6,10 @@ namespace ActualLab.CommandR.Commands;
 /// other commands.
 /// </summary>
 /// <remarks>
+/// API commands:
+/// - Always execute as the outermost ones.
+/// - Always execute other commands as the outermost ones.
 /// API command handlers are guaranteed to:
-/// - Always execute other commands as the outermost ones
 /// - Have less Fusion handlers in their pipelines - namely,
 ///   the Operation Framework handlers are filtered out for them,
 ///   since they anyway can't change the data directly.

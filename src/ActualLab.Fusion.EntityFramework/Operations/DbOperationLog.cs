@@ -9,7 +9,8 @@ public interface IDbOperationLog<
     where TDbContext : DbContext
 {
     Task<DbOperation> Add(TDbContext dbContext, Operation operation, CancellationToken cancellationToken);
-    Task<DbOperation?> Get(TDbContext dbContext, string id, CancellationToken cancellationToken);
+    Task<DbOperation?> Get(TDbContext dbContext, long index, CancellationToken cancellationToken);
+    Task<DbOperation?> Get(TDbContext dbContext, Symbol id, CancellationToken cancellationToken);
 
     Task<List<DbOperation>> ListNewlyCommitted(Tenant tenant, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken);
     Task<int> Trim(Tenant tenant, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken);
@@ -34,15 +35,26 @@ public class DbOperationLog<
         dbOperation.UpdateFrom(operation);
         await dbContext.AddAsync((object)dbOperation, cancellationToken).ConfigureAwait(false);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        dbOperation.Update(operation);
         return dbOperation;
     }
 
     public virtual async Task<DbOperation?> Get(TDbContext dbContext,
-        string id, CancellationToken cancellationToken)
+        long index, CancellationToken cancellationToken)
+    {
+        // dbContext shouldn't use tracking!
+        var dbOperation = await dbContext.Set<TDbOperation>()
+            .FindAsync(DbKey.Compose(index), cancellationToken)
+            .ConfigureAwait(false);
+        return dbOperation;
+    }
+
+    public virtual async Task<DbOperation?> Get(TDbContext dbContext,
+        Symbol id, CancellationToken cancellationToken)
     {
         // dbContext shouldn't use tracking!
         var dbOperation = await dbContext.Set<TDbOperation>().AsQueryable()
-            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
+            .FirstOrDefaultAsync(e => e.Id == id.Value, cancellationToken)
             .ConfigureAwait(false);
         return dbOperation;
     }

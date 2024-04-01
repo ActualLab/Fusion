@@ -28,6 +28,7 @@ public sealed class TransientOperationScope : AsyncDisposableBase, IOperationSco
         Operation = new TransientOperation() {
             AgentId = AgentInfo.Id,
             StartTime = Clocks.SystemClock.Now,
+            Scope = this,
         };
         CommandContext = CommandContext.GetCurrent();
     }
