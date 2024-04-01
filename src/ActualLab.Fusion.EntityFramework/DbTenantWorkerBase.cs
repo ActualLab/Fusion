@@ -6,23 +6,21 @@ using ActualLab.Versioning;
 namespace ActualLab.Fusion.EntityFramework;
 
 public abstract class DbTenantWorkerBase<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    : TenantWorkerBase<TDbContext>
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>(
+    IServiceProvider services,
+    CancellationTokenSource? stopTokenSource = null
+    ) : TenantWorkerBase<TDbContext>(services.GetRequiredService<ITenantRegistry<TDbContext>>(), stopTokenSource)
     where TDbContext : DbContext
 {
     private ILogger? _log;
     private DbHub<TDbContext>? _dbHub;
 
-    protected IServiceProvider Services { get; init; }
+    protected IServiceProvider Services { get; init; } = services;
     protected DbHub<TDbContext> DbHub => _dbHub ??= Services.DbHub<TDbContext>();
     protected VersionGenerator<long> VersionGenerator => DbHub.VersionGenerator;
     protected MomentClockSet Clocks => DbHub.Clocks;
     protected ICommander Commander => DbHub.Commander;
     protected ILogger Log => _log ??= Services.LogFor(GetType());
-
-    protected DbTenantWorkerBase(IServiceProvider services, CancellationTokenSource? stopTokenSource = null)
-        : base(services.GetRequiredService<ITenantRegistry<TDbContext>>(), stopTokenSource)
-        => Services = services;
 
     protected TDbContext CreateDbContext(Symbol tenantId, bool readWrite = false)
         => DbHub.CreateDbContext(tenantId, readWrite);
