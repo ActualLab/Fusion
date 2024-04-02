@@ -18,6 +18,7 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
 {
     private readonly JsonSerializer _jsonSerializer;
     private static NewtonsoftJsonSerializer? _default;
+    private static TypeDecoratingTextSerializer? _defaultTypeDecorating;
 
     public static JsonSerializerSettings DefaultSettings { get; set; } = new() {
 #if !NET5_0_OR_GREATER
@@ -34,6 +35,11 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
     public static NewtonsoftJsonSerializer Default {
         get => _default ??= new(DefaultSettings);
         set => _default = value;
+    }
+
+    public static TypeDecoratingTextSerializer DefaultTypeDecorating {
+        get => _defaultTypeDecorating ??= new(Default);
+        set => _defaultTypeDecorating = value;
     }
 
     // Instance members

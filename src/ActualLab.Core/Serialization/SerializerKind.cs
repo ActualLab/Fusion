@@ -30,7 +30,7 @@ public static class SerializerKindExt
             SerializerKind.MemoryPack => MemoryPackByteSerializer.DefaultTypeDecorating,
             SerializerKind.MessagePack => MessagePackByteSerializer.DefaultTypeDecorating,
             SerializerKind.SystemJson => SystemJsonSerializer.DefaultTypeDecorating,
-            SerializerKind.NewtonsoftJson => NewtonsoftJsonSerializer.Default,
+            SerializerKind.NewtonsoftJson => NewtonsoftJsonSerializer.DefaultTypeDecorating,
             _ => throw new ArgumentOutOfRangeException(nameof(serializerKind))
         };
 }
