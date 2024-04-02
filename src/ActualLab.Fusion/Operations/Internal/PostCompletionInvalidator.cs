@@ -59,6 +59,14 @@ public class PostCompletionInvalidator(
         context.SetOperation(operation);
         var invalidateScope = Computed.Invalidate();
         try {
+            // If we care only about the eventual consistency, the invalidation order
+            // doesn't matter:
+            // - Any node N gets invalidated when either it or any of its
+            //   dependencies D[i] is invalidated.
+            // - If you invalidate a subset of nodes in { N, D... } set in
+            //   any order (and with any delays between the invalidations),
+            //   the last invalidated dependency causes N to invalidate no matter what -
+            //   assuming the current version of N still depends it.
             var index = 1;
             foreach (var (nestedCommand, nestedOperationItems) in operation.NestedCommands)
                 index = await TryInvalidate(context, operation, nestedCommand, nestedOperationItems, index).ConfigureAwait(false);
