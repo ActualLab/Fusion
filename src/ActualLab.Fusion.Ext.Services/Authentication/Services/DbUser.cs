@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
+using ActualLab.Internal;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Versioning;
 
@@ -10,7 +12,7 @@ namespace ActualLab.Fusion.Authentication.Services;
 public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long>
     where TDbUserId : notnull
 {
-    private readonly NewtonsoftJsonSerialized<ImmutableDictionary<string, string>> _claims =
+    private NewtonsoftJsonSerialized<ImmutableDictionary<string, string>> _claims =
         NewtonsoftJsonSerialized.New(ImmutableDictionary<string, string>.Empty);
 
     [Key] public TDbUserId Id { get; set; } = default!;
@@ -22,10 +24,10 @@ public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long>
 #pragma warning restore IL2026
 
     public string ClaimsJson {
-#pragma warning disable IL2026
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => _claims.Data;
-#pragma warning restore IL2026
-        set => _claims.Data = value;
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        set => _claims = NewtonsoftJsonSerialized.New<ImmutableDictionary<string, string>>(value);
     }
 
     [NotMapped]
@@ -33,7 +35,7 @@ public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long>
 #pragma warning disable IL2026
         get => _claims.Value;
 #pragma warning restore IL2026
-        set => _claims.Value = value;
+        set => _claims = NewtonsoftJsonSerialized.New(value);
     }
 
     public List<DbUserIdentity<TDbUserId>> Identities { get; } = new();

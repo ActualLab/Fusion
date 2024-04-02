@@ -12,9 +12,22 @@ namespace ActualLab.Serialization;
 public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IByteSerializer
 {
     private readonly ConcurrentDictionary<Type, MemoryPackByteSerializer> _typedSerializers = new();
+    private static MemoryPackByteSerializer? _default;
+    private static TypeDecoratingByteSerializer? _defaultTypeDecorating;
 
     public static MemoryPackSerializerOptions DefaultOptions { get; set; } = MemoryPackSerializerOptions.Default;
-    public static MemoryPackByteSerializer Default { get; set; } = new(DefaultOptions);
+
+    public static MemoryPackByteSerializer Default {
+        get => _default ??= new(DefaultOptions);
+        set => _default = value;
+    }
+
+    public static TypeDecoratingByteSerializer DefaultTypeDecorating {
+        get => _defaultTypeDecorating ??= new(Default);
+        set => _defaultTypeDecorating = value;
+    }
+
+    // Instance members
 
     public MemoryPackSerializerOptions Options { get; } = options;
 

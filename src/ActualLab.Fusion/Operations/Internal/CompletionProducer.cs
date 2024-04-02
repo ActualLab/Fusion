@@ -1,3 +1,6 @@
+using ActualLab.CommandR.Operations;
+using ActualLab.OS;
+
 namespace ActualLab.Fusion.Operations.Internal;
 
 public class CompletionProducer(CompletionProducer.Options settings, ICommander commander)
@@ -9,14 +12,12 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
         public LogLevel LogLevel { get; init; } = LogLevel.Information;
     }
 
-    private AgentInfo? _agentInfo;
     private ILogger? _log;
 
     protected Options Settings { get; } = settings;
     protected ICommander Commander { get; } = commander;
     protected IServiceProvider Services => Commander.Services;
-    protected AgentInfo AgentInfo
-        => _agentInfo ??= Services.GetRequiredService<AgentInfo>();
+    protected HostId HostId => Commander.HostId;
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     public bool IsReady()
@@ -34,13 +35,13 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
                 await Commander.Call(Completion.New(operation), true).ConfigureAwait(false);
                 if (command is not INotLogged || Settings.IgnoreNotLogged)
                     Log.IfEnabled(Settings.LogLevel)?.Log(Settings.LogLevel,
-                        "{OperationType} operation completion succeeded. Agent: '{AgentId}', Command: {Command}",
-                        operationType, operation.AgentId, command);
+                        "{OperationType} operation completion succeeded. Host: {HostId}, Command: {Command}",
+                        operationType, operation.HostId, command);
             }
             catch (Exception e) {
                 Log.LogError(e,
-                    "{OperationType} operation completion failed! Agent: '{AgentId}', Command: {Command}",
-                    operationType, operation.AgentId, command);
+                    "{OperationType} operation completion failed! Host: {HostId}, Command: {Command}",
+                    operationType, operation.HostId, command);
             }
         });
     }

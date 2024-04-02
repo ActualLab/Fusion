@@ -20,7 +20,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         if (Computed.IsInvalidating()) {
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
-            var invSessionInfo = context.Operation().Items.Get<SessionInfo>();
+            var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo != null) {
                 _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
                 _ = GetUserSessions(tenant.Id, invSessionInfo.UserId, default);
@@ -70,8 +70,8 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         };
         await Sessions.Upsert(dbContext, session.Id, sessionInfo, cancellationToken).ConfigureAwait(false);
 
-        context.Operation().Items.Set(sessionInfo);
-        context.Operation().Items.Set(isNewUser);
+        context.OperationItems.Set(sessionInfo);
+        context.OperationItems.Set(isNewUser);
     }
 
     // [CommandHandler] inherited
@@ -84,11 +84,11 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var context = CommandContext.GetCurrent();
         var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
         if (Computed.IsInvalidating()) {
-            var invSessionInfo = context.Operation().Items.Get<SessionInfo>();
+            var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo == null)
                 return null!;
             _ = GetSessionInfo(session, default); // Must go first!
-            var invIsNew = context.Operation().Items.GetOrDefault<bool>();
+            var invIsNew = context.OperationItems.GetOrDefault<bool>();
             if (invIsNew) {
                 _ = GetAuthInfo(session, default);
                 _ = GetOptions(session, default);
@@ -116,8 +116,8 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
             .Upsert(dbContext, session.Id, sessionInfo, cancellationToken)
             .ConfigureAwait(false);
         sessionInfo = SessionConverter.ToModel(dbSessionInfo);
-        context.Operation().Items.Set(sessionInfo); // invSessionInfo
-        context.Operation().Items.Set(isNew); // invIsNew
+        context.OperationItems.Set(sessionInfo); // invSessionInfo
+        context.OperationItems.Set(isNew); // invIsNew
         return sessionInfo!;
     }
 

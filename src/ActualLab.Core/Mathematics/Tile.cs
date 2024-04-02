@@ -10,14 +10,14 @@ public readonly partial struct Tile<T>
 {
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public Range<T> Range { get; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public TileLayer<T> Layer { get; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public TileStack<T> Stack => Layer.Stack;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public T Start => Range.Start;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public T End => Range.End;
 
     public Tile(T start, T end, TileLayer<T> layer)

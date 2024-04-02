@@ -1,6 +1,6 @@
 namespace ActualLab.Tests.Collections;
 
-public class ImmutableOptionSetTest
+public class ImmutableOptionSetTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
     public void StringTest()
@@ -11,30 +11,33 @@ public class ImmutableOptionSetTest
         o.Should().Be(o);
 
         var o1 = o.Set("A");
-        o1 = o1.PassThroughAllSerializers();
-        o1.Get<string>().Should().Be("A");
-        o1.GetOrDefault("").Should().Be("A");
-        o1.Items.Count.Should().Be(1);
-        o1.Should().Be(o1);
-        o1.Should().NotBe(o);
+        o1 = o1.AssertPassesThroughAllSerializers(x => {
+            x.Get<string>().Should().Be("A");
+            x.GetOrDefault("").Should().Be("A");
+            x.Items.Count.Should().Be(1);
+            x.Should().Be(x);
+            x.Should().NotBe(o);
+        });
 
         var o2 = o1.Set("B");
-        o2 = o2.PassThroughAllSerializers();
-        o2.Get<string>().Should().Be("B");
-        o2.GetOrDefault("").Should().Be("B");
-        o2.Items.Count.Should().Be(1);
-        o2.Should().Be(o2);
-        o2.Should().NotBe(o1);
-        o2.Should().NotBe(o);
+        o2 = o2.AssertPassesThroughAllSerializers(x => {
+            x.Get<string>().Should().Be("B");
+            x.GetOrDefault("").Should().Be("B");
+            x.Items.Count.Should().Be(1);
+            x.Should().Be(x);
+            x.Should().NotBe(o1);
+            x.Should().NotBe(o);
+        });
 
         var o3 = o2.Remove<string>();
-        o3 = o3.PassThroughAllSerializers();
-        o3.Get<string>().Should().BeNull();
-        o3.GetOrDefault("").Should().Be("");
-        o3.Items.Count.Should().Be(0);
-        o3.Should().Be(o);
-        o3.Should().NotBe(o1);
-        o3.Should().NotBe(o2);
+        o3.AssertPassesThroughAllSerializers(x => {
+            x.Get<string>().Should().BeNull();
+            x.GetOrDefault("").Should().Be("");
+            x.Items.Count.Should().Be(0);
+            x.Should().Be(o);
+            x.Should().NotBe(o1);
+            x.Should().NotBe(o2);
+        });
     }
 
     [Fact]
@@ -48,22 +51,25 @@ public class ImmutableOptionSetTest
         // deserializes integers to this type.
 
         options = options.Set(1L);
-        options = options.PassThroughAllSerializers();
-        options.GetOrDefault<long>().Should().Be(1L);
-        options.GetOrDefault(-1L).Should().Be(1L);
-        options.Items.Count.Should().Be(1);
+        options = options.AssertPassesThroughAllSerializers(o => {
+            o.GetOrDefault<long>().Should().Be(1L);
+            o.GetOrDefault(-1L).Should().Be(1L);
+            o.Items.Count.Should().Be(1);
+        });
 
         options = options.Set(2L);
-        options = options.PassThroughAllSerializers();
-        options.GetOrDefault<long>().Should().Be(2L);
-        options.GetOrDefault(-1L).Should().Be(2L);
-        options.Items.Count.Should().Be(1);
+        options = options.AssertPassesThroughAllSerializers(o => {
+            o.GetOrDefault<long>().Should().Be(2L);
+            o.GetOrDefault(-1L).Should().Be(2L);
+            o.Items.Count.Should().Be(1);
+        });
 
         options = options.Remove<long>();
-        options = options.PassThroughAllSerializers();
-        options.GetOrDefault<long>().Should().Be(0L);
-        options.GetOrDefault(-1L).Should().Be(-1L);
-        options.Items.Count.Should().Be(0);
+        options.AssertPassesThroughAllSerializers(o => {
+            o.GetOrDefault<long>().Should().Be(0L);
+            o.GetOrDefault(-1L).Should().Be(-1L);
+            o.Items.Count.Should().Be(0);
+        });
     }
 
     [Fact]

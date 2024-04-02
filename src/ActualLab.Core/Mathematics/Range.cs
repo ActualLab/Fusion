@@ -31,11 +31,11 @@ public readonly partial struct Range<T> : IEquatable<Range<T>>
     /// <summary>
     /// Indicates whether the range is empty (has no items).
     /// </summary>
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public bool IsEmpty => EqualityComparer<T>.Default.Equals(Start, End);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public bool IsNegative => Comparer<T>.Default.Compare(Start, End) > 0;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public bool IsEmptyOrNegative => Comparer<T>.Default.Compare(Start, End) >= 0;
 
     /// <summary>

@@ -21,6 +21,7 @@ public interface IOption
 
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 public readonly partial struct Option<T> : IEquatable<Option<T>>, IOption
 {
@@ -35,7 +36,7 @@ public readonly partial struct Option<T> : IEquatable<Option<T>>, IOption
     /// <summary>
     /// Retrieves option's value. Throws <see cref="InvalidOperationException"/> in case option doesn't have one.
     /// </summary>
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public T Value {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get { AssertHasValue(); return ValueOrDefault!; }
@@ -44,6 +45,7 @@ public readonly partial struct Option<T> : IEquatable<Option<T>>, IOption
     /// <inheritdoc />
     // ReSharper disable once HeapView.BoxingAllocation
     object? IOption.Value => Value;
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     private string DebugValue => ToString();
 
     /// <summary>

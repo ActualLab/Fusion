@@ -1,12 +1,14 @@
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Multitenancy;
 using ActualLab.Locking;
+using ActualLab.OS;
 
 namespace ActualLab.Fusion.EntityFramework;
 
@@ -61,7 +63,7 @@ public class DbOperationScope<
 
     // Services
     protected IServiceProvider Services { get; }
-    protected AgentInfo AgentInfo { get; }
+    protected HostId HostId { get; }
     protected ITenantRegistry<TDbContext> TenantRegistry { get; }
     protected IMultitenantDbContextFactory<TDbContext> DbContextFactory { get; }
     protected IDbOperationLog<TDbContext> DbOperationLog { get; }
@@ -75,21 +77,16 @@ public class DbOperationScope<
         Settings = settings;
         Services = services;
         Log = Services.LogFor(GetType());
-        Clocks = Services.Clocks();
+        CommandContext = CommandContext.GetCurrent();
+        Clocks = CommandContext.Commander.Clocks;
 
-        AgentInfo = services.GetRequiredService<AgentInfo>();
+        HostId = services.GetRequiredService<HostId>();
         TenantRegistry = Services.GetRequiredService<ITenantRegistry<TDbContext>>();
         DbContextFactory = Services.GetRequiredService<IMultitenantDbContextFactory<TDbContext>>();
         DbOperationLog = Services.GetRequiredService<IDbOperationLog<TDbContext>>();
         TransactionIdGenerator = Services.GetRequiredService<TransactionIdGenerator<TDbContext>>();
         AsyncLock = new AsyncLock(LockReentryMode.CheckedPass);
-        Operation = new Operation() {
-            Id = Ulid.NewUlid().ToString(),
-            AgentId = AgentInfo.Id,
-            StartTime = Clocks.SystemClock.Now,
-            Scope = this,
-        };
-        CommandContext = CommandContext.GetCurrent();
+        Operation = Operation.New(this);
     }
 
     protected override async Task DisposeAsync(bool disposing)
@@ -152,7 +149,7 @@ public class DbOperationScope<
             oldConnection.Dispose();
 #endif
         }
-        CommandContext.SetOperation(Operation);
+        CommandContext.ChangeOperation(Operation, true);
         return dbContext;
     }
 

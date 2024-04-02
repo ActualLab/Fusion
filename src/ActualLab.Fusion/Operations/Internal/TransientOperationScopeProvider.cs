@@ -37,7 +37,7 @@ public class TransientOperationScopeProvider(IServiceProvider services) : IComma
         var operation = scope.Operation;
         operation.Command = command;
         context.Items.Set(scope);
-        context.SetOperation(operation);
+        context.ChangeOperation(operation);
 
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
@@ -58,7 +58,7 @@ public class TransientOperationScopeProvider(IServiceProvider services) : IComma
 
         // Since this is the outermost scope handler, it's reasonable to
         // call OperationCompletionNotifier.NotifyCompleted from it
-        var actualOperation = context.Items.Get<Operation>() ?? operation;
-        await OperationCompletionNotifier.NotifyCompleted(actualOperation, context).ConfigureAwait(false);
+        operation = context.Operation; // It could be changed by one of nested operation scope providers
+        await OperationCompletionNotifier.NotifyCompleted(operation, context).ConfigureAwait(false);
     }
 }

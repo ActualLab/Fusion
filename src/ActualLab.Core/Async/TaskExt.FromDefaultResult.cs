@@ -12,7 +12,7 @@ public static partial class TaskExt
         => FromDefaultResultCache.GetOrAdd(resultType,
             static t => (Task)FromDefaultResultInternalMethod
                 .MakeGenericMethod(t)
-                .Invoke(null, Array.Empty<object>()));
+                .Invoke(null, Array.Empty<object>())!);
 
     // Private methods
 

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Multitenancy;
 using ActualLab.OS;
@@ -23,7 +24,7 @@ public class DbOperationLogReader<
     }
 
     protected Options Settings { get; } = settings;
-    protected AgentInfo AgentInfo { get; } = services.GetRequiredService<AgentInfo>();
+    protected HostId HostId { get; } = services.GetRequiredService<HostId>();
     protected IOperationCompletionNotifier OperationCompletionNotifier { get; }
         = services.GetRequiredService<IOperationCompletionNotifier>();
     protected IDbOperationLogChangeTracker<TDbContext>? OperationLogChangeTracker { get;  }
@@ -85,7 +86,7 @@ public class DbOperationLogReader<
             // prior to its invalidation logic completion.
             var notifyTasks =
                 from dbOperation in dbOperations
-                let isLocal = StringComparer.Ordinal.Equals(dbOperation.AgentId, AgentInfo.Id.Value)
+                let isLocal = StringComparer.Ordinal.Equals(dbOperation.HostId, HostId.Id.Value)
                 where !isLocal
                 let operation = dbOperation.ToModel()
                 select OperationCompletionNotifier.NotifyCompleted(operation, null);

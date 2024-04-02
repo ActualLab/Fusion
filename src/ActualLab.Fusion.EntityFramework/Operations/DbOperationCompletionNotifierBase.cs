@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Multitenancy;
+using ActualLab.OS;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
@@ -14,7 +16,7 @@ public abstract class DbOperationCompletionNotifierBase<
     private volatile Task? _disposeTask = null;
 
     protected TOptions Options { get; init; }
-    protected AgentInfo AgentInfo { get; }
+    protected HostId HostId { get; }
     protected ConcurrentDictionary<Task, Unit> NotifyTasks { get; }
     protected IMomentClock CpuClock { get; }
     protected CancellationTokenSource StopTokenSource { get; }
@@ -28,7 +30,7 @@ public abstract class DbOperationCompletionNotifierBase<
         : base(services)
     {
         Options = options;
-        AgentInfo = services.GetRequiredService<AgentInfo>();
+        HostId = services.GetRequiredService<HostId>();
         // CpuClock caching is needed coz otherwise an attempt to get them
         // in DisposeAsync will fail (service resolution fails during the disposal).
         CpuClock = services.Clocks().CpuClock;

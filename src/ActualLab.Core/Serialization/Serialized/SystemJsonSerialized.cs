@@ -5,10 +5,14 @@ namespace ActualLab.Serialization;
 
 public static class SystemJsonSerialized
 {
-    public static SystemJsonSerialized<TValue> New<TValue>() => new();
-    public static SystemJsonSerialized<TValue> New<TValue>(TValue value) => new() { Value = value };
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static SystemJsonSerialized<TValue> New<TValue>(TValue value = default!)
+        => new() { Value = value };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public static SystemJsonSerialized<TValue> New<TValue>(string data) => new(data);
+    public static SystemJsonSerialized<TValue> New<TValue>(string data)
+        => new() { Data = data };
 }
 
 #if !NET5_0
@@ -18,13 +22,7 @@ public static class SystemJsonSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class SystemJsonSerialized<T> : TextSerialized<T>
 {
-    [ThreadStatic] private static ITextSerializer<T>? _serializer;
-
-    public SystemJsonSerialized() { }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    [MemoryPackConstructor]
-    public SystemJsonSerialized(string data) : base(data) { }
+    private static ITextSerializer<T>? _serializer;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override ITextSerializer<T> GetSerializer()

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using ActualLab.Fusion.Operations.Internal;
+using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
@@ -8,7 +8,7 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 #pragma warning disable IL2026
 
 [Table("_Operations")]
-[Index(nameof(Id), nameof(Index), Name = "IX_OperationId")]
+[Index(nameof(Id), nameof(Index), Name = "IX_Id")]
 [Index(nameof(StartTime), nameof(Index), Name = "IX_StartTime")]
 [Index(nameof(CommitTime), nameof(Index), Name = "IX_CommitTime")]
 public class DbOperation : IHasId<long>, IHasId<string>
@@ -31,7 +31,7 @@ public class DbOperation : IHasId<long>, IHasId<string>
     public bool HasIndex => _index.HasValue;
 
     public string Id { get; set; } = "";
-    public string AgentId { get; set; } = "";
+    public string HostId { get; set; } = "";
 
     public DateTime StartTime {
         get => _startTime.DefaultKind(DateTimeKind.Utc);
@@ -45,7 +45,7 @@ public class DbOperation : IHasId<long>, IHasId<string>
 
     public string CommandJson { get; set; } = "";
     public string ItemsJson { get; set; } = "";
-    public string NestedCommandsJson { get; set; } = "";
+    public string NestedOperations { get; set; } = "";
 
     public virtual Operation ToModel()
     {
@@ -55,10 +55,10 @@ public class DbOperation : IHasId<long>, IHasId<string>
         var items = ItemsJson.IsNullOrEmpty()
             ? new()
             : Serializer.Read<OptionSet>(ItemsJson);
-        var nestedCommands = NestedCommandsJson.IsNullOrEmpty()
+        var nestedCommands = NestedOperations.IsNullOrEmpty()
             ? new()
-            : Serializer.Read<List<NestedCommand>>(NestedCommandsJson);
-        return new Operation(Id, AgentId, StartTime, CommitTime, command!, items, nestedCommands) {
+            : Serializer.Read<List<NestedOperation>>(NestedOperations);
+        return new Operation(Id, HostId, StartTime, CommitTime, command!, items, nestedCommands) {
             Index = HasIndex ? Index : null,
         };
     }
@@ -74,11 +74,11 @@ public class DbOperation : IHasId<long>, IHasId<string>
         if (operation.Index is { } index)
             Index = index;
         Id = operation.Id;
-        AgentId = operation.AgentId;
+        HostId = operation.HostId;
         StartTime = operation.StartTime;
         CommitTime = operation.CommitTime;
         CommandJson = Serializer.Write(operation.Command);
         ItemsJson = operation.Items.Items.Count == 0 ? "" : Serializer.Write(operation.Items);
-        NestedCommandsJson = operation.NestedCommands.Count == 0 ? "" : Serializer.Write(operation.NestedCommands);
+        NestedOperations = operation.NestedOperations.Count == 0 ? "" : Serializer.Write(operation.NestedOperations);
     }
 }

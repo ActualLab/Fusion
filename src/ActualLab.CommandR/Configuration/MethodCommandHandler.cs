@@ -63,7 +63,7 @@ public sealed record MethodCommandHandler<
     public bool Equals(MethodCommandHandler<TCommand>? other) => ReferenceEquals(this, other);
     public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 
-    private static object GetParameterValue(ParameterInfo parameter, ICommandContext context, IServiceProvider services)
+    private static object GetParameterValue(ParameterInfo parameter, CommandContext context, IServiceProvider services)
     {
         if (parameter.ParameterType == typeof(CommandContext))
             return context;

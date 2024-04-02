@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
+using ActualLab.Collections.Internal;
 
 namespace ActualLab.Collections;
 
@@ -25,10 +25,7 @@ public readonly partial record struct ImmutableOptionSet
     [DataMember(Order = 0), MemoryPackOrder(0)]
     [JsonPropertyName(nameof(Items)), Newtonsoft.Json.JsonIgnore]
     public Dictionary<string, NewtonsoftJsonSerialized<object>> JsonCompatibleItems
-        => Items.ToDictionary(
-            p => p.Key.Value,
-            p => NewtonsoftJsonSerialized.New(p.Value),
-            StringComparer.Ordinal);
+        => OptionSetHelper.ToNewtonsoftJsonCompatible(Items);
 
     // ReSharper disable once CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
     public object? this[Symbol key] => Items.TryGetValue(key, out var v) ? v : null;
@@ -39,13 +36,12 @@ public readonly partial record struct ImmutableOptionSet
     public ImmutableOptionSet(ImmutableDictionary<Symbol, object>? items)
         => _items = items;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [JsonConstructor, MemoryPackConstructor]
     public ImmutableOptionSet(Dictionary<string, NewtonsoftJsonSerialized<object>>? jsonCompatibleItems)
         => _items = jsonCompatibleItems?.ToImmutableDictionary(p => (Symbol) p.Key, p => p.Value.Value);
 
     public override string ToString()
-        => $"{nameof(ImmutableOptionSet)}({Items.Count} item(s))";
+        => $"{nameof(ImmutableOptionSet)}({OptionSetHelper.GetToStringArgs(Items)})";
 
     public bool Contains(Type optionType)
         => this[optionType] != null;

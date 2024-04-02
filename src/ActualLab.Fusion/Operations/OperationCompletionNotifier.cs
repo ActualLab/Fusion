@@ -1,3 +1,6 @@
+using ActualLab.CommandR.Operations;
+using ActualLab.OS;
+
 namespace ActualLab.Fusion.Operations;
 
 public interface IOperationCompletionNotifier
@@ -19,7 +22,7 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
 
     protected Options Settings { get; }
     protected IServiceProvider Services { get; }
-    protected AgentInfo AgentInfo { get; }
+    protected HostId HostId { get; }
     protected IOperationCompletionListener[] OperationCompletionListeners { get; }
     protected RecentlySeenMap<Symbol, Unit> RecentlySeenOperationIds { get; }
     protected object Lock => RecentlySeenOperationIds;
@@ -33,7 +36,7 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
         Log = Services.LogFor(GetType());
         Clock = Settings.Clock ?? Services.Clocks().SystemClock;
 
-        AgentInfo = Services.GetRequiredService<AgentInfo>();
+        HostId = Services.GetRequiredService<HostId>();
         OperationCompletionListeners = Services.GetServices<IOperationCompletionListener>().ToArray();
         RecentlySeenOperationIds = new RecentlySeenMap<Symbol, Unit>(
             Settings.MaxKnownOperationCount,
@@ -55,7 +58,7 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
         using var _ = ExecutionContextExt.TrySuppressFlow();
         return Task.Run(async () => {
             var isLocal = commandContext != null;
-            var isFromLocalAgent = StringComparer.Ordinal.Equals(operation.AgentId, AgentInfo.Id.Value);
+            var isFromLocalAgent = StringComparer.Ordinal.Equals(operation.HostId, HostId.Id.Value);
             // An important assertion
             if (isLocal != isFromLocalAgent) {
                 if (isFromLocalAgent)

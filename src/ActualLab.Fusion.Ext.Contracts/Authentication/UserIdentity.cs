@@ -14,11 +14,11 @@ public readonly partial record struct UserIdentity(
 
     // Computed properties
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public string Schema => ParseId(Id.Value).Schema;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public string SchemaBoundId => ParseId(Id.Value).SchemaBoundId;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public bool IsValid => !Id.IsEmpty;
 
     public UserIdentity(string id)

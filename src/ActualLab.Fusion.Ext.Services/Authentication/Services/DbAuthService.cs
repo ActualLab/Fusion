@@ -55,7 +55,7 @@ public partial class DbAuthService<
                 _ = IsSignOutForced(session, default);
                 _ = GetOptions(session, default);
             }
-            var invSessionInfo = context.Operation().Items.Get<SessionInfo>();
+            var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo != null) {
                 _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
                 _ = GetUserSessions(tenant.Id, invSessionInfo.UserId, default);
@@ -88,7 +88,7 @@ public partial class DbAuthService<
         if (sessionInfo == null! || sessionInfo.IsSignOutForced)
             return;
 
-        context.Operation().Items.Set(sessionInfo);
+        context.OperationItems.Set(sessionInfo);
         sessionInfo = sessionInfo with {
             LastSeenAt = Clocks.SystemClock.Now,
             AuthenticatedIdentity = "",
@@ -106,7 +106,7 @@ public partial class DbAuthService<
         var context = CommandContext.GetCurrent();
         var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
         if (Computed.IsInvalidating()) {
-            var invSessionInfo = context.Operation().Items.Get<SessionInfo>();
+            var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo != null)
                 _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
             return;
@@ -125,7 +125,7 @@ public partial class DbAuthService<
             throw EntityFramework.Internal.Errors.EntityNotFound(Users.UserEntityType);
 
         await Users.Edit(dbContext, dbUser, command, cancellationToken).ConfigureAwait(false);
-        context.Operation().Items.Set(sessionInfo);
+        context.OperationItems.Set(sessionInfo);
     }
 
     public override async Task UpdatePresence(

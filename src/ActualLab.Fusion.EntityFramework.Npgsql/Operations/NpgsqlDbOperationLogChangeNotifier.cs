@@ -46,7 +46,7 @@ public class NpgsqlDbOperationLogChangeNotifier<
     private CachedInfo CreateCachedInfo(Tenant tenant)
     {
         var dbContext = CreateDbContext(tenant);
-        var quotedPayload = AgentInfo.Id.Value
+        var quotedPayload = HostId.Id.Value
 #if NETSTANDARD2_0
             .Replace("'", "''");
 #else

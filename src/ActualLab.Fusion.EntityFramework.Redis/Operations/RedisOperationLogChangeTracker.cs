@@ -1,6 +1,8 @@
+using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Multitenancy;
+using ActualLab.OS;
 using ActualLab.Redis;
 
 namespace ActualLab.Fusion.EntityFramework.Redis.Operations;
@@ -29,7 +31,7 @@ public class RedisOperationLogChangeTracker<TDbContext>
         public TenantWatcher(RedisOperationLogChangeTracker<TDbContext> owner, Symbol tenantId)
             : base(owner.TenantRegistry.Get(tenantId))
         {
-            var agentInfo = owner.Services.GetRequiredService<AgentInfo>();
+            var hostId = owner.Services.GetRequiredService<HostId>();
             var key = owner.Options.PubSubKeyFactory.Invoke(Tenant);
 
             var watchChain = new AsyncChain($"Watch({tenantId})", async cancellationToken => {
@@ -41,7 +43,7 @@ public class RedisOperationLogChangeTracker<TDbContext>
                     var value = await redisSub.Messages
                         .ReadAsync(cancellationToken)
                         .ConfigureAwait(false);
-                    if (!StringComparer.Ordinal.Equals(agentInfo.Id.Value, value))
+                    if (!StringComparer.Ordinal.Equals(hostId.Id.Value, value))
                         CompleteWaitForChanges();
                 }
             }).RetryForever(owner.Options.TrackerRetryDelays, owner.Log);

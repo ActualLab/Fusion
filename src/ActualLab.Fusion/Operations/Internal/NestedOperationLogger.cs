@@ -2,10 +2,10 @@ namespace ActualLab.Fusion.Operations.Internal;
 
 /// <summary>
 /// This handler captures invocations of nested commands inside
-/// operations and logs them into context.Operation().NestedCommands
+/// operations and logs them into context.Operation().NestedOperations
 /// so that invalidation for them could be auto-replayed too.
 /// </summary>
-public class NestedCommandLogger(IServiceProvider services) : ICommandHandler<ICommand>
+public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<ICommand>
 {
     private PostCompletionInvalidator? _postCompletionInvalidator;
     private ILogger? _log;
@@ -19,10 +19,11 @@ public class NestedCommandLogger(IServiceProvider services) : ICommandHandler<IC
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.NestedCommandLogger)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
-        var operation = context.OuterContext != null ? context.Items.Get<Operation>() : null;
+        var operation = context.Operation;
         var mustBeLogged =
-            operation != null // Should be a nested context inside a context w/ operation
-            && PostCompletionInvalidator.MayRequireInvalidation(command) // Command may require invalidation
+            operation != null // Should have an operation
+            && context.OuterContext != null // Should be a nested context
+            && PostCompletionInvalidator.MayRequireInvalidation(command)
             && !Computed.IsInvalidating();
         if (!mustBeLogged) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
@@ -44,9 +45,9 @@ public class NestedCommandLogger(IServiceProvider services) : ICommandHandler<IC
             if (error == null) {
                 // Downstream handler may change Operation to its own one,
                 // current command must be logged as part of that operation.
-                operation = context.Operation();
+                operation = context.GetOperation();
                 if (operation.Scope is { IsClosed: false })
-                    operation.NestedCommands.Add(new(command, operationItems));
+                    operation.NestedOperations.Add(new(command, operationItems));
             }
         }
     }

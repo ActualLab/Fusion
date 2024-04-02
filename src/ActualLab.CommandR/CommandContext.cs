@@ -1,15 +1,18 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using ActualLab.CommandR.Internal;
+using ActualLab.CommandR.Operations;
 
 namespace ActualLab.CommandR;
 
-public abstract class CommandContext(ICommander commander)
-    : ICommandContext, IAsyncDisposable
+public abstract class CommandContext(ICommander commander) : IHasServices, IRequirementTarget, IAsyncDisposable
 {
     private static readonly ConcurrentDictionary<Type, Type> CommandContextTypeCache = new();
 
     protected static readonly AsyncLocal<CommandContext?> CurrentLocal = new();
+
+    private readonly OptionSet _items = null!;
+    private Operation? _operation;
+
 #pragma warning disable CA1721
     public static CommandContext? Current => CurrentLocal.Value;
 #pragma warning restore CA1721
@@ -28,7 +31,14 @@ public abstract class CommandContext(ICommander commander)
     public bool IsOutermost => ReferenceEquals(OutermostContext, this);
     public CommandExecutionState ExecutionState { get; set; }
     public IServiceProvider Services => ServiceScope.ServiceProvider;
-    public OptionSet Items { get; protected init; } = null!;
+    public OptionSet Items {
+        get => OutermostContext._items;
+        protected init => _items = value;
+    }
+#pragma warning disable CA1721
+    public Operation? Operation => OutermostContext._operation;
+#pragma warning restore CA1721
+    public OptionSet OperationItems => GetOperation().Items;
 
     // Static methods
 
@@ -89,7 +99,20 @@ public abstract class CommandContext(ICommander commander)
     public CommandContext<TResult> Cast<TResult>()
         => (CommandContext<TResult>)this;
 
-#pragma warning disable CA2119
+    public Operation GetOperation()
+        => Operation ?? throw Errors.CommandContextHasNoOperation();
+
+    public void ChangeOperation(Operation? operation, bool moveItems = false)
+    {
+        if (Operation == operation)
+            return;
+
+        var oldOperation = Operation;
+        OutermostContext._operation = operation;
+        if (moveItems && operation != null && oldOperation != null)
+            operation.Items = oldOperation.Items;
+    }
+
     public abstract Task InvokeRemainingHandlers(CancellationToken cancellationToken = default);
 
     public abstract void ResetResult();
@@ -97,7 +120,6 @@ public abstract class CommandContext(ICommander commander)
     public abstract void SetResult(Exception exception);
 
     public abstract bool TryComplete(CancellationToken cancellationToken);
-#pragma warning restore CA2119
 }
 
 public sealed class CommandContext<TResult> : CommandContext
@@ -146,9 +168,8 @@ public sealed class CommandContext<TResult> : CommandContext
         }
         else {
             OuterContext = outerContext;
-            OutermostContext = outerContext!.OutermostContext;
+            OutermostContext = outerContext.OutermostContext;
             ServiceScope = OutermostContext.ServiceScope;
-            Items = OutermostContext.Items;
         }
     }
 

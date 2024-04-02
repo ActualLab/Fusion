@@ -1,6 +1,5 @@
+using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Operations.Internal;
-using ActualLab.Generators;
-using ActualLab.OS;
 using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Operations.Reprocessing;
@@ -100,8 +99,8 @@ public class OperationReprocessor(
         if (FailedTryCount > Options.MaxRetryCount)
             return false;
 
-        var operationScope = CommandContext.Items.Get<IOperationScope>();
-        if (operationScope is TransientOperationScope)
+        var operation = CommandContext.Operation;
+        if (operation == null || operation.Scope is TransientOperationScope)
             return false;
 
         return IsTransientFailure(allErrors);
@@ -125,7 +124,7 @@ public class OperationReprocessor(
                 $"{GetType().GetName()} cannot be used more than once in the same command execution pipeline.");
         CommandContext = context;
 
-        context.Items.Set((IOperationReprocessor) this);
+        context.Items.Set((IOperationReprocessor)this);
         var itemsBackup = context.Items.Items;
         var executionStateBackup = context.ExecutionState;
         while (true) {

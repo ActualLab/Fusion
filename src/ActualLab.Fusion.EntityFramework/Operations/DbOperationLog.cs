@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Multitenancy;
+using ActualLab.OS;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
@@ -25,7 +27,7 @@ public class DbOperationLog<
     where TDbContext : DbContext
     where TDbOperation : DbOperation, new()
 {
-    protected AgentInfo AgentInfo { get; } = services.GetRequiredService<AgentInfo>();
+    protected HostId HostId { get; } = services.GetRequiredService<HostId>();
 
     public virtual async Task<DbOperation> Add(TDbContext dbContext,
         Operation operation, CancellationToken cancellationToken)

@@ -45,9 +45,9 @@ public static class Errors
     public static Exception CommandMustImplementICommandOfTResult(Type commandType)
         => new InvalidOperationException($"Command type '{commandType}' must implement {typeof(ICommand<>)}.");
 
-    public static Exception BackendCommandMustBeStartedOnBackend()
-        => new InvalidOperationException("Backend command must be started on backend.");
-
     public static Exception LocalCommandHasNoHandler()
         => new InvalidOperationException("LocalCommand.Handler is null.");
+
+    public static Exception CommandContextHasNoOperation()
+        => new InvalidOperationException("CommandContext has no handlers providing an Operation (CommandContext.Operation is null).");
 }

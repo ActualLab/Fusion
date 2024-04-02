@@ -39,7 +39,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
                 _ = IsSignOutForced(session, default);
                 _ = GetOptions(session, default);
             }
-            var invSessionInfo = context.Operation().Items.Get<SessionInfo>();
+            var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo != null) {
                 _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
                 _ = GetUserSessions(tenant.Id, invSessionInfo.UserId, default);
@@ -69,7 +69,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             return;
 
         // Updating SessionInfo
-        context.Operation().Items.Set(sessionInfo);
+        context.OperationItems.Set(sessionInfo);
         sessionInfo = sessionInfo with {
             AuthenticatedIdentity = "",
             UserId = Symbol.Empty,
@@ -86,7 +86,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         var tenant = await TenantResolver.Resolve(session, context, cancellationToken).ConfigureAwait(false);
 
         if (Computed.IsInvalidating()) {
-            var invSessionInfo = context.Operation().Items.Get<SessionInfo>();
+            var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo != null)
                 _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
             return;
@@ -99,7 +99,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             .Require()
             .ConfigureAwait(false);
 
-        context.Operation().Items.Set(sessionInfo);
+        context.OperationItems.Set(sessionInfo);
         if (command.Name != null) {
             if (command.Name.Length < 3)
                 throw new ArgumentOutOfRangeException(nameof(command));

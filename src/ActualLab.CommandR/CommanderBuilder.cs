@@ -39,7 +39,12 @@ public readonly struct CommanderBuilder
         // We want above Contains call to run in O(1), so...
         services.Insert(0, AddedTagDescriptor);
 
-        // Common services
+        // Core services
+        services.TryAddSingleton(_ => new HostId());
+        services.TryAddSingleton(_ => MomentClockSet.Default);
+        services.TryAddSingleton(c => c.GetRequiredService<MomentClockSet>().SystemClock);
+
+        // Commander, handlers, etc.
         services.TryAddSingleton<ICommander>(c => new Commander(c));
         services.TryAddSingleton(new HashSet<CommandHandler>());
         services.TryAddSingleton(c => new CommandHandlerRegistry(c));

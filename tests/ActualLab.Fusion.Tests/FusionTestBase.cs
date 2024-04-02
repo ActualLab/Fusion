@@ -119,7 +119,7 @@ public abstract class FusionTestBase : RpcTestBase
         services.AddSingleton<IComputedState<ServerTimeModel1>, ServerTimeModel1State>();
         services.AddSingleton<IComputedState<KeyValueModel<string>>, StringKeyValueModelState>();
         fusion.AddService<ISimplestProvider, SimplestProvider>(ServiceLifetime.Scoped);
-        fusion.AddService<NestedCommandLoggerTester>();
+        fusion.AddService<NestedOperationLoggerTester>();
     }
 
     protected override void ConfigureServices(IServiceCollection services, bool isClient)

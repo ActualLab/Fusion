@@ -30,7 +30,7 @@ public class RedisOperationLogChangeNotifier<
     protected override async Task Notify(Tenant tenant)
     {
         var redisPub = GetRedisPub(tenant);
-        await redisPub.Publish(AgentInfo.Id.Value).ConfigureAwait(false);
+        await redisPub.Publish(HostId.Id.Value).ConfigureAwait(false);
     }
 
     protected virtual RedisPub<TDbContext> GetRedisPub(Tenant tenant)

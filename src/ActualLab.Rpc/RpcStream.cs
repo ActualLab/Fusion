@@ -24,13 +24,13 @@ public abstract partial class RpcStream : IRpcObject
     public int AckAdvance { get; init; } = 61;
 
     // Non-serialized members
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public RpcObjectId Id { get; protected set; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public RpcPeer? Peer { get; protected set; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public abstract Type ItemType { get; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public abstract RpcObjectKind Kind { get; }
 
     public static RpcStream<T> New<T>(IAsyncEnumerable<T> outgoingSource)
@@ -66,6 +66,7 @@ public abstract partial class RpcStream : IRpcObject
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 {
     private readonly IAsyncEnumerable<T>? _localSource;
@@ -107,9 +108,9 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         }
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore]
     public override Type ItemType => typeof(T);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore]
     public override RpcObjectKind Kind => _localSource != null ? RpcObjectKind.Local : RpcObjectKind.Remote;
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]

@@ -1,8 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Multitenancy;
+using ActualLab.OS;
 
 namespace ActualLab.Fusion.EntityFramework.Npgsql.Operations;
 
@@ -23,7 +25,7 @@ public class NpgsqlDbOperationLogChangeTracker<
             : base(owner.TenantRegistry.Get(tenantId))
         {
             var dbHub = owner.Services.DbHub<TDbContext>();
-            var agentInfo = owner.Services.GetRequiredService<AgentInfo>();
+            var hostId = owner.Services.GetRequiredService<HostId>();
 
             var watchChain = new AsyncChain($"Watch({tenantId})", async cancellationToken => {
                 var dbContext = dbHub.CreateDbContext(Tenant);
@@ -33,7 +35,7 @@ public class NpgsqlDbOperationLogChangeTracker<
                 await database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
                 var dbConnection = (NpgsqlConnection) database.GetDbConnection()!;
                 dbConnection.Notification += (_, eventArgs) => {
-                    if (eventArgs.Payload != agentInfo.Id)
+                    if (eventArgs.Payload != hostId.Id)
                         CompleteWaitForChanges();
                 };
                 await dbContext.Database

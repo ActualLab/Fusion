@@ -21,28 +21,28 @@ public partial class ResultBox<T> : IResult<T>
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public T? ValueOrDefault { get; }
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public Exception? Error { get; }
 
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public ExceptionInfo? ExceptionInfo => Error?.ToExceptionInfo();
 
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public bool HasValue {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Error == null;
     }
 
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public bool HasError {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Error != null;
     }
 
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public T Value {
         get {
             if (Error == null)

@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
+using ActualLab.Collections.Internal;
 
 namespace ActualLab.Collections;
 
@@ -21,10 +21,7 @@ public sealed partial class OptionSet
     [DataMember(Order = 0), MemoryPackOrder(0)]
     [JsonPropertyName(nameof(Items)), Newtonsoft.Json.JsonIgnore]
     public Dictionary<string, NewtonsoftJsonSerialized<object>> JsonCompatibleItems
-        => Items.ToDictionary(
-            p => p.Key.Value,
-            p => NewtonsoftJsonSerialized.New(p.Value),
-            StringComparer.Ordinal);
+        => OptionSetHelper.ToNewtonsoftJsonCompatible(Items);
 
     public object? this[Symbol key] {
         // ReSharper disable once CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
@@ -57,14 +54,13 @@ public sealed partial class OptionSet
     public OptionSet(ImmutableDictionary<Symbol, object>? items)
         => _items = items ?? ImmutableDictionary<Symbol, object>.Empty;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [JsonConstructor, MemoryPackConstructor]
     public OptionSet(Dictionary<string, NewtonsoftJsonSerialized<object>>? jsonCompatibleItems)
-        : this(jsonCompatibleItems?.ToImmutableDictionary(p => (Symbol) p.Key, p => p.Value.Value))
+        : this(jsonCompatibleItems?.ToImmutableDictionary(p => (Symbol)p.Key, p => p.Value.Value))
     { }
 
     public override string ToString()
-        => $"{nameof(OptionSet)}({Items.Count} item(s))";
+        => $"{nameof(OptionSet)}({OptionSetHelper.GetToStringArgs(Items)})";
 
     public bool Contains(Type optionType)
         => this[optionType] != null;

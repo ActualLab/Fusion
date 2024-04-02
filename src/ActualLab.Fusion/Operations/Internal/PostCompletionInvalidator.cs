@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Interception;
 using ActualLab.Interception;
@@ -55,8 +56,8 @@ public class PostCompletionInvalidator(
         using var activity = StartActivity(command);
 
         var operationItems = operation.Items;
-        var oldOperation = context.Items.Get<Operation>();
-        context.SetOperation(operation);
+        var oldOperation = context.Operation;
+        context.ChangeOperation(operation);
         var invalidateScope = Computed.Invalidate();
         try {
             // If we care only about the eventual consistency, the invalidation order
@@ -68,13 +69,13 @@ public class PostCompletionInvalidator(
             //   the last invalidated dependency causes N to invalidate no matter what -
             //   assuming the current version of N still depends it.
             var index = 1;
-            foreach (var (nestedCommand, nestedOperationItems) in operation.NestedCommands)
+            foreach (var (nestedCommand, nestedOperationItems) in operation.NestedOperations)
                 index = await TryInvalidate(context, operation, nestedCommand, nestedOperationItems, index).ConfigureAwait(false);
             await TryInvalidate(context, operation, command, operationItems, index).ConfigureAwait(false);
         }
         finally {
             invalidateScope.Dispose();
-            context.SetOperation(oldOperation);
+            context.ChangeOperation(oldOperation);
         }
     }
 

@@ -1,3 +1,4 @@
+using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Operations.Internal;
 
 namespace ActualLab.Fusion.Operations;
@@ -19,7 +20,7 @@ public static class Completion
     // because it is really used inside New, but via reflection.
 #pragma warning disable CA1823
     private static readonly Completion<ICommand> DummyCompletion =
-        new(new TransientOperation() { Command = new DummyCommand() });
+        new(new Operation() { Command = new DummyCommand() });
 #pragma warning restore CA1823
 
     public static ICompletion New(Operation operation)

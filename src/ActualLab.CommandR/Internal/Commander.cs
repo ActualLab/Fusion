@@ -6,10 +6,14 @@ public class Commander(IServiceProvider services) : ICommander
         typeof(IEventCommand).GetProperty(nameof(IEventCommand.ChainId))!;
 
     private ILogger? _log;
+    private HostId? _hostId;
+    private MomentClockSet? _clocks;
     private CommandHandlerResolver? _handlerResolver;
     private Action<IEventCommand, Symbol>? _chainIdSetter;
 
     public IServiceProvider Services { get; } = services;
+    public HostId HostId => _hostId ??= Services.GetRequiredService<HostId>();
+    public MomentClockSet Clocks => _clocks ??= Services.Clocks();
 
     protected CommandHandlerResolver HandlerResolver => _handlerResolver ??= Services.GetRequiredService<CommandHandlerResolver>();
     protected Action<IEventCommand, Symbol> ChainIdSetter => _chainIdSetter ??= ChainIdSetterProperty.GetSetter<Symbol>();

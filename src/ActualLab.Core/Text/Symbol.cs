@@ -21,11 +21,11 @@ public readonly partial struct Symbol : IRequirementTarget,
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public string Value => _value ?? "";
 
-    [IgnoreDataMember, MemoryPackIgnore]
+    [MemoryPackIgnore]
 #pragma warning disable CA1721
     public int HashCode => _hashCode;
 #pragma warning restore CA1721
-    [IgnoreDataMember, MemoryPackIgnore]
+    [MemoryPackIgnore]
     public bool IsEmpty => Value.Length == 0;
 
     [MemoryPackConstructor]

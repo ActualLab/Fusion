@@ -9,14 +9,34 @@ using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace ActualLab.Serialization;
 
+#pragma warning disable CA2326, CA2327, CA2328, IL2116
+
 #if !NET5_0
 [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
 #endif
 public class NewtonsoftJsonSerializer : TextSerializerBase
 {
     private readonly JsonSerializer _jsonSerializer;
+    private static NewtonsoftJsonSerializer? _default;
 
-    public static JsonSerializerSettings DefaultSettings { get; set; }
+    public static JsonSerializerSettings DefaultSettings { get; set; } = new() {
+#if !NET5_0_OR_GREATER
+        SerializationBinder = CrossPlatformSerializationBinder.Instance,
+#endif
+        TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
+        TypeNameHandling = TypeNameHandling.Auto,
+        NullValueHandling = NullValueHandling.Ignore,
+        ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
+        DateParseHandling = DateParseHandling.None, // This makes sure all strings are deserialized as-is
+        ContractResolver = new DefaultContractResolver(),
+    };
+
+    public static NewtonsoftJsonSerializer Default {
+        get => _default ??= new(DefaultSettings);
+        set => _default = value;
+    }
+
+    // Instance members
 
     public JsonSerializerSettings Settings { get; }
 
@@ -27,24 +47,8 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2116
-#pragma warning disable CA2326, CA2327, CA2328
     static NewtonsoftJsonSerializer()
-    {
-        DefaultSettings = new JsonSerializerSettings {
-#if !NET5_0_OR_GREATER
-            SerializationBinder = CrossPlatformSerializationBinder.Instance,
-#endif
-            TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
-            TypeNameHandling = TypeNameHandling.Auto,
-            NullValueHandling = NullValueHandling.Ignore,
-            ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
-            DateParseHandling = DateParseHandling.None, // This makes sure all strings are deserialized as-is
-            ContractResolver = new DefaultContractResolver(),
-        };
-    }
-#pragma warning restore CA2326, CA2327, CA2328
-#pragma warning restore IL2116
+    { }
 
     // Read
 

@@ -5,6 +5,7 @@ using ActualLab.Serialization.Internal;
 namespace ActualLab.Tests.Serialization;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
 {
     private static readonly Type[] ExceptionCtorArgumentTypes1 = [typeof(string), typeof(Exception)];
@@ -21,9 +22,9 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
     public string Message => _message ?? "";
     [DataMember(Order = 2), MemoryPackOrder(2)]
     public TypeRef WrappedTypeRef { get; }
-    [IgnoreDataMember, MemoryPackIgnore]
+    [MemoryPackIgnore]
     public bool IsNone => TypeRef.AssemblyQualifiedName.IsEmpty;
-    [IgnoreDataMember, MemoryPackIgnore]
+    [MemoryPackIgnore]
     public bool HasWrappedTypeRef => !WrappedTypeRef.AssemblyQualifiedName.IsEmpty;
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]

@@ -11,6 +11,7 @@ public enum DataFormat
 
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial record struct TextOrBytes(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] DataFormat Format,
     [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore] ReadOnlyMemory<byte> Data
@@ -23,7 +24,7 @@ public readonly partial record struct TextOrBytes(
     // Computed properties
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public byte[] Bytes => _data ?? Data.ToArray();
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public bool IsEmpty => Data.Length == 0;
 
     public TextOrBytes(string text)
@@ -61,6 +62,7 @@ public readonly partial record struct TextOrBytes(
 
     public static implicit operator TextOrBytes(ReadOnlyMemory<byte> bytes) => new(bytes);
     public static implicit operator TextOrBytes(ReadOnlyMemory<char> text) => new(text);
+    public static implicit operator TextOrBytes(byte[] bytes) => new(bytes);
     public static implicit operator TextOrBytes(string text) => new(text);
 
     public bool IsText(out ReadOnlyMemory<char> text)

@@ -3,9 +3,9 @@ using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.Tests.Extensions;
 
-public class NestedCommandLoggerTest : FusionTestBase
+public class NestedOperationLoggerTest : FusionTestBase
 {
-    public NestedCommandLoggerTest(ITestOutputHelper @out) : base(@out)
+    public NestedOperationLoggerTest(ITestOutputHelper @out) : base(@out)
         => UseTestClock = true;
 
     [Fact]
@@ -22,7 +22,7 @@ public class NestedCommandLoggerTest : FusionTestBase
         c3.Value.Should().BeNull();
 
         var commander = Services.Commander();
-        var command = new NestedCommandLoggerTester_SetMany(["1", "2", "3"], "v");
+        var command = new NestedOperationLoggerTester_SetMany(["1", "2", "3"], "v");
         await commander.Call(command);
 
         c1.IsInvalidated().Should().BeTrue();

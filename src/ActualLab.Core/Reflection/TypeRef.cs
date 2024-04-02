@@ -30,7 +30,7 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public Symbol AssemblyQualifiedName { get; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public string TypeName
         => AssemblyQualifiedName.Value[..AssemblyQualifiedName.Value.IndexOf(',', StringComparison.Ordinal)];
 

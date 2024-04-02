@@ -19,7 +19,7 @@ public partial class InMemoryAuthService
         if (Computed.IsInvalidating()) {
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
-            var invSessionInfo = context.Operation().Items.Get<SessionInfo>();
+            var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo != null) {
                 _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
                 _ = GetUserSessions(tenant.Id, invSessionInfo.UserId, default);
@@ -74,8 +74,8 @@ public partial class InMemoryAuthService
         // Persist changes
         Users[(tenant, user.Id)] = user;
         sessionInfo = UpsertSessionInfo(tenant, session.Id, sessionInfo, sessionInfo.Version);
-        context.Operation().Items.Set(sessionInfo);
-        context.Operation().Items.Set(isNewUser);
+        context.OperationItems.Set(sessionInfo);
+        context.OperationItems.Set(isNewUser);
     }
 
     // [CommandHandler] inherited
@@ -89,19 +89,19 @@ public partial class InMemoryAuthService
 
         if (Computed.IsInvalidating()) {
             _ = GetSessionInfo(session, default); // Must go first!
-            var invIsNew = context.Operation().Items.GetOrDefault<bool>();
+            var invIsNew = context.OperationItems.GetOrDefault<bool>();
             if (invIsNew) {
                 _ = GetAuthInfo(session, default);
                 _ = GetOptions(session, default);
             }
-            var invSessionInfo = context.Operation().Items.Get<SessionInfo>();
+            var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo?.IsAuthenticated() ?? false)
                 _ = GetUserSessions(tenant.Id, invSessionInfo.UserId, default);
             return null!;
         }
 
         var sessionInfo = SessionInfos.GetValueOrDefault((tenant, session.Id));
-        context.Operation().Items.Set(sessionInfo == null); // invIsNew
+        context.OperationItems.Set(sessionInfo == null); // invIsNew
         sessionInfo ??= new SessionInfo(session, Clocks.SystemClock.Now);
         sessionInfo = sessionInfo with {
             IPAddress = ipAddress.IsNullOrEmpty() ? sessionInfo.IPAddress : ipAddress,
@@ -109,7 +109,7 @@ public partial class InMemoryAuthService
             Options = options.SetMany(sessionInfo.Options),
         };
         sessionInfo = UpsertSessionInfo(tenant, session.Id, sessionInfo, sessionInfo.Version);
-        context.Operation().Items.Set(sessionInfo); // invSessionInfo
+        context.OperationItems.Set(sessionInfo); // invSessionInfo
         return sessionInfo;
     }
 

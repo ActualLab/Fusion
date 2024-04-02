@@ -19,10 +19,9 @@ public readonly partial struct Base64Encoded(byte[] data)
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public byte[] Data => _data ?? Array.Empty<byte>();
 
-    [IgnoreDataMember, MemoryPackIgnore]
+    [MemoryPackIgnore]
     public int Count => Data.Length;
 
-    [DataMember]
     public byte this[int index] {
         get => Data[index];
         set => Data[index] = value;

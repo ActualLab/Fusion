@@ -1,4 +1,5 @@
 using System.Security;
+using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.Tests.Model;
@@ -57,13 +58,13 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         if (MustSkip()) return;
 
         await using var serving = await WebHost.Serve();
-        var agentInfo1 = WebServices.GetRequiredService<AgentInfo>();
-        var agentInfo2 = Services.GetRequiredService<AgentInfo>();
+        var hostId1 = WebServices.GetRequiredService<HostId>();
+        var hostId2 = Services.GetRequiredService<HostId>();
         var notifier1 = WebServices.GetRequiredService<IOperationCompletionNotifier>();
         var notifier2 = Services.GetRequiredService<IOperationCompletionNotifier>();
 
-        agentInfo1.Should().NotBe(agentInfo2);
-        agentInfo1.Id.Should().NotBe(agentInfo2.Id);
+        hostId1.Should().NotBe(hostId2);
+        hostId1.Id.Should().NotBe(hostId2.Id);
         notifier1.Should().NotBe(notifier2);
 
         var auth = Services.GetRequiredService<IAuth>();

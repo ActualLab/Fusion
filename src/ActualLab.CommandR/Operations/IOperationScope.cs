@@ -1,9 +1,9 @@
-namespace ActualLab.Fusion.Operations;
+namespace ActualLab.CommandR.Operations;
 
 public interface IOperationScope : IAsyncDisposable, IRequirementTarget
 {
-    Operation Operation { get; }
     CommandContext CommandContext { get; }
+    Operation Operation { get; }
     bool IsUsed { get; }
     bool IsClosed { get; }
     bool? IsConfirmed { get; }

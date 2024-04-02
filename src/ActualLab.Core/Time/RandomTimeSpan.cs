@@ -4,15 +4,16 @@ namespace ActualLab.Time;
 
 [StructLayout(LayoutKind.Sequential)] // Important!
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor]
 // Unmanaged struct, so no need for [method: MemoryPackConstructor]
 public readonly partial record struct RandomTimeSpan(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] TimeSpan Origin,
     [property: DataMember(Order = 1), MemoryPackOrder(1)] TimeSpan MaxDelta = default
 ) {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public TimeSpan Min => (Origin - MaxDelta).Positive();
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public TimeSpan Max => (Origin + MaxDelta).Positive();
 
     public RandomTimeSpan(TimeSpan origin, double maxDelta)

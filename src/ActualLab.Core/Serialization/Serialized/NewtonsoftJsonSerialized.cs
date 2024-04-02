@@ -5,10 +5,14 @@ namespace ActualLab.Serialization;
 
 public static class NewtonsoftJsonSerialized
 {
-    public static NewtonsoftJsonSerialized<TValue> New<TValue>() => new();
-    public static NewtonsoftJsonSerialized<TValue> New<TValue>(TValue value) => new() { Value = value };
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static NewtonsoftJsonSerialized<TValue> New<TValue>(TValue value = default!)
+        => new() { Value = value };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public static NewtonsoftJsonSerialized<TValue> New<TValue>(string data) => new(data);
+    public static NewtonsoftJsonSerialized<TValue> New<TValue>(string data)
+        => new() { Data = data };
 }
 
 #if !NET5_0
@@ -18,16 +22,9 @@ public static class NewtonsoftJsonSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class NewtonsoftJsonSerialized<T> : TextSerialized<T>
 {
-    [ThreadStatic] private static ITextSerializer<T>? _serializer;
-
-    public NewtonsoftJsonSerialized() { }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    [MemoryPackConstructor]
-    public NewtonsoftJsonSerialized(string data)
-        : base(data) { }
+    private static ITextSerializer<T>? _serializer;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override ITextSerializer<T> GetSerializer()
-        => _serializer ??= new NewtonsoftJsonSerializer().ToTyped<T>();
+        => _serializer ??= NewtonsoftJsonSerializer.Default.ToTyped<T>();
 }

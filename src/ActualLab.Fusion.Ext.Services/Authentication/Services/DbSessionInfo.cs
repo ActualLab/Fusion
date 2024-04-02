@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
+using ActualLab.Internal;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Versioning;
 
@@ -12,7 +14,7 @@ namespace ActualLab.Fusion.Authentication.Services;
 [Index(nameof(IPAddress), nameof(IsSignOutForced))]
 public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
 {
-    private readonly NewtonsoftJsonSerialized<ImmutableOptionSet> _options =
+    private NewtonsoftJsonSerialized<ImmutableOptionSet> _options =
         NewtonsoftJsonSerialized.New(ImmutableOptionSet.Empty);
     private DateTime _createdAt;
     private DateTime _lastSeenAt;
@@ -40,10 +42,10 @@ public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
 
     // Options
     public string OptionsJson {
-#pragma warning disable IL2026
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => _options.Data;
-#pragma warning restore IL2026
-        set => _options.Data = value;
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        set => _options = NewtonsoftJsonSerialized.New<ImmutableOptionSet>(value);
     }
 
     [NotMapped]
@@ -51,6 +53,6 @@ public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
 #pragma warning disable IL2026
         get => _options.Value;
 #pragma warning restore IL2026
-        set => _options.Value = value;
+        set => _options = NewtonsoftJsonSerialized.New(value);
     }
 }

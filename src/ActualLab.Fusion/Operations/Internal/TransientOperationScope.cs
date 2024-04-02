@@ -1,3 +1,5 @@
+using ActualLab.CommandR.Operations;
+
 namespace ActualLab.Fusion.Operations.Internal;
 
 /// <summary>
@@ -9,13 +11,10 @@ public sealed class TransientOperationScope : AsyncDisposableBase, IOperationSco
     private ILogger? _log;
 
     private IServiceProvider Services { get; }
-    private AgentInfo AgentInfo { get; }
-    private MomentClockSet Clocks { get; }
     private ILogger Log => _log ??= Services.LogFor(GetType());
 
-    Operation IOperationScope.Operation => Operation;
-    public TransientOperation Operation { get; }
     public CommandContext CommandContext { get; }
+    public Operation Operation { get; }
     public bool IsUsed { get; private set; }
     public bool IsClosed { get; private set; }
     public bool? IsConfirmed { get; private set; }
@@ -23,14 +22,8 @@ public sealed class TransientOperationScope : AsyncDisposableBase, IOperationSco
     public TransientOperationScope(IServiceProvider services)
     {
         Services = services;
-        Clocks = services.Clocks();
-        AgentInfo = services.GetRequiredService<AgentInfo>();
-        Operation = new TransientOperation() {
-            AgentId = AgentInfo.Id,
-            StartTime = Clocks.SystemClock.Now,
-            Scope = this,
-        };
         CommandContext = CommandContext.GetCurrent();
+        Operation = Operation.NewTransient(this);
     }
 
     protected override ValueTask DisposeAsyncCore()
@@ -65,7 +58,7 @@ public sealed class TransientOperationScope : AsyncDisposableBase, IOperationSco
             return;
 
         if (isConfirmed)
-            Operation.CommitTime = Clocks.SystemClock.Now;
+            Operation.CommitTime = CommandContext.Commander.Clocks.SystemClock.Now;
         IsConfirmed = isConfirmed;
         IsClosed = true;
         IsUsed = CommandContext.Items.Replace<IOperationScope?>(null, this);
