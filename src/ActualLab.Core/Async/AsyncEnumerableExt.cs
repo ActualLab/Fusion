@@ -25,7 +25,7 @@ public static partial class AsyncEnumerableExt
 
     public static async IAsyncEnumerable<T> SkipSyncItems<T>(
         this IAsyncEnumerable<T> items,
-        bool alwaysYieldFirst,
+        bool alwaysYieldFirstItem,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         // ReSharper disable once NotDisposedResource
@@ -45,8 +45,8 @@ public static partial class AsyncEnumerableExt
                 break;
             }
 
-            if (hasLast && (alwaysYieldFirst || !hasNextTask.IsCompleted)) {
-                alwaysYieldFirst = hasLast = false;
+            if (hasLast && (alwaysYieldFirstItem || !hasNextTask.IsCompleted)) {
+                alwaysYieldFirstItem = hasLast = false;
                 yield return last!;
             }
 
