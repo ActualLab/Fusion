@@ -75,8 +75,8 @@ public static class StartupHelper
         fusion.AddService<TodoUI>(ServiceLifetime.Scoped);
         services.AddScoped(c => new RpcPeerStateMonitor(c, OSInfo.IsAnyClient ? RpcPeerRef.Default : null));
 
-        // Default update delay is 0.5s
-        services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.5));
+        // Default update delay is 0.25s
+        services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
 
         // Diagnostics
         services.AddHostedService(c => {

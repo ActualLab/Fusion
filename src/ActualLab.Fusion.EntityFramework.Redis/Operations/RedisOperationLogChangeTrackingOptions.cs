@@ -10,8 +10,7 @@ public record RedisOperationLogChangeTrackingOptions<TDbContext> : DbOperationCo
 
     public static string DefaultPubSubKeyFactory(DbShard shard)
     {
-        var tDbContext = typeof(TDbContext);
         var shardSuffix = shard.IsNone ? "" : $".{shard}";
-        return $"{tDbContext.GetName()}{shardSuffix}._Operations";
+        return $"{typeof(TDbContext).GetName()}{shardSuffix}._Operations";
     }
 }

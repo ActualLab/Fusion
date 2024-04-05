@@ -29,18 +29,14 @@ public abstract class DbOperationCompletionTrackerBase(IServiceProvider services
     // Protected methods
 
     protected abstract DbShardWatcher CreateShardWatcher(DbShard shard);
-
-    // Nested types
-
 }
 
 public abstract class DbOperationCompletionTrackerBase<TDbContext, TOptions>(
-        TOptions options,
-        IServiceProvider services
-        ) : DbOperationCompletionTrackerBase(services), IDbOperationLogChangeTracker<TDbContext>
+    TOptions options,
+    IServiceProvider services
+    ) : DbOperationCompletionTrackerBase(services), IDbOperationLogChangeTracker<TDbContext>
     where TDbContext : DbContext
     where TOptions : DbOperationCompletionTrackingOptions, new()
-
 {
     protected TOptions Options { get; init; } = options;
     protected IDbShardRegistry<TDbContext> ShardRegistry { get; } = services.GetRequiredService<IDbShardRegistry<TDbContext>>();

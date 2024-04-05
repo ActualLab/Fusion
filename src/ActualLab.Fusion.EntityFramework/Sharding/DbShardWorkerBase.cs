@@ -40,8 +40,8 @@ public abstract class DbShardWorkerBase<
         var usedShards = DbHub.ShardRegistry.UsedShards;
         var changes = usedShards
             .Changes(FixedDelayer.ZeroUnsafe, cancellationToken)
-            .Select(x => x.Value.Remove(DbShard.Template))
-            .SkipSyncItems(cancellationToken);
+            .SkipSyncItems(cancellationToken)
+            .Select(x => x.Value.Remove(DbShard.Template));
         return changes.RunItemTasks(OnRun, cancellationToken);
     }
 

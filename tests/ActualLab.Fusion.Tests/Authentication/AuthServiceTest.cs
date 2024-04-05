@@ -157,7 +157,7 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         user.ToClaimsPrincipal().Identity!.IsAuthenticated.Should().BeTrue();
 
         // Checking if local service is able to see the same user & sessions
-        if (!UseInMemoryAuthService) {
+        if (!UseInMemoryAuthService) { // In-memory auth services don't share the state
             await Delay(0.5);
             user = await auth.GetUser(session);
             user.Should().NotBeNull();
@@ -166,20 +166,20 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         }
 
         // Checking guest session
-        session = sessionB;
-        user = await authClient.GetUser(session);
+        user = await authClient.GetUser(sessionB);
         user.Should().BeNull();
 
         // Checking sign-out
-        await WebServices.Commander().Call(new Auth_SignOut(sessionA));
-        user = await webAuth.GetUser(sessionA);
+        session = sessionA;
+        await WebServices.Commander().Call(new Auth_SignOut(session));
+        user = await webAuth.GetUser(session);
         user.Should().BeNull();
 
         await Delay(0.5);
-        user = await authClient.GetUser(sessionA);
+        user = await authClient.GetUser(session);
         user.Should().BeNull();
-        if (!UseInMemoryAuthService) {
-            user = await auth.GetUser(sessionA);
+        if (!UseInMemoryAuthService) { // In-memory auth services don't share the state
+            user = await auth.GetUser(session);
             user.Should().BeNull();
         }
     }
@@ -235,7 +235,7 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         user.Claims.Count.Should().Be(2);
 
         // Checking if local service is able to see the same user & sessions
-        if (!UseInMemoryAuthService) {
+        if (!UseInMemoryAuthService) { // In-memory auth services don't share the state
             await Delay(0.5);
             user = await auth.GetUser(session);
             user.Should().NotBeNull();
@@ -256,7 +256,7 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         await Delay(0.5);
         user = await authClient.GetUser(sessionA);
         user.Should().BeNull();
-        if (!UseInMemoryAuthService) {
+        if (!UseInMemoryAuthService) { // In-memory auth services don't share the state
             user = await auth.GetUser(sessionA);
             user.Should().BeNull();
         }
