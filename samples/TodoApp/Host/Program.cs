@@ -119,8 +119,7 @@ void ConfigureServices()
             db.Services.AddTransientDbContextFactory<AppDbContext>((c, db) => {
                 // We use fakeShard here solely to be able to
                 // re-use the configuration logic from ConfigureShardDbContext.
-                var fakeShard = new DbShard("single");
-                ConfigureShardDbContext(c, fakeShard, db);
+                ConfigureShardDbContext(c, default, db);
             });
         }
     });
