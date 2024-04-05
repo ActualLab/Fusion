@@ -1,8 +1,5 @@
-using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Operations;
-using ActualLab.Multitenancy;
-using ActualLab.OS;
 using ActualLab.Redis;
 
 namespace ActualLab.Fusion.EntityFramework.Redis.Operations;
@@ -19,22 +16,23 @@ public class RedisOperationLogChangeTracker<TDbContext>
         : base(options, services)
     {
         RedisDb = services.GetService<RedisDb<TDbContext>>() ?? services.GetRequiredService<RedisDb>();
-        var redisPub = RedisDb.GetPub<TDbContext>(Options.PubSubKeyFactory.Invoke(Tenant.Default));
+        var redisPub = RedisDb.GetPub<TDbContext>(Options.PubSubKeyFactory.Invoke(default));
         Log.LogInformation("Using pub/sub key = '{Key}'", redisPub.FullKey);
     }
 
-    protected override DbOperationCompletionTrackerBase.TenantWatcher CreateTenantWatcher(Symbol tenantId)
-        => new TenantWatcher(this, tenantId);
+    protected override DbShardWatcher CreateShardWatcher(DbShard shard)
+        => new ShardWatcher(this, shard);
 
-    protected new class TenantWatcher : DbOperationCompletionTrackerBase.TenantWatcher
+    // Nested types
+
+    protected class ShardWatcher : DbShardWatcher
     {
-        public TenantWatcher(RedisOperationLogChangeTracker<TDbContext> owner, Symbol tenantId)
-            : base(owner.TenantRegistry.Get(tenantId))
+        public ShardWatcher(RedisOperationLogChangeTracker<TDbContext> owner, DbShard shard) : base(shard)
         {
             var hostId = owner.Services.GetRequiredService<HostId>();
-            var key = owner.Options.PubSubKeyFactory.Invoke(Tenant);
+            var key = owner.Options.PubSubKeyFactory.Invoke(Shard);
 
-            var watchChain = new AsyncChain($"Watch({tenantId})", async cancellationToken => {
+            var watchChain = new AsyncChain($"Watch({shard})", async cancellationToken => {
                 var redisSub = owner.RedisDb.GetChannelSub(key);
                 await using var _ = redisSub.ConfigureAwait(false);
 

@@ -1,14 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
-using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.Extensions.Services;
 
 public class DbKeyValueTrimmer<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbKeyValue>
-    : DbTenantWorkerBase<TDbContext>
+    : DbShardWorkerBase<TDbContext>
     where TDbContext : DbContext
     where TDbKeyValue : DbKeyValue, new()
 {
@@ -25,7 +24,6 @@ public class DbKeyValueTrimmer<
 
     protected Options Settings { get; }
     protected IKeyValueStore KeyValueStore { get; init; }
-    protected override IReadOnlyMutableDictionary<Symbol, Tenant> TenantSet => TenantRegistry.AccessedTenants;
     protected bool IsLoggingEnabled { get; }
 
     public DbKeyValueTrimmer(Options settings, IServiceProvider services)
@@ -36,13 +34,13 @@ public class DbKeyValueTrimmer<
         KeyValueStore = services.GetRequiredService<IKeyValueStore>();
     }
 
-    protected override Task RunInternal(Tenant tenant, CancellationToken cancellationToken)
+    protected override Task OnRun(DbShard shard, CancellationToken cancellationToken)
     {
         var lastTrimCount = 0;
 
         var activitySource = GetType().GetActivitySource();
-        var runChain = new AsyncChain($"Trim({tenant.Id})", async cancellationToken1 => {
-            var dbContext = CreateDbContext(tenant, true);
+        var runChain = new AsyncChain($"Trim({shard})", async cancellationToken1 => {
+            var dbContext = await CreateDbContext(shard, true, cancellationToken1).ConfigureAwait(false);
             await using var _ = dbContext.ConfigureAwait(false);
             dbContext.EnableChangeTracking(false);
 
@@ -59,13 +57,14 @@ public class DbKeyValueTrimmer<
 
             // This must be done via IKeyValueStore & operations,
             // otherwise invalidation won't happen for removed entries
-            await KeyValueStore.Remove(tenant.Id, keys, cancellationToken1).ConfigureAwait(false);
+            await KeyValueStore.Remove(shard, keys, cancellationToken1).ConfigureAwait(false);
             lastTrimCount = keys.Length;
 
             if (lastTrimCount > 0 && IsLoggingEnabled)
                 Log.Log(Settings.LogLevel,
-                    "Trim({TenantId}) trimmed {Count} entries", tenant.Id, lastTrimCount);
-        }).Trace(() => activitySource.StartActivity("Trim").AddTenantTags(tenant), Log);
+                    "Trim({Shard}) trimmed {Count} entries", shard.Value, lastTrimCount);
+            // ReSharper disable once ExplicitCallerInfoArgument
+        }).Trace(() => activitySource.StartActivity("Trim").AddShardTags(shard), Log);
 
         var chain = runChain
             .RetryForever(Settings.RetryDelays, Clocks.CpuClock, Log)

@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
-using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
@@ -23,7 +22,7 @@ public interface IDbUserRepo<in TDbContext, TDbUser, TDbUserId>
         TDbContext dbContext, TDbUser dbUser, CancellationToken cancellationToken = default);
 
     // Read methods
-    Task<TDbUser?> Get(Tenant tenant, TDbUserId userId, CancellationToken cancellationToken = default);
+    Task<TDbUser?> Get(DbShard shard, TDbUserId userId, CancellationToken cancellationToken = default);
     Task<TDbUser?> Get(TDbContext dbContext, TDbUserId userId, bool forUpdate, CancellationToken cancellationToken = default);
     Task<TDbUser?> GetByUserIdentity(
         TDbContext dbContext, UserIdentity userIdentity, bool forUpdate, CancellationToken cancellationToken = default);
@@ -117,8 +116,8 @@ public class DbUserRepo<
 
     // Read methods
 
-    public async Task<TDbUser?> Get(Tenant tenant, TDbUserId userId, CancellationToken cancellationToken = default)
-        => await UserResolver.Get(tenant, userId, cancellationToken).ConfigureAwait(false);
+    public async Task<TDbUser?> Get(DbShard shard, TDbUserId userId, CancellationToken cancellationToken = default)
+        => await UserResolver.Get(shard, userId, cancellationToken).ConfigureAwait(false);
 
     public virtual async Task<TDbUser?> Get(
         TDbContext dbContext, TDbUserId userId, bool forUpdate, CancellationToken cancellationToken = default)

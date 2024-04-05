@@ -1,4 +1,3 @@
-using ActualLab.Multitenancy;
 using ActualLab.IO;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
@@ -7,13 +6,13 @@ public record FileBasedDbOperationLogChangeTrackingOptions<TDbContext> : DbOpera
 {
     public static FileBasedDbOperationLogChangeTrackingOptions<TDbContext> Default { get; set; } = new();
 
-    public Func<Tenant, FilePath> FilePathFactory { get; init; } = DefaultFilePathFactory;
+    public Func<DbShard, FilePath> FilePathFactory { get; init; } = DefaultFilePathFactory;
 
-    public static FilePath DefaultFilePathFactory(Tenant tenant)
+    public static FilePath DefaultFilePathFactory(DbShard shard)
     {
         var tDbContext = typeof(TDbContext);
         var appTempDir = FilePath.GetApplicationTempDirectory("", true);
-        var tenantSuffix = tenant == Tenant.Default ? "" : $"_{tenant.Id.Value}";
-        return appTempDir & FilePath.GetHashedName($"{tDbContext.Name}_{tDbContext.Namespace}{tenantSuffix}.tracker");
+        var shardSuffix = shard.IsNone ? "" : $"_{shard}";
+        return appTempDir & FilePath.GetHashedName($"{tDbContext.Name}_{tDbContext.Namespace}{shardSuffix}.tracker");
     }
 }

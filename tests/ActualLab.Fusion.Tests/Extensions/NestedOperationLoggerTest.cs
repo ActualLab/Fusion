@@ -1,5 +1,5 @@
+using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Extensions;
-using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.Tests.Extensions;
 
@@ -12,11 +12,11 @@ public class NestedOperationLoggerTest : FusionTestBase
     public async Task BasicTest()
     {
         var kvs = Services.GetRequiredService<IKeyValueStore>();
-        var tenantId = Tenant.Default.Id;
+        var shard = DbShard.None;
 
-        var c1 = await Computed.Capture(() => kvs.Get(tenantId, "1"));
-        var c2 = await Computed.Capture(() => kvs.Get(tenantId, "2"));
-        var c3 = await Computed.Capture(() => kvs.Get(tenantId, "3"));
+        var c1 = await Computed.Capture(() => kvs.Get(shard, "1"));
+        var c2 = await Computed.Capture(() => kvs.Get(shard, "2"));
+        var c3 = await Computed.Capture(() => kvs.Get(shard, "3"));
         c1.Value.Should().BeNull();
         c2.Value.Should().BeNull();
         c3.Value.Should().BeNull();

@@ -1,3 +1,5 @@
+using ActualLab.Fusion.EntityFramework;
+
 namespace ActualLab.Fusion.Authentication;
 
 public interface IAuthBackend : IComputeService
@@ -12,5 +14,5 @@ public interface IAuthBackend : IComputeService
 
     // Queries
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<User?> GetUser(Symbol tenantId, Symbol userId, CancellationToken cancellationToken = default);
+    Task<User?> GetUser(DbShard shard, Symbol userId, CancellationToken cancellationToken = default);
 }

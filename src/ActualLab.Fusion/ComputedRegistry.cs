@@ -194,9 +194,7 @@ public sealed class ComputedRegistry : IDisposable
     private void TryPrune()
     {
         lock (Lock) {
-            // Double check locking
-            if (_opCounter.Value <= _pruneOpCounterThreshold)
-                return;
+            if (_opCounter.Value <= _pruneOpCounterThreshold) return;
 
             _opCounter.Value = 0;
             _ = Prune();

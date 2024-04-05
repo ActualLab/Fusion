@@ -1,8 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
-using ActualLab.Multitenancy;
-using ActualLab.OS;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
@@ -73,8 +71,8 @@ public abstract class DbOperationCompletionNotifierBase<
         if (operationScope is not { IsConfirmed: true })
             return Task.CompletedTask; // Nothing is committed to TDbContext
 
-        var tenant = operationScope.Tenant;
-        var notifyChain = new AsyncChain($"Notify({tenant.Id})", _ => Notify(tenant))
+        var shard = operationScope.Shard;
+        var notifyChain = new AsyncChain($"Notify({shard})", _ => Notify(shard))
             .Retry(Options.NotifyRetryDelays, Options.NotifyRetryCount, Clocks.CpuClock, Log);
         _ = notifyChain.RunIsolated(CancellationToken.None);
         return Task.CompletedTask;
@@ -82,5 +80,5 @@ public abstract class DbOperationCompletionNotifierBase<
 
     // Protected methods
 
-    protected abstract Task Notify(Tenant tenant);
+    protected abstract Task Notify(DbShard shard);
 }

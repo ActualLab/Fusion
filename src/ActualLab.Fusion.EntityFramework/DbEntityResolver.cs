@@ -6,7 +6,6 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using ActualLab.Fusion.EntityFramework.Internal;
-using ActualLab.Multitenancy;
 using ActualLab.Net;
 
 namespace ActualLab.Fusion.EntityFramework;
@@ -18,7 +17,7 @@ public interface IDbEntityResolver<TKey, TDbEntity>
     Func<TDbEntity, TKey> KeyExtractor { get; init; }
     Expression<Func<TDbEntity, TKey>> KeyExtractorExpression { get; init; }
 
-    Task<TDbEntity?> Get(Symbol tenantId, TKey key, CancellationToken cancellationToken = default);
+    Task<TDbEntity?> Get(DbShard shard, TKey key, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -67,7 +66,7 @@ public class DbEntityResolver<
     protected static MethodInfo QueryableWhereMethod { get; }
         = new Func<IQueryable<TDbEntity>, Expression<Func<TDbEntity, bool>>, IQueryable<TDbEntity>>(Queryable.Where).Method;
 
-    private ConcurrentDictionary<Symbol, BatchProcessor<TKey, TDbEntity?>>? _batchProcessors;
+    private ConcurrentDictionary<DbShard, BatchProcessor<TKey, TDbEntity?>>? _batchProcessors;
     private ITransientErrorDetector<TDbContext>? _transientErrorDetector;
 
     protected Options Settings { get; }
@@ -83,8 +82,8 @@ public class DbEntityResolver<
         Settings = settings;
         var keyExtractor = Settings.KeyExtractor;
         if (keyExtractor == null) {
-            var dummyTenant = TenantRegistry.IsSingleTenant ? Tenant.Default : Tenant.Dummy;
-            using var dbContext = CreateDbContext(dummyTenant);
+            var shard = DbShardRegistry.HasSingleShard ? default : DbShard.Template;
+            using var dbContext = DbHub.ContextFactory.CreateDbContext(shard);
             var keyPropertyName = dbContext.Model
                 .FindEntityType(typeof(TDbEntity))!
                 .FindPrimaryKey()!
@@ -123,10 +122,10 @@ public class DbEntityResolver<
             .ConfigureAwait(false);
     }
 
-    public virtual Task<TDbEntity?> Get(Symbol tenantId, TKey key, CancellationToken cancellationToken = default)
+    public virtual Task<TDbEntity?> Get(DbShard shard, TKey key, CancellationToken cancellationToken = default)
     {
-        var batchProcessor = GetBatchProcessor(tenantId);
-        return batchProcessor.Process(key, cancellationToken)!;
+        var batchProcessor = GetBatchProcessor(shard);
+        return batchProcessor.Process(key, cancellationToken);
     }
 
     // Protected methods
@@ -189,23 +188,21 @@ public class DbEntityResolver<
         return (Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>)Expression.Lambda(eExecuteCall, pDbContext, pAllKeys).Compile();
     }
 
-    protected BatchProcessor<TKey, TDbEntity?> GetBatchProcessor(Symbol tenantId)
+    protected BatchProcessor<TKey, TDbEntity?> GetBatchProcessor(DbShard shard)
     {
         var batchProcessors = _batchProcessors;
         if (batchProcessors == null)
             throw ActualLab.Internal.Errors.AlreadyDisposed(GetType());
 
-        return batchProcessors.GetOrAdd(tenantId,
-            static (tenantId1, self) => self.CreateBatchProcessor(tenantId1), this);
+        return batchProcessors.GetOrAdd(shard, static (shard1, self) => self.CreateBatchProcessor(shard1), this);
     }
 
-    protected virtual BatchProcessor<TKey, TDbEntity?> CreateBatchProcessor(Symbol tenantId)
+    protected virtual BatchProcessor<TKey, TDbEntity?> CreateBatchProcessor(DbShard shard)
     {
-        var tenant = TenantRegistry.Get(tenantId);
         var batchProcessor = new BatchProcessor<TKey, TDbEntity?> {
             BatchSize = Settings.BatchSize,
             WorkerPolicy = BatchProcessorWorkerPolicy.DbDefault,
-            Implementation = (batch, cancellationToken) => ProcessBatch(tenant, batch, cancellationToken),
+            Implementation = (batch, cancellationToken) => ProcessBatch(shard, batch, cancellationToken),
             Log = Log,
         };
         Settings.ConfigureBatchProcessor?.Invoke(batchProcessor);
@@ -215,29 +212,30 @@ public class DbEntityResolver<
         return batchProcessor;
     }
 
-    protected virtual Activity? StartProcessBatchActivity(Tenant tenant, int batchSize)
+    protected virtual Activity? StartProcessBatchActivity(DbShard shard, int batchSize)
     {
         var activitySource = GetType().GetActivitySource();
         var activity = activitySource
             .StartActivity(nameof(ProcessBatch))
-            .AddTenantTags(tenant)?
+            .AddShardTags(shard)?
             .AddTag("batchSize", batchSize.ToString(CultureInfo.InvariantCulture));
         return activity;
     }
 
     protected virtual async Task ProcessBatch(
-        Tenant tenant,
+        DbShard shard,
         List<BatchProcessor<TKey, TDbEntity?>.Item> batch,
         CancellationToken cancellationToken)
     {
         if (batch.Count == 0)
             return;
 
-        using var activity = StartProcessBatchActivity(tenant, batch.Count);
+        using var activity = StartProcessBatchActivity(shard, batch.Count);
         var (query, batchSize) = Queries.First(q => q.BatchSize >= batch.Count);
         for (var tryIndex = 0;; tryIndex++) {
-            var dbContext = CreateDbContext(tenant);
+            var dbContext = await CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
             await using var _ = dbContext.ConfigureAwait(false);
+
             var keys = ArrayPool<TKey>.Shared.Rent(batchSize);
             try {
                 var i = 0;

@@ -22,19 +22,19 @@ public readonly struct DbContextBuilder<
         }
 
         services.TryAddSingleton<DbHub<TDbContext>>();
-        AddMultitenancy(); // Core multitenancy services
+        AddSharding(); // Core sharding services
         TryAddTransientErrorDetector(_ => TransientErrorDetector.DefaultPreferTransient);
 
         configure?.Invoke(this);
     }
 
-    // Multitenancy
+    // Sharding
 
-    public DbMultitenancyBuilder<TDbContext> AddMultitenancy()
+    public ShardDbContextBuilder<TDbContext> AddSharding()
         => new(this, null);
 
-    public DbContextBuilder<TDbContext> AddMultitenancy(Action<DbMultitenancyBuilder<TDbContext>> configure)
-        => new DbMultitenancyBuilder<TDbContext>(this, configure).DbContext;
+    public DbContextBuilder<TDbContext> AddSharding(Action<ShardDbContextBuilder<TDbContext>> configure)
+        => new ShardDbContextBuilder<TDbContext>(this, configure).DbContext;
 
     // Transient error detector
 

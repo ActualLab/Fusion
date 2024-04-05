@@ -1,10 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using ActualLab.Fusion.EntityFramework.Operations;
-using ActualLab.Multitenancy;
-using ActualLab.OS;
 
 namespace ActualLab.Fusion.EntityFramework.Npgsql.Operations;
 
@@ -16,19 +13,20 @@ public class NpgsqlDbOperationLogChangeTracker<
     : DbOperationCompletionTrackerBase<TDbContext, NpgsqlDbOperationLogChangeTrackingOptions<TDbContext>>(options, services)
     where TDbContext : DbContext
 {
-    protected override DbOperationCompletionTrackerBase.TenantWatcher CreateTenantWatcher(Symbol tenantId)
-        => new TenantWatcher(this, tenantId);
+    protected override DbShardWatcher CreateShardWatcher(DbShard shard)
+        => new ShardWatcher(this, shard);
 
-    protected new class TenantWatcher : DbOperationCompletionTrackerBase.TenantWatcher
+    // Nested types
+
+    protected class ShardWatcher : DbShardWatcher
     {
-        public TenantWatcher(NpgsqlDbOperationLogChangeTracker<TDbContext> owner, Symbol tenantId)
-            : base(owner.TenantRegistry.Get(tenantId))
+        public ShardWatcher(NpgsqlDbOperationLogChangeTracker<TDbContext> owner, DbShard shard) : base(shard)
         {
             var dbHub = owner.Services.DbHub<TDbContext>();
             var hostId = owner.Services.GetRequiredService<HostId>();
 
-            var watchChain = new AsyncChain($"Watch({tenantId})", async cancellationToken => {
-                var dbContext = dbHub.CreateDbContext(Tenant);
+            var watchChain = new AsyncChain($"Watch({shard})", async cancellationToken => {
+                var dbContext = await dbHub.CreateDbContext(Shard, cancellationToken).ConfigureAwait(false);
                 await using var _ = dbContext.ConfigureAwait(false);
 
                 var database = dbContext.Database;

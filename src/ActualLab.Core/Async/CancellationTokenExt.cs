@@ -10,6 +10,12 @@ public static class CancellationTokenExt
     public static CancellationTokenSource CreateLinkedTokenSource(this CancellationToken cancellationToken)
         => CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static CancellationTokenSource CreateDelayedTokenSource(
+        this CancellationToken cancellationToken,
+        TimeSpan cancellationDelay)
+        => new DelayedCancellationTokenSource(cancellationToken, cancellationDelay);
+
     // FromTask
 
     public static CancellationToken FromTask(Task task, CancellationToken cancellationToken = default)
@@ -87,5 +93,30 @@ public static class CancellationTokenExt
         var tcs = TaskCompletionSourceExt.New<T>(taskCreationOptions);
         token.Register(() => tcs.TrySetCanceled(token));
         return tcs.Task;
+    }
+
+    // Nested types
+
+    private sealed class DelayedCancellationTokenSource : CancellationTokenSource
+    {
+        private readonly TimeSpan _cancellationDelay;
+        private readonly CancellationTokenRegistration _registration;
+
+#pragma warning disable CA1068
+        public DelayedCancellationTokenSource(CancellationToken cancellationToken, TimeSpan cancellationDelay)
+#pragma warning restore CA1068
+        {
+            _cancellationDelay = cancellationDelay;
+            _registration = cancellationToken.Register(static state => {
+                var self = (DelayedCancellationTokenSource)state!;
+                self.CancelAfter(self._cancellationDelay);
+            }, this);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            _registration.Dispose();
+            base.Dispose(disposing);
+        }
     }
 }

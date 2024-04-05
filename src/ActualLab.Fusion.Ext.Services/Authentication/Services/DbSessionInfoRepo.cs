@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
-using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
@@ -21,11 +20,11 @@ public interface IDbSessionInfoRepo<
     Task<TDbSessionInfo> Upsert(
         TDbContext dbContext, string sessionId, SessionInfo sessionInfo, CancellationToken cancellationToken = default);
     Task<int> Trim(
-        Tenant tenant, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default);
+        DbShard shard, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default);
 
     // Read methods
     Task<TDbSessionInfo?> Get(
-        Tenant tenant, string sessionId, CancellationToken cancellationToken = default);
+        DbShard shard, string sessionId, CancellationToken cancellationToken = default);
     Task<TDbSessionInfo?> Get(
         TDbContext dbContext, string sessionId, bool forUpdate, CancellationToken cancellationToken = default);
     Task<TDbSessionInfo[]> ListByUser(
@@ -43,14 +42,14 @@ public class DbSessionInfoRepo<
     where TDbUserId : notnull
 {
     protected DbAuthService<TDbContext>.Options Settings { get; } = settings;
-    protected IDbUserIdHandler<TDbUserId> DbUserIdHandler { get; init; }
+    protected IDbUserIdHandler<TDbUserId> UserIdHandler { get; init; }
         = services.GetRequiredService<IDbUserIdHandler<TDbUserId>>();
     protected IDbEntityResolver<string, TDbSessionInfo> SessionResolver { get; init; }
         = services.DbEntityResolver<string, TDbSessionInfo>();
     protected IDbEntityConverter<TDbSessionInfo, SessionInfo> SessionConverter { get; init; }
         = services.DbEntityConverter<TDbSessionInfo, SessionInfo>();
-    protected ITenantResolver<TDbContext> TenantResolver { get; init; }
-        = services.GetRequiredService<ITenantResolver<TDbContext>>();
+    protected IDbShardResolver ShardResolver { get; init; }
+        = services.GetRequiredService<IDbShardResolver>();
 
     public Type SessionInfoEntityType => typeof(TDbSessionInfo);
 
@@ -95,9 +94,9 @@ public class DbSessionInfoRepo<
     }
 
     public virtual async Task<int> Trim(
-        Tenant tenant, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default)
+        DbShard shard, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default)
     {
-        var dbContext = CreateDbContext(tenant, true);
+        var dbContext = await CreateDbContext(shard, true, cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);
 
@@ -117,8 +116,8 @@ public class DbSessionInfoRepo<
 
     // Read methods
 
-    public async Task<TDbSessionInfo?> Get(Tenant tenant, string sessionId, CancellationToken cancellationToken = default)
-        => await SessionResolver.Get(tenant, sessionId, cancellationToken).ConfigureAwait(false);
+    public async Task<TDbSessionInfo?> Get(DbShard shard, string sessionId, CancellationToken cancellationToken = default)
+        => await SessionResolver.Get(shard, sessionId, cancellationToken).ConfigureAwait(false);
 
     public virtual async Task<TDbSessionInfo?> Get(
         TDbContext dbContext, string sessionId, bool forUpdate, CancellationToken cancellationToken = default)

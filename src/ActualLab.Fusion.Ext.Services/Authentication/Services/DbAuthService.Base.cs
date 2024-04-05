@@ -31,5 +31,5 @@ public abstract class DbAuthService<
     public abstract Task SetOptions(Auth_SetSessionOptions command, CancellationToken cancellationToken = default);
     public abstract Task<SessionInfo?> GetSessionInfo(Session session, CancellationToken cancellationToken = default);
     public abstract Task<ImmutableOptionSet> GetOptions(Session session, CancellationToken cancellationToken = default);
-    public abstract Task<User?> GetUser(Symbol tenantId, Symbol userId, CancellationToken cancellationToken = default);
+    public abstract Task<User?> GetUser(DbShard shard, Symbol userId, CancellationToken cancellationToken = default);
 }

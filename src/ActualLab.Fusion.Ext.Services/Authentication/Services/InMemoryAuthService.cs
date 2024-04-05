@@ -1,4 +1,4 @@
-using ActualLab.Multitenancy;
+using ActualLab.Fusion.EntityFramework;
 using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Authentication.Services;
@@ -7,11 +7,10 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
 {
     private long _nextUserId;
 
-    protected ConcurrentDictionary<(Symbol TenantId, Symbol UserId), User> Users { get; } = new();
-    protected ConcurrentDictionary<(Symbol TenantId, Symbol SessionId), SessionInfo> SessionInfos { get; } = new();
+    protected ConcurrentDictionary<(DbShard Shard, Symbol UserId), User> Users { get; } = new();
+    protected ConcurrentDictionary<(DbShard Shard, Symbol SessionId), SessionInfo> SessionInfos { get; } = new();
     protected VersionGenerator<long> VersionGenerator { get; } = services.VersionGenerator<long>();
-    protected ITenantResolver TenantResolver { get; } = services.GetRequiredService<ITenantResolver>();
-    protected ITenantRegistry TenantRegistry { get; } = services.GetRequiredService<ITenantRegistry>();
+    protected IDbShardResolver ShardResolver { get; } = services.GetRequiredService<IDbShardResolver>();
     protected MomentClockSet Clocks { get; } = services.Clocks();
     protected ICommander Commander { get; } = services.Commander();
 
@@ -27,7 +26,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         var force = command.Force;
 
         var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(session, context, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<Unit>(command);
 
         if (Computed.IsInvalidating()) {
             if (isKickCommand)
@@ -41,8 +40,8 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             }
             var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo != null) {
-                _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
-                _ = GetUserSessions(tenant.Id, invSessionInfo.UserId, default);
+                _ = GetUser(shard, invSessionInfo.UserId, default);
+                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             }
             return;
         }
@@ -52,7 +51,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             var user = await GetUser(session, cancellationToken).ConfigureAwait(false);
             if (user == null)
                 return;
-            var userSessions = await GetUserSessions(tenant, user.Id, cancellationToken).ConfigureAwait(false);
+            var userSessions = await GetUserSessions(shard, user.Id, cancellationToken).ConfigureAwait(false);
             var signOutSessions = kickUserSessionHash.IsNullOrEmpty()
                 ? userSessions
                 : userSessions.Where(p => Equals(p.SessionInfo.SessionHash, kickUserSessionHash));
@@ -75,7 +74,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             UserId = Symbol.Empty,
             IsSignOutForced = force,
         };
-        UpsertSessionInfo(tenant, session.Id, sessionInfo, null);
+        UpsertSessionInfo(shard, session.Id, sessionInfo, null);
     }
 
     // [CommandHandler] inherited
@@ -83,19 +82,19 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
     {
         var session = command.Session.RequireValid();
         var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(session, context, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<Unit>(command);
 
         if (Computed.IsInvalidating()) {
             var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo != null)
-                _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
+                _ = GetUser(shard, invSessionInfo.UserId, default);
             return;
         }
 
         var sessionInfo = await GetSessionInfo(session, cancellationToken)
             .Require(SessionInfo.MustBeAuthenticated)
             .ConfigureAwait(false);
-        var user = await GetUser(tenant.Id, sessionInfo.UserId, cancellationToken)
+        var user = await GetUser(shard, sessionInfo.UserId, cancellationToken)
             .Require()
             .ConfigureAwait(false);
 
@@ -108,7 +107,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
                 Version = VersionGenerator.NextVersion(user.Version),
             };
         }
-        Users[(tenant, user.Id)] = user;
+        Users[(shard, user.Id)] = user;
     }
 
     // [CommandHandler] inherited
@@ -136,45 +135,45 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
     }
 
     // [ComputeMethod] inherited
-    public virtual async Task<SessionAuthInfo?> GetAuthInfo(
+    public virtual Task<SessionAuthInfo?> GetAuthInfo(
         Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        var tenant = await TenantResolver.Resolve(session, this, cancellationToken).ConfigureAwait(false);
-        var sessionInfo = SessionInfos.GetValueOrDefault((tenant, session.Id));
-        return sessionInfo?.ToAuthInfo();
+        var shard = ShardResolver.Resolve<Unit>(session);
+        var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
+        return Task.FromResult(sessionInfo?.ToAuthInfo());
     }
 
     // [ComputeMethod] inherited
-    public virtual async Task<SessionInfo?> GetSessionInfo(
+    public virtual Task<SessionInfo?> GetSessionInfo(
         Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        var tenant = await TenantResolver.Resolve(session, this, cancellationToken).ConfigureAwait(false);
-        var sessionInfo = SessionInfos.GetValueOrDefault((tenant, session.Id));
-        return sessionInfo;
+        var shard = ShardResolver.Resolve<Unit>(session);
+        var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
+        return Task.FromResult(sessionInfo)!;
     }
 
     // [ComputeMethod] inherited
-    public virtual async Task<ImmutableOptionSet> GetOptions(
+    public virtual Task<ImmutableOptionSet> GetOptions(
         Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        var tenant = await TenantResolver.Resolve(session, this, cancellationToken).ConfigureAwait(false);
-        var sessionInfo = SessionInfos.GetValueOrDefault((tenant, session.Id));
-        return sessionInfo?.Options ?? ImmutableOptionSet.Empty;
+        var shard = ShardResolver.Resolve<Unit>(session);
+        var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
+        return Task.FromResult(sessionInfo?.Options ?? ImmutableOptionSet.Empty);
     }
 
     // [ComputeMethod] inherited
     public virtual async Task<User?> GetUser(Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        var tenant = await TenantResolver.Resolve(session, this, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<Unit>(session);
         var authInfo = await GetAuthInfo(session, cancellationToken).ConfigureAwait(false);
         if (!(authInfo?.IsAuthenticated() ?? false))
             return null;
 
-        var user = await GetUser(tenant.Id, authInfo.UserId, cancellationToken).ConfigureAwait(false);
+        var user = await GetUser(shard, authInfo.UserId, cancellationToken).ConfigureAwait(false);
         return user;
     }
 
@@ -183,11 +182,12 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        var tenant = await TenantResolver.Resolve(session, this, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<Unit>(session);
         var user = await GetUser(session, cancellationToken).ConfigureAwait(false);
         if (user == null)
             return ImmutableArray<SessionInfo>.Empty;
-        var sessions = await GetUserSessions(tenant.Id, user.Id, cancellationToken).ConfigureAwait(false);
+
+        var sessions = await GetUserSessions(shard, user.Id, cancellationToken).ConfigureAwait(false);
         return sessions.Select(p => p.SessionInfo).ToImmutableArray();
     }
 }

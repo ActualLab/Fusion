@@ -71,9 +71,7 @@ public abstract class FusionTestBase : RpcTestBase
             }
         }
 
-        var dbContext = CreateDbContext();
-        await using var _ = dbContext.ConfigureAwait(false);
-
+        await using var dbContext = await CreateDbContext();
         await dbContext.Database.EnsureDeletedAsync();
         try {
             await dbContext.Database.EnsureCreatedAsync();
@@ -221,6 +219,6 @@ public abstract class FusionTestBase : RpcTestBase
         }
     }
 
-    protected TestDbContext CreateDbContext()
-        => Services.GetRequiredService<DbHub<TestDbContext>>().CreateDbContext(readWrite: true);
+    protected ValueTask<TestDbContext> CreateDbContext(CancellationToken cancellationToken = default)
+        => Services.GetRequiredService<DbHub<TestDbContext>>().CreateDbContext(readWrite: true, cancellationToken);
 }

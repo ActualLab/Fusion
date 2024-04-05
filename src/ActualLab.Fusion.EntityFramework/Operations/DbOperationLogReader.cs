@@ -1,7 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
-using ActualLab.Multitenancy;
 using ActualLab.OS;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
@@ -9,7 +7,7 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 public class DbOperationLogReader<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
     (DbOperationLogReader<TDbContext>.Options settings, IServiceProvider services)
-    : DbTenantWorkerBase<TDbContext>(services)
+    : DbShardWorkerBase<TDbContext>(services)
     where TDbContext : DbContext
 {
     public record Options
@@ -31,16 +29,15 @@ public class DbOperationLogReader<
         = services.GetService<IDbOperationLogChangeTracker<TDbContext>>();
     protected IDbOperationLog<TDbContext> DbOperationLog { get; }
         = services.GetRequiredService<IDbOperationLog<TDbContext>>();
-    protected override IReadOnlyMutableDictionary<Symbol, Tenant> TenantSet => TenantRegistry.AccessedTenants;
 
-    protected override Task RunInternal(Tenant tenant, CancellationToken cancellationToken)
+    protected override Task OnRun(DbShard shard, CancellationToken cancellationToken)
     {
         var maxKnownCommitTime = Clocks.SystemClock.Now;
         var batchSize = Settings.MinBatchSize;
         var lastOperationCount = 0;
 
         var activitySource = GetType().GetActivitySource();
-        var runChain = new AsyncChain($"Read({tenant.Id})", async cancellationToken1 => {
+        var runChain = new AsyncChain($"Read({shard})", async cancellationToken1 => {
             var now = Clocks.SystemClock.Now;
 
             // Adjusting maxKnownCommitTime to make sure we make progress no matter what
@@ -58,7 +55,7 @@ public class DbOperationLogReader<
             // Fetching potentially new operations
             var minCommitTime = (maxKnownCommitTime - Settings.MaxCommitDuration).ToDateTime();
             var dbOperations = await DbOperationLog
-                .ListNewlyCommitted(tenant, minCommitTime, batchSize, cancellationToken1)
+                .ListNewlyCommitted(shard, minCommitTime, batchSize, cancellationToken1)
                 .ConfigureAwait(false);
 
             // Updating important stuff
@@ -93,7 +90,7 @@ public class DbOperationLogReader<
             await notifyTasks
                 .Collect(HardwareInfo.GetProcessorCountFactor(64, 64))
                 .ConfigureAwait(false);
-        }).Trace(() => activitySource.StartActivity(nameof(Read)).AddTenantTags(tenant), Log);
+        }).Trace(() => activitySource.StartActivity(nameof(Read)).AddShardTags(shard), Log);
 
         var waitForChangesChain = new AsyncChain("WaitForChanges", async cancellationToken1 => {
             if (lastOperationCount == batchSize) {
@@ -110,7 +107,7 @@ public class DbOperationLogReader<
 
             var cts = cancellationToken1.CreateLinkedTokenSource();
             try {
-                var notificationTask = OperationLogChangeTracker.WaitForChanges(tenant.Id, cts.Token);
+                var notificationTask = OperationLogChangeTracker.WaitForChanges(shard, cts.Token);
                 var delayTask = Clocks.CpuClock.Delay(unconditionalCheckPeriod, cts.Token);
                 var completedTask = await Task.WhenAny(notificationTask, delayTask).ConfigureAwait(false);
                 await completedTask.ConfigureAwait(false);

@@ -1,5 +1,5 @@
+using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Internal;
-using ActualLab.Multitenancy;
 using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Authentication.Services;
@@ -16,14 +16,14 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         session.RequireValid();
 
         var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<TDbContext>(command);
         if (Computed.IsInvalidating()) {
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
             var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo != null) {
-                _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
-                _ = GetUserSessions(tenant.Id, invSessionInfo.UserId, default);
+                _ = GetUser(shard, invSessionInfo.UserId, default);
+                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             }
             return;
         }
@@ -34,7 +34,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
                 $"{nameof(command)}.{nameof(AuthBackend_SignIn.AuthenticatedIdentity)}");
 #pragma warning restore MA0015
 
-        var dbContext = await CreateCommandDbContext(tenant, cancellationToken).ConfigureAwait(false);
+        var dbContext = await CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         var dbSessionInfo = await Sessions.GetOrCreate(dbContext, session.Id, cancellationToken).ConfigureAwait(false);
@@ -57,7 +57,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         }
         else {
             user = user with {
-                Id = DbUserIdHandler.Format(dbUser.Id)
+                Id = UserIdHandler.Format(dbUser.Id)
             };
             UserConverter.UpdateEntity(user, dbUser);
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -66,7 +66,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         sessionInfo = sessionInfo with {
             LastSeenAt = Clocks.SystemClock.Now,
             AuthenticatedIdentity = authenticatedIdentity,
-            UserId = DbUserIdHandler.Format(dbUser.Id)
+            UserId = UserIdHandler.Format(dbUser.Id)
         };
         await Sessions.Upsert(dbContext, session.Id, sessionInfo, cancellationToken).ConfigureAwait(false);
 
@@ -82,7 +82,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         session.RequireValid();
 
         var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<TDbContext>(command);
         if (Computed.IsInvalidating()) {
             var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo == null)
@@ -94,11 +94,11 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
                 _ = GetOptions(session, default);
             }
             if (invSessionInfo.IsAuthenticated())
-                _ = GetUserSessions(tenant.Id, invSessionInfo.UserId, default);
+                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             return null!;
         }
 
-        var dbContext = await CreateCommandDbContext(tenant, cancellationToken).ConfigureAwait(false);
+        var dbContext = await CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         var dbSessionInfo = await Sessions.Get(dbContext, session.Id, true, cancellationToken).ConfigureAwait(false);
@@ -128,15 +128,14 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var (session, options, expectedVersion) = command;
         session.RequireValid();
 
-        var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<TDbContext>(command);
         if (Computed.IsInvalidating()) {
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetOptions(session, default);
             return;
         }
 
-        var dbContext = await CreateCommandDbContext(tenant, cancellationToken).ConfigureAwait(false);
+        var dbContext = await CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         var dbSessionInfo = await Sessions.Get(dbContext, session.Id, true, cancellationToken).ConfigureAwait(false);
@@ -155,13 +154,12 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
     // [ComputeMethod] inherited
     public override async Task<User?> GetUser(
-        Symbol tenantId, Symbol userId, CancellationToken cancellationToken = default)
+        DbShard shard, Symbol userId, CancellationToken cancellationToken = default)
     {
-        if (!DbUserIdHandler.TryParse(userId, false, out var dbUserId))
+        if (!UserIdHandler.TryParse(userId, false, out var dbUserId))
             return null;
 
-        var tenant = TenantRegistry.Get(tenantId);
-        var dbUser = await Users.Get(tenant, dbUserId, cancellationToken).ConfigureAwait(false);
+        var dbUser = await Users.Get(shard, dbUserId, cancellationToken).ConfigureAwait(false);
         return UserConverter.ToModel(dbUser);
     }
 
@@ -169,12 +167,12 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
     [ComputeMethod]
     protected virtual async Task<ImmutableArray<(Symbol Id, SessionInfo SessionInfo)>> GetUserSessions(
-        Symbol tenantId, string userId, CancellationToken cancellationToken = default)
+        DbShard shard, string userId, CancellationToken cancellationToken = default)
     {
-        if (!DbUserIdHandler.TryParse(userId, false, out var dbUserId))
+        if (!UserIdHandler.TryParse(userId, false, out var dbUserId))
             return ImmutableArray<(Symbol Id, SessionInfo SessionInfo)>.Empty;
 
-        var dbContext = CreateDbContext(tenantId);
+        var dbContext = await CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
         var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         await using var _2 = tx.ConfigureAwait(false);

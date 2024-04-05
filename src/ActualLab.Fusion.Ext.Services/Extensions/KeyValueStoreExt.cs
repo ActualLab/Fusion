@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Extensions;
 
@@ -12,53 +13,53 @@ public static class KeyValueStoreExt
     public static Task Set<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]T>(
         this IKeyValueStore keyValueStore,
-        Symbol tenantId, string key, T value, CancellationToken cancellationToken = default)
-        => keyValueStore.Set(tenantId, key, value, null, cancellationToken);
+        DbShard shard, string key, T value, CancellationToken cancellationToken = default)
+        => keyValueStore.Set(shard, key, value, null, cancellationToken);
 
     public static Task Set<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
         (this IKeyValueStore keyValueStore,
-        Symbol tenantId, string key, T value, Moment? expiresAt, CancellationToken cancellationToken = default)
+        DbShard shard, string key, T value, Moment? expiresAt, CancellationToken cancellationToken = default)
     {
 #pragma warning disable IL2026
         var sValue = NewtonsoftJsonSerialized.New(value).Data;
 #pragma warning restore IL2026
-        return keyValueStore.Set(tenantId, key, sValue, expiresAt, cancellationToken);
+        return keyValueStore.Set(shard, key, sValue, expiresAt, cancellationToken);
     }
 
     public static Task Set(this IKeyValueStore keyValueStore,
-        Symbol tenantId, string key, string value, CancellationToken cancellationToken = default)
-        => keyValueStore.Set(tenantId, key, value, null, cancellationToken);
+        DbShard shard, string key, string value, CancellationToken cancellationToken = default)
+        => keyValueStore.Set(shard, key, value, null, cancellationToken);
 
     public static Task Set(this IKeyValueStore keyValueStore,
-        Symbol tenantId, string key, string value, Moment? expiresAt, CancellationToken cancellationToken = default)
+        DbShard shard, string key, string value, Moment? expiresAt, CancellationToken cancellationToken = default)
     {
-        var command = new KeyValueStore_Set(tenantId, [(key, value, expiresAt)]);
+        var command = new KeyValueStore_Set(shard, [(key, value, expiresAt)]);
         return keyValueStore.GetCommander().Call(command, cancellationToken);
     }
 
     public static Task Set(this IKeyValueStore keyValueStore,
-        Symbol tenantId,
+        DbShard shard,
         (string Key, string Value, Moment? ExpiresAt)[] items,
         CancellationToken cancellationToken = default)
     {
-        var command = new KeyValueStore_Set(tenantId, items);
+        var command = new KeyValueStore_Set(shard, items);
         return keyValueStore.GetCommander().Call(command, cancellationToken);
     }
 
     // Remove
 
     public static Task Remove(this IKeyValueStore keyValueStore,
-        Symbol tenantId, string key, CancellationToken cancellationToken = default)
+        DbShard shard, string key, CancellationToken cancellationToken = default)
     {
-        var command = new KeyValueStore_Remove(tenantId, [key]);
+        var command = new KeyValueStore_Remove(shard, [key]);
         return keyValueStore.GetCommander().Call(command, cancellationToken);
     }
 
     public static Task Remove(this IKeyValueStore keyValueStore,
-        Symbol tenantId, string[] keys, CancellationToken cancellationToken = default)
+        DbShard shard, string[] keys, CancellationToken cancellationToken = default)
     {
-        var command = new KeyValueStore_Remove(tenantId, keys);
+        var command = new KeyValueStore_Remove(shard, keys);
         return keyValueStore.GetCommander().Call(command, cancellationToken);
     }
 
@@ -66,9 +67,9 @@ public static class KeyValueStoreExt
 
     public static async ValueTask<Option<T>> TryGet<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (this IKeyValueStore keyValueStore, Symbol tenantId, string key, CancellationToken cancellationToken = default)
+        (this IKeyValueStore keyValueStore, DbShard shard, string key, CancellationToken cancellationToken = default)
     {
-        var sValue = await keyValueStore.Get(tenantId, key, cancellationToken).ConfigureAwait(false);
+        var sValue = await keyValueStore.Get(shard, key, cancellationToken).ConfigureAwait(false);
 #pragma warning disable IL2026
         return sValue == null ? Option<T>.None : NewtonsoftJsonSerialized.New<T>(sValue).Value;
 #pragma warning restore IL2026
@@ -76,9 +77,9 @@ public static class KeyValueStoreExt
 
     public static async ValueTask<T?> Get<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (this IKeyValueStore keyValueStore, Symbol tenantId, string key, CancellationToken cancellationToken = default)
+        (this IKeyValueStore keyValueStore, DbShard shard, string key, CancellationToken cancellationToken = default)
     {
-        var sValue = await keyValueStore.Get(tenantId, key, cancellationToken).ConfigureAwait(false);
+        var sValue = await keyValueStore.Get(shard, key, cancellationToken).ConfigureAwait(false);
 #pragma warning disable IL2026
         return sValue == null ? default : NewtonsoftJsonSerialized.New<T>(sValue).Value;
 #pragma warning restore IL2026
@@ -87,9 +88,9 @@ public static class KeyValueStoreExt
     // ListKeysByPrefix
 
     public static Task<string[]> ListKeySuffixes(this IKeyValueStore keyValueStore,
-        Symbol tenantId,
+        DbShard shard,
         string prefix,
         PageRef<string> pageRef,
         CancellationToken cancellationToken = default)
-        => keyValueStore.ListKeySuffixes(tenantId, prefix, pageRef, SortDirection.Ascending, cancellationToken);
+        => keyValueStore.ListKeySuffixes(shard, prefix, pageRef, SortDirection.Ascending, cancellationToken);
 }

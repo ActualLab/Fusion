@@ -1,3 +1,5 @@
+using ActualLab.Fusion.EntityFramework;
+
 namespace ActualLab.Fusion.Extensions;
 
 public interface IKeyValueStore : IComputeService
@@ -8,12 +10,12 @@ public interface IKeyValueStore : IComputeService
     Task Remove(KeyValueStore_Remove command, CancellationToken cancellationToken = default);
 
     [ComputeMethod]
-    Task<string?> Get(Symbol tenantId, string key, CancellationToken cancellationToken = default);
+    Task<string?> Get(DbShard shard, string key, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<int> Count(Symbol tenantId, string prefix, CancellationToken cancellationToken = default);
+    Task<int> Count(DbShard shard, string prefix, CancellationToken cancellationToken = default);
     [ComputeMethod]
     Task<string[]> ListKeySuffixes(
-        Symbol tenantId,
+        DbShard shard,
         string prefix,
         PageRef<string> pageRef,
         SortDirection sortDirection = SortDirection.Ascending,

@@ -21,7 +21,7 @@ public class SessionMiddleware : IMiddleware, IHasServices
         public Func<HttpContext, bool> RequestFilter { get; init; } = _ => true;
         public Func<SessionMiddleware, HttpContext, Task<bool>> ForcedSignOutHandler { get; init; } =
             DefaultForcedSignOutHandler;
-        public Func<HttpContext, Symbol> TenantIdExtractor { get; init; } = TenantIdExtractors.None;
+        public Func<Session, HttpContext, Session>? TagProvider { get; init; }
 
         public static async Task<bool> DefaultForcedSignOutHandler(SessionMiddleware self, HttpContext httpContext)
         {
@@ -70,18 +70,20 @@ public class SessionMiddleware : IMiddleware, IHasServices
     {
         var cancellationToken = httpContext.RequestAborted;
         var originalSession = GetSession(httpContext);
-        var tenantId = Settings.TenantIdExtractor.Invoke(httpContext);
-        var session = originalSession?.WithTenantId(tenantId);
-
+        var session = originalSession;
         if (session != null && Auth != null) {
-            var isSignOutForced = await Auth.IsSignOutForced(session, cancellationToken).ConfigureAwait(false);
-            if (isSignOutForced) {
-                await Settings.ForcedSignOutHandler(this, httpContext).ConfigureAwait(false);
-                session = null;
+            try {
+                var isSignOutForced = await Auth.IsSignOutForced(session, cancellationToken).ConfigureAwait(false);
+                if (isSignOutForced)
+                    await Settings.ForcedSignOutHandler(this, httpContext).ConfigureAwait(false);
             }
+            catch (Exception e) when (!e.IsCancellationOf(httpContext.RequestAborted)) {
+                Log.LogError(e, "Session is unavailable: {Session}", session);
+            }
+            session = null;
         }
-        session ??= Session.New().WithTenantId(tenantId);
-
+        session ??= Session.New();
+        session = Settings.TagProvider?.Invoke(session, httpContext) ?? session;
         if (session != originalSession) {
             var cookieName = Settings.Cookie.Name ?? "";
             var responseCookies = httpContext.Response.Cookies;

@@ -1,14 +1,40 @@
 namespace ActualLab.Async;
 
-public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously) : IAsyncEnumerable<AsyncState<T>>
+public interface IAsyncState
+{
+    bool IsFinal { get; }
+    IAsyncState? Next { get; }
+    IAsyncState Last { get; }
+    Task<IAsyncState> WhenNext(CancellationToken cancellationToken = default);
+}
+
+public interface IAsyncState<out T> : IAsyncState, IAsyncEnumerable<IAsyncState<T>>
+{
+    T Value { get; }
+    new IAsyncState<T>? Next { get; }
+    new IAsyncState<T> Last { get; }
+
+    Task<IAsyncState> When(Func<T, bool> predicate, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<T> Changes(CancellationToken cancellationToken = default);
+}
+
+public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously)
+    : IAsyncState<T>, IAsyncEnumerable<AsyncState<T>>
 {
     private readonly TaskCompletionSource<AsyncState<T>> _next
         = TaskCompletionSourceExt.New<AsyncState<T>>(runContinuationsAsynchronously);
 
     public T Value { get; } = value;
     public bool IsFinal => _next.Task.IsFaultedOrCancelled();
+
+    // Next
+    IAsyncState? IAsyncState.Next => Next;
+    IAsyncState<T>? IAsyncState<T>.Next => Next;
     public AsyncState<T>? Next => _next.Task.IsCompleted ? _next.Task.Result : null;
 
+    // Last
+    IAsyncState IAsyncState.Last => Last;
+    IAsyncState<T> IAsyncState<T>.Last => Last;
     public AsyncState<T> Last {
         get {
             var current = this;
@@ -18,7 +44,9 @@ public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously) 
         }
     }
 
-    async IAsyncEnumerator<AsyncState<T>> IAsyncEnumerable<AsyncState<T>>.GetAsyncEnumerator(
+    // GetAsyncEnumerator
+
+    async IAsyncEnumerator<IAsyncState<T>> IAsyncEnumerable<IAsyncState<T>>.GetAsyncEnumerator(
         CancellationToken cancellationToken)
     {
         var current = this;
@@ -29,17 +57,31 @@ public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously) 
         // ReSharper disable once IteratorNeverReturns
     }
 
+    async IAsyncEnumerator<AsyncState<T>> IAsyncEnumerable<AsyncState<T>>.GetAsyncEnumerator(CancellationToken cancellationToken)
+    {
+        var current = this;
+        while (true) {
+            yield return current;
+            current = await current.WhenNext(cancellationToken).ConfigureAwait(false);
+        }
+        // ReSharper disable once IteratorNeverReturns
+    }
+
+    // ToString
+
     public override string ToString()
         => $"{GetType().GetName()}({Value})";
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Task<AsyncState<T>> WhenNext()
-        => _next.Task;
+    // WhenNext
 
+    async Task<IAsyncState> IAsyncState.WhenNext(CancellationToken cancellationToken)
+        => await WhenNext(cancellationToken).ConfigureAwait(false);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Task<AsyncState<T>> WhenNext(CancellationToken cancellationToken)
+    public Task<AsyncState<T>> WhenNext(CancellationToken cancellationToken = default)
         => _next.Task.WaitAsync(cancellationToken);
 
+    async Task<IAsyncState> IAsyncState<T>.When(Func<T, bool> predicate, CancellationToken cancellationToken)
+        => await When(predicate, cancellationToken).ConfigureAwait(false);
     public async Task<AsyncState<T>> When(Func<T, bool> predicate, CancellationToken cancellationToken = default)
     {
         var current = this;
@@ -47,6 +89,8 @@ public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously) 
             current = await current.WhenNext(cancellationToken).ConfigureAwait(false);
         return current;
     }
+
+    // Changes
 
     public async IAsyncEnumerable<T> Changes(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)

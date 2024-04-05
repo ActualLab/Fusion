@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
@@ -10,9 +9,9 @@ public class FileBasedDbOperationLogChangeNotifier<
     : DbOperationCompletionNotifierBase<TDbContext, FileBasedDbOperationLogChangeTrackingOptions<TDbContext>>(options, services)
     where TDbContext : DbContext
 {
-    protected override Task Notify(Tenant tenant)
+    protected override Task Notify(DbShard shard)
     {
-        var filePath = Options.FilePathFactory(tenant);
+        var filePath = Options.FilePathFactory(shard);
         if (!File.Exists(filePath))
             File.WriteAllText(filePath, "");
         else

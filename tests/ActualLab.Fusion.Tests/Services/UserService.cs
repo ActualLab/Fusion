@@ -103,10 +103,12 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
     public async Task UpdateDirectly(UserService_Update command, CancellationToken cancellationToken = default)
     {
         var user = command.User;
-        await using (var dbContext = CreateDbContext(true)) {
-            dbContext.Users.Update(user);
-            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
+        var dbContext = await CreateDbContext(true, cancellationToken).ConfigureAwait(false);
+        await using var _1 = dbContext.ConfigureAwait(false);
+
+        dbContext.Users.Update(user);
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
         if (Computed.IsInvalidating())
             _ = Get(user.Id, default).AssertCompleted();
     }
@@ -146,7 +148,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         if (UseEntityResolver)
             return await _userResolver.Get(userId, cancellationToken).ConfigureAwait(false);
 
-        var dbContext = CreateDbContext();
+        var dbContext = await CreateDbContext(cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
 
         var user = await dbContext.Users
@@ -159,7 +161,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
     {
         await Everything().ConfigureAwait(false);
 
-        var dbContext = CreateDbContext();
+        var dbContext = await CreateDbContext(cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
 
         var count = await dbContext.Users.AsQueryable()
@@ -185,10 +187,10 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
     [ComputeMethod]
     protected virtual Task<Unit> Everything() => TaskExt.UnitTask;
 
-    private new Task<TestDbContext> CreateCommandDbContext(CancellationToken cancellationToken = default)
+    private new ValueTask<TestDbContext> CreateCommandDbContext(CancellationToken cancellationToken = default)
     {
-        if (IsProxy)
-            return base.CreateCommandDbContext(cancellationToken);
-        return Task.FromResult(CreateDbContext().ReadWrite());
+        return IsProxy
+            ? base.CreateCommandDbContext(cancellationToken)
+            : CreateDbContext(readWrite: true, cancellationToken);
     }
 }

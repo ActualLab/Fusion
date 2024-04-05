@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ActualLab.IO;
-using ActualLab.Multitenancy;
+using FileSystemWatcher = System.IO.FileSystemWatcher;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
@@ -10,10 +10,12 @@ public class FileBasedDbOperationLogChangeTracker<TDbContext>(
     ) : DbOperationCompletionTrackerBase<TDbContext, FileBasedDbOperationLogChangeTrackingOptions<TDbContext>>(options, services)
     where TDbContext : DbContext
 {
-    protected override DbOperationCompletionTrackerBase.TenantWatcher CreateTenantWatcher(Symbol tenantId)
-        => new TenantWatcher(this, tenantId);
+    protected override DbShardWatcher CreateShardWatcher(DbShard shard)
+        => new ShardWatcher(this, shard);
 
-    protected new class TenantWatcher : DbOperationCompletionTrackerBase.TenantWatcher
+    // Nested types
+
+    protected class ShardWatcher : DbShardWatcher
     {
         protected FileBasedDbOperationLogChangeTracker<TDbContext> Owner { get; }
         protected FilePath FilePath { get; }
@@ -21,11 +23,10 @@ public class FileBasedDbOperationLogChangeTracker<TDbContext>(
         protected IObservable<FileSystemEventArgs> Observable { get; init; }
         protected IDisposable Subscription { get; init; }
 
-        public TenantWatcher(FileBasedDbOperationLogChangeTracker<TDbContext> owner, Symbol tenantId)
-            : base(owner.TenantRegistry.Get(tenantId))
+        public ShardWatcher(FileBasedDbOperationLogChangeTracker<TDbContext> owner, DbShard shard) : base(shard)
         {
             Owner = owner;
-            FilePath = Owner.Options.FilePathFactory.Invoke(Tenant);
+            FilePath = Owner.Options.FilePathFactory.Invoke(Shard);
             Watcher = new FileSystemWatcher(FilePath.DirectoryPath, FilePath.FileName);
             Observable = Watcher.ToObservable();
             Subscription = Observable.Subscribe(_ => CompleteWaitForChanges());

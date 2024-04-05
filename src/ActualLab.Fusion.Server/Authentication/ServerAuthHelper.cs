@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using ActualLab.Fusion.Authentication;
+using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Server.Internal;
-using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.Server.Authentication;
 
@@ -31,7 +31,7 @@ public class ServerAuthHelper : IHasServices
     protected IAuthBackend AuthBackend { get; }
     protected ISessionResolver SessionResolver { get; }
     protected AuthSchemasCache AuthSchemasCache { get; }
-    protected ITenantResolver TenantResolver { get; }
+    protected IDbShardResolver DbShardResolver { get; }
     protected ICommander Commander { get; }
     protected MomentClockSet Clocks { get; }
 
@@ -50,7 +50,7 @@ public class ServerAuthHelper : IHasServices
         AuthBackend = services.GetRequiredService<IAuthBackend>();
         SessionResolver = services.GetRequiredService<ISessionResolver>();
         AuthSchemasCache = services.GetRequiredService<AuthSchemasCache>();
-        TenantResolver = services.GetRequiredService<ITenantResolver>();
+        DbShardResolver = services.GetRequiredService<IDbShardResolver>();
         Commander = services.Commander();
         Clocks = services.Clocks();
     }

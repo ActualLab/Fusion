@@ -6,8 +6,10 @@ public readonly record struct AsyncChain(
     Func<CancellationToken, Task> Start,
     TerminalErrorDetector TerminalErrorDetector)
 {
-    public static readonly AsyncChain None = new("(no-operation)", _ => Task.CompletedTask);
-    public static readonly AsyncChain NeverEnding = new("(never-ending)", _ => TaskExt.NeverEndingTask);
+    public static readonly AsyncChain None = new("(no-operation)",
+        _ => Task.CompletedTask);
+    public static readonly AsyncChain NeverEnding = new("(never-ending)",
+        cancellationToken => TaskExt.NeverEndingTask.WaitAsync(cancellationToken));
 
     public AsyncChain(string name, Func<CancellationToken, Task> start)
         : this(name, start, TerminalError.Detector) { }

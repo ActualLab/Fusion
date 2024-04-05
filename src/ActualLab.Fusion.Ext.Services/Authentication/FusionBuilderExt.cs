@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.Authentication.Services;
+using ActualLab.Fusion.EntityFramework;
 using ActualLab.Internal;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using UnreferencedCode = ActualLab.Fusion.Internal.UnreferencedCode;
 
 namespace ActualLab.Fusion.Authentication;
@@ -12,7 +14,15 @@ public static class FusionBuilderExt
 
     [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static FusionBuilder AddInMemoryAuthService(this FusionBuilder fusion)
-        => fusion.AddAuthService(typeof(InMemoryAuthService));
+    {
+        var services = fusion.Services;
+        // In-memory auth service relies on IDbAuthBackend,
+        // which requires DbShard-based APIs, so we add fake IDbShardRegistry<Unit>
+        // to let it use Unit as TDbContext.
+        services.TryAddSingleton<IDbShardRegistry<Unit>>(c => new DbShardRegistry<Unit>(c, DbShard.None));
+        services.TryAddSingleton<IDbShardResolver, DbShardResolver>();
+        return fusion.AddAuthService(typeof(InMemoryAuthService));
+    }
 
     // DbAuthService<...>
 

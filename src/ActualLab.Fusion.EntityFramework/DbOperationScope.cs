@@ -6,9 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.EntityFramework.Operations;
-using ActualLab.Multitenancy;
 using ActualLab.Locking;
-using ActualLab.OS;
 
 namespace ActualLab.Fusion.EntityFramework;
 
@@ -19,9 +17,9 @@ public interface IDbOperationScope : IOperationScope
     IDbContextTransaction? Transaction { get; }
     string? TransactionId { get; }
     IsolationLevel IsolationLevel { get; set; }
-    Tenant Tenant { get; }
+    DbShard Shard { get; }
 
-    Task<DbContext> InitializeDbContext(DbContext preCreatedDbContext, Tenant tenant, CancellationToken cancellationToken = default);
+    ValueTask InitializeDbContext(DbContext preCreatedDbContext, DbShard shard, CancellationToken cancellationToken = default);
     bool IsTransientFailure(Exception error);
 }
 
@@ -35,7 +33,7 @@ public class DbOperationScope<
         public IsolationLevel DefaultIsolationLevel { get; init; } = IsolationLevel.Unspecified;
     }
 
-    private Tenant _tenant = Tenant.Default;
+    private DbShard _shard = DbShard.None;
 
     public Options Settings { get; protected init; }
     DbContext? IDbOperationScope.MasterDbContext => MasterDbContext;
@@ -51,21 +49,21 @@ public class DbOperationScope<
     public bool IsClosed { get; private set; }
     public bool? IsConfirmed { get; private set; }
 
-    public Tenant Tenant {
-        get => _tenant;
+    public DbShard Shard {
+        get => _shard;
         protected set {
-            if (_tenant == value)
+            if (_shard == value)
                 return;
 
-            _tenant = !IsUsed ? value : throw Errors.TenantCannotBeChanged();
+            _shard = !IsUsed ? value : throw Errors.DbOperationScopeIsAlreadyUsed();
         }
     }
 
     // Services
     protected IServiceProvider Services { get; }
     protected HostId HostId { get; }
-    protected ITenantRegistry<TDbContext> TenantRegistry { get; }
-    protected IMultitenantDbContextFactory<TDbContext> DbContextFactory { get; }
+    protected IDbShardRegistry<TDbContext> DbShardRegistry { get; }
+    protected IShardDbContextFactory<TDbContext> DbContextFactory { get; }
     protected IDbOperationLog<TDbContext> DbOperationLog { get; }
     protected TransactionIdGenerator<TDbContext> TransactionIdGenerator { get; }
     protected MomentClockSet Clocks { get; }
@@ -81,8 +79,8 @@ public class DbOperationScope<
         Clocks = CommandContext.Commander.Clocks;
 
         HostId = services.GetRequiredService<HostId>();
-        TenantRegistry = Services.GetRequiredService<ITenantRegistry<TDbContext>>();
-        DbContextFactory = Services.GetRequiredService<IMultitenantDbContextFactory<TDbContext>>();
+        DbShardRegistry = Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
+        DbContextFactory = Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
         DbOperationLog = Services.GetRequiredService<IDbOperationLog<TDbContext>>();
         TransactionIdGenerator = Services.GetRequiredService<TransactionIdGenerator<TDbContext>>();
         AsyncLock = new AsyncLock(LockReentryMode.CheckedPass);
@@ -118,18 +116,18 @@ public class DbOperationScope<
         }
     }
 
-    async Task<DbContext> IDbOperationScope.InitializeDbContext(
-        DbContext dbContext, Tenant tenant, CancellationToken cancellationToken)
-        => await InitializeDbContext((TDbContext) dbContext, tenant, cancellationToken).ConfigureAwait(false);
-    public virtual async Task<TDbContext> InitializeDbContext(
-        TDbContext dbContext, Tenant tenant, CancellationToken cancellationToken = default)
+    async ValueTask IDbOperationScope.InitializeDbContext(
+        DbContext dbContext, DbShard shard, CancellationToken cancellationToken)
+        => await InitializeDbContext((TDbContext)dbContext, shard, cancellationToken).ConfigureAwait(false);
+    public virtual async ValueTask InitializeDbContext(
+        TDbContext dbContext, DbShard shard, CancellationToken cancellationToken = default)
     {
         // This code must run in the same execution context to work, so
         // we run it first
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
         releaser.MarkLockedLocally();
 
-        Tenant = tenant;
+        Shard = shard;
         if (IsClosed)
             throw ActualLab.Fusion.Operations.Internal.Errors.OperationScopeIsAlreadyClosed();
 
@@ -150,7 +148,6 @@ public class DbOperationScope<
 #endif
         }
         CommandContext.ChangeOperation(Operation, true);
-        return dbContext;
     }
 
     public virtual async Task Commit(CancellationToken cancellationToken = default)
@@ -179,7 +176,7 @@ public class DbOperationScope<
                 .Add(dbContext, Operation, cancellationToken)
                 .ConfigureAwait(false);
             if (!Operation.Index.HasValue)
-                throw Errors.NoOperationIndex();
+                throw Errors.DbOperationIndexWasNotAssigned();
             try {
                 await Transaction!.CommitAsync(cancellationToken).ConfigureAwait(false);
                 IsConfirmed = true;
@@ -189,7 +186,7 @@ public class DbOperationScope<
                 // See https://docs.microsoft.com/en-us/ef/ef6/fundamentals/connection-resiliency/commit-failures
                 try {
                     // We need a new connection here, since the old one might be broken
-                    var verifierDbContext = DbContextFactory.CreateDbContext(Tenant);
+                    var verifierDbContext = await DbContextFactory.CreateDbContextAsync(Shard, cancellationToken).ConfigureAwait(false);
                     await using var _1 = verifierDbContext.ConfigureAwait(false);
 #if NET7_0_OR_GREATER
                     verifierDbContext.Database.AutoTransactionBehavior = AutoTransactionBehavior.WhenNeeded;
@@ -256,13 +253,11 @@ public class DbOperationScope<
             // scope.MasterDbContext?.Database may throw this exception
             Log.LogWarning(e, "IsTransientFailure resorts to temporary {DbContext}", typeof(TDbContext).Name);
             try {
-                var tenantId = TenantRegistry.IsSingleTenant ? Tenant.Default.Id : Tenant.Dummy.Id;
-                using var tmpDbContext = DbContextFactory.CreateDbContext(tenantId);
+                var shard = DbShardRegistry.HasSingleShard ? default : DbShard.Template;
+                using var tmpDbContext = DbContextFactory.CreateDbContext(shard);
                 var executionStrategy = tmpDbContext.Database.CreateExecutionStrategy();
-                if (executionStrategy is not ExecutionStrategy retryingExecutionStrategy)
-                    return false;
-                var isTransient = retryingExecutionStrategy.ShouldRetryOn(error);
-                return isTransient;
+                return executionStrategy is ExecutionStrategy retryingExecutionStrategy
+                    && retryingExecutionStrategy.ShouldRetryOn(error);
             }
             catch (Exception e2) {
                 Log.LogWarning(e2, "IsTransientFailure fails for temporary {DbContext}", typeof(TDbContext).Name);
@@ -274,10 +269,10 @@ public class DbOperationScope<
 
     // Protected methods
 
-    protected virtual async Task CreateMasterDbContext(CancellationToken cancellationToken)
+    protected virtual async ValueTask CreateMasterDbContext(CancellationToken cancellationToken)
     {
-        var dbContext = DbContextFactory.CreateDbContext(Tenant).ReadWrite();
-        var database = dbContext.Database;
+        var dbContext = await DbContextFactory.CreateDbContextAsync(Shard, cancellationToken).ConfigureAwait(false);
+        var database = dbContext.ReadWrite().Database;
         database.DisableAutoTransactionsAndSavepoints();
 
         var commandContext = CommandContext;

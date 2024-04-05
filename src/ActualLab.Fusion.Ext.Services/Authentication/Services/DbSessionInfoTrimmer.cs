@@ -1,13 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
-using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
 public abstract class DbSessionInfoTrimmer<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    : DbTenantWorkerBase<TDbContext>
+    : DbShardWorkerBase<TDbContext>
     where TDbContext : DbContext
 {
     public record Options
@@ -21,7 +20,6 @@ public abstract class DbSessionInfoTrimmer<
     }
 
     protected Options Settings { get; }
-    protected override IReadOnlyMutableDictionary<Symbol, Tenant> TenantSet => TenantRegistry.AccessedTenants;
     protected bool IsLoggingEnabled { get; }
 
     protected DbSessionInfoTrimmer(Options settings, IServiceProvider services)
@@ -45,21 +43,22 @@ public class DbSessionInfoTrimmer<
     protected IDbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId> Sessions { get; }
         = services.GetRequiredService<IDbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>>();
 
-    protected override Task RunInternal(Tenant tenant, CancellationToken cancellationToken)
+    protected override Task OnRun(DbShard shard, CancellationToken cancellationToken)
     {
         var lastTrimCount = 0;
 
         var activitySource = GetType().GetActivitySource();
-        var runChain = new AsyncChain($"Trim({tenant.Id})", async cancellationToken1 => {
+        var runChain = new AsyncChain($"Trim({shard})", async cancellationToken1 => {
             var maxLastSeenAt = (Clocks.SystemClock.Now - Settings.MaxSessionAge).ToDateTime();
             lastTrimCount = await Sessions
-                .Trim(tenant, maxLastSeenAt, Settings.BatchSize, cancellationToken1)
+                .Trim(shard, maxLastSeenAt, Settings.BatchSize, cancellationToken1)
                 .ConfigureAwait(false);
 
             if (lastTrimCount > 0 && IsLoggingEnabled)
                 Log.Log(Settings.LogLevel,
-                    "Trim({TenantId}) trimmed {Count} sessions", tenant.Id, lastTrimCount);
-        }).Trace(() => activitySource.StartActivity("Trim").AddTenantTags(tenant), Log);
+                    "Trim({Shard}) trimmed {Count} sessions", shard.Value, lastTrimCount);
+            // ReSharper disable once ExplicitCallerInfoArgument
+        }).Trace(() => activitySource.StartActivity("Trim").AddShardTags(shard), Log);
 
         var chain = runChain
             .RetryForever(Settings.RetryDelays, Clocks.CpuClock, Log)

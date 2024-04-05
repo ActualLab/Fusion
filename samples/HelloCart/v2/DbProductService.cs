@@ -36,7 +36,7 @@ public class DbProductService : IProductService
 
     public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)
     {
-        await using var dbContext = _dbHub.CreateDbContext();
+        await using var dbContext = await _dbHub.CreateDbContext(cancellationToken);
         var dbProduct = await dbContext.Products.FindAsync(DbKey.Compose(id), cancellationToken);
         if (dbProduct == null)
             return null;

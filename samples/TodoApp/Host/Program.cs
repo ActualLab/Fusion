@@ -11,7 +11,6 @@ using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Server;
 using ActualLab.Fusion.Server.Middlewares;
 using ActualLab.IO;
-using ActualLab.Multitenancy;
 using ActualLab.OS;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
@@ -62,10 +61,10 @@ var app = builder.Build();
 ConfigureApp();
 
 // Ensure the DB is created
-var dbContextFactory = app.Services.GetRequiredService<IMultitenantDbContextFactory<AppDbContext>>();
-var tenantRegistry = app.Services.GetRequiredService<ITenantRegistry>();
-foreach (var tenant in tenantRegistry.AllTenants.Values) {
-    await using var dbContext = dbContextFactory.CreateDbContext(tenant);
+var dbContextFactory = app.Services.GetRequiredService<IShardDbContextFactory<AppDbContext>>();
+var shardRegistry = app.Services.GetRequiredService<IDbShardRegistry<AppDbContext>>();
+foreach (var shard in shardRegistry.Shards.Value) {
+    await using var dbContext = await dbContextFactory.CreateDbContextAsync(shard);
     // await dbContext.Database.EnsureDeletedAsync();
     await dbContext.Database.EnsureCreatedAsync();
 }
@@ -110,24 +109,18 @@ void ConfigureServices()
         });
 
         if (hostSettings.UseMultitenancy) {
-            db.AddMultitenancy(multitenancy => {
-                multitenancy.UseMultitenantMode();
-                multitenancy.AddMultitenantRegistry(
-                    Enumerable.Range(0, 3).Select(i => new Tenant($"tenant{i}")));
-                multitenancy.AddMultitenantTransientDbContextFactory(ConfigureTenantDbContext);
-                // This call allows similar blocks for DbContext-s to call "UseDefault"
-                // to make them re-use the same multitenancy settings (registry, resolver, etc.)
-                multitenancy.MakeDefault();
+            db.AddSharding(sharding => {
+                sharding.AddShardRegistry(Enumerable.Range(0, 3).Select(i => new DbShard($"tenant{i}")));
+                sharding.AddTransientShardDbContextFactory(ConfigureShardDbContext);
             });
         }
         else {
             // ReSharper disable once VariableHidesOuterVariable
             db.Services.AddTransientDbContextFactory<AppDbContext>((c, db) => {
-                // We use fakeTenant here solely to be able to
-                // re-use the configuration logic from
-                // ConfigureTenantDbContext.
-                var fakeTenant = new Tenant(default, "single", "single");
-                ConfigureTenantDbContext(c, fakeTenant, db);
+                // We use fakeShard here solely to be able to
+                // re-use the configuration logic from ConfigureShardDbContext.
+                var fakeShard = new DbShard("single");
+                ConfigureShardDbContext(c, fakeShard, db);
             });
         }
     });
@@ -155,12 +148,17 @@ void ConfigureServices()
         fusion.AddDbAuthService<AppDbContext, string>();
     fusion.AddDbKeyValueStore<AppDbContext>();
 
-    if (hostSettings.UseMultitenancy)
+    if (hostSettings.UseMultitenancy) {
+        var tenantExtractor = HttpContextExtractors.Subdomain(".localhost")
+            .Or(HttpContextExtractors.PortOffset(5005, 5010).WithPrefix("tenant"))
+            .WithValidator(value => {
+                if (!value.StartsWith("tenant", StringComparison.Ordinal))
+                    throw new ArgumentOutOfRangeException(nameof(value), $"Invalid Tenant ID: '{value}'.");
+            });
         fusionServer.ConfigureSessionMiddleware(_ => new() {
-            TenantIdExtractor = TenantIdExtractors.FromSubdomain(".localhost")
-                .Or(TenantIdExtractors.FromPort((5005, 5010)))
-                .WithValidator(tenantId => tenantId.Value.StartsWith("tenant")),
+            TagProvider = (session, httpContext) => session.WithTag(Session.ShardTag, tenantExtractor.Invoke(httpContext)),
         });
+    }
     fusionServer.ConfigureAuthEndpoint(_ => new() {
         DefaultSignInScheme = MicrosoftAccountDefaults.AuthenticationScheme,
         SignInPropertiesBuilder = (_, properties) => {
@@ -170,7 +168,7 @@ void ConfigureServices()
     fusionServer.ConfigureServerAuthHelper(_ => new() {
         NameClaimKeys = Array.Empty<string>(),
     });
-    fusion.AddSandboxedKeyValueStore();
+    fusion.AddSandboxedKeyValueStore<AppDbContext>();
     fusion.AddOperationReprocessor();
 
     // Compute service(s)
@@ -226,19 +224,19 @@ void ConfigureServices()
 }
 
 // ReSharper disable once VariableHidesOuterVariable
-void ConfigureTenantDbContext(IServiceProvider services, Tenant tenant, DbContextOptionsBuilder db)
+void ConfigureShardDbContext(IServiceProvider services, DbShard shard, DbContextOptionsBuilder db)
 {
     if (!string.IsNullOrEmpty(hostSettings.UseSqlServer))
-        db.UseSqlServer(hostSettings.UseSqlServer.Interpolate(tenant));
+        db.UseSqlServer(hostSettings.UseSqlServer.Interpolate(shard));
     else if (!string.IsNullOrEmpty(hostSettings.UsePostgreSql)) {
-        db.UseNpgsql(hostSettings.UsePostgreSql.Interpolate(tenant), npgsql => {
+        db.UseNpgsql(hostSettings.UsePostgreSql.Interpolate(shard), npgsql => {
             npgsql.EnableRetryOnFailure(0);
         });
         db.UseNpgsqlHintFormatter();
     }
     else {
         var appTempDir = FilePath.GetApplicationTempDirectory("", true);
-        var dbPath = (appTempDir & "App_{0:StorageId}.db").Value.Interpolate(tenant);
+        var dbPath = (appTempDir & "App_{0:StorageId}.db").Value.Interpolate(shard);
         db.UseSqlite($"Data Source={dbPath}");
     }
     if (env.IsDevelopment())

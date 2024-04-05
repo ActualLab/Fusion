@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Locking;
-using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.EntityFramework.Npgsql.Operations;
 
@@ -12,13 +11,13 @@ public class NpgsqlDbOperationLogChangeNotifier<
     : DbOperationCompletionNotifierBase<TDbContext, NpgsqlDbOperationLogChangeTrackingOptions<TDbContext>>(options, services)
     where TDbContext : DbContext
 {
-    private readonly ConcurrentDictionary<Symbol, CachedInfo> _cache = new();
+    private readonly ConcurrentDictionary<DbShard, CachedInfo> _cache = new();
 
     // Protected methods
 
-    protected override async Task Notify(Tenant tenant)
+    protected override async Task Notify(DbShard shard)
     {
-        var info = GetCachedInfo(tenant);
+        var info = GetCachedInfo(shard);
         var (dbContext, sql, asyncLock) = info;
 
         using var releaser = await asyncLock.Lock().ConfigureAwait(false);
@@ -36,16 +35,16 @@ public class NpgsqlDbOperationLogChangeNotifier<
             catch {
                 // Intended
             }
-            _cache.TryRemove(tenant.Id, info);
+            _cache.TryRemove(shard, info);
         }
     }
 
-    private CachedInfo GetCachedInfo(Tenant tenant)
-        => _cache.GetOrAdd(tenant.Id, static (_, x) => x.self.CreateCachedInfo(x.tenant), (tenant, self: this));
+    private CachedInfo GetCachedInfo(DbShard shard)
+        => _cache.GetOrAdd(shard, static (_, x) => x.Self.CreateCachedInfo(x.Shard), (Shard: shard, Self: this));
 
-    private CachedInfo CreateCachedInfo(Tenant tenant)
+    private CachedInfo CreateCachedInfo(DbShard shard)
     {
-        var dbContext = CreateDbContext(tenant);
+        var dbContext = DbHub.ContextFactory.CreateDbContext(shard);
         var quotedPayload = HostId.Id.Value
 #if NETSTANDARD2_0
             .Replace("'", "''");

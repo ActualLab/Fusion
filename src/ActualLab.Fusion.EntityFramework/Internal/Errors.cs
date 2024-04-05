@@ -11,27 +11,22 @@ public static class Errors
     public static Exception DbContextIsReadOnly()
         => new InvalidOperationException("This DbContext is read-only.");
 
-    public static Exception NoOperationsFrameworkServices()
-        => new InvalidOperationException(
-            "Operations Framework services aren't registered. " +
-            "Call DbContextBuilder<TDbContext>.AddDbOperations before calling this method to add them.");
+    public static Exception DbOperationScopeIsAlreadyUsed()
+        => new InvalidOperationException("DbOperationScope is already used, so this operation cannot be performed.");
+    public static Exception DbOperationIndexWasNotAssigned()
+        => new InvalidOperationException("DbOperation.Index wasn't assigned on save.");
 
-    public static Exception TenantCannotBeChanged()
-        => new InvalidOperationException("DbContext is already created, so its Tenant property cannot be changed at this point.");
-    public static Exception NonDefaultTenantIsUsedInSingleTenantMode()
-        => new NotSupportedException(
-            "A tenant other than Tenant.Default is attempted to be used in single-tenant mode.");
-    public static Exception DefaultTenantCanOnlyBeUsedInSingleTenantMode()
-        => new NotSupportedException(
-            "Tenant.Default can only be used in single-tenant mode (with SingleTenantResolver).");
+    public static Exception NoShard(DbShard shard)
+        => new InvalidOperationException($"Shard doesn't exist: '{shard}'.");
+    public static Exception ShardMustBeNone()
+        => new NotSupportedException("DbShard other than None is used in non-sharded setup.");
+    public static Exception ShardMustNotBeNone()
+        => new NotSupportedException("DbShard.None is used in sharded setup.");
 
     public static Exception EntityNotFound<TEntity>()
         => EntityNotFound(typeof(TEntity));
     public static Exception EntityNotFound(Type entityType)
         => new KeyNotFoundException($"Requested {entityType.GetName()} entity is not found.");
-
-    public static Exception NoOperationIndex()
-        => new InvalidOperationException("DbOperation.Index is not assigned on save.");
 
     public static Exception InvalidUserId()
         => new FormatException("Invalid UserId.");

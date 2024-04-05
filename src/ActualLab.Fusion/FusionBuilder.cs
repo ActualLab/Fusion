@@ -4,13 +4,11 @@ using ActualLab.Conversion;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
-using ActualLab.Fusion.Multitenancy;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Fusion.Operations.Reprocessing;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.UI;
-using ActualLab.Multitenancy;
 using ActualLab.Rpc;
 using ActualLab.Versioning.Providers;
 
@@ -128,15 +126,6 @@ public readonly struct FusionBuilder
         // Core authentication services
         services.TryAddScoped<ISessionResolver>(c => new SessionResolver(c));
         services.TryAddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
-
-        // Core multitenancy services
-        services.TryAddSingleton<ITenantRegistry<Unit>>(_ => new SingleTenantRegistry<Unit>());
-        services.TryAddSingleton<DefaultTenantResolver<Unit>.Options>();
-        services.TryAddSingleton<ITenantResolver<Unit>>(c => new DefaultTenantResolver<Unit>(
-            c.GetRequiredService<DefaultTenantResolver<Unit>.Options>(), c));
-        // And make it default
-        services.TryAddAlias<ITenantRegistry, ITenantRegistry<Unit>>();
-        services.TryAddAlias<ITenantResolver, ITenantResolver<Unit>>();
 
         // RPC
 

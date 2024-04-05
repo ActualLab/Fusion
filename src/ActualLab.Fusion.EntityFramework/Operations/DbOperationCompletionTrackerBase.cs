@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
@@ -8,7 +7,7 @@ public abstract class DbOperationCompletionTrackerBase(IServiceProvider services
     private ILogger? _log;
 
     protected IServiceProvider Services { get; } = services;
-    protected ConcurrentDictionary<Symbol, TenantWatcher>? TenantWatchers { get; set; } = new();
+    protected ConcurrentDictionary<DbShard, DbShardWatcher>? ShardWatchers { get; set; } = new();
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     protected override Task OnRun(CancellationToken cancellationToken)
@@ -16,11 +15,12 @@ public abstract class DbOperationCompletionTrackerBase(IServiceProvider services
 
     protected override async Task OnStop()
     {
-        if (TenantWatchers == null)
+        if (ShardWatchers == null)
             return;
-        var tenantWatchers = TenantWatchers;
-        TenantWatchers = null;
-        await tenantWatchers.Values
+
+        var shardWatchers = ShardWatchers;
+        ShardWatchers = null;
+        await shardWatchers.Values
             .Select(v => v.DisposeAsync().AsTask())
             .Collect()
             .ConfigureAwait(false);
@@ -28,41 +28,10 @@ public abstract class DbOperationCompletionTrackerBase(IServiceProvider services
 
     // Protected methods
 
-    protected abstract TenantWatcher CreateTenantWatcher(Symbol tenantId);
+    protected abstract DbShardWatcher CreateShardWatcher(DbShard shard);
 
     // Nested types
 
-    protected abstract class TenantWatcher : ProcessorBase
-    {
-        private TaskCompletionSource<Unit> _nextEventSource = null!;
-        protected Tenant Tenant { get; }
-
-        protected TenantWatcher(Tenant tenant)
-        {
-            Tenant = tenant;
-            // ReSharper disable once VirtualMemberCallInConstructor
-            ReplaceNextEventTask();
-        }
-
-        public Task WaitForChanges(CancellationToken cancellationToken)
-        {
-            lock (Lock) {
-                var task = _nextEventSource;
-                if (_nextEventSource.Task.IsCompleted)
-                    ReplaceNextEventTask();
-                return task.Task.WaitAsync(cancellationToken);
-            }
-        }
-
-        protected void CompleteWaitForChanges()
-        {
-            lock (Lock)
-                _nextEventSource.TrySetResult(default);
-        }
-
-        private void ReplaceNextEventTask()
-            => _nextEventSource = TaskCompletionSourceExt.NewSynchronous<Unit>();
-    }
 }
 
 public abstract class DbOperationCompletionTrackerBase<TDbContext, TOptions>(
@@ -74,16 +43,17 @@ public abstract class DbOperationCompletionTrackerBase<TDbContext, TOptions>(
 
 {
     protected TOptions Options { get; init; } = options;
-    protected ITenantRegistry<TDbContext> TenantRegistry { get; } = services.GetRequiredService<ITenantRegistry<TDbContext>>();
+    protected IDbShardRegistry<TDbContext> ShardRegistry { get; } = services.GetRequiredService<IDbShardRegistry<TDbContext>>();
 
-    public Task WaitForChanges(Symbol tenantId, CancellationToken cancellationToken = default)
+    public Task WaitForChanges(DbShard shard, CancellationToken cancellationToken = default)
     {
-        var tenantWatchers = TenantWatchers;
-        if (tenantWatchers == null)
-            return TaskExt.NeverEndingTask;
-        var tenantWatcher = tenantWatchers.GetOrAdd(tenantId,
-            static (tenantId1, self) => self.CreateTenantWatcher(tenantId1),
+        var shardWatchers = ShardWatchers;
+        if (shardWatchers == null)
+            return TaskExt.NeverEndingTask.WaitAsync(cancellationToken);
+
+        var watcher = shardWatchers.GetOrAdd(shard,
+            static (shard1, self) => self.CreateShardWatcher(shard1),
             this);
-        return tenantWatcher.WaitForChanges(cancellationToken);
+        return watcher.WaitForChanges(cancellationToken);
     }
 }

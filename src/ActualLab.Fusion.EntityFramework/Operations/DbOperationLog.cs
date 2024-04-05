@@ -1,8 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
-using ActualLab.Multitenancy;
-using ActualLab.OS;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
@@ -14,8 +12,8 @@ public interface IDbOperationLog<
     Task<DbOperation?> Get(TDbContext dbContext, long index, CancellationToken cancellationToken);
     Task<DbOperation?> Get(TDbContext dbContext, Symbol id, CancellationToken cancellationToken);
 
-    Task<List<DbOperation>> ListNewlyCommitted(Tenant tenant, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken);
-    Task<int> Trim(Tenant tenant, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken);
+    Task<List<DbOperation>> ListNewlyCommitted(DbShard shard, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken);
+    Task<int> Trim(DbShard shard, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken);
 }
 
 public class DbOperationLog<
@@ -62,9 +60,9 @@ public class DbOperationLog<
     }
 
     public virtual async Task<List<DbOperation>> ListNewlyCommitted(
-        Tenant tenant, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken)
+        DbShard shard, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken)
     {
-        var dbContext = CreateDbContext(tenant);
+        var dbContext = await CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
 
         var operations = await dbContext.Set<TDbOperation>().AsQueryable()
@@ -72,13 +70,13 @@ public class DbOperationLog<
             .OrderBy(o => o.CommitTime)
             .Take(maxCount)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
-        return operations.Cast<DbOperation>().ToList()!;
+        return operations.Cast<DbOperation>().ToList();
     }
 
     public virtual async Task<int> Trim(
-        Tenant tenant, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken)
+        DbShard shard, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken)
     {
-        var dbContext = CreateDbContext(tenant, true);
+        var dbContext = await CreateDbContext(shard, true, cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);
 

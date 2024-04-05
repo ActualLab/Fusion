@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
-using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
@@ -18,7 +17,7 @@ public partial class DbAuthService<
     where TDbUserId : notnull
 {
     protected Options Settings { get; } = settings;
-    protected IDbUserIdHandler<TDbUserId> DbUserIdHandler { get; init; }
+    protected IDbUserIdHandler<TDbUserId> UserIdHandler { get; init; }
         = services.GetRequiredService<IDbUserIdHandler<TDbUserId>>();
     protected IDbUserRepo<TDbContext, TDbUser, TDbUserId> Users { get; init; }
         = services.GetRequiredService<IDbUserRepo<TDbContext, TDbUser, TDbUserId>>();
@@ -28,8 +27,8 @@ public partial class DbAuthService<
         = services.GetRequiredService<IDbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>>();
     protected IDbEntityConverter<TDbSessionInfo, SessionInfo> SessionConverter { get; init; }
         = services.DbEntityConverter<TDbSessionInfo, SessionInfo>();
-    protected ITenantResolver<TDbContext> TenantResolver { get; init; }
-        = services.GetRequiredService<ITenantResolver<TDbContext>>();
+    protected IDbShardResolver ShardResolver { get; init; }
+        = services.GetRequiredService<IDbShardResolver>();
 
     // Commands
 
@@ -44,7 +43,7 @@ public partial class DbAuthService<
         var force = command.Force;
 
         var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<TDbContext>(command);
         if (Computed.IsInvalidating()) {
             if (isKickCommand)
                 return;
@@ -57,8 +56,8 @@ public partial class DbAuthService<
             }
             var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo != null) {
-                _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
-                _ = GetUserSessions(tenant.Id, invSessionInfo.UserId, default);
+                _ = GetUser(shard, invSessionInfo.UserId, default);
+                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             }
             return;
         }
@@ -68,7 +67,7 @@ public partial class DbAuthService<
             var user = await GetUser(session, cancellationToken).ConfigureAwait(false);
             if (user == null)
                 return;
-            var userSessions = await GetUserSessions(tenant, user.Id, cancellationToken).ConfigureAwait(false);
+            var userSessions = await GetUserSessions(shard, user.Id, cancellationToken).ConfigureAwait(false);
             var signOutSessions = kickUserSessionHash.IsNullOrEmpty()
                 ? userSessions
                 : userSessions.Where(p => Equals(p.SessionInfo.SessionHash, kickUserSessionHash));
@@ -80,7 +79,7 @@ public partial class DbAuthService<
             return;
         }
 
-        var dbContext = await CreateCommandDbContext(tenant, cancellationToken).ConfigureAwait(false);
+        var dbContext = await CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         var dbSessionInfo = await Sessions.GetOrCreate(dbContext, session.Id, cancellationToken).ConfigureAwait(false);
@@ -104,11 +103,11 @@ public partial class DbAuthService<
         var session = command.Session.RequireValid();
 
         var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<TDbContext>(command);
         if (Computed.IsInvalidating()) {
             var invSessionInfo = context.OperationItems.Get<SessionInfo>();
             if (invSessionInfo != null)
-                _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
+                _ = GetUser(shard, invSessionInfo.UserId, default);
             return;
         }
 
@@ -116,10 +115,10 @@ public partial class DbAuthService<
             .Require(SessionInfo.MustBeAuthenticated)
             .ConfigureAwait(false);
 
-        var dbContext = await CreateCommandDbContext(tenant, cancellationToken).ConfigureAwait(false);
+        var dbContext = await CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
-        var dbUserId = DbUserIdHandler.Parse(sessionInfo.UserId, false);
+        var dbUserId = UserIdHandler.Parse(sessionInfo.UserId, false);
         var dbUser = await Users.Get(dbContext, dbUserId, true, cancellationToken).ConfigureAwait(false);
         if (dbUser == null)
             throw EntityFramework.Internal.Errors.EntityNotFound(Users.UserEntityType);
@@ -167,8 +166,8 @@ public partial class DbAuthService<
     public override async Task<SessionInfo?> GetSessionInfo(Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        var tenant = await TenantResolver.Resolve(session, this, cancellationToken).ConfigureAwait(false);
-        var dbSessionInfo = await Sessions.Get(tenant, session.Id, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<TDbContext>(session);
+        var dbSessionInfo = await Sessions.Get(shard, session.Id, cancellationToken).ConfigureAwait(false);
         return dbSessionInfo == null ? null : SessionConverter.ToModel(dbSessionInfo);
     }
 
@@ -189,8 +188,8 @@ public partial class DbAuthService<
         if (!(authInfo?.IsAuthenticated() ?? false))
             return null;
 
-        var tenant = await TenantResolver.Resolve(session, this, cancellationToken).ConfigureAwait(false);
-        var user = await GetUser(tenant.Id, authInfo.UserId, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<TDbContext>(session);
+        var user = await GetUser(shard, authInfo.UserId, cancellationToken).ConfigureAwait(false);
         return user;
     }
 
@@ -202,8 +201,8 @@ public partial class DbAuthService<
         if (user == null)
             return ImmutableArray<SessionInfo>.Empty;
 
-        var tenant = await TenantResolver.Resolve(session, this, cancellationToken).ConfigureAwait(false);
-        var sessions = await GetUserSessions(tenant.Id, user.Id, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve<TDbContext>(session);
+        var sessions = await GetUserSessions(shard, user.Id, cancellationToken).ConfigureAwait(false);
         return sessions.Select(p => p.SessionInfo).ToImmutableArray();
     }
 }

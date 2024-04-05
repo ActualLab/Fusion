@@ -10,6 +10,7 @@ public interface IReadOnlyMutableDictionary<TKey, TValue> : IReadOnlyDictionary<
     event Action? Changed;
 }
 
+// ReSharper disable once PossibleInterfaceMemberAmbiguity
 public interface IMutableDictionary<TKey, TValue> : IReadOnlyMutableDictionary<TKey, TValue>, IDictionary<TKey, TValue>
     where TKey : notnull
 {
@@ -47,7 +48,7 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
     public IEnumerable<TValue> Values => _items.Values;
     ICollection<TKey> IDictionary<TKey, TValue>.Keys => throw new NotSupportedException();
     ICollection<TValue> IDictionary<TKey, TValue>.Values => throw new NotSupportedException();
-    public bool IsReadOnly { get; } = false;
+    public bool IsReadOnly => false;
 
     public MutableDictionary() : this(ImmutableDictionary<TKey, TValue>.Empty) { }
 

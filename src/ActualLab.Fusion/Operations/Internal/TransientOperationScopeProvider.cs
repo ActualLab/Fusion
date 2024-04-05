@@ -58,7 +58,7 @@ public class TransientOperationScopeProvider(IServiceProvider services) : IComma
 
         // Since this is the outermost scope handler, it's reasonable to
         // call OperationCompletionNotifier.NotifyCompleted from it
-        operation = context.Operation; // It could be changed by one of nested operation scope providers
+        operation = context.GetOperation(); // It could be changed by one of nested operation scope providers
         await OperationCompletionNotifier.NotifyCompleted(operation, context).ConfigureAwait(false);
     }
 }

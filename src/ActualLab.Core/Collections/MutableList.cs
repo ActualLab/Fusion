@@ -9,6 +9,7 @@ public interface IReadOnlyMutableList<T> : IReadOnlyCollection<T>
     event Action? Changed;
 }
 
+// ReSharper disable once PossibleInterfaceMemberAmbiguity
 public interface IMutableList<T> : IReadOnlyMutableList<T>, IList<T>
 {
     new ImmutableList<T> Items { get; set; }

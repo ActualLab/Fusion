@@ -2,7 +2,7 @@ using ActualLab.Fusion.Extensions.Internal;
 
 namespace ActualLab.Fusion.Extensions.Services;
 
-public partial class SandboxedKeyValueStore
+public partial class SandboxedKeyValueStore<TContext>
 {
     public record KeyChecker
     {
