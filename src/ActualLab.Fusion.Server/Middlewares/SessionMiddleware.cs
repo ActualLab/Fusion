@@ -74,13 +74,15 @@ public class SessionMiddleware : IMiddleware, IHasServices
         if (session != null && Auth != null) {
             try {
                 var isSignOutForced = await Auth.IsSignOutForced(session, cancellationToken).ConfigureAwait(false);
-                if (isSignOutForced)
+                if (isSignOutForced) {
                     await Settings.ForcedSignOutHandler(this, httpContext).ConfigureAwait(false);
+                    session = null;
+                }
             }
-            catch (Exception e) when (!e.IsCancellationOf(httpContext.RequestAborted)) {
+            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                 Log.LogError(e, "Session is unavailable: {Session}", session);
+                session = null;
             }
-            session = null;
         }
         session ??= Session.New();
         session = Settings.TagProvider?.Invoke(session, httpContext) ?? session;
