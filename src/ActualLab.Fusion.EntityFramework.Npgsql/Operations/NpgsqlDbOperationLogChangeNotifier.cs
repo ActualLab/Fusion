@@ -1,14 +1,13 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Locking;
 
 namespace ActualLab.Fusion.EntityFramework.Npgsql.Operations;
 
-public class NpgsqlDbOperationLogChangeNotifier<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    (NpgsqlDbOperationLogChangeTrackingOptions<TDbContext> options, IServiceProvider services)
-    : DbOperationCompletionNotifierBase<TDbContext, NpgsqlDbOperationLogChangeTrackingOptions<TDbContext>>(options, services)
+public class NpgsqlDbOperationLogChangeNotifier<TDbContext>(
+    NpgsqlDbOperationLogChangeTrackingOptions<TDbContext> options,
+    IServiceProvider services
+    ) : DbOperationCompletionNotifierBase<TDbContext, NpgsqlDbOperationLogChangeTrackingOptions<TDbContext>>(options, services)
     where TDbContext : DbContext
 {
     private readonly ConcurrentDictionary<DbShard, CachedInfo> _cache = new();

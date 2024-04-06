@@ -1,15 +1,10 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
-public class DbSessionInfoConverter<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbSessionInfo,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>
-    (IServiceProvider services)
+public class DbSessionInfoConverter<TDbContext, TDbSessionInfo, TDbUserId>(IServiceProvider services)
     : DbEntityConverter<TDbContext, TDbSessionInfo, SessionInfo>(services)
     where TDbContext : DbContext
     where TDbSessionInfo : DbSessionInfo<TDbUserId>, new()

@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework;
@@ -10,14 +9,13 @@ public interface IShardDbContextFactory<TDbContext>
     ValueTask<TDbContext> CreateDbContextAsync(DbShard shard, CancellationToken cancellationToken = default);
 }
 
-public delegate IDbContextFactory<TDbContext> ShardDbContextFactoryBuilder<
-    // ReSharper disable once TypeParameterCanBeVariant
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>(
-    IServiceProvider services, DbShard shard)
+// ReSharper disable once TypeParameterCanBeVariant
+public delegate IDbContextFactory<TDbContext> ShardDbContextFactoryBuilder<TDbContext>(
+    IServiceProvider services,
+    DbShard shard)
     where TDbContext : DbContext;
 
-public class ShardDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    : IShardDbContextFactory<TDbContext>
+public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbContext>
     where TDbContext : DbContext
 {
     private readonly ConcurrentDictionary<

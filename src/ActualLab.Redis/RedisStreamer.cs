@@ -1,6 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
 using StackExchange.Redis;
-using ActualLab.Internal;
 using Errors = ActualLab.Redis.Internal.Errors;
 
 namespace ActualLab.Redis;
@@ -29,7 +27,6 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
     public RedisDb RedisDb { get; } = redisDb;
     public string Key { get; } = key;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async IAsyncEnumerable<T> Read([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var appendSub = GetAppendSub();
@@ -73,13 +70,11 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Write(
         IAsyncEnumerable<T> source,
         CancellationToken cancellationToken = default)
         => Write(source, _ => default, cancellationToken);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Write(
         IAsyncEnumerable<T> source,
         Action<RedisStreamer<T>> newStreamAnnouncer,
@@ -91,7 +86,6 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
             },
             cancellationToken);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Write(
         IAsyncEnumerable<T> source,
         Func<RedisStreamer<T>, ValueTask> newStreamAnnouncer,
@@ -145,7 +139,6 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
         await newStreamAnnouncer(this).ConfigureAwait(false);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async Task AppendItem(
         IDatabase database,
         T item,
@@ -162,7 +155,6 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
         await appendPub.Publish(RedisValue.EmptyString).ConfigureAwait(false);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async Task AppendEnd(
         IDatabase database,
         Exception? error,

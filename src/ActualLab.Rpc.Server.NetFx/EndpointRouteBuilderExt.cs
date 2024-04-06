@@ -1,13 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
-using Microsoft.Owin;
 using Owin;
-using ActualLab.Internal;
 
 namespace ActualLab.Rpc.Server;
 
 public static class EndpointRouteBuilderExt
 {
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static IAppBuilder MapRpcServer(this IAppBuilder appBuilder, IServiceProvider services)
     {
         if (appBuilder == null) throw new ArgumentNullException(nameof(appBuilder));

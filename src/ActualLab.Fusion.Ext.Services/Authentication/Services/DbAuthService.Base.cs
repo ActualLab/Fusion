@@ -1,12 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
-public abstract class DbAuthService<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    (IServiceProvider services)
+public abstract class DbAuthService<TDbContext>(IServiceProvider services)
     : DbServiceBase<TDbContext>(services), IAuth, IAuthBackend
     where TDbContext : DbContext
 {

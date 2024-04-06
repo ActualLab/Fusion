@@ -1,13 +1,10 @@
 using System.Data;
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.EntityFramework;
 
-public abstract class DbServiceBase<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    (IServiceProvider services)
+public abstract class DbServiceBase<TDbContext>(IServiceProvider services)
     where TDbContext : DbContext
 {
     private ILogger? _log;

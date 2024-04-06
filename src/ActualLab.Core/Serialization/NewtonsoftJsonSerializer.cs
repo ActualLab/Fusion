@@ -38,6 +38,7 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
     }
 
     public static TypeDecoratingTextSerializer DefaultTypeDecorating {
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => _defaultTypeDecorating ??= new(Default);
         set => _defaultTypeDecorating = value;
     }

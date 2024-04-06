@@ -1,8 +1,6 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.WebSockets;
 using Microsoft.Owin;
-using ActualLab.Internal;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
@@ -37,7 +35,6 @@ public class RpcWebSocketServer(
     public RpcServerConnectionFactory ServerConnectionFactory { get; }
         = services.GetRequiredService<RpcServerConnectionFactory>();
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public HttpStatusCode Invoke(IOwinContext context, bool isBackend)
     {
         // Based on https://stackoverflow.com/questions/41848095/websockets-using-owin
@@ -67,7 +64,6 @@ public class RpcWebSocketServer(
         return HttpStatusCode.SwitchingProtocols;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async Task HandleWebSocket(IOwinContext context, WebSocketContext wsContext, bool isBackend)
     {
         var cancellationToken = context.Request.CallCancelled;

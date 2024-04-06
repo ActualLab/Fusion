@@ -15,8 +15,8 @@ public sealed class ComputeMethodDef : MethodDef
     public ComputeMethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]Type type,
         MethodInfo method,
-        ComputeServiceInterceptorBase interceptor)
-        : base(type, method)
+        ComputeServiceInterceptorBase interceptor
+        ) : base(type, method)
     {
         if (!IsAsyncMethod) {
             IsValid = false;

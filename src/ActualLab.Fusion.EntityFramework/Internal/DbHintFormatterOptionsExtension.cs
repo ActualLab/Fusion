@@ -1,11 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
-public class DbHintFormatterOptionsExtension(
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type dbHintFormatterType)
-    : IDbContextOptionsExtension
+public class DbHintFormatterOptionsExtension(Type dbHintFormatterType) : IDbContextOptionsExtension
 {
     public Type DbHintFormatterType { get; } = dbHintFormatterType;
 

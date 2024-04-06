@@ -1,13 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Extensions.Services;
 
-public class DbKeyValueTrimmer<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbKeyValue>
-    : DbShardWorkerBase<TDbContext>
+public class DbKeyValueTrimmer<TDbContext, TDbKeyValue> : DbShardWorkerBase<TDbContext>
     where TDbContext : DbContext
     where TDbKeyValue : DbKeyValue, new()
 {

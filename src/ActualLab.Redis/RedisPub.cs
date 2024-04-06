@@ -1,7 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using StackExchange.Redis;
-using ActualLab.Internal;
 
 namespace ActualLab.Redis;
 
@@ -33,7 +31,6 @@ public sealed class RedisPub<T>(RedisDb redisDb, string key, IByteSerializer<T>?
 {
     public IByteSerializer<T> Serializer { get; } = serializer ?? ByteSerializer<T>.Default;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task<long> Publish(T item)
     {
         using var bufferWriter = Serializer.Write(item);

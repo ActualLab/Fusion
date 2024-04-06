@@ -1,12 +1,11 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-public class FileBasedDbOperationLogChangeNotifier<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    (FileBasedDbOperationLogChangeTrackingOptions<TDbContext> options, IServiceProvider services)
-    : DbOperationCompletionNotifierBase<TDbContext, FileBasedDbOperationLogChangeTrackingOptions<TDbContext>>(options, services)
+public class FileBasedDbOperationLogChangeNotifier<TDbContext>(
+    FileBasedDbOperationLogChangeTrackingOptions<TDbContext> options,
+    IServiceProvider services
+    ) : DbOperationCompletionNotifierBase<TDbContext, FileBasedDbOperationLogChangeTrackingOptions<TDbContext>>(options, services)
     where TDbContext : DbContext
 {
     protected override Task Notify(DbShard shard)

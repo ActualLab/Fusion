@@ -1,13 +1,10 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-public abstract class DbOperationCompletionNotifierBase<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext, TOptions>
-    : DbServiceBase<TDbContext>,
-    IOperationCompletionListener, IDisposable, IAsyncDisposable, IHasWhenDisposed
+public abstract class DbOperationCompletionNotifierBase<TDbContext, TOptions>
+    : DbServiceBase<TDbContext>, IOperationCompletionListener, IDisposable, IAsyncDisposable, IHasWhenDisposed
     where TDbContext : DbContext
     where TOptions : DbOperationCompletionTrackingOptions, new()
 {

@@ -10,6 +10,7 @@
     --></Description>
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
     <RootNamespace>ActualLab.Fusion</RootNamespace>
+    <IsServerSideOnly>true</IsServerSideOnly>
   </PropertyGroup>
 
   <ItemGroup>

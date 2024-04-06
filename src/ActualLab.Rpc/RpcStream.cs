@@ -7,6 +7,7 @@ using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 namespace ActualLab.Rpc;
 
 #pragma warning disable MA0055
+#pragma warning disable IL2046
 
 [DataContract]
 public abstract partial class RpcStream : IRpcObject
@@ -127,9 +128,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2046
     public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-#pragma warning restore IL2046
     {
         if (_localSource != null)
             return _localSource.GetAsyncEnumerator(cancellationToken);
@@ -319,9 +318,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
             : throw new InvalidOperationException($"{nameof(MoveNextAsync)} should be called first.");
 
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2046
         public ValueTask DisposeAsync()
-#pragma warning restore IL2046
         {
             if (!ActiveObjects.TryRemove(this, out _))
                 return default;
@@ -331,9 +328,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         }
 
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2046
         public ValueTask<bool> MoveNextAsync()
-#pragma warning restore IL2046
         {
             if (_isEnded)
                 return default;

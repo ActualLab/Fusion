@@ -29,8 +29,8 @@ public class ComputeMethodComputed<T> : Computed<T>, IComputedMethodComputed
         ComputeMethodInput input,
         Result<T> output,
         bool isConsistent,
-        SkipComputedRegistration _)
-        : base(options, input, output, isConsistent)
+        SkipComputedRegistration _
+        ) : base(options, input, output, isConsistent)
     { }
 
     protected override void OnInvalidated()

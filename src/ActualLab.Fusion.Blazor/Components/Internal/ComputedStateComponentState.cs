@@ -3,8 +3,8 @@ namespace ActualLab.Fusion.Blazor.Internal;
 public sealed class ComputedStateComponentState<T>(
     ComputedState<T>.Options settings,
     Func<IComputedState<T>, CancellationToken, Task<T>> computer,
-    IServiceProvider services)
-    : ComputedState<T>(settings, services, false), IHasInitialize
+    IServiceProvider services
+    ) : ComputedState<T>(settings, services, false), IHasInitialize
 {
     public readonly Options Settings = settings;
     public readonly Func<IComputedState<T>, CancellationToken, Task<T>> Computer = computer;

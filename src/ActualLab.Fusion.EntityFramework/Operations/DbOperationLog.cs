@@ -1,11 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-public interface IDbOperationLog<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] in TDbContext>
+public interface IDbOperationLog<in TDbContext>
     where TDbContext : DbContext
 {
     Task<DbOperation> Add(TDbContext dbContext, Operation operation, CancellationToken cancellationToken);
@@ -16,10 +14,7 @@ public interface IDbOperationLog<
     Task<int> Trim(DbShard shard, DateTime minCommitTime, int maxCount, CancellationToken cancellationToken);
 }
 
-public class DbOperationLog<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbOperation>
-    (IServiceProvider services)
+public class DbOperationLog<TDbContext, TDbOperation>(IServiceProvider services)
     : DbServiceBase<TDbContext>(services),
     IDbOperationLog<TDbContext>
     where TDbContext : DbContext

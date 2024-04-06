@@ -1,6 +1,4 @@
 using ActualLab.CommandR.Operations;
-using ActualLab.OS;
-
 namespace ActualLab.Fusion.Operations;
 
 public interface IOperationCompletionNotifier

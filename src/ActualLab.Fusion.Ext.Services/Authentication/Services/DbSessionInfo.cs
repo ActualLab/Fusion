@@ -1,7 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Versioning;
 
@@ -42,9 +40,7 @@ public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
 
     // Options
     public string OptionsJson {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => _options.Data;
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         set => _options = NewtonsoftJsonSerialized.New<ImmutableOptionSet>(value);
     }
 

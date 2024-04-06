@@ -1,11 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-public class DbOperationLogTrimmer<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    : DbShardWorkerBase<TDbContext>
+public class DbOperationLogTrimmer<TDbContext> : DbShardWorkerBase<TDbContext>
     where TDbContext : DbContext
 {
     public record Options

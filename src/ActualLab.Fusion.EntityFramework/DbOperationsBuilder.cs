@@ -1,21 +1,17 @@
 using System.Data;
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ActualLab.CommandR.Internal;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.EntityFramework.Operations;
 
 namespace ActualLab.Fusion.EntityFramework;
 
-public readonly struct DbOperationsBuilder<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
+public readonly struct DbOperationsBuilder<TDbContext>
     where TDbContext : DbContext
 {
     public DbContextBuilder<TDbContext> DbContext { get; }
     public IServiceCollection Services => DbContext.Services;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Commander)]
     internal DbOperationsBuilder(
         DbContextBuilder<TDbContext> dbContext,
         Action<DbOperationsBuilder<TDbContext>>? configure)
@@ -53,8 +49,7 @@ public readonly struct DbOperationsBuilder<
 
     // Core settings
 
-    public DbOperationsBuilder<TDbContext> SetDbOperationType<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbOperation>()
+    public DbOperationsBuilder<TDbContext> SetDbOperationType<TDbOperation>()
         where TDbOperation : DbOperation, new()
     {
         Services.RemoveAll<IDbOperationLog<TDbContext>>();

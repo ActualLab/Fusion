@@ -5,6 +5,7 @@
     <PackageTags>actual_chat actual_lab actual_lab_fusion ef redis</PackageTags>
     <Description>ActualLab.Fusion.EntityFramework.Redis - <!--
     -->Fusion services utilizing EF Core and Redis.</Description>
+    <IsServerSideOnly>true</IsServerSideOnly>
   </PropertyGroup>
 
   <ItemGroup>

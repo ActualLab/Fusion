@@ -5,6 +5,7 @@
     <PackageTags>actual_chat actual_lab actual_lab_fusion ef npgsql</PackageTags>
     <Description>ActualLab.Fusion.EntityFramework.Npgsql - <!--
     -->Fusion services utilizing EF Core and Npgsql (PostgreSQL EF Core provider).</Description>
+    <IsServerSideOnly>true</IsServerSideOnly>
   </PropertyGroup>
 
   <ItemGroup>

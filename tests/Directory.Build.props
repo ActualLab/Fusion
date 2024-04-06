@@ -16,7 +16,6 @@
 
   <!-- Suppressed warnings -->
   <PropertyGroup>
-    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
     <!-- MA0048: File name must match type name -->
     <!-- MA0018: Do not declare static members on generic types -->
     <!-- MA0026: To-do : ... -->

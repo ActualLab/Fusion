@@ -1,13 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
-public interface IDbSessionInfoRepo<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] in TDbContext,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbSessionInfo,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] in TDbUserId>
+public interface IDbSessionInfoRepo<in TDbContext, TDbSessionInfo, in TDbUserId>
     where TDbContext : DbContext
     where TDbSessionInfo : DbSessionInfo<TDbUserId>, new()
     where TDbUserId : notnull
@@ -31,12 +27,10 @@ public interface IDbSessionInfoRepo<
         TDbContext dbContext, TDbUserId userId, CancellationToken cancellationToken = default);
 }
 
-public class DbSessionInfoRepo<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbSessionInfo,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>
-    (DbAuthService<TDbContext>.Options settings, IServiceProvider services)
-    : DbServiceBase<TDbContext>(services), IDbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>
+public class DbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>(
+    DbAuthService<TDbContext>.Options settings,
+    IServiceProvider services
+    ) : DbServiceBase<TDbContext>(services), IDbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>
     where TDbContext : DbContext
     where TDbSessionInfo : DbSessionInfo<TDbUserId>, new()
     where TDbUserId : notnull

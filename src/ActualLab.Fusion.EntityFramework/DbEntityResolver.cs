@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
@@ -27,13 +26,8 @@ public interface IDbEntityResolver<TKey, TDbEntity>
 /// <typeparam name="TDbContext">The type of <see cref="DbContext"/>.</typeparam>
 /// <typeparam name="TKey">The type of entity key.</typeparam>
 /// <typeparam name="TDbEntity">The type of entity to pipeline batch for.</typeparam>
-public class DbEntityResolver<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TKey,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbEntity>
-    : DbServiceBase<TDbContext>,
-    IDbEntityResolver<TKey, TDbEntity>,
-    IAsyncDisposable
+public class DbEntityResolver<TDbContext, TKey, TDbEntity>
+    : DbServiceBase<TDbContext>, IDbEntityResolver<TKey, TDbEntity>, IAsyncDisposable
     where TDbContext : DbContext
     where TKey : notnull
     where TDbEntity : class

@@ -1,11 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.EntityFramework;
 
-public abstract class DbShardWorkerBase<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>(
+public abstract class DbShardWorkerBase<TDbContext>(
     IServiceProvider services,
     CancellationTokenSource? stopTokenSource = null
     ) : WorkerBase(stopTokenSource)

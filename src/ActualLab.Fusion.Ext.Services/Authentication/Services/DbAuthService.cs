@@ -1,16 +1,12 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
-public partial class DbAuthService<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbSessionInfo,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUser,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>
-    (DbAuthService<TDbContext>.Options settings, IServiceProvider services)
-    : DbAuthService<TDbContext>(services)
+public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserId>(
+    DbAuthService<TDbContext>.Options settings,
+    IServiceProvider services
+    ) : DbAuthService<TDbContext>(services)
     where TDbContext : DbContext
     where TDbSessionInfo : DbSessionInfo<TDbUserId>, new()
     where TDbUser : DbUser<TDbUserId>, new()

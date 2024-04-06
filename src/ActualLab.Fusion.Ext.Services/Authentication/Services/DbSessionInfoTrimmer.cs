@@ -1,12 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
-public abstract class DbSessionInfoTrimmer<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    : DbShardWorkerBase<TDbContext>
+public abstract class DbSessionInfoTrimmer<TDbContext> : DbShardWorkerBase<TDbContext>
     where TDbContext : DbContext
 {
     public record Options
@@ -30,12 +27,10 @@ public abstract class DbSessionInfoTrimmer<
     }
 }
 
-public class DbSessionInfoTrimmer<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbSessionInfo,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>
-    (DbSessionInfoTrimmer<TDbContext>.Options settings, IServiceProvider services)
-    : DbSessionInfoTrimmer<TDbContext>(settings, services)
+public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
+    DbSessionInfoTrimmer<TDbContext>.Options settings,
+    IServiceProvider services
+    ) : DbSessionInfoTrimmer<TDbContext>(settings, services)
     where TDbContext : DbContext
     where TDbSessionInfo : DbSessionInfo<TDbUserId>, new()
     where TDbUserId : notnull

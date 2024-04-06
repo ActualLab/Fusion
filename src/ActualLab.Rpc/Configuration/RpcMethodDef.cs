@@ -42,8 +42,8 @@ public sealed class RpcMethodDef : MethodDef
     public RpcMethodDef(
         RpcServiceDef service,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        MethodInfo method)
-        : base(serviceType, method)
+        MethodInfo method
+        ) : base(serviceType, method)
     {
         if (serviceType != service.Type)
             throw new ArgumentOutOfRangeException(nameof(serviceType));

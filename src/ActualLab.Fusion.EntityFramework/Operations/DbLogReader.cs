@@ -3,27 +3,22 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-public class DbOperationLogReader<TDbContext>(
-    DbOperationLogReader<TDbContext>.Options settings,
-    IServiceProvider services
-    ) : DbShardWorkerBase<TDbContext>(services)
+#if false
+
+public class DbLogReader<TDbContext>(DbLogReader<TDbContext>.Options settings, IServiceProvider services)
+    : DbShardWorkerBase<TDbContext>(services)
     where TDbContext : DbContext
 {
     public record Options
     {
-        public TimeSpan MaxCommitAge { get; init; } = TimeSpan.FromMinutes(5);
+        public int BatchSize { get; init; } = 256;
         public TimeSpan MaxCommitDuration { get; init; } = TimeSpan.FromSeconds(1);
-        public int MinBatchSize { get; init; } = 256;
-        public int MaxBatchSize { get; init; } = 8192;
-        public TimeSpan MinDelay { get; init; } = TimeSpan.FromMilliseconds(20);
         public RandomTimeSpan UnconditionalCheckPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.1);
         public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(1, 5);
     }
 
     protected Options Settings { get; } = settings;
     protected HostId HostId { get; } = services.GetRequiredService<HostId>();
-    protected IOperationCompletionNotifier OperationCompletionNotifier { get; }
-        = services.GetRequiredService<IOperationCompletionNotifier>();
     protected IDbOperationLogChangeTracker<TDbContext>? OperationLogChangeTracker { get;  }
         = services.GetService<IDbOperationLogChangeTracker<TDbContext>>();
     protected IDbOperationLog<TDbContext> DbOperationLog { get; }
@@ -32,7 +27,7 @@ public class DbOperationLogReader<TDbContext>(
     protected override Task OnRun(DbShard shard, CancellationToken cancellationToken)
     {
         var maxKnownCommitTime = Clocks.SystemClock.Now;
-        var batchSize = Settings.MinBatchSize;
+        var batchSize = Settings.BatchSize;
         var lastOperationCount = 0;
 
         var activitySource = GetType().GetActivitySource();
@@ -49,7 +44,7 @@ public class DbOperationLogReader<TDbContext>(
             // Adjusting batch size
             batchSize = lastOperationCount == batchSize
                 ? Math.Min(batchSize << 1, Settings.MaxBatchSize)
-                : Settings.MinBatchSize;
+                : Settings.BatchSize;
 
             // Fetching potentially new operations
             var minCommitTime = (maxKnownCommitTime - Settings.MaxCommitDuration).ToDateTime();
@@ -125,3 +120,5 @@ public class DbOperationLogReader<TDbContext>(
         return chain.Start(cancellationToken);
     }
 }
+
+#endif

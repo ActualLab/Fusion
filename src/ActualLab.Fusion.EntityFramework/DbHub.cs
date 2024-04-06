@@ -1,14 +1,11 @@
 using System.Data;
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.EntityFramework;
 
-public class DbHub<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    (IServiceProvider services)
+public class DbHub<TDbContext>(IServiceProvider services)
     where TDbContext : DbContext
 {
     private IDbShardRegistry<TDbContext>? _shardRegistry;

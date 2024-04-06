@@ -1,8 +1,6 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.WebSockets;
 using Microsoft.AspNetCore.Http;
-using ActualLab.Internal;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
@@ -35,7 +33,6 @@ public class RpcWebSocketServer(
     public RpcServerConnectionFactory ServerConnectionFactory { get; }
         = services.GetRequiredService<RpcServerConnectionFactory>();
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Invoke(HttpContext context, bool isBackend)
     {
         var cancellationToken = context.RequestAborted;

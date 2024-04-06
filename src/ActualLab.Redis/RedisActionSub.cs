@@ -1,6 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
 using StackExchange.Redis;
-using ActualLab.Internal;
 
 namespace ActualLab.Redis;
 
@@ -28,10 +26,7 @@ public sealed class RedisActionSub<T>(RedisDb redisDb,
 
     public IByteSerializer<T> Serializer { get; } = serializer ?? ByteSerializer<T>.Default;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2046
     protected override void OnMessage(RedisChannel redisChannel, RedisValue redisValue)
-#pragma warning restore IL2046
     {
         var value = Serializer.Read(redisValue);
         MessageHandler(redisChannel, value);

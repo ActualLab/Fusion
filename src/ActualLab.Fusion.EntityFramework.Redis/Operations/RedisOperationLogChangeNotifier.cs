@@ -1,12 +1,10 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Redis;
 
 namespace ActualLab.Fusion.EntityFramework.Redis.Operations;
 
-public class RedisOperationLogChangeNotifier<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
+public class RedisOperationLogChangeNotifier<TDbContext>
     : DbOperationCompletionNotifierBase<TDbContext, RedisOperationLogChangeTrackingOptions<TDbContext>>
     where TDbContext : DbContext
 {
@@ -15,8 +13,8 @@ public class RedisOperationLogChangeNotifier<
 
     public RedisOperationLogChangeNotifier(
         RedisOperationLogChangeTrackingOptions<TDbContext> options,
-        IServiceProvider services)
-        : base(options, services)
+        IServiceProvider services
+        ) : base(options, services)
     {
         RedisDb = services.GetService<RedisDb<TDbContext>>() ?? services.GetRequiredService<RedisDb>();
         RedisPubCache = new();

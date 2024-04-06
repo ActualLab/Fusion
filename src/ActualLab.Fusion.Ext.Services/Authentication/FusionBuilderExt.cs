@@ -1,10 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Internal;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using UnreferencedCode = ActualLab.Fusion.Internal.UnreferencedCode;
 
 namespace ActualLab.Fusion.Authentication;
 
@@ -12,7 +10,6 @@ public static class FusionBuilderExt
 {
     // InMemoryAuthService
 
-    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static FusionBuilder AddInMemoryAuthService(this FusionBuilder fusion)
     {
         var services = fusion.Services;
@@ -26,22 +23,14 @@ public static class FusionBuilderExt
 
     // DbAuthService<...>
 
-    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
-    public static FusionBuilder AddDbAuthService<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>(
+    public static FusionBuilder AddDbAuthService<TDbContext, TDbUserId>(
         this FusionBuilder fusion,
         Action<DbAuthServiceBuilder<TDbContext, DbSessionInfo<TDbUserId>, DbUser<TDbUserId>, TDbUserId>>? configure = null)
         where TDbContext : DbContext
         where TDbUserId : notnull
         => fusion.AddDbAuthService<TDbContext, DbSessionInfo<TDbUserId>, DbUser<TDbUserId>, TDbUserId>(configure);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
-    public static FusionBuilder AddDbAuthService<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbSessionInfo,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUser,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>(
+    public static FusionBuilder AddDbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserId>(
         this FusionBuilder fusion,
         Action<DbAuthServiceBuilder<TDbContext, TDbSessionInfo, TDbUser, TDbUserId>>? configure = null)
         where TDbContext : DbContext
@@ -52,17 +41,11 @@ public static class FusionBuilderExt
 
     // Custom auth service
 
-    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
-    public static FusionBuilder AddAuthService<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TAuthService>
-        (this FusionBuilder fusion)
+    public static FusionBuilder AddAuthService<TAuthService>(this FusionBuilder fusion)
         where TAuthService : class, IAuthBackend
         => fusion.AddAuthService(typeof(TAuthService));
 
-    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
-    public static FusionBuilder AddAuthService(
-        this FusionBuilder fusion,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType)
+    public static FusionBuilder AddAuthService(this FusionBuilder fusion, Type implementationType)
     {
         var services = fusion.Services;
         if (services.HasService<IAuthBackend>())

@@ -12,8 +12,8 @@ public class RedisOperationLogChangeTracker<TDbContext>
 
     public RedisOperationLogChangeTracker(
         RedisOperationLogChangeTrackingOptions<TDbContext> options,
-        IServiceProvider services)
-        : base(options, services)
+        IServiceProvider services
+        ) : base(options, services)
     {
         RedisDb = services.GetService<RedisDb<TDbContext>>() ?? services.GetRequiredService<RedisDb>();
         var redisPub = RedisDb.GetPub<TDbContext>(Options.PubSubKeyFactory.Invoke(default));

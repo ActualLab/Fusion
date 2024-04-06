@@ -1,11 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ActualLab.Fusion.EntityFramework;
 
-public readonly struct ShardDbContextBuilder<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
+public readonly struct ShardDbContextBuilder<TDbContext>
     where TDbContext : DbContext
 {
     public DbContextBuilder<TDbContext> DbContext { get; }
@@ -40,8 +38,7 @@ public readonly struct ShardDbContextBuilder<
         return this;
     }
 
-    public ShardDbContextBuilder<TDbContext> AddShardResolver<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TShardResolver>()
+    public ShardDbContextBuilder<TDbContext> AddShardResolver<TShardResolver>()
         where TShardResolver : class, IDbShardResolver
     {
         Services.AddSingleton<IDbShardResolver, TShardResolver>();
@@ -66,8 +63,7 @@ public readonly struct ShardDbContextBuilder<
         return this;
     }
 
-    public ShardDbContextBuilder<TDbContext> AddShardRegistry<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TShardRegistry>()
+    public ShardDbContextBuilder<TDbContext> AddShardRegistry<TShardRegistry>()
         where TShardRegistry : class, IDbShardRegistry<TDbContext>
     {
         Services.AddSingleton<IDbShardRegistry<TDbContext>, TShardRegistry>();
@@ -138,8 +134,7 @@ public readonly struct ShardDbContextBuilder<
         return this;
     }
 
-    public ShardDbContextBuilder<TDbContext> AddShardDbContextFactory<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TShardDbContextFactory>()
+    public ShardDbContextBuilder<TDbContext> AddShardDbContextFactory<TShardDbContextFactory>()
         where TShardDbContextFactory : class, IShardDbContextFactory<TDbContext>
     {
         Services.AddSingleton<IShardDbContextFactory<TDbContext>, TShardDbContextFactory>();

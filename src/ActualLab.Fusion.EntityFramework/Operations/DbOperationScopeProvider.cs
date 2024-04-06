@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using ActualLab.Fusion.EntityFramework.Internal;
@@ -6,10 +5,8 @@ using ActualLab.Fusion.Operations.Reprocessing;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-public class DbOperationScopeProvider<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    (IServiceProvider services) : DbServiceBase<TDbContext>(services),
-    ICommandHandler<ICommand>
+public class DbOperationScopeProvider<TDbContext>(IServiceProvider services)
+    : DbServiceBase<TDbContext>(services), ICommandHandler<ICommand>
     where TDbContext : DbContext
 {
     // ReSharper disable once StaticMemberInGenericType

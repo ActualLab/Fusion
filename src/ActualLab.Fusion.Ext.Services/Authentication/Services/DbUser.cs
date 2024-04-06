@@ -1,7 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Versioning;
 
@@ -24,9 +22,7 @@ public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long>
 #pragma warning restore IL2026
 
     public string ClaimsJson {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => _claims.Data;
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         set => _claims = NewtonsoftJsonSerialized.New<ImmutableDictionary<string, string>>(value);
     }
 

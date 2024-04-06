@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using ActualLab.Fusion.EntityFramework.Operations;
@@ -7,10 +6,10 @@ namespace ActualLab.Fusion.EntityFramework.Npgsql.Operations;
 
 #pragma warning disable EF1002
 
-public class NpgsqlDbOperationLogChangeTracker<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    (NpgsqlDbOperationLogChangeTrackingOptions<TDbContext> options, IServiceProvider services)
-    : DbOperationCompletionTrackerBase<TDbContext, NpgsqlDbOperationLogChangeTrackingOptions<TDbContext>>(options, services)
+public class NpgsqlDbOperationLogChangeTracker<TDbContext>(
+    NpgsqlDbOperationLogChangeTrackingOptions<TDbContext> options,
+    IServiceProvider services
+    ) : DbOperationCompletionTrackerBase<TDbContext, NpgsqlDbOperationLogChangeTrackingOptions<TDbContext>>(options, services)
     where TDbContext : DbContext
 {
     protected override DbShardWatcher CreateShardWatcher(DbShard shard)
