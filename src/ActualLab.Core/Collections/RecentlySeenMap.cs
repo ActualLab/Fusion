@@ -32,7 +32,14 @@ public sealed class RecentlySeenMap<TKey, TValue>(
     }
 
     public bool TryRemove(TKey key)
-        => _map.Remove(key);
+    {
+        if (!_map.Remove(key))
+            return false;
+
+        while (_heap.PeekMin().IsSome(out var value) && !_map.ContainsKey(value.Value))
+            _heap.ExtractMin();
+        return true;
+    }
 
     public void Prune()
     {

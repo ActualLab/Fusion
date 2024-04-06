@@ -3,9 +3,7 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-#if false
-
-public class DbLogReader<TDbContext>(DbLogReader<TDbContext>.Options settings, IServiceProvider services)
+public abstract class DbLogReader<TDbContext>(DbLogReader<TDbContext>.Options settings, IServiceProvider services)
     : DbShardWorkerBase<TDbContext>(services)
     where TDbContext : DbContext
 {
@@ -120,5 +118,3 @@ public class DbLogReader<TDbContext>(DbLogReader<TDbContext>.Options settings, I
         return chain.Start(cancellationToken);
     }
 }
-
-#endif
