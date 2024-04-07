@@ -1,7 +1,6 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.EntityFramework.Operations;
 
 namespace ActualLab.Fusion.EntityFramework;
@@ -18,26 +17,21 @@ public readonly struct DbOperationsBuilder<TDbContext>
     {
         DbContext = dbContext;
         var services = Services;
-        if (services.HasService<IDbOperationLog<TDbContext>>()) {
+        if (services.HasService<DbOperationScopeProvider<TDbContext>>()) {
             configure?.Invoke(this);
             return;
         }
 
-        // Common services
-        services.TryAddSingleton<IDbOperationLog<TDbContext>, DbOperationLog<TDbContext, DbOperation>>();
-
         // DbOperationScope & its CommandR handler
-        services.TryAddSingleton<TransactionIdGenerator<TDbContext>>();
+        services.AddSingleton<DbOperationScopeProvider<TDbContext>>();
+        services.AddCommander().AddHandlers<DbOperationScopeProvider<TDbContext>>();
         services.TryAddSingleton<DbOperationScope<TDbContext>.Options>();
-        if (!services.HasService<DbOperationScopeProvider<TDbContext>>()) {
-            services.AddSingleton<DbOperationScopeProvider<TDbContext>>();
-            services.AddCommander().AddHandlers<DbOperationScopeProvider<TDbContext>>();
-        }
+        // DbOperationScope<TDbContext> is created w/ services.Activate
 
         // DbOperationLogReader - hosted service!
-        services.TryAddSingleton<DbOperationLogReader<TDbContext>.Options>();
-        services.TryAddSingleton<DbOperationLogReader<TDbContext>>();
-        services.AddHostedService(c => c.GetRequiredService<DbOperationLogReader<TDbContext>>());
+        services.TryAddSingleton<DbOperationLogProcessor<TDbContext>.Options>();
+        services.TryAddSingleton<DbOperationLogProcessor<TDbContext>>();
+        services.AddHostedService(c => c.GetRequiredService<DbOperationLogProcessor<TDbContext>>());
 
         // DbOperationLogTrimmer - hosted service!
         services.TryAddSingleton<DbOperationLogTrimmer<TDbContext>.Options>();
@@ -49,14 +43,6 @@ public readonly struct DbOperationsBuilder<TDbContext>
 
     // Core settings
 
-    public DbOperationsBuilder<TDbContext> SetDbOperationType<TDbOperation>()
-        where TDbOperation : DbOperation, new()
-    {
-        Services.RemoveAll<IDbOperationLog<TDbContext>>();
-        Services.AddSingleton<IDbOperationLog<TDbContext>, DbOperationLog<TDbContext, TDbOperation>>();
-        return this;
-    }
-
     public DbOperationsBuilder<TDbContext> ConfigureOperationScope(
         Func<IServiceProvider, DbOperationScope<TDbContext>.Options> optionsFactory)
     {
@@ -64,8 +50,8 @@ public readonly struct DbOperationsBuilder<TDbContext>
         return this;
     }
 
-    public DbOperationsBuilder<TDbContext> ConfigureOperationLogReader(
-        Func<IServiceProvider, DbOperationLogReader<TDbContext>.Options> optionsFactory)
+    public DbOperationsBuilder<TDbContext> ConfigureOperationLogProcessor(
+        Func<IServiceProvider, DbOperationLogProcessor<TDbContext>.Options> optionsFactory)
     {
         Services.AddSingleton(optionsFactory);
         return this;

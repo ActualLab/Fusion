@@ -62,9 +62,11 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
     private ConcurrentDictionary<DbShard, BatchProcessor<TKey, TDbEntity?>>? _batchProcessors;
     private ITransientErrorDetector<TDbContext>? _transientErrorDetector;
+    private ActivitySource? _activitySource;
 
     protected Options Settings { get; }
     protected (Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>> Query, int BatchSize)[] Queries { get; init; }
+    protected ActivitySource ActivitySource => _activitySource ??= GetType().GetActivitySource();
 
     public Func<TDbEntity, TKey> KeyExtractor { get; init; }
     public Expression<Func<TDbEntity, TKey>> KeyExtractorExpression { get; init; }
@@ -207,14 +209,10 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
     }
 
     protected virtual Activity? StartProcessBatchActivity(DbShard shard, int batchSize)
-    {
-        var activitySource = GetType().GetActivitySource();
-        var activity = activitySource
+        => ActivitySource
             .StartActivity(nameof(ProcessBatch))
             .AddShardTags(shard)?
             .AddTag("batchSize", batchSize.ToString(CultureInfo.InvariantCulture));
-        return activity;
-    }
 
     protected virtual async Task ProcessBatch(
         DbShard shard,

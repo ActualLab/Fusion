@@ -9,10 +9,8 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
     private ILogger? _log;
 
     protected IServiceProvider Services { get; } = services;
-    protected ActivitySource ActivitySource {
-        get => _activitySource ??= GetType().GetActivitySource();
-        init => _activitySource = value;
-    }
+    protected ActivitySource ActivitySource => _activitySource ??= GetType().GetActivitySource();
+
     protected ILogger Log {
         get => _log ??= Services.LogFor(GetType());
         init => _log = value;

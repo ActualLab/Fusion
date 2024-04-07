@@ -91,10 +91,19 @@ public class DbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>(
         DbShard shard, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default)
     {
         var dbContext = await CreateDbContext(shard, true, cancellationToken).ConfigureAwait(false);
-        await using var _ = dbContext.ConfigureAwait(false);
+        await using var _1 = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);
 
-        var entities = await dbContext.Set<TDbSessionInfo>().AsQueryable()
+#if NET7_0_OR_GREATER
+        return await dbContext.Set<TDbSessionInfo>(DbHintSet.UpdateSkipLocked)
+            .Where(o => o.LastSeenAt < maxLastSeenAt)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+#else
+        var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using var _2 = tx.ConfigureAwait(false);
+
+        var entities = await dbContext.Set<TDbSessionInfo>(DbHintSet.UpdateSkipLocked)
             .Where(o => o.LastSeenAt < maxLastSeenAt)
             .OrderBy(o => o.LastSeenAt)
             .Take(maxCount)
@@ -102,10 +111,11 @@ public class DbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>(
         if (entities.Count == 0)
             return 0;
 
-        foreach (var e in entities)
-            dbContext.Remove(e);
+        dbContext.Set<TDbSessionInfo>().RemoveRange(entities);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return entities.Count;
+#endif
     }
 
     // Read methods

@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using ActualLab.CommandR.Operations;
+using ActualLab.Fusion.EntityFramework.LogProcessing;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
@@ -9,9 +10,8 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 
 [Table("_Operations")]
 [Index(nameof(Id), nameof(Index), Name = "IX_Id")]
-[Index(nameof(StartTime), nameof(Index), Name = "IX_StartTime")]
 [Index(nameof(CommitTime), nameof(Index), Name = "IX_CommitTime")]
-public class DbOperation : IHasId<long>, IHasId<string>
+public sealed class DbOperation : ILogEntry, IHasId<long>, IHasId<string>
 {
     public static ITextSerializer Serializer { get; set; } = new NewtonsoftJsonSerializer();
 
@@ -47,7 +47,11 @@ public class DbOperation : IHasId<long>, IHasId<string>
     public string ItemsJson { get; set; } = "";
     public string NestedOperations { get; set; } = "";
 
-    public virtual Operation ToModel()
+    public DbOperation() { }
+    public DbOperation(Operation operation)
+        => UpdateFrom(operation);
+
+    public Operation ToModel()
     {
         var command = CommandJson.IsNullOrEmpty()
             ? null
@@ -63,13 +67,7 @@ public class DbOperation : IHasId<long>, IHasId<string>
         };
     }
 
-    public virtual void Update(Operation operation)
-    {
-        if (HasIndex)
-            operation.Index = Index;
-    }
-
-    public virtual void UpdateFrom(Operation operation)
+    public DbOperation UpdateFrom(Operation operation)
     {
         if (operation.Index is { } index)
             Index = index;
@@ -80,5 +78,6 @@ public class DbOperation : IHasId<long>, IHasId<string>
         CommandJson = Serializer.Write(operation.Command);
         ItemsJson = operation.Items.Items.Count == 0 ? "" : Serializer.Write(operation.Items);
         NestedOperations = operation.NestedOperations.Count == 0 ? "" : Serializer.Write(operation.NestedOperations);
+        return this;
     }
 }

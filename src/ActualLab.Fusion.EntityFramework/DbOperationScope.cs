@@ -61,8 +61,6 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
     protected HostId HostId { get; }
     protected IDbShardRegistry<TDbContext> DbShardRegistry { get; }
     protected IShardDbContextFactory<TDbContext> DbContextFactory { get; }
-    protected IDbOperationLog<TDbContext> DbOperationLog { get; }
-    protected TransactionIdGenerator<TDbContext> TransactionIdGenerator { get; }
     protected MomentClockSet Clocks { get; }
     protected AsyncLock AsyncLock { get; }
     protected ILogger Log { get; }
@@ -78,8 +76,6 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
         HostId = services.GetRequiredService<HostId>();
         DbShardRegistry = Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
         DbContextFactory = Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
-        DbOperationLog = Services.GetRequiredService<IDbOperationLog<TDbContext>>();
-        TransactionIdGenerator = Services.GetRequiredService<TransactionIdGenerator<TDbContext>>();
         AsyncLock = new AsyncLock(LockReentryMode.CheckedPass);
         Operation = Operation.New(this);
     }
@@ -169,13 +165,15 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
 
             var dbContext = MasterDbContext!;
             dbContext.EnableChangeTracking(false); // Just to speed up things a bit
-            var dbOperation = await DbOperationLog
-                .Add(dbContext, Operation, cancellationToken)
-                .ConfigureAwait(false);
-            if (!Operation.Index.HasValue)
+            var dbOperation = new DbOperation(Operation);
+            dbContext.Add(dbOperation);
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            if (!dbOperation.HasIndex)
                 throw Errors.DbOperationIndexWasNotAssigned();
+
             try {
                 await Transaction!.CommitAsync(cancellationToken).ConfigureAwait(false);
+                Operation.Index = dbOperation.Index;
                 IsConfirmed = true;
                 Log.IfEnabled(LogLevel.Debug)?.LogDebug("Transaction #{TransactionId}: committed", TransactionId);
             }
@@ -190,8 +188,8 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
 #else
                     verifierDbContext.Database.AutoTransactionsEnabled = true;
 #endif
-                    var committedDbOperation = await DbOperationLog
-                        .Get(verifierDbContext, dbOperation.Id, cancellationToken)
+                    var committedDbOperation = await verifierDbContext
+                        .FindAsync<DbOperation>(DbKey.Compose(dbOperation.Index), cancellationToken)
                         .ConfigureAwait(false);
                     if (committedDbOperation != null)
                         IsConfirmed = true;
@@ -302,7 +300,7 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
         Transaction = await database
             .BeginTransactionAsync(isolationLevel, cancellationToken)
             .ConfigureAwait(false);
-        TransactionId = TransactionIdGenerator.Next();
+        TransactionId = Operation.Id.Value;
         if (!database.IsInMemory()) {
             Connection = database.GetDbConnection();
             if (Connection == null)

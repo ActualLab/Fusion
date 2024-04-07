@@ -13,6 +13,10 @@ public static class DbContextExt
         (sender, args) => throw Errors.DbContextIsReadOnly();
 #endif
 
+    public static IQueryable<TDbEntity> Set<TDbEntity>(this DbContext dbContext, params DbHint[] hints)
+        where TDbEntity : class
+        => dbContext.Set<TDbEntity>().WithHints(hints);
+
     public static TDbContext ReadWrite<TDbContext>(this TDbContext dbContext, bool allowWrites = true)
         where TDbContext : DbContext
         => dbContext

@@ -25,9 +25,13 @@ public static class DbSetExt
     public static IQueryable<TEntity> WithHints<TEntity>(this DbSet<TEntity> dbSet, params DbHint[] hints)
         where TEntity: class
     {
+        if (hints.Length == 0)
+            return dbSet;
+
         var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
         if (hintFormatter == null)
             return dbSet;
+
         var tableName = dbSet.GetTableName();
         var mHints = MemoryBuffer<DbHint>.Lease(false);
         try {
@@ -48,9 +52,13 @@ public static class DbSetExt
         params DbHint[] hints)
         where TEntity: class
     {
+        if (hints.Length == 0)
+            return dbSet;
+
         var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
         if (hintFormatter == null)
             return dbSet;
+
         var tableName = dbSet.GetTableName();
         var mHints = MemoryBuffer<DbHint>.Lease(false);
         try {
