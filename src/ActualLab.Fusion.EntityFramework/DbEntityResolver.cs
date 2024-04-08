@@ -83,7 +83,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         Settings = settings;
         var keyExtractor = Settings.KeyExtractor;
         if (keyExtractor == null) {
-            var shard = DbShardRegistry.HasSingleShard ? default : DbShard.Template;
+            var shard = DbHub.ShardRegistry.HasSingleShard ? default : DbShard.Template;
             using var dbContext = DbHub.ContextFactory.CreateDbContext(shard);
             var keyPropertyName = dbContext.Model
                 .FindEntityType(typeof(TDbEntity))!

@@ -31,7 +31,7 @@ public class AppV2 : AppBase
         });
         services.AddDbContextServices<AppDbContext>(db => {
             db.AddOperations(operations => {
-                operations.AddFileBasedOperationLogChangeTracking();
+                operations.AddFileSystemOperationLogWatchers();
             });
         });
         ClientServices = ServerServices = services.BuildServiceProvider();

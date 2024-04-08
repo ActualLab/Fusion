@@ -1,3 +1,4 @@
+using ActualLab.Fusion.EntityFramework.LogProcessing;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework;
@@ -20,4 +21,10 @@ public static class ServiceProviderExt
         where TEntity : notnull
         where TDbEntity : class
         => services.GetRequiredService<IDbEntityConverter<TDbEntity, TEntity>>();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IDbLogWatcher<TDbContext, TDbEntry> DbLogWatcher<TDbContext, TDbEntry>(this IServiceProvider services)
+        where TDbContext : DbContext
+        where TDbEntry : class, ILogEntry
+        => services.GetRequiredService<IDbLogWatcher<TDbContext, TDbEntry>>();
 }

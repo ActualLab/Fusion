@@ -12,7 +12,6 @@ public abstract class DbServiceBase<TDbContext>(IServiceProvider services)
 
     protected IServiceProvider Services { get; init; } = services;
     protected DbHub<TDbContext> DbHub => _dbHub ??= Services.DbHub<TDbContext>();
-    protected IDbShardRegistry<TDbContext> DbShardRegistry => DbHub.ShardRegistry;
     protected VersionGenerator<long> VersionGenerator => DbHub.VersionGenerator;
     protected IsolationLevel CommandIsolationLevel {
         get => DbHub.CommandIsolationLevel;

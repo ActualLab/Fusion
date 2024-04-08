@@ -32,7 +32,7 @@ public class AppV3 : AppBase
         });
         services.AddDbContextServices<AppDbContext>(db => {
             db.AddOperations(operations => {
-                operations.AddFileBasedOperationLogChangeTracking();
+                operations.AddFileSystemOperationLogWatchers();
             });
             db.AddEntityResolver<string, DbProduct>();
             db.AddEntityResolver<string, DbCart>(_ => new() {

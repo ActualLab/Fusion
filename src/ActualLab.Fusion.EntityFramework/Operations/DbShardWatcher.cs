@@ -1,33 +1,15 @@
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-public abstract class DbShardWatcher : ProcessorBase
+public abstract class DbShardWatcher(DbShard shard) : ProcessorBase
 {
-    private TaskCompletionSource<Unit> _nextEventSource = null!;
-    protected DbShard Shard { get; }
+    private volatile AsyncState<Unit> _state = new(default, true);
 
-    protected DbShardWatcher(DbShard shard)
-    {
-        Shard = shard;
-        // ReSharper disable once VirtualMemberCallInConstructor
-        ReplaceNextEventTask();
-    }
+    public DbShard Shard { get; } = shard;
+    public Task WhenChanged => _state.WhenNext();
 
-    public Task WaitForChanges(CancellationToken cancellationToken)
-    {
-        lock (Lock) {
-            var task = _nextEventSource;
-            if (_nextEventSource.Task.IsCompleted)
-                ReplaceNextEventTask();
-            return task.Task.WaitAsync(cancellationToken);
-        }
-    }
-
-    protected void CompleteWaitForChanges()
+    protected void MarkChanged()
     {
         lock (Lock)
-            _nextEventSource.TrySetResult(default);
+            _state = _state.SetNext(default);
     }
-
-    private void ReplaceNextEventTask()
-        => _nextEventSource = TaskCompletionSourceExt.NewSynchronous<Unit>();
 }

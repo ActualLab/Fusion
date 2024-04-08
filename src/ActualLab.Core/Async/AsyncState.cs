@@ -5,7 +5,8 @@ public interface IAsyncState
     bool IsFinal { get; }
     IAsyncState? Next { get; }
     IAsyncState Last { get; }
-    Task<IAsyncState> WhenNext(CancellationToken cancellationToken = default);
+    Task WhenNext();
+    Task WhenNext(CancellationToken cancellationToken);
 }
 
 public interface IAsyncState<out T> : IAsyncState, IAsyncEnumerable<IAsyncState<T>>
@@ -74,14 +75,25 @@ public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously)
 
     // WhenNext
 
-    async Task<IAsyncState> IAsyncState.WhenNext(CancellationToken cancellationToken)
-        => await WhenNext(cancellationToken).ConfigureAwait(false);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Task<AsyncState<T>> WhenNext(CancellationToken cancellationToken = default)
+    Task IAsyncState.WhenNext()
+        => _next.Task;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    Task IAsyncState.WhenNext(CancellationToken cancellationToken)
+        => _next.Task.WaitAsync(cancellationToken);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task<AsyncState<T>> WhenNext()
+        => _next.Task;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task<AsyncState<T>> WhenNext(CancellationToken cancellationToken)
         => _next.Task.WaitAsync(cancellationToken);
 
     async Task<IAsyncState> IAsyncState<T>.When(Func<T, bool> predicate, CancellationToken cancellationToken)
         => await When(predicate, cancellationToken).ConfigureAwait(false);
+
     public async Task<AsyncState<T>> When(Func<T, bool> predicate, CancellationToken cancellationToken = default)
     {
         var current = this;

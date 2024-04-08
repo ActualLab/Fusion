@@ -3,13 +3,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-public class DbOperationLogTrimmer<TDbContext>(
-    DbOperationLogTrimmer<TDbContext>.Options settings,
-    IServiceProvider services
-    ) : DbLogTrimmer<TDbContext, DbOperation>(settings, services)
+public class DbOperationLogTrimmer<TDbContext>
+    : DbLogTrimmer<TDbContext, DbOperation, DbOperationLogTrimmer<TDbContext>.Options>
     where TDbContext : DbContext
 {
     public record Options : DbLogTrimmerOptions;
 
-    protected new Options Settings { get; } = settings;
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public DbOperationLogTrimmer(Options settings, IServiceProvider services)
+        : base(settings, services)
+    { }
 }

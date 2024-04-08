@@ -7,6 +7,7 @@ using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
 using ActualLab.Testing.Collections;
 using ActualLab.Time.Testing;
+using Microsoft.EntityFrameworkCore;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
@@ -89,11 +90,11 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
                     "ActualLab.CommandR",
                     "ActualLab.Tests",
                     "ActualLab.Tests.Fusion",
-                    // DbLoggerCategory.Database.Transaction.Name,
+                    DbLoggerCategory.Database.Transaction.Name,
                     // DbLoggerCategory.Database.Connection.Name,
-                    // DbLoggerCategory.Database.Command.Name,
-                    // DbLoggerCategory.Query.Name,
-                    // DbLoggerCategory.Update.Name,
+                    DbLoggerCategory.Database.Command.Name,
+                    DbLoggerCategory.Query.Name,
+                    DbLoggerCategory.Update.Name,
                 };
 
                 bool LogFilter(string? category, LogLevel level)

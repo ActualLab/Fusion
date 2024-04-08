@@ -1,3 +1,4 @@
+using ActualLab.Fusion.EntityFramework.LogProcessing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -110,6 +111,31 @@ public readonly struct DbContextBuilder<TDbContext>
         where TResolver : class, IDbEntityResolver<TKey, TDbEntity>
     {
         Services.TryAddSingleton<IDbEntityResolver<TKey, TDbEntity>>(resolverFactory);
+        return this;
+    }
+
+    // Log watchers
+
+    public DbContextBuilder<TDbContext> AddLogWatcher<TDbEntry>(Type implementationGenericType)
+        where TDbEntry : class, ILogEntry
+    {
+        var services = Services;
+        var implementationType = implementationGenericType.MakeGenericType(typeof(TDbContext), typeof(TDbEntry));
+        services.AddSingleton(implementationType);
+        services.AddAlias(typeof(IDbLogWatcher<TDbContext, TDbEntry>), implementationType);
+        return this;
+    }
+
+    public DbContextBuilder<TDbContext> TryAddLogWatcher<TDbEntry>(Type implementationGenericType)
+        where TDbEntry : class, ILogEntry
+    {
+        var services = Services;
+        var implementationType = implementationGenericType.MakeGenericType(typeof(TDbContext), typeof(TDbEntry));
+        if (services.HasService(implementationType))
+            return this;
+
+        services.AddSingleton(implementationType);
+        services.AddAlias(typeof(IDbLogWatcher<TDbContext, TDbEntry>), implementationType);
         return this;
     }
 

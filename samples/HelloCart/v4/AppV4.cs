@@ -45,7 +45,7 @@ public class AppV4 : AppBase
         });
         services.AddDbContextServices<AppDbContext>(db => {
             db.AddOperations(operations => {
-                operations.AddRedisOperationLogChangeTracking();
+                operations.AddRedisOperationLogWatchers();
             });
             db.AddRedisDb("localhost", "Fusion.Samples.HelloCart");
             db.AddEntityResolver<string, DbProduct>();

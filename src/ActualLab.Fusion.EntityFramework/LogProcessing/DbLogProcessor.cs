@@ -53,34 +53,40 @@ public static class DbLogProcessor
             : ExclusiveReadHints;
 }
 
-public abstract class DbLogProcessor<TDbContext, TDbEntry>(DbLogProcessorOptions settings, IServiceProvider services)
+public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
+    TOptions settings,
+    IServiceProvider services)
     : DbShardWorkerBase<TDbContext>(services)
     where TDbContext : DbContext
     where TDbEntry : class, ILogEntry
+    where TOptions : DbLogProcessorOptions
 {
     protected ConcurrentDictionary<DbShard, long> NextIndexes { get; } = new();
     protected Dictionary<(DbShard Shard, long Index), Task> ProcessGapTasks { get; } = new();
 
-    protected DbLogProcessorOptions Settings { get; } = settings;
-    protected DbLogProcessingMode Mode { get; } = settings switch {
+    protected IDbLogWatcher<TDbContext, TDbEntry> LogWatcher { get; } = services.DbLogWatcher<TDbContext, TDbEntry>();
+    protected IDbEntityResolver<long, TDbEntry> EntryResolver { get; } = services.DbEntityResolver<long, TDbEntry>();
+    protected IMomentClock SystemClock { get; init; } = services.Clocks().SystemClock;
+    protected ILogger? DefaultLog => Log.IfEnabled(Settings.LogLevel);
+
+    public TOptions Settings { get; } = settings;
+    public DbLogProcessingMode Mode { get; } = settings switch {
         CooperativeDbLogProcessorOptions => DbLogProcessingMode.Cooperative,
         ExclusiveDbLogProcessorOptions => DbLogProcessingMode.Exclusive,
         _ => throw new ArgumentOutOfRangeException(nameof(settings))
     };
 
-    protected IDbEntityResolver<long, TDbEntry> EntryResolver { get; } = services.DbEntityResolver<long, TDbEntry>();
-    protected IMomentClock Clock { get; init; } = services.Clocks().SystemClock;
-    protected ILogger? DefaultLog => Log.IfEnabled(Settings.LogLevel);
-
     protected abstract Task Process(DbShard shard, TDbEntry entry, CancellationToken cancellationToken);
-    protected abstract Task WhenEntriesAdded(DbShard shard, CancellationToken cancellationToken);
 
     protected override Task OnRun(DbShard shard, CancellationToken cancellationToken)
         => new AsyncChain($"{nameof(ProcessNewEntries)}[{shard}]", ct => ProcessNewEntries(shard, ct))
-            .RetryForever(Settings.RetryDelays, Clock, Log)
+            .RetryForever(Settings.RetryDelays, SystemClock, Log)
             .CycleForever()
             .Log(Log)
             .Start(cancellationToken);
+
+    protected virtual Task WhenChanged(DbShard shard, CancellationToken cancellationToken)
+        => LogWatcher?.WhenChanged(shard, cancellationToken) ?? TaskExt.NeverEndingTask;
 
     protected virtual async Task ProcessNewEntries(DbShard shard, CancellationToken cancellationToken)
     {
@@ -91,10 +97,10 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry>(DbLogProcessorOptions
         }
         var timeoutCts = cancellationToken.CreateLinkedTokenSource();
         try {
-            var timeoutTask = Clock.Delay(Settings.ForcedCheckPeriod.Next(), timeoutCts.Token);
+            var timeoutTask = SystemClock.Delay(Settings.ForcedCheckPeriod.Next(), timeoutCts.Token);
             // WhenEntriesAdded should be invoked before we start reading!
             var whenEntriesAdded = await Task
-                .WhenAny(WhenEntriesAdded(shard, timeoutCts.Token), timeoutTask)
+                .WhenAny(WhenChanged(shard, timeoutCts.Token), timeoutTask)
                 .ConfigureAwait(false);
             while (true) { // Reading entries in batches
                 var mustContinue = await ProcessBatch(shard, cancellationToken).ConfigureAwait(false);
@@ -117,7 +123,7 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry>(DbLogProcessorOptions
 
         var dbLogEntries = dbContext.Set<TDbEntry>().AsQueryable();
         if (Mode is DbLogProcessingMode.Cooperative) {
-            var minLoggedAt = Clock.Now.ToDateTime() - Settings.MaxGapLifespan;
+            var minLoggedAt = SystemClock.Now.ToDateTime() - Settings.MaxGapLifespan;
             dbLogEntries = dbLogEntries.Where(e => e.LoggedAt >= minLoggedAt);
         }
         return await dbLogEntries
@@ -213,9 +219,9 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry>(DbLogProcessorOptions
     {
         var tryIndex = 0;
         var lastError = (Exception?)null;
-        while (Clock.Now < loggedAt + Settings.MaxGapLifespan) {
+        while (SystemClock.Now < loggedAt + Settings.MaxGapLifespan) {
             tryIndex++;
-            await Clock.Delay(Settings.ProcessGapDelays[tryIndex], cancellationToken).ConfigureAwait(false);
+            await SystemClock.Delay(Settings.ProcessGapDelays[tryIndex], cancellationToken).ConfigureAwait(false);
             try {
                 foundEntry ??= await EntryResolver.Get(index, cancellationToken).ConfigureAwait(false);
                 if (foundEntry == null)

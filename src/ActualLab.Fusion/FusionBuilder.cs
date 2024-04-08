@@ -334,16 +334,16 @@ public readonly struct FusionBuilder
     // AddOperationReprocessor
 
     public FusionBuilder AddOperationReprocessor(
-        Func<IServiceProvider, OperationReprocessorOptions>? optionsFactory = null)
+        Func<IServiceProvider, OperationReprocessor.Options>? optionsFactory = null)
         => AddOperationReprocessor<OperationReprocessor>(optionsFactory);
 
     public FusionBuilder AddOperationReprocessor<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TOperationReprocessor>(
-        Func<IServiceProvider, OperationReprocessorOptions>? optionsFactory = null)
+        Func<IServiceProvider, OperationReprocessor.Options>? optionsFactory = null)
         where TOperationReprocessor : class, IOperationReprocessor
     {
         var services = Services;
-        services.AddSingleton(optionsFactory, _ => OperationReprocessorOptions.Default);
+        services.AddSingleton(optionsFactory, _ => OperationReprocessor.Options.Default);
         if (services.HasService<TOperationReprocessor>())
             return this;
 

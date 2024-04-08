@@ -3,29 +3,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-public class DbOperationLogProcessor<TDbContext>(
-    DbOperationLogProcessor<TDbContext>.Options settings,
-    IServiceProvider services
-    ) : DbLogProcessor<TDbContext, DbOperation>(settings, services)
+public class DbOperationLogProcessor<TDbContext>
+    : DbLogProcessor<TDbContext, DbOperation, DbOperationLogProcessor<TDbContext>.Options>
     where TDbContext : DbContext
 {
     public record Options : CooperativeDbLogProcessorOptions;
 
-    protected new Options Settings { get; } = settings;
-
-    protected HostId HostId { get; } = services.GetRequiredService<HostId>();
     protected IOperationCompletionNotifier OperationCompletionNotifier { get; }
-        = services.GetRequiredService<IOperationCompletionNotifier>();
-    protected IDbOperationLogChangeTracker<TDbContext>? OperationLogChangeTracker { get;  }
-        = services.GetService<IDbOperationLogChangeTracker<TDbContext>>();
+
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public DbOperationLogProcessor(Options settings, IServiceProvider services)
+        : base(settings, services)
+        => OperationCompletionNotifier = services.GetRequiredService<IOperationCompletionNotifier>();
 
     protected override Task Process(DbShard shard, DbOperation entry, CancellationToken cancellationToken)
     {
-        var isLocal = StringComparer.Ordinal.Equals(entry.HostId, HostId.Value);
-        return isLocal ? Task.CompletedTask
+        var isLocal = StringComparer.Ordinal.Equals(entry.HostId, DbHub.HostId.Value);
+        return isLocal
+            ? Task.CompletedTask
             : OperationCompletionNotifier.NotifyCompleted(entry.ToModel(), null);
     }
-
-    protected override Task WhenEntriesAdded(DbShard shard, CancellationToken cancellationToken)
-        => OperationLogChangeTracker?.WaitForChanges(shard, cancellationToken) ?? TaskExt.NeverEndingTask;
 }

@@ -3,7 +3,6 @@ namespace ActualLab.Fusion.Operations;
 
 public interface IOperationCompletionNotifier
 {
-    bool IsReady();
     Task<bool> NotifyCompleted(Operation operation, CommandContext? commandContext);
 }
 
@@ -41,9 +40,6 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
             Settings.MaxKnownOperationAge,
             Clock);
     }
-
-    public bool IsReady()
-        => OperationCompletionListeners.All(x => x.IsReady());
 
     public Task<bool> NotifyCompleted(Operation operation, CommandContext? commandContext)
     {

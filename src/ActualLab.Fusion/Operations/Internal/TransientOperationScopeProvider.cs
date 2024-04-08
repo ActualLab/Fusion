@@ -41,8 +41,6 @@ public class TransientOperationScopeProvider(IServiceProvider services) : IComma
 
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
-            if (!OperationCompletionNotifier.IsReady())
-                throw Errors.OperationCompletionNotifierIsNotReady();
             scope.Close(true);
         }
         catch (Exception error) {

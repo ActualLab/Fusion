@@ -89,6 +89,28 @@ public static class ServiceCollectionExt
         return services;
     }
 
+    public static IServiceCollection AddAlias(
+        this IServiceCollection services,
+        Type aliasType,
+        Type serviceType,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+    {
+        var descriptor = new ServiceDescriptor(aliasType, c => c.GetRequiredService(serviceType), lifetime);
+        services.Add(descriptor);
+        return services;
+    }
+
+    public static IServiceCollection TryAddAlias(
+        this IServiceCollection services,
+        Type aliasType,
+        Type serviceType,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+    {
+        var descriptor = new ServiceDescriptor(aliasType, c => c.GetRequiredService(serviceType), lifetime);
+        services.TryAdd(descriptor);
+        return services;
+    }
+
     // AddSettings
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]

@@ -29,4 +29,8 @@
     <ProjectReference Include="..\ActualLab.Fusion.EntityFramework\ActualLab.Fusion.EntityFramework.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Operations\" />
+  </ItemGroup>
+
 </Project>

@@ -9,8 +9,6 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
 
-#pragma warning disable IL2055, IL2072
-
 public class PostCompletionInvalidator(
         PostCompletionInvalidator.Options settings,
         IServiceProvider services

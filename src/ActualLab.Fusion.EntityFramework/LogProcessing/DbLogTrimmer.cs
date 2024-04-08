@@ -12,12 +12,14 @@ public record DbLogTrimmerOptions
     public LogLevel LogLevel { get; init; } = LogLevel.Information;
 }
 
-public abstract class DbLogTrimmer<TDbContext, TDbEntry>(DbLogTrimmerOptions settings, IServiceProvider services)
+public abstract class DbLogTrimmer<TDbContext, TDbEntry, TOptions>(
+    TOptions settings, IServiceProvider services)
     : DbShardWorkerBase<TDbContext>(services)
     where TDbContext : DbContext
     where TDbEntry : class, ILogEntry
+    where TOptions : DbLogTrimmerOptions
 {
-    protected DbLogTrimmerOptions Settings { get; } = settings;
+    protected TOptions Settings { get; } = settings;
     protected IMomentClock SystemClock => Clocks.SystemClock;
     protected ILogger? DefaultLog => Log.IfEnabled(Settings.LogLevel);
 

@@ -1,5 +1,4 @@
 using ActualLab.CommandR.Operations;
-using ActualLab.OS;
 
 namespace ActualLab.Fusion.Operations.Internal;
 

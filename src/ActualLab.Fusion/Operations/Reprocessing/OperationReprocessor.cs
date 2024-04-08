@@ -1,4 +1,3 @@
-using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Operations.Internal;
 using Errors = ActualLab.Internal.Errors;
 
@@ -10,63 +9,62 @@ namespace ActualLab.Fusion.Operations.Reprocessing;
 /// </summary>
 public interface IOperationReprocessor : ICommandHandler<ICommand>
 {
-    public OperationReprocessorOptions Options { get; }
-    public IMomentClock DelayClock { get; }
-    int FailedTryCount { get; }
-    Exception? LastError { get; }
-
     void AddTransientFailure(Exception error);
     bool IsTransientFailure(IReadOnlyList<Exception> allErrors);
     bool WillRetry(IReadOnlyList<Exception> allErrors);
-}
-
-public record OperationReprocessorOptions
-{
-    public static OperationReprocessorOptions Default { get; set; } = new();
-
-    public int MaxRetryCount { get; init; } = 3;
-    public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(0.50, 3, 0.33);
-    public IMomentClock? DelayClock { get; init; }
-    public Func<ICommand, CommandContext, bool> Filter { get; init; } = DefaultFilter;
-
-    public static bool DefaultFilter(ICommand command, CommandContext context)
-    {
-        if (FusionSettings.Mode != FusionMode.Server)
-            return false; // Only server can do the reprocessing
-
-        // No reprocessing for commands running from scoped Commander instances,
-        // i.e. no reprocessing for UI commands:
-        // - the underlying backend commands are anyway reprocessed on the server side
-        // - so reprocessing UI commands means N*N times reprocessing.
-        return !context.Commander.Services.IsScoped();
-    }
 }
 
 /// <summary>
 /// Tries to reprocess commands that failed with a reprocessable (transient) error.
 /// Must be a transient service.
 /// </summary>
-public class OperationReprocessor(
-        OperationReprocessorOptions options,
-        IServiceProvider services
-        ) : IOperationReprocessor
+public class OperationReprocessor : IOperationReprocessor
 {
+    public record Options
+    {
+        public static Options Default { get; set; } = new();
+
+        public int MaxRetryCount { get; init; } = 3;
+        public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(0.50, 3, 0.33);
+        public IMomentClock? DelayClock { get; init; }
+        public Func<ICommand, CommandContext, bool> Filter { get; init; } = DefaultFilter;
+
+        public static bool DefaultFilter(ICommand command, CommandContext context)
+        {
+            if (FusionSettings.Mode != FusionMode.Server)
+                return false; // Only server can do the reprocessing
+
+            // No reprocessing for commands running from scoped Commander instances,
+            // i.e. no reprocessing for UI commands:
+            // - the underlying backend commands are anyway reprocessed on the server side
+            // - so reprocessing UI commands means N*N times reprocessing.
+            return !context.Commander.Services.IsScoped();
+        }
+    }
+
     private ITransientErrorDetector<IOperationReprocessor>? _transientErrorDetector;
     private IMomentClock? _delayClock;
     private ILogger? _log;
 
-    protected IServiceProvider Services { get; } = services;
+    protected HashSet<Exception> KnownTransientFailures { get; } = new();
+    protected CommandContext CommandContext { get; set; } = null!;
+    protected int FailedTryCount { get; set; }
+    protected Exception? LastError { get; set; }
+
+    protected IServiceProvider Services { get; }
     protected ITransientErrorDetector<IOperationReprocessor> TransientErrorDetector
         => _transientErrorDetector ??= Services.GetRequiredService<ITransientErrorDetector<IOperationReprocessor>>();
-    protected HashSet<Exception> KnownTransientFailures { get; } = new();
+    public IMomentClock DelayClock => _delayClock ??= Settings.DelayClock ?? Services.Clocks().CpuClock;
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
-    public OperationReprocessorOptions Options { get; } = options;
-    public IMomentClock DelayClock => _delayClock ??= Options.DelayClock ?? Services.Clocks().CpuClock;
+    public Options Settings { get; }
 
-    public int FailedTryCount { get; protected set; }
-    public Exception? LastError { get; protected set; }
-    public CommandContext CommandContext { get; protected set; } = null!;
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public OperationReprocessor(Options settings, IServiceProvider services)
+    {
+        Services = services;
+        Settings = settings;
+    }
 
     public void AddTransientFailure(Exception error)
     {
@@ -96,7 +94,7 @@ public class OperationReprocessor(
 
     public virtual bool WillRetry(IReadOnlyList<Exception> allErrors)
     {
-        if (FailedTryCount > Options.MaxRetryCount)
+        if (FailedTryCount > Settings.MaxRetryCount)
             return false;
 
         var operation = CommandContext.TryGetOperation();
@@ -113,7 +111,7 @@ public class OperationReprocessor(
             context.IsOutermost // Should be a top-level command
             && command is not ISystemCommand // No reprocessing for system commands
             && !Computed.IsInvalidating()
-            && Options.Filter.Invoke(command, context);
+            && Settings.Filter.Invoke(command, context);
         if (!isReprocessingAllowed) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
@@ -141,10 +139,10 @@ public class OperationReprocessor(
 
                 context.Items.Items = itemsBackup;
                 context.ExecutionState = executionStateBackup;
-                var delay = Options.RetryDelays[FailedTryCount];
+                var delay = Settings.RetryDelays[FailedTryCount];
                 Log.LogWarning(
                     "Retry #{FailedTryCount}/{MaxTryCount} on {Error}: {Command} with {Delay} delay",
-                    FailedTryCount, Options.MaxRetryCount,
+                    FailedTryCount, Settings.MaxRetryCount,
                     new ExceptionInfo(error), command, delay.ToShortString());
                 await DelayClock.Delay(delay, cancellationToken).ConfigureAwait(false);
             }

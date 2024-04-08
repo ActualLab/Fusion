@@ -8,6 +8,7 @@ namespace ActualLab.Fusion.EntityFramework;
 public class DbHub<TDbContext>(IServiceProvider services)
     where TDbContext : DbContext
 {
+    private HostId? _hostId;
     private IDbShardRegistry<TDbContext>? _shardRegistry;
     private IShardDbContextFactory<TDbContext>? _contextFactory;
     private VersionGenerator<long>? _versionGenerator;
@@ -18,6 +19,7 @@ public class DbHub<TDbContext>(IServiceProvider services)
     protected ILogger Log => _log ??= Services.LogFor(GetType());
     protected IServiceProvider Services { get; } = services;
 
+    public HostId HostId => _hostId ??= Commander.Hub.HostId;
     public IDbShardRegistry<TDbContext> ShardRegistry
         => _shardRegistry ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
     public IShardDbContextFactory<TDbContext> ContextFactory

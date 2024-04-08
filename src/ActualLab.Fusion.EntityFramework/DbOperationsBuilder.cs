@@ -1,7 +1,8 @@
 using System.Data;
+using ActualLab.Fusion.EntityFramework.LogProcessing;
+using ActualLab.Fusion.EntityFramework.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ActualLab.Fusion.EntityFramework.Operations;
 
 namespace ActualLab.Fusion.EntityFramework;
 
@@ -28,6 +29,10 @@ public readonly struct DbOperationsBuilder<TDbContext>
         services.TryAddSingleton<DbOperationScope<TDbContext>.Options>();
         // DbOperationScope<TDbContext> is created w/ services.Activate
 
+        // DbOperationCompletionListener
+        services.TryAddSingleton<DbOperationCompletionListener<TDbContext>.Options>();
+        AddOperationCompletionListener<DbOperationCompletionListener<TDbContext>>();
+
         // DbOperationLogProcessor & trimmer - hosted services!
         DbContext.TryAddEntityResolver<long, DbOperation>();
         services.TryAddSingleton<DbOperationLogProcessor<TDbContext>.Options>();
@@ -46,6 +51,11 @@ public readonly struct DbOperationsBuilder<TDbContext>
         services.TryAddSingleton<DbOperationEventLogTrimmer<TDbContext>>();
         services.AddHostedService(c => c.GetRequiredService<DbOperationEventLogProcessor<TDbContext>>());
         services.AddHostedService(c => c.GetRequiredService<DbOperationEventLogTrimmer<TDbContext>>());
+
+        // Fake operation log processor
+        var fakeOperationLogWatcherType = typeof(FakeDbLogWatcher<,>);
+        DbContext.TryAddLogWatcher<DbOperation>(fakeOperationLogWatcherType);
+        DbContext.TryAddLogWatcher<DbOperationEvent>(fakeOperationLogWatcherType);
 
         configure?.Invoke(this);
     }
@@ -73,7 +83,7 @@ public readonly struct DbOperationsBuilder<TDbContext>
         return this;
     }
 
-    // DbIsolationLevelSelectors
+    // Isolation level selectors
 
     public DbOperationsBuilder<TDbContext> AddIsolationLevelSelector(
         Func<IServiceProvider, DbIsolationLevelSelector<TDbContext>> dbIsolationLevelSelector)
@@ -105,25 +115,48 @@ public readonly struct DbOperationsBuilder<TDbContext>
         return this;
     }
 
-    // File-based operation log change tracking
+    // Operation completion listeners
 
-    public DbOperationsBuilder<TDbContext> AddFileBasedOperationLogChangeTracking(
-        Func<IServiceProvider, FileBasedDbOperationLogChangeTrackingOptions<TDbContext>>? optionsFactory = null)
+    public DbOperationsBuilder<TDbContext> AddOperationCompletionListener<TListener>(
+        Func<IServiceProvider, TListener>? factory = null)
+        where TListener : class, IOperationCompletionListener
+        => AddOperationCompletionListener(typeof(TListener), factory);
+
+    public DbOperationsBuilder<TDbContext> AddOperationCompletionListener(
+        Type listenerType,
+        Func<IServiceProvider, object>? factory = null)
     {
-        var services = Services;
-        services.AddSingleton(optionsFactory, _ => FileBasedDbOperationLogChangeTrackingOptions<TDbContext>.Default);
-        if (services.HasService<FileBasedDbOperationLogChangeTracker<TDbContext>>())
-            return this;
+        if (!typeof(IOperationCompletionListener).IsAssignableFrom(listenerType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<IOperationCompletionListener>(listenerType, nameof(listenerType));
 
-        services.AddSingleton(c => new FileBasedDbOperationLogChangeTracker<TDbContext>(
-            c.GetRequiredService<FileBasedDbOperationLogChangeTrackingOptions<TDbContext>>(), c));
-        services.AddAlias<
-            IDbOperationLogChangeTracker<TDbContext>,
-            FileBasedDbOperationLogChangeTracker<TDbContext>>();
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<
-                IOperationCompletionListener,
-                FileBasedDbOperationLogChangeNotifier<TDbContext>>());
+        var descriptor = factory != null
+            ? ServiceDescriptor.Singleton(typeof(IOperationCompletionListener), factory)
+            : ServiceDescriptor.Singleton(typeof(IOperationCompletionListener), listenerType);
+        Services.TryAddEnumerable(descriptor);
         return this;
     }
+
+    // Operation log watchers
+
+    public DbOperationsBuilder<TDbContext> AddOperationLogWatchers<TOptions>(
+        Type implementationGenericType,
+        Func<IServiceProvider, TOptions> defaultOptionsFactory,
+        Func<IServiceProvider, TOptions>? optionsFactory = null)
+        where TOptions : class
+    {
+        var services = Services;
+        services.AddSingleton(optionsFactory, defaultOptionsFactory);
+        DbContext.TryAddLogWatcher<DbOperation>(implementationGenericType);
+        DbContext.TryAddLogWatcher<DbOperationEvent>(implementationGenericType);
+        return this;
+    }
+
+    // FileSystem operation log watchers
+
+    public DbOperationsBuilder<TDbContext> AddFileSystemOperationLogWatchers(
+        Func<IServiceProvider, FileSystemDbLogWatcherOptions<TDbContext>>? optionsFactory = null)
+        => AddOperationLogWatchers(
+            typeof(FileSystemDbLogWatcher<,>),
+            _ => FileSystemDbLogWatcherOptions<TDbContext>.Default,
+            optionsFactory);
 }

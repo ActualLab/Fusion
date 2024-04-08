@@ -1,13 +1,10 @@
 using System.Data;
-using Microsoft.EntityFrameworkCore;
 using ActualLab.Versioning;
+using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework;
 
-public abstract class DbWorkerBase<TDbContext>(
-    IServiceProvider services,
-    CancellationTokenSource? stopTokenSource = null
-    ) : WorkerBase(stopTokenSource)
+public abstract class DbProcessorBase<TDbContext>(IServiceProvider services) : ProcessorBase
     where TDbContext : DbContext
 {
     private ILogger? _log;

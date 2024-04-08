@@ -20,8 +20,7 @@ public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbConte
 {
     private readonly ConcurrentDictionary<
         DbShard,
-        LazySlim<(ShardDbContextFactory<TDbContext> Self, DbShard Shard), IDbContextFactory<TDbContext>>>
-        _factories = new();
+        LazySlim<DbShard, ShardDbContextFactory<TDbContext>, IDbContextFactory<TDbContext>>> _factories = new();
     private ShardDbContextFactoryBuilder<TDbContext>? _shardDbContextBuilder;
 
     protected IServiceProvider Services { get; }
@@ -53,13 +52,12 @@ public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbConte
     // Protected methods
 
     protected virtual IDbContextFactory<TDbContext> GetDbContextFactory(DbShard shard)
-        => _factories.GetOrAdd(shard, static state => {
-            var (self, shard1) = state;
+        => _factories.GetOrAdd(shard, static (shard1, self) => {
             if (!self.ShardRegistry.CanUse(shard1))
                 throw Internal.Errors.NoShard(shard1);
 
             var factory = self.ShardDbContextFactoryBuilder.Invoke(self.Services, shard1);
             self.ShardRegistry.Use(shard1);
             return factory;
-        }, (Self: this, Shard: shard));
+        }, this);
 }
