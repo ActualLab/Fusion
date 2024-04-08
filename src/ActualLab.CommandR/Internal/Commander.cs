@@ -1,23 +1,24 @@
 namespace ActualLab.CommandR.Internal;
 
-public class Commander(IServiceProvider services) : ICommander
+public class Commander : ICommander
 {
     private static readonly PropertyInfo ChainIdSetterProperty =
         typeof(IEventCommand).GetProperty(nameof(IEventCommand.ChainId))!;
 
-    private ILogger? _log;
-    private HostId? _hostId;
-    private MomentClockSet? _clocks;
-    private CommandHandlerResolver? _handlerResolver;
     private Action<IEventCommand, Symbol>? _chainIdSetter;
+    private ILogger? _log;
 
-    public IServiceProvider Services { get; } = services;
-    public HostId HostId => _hostId ??= Services.GetRequiredService<HostId>();
-    public MomentClockSet Clocks => _clocks ??= Services.Clocks();
+    public IServiceProvider Services { get; }
+    public CommanderHub Hub { get; }
 
-    protected CommandHandlerResolver HandlerResolver => _handlerResolver ??= Services.GetRequiredService<CommandHandlerResolver>();
     protected Action<IEventCommand, Symbol> ChainIdSetter => _chainIdSetter ??= ChainIdSetterProperty.GetSetter<Symbol>();
     protected ILogger Log => _log ??= Services.LogFor(GetType());
+
+    public Commander(IServiceProvider services)
+    {
+        Services = services;
+        Hub = new CommanderHub(this, services);
+    }
 
     public Task Run(CommandContext context, CancellationToken cancellationToken = default)
     {
@@ -36,7 +37,7 @@ public class Commander(IServiceProvider services) : ICommander
     {
         try {
             var command = context.UntypedCommand;
-            var handlers = HandlerResolver.GetCommandHandlerChain(command);
+            var handlers = Hub.HandlerResolver.GetCommandHandlerChain(command);
             context.ExecutionState = new CommandExecutionState(handlers);
             if (handlers.Length == 0)
                 await OnUnhandledCommand(command, context, cancellationToken).ConfigureAwait(false);
@@ -60,7 +61,7 @@ public class Commander(IServiceProvider services) : ICommander
             if (!command.ChainId.IsEmpty)
                 throw new ArgumentOutOfRangeException(nameof(command));
 
-            var handlers = HandlerResolver.GetCommandHandlers(command);
+            var handlers = Hub.HandlerResolver.GetCommandHandlers(command);
             var handlerChains = handlers.HandlerChains;
             if (handlerChains.Count == 0) {
                 await OnUnhandledEvent(command, context, cancellationToken).ConfigureAwait(false);

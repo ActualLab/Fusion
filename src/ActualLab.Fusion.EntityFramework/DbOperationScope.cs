@@ -30,6 +30,8 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
         public IsolationLevel DefaultIsolationLevel { get; init; } = IsolationLevel.Unspecified;
     }
 
+    private IDbShardRegistry<TDbContext>? _shardRegistry;
+    private IShardDbContextFactory<TDbContext>? _contextFactory;
     private DbShard _shard = DbShard.None;
 
     public Options Settings { get; protected init; }
@@ -42,6 +44,7 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
 
     public Operation Operation { get; protected init; }
     public CommandContext CommandContext { get; protected init; }
+    public bool AllowsEvents => true;
     public bool IsUsed => MasterDbContext != null;
     public bool IsClosed { get; private set; }
     public bool? IsConfirmed { get; private set; }
@@ -59,8 +62,10 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
     // Services
     protected IServiceProvider Services { get; }
     protected HostId HostId { get; }
-    protected IDbShardRegistry<TDbContext> DbShardRegistry { get; }
-    protected IShardDbContextFactory<TDbContext> DbContextFactory { get; }
+    protected IDbShardRegistry<TDbContext> ShardRegistry
+        => _shardRegistry ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
+    protected IShardDbContextFactory<TDbContext> ContextFactory
+        => _contextFactory ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
     protected MomentClockSet Clocks { get; }
     protected AsyncLock AsyncLock { get; }
     protected ILogger Log { get; }
@@ -71,11 +76,9 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
         Services = services;
         Log = Services.LogFor(GetType());
         CommandContext = CommandContext.GetCurrent();
-        Clocks = CommandContext.Commander.Clocks;
-
-        HostId = services.GetRequiredService<HostId>();
-        DbShardRegistry = Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
-        DbContextFactory = Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
+        var commanderHub = CommandContext.Commander.Hub;
+        HostId = commanderHub.HostId;
+        Clocks = commanderHub.Clocks;
         AsyncLock = new AsyncLock(LockReentryMode.CheckedPass);
         Operation = Operation.New(this);
     }
@@ -159,12 +162,18 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
                 return;
             }
 
-            Operation.CommitTime = Clocks.SystemClock.Now;
+            Operation.LoggedAt = Clocks.SystemClock.Now;
             if (Operation.Command == null)
                 throw ActualLab.Fusion.Operations.Internal.Errors.OperationHasNoCommand();
 
             var dbContext = MasterDbContext!;
             dbContext.EnableChangeTracking(false); // Just to speed up things a bit
+            if (Operation.HasEvents) {
+                foreach (var @event in Operation.Events) {
+                    var dbOperationEvent = new DbOperationEvent(@event);
+                    dbContext.Add(dbOperationEvent);
+                }
+            }
             var dbOperation = new DbOperation(Operation);
             dbContext.Add(dbOperation);
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -181,7 +190,7 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
                 // See https://docs.microsoft.com/en-us/ef/ef6/fundamentals/connection-resiliency/commit-failures
                 try {
                     // We need a new connection here, since the old one might be broken
-                    var verifierDbContext = await DbContextFactory.CreateDbContextAsync(Shard, cancellationToken).ConfigureAwait(false);
+                    var verifierDbContext = await ContextFactory.CreateDbContextAsync(Shard, cancellationToken).ConfigureAwait(false);
                     await using var _1 = verifierDbContext.ConfigureAwait(false);
 #if NET7_0_OR_GREATER
                     verifierDbContext.Database.AutoTransactionBehavior = AutoTransactionBehavior.WhenNeeded;
@@ -248,8 +257,8 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
             // scope.MasterDbContext?.Database may throw this exception
             Log.LogWarning(e, "IsTransientFailure resorts to temporary {DbContext}", typeof(TDbContext).Name);
             try {
-                var shard = DbShardRegistry.HasSingleShard ? default : DbShard.Template;
-                using var tmpDbContext = DbContextFactory.CreateDbContext(shard);
+                var shard = ShardRegistry.HasSingleShard ? default : DbShard.Template;
+                using var tmpDbContext = ContextFactory.CreateDbContext(shard);
                 var executionStrategy = tmpDbContext.Database.CreateExecutionStrategy();
                 return executionStrategy is ExecutionStrategy retryingExecutionStrategy
                     && retryingExecutionStrategy.ShouldRetryOn(error);
@@ -266,7 +275,7 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
 
     protected virtual async ValueTask CreateMasterDbContext(CancellationToken cancellationToken)
     {
-        var dbContext = await DbContextFactory.CreateDbContextAsync(Shard, cancellationToken).ConfigureAwait(false);
+        var dbContext = await ContextFactory.CreateDbContextAsync(Shard, cancellationToken).ConfigureAwait(false);
         var database = dbContext.ReadWrite().Database;
         database.DisableAutoTransactionsAndSavepoints();
 
@@ -300,7 +309,7 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
         Transaction = await database
             .BeginTransactionAsync(isolationLevel, cancellationToken)
             .ConfigureAwait(false);
-        TransactionId = Operation.Id.Value;
+        TransactionId = Operation.Uuid;
         if (!database.IsInMemory()) {
             Connection = database.GetDbConnection();
             if (Connection == null)

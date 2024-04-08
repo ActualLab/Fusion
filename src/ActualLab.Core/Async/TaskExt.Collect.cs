@@ -13,61 +13,81 @@ public static partial class TaskExt
         => concurrency <= 0 ? Task.WhenAll(tasks) : CollectConcurrently(tasks, concurrency);
 
     public static Task<Result<T>[]> CollectResults<T>(this IEnumerable<Task<T>> tasks, int concurrency = 0)
-        => concurrency <= 0 ? ToResults(tasks.ToList()) : CollectResultsConcurrently(tasks, concurrency);
+        => concurrency <= 0 ? ToResults(tasks.ToArray()) : CollectResultsConcurrently(tasks, concurrency);
 
     // Private methods
 
     private static async Task<T[]> CollectConcurrently<T>(this IEnumerable<Task<T>> tasks, int concurrency)
     {
-        var list = new List<Task<T>>();
-        var runningCount = 0;
-        var i = 0;
-        foreach (var task in tasks) {
-            list.Add(task);
-            if (concurrency > runningCount)
-                runningCount++;
-            else
-                await list[i++].SilentAwait(false);
+        var buffer = ArrayBuffer<Task<T>>.Lease(true, concurrency * 2);
+        try {
+            var runningCount = 0;
+            var i = 0;
+            foreach (var task in tasks) {
+                buffer.Add(task);
+                if (concurrency > runningCount)
+                    runningCount++;
+                else
+                    await buffer[i++].SilentAwait(false);
+            }
+            return buffer.Count == 0
+                ? Array.Empty<T>()
+                : await Task.WhenAll(buffer.ToArray()).ConfigureAwait(false);
         }
-        return await Task.WhenAll(list).ConfigureAwait(false);
+        finally {
+            buffer.Release();
+        }
     }
 
     private static async Task CollectConcurrently(this IEnumerable<Task> tasks, int concurrency)
     {
-        var list = new List<Task>();
-        var runningCount = 0;
-        var i = 0;
-        foreach (var task in tasks) {
-            list.Add(task);
-            if (concurrency > runningCount)
-                runningCount++;
-            else
-                await list[i++].SilentAwait(false);
+        var buffer = ArrayBuffer<Task>.Lease(true, concurrency * 2);
+        try {
+            var runningCount = 0;
+            var i = 0;
+            foreach (var task in tasks) {
+                buffer.Add(task);
+                if (concurrency > runningCount)
+                    runningCount++;
+                else
+                    await buffer[i++].SilentAwait(false);
+            }
+            if (buffer.Count != 0)
+                await Task.WhenAll(buffer.ToArray()).ConfigureAwait(false);
         }
-        await Task.WhenAll(list).ConfigureAwait(false);
+        finally {
+            buffer.Release();
+        }
     }
 
     private static async Task<Result<T>[]> CollectResultsConcurrently<T>(this IEnumerable<Task<T>> tasks, int concurrency)
     {
-        var list = new List<Task<T>>();
-        var runningCount = 0;
-        var i = 0;
-        foreach (var task in tasks) {
-            list.Add(task);
-            if (concurrency > runningCount)
-                runningCount++;
-            else
-                await list[i++].SilentAwait(false);
+        var buffer = ArrayBuffer<Task<T>>.Lease(true, concurrency * 2);
+        try {
+            var runningCount = 0;
+            var i = 0;
+            foreach (var task in tasks) {
+                buffer.Add(task);
+                if (concurrency > runningCount)
+                    runningCount++;
+                else
+                    await buffer[i++].SilentAwait(false);
+            }
+            return buffer.Count == 0
+                ? Array.Empty<Result<T>>()
+                : await ToResults(buffer.ToArray()).ConfigureAwait(false);
         }
-        return await ToResults(list).ConfigureAwait(false);
+        finally {
+            buffer.Release();
+        }
     }
 
-    private static async Task<Result<T>[]> ToResults<T>(List<Task<T>> list)
+    private static async Task<Result<T>[]> ToResults<T>(Task<T>[] tasks)
     {
-        await Task.WhenAll(list).SilentAwait(false);
-        var result = new Result<T>[list.Count];
+        await Task.WhenAll(tasks).SilentAwait(false);
+        var result = new Result<T>[tasks.Length];
         for (var i = 0; i < result.Length; i++)
-            result[i] = list[i].ToResultSynchronously();
+            result[i] = tasks[i].ToResultSynchronously();
         return result;
     }
 }

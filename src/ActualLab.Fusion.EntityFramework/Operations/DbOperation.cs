@@ -9,38 +9,44 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 #pragma warning disable IL2026
 
 [Table("_Operations")]
-[Index(nameof(Id), nameof(Index), Name = "IX_Id")]
-[Index(nameof(CommitTime), nameof(Index), Name = "IX_CommitTime")]
-public sealed class DbOperation : ILogEntry, IHasId<long>, IHasId<string>
+[Index(nameof(Uuid), nameof(Index), Name = "IX_Uuid")]
+[Index(nameof(LoggedAt), nameof(Index), Name = "IX_LoggedAt")]
+public sealed class DbOperation
+    : ILogEntry, IHasId<string>, IHasId<long>
 {
-    public static ITextSerializer Serializer { get; set; } = new NewtonsoftJsonSerializer();
+    public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;
 
     private long? _index;
-    private DateTime _startTime;
-    private DateTime _commitTime;
+    private Symbol _uuid;
+    private Symbol _hostId;
+    private DateTime _startedAt;
+    private DateTime _completedAt;
 
+    Symbol IHasUuid.Uuid => _uuid;
+    string IHasId<string>.Id => _uuid.Value;
     long IHasId<long>.Id => Index;
-    string IHasId<string>.Id => Id;
+    // DbOperations are never updated, but only deleted, so...
+    long ILogEntry.Version { get => 0; set { } }
+    bool ILogEntry.IsProcessed { get => false; set { } }
 
     [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long Index {
         get => _index ?? 0;
         set => _index = value;
     }
-    [NotMapped]
-    public bool HasIndex => _index.HasValue;
+    [NotMapped] public bool HasIndex => _index.HasValue;
 
-    public string Id { get; set; } = "";
-    public string HostId { get; set; } = "";
+    public string Uuid { get => _uuid; set => _uuid = value; }
+    public string HostId { get => _hostId; set => _hostId = value; }
 
-    public DateTime StartTime {
-        get => _startTime.DefaultKind(DateTimeKind.Utc);
-        set => _startTime = value.DefaultKind(DateTimeKind.Utc);
+    public DateTime StartedAt {
+        get => _startedAt.DefaultKind(DateTimeKind.Utc);
+        set => _startedAt = value.DefaultKind(DateTimeKind.Utc);
     }
 
-    public DateTime CommitTime {
-        get => _commitTime.DefaultKind(DateTimeKind.Utc);
-        set => _commitTime = value.DefaultKind(DateTimeKind.Utc);
+    public DateTime LoggedAt {
+        get => _completedAt.DefaultKind(DateTimeKind.Utc);
+        set => _completedAt = value.DefaultKind(DateTimeKind.Utc);
     }
 
     public string CommandJson { get; set; } = "";
@@ -62,7 +68,14 @@ public sealed class DbOperation : ILogEntry, IHasId<long>, IHasId<string>
         var nestedCommands = NestedOperations.IsNullOrEmpty()
             ? new()
             : Serializer.Read<List<NestedOperation>>(NestedOperations);
-        return new Operation(Id, HostId, StartTime, CommitTime, command!, items, nestedCommands) {
+        return new Operation(
+            Uuid,
+            HostId,
+            StartedAt,
+            LoggedAt,
+            command!,
+            items,
+            nestedCommands) {
             Index = HasIndex ? Index : null,
         };
     }
@@ -71,10 +84,10 @@ public sealed class DbOperation : ILogEntry, IHasId<long>, IHasId<string>
     {
         if (operation.Index is { } index)
             Index = index;
-        Id = operation.Id;
+        Uuid = operation.Uuid;
         HostId = operation.HostId;
-        StartTime = operation.StartTime;
-        CommitTime = operation.CommitTime;
+        StartedAt = operation.StartedAt;
+        LoggedAt = operation.LoggedAt;
         CommandJson = Serializer.Write(operation.Command);
         ItemsJson = operation.Items.Items.Count == 0 ? "" : Serializer.Write(operation.Items);
         NestedOperations = operation.NestedOperations.Count == 0 ? "" : Serializer.Write(operation.NestedOperations);

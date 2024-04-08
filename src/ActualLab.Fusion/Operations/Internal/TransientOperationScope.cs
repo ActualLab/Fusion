@@ -15,6 +15,7 @@ public sealed class TransientOperationScope : AsyncDisposableBase, IOperationSco
 
     public CommandContext CommandContext { get; }
     public Operation Operation { get; }
+    public bool AllowsEvents => false;
     public bool IsUsed { get; private set; }
     public bool IsClosed { get; private set; }
     public bool? IsConfirmed { get; private set; }
@@ -58,7 +59,7 @@ public sealed class TransientOperationScope : AsyncDisposableBase, IOperationSco
             return;
 
         if (isConfirmed)
-            Operation.CommitTime = CommandContext.Commander.Clocks.SystemClock.Now;
+            Operation.LoggedAt = CommandContext.Commander.Hub.Clocks.SystemClock.Now;
         IsConfirmed = isConfirmed;
         IsClosed = true;
         IsUsed = CommandContext.Items.Replace<IOperationScope?>(null, this);

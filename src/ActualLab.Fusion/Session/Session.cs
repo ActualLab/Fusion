@@ -11,9 +11,9 @@ namespace ActualLab.Fusion;
 [JsonConverter(typeof(SessionJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(SessionNewtonsoftJsonConverter))]
 [TypeConverter(typeof(SessionTypeConverter))]
-public sealed partial class Session : IHasId<Symbol>, IRequirementTarget,
+public sealed partial class Session : IHasId<Symbol>,
     IEquatable<Session>, IConvertibleTo<string>, IConvertibleTo<Symbol>,
-    IHasJsonCompatibleToString
+    IHasToStringProducingJson
 {
     public static readonly Session Default = new("~");
     public static readonly string ShardTag = "s";

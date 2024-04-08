@@ -40,4 +40,6 @@ public static class Errors
         => new InvalidOperationException("ConfigureBatchProcessor delegate cannot change BatchProcessor's BatchSize.");
     public static Exception BatchSizeIsTooLarge()
         => new InvalidOperationException("DbEntityResolver's BatchSize is too large.");
+    public static Exception CannotCompileQuery()
+        => new InvalidOperationException("DbEntityResolver is unable to produce compiled query.");
 }

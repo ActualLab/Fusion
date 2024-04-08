@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security;
 using ActualLab.Fusion.Authentication;
 
@@ -9,9 +8,63 @@ public class RequireTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void SimpleTest()
     {
+        // Struct
+        Assert.ThrowsAny<InvalidOperationException>(() => 0.Require());
+        Assert.ThrowsAny<InvalidOperationException>(() => ((int?)null).Require());
+        1.Require();
+        ((int?)0).Require();
+
+        // Object
+        Assert.ThrowsAny<InvalidOperationException>(() => ((object)null!).Require());
+        Assert.ThrowsAny<InvalidOperationException>(() => ((object?)null).Require());
+        new object().Require();
+
+        // Custom
         var requirement = Requirement.New<int>(i => i != 1).With("Invalid {0}: {1}!", "int");
-        Assert.ThrowsAny<ValidationException>(() => requirement.Check(1))
+        Assert.ThrowsAny<InvalidOperationException>(() => 1.Require(requirement))
             .Message.Should().Be("Invalid int: 1!");
+    }
+
+    [Fact]
+    public async Task TaskTest()
+    {
+        // Struct
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(() => Task.FromResult(0).Require());
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(() => Task.FromResult((int?)null).Require());
+        await Task.FromResult(1).Require();
+        await Task.FromResult((int?)0).Require();
+
+        // Object
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(() => Task.FromResult((object?)null).Require());
+        await Task.FromResult(new object())!.Require();
+
+        // Custom
+        var requirement = Requirement.New<int>(i => i != 1).With("Invalid {0}: {1}!", "int");
+        (await Assert.ThrowsAnyAsync<InvalidOperationException>(() => Task.FromResult(1).Require(requirement)))
+            .Message.Should().Be("Invalid int: 1!");
+    }
+
+    [Fact]
+    public async Task ValueTaskTest()
+    {
+        // Struct
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            () => ValueTaskExt.FromResult(0).Require().AsTask());
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            () => ValueTaskExt.FromResult((int?)null).Require().AsTask());
+        await ValueTaskExt.FromResult(1).Require();
+        await ValueTaskExt.FromResult((int?)0).Require();
+
+        // Object
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            () => ValueTaskExt.FromResult((object?)null).Require().AsTask());
+        await ValueTaskExt.FromResult(new object())!.Require();
+
+        // Custom
+        var requirement = Requirement.New<int>(i => i != 1).With("Invalid {0}: {1}!", "int");
+        (await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            () => ValueTaskExt.FromResult(1).Require(requirement).AsTask())
+            ).Message.Should().Be("Invalid int: 1!");
     }
 
     [Fact]
@@ -32,10 +85,10 @@ public class RequireTest(ITestOutputHelper @out) : TestBase(@out)
         user = User.NewGuest();
         Assert.ThrowsAny<SecurityException>(() => user.Require(User.MustBeAuthenticated));
         Assert.ThrowsAny<ServiceException>(() => user.Require(User.MustBeAuthenticated.WithServiceException));
-        Assert.ThrowsAny<ValidationException>(() => user.Require(Requirement.New<User>(u => u?.Name == "Bob")));
-        Assert.ThrowsAny<ValidationException>(() => user.Require(User.MustBeAuthenticated.With("Invalid!")))
+        Assert.ThrowsAny<InvalidOperationException>(() => user.Require(Requirement.New<User>(u => u?.Name == "Bob")));
+        Assert.ThrowsAny<InvalidOperationException>(() => user.Require(User.MustBeAuthenticated.With("Invalid!")))
             .Message.Should().Be("Invalid!");
-        Assert.ThrowsAny<ValidationException>(() => user.Require(User.MustBeAuthenticated.With("Invalid {0}!", "Author")))
+        Assert.ThrowsAny<InvalidOperationException>(() => user.Require(User.MustBeAuthenticated.With("Invalid {0}!", "Author")))
             .Message.Should().Be("Invalid Author!");
         Assert.ThrowsAny<NotSupportedException>(() => user.Require(User.MustBeAuthenticated.With("Invalid!", m => new NotSupportedException(m))))
             .Message.Should().Be("Invalid!");

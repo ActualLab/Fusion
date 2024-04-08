@@ -9,9 +9,7 @@ namespace ActualLab.Text;
 [JsonConverter(typeof(SymbolJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(SymbolNewtonsoftJsonConverter))]
 [TypeConverter(typeof(SymbolTypeConverter))]
-public readonly partial struct Symbol : IRequirementTarget,
-    IEquatable<Symbol>, IComparable<Symbol>, IConvertibleTo<string>,
-    ISerializable
+public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>, IConvertibleTo<string>, ISerializable
 {
     public static readonly Symbol Empty = new("");
 

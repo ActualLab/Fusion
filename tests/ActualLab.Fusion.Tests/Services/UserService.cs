@@ -63,20 +63,20 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         var context = CommandContext.GetCurrent();
         if (Computed.IsInvalidating()) {
             _ = Get(user.Id, default).AssertCompleted();
-            existingUser = context.OperationItems.Get<User>();
+            existingUser = context.Operation.Items.Get<User>();
             if (existingUser == null)
                 _ = Count(default).AssertCompleted();
             return;
         }
 
-        var dbContext = await CreateCommandDbContext(cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateCommandDbContext(cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);
 
         var userId = user.Id;
         if (orUpdate) {
             existingUser = await dbContext.Users.FindAsync(DbKey.Compose(userId), cancellationToken);
-            context.OperationItems.Set(existingUser);
+            context.Operation.Items.Set(existingUser);
             if (existingUser != null!)
                 dbContext.Users.Update(user);
         }
@@ -93,7 +93,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
             return;
         }
 
-        var dbContext = await CreateCommandDbContext(cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateCommandDbContext(cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         dbContext.Users.Update(user);
@@ -103,7 +103,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
     public async Task UpdateDirectly(UserService_Update command, CancellationToken cancellationToken = default)
     {
         var user = command.User;
-        var dbContext = await CreateDbContext(true, cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateDbContext(true, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         dbContext.Users.Update(user);
@@ -118,7 +118,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         var user = command.User;
         var context = CommandContext.GetCurrent();
         if (Computed.IsInvalidating()) {
-            var success = context.OperationItems.GetOrDefault<bool>();
+            var success = context.Operation.Items.GetOrDefault<bool>();
             if (success) {
                 _ = Get(user.Id, default).AssertCompleted();
                 _ = Count(default).AssertCompleted();
@@ -126,13 +126,13 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
             return false;
         }
 
-        var dbContext = await CreateCommandDbContext(cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateCommandDbContext(cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         dbContext.Users.Remove(user);
         try {
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            context.OperationItems.Set(true);
+            context.Operation.Items.Set(true);
             return true;
         }
         catch (DbUpdateConcurrencyException) {
@@ -148,7 +148,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         if (UseEntityResolver)
             return await _userResolver.Get(userId, cancellationToken).ConfigureAwait(false);
 
-        var dbContext = await CreateDbContext(cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateDbContext(cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
 
         var user = await dbContext.Users
@@ -161,7 +161,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
     {
         await Everything().ConfigureAwait(false);
 
-        var dbContext = await CreateDbContext(cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateDbContext(cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
 
         var count = await dbContext.Users.AsQueryable()
@@ -187,10 +187,8 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
     [ComputeMethod]
     protected virtual Task<Unit> Everything() => TaskExt.UnitTask;
 
-    private new ValueTask<TestDbContext> CreateCommandDbContext(CancellationToken cancellationToken = default)
-    {
-        return IsProxy
-            ? base.CreateCommandDbContext(cancellationToken)
-            : CreateDbContext(readWrite: true, cancellationToken);
-    }
+    private ValueTask<TestDbContext> CreateCommandDbContext(CancellationToken cancellationToken = default)
+        => IsProxy
+            ? DbHub.CreateCommandDbContext(cancellationToken)
+            : DbHub.CreateDbContext(readWrite: true, cancellationToken);
 }

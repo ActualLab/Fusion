@@ -4,6 +4,7 @@ using ActualLab.CommandR.Diagnostics;
 using ActualLab.CommandR.Interception;
 using ActualLab.CommandR.Internal;
 using ActualLab.CommandR.Rpc;
+using ActualLab.Generators;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 
@@ -43,9 +44,11 @@ public readonly struct CommanderBuilder
         services.TryAddSingleton(_ => new HostId());
         services.TryAddSingleton(_ => MomentClockSet.Default);
         services.TryAddSingleton(c => c.GetRequiredService<MomentClockSet>().SystemClock);
+        services.TryAddSingleton<UuidGenerator>(_ => new UlidUuidGenerator());
 
         // Commander, handlers, etc.
         services.TryAddSingleton<ICommander>(c => new Commander(c));
+        services.TryAddSingleton(c => c.GetRequiredService<ICommander>().Hub);
         services.TryAddSingleton(new HashSet<CommandHandler>());
         services.TryAddSingleton(c => new CommandHandlerRegistry(c));
         services.TryAddSingleton(_ => new CommandHandlerResolver.Options());

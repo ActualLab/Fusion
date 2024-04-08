@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace ActualLab.Fusion.Extensions;
 
-public abstract record PageRef : IHasJsonCompatibleToString
+public abstract record PageRef : IHasToStringProducingJson
 {
     public static PageRef<TKey> New<TKey>(int count)
         => new(count);

@@ -24,7 +24,7 @@ public class DbKeyValueStore<TDbContext, TDbKeyValue>(IServiceProvider services)
             return;
         }
 
-        var dbContext = await CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false); // Just to speed up things a bit
 
@@ -61,7 +61,7 @@ public class DbKeyValueStore<TDbContext, TDbKeyValue>(IServiceProvider services)
             return;
         }
 
-        var dbContext = await CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false); // Just to speed up things a bit
 
@@ -96,7 +96,7 @@ public class DbKeyValueStore<TDbContext, TDbKeyValue>(IServiceProvider services)
     {
         _ = PseudoGet(shard, prefix);
 
-        var dbContext = await CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         var count = await dbContext.Set<TDbKeyValue>().AsQueryable()
@@ -114,7 +114,7 @@ public class DbKeyValueStore<TDbContext, TDbKeyValue>(IServiceProvider services)
     {
         _ = PseudoGet(shard, prefix);
 
-        var dbContext = await CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         var query = dbContext.Set<TDbKeyValue>().AsQueryable()

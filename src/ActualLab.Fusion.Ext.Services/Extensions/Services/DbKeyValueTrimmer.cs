@@ -36,7 +36,7 @@ public class DbKeyValueTrimmer<TDbContext, TDbKeyValue> : DbShardWorkerBase<TDbC
 
         var activitySource = GetType().GetActivitySource();
         var runChain = new AsyncChain($"Trim({shard})", async cancellationToken1 => {
-            var dbContext = await CreateDbContext(shard, true, cancellationToken1).ConfigureAwait(false);
+            var dbContext = await DbHub.CreateDbContext(shard, true, cancellationToken1).ConfigureAwait(false);
             await using var _ = dbContext.ConfigureAwait(false);
             dbContext.EnableChangeTracking(false);
 

@@ -153,9 +153,10 @@
   <PropertyGroup Condition="$(IsServerSideProject)">
     <!-- IL2026: Members attributed with RequiresUnreferencedCode may break when trimming -->
     <!-- IL2046: All interface implementations and method overrides must have annotations matching the interface or overridden virtual method 'RequiresUnreferencedCodeAttribute' annotations -->
+    <!-- IL2055: IL2055: Call to 'System.Type.MakeGenericType' cannot be statically analyzed by the trimmer -->
     <!-- IL2067, IL2070, IL2072, IL2075, IL2087: 'type' argument does not satisfy 'DynamicallyAccessedMemberTypes.*' -->
     <!-- IL2091: 'target generic parameter' generic argument does not satisfy 'DynamicallyAccessedMembersAttribute' ... -->
-    <NoWarn>$(NoWarn);IL2026;IL2046;IL2067;IL2070;IL2072;IL2075;IL2087;IL2091</NoWarn>
+    <NoWarn>$(NoWarn);IL2026;IL2046;IL2055;IL2067;IL2070;IL2072;IL2075;IL2087;IL2091</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>

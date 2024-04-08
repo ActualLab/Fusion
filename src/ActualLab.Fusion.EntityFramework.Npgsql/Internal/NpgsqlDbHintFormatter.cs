@@ -1,4 +1,3 @@
-using Cysharp.Text;
 using ActualLab.Fusion.EntityFramework.Internal;
 
 namespace ActualLab.Fusion.EntityFramework.Npgsql.Internal;

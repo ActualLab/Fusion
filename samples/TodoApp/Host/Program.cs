@@ -102,7 +102,7 @@ void ConfigureServices()
             operations.ConfigureOperationLogProcessor(_ => new() {
                 // We use FileBasedDbOperationLogChangeTracking, so unconditional wake up period
                 // can be arbitrary long - all depends on the reliability of Notifier-Monitor chain.
-                UnconditionalCheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
+                ForcedCheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
             });
             operations.AddFileBasedOperationLogChangeTracking();
             // db.AddRedisOperationLogChangeTracking();

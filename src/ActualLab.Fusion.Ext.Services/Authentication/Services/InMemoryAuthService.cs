@@ -38,7 +38,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
                 _ = IsSignOutForced(session, default);
                 _ = GetOptions(session, default);
             }
-            var invSessionInfo = context.OperationItems.Get<SessionInfo>();
+            var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo != null) {
                 _ = GetUser(shard, invSessionInfo.UserId, default);
                 _ = GetUserSessions(shard, invSessionInfo.UserId, default);
@@ -68,7 +68,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             return;
 
         // Updating SessionInfo
-        context.OperationItems.Set(sessionInfo);
+        context.Operation.Items.Set(sessionInfo);
         sessionInfo = sessionInfo with {
             AuthenticatedIdentity = "",
             UserId = Symbol.Empty,
@@ -85,7 +85,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         var shard = ShardResolver.Resolve<Unit>(command);
 
         if (Computed.IsInvalidating()) {
-            var invSessionInfo = context.OperationItems.Get<SessionInfo>();
+            var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo != null)
                 _ = GetUser(shard, invSessionInfo.UserId, default);
             return;
@@ -98,7 +98,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             .Require()
             .ConfigureAwait(false);
 
-        context.OperationItems.Set(sessionInfo);
+        context.Operation.Items.Set(sessionInfo);
         if (command.Name != null) {
             if (command.Name.Length < 3)
                 throw new ArgumentOutOfRangeException(nameof(command));

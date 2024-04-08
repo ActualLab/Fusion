@@ -9,7 +9,9 @@ using ActualLab.Net;
 
 namespace ActualLab.Fusion.EntityFramework;
 
-public interface IDbEntityResolver<TKey, TDbEntity>
+public interface IDbEntityResolver;
+
+public interface IDbEntityResolver<TKey, TDbEntity> : IDbEntityResolver
     where TKey : notnull
     where TDbEntity : class
 {
@@ -59,14 +61,17 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         .MakeGenericMethod(typeof(TDbEntity));
     protected static MethodInfo QueryableWhereMethod { get; }
         = new Func<IQueryable<TDbEntity>, Expression<Func<TDbEntity, bool>>, IQueryable<TDbEntity>>(Queryable.Where).Method;
+    private static MethodInfo EnumerableContainsMethod { get; }
+        = new Func<IEnumerable<TKey>, TKey, bool>(Enumerable.Contains).Method;
 
     private ConcurrentDictionary<DbShard, BatchProcessor<TKey, TDbEntity?>>? _batchProcessors;
     private ITransientErrorDetector<TDbContext>? _transientErrorDetector;
     private ActivitySource? _activitySource;
 
     protected Options Settings { get; }
-    protected (Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>> Query, int BatchSize)[] Queries { get; init; }
+    protected Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>[] Queries { get; init; }
     protected ActivitySource ActivitySource => _activitySource ??= GetType().GetActivitySource();
+    protected bool UseContainsQuery { get; }
 
     public Func<TDbEntity, TKey> KeyExtractor { get; init; }
     public Expression<Func<TDbEntity, TKey>> KeyExtractorExpression { get; init; }
@@ -95,16 +100,31 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         KeyExtractor = keyExtractor.Compile();
         _batchProcessors = new();
 
-        var buffer = ArrayBuffer<(Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>, int)>.Lease(false);
-        try {
-            for (var batchSize = 2; batchSize < Settings.BatchSize; batchSize *= 2)
-                buffer.Add((CreateCompiledQuery(batchSize), batchSize));
-            buffer.Add((CreateCompiledQuery(Settings.BatchSize), Settings.BatchSize));
-            Queries = buffer.ToArray();
+#pragma warning disable CA2214
+        // ReSharper disable once VirtualMemberCallInConstructor
+        UseContainsQuery = MustUseContainsQuery(typeof(TKey));
+#pragma warning restore CA2214
+        var queries = new List<Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>>(Settings.BatchSize + 1) {
+            null!,
+            CreateCompiledEqualsQuery(1),
+        };
+        if (UseContainsQuery) {
+            var compiledQuery = CreateCompiledContainsQuery();
+            for (var batchSize = 2; batchSize <= Settings.BatchSize; batchSize++)
+                queries.Add(compiledQuery);
         }
-        finally {
-            buffer.Release();
+        else {
+            var batchSize = 2;
+            var compiledQuery = CreateCompiledEqualsQuery(batchSize);
+            for (var i = 2; i <= Settings.BatchSize; i++) {
+                if (i > batchSize) {
+                    batchSize = Math.Min(batchSize * 2, Settings.BatchSize);
+                    compiledQuery = CreateCompiledEqualsQuery(batchSize);
+                }
+                queries.Add(compiledQuery);
+            }
         }
+        Queries = queries.ToArray();
     }
 
     public async ValueTask DisposeAsync()
@@ -126,7 +146,72 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
     // Protected methods
 
-    protected Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>> CreateCompiledQuery(int batchSize)
+    protected virtual bool MustUseContainsQuery(Type type)
+    {
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            type = type.GetGenericArguments()[0];
+        return type.IsPrimitive
+            || type.IsEnum
+#if NET6_0_OR_GREATER
+            || type == typeof(DateOnly)
+            || type == typeof(TimeOnly)
+#endif
+            || type == typeof(DateTime)
+            || type == typeof(DateTimeOffset)
+            || type == typeof(TimeSpan)
+            || type == typeof(Guid)
+            || type == typeof(decimal)
+            || type == typeof(string);
+    }
+
+    protected Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>> CreateCompiledContainsQuery()
+    {
+        var pDbContext = Expression.Parameter(typeof(TDbContext), "dbContext");
+        var pKeys = Expression.Parameter(typeof(TKey[]), "pKeys");
+        var pEntity = Expression.Parameter(typeof(TDbEntity), "e");
+
+        // entity.Key expression
+        var eKey = KeyExtractorExpression.Body.Replace(KeyExtractorExpression.Parameters[0], pEntity);
+
+        // .Where predicate expression
+        var ePredicate = Expression.Call(EnumerableContainsMethod, pKeys, eKey);
+        var lPredicate = Expression.Lambda<Func<TDbEntity, bool>>(ePredicate!, pEntity);
+
+        // dbContext.Set<TDbEntity>().Where(...)
+        var eEntitySet = Expression.Call(pDbContext, DbContextSetMethod);
+        var eWhere = Expression.Call(null, QueryableWhereMethod, eEntitySet, Expression.Quote(lPredicate));
+
+        // Applying QueryTransformer
+        var qt = Settings.QueryTransformer;
+        var eBody = qt == null
+            ? eWhere
+            : qt.Body.Replace(qt.Parameters[0], eWhere);
+
+        // Creating compiled query
+        var lambda = Expression.Lambda(eBody, [pDbContext, pKeys]);
+#pragma warning disable EF1001
+        var query = new CompiledAsyncEnumerableQuery<TDbContext, TDbEntity>(lambda);
+#pragma warning restore EF1001
+
+        // Locating query.Execute methods
+        var mExecute = query.GetType()
+            .GetMethods()
+            .SingleOrDefault(m => Equals(m.Name, nameof(query.Execute))
+                && m.IsGenericMethod
+                && m.GetGenericArguments().Length == 1)
+#pragma warning disable IL2060
+            ?.MakeGenericMethod(typeof(TKey[]));
+#pragma warning restore IL2060
+        if (mExecute == null)
+            throw Errors.CannotCompileQuery();
+
+        // Creating compiled query invoker
+        var eExecuteCall = Expression.Call(Expression.Constant(query), mExecute, pDbContext, pKeys);
+        return (Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>)Expression
+            .Lambda(eExecuteCall, pDbContext, pKeys).Compile();
+    }
+
+    protected Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>> CreateCompiledEqualsQuery(int batchSize)
     {
         var pDbContext = Expression.Parameter(typeof(TDbContext), "dbContext");
         var pKeys = new ParameterExpression[batchSize];
@@ -181,7 +266,8 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         var eDbContext = Enumerable.Range(0, 1).Select(_ => (Expression)pDbContext);
         var eAllKeys = Enumerable.Range(0, batchSize).Select(i => Expression.ArrayIndex(pAllKeys, Expression.Constant(i)));
         var eExecuteCall = Expression.Call(Expression.Constant(query), mExecute, eDbContext.Concat(eAllKeys));
-        return (Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>)Expression.Lambda(eExecuteCall, pDbContext, pAllKeys).Compile();
+        return (Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>)Expression
+            .Lambda(eExecuteCall, pDbContext, pAllKeys).Compile();
     }
 
     protected BatchProcessor<TKey, TDbEntity?> GetBatchProcessor(DbShard shard)
@@ -219,13 +305,14 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         List<BatchProcessor<TKey, TDbEntity?>.Item> batch,
         CancellationToken cancellationToken)
     {
-        if (batch.Count == 0)
+        var batchSize = batch.Count;
+        if (batchSize == 0)
             return;
 
-        using var activity = StartProcessBatchActivity(shard, batch.Count);
-        var (query, batchSize) = Queries.First(q => q.BatchSize >= batch.Count);
+        using var activity = StartProcessBatchActivity(shard, batchSize);
+        var query = Queries[batchSize];
         for (var tryIndex = 0;; tryIndex++) {
-            var dbContext = await CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
+            var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
             await using var _ = dbContext.ConfigureAwait(false);
 
             var keys = ArrayPool<TKey>.Shared.Rent(batchSize);

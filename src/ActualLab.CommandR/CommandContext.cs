@@ -4,7 +4,7 @@ using ActualLab.CommandR.Operations;
 
 namespace ActualLab.CommandR;
 
-public abstract class CommandContext(ICommander commander) : IHasServices, IRequirementTarget, IAsyncDisposable
+public abstract class CommandContext(ICommander commander) : IHasServices, IAsyncDisposable
 {
     private static readonly ConcurrentDictionary<Type, Type> CommandContextTypeCache = new();
 
@@ -35,10 +35,9 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IRequ
         get => OutermostContext._items;
         protected init => _items = value;
     }
-#pragma warning disable CA1721
-    public Operation? Operation => OutermostContext._operation;
-#pragma warning restore CA1721
-    public OptionSet OperationItems => GetOperation().Items;
+
+    public Operation Operation
+        => OutermostContext._operation ?? throw Errors.CommandContextHasNoOperation();
 
     // Static methods
 
@@ -99,15 +98,16 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IRequ
     public CommandContext<TResult> Cast<TResult>()
         => (CommandContext<TResult>)this;
 
-    public Operation GetOperation()
-        => Operation ?? throw Errors.CommandContextHasNoOperation();
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Operation? TryGetOperation()
+        => OutermostContext._operation;
 
     public void ChangeOperation(Operation? operation, bool moveItems = false)
     {
-        if (Operation == operation)
+        var oldOperation = TryGetOperation();
+        if (oldOperation == operation)
             return;
 
-        var oldOperation = Operation;
         OutermostContext._operation = operation;
         if (moveItems && operation != null && oldOperation != null)
             operation.Items = oldOperation.Items;

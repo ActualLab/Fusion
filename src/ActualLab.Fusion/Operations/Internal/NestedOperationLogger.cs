@@ -19,7 +19,7 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.NestedCommandLogger)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
-        var operation = context.Operation;
+        var operation = context.TryGetOperation();
         var mustBeLogged =
             operation != null // Should have an operation
             && context.OuterContext != null // Should be a nested context
@@ -45,7 +45,7 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
             if (error == null) {
                 // Downstream handler may change Operation to its own one,
                 // current command must be logged as part of that operation.
-                operation = context.GetOperation();
+                operation = context.Operation;
                 if (operation.Scope is { IsClosed: false })
                     operation.NestedOperations.Add(new(command, operationItems));
             }

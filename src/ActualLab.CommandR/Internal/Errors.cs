@@ -50,4 +50,6 @@ public static class Errors
 
     public static Exception CommandContextHasNoOperation()
         => new InvalidOperationException("CommandContext has no handlers providing an Operation (CommandContext.Operation is null).");
+    public static Exception ThisOperationCannotHaveEvents()
+        => new NotSupportedException("This operation cannot have events.");
 }

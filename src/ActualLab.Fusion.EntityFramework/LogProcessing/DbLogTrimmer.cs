@@ -50,15 +50,15 @@ public abstract class DbLogTrimmer<TDbContext, TDbEntry>(DbLogTrimmerOptions set
 
     protected virtual async Task<long> TrimBatch(DbShard shard, int batchSize, CancellationToken cancellationToken)
     {
-        var minCommitTime = SystemClock.Now.ToDateTime() - Settings.MaxEntryAge;
+        var minLoggedAt = SystemClock.Now.ToDateTime() - Settings.MaxEntryAge;
 
         using var _ = ActivitySource.StartActivity().AddShardTags(shard);
-        var dbContext = await CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);
 
         var lastCandidate = await dbContext.Set<TDbEntry>(DbHintSet.UpdateSkipLocked)
-            .FirstOrDefaultAsync(e => e.CommitTime < minCommitTime, cancellationToken)
+            .FirstOrDefaultAsync(e => e.LoggedAt < minLoggedAt, cancellationToken)
             .ConfigureAwait(false);
         if (lastCandidate == null)
             return 0;

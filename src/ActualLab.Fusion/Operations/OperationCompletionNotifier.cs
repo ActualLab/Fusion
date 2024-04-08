@@ -11,9 +11,9 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
 {
     public record Options
     {
-        // Should be >= MaxBatchSize @ DbOperationLogReader.Options
+        // Should be >= MaxBatchSize @ DbOperationLogProcessor.Options
         public int MaxKnownOperationCount { get; init; } = 16384;
-        // Should be >= MaxCommitAge + MaxCommitDuration @ DbOperationLogReader.Options
+        // Should be >= MaxCommitAge + MaxCommitDuration @ DbOperationLogProcessor.Options
         public TimeSpan MaxKnownOperationAge { get; init; } = TimeSpan.FromMinutes(10);
         public IMomentClock? Clock { get; init; }
     }
@@ -22,8 +22,8 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
     protected IServiceProvider Services { get; }
     protected HostId HostId { get; }
     protected IOperationCompletionListener[] OperationCompletionListeners { get; }
-    protected RecentlySeenMap<Symbol, Unit> RecentlySeenOperationIds { get; }
-    protected object Lock => RecentlySeenOperationIds;
+    protected RecentlySeenMap<Symbol, Unit> RecentlySeenUuids { get; }
+    protected object Lock => RecentlySeenUuids;
     protected IMomentClock Clock { get; }
     protected ILogger Log { get; }
 
@@ -36,7 +36,7 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
 
         HostId = Services.GetRequiredService<HostId>();
         OperationCompletionListeners = Services.GetServices<IOperationCompletionListener>().ToArray();
-        RecentlySeenOperationIds = new RecentlySeenMap<Symbol, Unit>(
+        RecentlySeenUuids = new RecentlySeenMap<Symbol, Unit>(
             Settings.MaxKnownOperationCount,
             Settings.MaxKnownOperationAge,
             Clock);
@@ -47,9 +47,8 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
 
     public Task<bool> NotifyCompleted(Operation operation, CommandContext? commandContext)
     {
-        var operationId = (Symbol) operation.Id;
         lock (Lock) {
-            if (!RecentlySeenOperationIds.TryAdd(operationId, operation.StartTime))
+            if (!RecentlySeenUuids.TryAdd(operation.Uuid, operation.StartedAt))
                 return TaskExt.FalseTask;
         }
 

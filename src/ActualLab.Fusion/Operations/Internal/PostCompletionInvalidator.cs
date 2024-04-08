@@ -56,7 +56,7 @@ public class PostCompletionInvalidator(
         using var activity = StartActivity(command);
 
         var operationItems = operation.Items;
-        var oldOperation = context.Operation;
+        var oldOperation = context.TryGetOperation();
         context.ChangeOperation(operation);
         var invalidateScope = Computed.Invalidate();
         try {

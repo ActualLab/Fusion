@@ -1,5 +1,5 @@
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Internal;
 
 namespace ActualLab.Requirements;
 
@@ -10,7 +10,7 @@ public record MustExistRequirement<
     public static readonly MustExistRequirement<T> Default = new();
 
     public MustExistRequirement()
-        => ExceptionBuilder = new("'{0}' is not found.", message => new ValidationException(message));
+        => ExceptionBuilder = new("'{0}' is not found.", Errors.Constraint);
 
     public override bool IsSatisfied([NotNullWhen(true)] T? value)
         => typeof(T).IsValueType

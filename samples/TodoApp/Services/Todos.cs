@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Rpc;
@@ -35,7 +34,7 @@ public class Todos(ISandboxedKeyValueStore store, IAuth auth) : ITodos
             oldTodo = await Get(session, todo.Id, cancellationToken);
 
         if (todo.Title.Contains("@"))
-            throw new ValidationException("Todo title can't contain '@' symbol.");
+            throw new InvalidOperationException("Todo title can't contain '@' symbol.");
 
         var key = GetTodoKey(user, todo.Id);
         await store.Set(session, key, todo, cancellationToken);

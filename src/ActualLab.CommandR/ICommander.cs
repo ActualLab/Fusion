@@ -1,9 +1,10 @@
+using ActualLab.CommandR.Internal;
+
 namespace ActualLab.CommandR;
 
 public interface ICommander : IHasServices
 {
-    HostId HostId { get; }
-    MomentClockSet Clocks { get; }
+    CommanderHub Hub { get; }
 
     Task Run(CommandContext context, CancellationToken cancellationToken = default);
 }

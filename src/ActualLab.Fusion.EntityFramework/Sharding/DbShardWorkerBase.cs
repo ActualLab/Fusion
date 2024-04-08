@@ -19,20 +19,6 @@ public abstract class DbShardWorkerBase<TDbContext>(
     protected ICommander Commander => DbHub.Commander;
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
-    protected ValueTask<TDbContext> CreateDbContext(CancellationToken cancellationToken = default)
-        => DbHub.CreateDbContext(cancellationToken);
-    protected ValueTask<TDbContext> CreateDbContext(bool readWrite, CancellationToken cancellationToken = default)
-        => DbHub.CreateDbContext(readWrite, cancellationToken);
-    protected ValueTask<TDbContext> CreateDbContext(DbShard shard, CancellationToken cancellationToken = default)
-        => DbHub.CreateDbContext(shard, cancellationToken);
-    protected ValueTask<TDbContext> CreateDbContext(DbShard shard, bool readWrite, CancellationToken cancellationToken = default)
-        => DbHub.CreateDbContext(shard, readWrite, cancellationToken);
-
-    protected ValueTask<TDbContext> CreateCommandDbContext(CancellationToken cancellationToken = default)
-        => DbHub.CreateCommandDbContext(cancellationToken);
-    protected ValueTask<TDbContext> CreateCommandDbContext(DbShard shard, CancellationToken cancellationToken = default)
-        => DbHub.CreateCommandDbContext(shard, cancellationToken);
-
     protected override Task OnRun(CancellationToken cancellationToken)
     {
         var usedShards = DbHub.ShardRegistry.UsedShards;

@@ -1,3 +1,4 @@
+using System;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Internal;
 
@@ -32,6 +33,21 @@ public static class ServiceCollectionExt
         services.RemoveAll(x => x.ServiceType == typeof(TDbContext));
         services.AddSingleton<IDbContextFactory<TDbContext>>(
             c => new FuncDbContextFactory<TDbContext>(() => c.Activate<TDbContext>()));
+        return services;
+    }
+
+    public static IServiceCollection ReplaceDbEntityResolvers(
+        this IServiceCollection services,
+        Type entityResolverGenericType)
+    {
+        foreach (var descriptor in services) {
+            var serviceType = descriptor.ServiceType;
+            if (!serviceType.IsGenericType || serviceType.GetGenericTypeDefinition() != typeof(IDbEntityResolver<,>))
+                continue;
+
+            var newImplementationType = entityResolverGenericType.MakeGenericType(serviceType.GetGenericArguments());
+            descriptor.SetImplementationFactory(c => c.Activate(newImplementationType));
+        }
         return services;
     }
 }

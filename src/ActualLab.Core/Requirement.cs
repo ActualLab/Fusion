@@ -35,23 +35,28 @@ public abstract record Requirement<
                 if (_mustExist != null)
                     return _mustExist;
 
-                var type = typeof(T);
-                var result = type
-                    .GetField(MustExistFieldOrPropertyName, BindingFlags.Public | BindingFlags.Static)
-                    ?.GetValue(null) as Requirement<T>;
-                result ??= type
-                    .GetProperty(MustExistFieldOrPropertyName, BindingFlags.Public | BindingFlags.Static)
-                    ?.GetValue(null) as Requirement<T>;
-                result ??= MustExistRequirement<T>.Default;
+                Requirement<T>? result;
+                if (typeof(IRequirementTarget).IsAssignableFrom(typeof(T))) {
+                    var type = typeof(T);
+                    result = type
+                        .GetField(MustExistFieldOrPropertyName, BindingFlags.Public | BindingFlags.Static)
+                        ?.GetValue(null) as Requirement<T>;
+                    result ??= type
+                        .GetProperty(MustExistFieldOrPropertyName, BindingFlags.Public | BindingFlags.Static)
+                        ?.GetValue(null) as Requirement<T>;
+                    result ??= MustExistRequirement<T>.Default;
+                }
+                else
+                    result = MustExistRequirement<T>.Default;
                 return _mustExist = result;
             }
         }
     }
 
     public override bool IsSatisfiedUntyped([NotNullWhen(true)] object? value)
-        => IsSatisfied((T?) value);
+        => IsSatisfied((T?)value);
     public override object CheckUntyped([NotNull] object? value)
-        => Check((T?) value)!;
+        => Check((T?)value)!;
 
     public abstract bool IsSatisfied([NotNullWhen(true)] T? value);
     public abstract T Check([NotNull] T? value);

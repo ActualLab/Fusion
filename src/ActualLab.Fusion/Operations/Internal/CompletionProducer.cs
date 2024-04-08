@@ -17,7 +17,7 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
     protected Options Settings { get; } = settings;
     protected ICommander Commander { get; } = commander;
     protected IServiceProvider Services => Commander.Services;
-    protected HostId HostId => Commander.HostId;
+    protected HostId HostId => Commander.Hub.HostId;
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     public bool IsReady()

@@ -1,7 +1,5 @@
 Now:
-- Nothing :)
+- Outbox
 
 Near-term:
 - Robust routing tests
-- InvalidationInfoProvider.IsClientComputeServiceCommand & command execution w/ routers
-- ComputeServiceExt.IsClient

@@ -43,12 +43,18 @@ public class DbHub<TDbContext>(IServiceProvider services)
     public MomentClockSet Clocks
         => _clocks ??= Services.Clocks();
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<TDbContext> CreateDbContext(CancellationToken cancellationToken = default)
         => CreateDbContext(default, false, cancellationToken);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<TDbContext> CreateDbContext(bool readWrite, CancellationToken cancellationToken = default)
         => CreateDbContext(default, readWrite, cancellationToken);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<TDbContext> CreateDbContext(DbShard shard, CancellationToken cancellationToken = default)
         => CreateDbContext(shard, false, cancellationToken);
+
     public async ValueTask<TDbContext> CreateDbContext(DbShard shard, bool readWrite, CancellationToken cancellationToken = default)
     {
         var dbContext = await ContextFactory.CreateDbContextAsync(shard, cancellationToken).ConfigureAwait(false);
@@ -56,8 +62,10 @@ public class DbHub<TDbContext>(IServiceProvider services)
         return dbContext;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<TDbContext> CreateCommandDbContext(CancellationToken cancellationToken = default)
         => CreateCommandDbContext(default, cancellationToken);
+
     public async ValueTask<TDbContext> CreateCommandDbContext(DbShard shard, CancellationToken cancellationToken = default)
     {
         if (Computed.IsInvalidating())

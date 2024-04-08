@@ -99,7 +99,7 @@ public class OperationReprocessor(
         if (FailedTryCount > Options.MaxRetryCount)
             return false;
 
-        var operation = CommandContext.Operation;
+        var operation = CommandContext.TryGetOperation();
         if (operation == null || operation.Scope is TransientOperationScope)
             return false;
 

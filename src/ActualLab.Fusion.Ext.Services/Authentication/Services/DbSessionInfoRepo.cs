@@ -90,7 +90,7 @@ public class DbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>(
     public virtual async Task<int> Trim(
         DbShard shard, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default)
     {
-        var dbContext = await CreateDbContext(shard, true, cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateDbContext(shard, true, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);
 
