@@ -14,7 +14,7 @@ public class FileSystemDbLogWatcher<TDbContext, TDbEntry>(
 {
     public FileSystemDbLogWatcherOptions<TDbContext> Settings { get; } = settings;
 
-    public override Task Notify(DbShard shard, CancellationToken cancellationToken = default)
+    public override Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default)
     {
         if (StopToken.IsCancellationRequested)
             return Task.CompletedTask;

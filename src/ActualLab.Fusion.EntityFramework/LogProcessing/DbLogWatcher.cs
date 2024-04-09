@@ -7,7 +7,7 @@ public interface IDbLogWatcher<TDbContext, TDbEntry>
     where TDbContext : DbContext
     where TDbEntry : class, ILogEntry
 {
-    Task Notify(DbShard shard, CancellationToken cancellationToken = default);
+    Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default);
     Task WhenChanged(DbShard shard, CancellationToken cancellationToken = default);
 }
 
@@ -19,7 +19,7 @@ public abstract class DbLogWatcher<TDbContext, TDbEntry>(IServiceProvider servic
     protected ConcurrentDictionary<DbShard, LazySlim<DbShard, DbLogWatcher<TDbContext, TDbEntry>, DbShardWatcher>>
         ShardWatchers { get; set; } = new();
 
-    public abstract Task Notify(DbShard shard, CancellationToken cancellationToken = default);
+    public abstract Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default);
 
     public virtual Task WhenChanged(DbShard shard, CancellationToken cancellationToken = default)
     {

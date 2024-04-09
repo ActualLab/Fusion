@@ -174,22 +174,26 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var users = Services.GetRequiredService<IUserService>();
         await using var _ = await WebHost.Serve();
         var webUsers = WebServices.GetRequiredService<IUserService>();
+        var syncTimeout = TimeSpan.FromSeconds(300);
 
         async Task PingPong(IUserService users1, IUserService users2, User user)
         {
-            var commander = users1.GetCommander();
             var count0 = await users1.Count();
-            (await users2.Count()).Should().Be(count0);
+            var cCount = await Computed.Capture(() => users2.Count());
+            cCount = await cCount.When(x => x == count0).WaitAsync(syncTimeout);
 
+            var commander = users1.GetCommander();
             await commander.Call(new UserService_Add(user));
-            (await users1.Count()).Should().Be(++count0);
+            var count1 = count0 + 1;
+            (await users1.Count()).Should().Be(count1);
 
-            await Delay(0.5);
-
-            var user2 = await users2.Get(user.Id);
+            var cUser2 = await Computed.Capture(() => users2.Get(user.Id));
+            cUser2 = await cUser2.When(x => x != null).WaitAsync(syncTimeout);
+            var user2 = cUser2.Value;
             user2.Should().NotBeNull();
             user2!.Id.Should().Be(user.Id);
-            (await users2.Count()).Should().Be(count0);
+
+            await cCount.When(x => x == count1).WaitAsync(syncTimeout);
         }
 
         for (var i = 0; i < 5; i++) {
@@ -198,7 +202,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
             Out.WriteLine($"{i}: ping...");
             await PingPong(users, webUsers, new User() { Id = id1, Name = id1.ToString()});
             Out.WriteLine($"{i}: pong...");
-            await PingPong(users, webUsers, new User() { Id = id2, Name = id2.ToString()});
+            await PingPong(webUsers, users, new User() { Id = id2, Name = id2.ToString()});
             // await PingPong(webUsers, users, new User() { Id = id2, Name = id2.ToString()});
         }
     }

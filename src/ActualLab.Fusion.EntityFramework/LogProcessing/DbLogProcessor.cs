@@ -86,15 +86,10 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
             .Start(cancellationToken);
 
     protected virtual Task WhenChanged(DbShard shard, CancellationToken cancellationToken)
-        => LogWatcher?.WhenChanged(shard, cancellationToken) ?? TaskExt.NeverEndingTask;
+        => LogWatcher.WhenChanged(shard, cancellationToken);
 
     protected virtual async Task ProcessNewEntries(DbShard shard, CancellationToken cancellationToken)
     {
-        if (!NextIndexes.ContainsKey(shard)) {
-            var startEntry = await GetStartEntry(shard, cancellationToken).ConfigureAwait(false);
-            if (startEntry != null)
-                NextIndexes.TryAdd(shard, startEntry.Index);
-        }
         var timeoutCts = cancellationToken.CreateLinkedTokenSource();
         try {
             var timeoutTask = SystemClock.Delay(Settings.ForcedCheckPeriod.Next(), timeoutCts.Token);
@@ -115,27 +110,11 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
         }
     }
 
-    protected virtual async Task<TDbEntry?> GetStartEntry(DbShard shard, CancellationToken cancellationToken)
-    {
-        var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
-        await using var _ = dbContext.ConfigureAwait(false);
-        dbContext.EnableChangeTracking(false);
-
-        var dbLogEntries = dbContext.Set<TDbEntry>().AsQueryable();
-        if (Mode is DbLogProcessingMode.Cooperative) {
-            var minLoggedAt = SystemClock.Now.ToDateTime() - Settings.MaxGapLifespan;
-            dbLogEntries = dbLogEntries.Where(e => e.LoggedAt >= minLoggedAt);
-        }
-        return await dbLogEntries
-            .OrderBy(e => e.Index)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-    }
-
     protected virtual async Task<bool> ProcessBatch(DbShard shard, CancellationToken cancellationToken)
     {
-        if (!NextIndexes.TryGetValue(shard, out var nextIndex))
-            return false;
+        var nextIndexOpt = await TryGetNextIndex(shard, cancellationToken).ConfigureAwait(false);
+        if (nextIndexOpt is not { } nextIndex)
+            return false; // The log is empty
 
         using var _ = ActivitySource.StartActivity().AddShardTags(shard);
         var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
@@ -173,6 +152,33 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
         }
         NextIndexes[shard] = nextIndex;
         return entries.Count < batchSize;
+    }
+
+    protected async ValueTask<long?> TryGetNextIndex(DbShard shard, CancellationToken cancellationToken)
+    {
+        if (NextIndexes.TryGetValue(shard, out var nextIndex))
+            return nextIndex;
+
+        var startEntry = await GetStartEntry(shard, cancellationToken).ConfigureAwait(false);
+        return startEntry == null ? null
+            : NextIndexes.GetOrAdd(shard, startEntry.Index);
+    }
+
+    protected virtual async Task<TDbEntry?> GetStartEntry(DbShard shard, CancellationToken cancellationToken)
+    {
+        var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
+        await using var _ = dbContext.ConfigureAwait(false);
+        dbContext.EnableChangeTracking(false);
+
+        var dbLogEntries = dbContext.Set<TDbEntry>().AsQueryable();
+        if (Mode is DbLogProcessingMode.Cooperative) {
+            var minLoggedAt = SystemClock.Now.ToDateTime() - Settings.MaxGapLifespan;
+            dbLogEntries = dbLogEntries.Where(e => e.LoggedAt >= minLoggedAt);
+        }
+        return await dbLogEntries
+            .OrderBy(e => e.Index)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
     }
 
     protected virtual IEnumerable<Task> GetProcessTasks(

@@ -23,7 +23,7 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
 
     // Protected methods
 
-    public override async Task Notify(DbShard shard, CancellationToken cancellationToken = default)
+    public override async Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default)
     {
         var helper = GetNotifyHelper(shard);
         var (dbContext, sql, asyncLock) = helper;

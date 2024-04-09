@@ -25,7 +25,7 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry> : DbLogWatcher<TDbContext, 
         Log.LogInformation("Using pub/sub key = '{Key}'", redisPub.FullKey);
     }
 
-    public override async Task Notify(DbShard shard, CancellationToken cancellationToken = default)
+    public override async Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default)
     {
         var redisPub = GetRedisPub(shard);
         if (StopToken.IsCancellationRequested)
