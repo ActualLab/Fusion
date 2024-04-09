@@ -22,6 +22,41 @@ public static class DbSetExt
         return tableName!;
     }
 
+    public static IQueryable<TEntity> WithHints<TEntity>(this DbSet<TEntity> dbSet, DbHint hint)
+        where TEntity: class
+    {
+        var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
+        if (hintFormatter == null)
+            return dbSet;
+
+        var mHints = MemoryBuffer<DbHint>.Lease(false);
+        try {
+            mHints.Add(hint);
+            return hintFormatter.Apply(dbSet, ref mHints);
+        }
+        finally {
+            mHints.Release();
+        }
+    }
+
+    public static IQueryable<TEntity> WithHints<TEntity>(this DbSet<TEntity> dbSet, DbHint hint1, DbHint hint2)
+        where TEntity: class
+    {
+        var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
+        if (hintFormatter == null)
+            return dbSet;
+
+        var mHints = MemoryBuffer<DbHint>.Lease(false);
+        try {
+            mHints.Add(hint1);
+            mHints.Add(hint2);
+            return hintFormatter.Apply(dbSet, ref mHints);
+        }
+        finally {
+            mHints.Release();
+        }
+    }
+
     public static IQueryable<TEntity> WithHints<TEntity>(this DbSet<TEntity> dbSet, params DbHint[] hints)
         where TEntity: class
     {
@@ -42,43 +77,27 @@ public static class DbSetExt
         }
     }
 
-    public static IQueryable<TEntity> WithHints<TEntity>(
-        this DbSet<TEntity> dbSet,
-        DbHint primaryHint,
-        params DbHint[] hints)
+    public static IQueryable<TEntity> ForShare<TEntity>(this DbSet<TEntity> dbSet)
         where TEntity: class
-    {
-        if (hints.Length == 0)
-            return dbSet;
+        => dbSet.WithHints(DbLockingHint.Share);
 
-        var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
-        if (hintFormatter == null)
-            return dbSet;
-
-        var mHints = MemoryBuffer<DbHint>.Lease(false);
-        try {
-            mHints.Add(primaryHint);
-            mHints.AddSpan(hints.AsSpan());
-            return hintFormatter.Apply(dbSet, ref mHints);
-        }
-        finally {
-            mHints.Release();
-        }
-    }
-
-    public static IQueryable<TEntity> ForShare<TEntity>(this DbSet<TEntity> dbSet, params DbHint[] otherHints)
+    public static IQueryable<TEntity> ForKeyShare<TEntity>(this DbSet<TEntity> dbSet)
         where TEntity: class
-        => dbSet.WithHints(DbLockingHint.Share, otherHints);
+        => dbSet.WithHints(DbLockingHint.KeyShare);
 
-    public static IQueryable<TEntity> ForKeyShare<TEntity>(this DbSet<TEntity> dbSet, params DbHint[] otherHints)
+    public static IQueryable<TEntity> ForUpdate<TEntity>(this DbSet<TEntity> dbSet)
         where TEntity: class
-        => dbSet.WithHints(DbLockingHint.KeyShare, otherHints);
+        => dbSet.WithHints(DbLockingHint.Update);
 
-    public static IQueryable<TEntity> ForUpdate<TEntity>(this DbSet<TEntity> dbSet, params DbHint[] otherHints)
+    public static IQueryable<TEntity> ForNoKeyUpdate<TEntity>(this DbSet<TEntity> dbSet)
         where TEntity: class
-        => dbSet.WithHints(DbLockingHint.Update, otherHints);
+        => dbSet.WithHints(DbLockingHint.NoKeyUpdate);
 
-    public static IQueryable<TEntity> ForNoKeyUpdate<TEntity>(this DbSet<TEntity> dbSet, params DbHint[] otherHints)
+    public static IQueryable<TEntity> ForUpdateSkipLocked<TEntity>(this DbSet<TEntity> dbSet)
         where TEntity: class
-        => dbSet.WithHints(DbLockingHint.NoKeyUpdate, otherHints);
+        => dbSet.WithHints(DbLockingHint.Update, DbWaitHint.SkipLocked);
+
+    public static IQueryable<TEntity> ForNoKeyUpdateSkipLocked<TEntity>(this DbSet<TEntity> dbSet)
+        where TEntity: class
+        => dbSet.WithHints(DbLockingHint.NoKeyUpdate, DbWaitHint.SkipLocked);
 }
