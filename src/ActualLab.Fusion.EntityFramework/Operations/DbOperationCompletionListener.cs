@@ -10,6 +10,8 @@ public class DbOperationCompletionListener<TDbContext>
 {
     public record Options
     {
+        public static Options Default { get; set; } = new();
+
         public int? NotifyRetryCount { get; init; } = 3;
         public RetryDelaySeq NotifyRetryDelays { get; init; } = RetryDelaySeq.Linear(0.1);
     }

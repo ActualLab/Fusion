@@ -7,7 +7,10 @@ public class DbOperationLogTrimmer<TDbContext>
     : DbLogTrimmer<TDbContext, DbOperation, DbOperationLogTrimmer<TDbContext>.Options>
     where TDbContext : DbContext
 {
-    public record Options : DbLogTrimmerOptions;
+    public record Options : DbLogTrimmerOptions
+    {
+        public static Options Default { get; set; } = new();
+    }
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public DbOperationLogTrimmer(Options settings, IServiceProvider services)

@@ -7,7 +7,10 @@ public class DbOperationLogProcessor<TDbContext>
     : DbLogProcessor<TDbContext, DbOperation, DbOperationLogProcessor<TDbContext>.Options>
     where TDbContext : DbContext
 {
-    public record Options : CooperativeDbLogProcessorOptions;
+    public record Options : CooperativeDbLogProcessorOptions
+    {
+        public static Options Default { get; set; } = new();
+    }
 
     protected IOperationCompletionNotifier OperationCompletionNotifier { get; }
 

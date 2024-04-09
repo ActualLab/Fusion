@@ -9,10 +9,10 @@ public class DbOperationEventLogTrimmer<TDbContext>
 {
     public record Options : DbLogTrimmerOptions
     {
+        public static Options Default { get; set; } = new();
+
         public Options()
-        {
-            MaxEntryAge = TimeSpan.FromDays(1);
-        }
+            => MaxEntryAge = TimeSpan.FromDays(1);
     }
 
     protected override IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;

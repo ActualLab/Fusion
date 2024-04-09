@@ -30,14 +30,14 @@ public readonly struct DbOperationsBuilder<TDbContext>
         // DbOperationScope<TDbContext> is created w/ services.Activate
 
         // DbOperationCompletionListener
-        services.TryAddSingleton<DbOperationCompletionListener<TDbContext>.Options>();
+        services.TryAddSingleton(_ => DbOperationCompletionListener<TDbContext>.Options.Default);
         AddOperationCompletionListener<DbOperationCompletionListener<TDbContext>>();
 
         // DbOperationLogProcessor & trimmer - hosted services!
         DbContext.TryAddEntityResolver<long, DbOperation>();
-        services.TryAddSingleton<DbOperationLogProcessor<TDbContext>.Options>();
+        services.TryAddSingleton(_ => DbOperationLogProcessor<TDbContext>.Options.Default);
         services.TryAddSingleton<DbOperationLogProcessor<TDbContext>>();
-        services.TryAddSingleton<DbOperationLogTrimmer<TDbContext>.Options>();
+        services.TryAddSingleton(_ => DbOperationLogTrimmer<TDbContext>.Options.Default);
         services.TryAddSingleton<DbOperationLogTrimmer<TDbContext>>();
         services.AddHostedService(c => c.GetRequiredService<DbOperationLogProcessor<TDbContext>>());
         services.AddHostedService(c => c.GetRequiredService<DbOperationLogTrimmer<TDbContext>>());
@@ -45,9 +45,9 @@ public readonly struct DbOperationsBuilder<TDbContext>
         // DbOperationLogProcessor & trimmer - hosted services!
         services.TryAddSingleton<OperationEventProcessor>();
         DbContext.TryAddEntityResolver<long, DbOperationEvent>();
-        services.TryAddSingleton<DbOperationEventLogProcessor<TDbContext>.Options>();
+        services.TryAddSingleton(_ => DbOperationEventLogProcessor<TDbContext>.Options.Default);
         services.TryAddSingleton<DbOperationEventLogProcessor<TDbContext>>();
-        services.TryAddSingleton<DbOperationEventLogTrimmer<TDbContext>.Options>();
+        services.TryAddSingleton(_ => DbOperationEventLogTrimmer<TDbContext>.Options.Default);
         services.TryAddSingleton<DbOperationEventLogTrimmer<TDbContext>>();
         services.AddHostedService(c => c.GetRequiredService<DbOperationEventLogProcessor<TDbContext>>());
         services.AddHostedService(c => c.GetRequiredService<DbOperationEventLogTrimmer<TDbContext>>());

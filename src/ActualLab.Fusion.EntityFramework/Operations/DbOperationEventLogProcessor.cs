@@ -7,7 +7,10 @@ public class DbOperationEventLogProcessor<TDbContext>
     : DbLogProcessor<TDbContext, DbOperationEvent, DbOperationEventLogProcessor<TDbContext>.Options>
     where TDbContext : DbContext
 {
-    public record Options : ExclusiveDbLogProcessorOptions;
+    public record Options : ExclusiveDbLogProcessorOptions
+    {
+        public static Options Default { get; set; } = new();
+    }
 
     protected OperationEventProcessor OperationEventProcessor { get;  }
     protected override IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
