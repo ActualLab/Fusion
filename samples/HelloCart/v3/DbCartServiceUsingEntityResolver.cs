@@ -3,7 +3,7 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace Samples.HelloCart.V3;
 
-public class DbCartService2(
+public class DbCartServiceUsingEntityResolver(
     DbHub<AppDbContext> dbHub,
     IProductService products,
     IDbEntityResolver<string, DbCart> cartResolver
@@ -70,10 +70,12 @@ public class DbCartService2(
         var cart = await Get(id, cancellationToken);
         if (cart == null)
             return 0;
+
         var itemTotals = await Task.WhenAll(cart.Items.Select(async item => {
             var product = await products.Get(item.Key, cancellationToken);
             return item.Value * (product?.Price ?? 0M);
         }));
+
         return itemTotals.Sum();
     }
 }

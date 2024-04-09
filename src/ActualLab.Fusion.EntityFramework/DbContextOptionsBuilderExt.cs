@@ -11,7 +11,7 @@ public static class DbContextOptionsBuilderExt
         where TDbHintFormatter : IDbHintFormatter
     {
         var extension = new DbHintFormatterOptionsExtension(typeof(TDbHintFormatter));
-        ((IDbContextOptionsBuilderInfrastructure) dbContext).AddOrUpdateExtension(extension);
+        ((IDbContextOptionsBuilderInfrastructure)dbContext).AddOrUpdateExtension(extension);
         return dbContext;
     }
 }

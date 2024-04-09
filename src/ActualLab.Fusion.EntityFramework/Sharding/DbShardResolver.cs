@@ -2,7 +2,6 @@ namespace ActualLab.Fusion.EntityFramework;
 
 public interface IDbShardResolver
 {
-    DbShard Resolve<TContext>(object source);
     DbShard Resolve(Type contextType, object source);
 }
 
@@ -11,9 +10,6 @@ public class DbShardResolver(IServiceProvider services) : IDbShardResolver
     private readonly ConcurrentDictionary<Type, IDbShardRegistry> _shardRegistryCache = new();
 
     protected IServiceProvider Services { get; } = services;
-
-    public DbShard Resolve<TContext>(object source)
-        => Resolve(typeof(TContext), source);
 
     public DbShard Resolve(Type contextType, object source)
     {

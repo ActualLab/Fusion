@@ -32,14 +32,10 @@ public static class DbSetExt
         if (hintFormatter == null)
             return dbSet;
 
-        var tableName = dbSet.GetTableName();
         var mHints = MemoryBuffer<DbHint>.Lease(false);
         try {
             mHints.AddSpan(hints.AsSpan());
-            if (mHints.Count == 0)
-                return dbSet;
-            var sql = hintFormatter.FormatSelectSql(tableName, ref mHints);
-            return dbSet.FromSqlRaw(sql);
+            return hintFormatter.Apply(dbSet, ref mHints);
         }
         finally {
             mHints.Release();
@@ -59,15 +55,11 @@ public static class DbSetExt
         if (hintFormatter == null)
             return dbSet;
 
-        var tableName = dbSet.GetTableName();
         var mHints = MemoryBuffer<DbHint>.Lease(false);
         try {
             mHints.Add(primaryHint);
             mHints.AddSpan(hints.AsSpan());
-            if (mHints.Count == 0)
-                return dbSet;
-            var sql = hintFormatter.FormatSelectSql(tableName, ref mHints);
-            return dbSet.FromSqlRaw(sql);
+            return hintFormatter.Apply(dbSet, ref mHints);
         }
         finally {
             mHints.Release();

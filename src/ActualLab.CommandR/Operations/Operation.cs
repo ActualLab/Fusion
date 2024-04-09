@@ -5,7 +5,6 @@ namespace ActualLab.CommandR.Operations;
 public class Operation(
     Symbol uuid,
     Symbol hostId,
-    Moment startedAt,
     Moment loggedAt = default,
     ICommand? command = null,
     OptionSet? items = null,
@@ -19,7 +18,6 @@ public class Operation(
     public long? Index { get; set; }
     public Symbol Uuid { get; set; } = uuid;
     public Symbol HostId { get; set; } = hostId;
-    public Moment StartedAt { get; set; } = startedAt;
     public Moment LoggedAt { get; set; } = loggedAt;
     public ICommand Command { get; set; } = command!;
     public OptionSet Items { get; set; } = items ?? new();

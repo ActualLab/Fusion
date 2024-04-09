@@ -21,7 +21,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public int ReadBufferSize { get; init; } = 16_000; // Rented ~just once, so it can be large
         public int RetainedBufferSize { get; init; } = 64_000; // Any buffer is released when it hits this size
         public int MaxItemSize { get; init; } = 130_000_000; // 130 MB;
-        public Func<Task>? WriteDelayFactory { get; init; }
+        public Func<Task>? WriteDelayFactory { get; init; } = RpcSettings.WebSocketWriteDelayFactory;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public DualSerializer<T> Serializer { get; init; } = new();
         public BoundedChannelOptions ReadChannelOptions { get; init; } = new(128) {

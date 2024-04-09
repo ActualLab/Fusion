@@ -44,7 +44,7 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
     public Task<bool> NotifyCompleted(Operation operation, CommandContext? commandContext)
     {
         lock (Lock) {
-            if (!RecentlySeenUuids.TryAdd(operation.Uuid, operation.StartedAt))
+            if (!RecentlySeenUuids.TryAdd(operation.Uuid, operation.LoggedAt))
                 return TaskExt.FalseTask;
         }
 

@@ -2,13 +2,15 @@ namespace ActualLab.Fusion;
 
 public sealed record FixedDelayer(
     TimeSpan UpdateDelay,
-    RetryDelaySeq RetryDelays
+    RetryDelaySeq RetryDelays,
+    bool IsSafe = true
 ) : IUpdateDelayer
 {
     private static readonly ConcurrentDictionary<TimeSpan, FixedDelayer> Cache = new();
 
-    public static FixedDelayer ZeroUnsafe { get; set; } = new(TimeSpan.Zero);
-    public static FixedDelayer Instant { get; set; } = Get(Defaults.MinDelay);
+    public static FixedDelayer ZeroUnsafe { get; set; } = new(TimeSpan.Zero, Defaults.RetryDelays, false);
+    public static FixedDelayer Zero { get; set; } = new(TimeSpan.Zero, Defaults.RetryDelays);
+    public static FixedDelayer MinDelay { get; set; } = Get(Defaults.MinDelay);
 
     public FixedDelayer(double updateDelay)
         : this(TimeSpan.FromSeconds(updateDelay), Defaults.RetryDelays) { }
@@ -25,8 +27,11 @@ public sealed record FixedDelayer(
     public async ValueTask Delay(int retryCount, CancellationToken cancellationToken = default)
     {
         var delay = TimeSpanExt.Max(UpdateDelay, GetDelay(retryCount));
-        if (delay <= TimeSpan.Zero)
-            return; // This may only happen if MinDelay == 0 - e.g. for UpdateDelayer.ZeroUnsafe
+        if (delay <= TimeSpan.Zero) {
+            if (IsSafe)
+                await Task.Yield();
+            return;
+        }
 
         await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
     }
@@ -42,6 +47,7 @@ public sealed record FixedDelayer(
         private static RetryDelaySeq _retryDelays = new(TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(2));
         private static IMomentClock _clock = MomentClockSet.Default.CpuClock;
 
+        // ReSharper disable once MemberHidesStaticFromOuterClass
         public static TimeSpan MinDelay {
             get => _minDelay;
             set {

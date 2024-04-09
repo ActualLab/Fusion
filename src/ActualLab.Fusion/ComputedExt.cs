@@ -170,7 +170,7 @@ public static partial class ComputedExt
     public static Task<Computed<T>> When<T>(this Computed<T> computed,
         Func<T, bool> predicate,
         CancellationToken cancellationToken = default)
-        => computed.When(predicate, FixedDelayer.Instant, cancellationToken);
+        => computed.When(predicate, FixedDelayer.Zero, cancellationToken);
     public static async Task<Computed<T>> When<T>(this Computed<T> computed,
         Func<T, bool> predicate,
         IUpdateDelayer updateDelayer,
@@ -190,7 +190,7 @@ public static partial class ComputedExt
     public static Task<Computed<T>> When<T>(this Computed<T> computed,
         Func<T, Exception?, bool> predicate,
         CancellationToken cancellationToken = default)
-        => computed.When(predicate, FixedDelayer.Instant, cancellationToken);
+        => computed.When(predicate, FixedDelayer.Zero, cancellationToken);
     public static async Task<Computed<T>> When<T>(this Computed<T> computed,
         Func<T, Exception?, bool> predicate,
         IUpdateDelayer updateDelayer,
@@ -213,7 +213,7 @@ public static partial class ComputedExt
     public static IAsyncEnumerable<Computed<T>> Changes<T>(
         this Computed<T> computed,
         CancellationToken cancellationToken = default)
-        => computed.Changes(FixedDelayer.Instant, cancellationToken);
+        => computed.Changes(FixedDelayer.Zero, cancellationToken);
     public static async IAsyncEnumerable<Computed<T>> Changes<T>(
         this Computed<T> computed,
         IUpdateDelayer updateDelayer,

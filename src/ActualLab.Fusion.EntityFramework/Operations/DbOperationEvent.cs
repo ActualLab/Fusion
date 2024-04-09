@@ -9,8 +9,9 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 #pragma warning disable IL2026
 
 [Table("_OperationEvents")]
-[Index(nameof(Uuid), nameof(Index), Name = "IX_Uuid")]
-[Index(nameof(LoggedAt), nameof(Index), Name = "IX_LoggedAt")]
+[Index(nameof(Uuid), nameof(Index), Name = "IX_Uuid")] // "Uuid -> Index" queries
+[Index(nameof(IsProcessed), nameof(Index), Name = "IX_IsProcessed")] // "!IsProcessed -> min(Index)" queries
+[Index(nameof(LoggedAt), nameof(Index), Name = "IX_LoggedAt")] // "LoggedAt > minLoggedAt -> min(Index)" queries
 public sealed class DbOperationEvent
     : ILogEntry, IHasId<string>, IHasId<long>
 {
@@ -23,8 +24,6 @@ public sealed class DbOperationEvent
     Symbol IHasUuid.Uuid => _uuid;
     string IHasId<string>.Id => _uuid.Value;
     long IHasId<long>.Id => Index;
-    // DbOperations are never updated, but only deleted, so...
-    bool ILogEntry.IsProcessed { get => false; set { } }
 
     [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long Index {
@@ -41,6 +40,7 @@ public sealed class DbOperationEvent
         set => _loggedAt = value.DefaultKind(DateTimeKind.Utc);
     }
 
+    public bool IsProcessed { get; set; }
     public string ValueJson { get; set; } = "";
 
     public DbOperationEvent() { }

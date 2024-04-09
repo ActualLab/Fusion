@@ -181,6 +181,12 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
                 throw Errors.DbOperationIndexWasNotAssigned();
 
             try {
+                if (DbOperationsChaosMonkey.Instance is { } chaosMonkey) {
+                    if (chaosMonkey.CommitDelaySampler.Next.Invoke())
+                        await Task.Delay(chaosMonkey.CommitDelay.Next(), cancellationToken).ConfigureAwait(false);
+                    if (chaosMonkey.CommitFailureSampler.Next.Invoke())
+                        throw new TransientException("DbOperationsChaosMonkey-caused failure.");
+                }
                 await Transaction!.CommitAsync(cancellationToken).ConfigureAwait(false);
                 Operation.Index = dbOperation.Index;
                 IsConfirmed = true;
@@ -288,15 +294,15 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
         // 2. Try to query DbContext-specific DbIsolationLevelSelectors
         var selectors = Services.GetRequiredService<IEnumerable<DbIsolationLevelSelector<TDbContext>>>();
         isolationLevel = selectors
-            .Select(s => s.GetCommandIsolationLevel(commandContext))
+            .Select(x => x.Invoke(commandContext))
             .Aggregate(IsolationLevel.Unspecified, (x, y) => x.Max(y));
         if (isolationLevel != IsolationLevel.Unspecified)
             goto ready;
 
         // 3. Try to query GlobalIsolationLevelSelectors
-        var globalSelectors = Services.GetRequiredService<IEnumerable<GlobalIsolationLevelSelector>>();
+        var globalSelectors = Services.GetRequiredService<IEnumerable<DbIsolationLevelSelector>>();
         isolationLevel = globalSelectors
-            .Select(s => s.GetCommandIsolationLevel(commandContext))
+            .Select(x => x.Invoke(commandContext))
             .Aggregate(IsolationLevel.Unspecified, (x, y) => x.Max(y));
         if (isolationLevel != IsolationLevel.Unspecified)
             goto ready;

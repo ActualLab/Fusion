@@ -10,12 +10,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="MemoryPack.Generator" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ActualLab.Fusion.EntityFramework\ActualLab.Fusion.EntityFramework.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Fusion.EntityFramework.Npgsql\ActualLab.Fusion.EntityFramework.Npgsql.csproj" />
     <ProjectReference Include="..\..\src\ActualLab.Fusion.EntityFramework.Redis\ActualLab.Fusion.EntityFramework.Redis.csproj" />
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
   </ItemGroup>

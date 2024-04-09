@@ -17,7 +17,10 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
         var updateDelayer = FixedDelayer.ZeroUnsafe;
         await Test(50);
         await Test(1000);
-        updateDelayer = FixedDelayer.Instant;
+        updateDelayer = FixedDelayer.Zero;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.MinDelay;
         await Test(50);
         await Test(1000);
         updateDelayer = FixedDelayer.Get(0.1);
@@ -82,7 +85,10 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
         var updateDelayer = FixedDelayer.ZeroUnsafe;
         await Test(50);
         await Test(1000);
-        updateDelayer = FixedDelayer.Instant;
+        updateDelayer = FixedDelayer.Zero;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.MinDelay;
         await Test(50);
         await Test(1000);
         updateDelayer = FixedDelayer.Get(0.1);
@@ -148,7 +154,10 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
         var updateDelayer = FixedDelayer.ZeroUnsafe;
         await Test(50);
         await Test(1000);
-        updateDelayer = FixedDelayer.Instant;
+        updateDelayer = FixedDelayer.Zero;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.MinDelay;
         await Test(50);
         await Test(1000);
         updateDelayer = FixedDelayer.Get(0.1);

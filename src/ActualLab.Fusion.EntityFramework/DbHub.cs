@@ -29,13 +29,13 @@ public class DbHub<TDbContext>(IServiceProvider services)
 
     public IsolationLevel CommandIsolationLevel {
         get {
-            var commandContext = CommandContext.GetCurrent();
-            var operationScope = commandContext.Items.Get<DbOperationScope<TDbContext>>().Require();
+            var context = CommandContext.GetCurrent();
+            var operationScope = context.Items.Get<DbOperationScope<TDbContext>>().Require();
             return operationScope.IsolationLevel;
         }
         set {
-            var commandContext = CommandContext.GetCurrent();
-            var operationScope = commandContext.Items.Get<DbOperationScope<TDbContext>>().Require();
+            var context = CommandContext.GetCurrent();
+            var operationScope = context.Items.Get<DbOperationScope<TDbContext>>().Require();
             operationScope.IsolationLevel = value;
         }
     }

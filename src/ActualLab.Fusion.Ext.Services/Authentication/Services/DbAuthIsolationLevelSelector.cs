@@ -1,13 +1,10 @@
 using System.Data;
-using Microsoft.EntityFrameworkCore;
-using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
-public class DbAuthIsolationLevelSelector<TDbContext>() : DbIsolationLevelSelector<TDbContext>(null)
-    where TDbContext : DbContext
+public static class DbAuthIsolationLevelSelector
 {
-    public override IsolationLevel GetCommandIsolationLevel(CommandContext commandContext)
+    public static IsolationLevel GetIsolationLevel(CommandContext commandContext)
     {
         var command = commandContext.UntypedCommand;
         switch (command) {

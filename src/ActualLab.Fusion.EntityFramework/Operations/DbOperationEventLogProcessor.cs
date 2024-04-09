@@ -10,6 +10,7 @@ public class DbOperationEventLogProcessor<TDbContext>
     public record Options : ExclusiveDbLogProcessorOptions;
 
     protected OperationEventProcessor OperationEventProcessor { get;  }
+    protected override IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public DbOperationEventLogProcessor(Options settings, IServiceProvider services)

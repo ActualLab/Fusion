@@ -92,7 +92,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         await commander.Call(new UserService_Add(u));
 
         using var sText = await stateFactory.NewComputed<string>(
-            FixedDelayer.Instant,
+            FixedDelayer.Zero,
             async (s, cancellationToken) => {
                 var norris = await users.Get(int.MaxValue, cancellationToken).ConfigureAwait(false);
                 var now = await time.GetTime().ConfigureAwait(false);
@@ -120,14 +120,14 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
 
 #pragma warning disable 1998
         var s1 = await stateFactory.NewComputed<int>(
-            FixedDelayer.Instant,
+            FixedDelayer.Zero,
             async (s, ct) => count1++).Update();
         var s2 = await stateFactory.NewComputed<int>(
-            FixedDelayer.Instant,
+            FixedDelayer.Zero,
             async (s, ct) => count2++).Update();
 #pragma warning restore 1998
         var s12 = await stateFactory.NewComputed<(int, int)>(
-            FixedDelayer.Instant,
+            FixedDelayer.Zero,
             async (s, cancellationToken) => {
                 var a = await s1.Use(cancellationToken);
                 using var _ = Computed.SuspendDependencyCapture();

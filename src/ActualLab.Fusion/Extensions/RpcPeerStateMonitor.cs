@@ -50,7 +50,7 @@ public class RpcPeerStateMonitor : WorkerBase
         LastReconnectDelayCancelledAt = peerRef == null
             ? stateFactory.NewMutable((Moment)default, stateCategory)
             : stateFactory.NewComputed<Moment>(
-                FixedDelayer.Instant,
+                FixedDelayer.Zero,
                 ComputeLastReconnectDelayCancelledAtState,
                 stateCategory);
 
@@ -60,7 +60,7 @@ public class RpcPeerStateMonitor : WorkerBase
             : new RpcPeerState(RpcPeerStateKind.JustDisconnected, connectionState?.Error);
         State = peerRef == null
             ? stateFactory.NewMutable(initialState, stateCategory)
-            : stateFactory.NewComputed(initialState, FixedDelayer.Instant, ComputeState, stateCategory);
+            : stateFactory.NewComputed(initialState, FixedDelayer.Zero, ComputeState, stateCategory);
         if (mustStart)
             Start();
     }

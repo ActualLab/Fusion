@@ -25,10 +25,24 @@ public partial record Cart(
 public partial record EditCommand<TItem>(
     [property: DataMember] string Id,
     [property: DataMember] TItem? Item
-    ) : ICommand<Unit>
+) : ICommand<Unit>
     where TItem : class, IHasId<string>
 {
     public EditCommand(TItem value) : this(value.Id, value) { }
+}
+
+[DataContract, MemoryPackable]
+[method: JsonConstructor, MemoryPackConstructor]
+public partial record LogMessageCommand(
+    [property: DataMember] Symbol Uuid,
+    [property: DataMember] string Message
+) : ILocalCommand<Unit>, IHasUuid
+{
+    public Task Run(CommandContext context, CancellationToken cancellationToken)
+    {
+        Console.WriteLine($"[{Uuid}] {Message}");
+        return Task.CompletedTask;
+    }
 }
 
 public interface IProductService: IComputeService

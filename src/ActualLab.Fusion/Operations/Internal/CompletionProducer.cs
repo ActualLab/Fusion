@@ -19,9 +19,6 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
     protected HostId HostId => Commander.Hub.HostId;
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
-    public bool IsReady()
-        => true;
-
     public virtual Task OnOperationCompleted(Operation operation, CommandContext? commandContext)
     {
         if (operation.Command is not { } command)

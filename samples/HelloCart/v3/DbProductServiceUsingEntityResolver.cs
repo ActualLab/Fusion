@@ -3,7 +3,7 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace Samples.HelloCart.V3;
 
-public class DbProductService2(
+public class DbProductServiceUsingEntityResolver(
     DbHub<AppDbContext> dbHub,
     IDbEntityResolver<string, DbProduct> productResolver
     ) : IProductService
@@ -13,6 +13,7 @@ public class DbProductService2(
         var (productId, product) = command;
         if (string.IsNullOrEmpty(productId))
             throw new ArgumentOutOfRangeException(nameof(command));
+
         if (Computed.IsInvalidating()) {
             _ = Get(productId, default);
             return;
@@ -31,6 +32,13 @@ public class DbProductService2(
                 dbContext.Add(new DbProduct { Id = productId, Price = product.Price });
         }
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Adding LogMessageCommand as event
+        var context = CommandContext.GetCurrent();
+        var message = product == null
+            ? $"Product removed: {productId}"
+            : $"Product updated: {productId} with Price = {product.Price}";
+        context.Operation.AddEvent(new LogMessageCommand(Ulid.NewUlid().ToString(), message));
     }
 
     public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)

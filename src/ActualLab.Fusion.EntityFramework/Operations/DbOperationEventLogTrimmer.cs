@@ -15,6 +15,8 @@ public class DbOperationEventLogTrimmer<TDbContext>
         }
     }
 
+    protected override IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
+
     // ReSharper disable once ConvertToPrimaryConstructor
     public DbOperationEventLogTrimmer(Options settings, IServiceProvider services)
         : base(settings, services)

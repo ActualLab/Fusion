@@ -9,8 +9,8 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 #pragma warning disable IL2026
 
 [Table("_Operations")]
-[Index(nameof(Uuid), nameof(Index), Name = "IX_Uuid")]
-[Index(nameof(LoggedAt), nameof(Index), Name = "IX_LoggedAt")]
+[Index(nameof(Uuid), nameof(Index), Name = "IX_Uuid")] // "Uuid -> Index" queries
+[Index(nameof(LoggedAt), nameof(Index), Name = "IX_LoggedAt")] // "LoggedAt > minLoggedAt -> min(Index)" queries
 public sealed class DbOperation
     : ILogEntry, IHasId<string>, IHasId<long>
 {
@@ -19,8 +19,7 @@ public sealed class DbOperation
     private long? _index;
     private Symbol _uuid;
     private Symbol _hostId;
-    private DateTime _startedAt;
-    private DateTime _completedAt;
+    private DateTime _loggedAt;
 
     Symbol IHasUuid.Uuid => _uuid;
     string IHasId<string>.Id => _uuid.Value;
@@ -39,14 +38,9 @@ public sealed class DbOperation
     public string Uuid { get => _uuid; set => _uuid = value; }
     public string HostId { get => _hostId; set => _hostId = value; }
 
-    public DateTime StartedAt {
-        get => _startedAt.DefaultKind(DateTimeKind.Utc);
-        set => _startedAt = value.DefaultKind(DateTimeKind.Utc);
-    }
-
     public DateTime LoggedAt {
-        get => _completedAt.DefaultKind(DateTimeKind.Utc);
-        set => _completedAt = value.DefaultKind(DateTimeKind.Utc);
+        get => _loggedAt.DefaultKind(DateTimeKind.Utc);
+        set => _loggedAt = value.DefaultKind(DateTimeKind.Utc);
     }
 
     public string CommandJson { get; set; } = "";
@@ -71,7 +65,6 @@ public sealed class DbOperation
         return new Operation(
             Uuid,
             HostId,
-            StartedAt,
             LoggedAt,
             command!,
             items,
@@ -86,7 +79,6 @@ public sealed class DbOperation
             Index = index;
         Uuid = operation.Uuid;
         HostId = operation.HostId;
-        StartedAt = operation.StartedAt;
         LoggedAt = operation.LoggedAt;
         CommandJson = Serializer.Write(operation.Command);
         ItemsJson = operation.Items.Items.Count == 0 ? "" : Serializer.Write(operation.Items);

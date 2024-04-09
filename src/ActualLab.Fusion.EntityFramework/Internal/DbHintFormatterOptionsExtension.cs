@@ -10,9 +10,11 @@ public class DbHintFormatterOptionsExtension(Type dbHintFormatterType) : IDbCont
         => new DbHintFormatterExtensionInfo(this);
 
     public void ApplyServices(IServiceCollection services)
-#pragma warning disable IL2072
-        => services.AddSingleton(typeof(IDbHintFormatter), DbHintFormatterType);
-#pragma warning restore IL2072
+    {
+        var hintFormatter = (IDbHintFormatter)DbHintFormatterType.CreateInstance();
+        services.AddSingleton(typeof(IDbHintFormatter), DbHintFormatterType);
+        hintFormatter.Configure(services);
+    }
 
     public void Validate(IDbContextOptions options)
     { }

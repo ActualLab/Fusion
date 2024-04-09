@@ -5,6 +5,8 @@ public interface IDbShardRegistry
     bool HasSingleShard { get; }
     IState<ImmutableHashSet<DbShard>> Shards { get; }
     IState<ImmutableHashSet<DbShard>> UsedShards { get; }
+    IState<ImmutableHashSet<DbShard>> EventProcessorShards { get; }
+    IMutableState<Func<DbShard, bool>> EventProcessorShardFilter { get; }
 
     bool Add(DbShard shard);
     bool Remove(DbShard shard);
@@ -16,15 +18,18 @@ public interface IDbShardRegistry
 
 public interface IDbShardRegistry<TContext> : IDbShardRegistry;
 
-public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>
+public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
 {
     protected readonly object Lock = new();
     private readonly IMutableState<ImmutableHashSet<DbShard>> _shards;
     private readonly IMutableState<ImmutableHashSet<DbShard>> _usedShards;
+    private readonly IComputedState<ImmutableHashSet<DbShard>> _eventProcessorShards;
 
     public bool HasSingleShard { get; }
     public IState<ImmutableHashSet<DbShard>> Shards => _shards;
     public IState<ImmutableHashSet<DbShard>> UsedShards => _usedShards;
+    public IState<ImmutableHashSet<DbShard>> EventProcessorShards => _eventProcessorShards;
+    public IMutableState<Func<DbShard, bool>> EventProcessorShardFilter { get; }
 
     public DbShardRegistry(IServiceProvider services, params DbShard[] initialShards)
     {
@@ -42,12 +47,24 @@ public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>
             shards = shards.Add(DbShard.Template);
 
         var stateFactory = services.StateFactory();
+        EventProcessorShardFilter = stateFactory.NewMutable<Func<DbShard, bool>>(_ => true,
+            StateCategories.Get(GetType(), nameof(EventProcessorShardFilter)));
         _shards = stateFactory.NewMutable(shards,
             StateCategories.Get(GetType(), nameof(Shards)));
         _usedShards = stateFactory.NewMutable(ImmutableHashSet<DbShard>.Empty,
             StateCategories.Get(GetType(), nameof(UsedShards)));
-        // ReSharper disable once VirtualMemberCallInConstructor
+        _eventProcessorShards = stateFactory.NewComputed<ImmutableHashSet<DbShard>>(
+            FixedDelayer.Zero,
+            async (_, ct) => {
+                var filter = await EventProcessorShardFilter.Use(ct).ConfigureAwait(false);
+                var shards1 = await Shards.Use(ct).ConfigureAwait(false);
+                return shards1.Where(shard => filter.Invoke(shard) && !shard.IsTemplate).ToImmutableHashSet();
+            },
+            StateCategories.Get(GetType(), nameof(EventProcessorShards)));
     }
+
+    public void Dispose()
+        => _eventProcessorShards.Dispose();
 
     public bool Add(DbShard shard)
     {

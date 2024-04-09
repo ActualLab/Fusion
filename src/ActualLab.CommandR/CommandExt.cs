@@ -17,6 +17,7 @@ public static class CommandExt
     {
         if (commandType == null)
             throw new ArgumentNullException(nameof(commandType));
+
         var result = ResultTypeCache.GetOrAdd(commandType, static tCommand => {
 #pragma warning disable IL2070
             foreach (var tInterface in tCommand.GetInterfaces()) {
@@ -26,6 +27,7 @@ public static class CommandExt
                 var gInterface = tInterface.GetGenericTypeDefinition();
                 if (gInterface != CommandWithResultType)
                     continue;
+
                 return tInterface.GetGenericArguments()[0];
             }
             return null!;

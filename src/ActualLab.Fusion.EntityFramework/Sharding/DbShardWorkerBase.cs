@@ -19,11 +19,12 @@ public abstract class DbShardWorkerBase<TDbContext>(
     protected ICommander Commander => DbHub.Commander;
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
+    protected virtual IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.UsedShards;
+
     protected override Task OnRun(CancellationToken cancellationToken)
     {
-        var usedShards = DbHub.ShardRegistry.UsedShards;
-        var changes = usedShards
-            .Changes(FixedDelayer.ZeroUnsafe, cancellationToken)
+        var changes = WorkerShards
+            .Changes(cancellationToken)
             .SkipSyncItems(cancellationToken)
             .Select(x => x.Value.Remove(DbShard.Template));
         return changes.RunItemTasks(OnRun, cancellationToken);

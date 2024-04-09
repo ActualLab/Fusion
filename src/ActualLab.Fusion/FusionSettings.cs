@@ -11,7 +11,7 @@ public static class FusionSettings
     public static FusionMode Mode {
         get => _mode;
         set {
-            if (value != FusionMode.Client && value != FusionMode.Server)
+            if (value is not (FusionMode.Client or FusionMode.Server))
                 throw new ArgumentOutOfRangeException(nameof(value), value, null);
 
             lock (Lock) {
@@ -31,7 +31,7 @@ public static class FusionSettings
 
     private static void Recompute()
     {
-        var isServer = Mode == FusionMode.Server;
+        var isServer = Mode is FusionMode.Server;
         var cpuCountPo2 = HardwareInfo.ProcessorCountPo2;
         TimeoutsConcurrencyLevel = (isServer ? cpuCountPo2 : cpuCountPo2 / 16).Clamp(1, isServer ? 256 : 4);
         ComputedRegistryConcurrencyLevel = cpuCountPo2 * (isServer ? 4 : 1);

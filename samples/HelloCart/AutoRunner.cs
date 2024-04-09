@@ -1,3 +1,4 @@
+using ActualLab.Fusion.EntityFramework.Operations;
 using static System.Console;
 
 namespace Samples.HelloCart;
@@ -8,6 +9,7 @@ public static class AutoRunner
     {
         var productService = app.ClientServices.GetRequiredService<IProductService>();
         var commander = app.ClientServices.Commander();
+        DbOperationsChaosMonkey.Instance = DbOperationsChaosMonkey.New(1, 0);
 
         var rnd = new Random(10);
         for (var i = 0;; i++) {
@@ -16,8 +18,8 @@ public static class AutoRunner
             var price = rnd.Next(10);
             var command = new EditCommand<Product>(product! with { Price = price });
             WriteLine(command);
-            await commander.Call(command, cancellationToken);
-            await Task.Delay(2000, cancellationToken);
+            _ = commander.Run(command, cancellationToken);
+            await Task.Delay(50, cancellationToken);
         }
     }
 }
