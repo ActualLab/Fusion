@@ -21,7 +21,7 @@ public class OperationEventProcessor
         var value = @event.Value;
         if (value is ICommand command) {
             Log.LogInformation("Processing command event {Ulid}: {Command}", ulid, command);
-            return Commander.Run(command, true, cancellationToken);
+            return Commander.Call(command, true, cancellationToken);
         }
         Log.LogInformation("Unsupported event {Ulid}: {Event}", ulid, value);
         return Task.CompletedTask;

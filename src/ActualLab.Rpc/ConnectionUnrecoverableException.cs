@@ -15,6 +15,7 @@ public class ConnectionUnrecoverableException : Exception
             : $"Impossible to (re)connect: {innerException.Message}", innerException) { }
     public ConnectionUnrecoverableException(string? message, Exception? innerException)
         : base(message ?? "Impossible to (re)connect.", innerException) { }
+
     protected ConnectionUnrecoverableException(SerializationInfo info, StreamingContext context)
         : base(info, context) { }
 }

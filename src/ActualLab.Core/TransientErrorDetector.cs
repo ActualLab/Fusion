@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security;
 using System.Security.Authentication;
+using ActualLab.Resilience;
 using ActualLab.Versioning;
 
 namespace ActualLab;
@@ -58,6 +59,9 @@ public abstract record TransientErrorDetector : ITransientErrorDetector
             MissingMemberException => false,
             // Math
             ArithmeticException => false,
+            // ActualLab.Core errors
+            RetryPolicyTimeoutExceededException => false,
+            RetryLimitExceededException => false,
             _ => true,
         };
     });

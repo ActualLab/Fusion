@@ -1,7 +1,7 @@
 using ActualLab.Fusion.EntityFramework.LogProcessing;
 using Microsoft.EntityFrameworkCore;
 
-namespace ActualLab.Fusion.EntityFramework.Operations;
+namespace ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 
 public class DbOperationLogProcessor<TDbContext>
     : DbLogProcessor<TDbContext, DbOperation, DbOperationLogProcessor<TDbContext>.Options>

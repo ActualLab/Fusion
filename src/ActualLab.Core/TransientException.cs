@@ -10,7 +10,8 @@ public interface ITransientException;
 [Serializable]
 public class TransientException : Exception, ITransientException
 {
-    public TransientException() : this(null) { }
+    public TransientException()
+        : this(null) { }
     public TransientException(string? message)
         : base(message ?? "Transient error.") { }
     public TransientException(string? message, Exception innerException)

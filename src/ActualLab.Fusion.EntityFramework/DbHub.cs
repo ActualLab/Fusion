@@ -1,6 +1,7 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Resilience;
 using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.EntityFramework;
@@ -12,6 +13,7 @@ public class DbHub<TDbContext>(IServiceProvider services)
     private IDbShardRegistry<TDbContext>? _shardRegistry;
     private IShardDbContextFactory<TDbContext>? _contextFactory;
     private VersionGenerator<long>? _versionGenerator;
+    private ChaosMaker? _chaosMaker;
     private MomentClockSet? _clocks;
     private ICommander? _commander;
     private ILogger? _log;
@@ -40,10 +42,12 @@ public class DbHub<TDbContext>(IServiceProvider services)
         }
     }
 
-    public ICommander Commander
-        => _commander ??= Services.Commander();
+    public ChaosMaker ChaosMaker
+        => _chaosMaker ??= Commander.Hub.ChaosMaker;
     public MomentClockSet Clocks
         => _clocks ??= Services.Clocks();
+    public ICommander Commander
+        => _commander ??= Services.Commander();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<TDbContext> CreateDbContext(CancellationToken cancellationToken = default)

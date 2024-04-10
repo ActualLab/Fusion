@@ -1,4 +1,5 @@
 using ActualLab.Internal;
+using ActualLab.Resilience;
 
 namespace ActualLab.Net;
 

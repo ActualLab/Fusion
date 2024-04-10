@@ -1,6 +1,7 @@
 using System.Data;
 using ActualLab.Fusion.EntityFramework.LogProcessing;
 using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

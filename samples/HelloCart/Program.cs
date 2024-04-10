@@ -1,4 +1,7 @@
-﻿using Samples.HelloCart;
+﻿using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework.LogProcessing;
+using ActualLab.Resilience;
+using Samples.HelloCart;
 using Samples.HelloCart.V1;
 using Samples.HelloCart.V2;
 using Samples.HelloCart.V3;
@@ -6,6 +9,12 @@ using Samples.HelloCart.V4;
 using Samples.HelloCart.V5;
 using static System.Console;
 
+var dbChaosMaker = (
+    (0.5*ChaosMaker.Delay(0.75, 1)) |
+    (0.0*ChaosMaker.TransientError)
+    ).Filtered("OF types", o => o is IDbOperationScope or IDbLogProcessor).Gated();
+WriteLine(dbChaosMaker);
+ChaosMaker.Default = dbChaosMaker;
 // Create services
 AppBase? app;
 while(true) {

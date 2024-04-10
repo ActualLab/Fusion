@@ -11,6 +11,8 @@ public class DisconnectedException : Exception, ITransientException
         : this(message, innerException: null) { }
     public DisconnectedException(string? message, Exception? innerException)
         : base(message ?? "The server connection is offline.", innerException) { }
+
+    [Obsolete("Obsolete")]
     protected DisconnectedException(SerializationInfo info, StreamingContext context)
         : base(info, context) { }
 }

@@ -11,7 +11,7 @@ public static class AppDb
 {
     public static bool UsePostgreSql { get; set; } = true;
     public static bool UseOperationLogWatchers { get; set; } = true;
-    public static bool UseRedisOperationLogWatchers { get; set; } = false;
+    public static bool UseRedisOperationLogWatchers { get; set; } = true;
 
     public static void Configure(IServiceCollection services)
     {
@@ -37,8 +37,10 @@ public static class AppDb
                 if (!UseOperationLogWatchers)
                     return;
 
-                if (UseRedisOperationLogWatchers)
+                if (UseRedisOperationLogWatchers) {
+                    db.AddRedisDb("localhost", "Fusion.Samples.HelloCart");
                     operations.AddRedisOperationLogWatchers();
+                }
                 else if (UsePostgreSql)
                     operations.AddNpgsqlOperationLogWatchers();
                 else

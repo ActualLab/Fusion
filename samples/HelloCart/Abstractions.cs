@@ -41,6 +41,8 @@ public partial record LogMessageCommand(
     public Task Run(CommandContext context, CancellationToken cancellationToken)
     {
         Console.WriteLine($"[{Uuid}] {Message}");
+        if (false && char.IsDigit(Uuid.Value[^1]))
+            throw new InvalidOperationException("Can't run this command!");
         return Task.CompletedTask;
     }
 }

@@ -1,23 +1,37 @@
+using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.CommandR.Rpc;
 
 public class RpcOutboundCommandCallMiddleware : RpcOutboundMiddleware
 {
-    public static TimeSpan DefaultConnectTimeout { get; set; } = TimeSpan.FromSeconds(1.5);
-    public static TimeSpan DefaultCallTimeout { get; set; } = TimeSpan.FromSeconds(10);
-    public static TimeSpan DefaultBackendConnectTimeout { get; set; } = TimeSpan.FromMinutes(5);
-    public static TimeSpan DefaultBackendCallTimeout { get; set; } = TimeSpan.FromMinutes(5);
-    public int DefaultPriority { get; set; } = 10;
+    public static class Default
+    {
+        public static int Priority { get; set; } = 10;
+        public static TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(1.5);
+        public static TimeSpan CallTimeout { get; set; } = TimeSpan.FromSeconds(10);
+        public static TimeSpan BackendConnectTimeout { get; set; } = TimeSpan.FromMinutes(5);
+        public static TimeSpan BackendCallTimeout { get; set; } = TimeSpan.FromMinutes(5);
+        // Timeouts when RpcSettings.DebugMode == true
+        public static TimeSpan DebugModeTimeouts { get; set; } = TimeSpan.Zero; // Zero = no timeout!
+    }
 
-    public TimeSpan ConnectTimeout { get; set; } = DefaultConnectTimeout;
-    public TimeSpan CallTimeout { get; set; } = DefaultCallTimeout;
-    public TimeSpan BackendConnectTimeout { get; set; } = DefaultBackendConnectTimeout;
-    public TimeSpan BackendCallTimeout { get; set; } = DefaultBackendCallTimeout;
+    public TimeSpan ConnectTimeout { get; set; }
+    public TimeSpan CallTimeout { get; set; }
+    public TimeSpan BackendConnectTimeout { get; set; }
+    public TimeSpan BackendCallTimeout { get; set; }
 
     public RpcOutboundCommandCallMiddleware(IServiceProvider services)
         : base(services)
-        => Priority = DefaultPriority;
+    {
+        Priority = Default.Priority;
+        ConnectTimeout = Default.ConnectTimeout;
+        CallTimeout = Default.CallTimeout;
+        BackendConnectTimeout = Default.BackendConnectTimeout;
+        BackendCallTimeout = Default.BackendCallTimeout;
+        if (RpcSettings.DebugMode)
+            ConnectTimeout = CallTimeout = BackendConnectTimeout = BackendCallTimeout = Default.DebugModeTimeouts;
+    }
 
     public override void PrepareCall(RpcOutboundContext context)
     {

@@ -18,10 +18,15 @@ public sealed record Sampler(
 
     public double InverseProbability { get; } = 1d / Probability;
 
+    // Conversion
+
     public override string ToString()
         => Id.EndsWith(')')
             ? Id // .ToConcurrent(...)-like case, the probability is already in Id there
             : $"{Id}({Probability.ToString("P1",CultureInfo.InvariantCulture)})";
+
+    public static implicit operator Sampler(double probability)
+        => Random(probability);
 
     public Sampler ToConcurrent(int concurrencyLevel = -1)
     {

@@ -1,4 +1,4 @@
-using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.Resilience;
 using static System.Console;
 
 namespace Samples.HelloCart;
@@ -7,9 +7,9 @@ public static class AutoRunner
 {
     public static async Task Run(AppBase app, CancellationToken cancellationToken = default)
     {
+        ChaosMaker.Default.TryEnable();
         var productService = app.ClientServices.GetRequiredService<IProductService>();
         var commander = app.ClientServices.Commander();
-        DbOperationsChaosMonkey.Instance = DbOperationsChaosMonkey.New(1, 0);
 
         var rnd = new Random(10);
         for (var i = 0;; i++) {
@@ -19,7 +19,7 @@ public static class AutoRunner
             var command = new EditCommand<Product>(product! with { Price = price });
             WriteLine(command);
             _ = commander.Run(command, cancellationToken);
-            await Task.Delay(50, cancellationToken);
+            await Task.Delay(333, cancellationToken);
         }
     }
 }

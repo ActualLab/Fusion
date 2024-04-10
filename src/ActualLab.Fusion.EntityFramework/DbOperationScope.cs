@@ -61,6 +61,7 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
 
     // Services
     protected IServiceProvider Services { get; }
+    protected DbHub<TDbContext> DbHub { get; }
     protected HostId HostId { get; }
     protected IDbShardRegistry<TDbContext> ShardRegistry
         => _shardRegistry ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
@@ -75,10 +76,11 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
         Settings = settings;
         Services = services;
         Log = Services.LogFor(GetType());
+
         CommandContext = CommandContext.GetCurrent();
-        var commanderHub = CommandContext.Commander.Hub;
-        HostId = commanderHub.HostId;
-        Clocks = commanderHub.Clocks;
+        DbHub = services.DbHub<TDbContext>();
+        HostId = DbHub.HostId;
+        Clocks = DbHub.Clocks;
         AsyncLock = new AsyncLock(LockReentryMode.CheckedPass);
         Operation = Operation.New(this);
     }
@@ -181,12 +183,8 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
                 throw Errors.DbOperationIndexWasNotAssigned();
 
             try {
-                if (DbOperationsChaosMonkey.Instance is { } chaosMonkey) {
-                    if (chaosMonkey.CommitDelaySampler.Next.Invoke())
-                        await Task.Delay(chaosMonkey.CommitDelay.Next(), cancellationToken).ConfigureAwait(false);
-                    if (chaosMonkey.CommitFailureSampler.Next.Invoke())
-                        throw new TransientException("DbOperationsChaosMonkey-caused failure.");
-                }
+                if (DbHub.ChaosMaker.IsEnabled)
+                    await DbHub.ChaosMaker.Act(this, cancellationToken).ConfigureAwait(false);
                 await Transaction!.CommitAsync(cancellationToken).ConfigureAwait(false);
                 Operation.Index = dbOperation.Index;
                 IsConfirmed = true;

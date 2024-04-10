@@ -7,6 +7,7 @@ using ActualLab.Fusion.Blazor.Authentication;
 using Microsoft.Extensions.Configuration.Memory;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.EntityFramework.Npgsql;
+using ActualLab.Fusion.EntityFramework.Redis;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Server;
 using ActualLab.Fusion.Server.Middlewares;

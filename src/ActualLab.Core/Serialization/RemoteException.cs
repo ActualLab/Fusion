@@ -22,5 +22,7 @@ public class RemoteException : Exception, ITransientException
         : base(message, innerException)
         => ExceptionInfo = exceptionInfo;
 
-    protected RemoteException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    [Obsolete("Obsolete")]
+    protected RemoteException(SerializationInfo info, StreamingContext context)
+        : base(info, context) { }
 }

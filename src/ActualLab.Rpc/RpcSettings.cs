@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ActualLab.OS;
 
 namespace ActualLab.Rpc;
@@ -20,6 +21,7 @@ public static class RpcSettings
         }
     }
 
+    public static bool DebugMode { get; set; } = Debugger.IsAttached;
     public static Func<Task>? WebSocketWriteDelayFactory { get; set; }
 
     static RpcSettings()
