@@ -9,8 +9,8 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 #pragma warning disable IL2026
 
 [Table("_Operations")]
-[Index(nameof(Uuid), nameof(Index), Name = "IX_Uuid")] // "Uuid -> Index" queries
-[Index(nameof(LoggedAt), nameof(Index), Name = "IX_LoggedAt")] // "LoggedAt > minLoggedAt -> min(Index)" queries
+[Index(nameof(Uuid), Name = "IX_Uuid")] // "Uuid -> Index" queries
+[Index(nameof(LoggedAt), Name = "IX_LoggedAt")] // "LoggedAt > minLoggedAt -> min(Index)" queries
 public sealed class DbOperation
     : ILogEntry, IHasId<string>, IHasId<long>
 {
