@@ -44,7 +44,7 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
 
     public Operation Operation { get; protected init; }
     public CommandContext CommandContext { get; protected init; }
-    public bool AllowsEvents => true;
+    public bool IsTransient => false;
     public bool IsUsed => MasterDbContext != null;
     public bool IsClosed { get; private set; }
     public bool? IsConfirmed { get; private set; }
@@ -164,16 +164,27 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
                 return;
             }
 
-            Operation.LoggedAt = Clocks.SystemClock.Now;
+            var now = Clocks.SystemClock.Now;
+            Operation.LoggedAt = now;
             if (Operation.Command == null)
                 throw ActualLab.Fusion.Operations.Internal.Errors.OperationHasNoCommand();
 
             var dbContext = MasterDbContext!;
             dbContext.EnableChangeTracking(false); // Just to speed up things a bit
-            if (Operation.HasEvents) {
-                foreach (var @event in Operation.Events) {
-                    var dbOperationEvent = new DbOperationEvent(@event);
-                    dbContext.Add(dbOperationEvent);
+            if (Operation.Events.Count != 0) {
+                foreach (var operationEvent in Operation.Events) {
+                    if (ReferenceEquals(operationEvent.Value, null))
+                        continue; // We don't store events with null values
+
+                    var firesAt = operationEvent.FiresAt;
+                    if (firesAt >= now) {
+                        var dbOperationTimer = new DbOperationTimer(operationEvent, DbHub.VersionGenerator);
+                        dbContext.Add(dbOperationTimer);
+                    }
+                    else {
+                        var dbOperationEvent = new DbOperationEvent(operationEvent, DbHub.VersionGenerator);
+                        dbContext.Add(dbOperationEvent);
+                    }
                 }
             }
             var dbOperation = new DbOperation(Operation);

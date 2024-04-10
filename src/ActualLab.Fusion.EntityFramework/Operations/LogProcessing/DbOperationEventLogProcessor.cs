@@ -7,7 +7,7 @@ public class DbOperationEventLogProcessor<TDbContext>
     : DbLogProcessor<TDbContext, DbOperationEvent, DbOperationEventLogProcessor<TDbContext>.Options>
     where TDbContext : DbContext
 {
-    public record Options : ExclusiveDbLogProcessorOptions
+    public record Options : DbEventLogProcessorOptions
     {
         public static Options Default { get; set; } = new();
 
@@ -32,7 +32,7 @@ public class DbOperationEventLogProcessor<TDbContext>
 
     protected override Task Process(DbShard shard, DbOperationEvent entry, CancellationToken cancellationToken)
     {
-        var @event = entry.ToModel();
-        return OperationEventProcessor.Process(@event, cancellationToken);
+        var operationEvent = entry.ToModel();
+        return OperationEventProcessor.Process(operationEvent, cancellationToken);
     }
 }

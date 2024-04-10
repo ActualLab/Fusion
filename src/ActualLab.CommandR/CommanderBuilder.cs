@@ -8,6 +8,8 @@ using ActualLab.Generators;
 using ActualLab.Interception;
 using ActualLab.Resilience;
 using ActualLab.Rpc;
+using ActualLab.Versioning;
+using ActualLab.Versioning.Providers;
 
 namespace ActualLab.CommandR;
 
@@ -46,6 +48,7 @@ public readonly struct CommanderBuilder
         services.TryAddSingleton(_ => MomentClockSet.Default);
         services.TryAddSingleton(c => c.GetRequiredService<MomentClockSet>().SystemClock);
         services.TryAddSingleton<UuidGenerator>(_ => new UlidUuidGenerator());
+        services.TryAddSingleton<VersionGenerator<long>>(c => new ClockBasedVersionGenerator(c.Clocks().SystemClock));
         services.TryAddSingleton(_ => ChaosMaker.Default);
 
         // Commander, handlers, etc.

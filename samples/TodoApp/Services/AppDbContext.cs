@@ -17,4 +17,5 @@ public class AppDbContext(DbContextOptions options) : DbContextBase(options)
     // ActualLab.Fusion.EntityFramework.Operations tables
     public DbSet<DbOperation> Operations { get; protected set; } = null!;
     public DbSet<DbOperationEvent> OperationEvents { get; protected set; } = null!;
+    public DbSet<DbOperationTimer> OperationTimers { get; protected set; } = null!;
 }

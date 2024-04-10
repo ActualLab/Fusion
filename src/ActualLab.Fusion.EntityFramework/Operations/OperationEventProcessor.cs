@@ -15,10 +15,10 @@ public class OperationEventProcessor
         Log = services.LogFor(GetType());
     }
 
-    public virtual Task Process(OperationEvent @event, CancellationToken cancellationToken)
+    public virtual Task Process(OperationEvent operationEvent, CancellationToken cancellationToken)
     {
-        var ulid = @event.Uuid;
-        var value = @event.Value;
+        var ulid = operationEvent.Uuid;
+        var value = operationEvent.Value;
         if (value is ICommand command) {
             Log.LogInformation("Processing command event {Ulid}: {Command}", ulid, command);
             return Commander.Call(command, true, cancellationToken);

@@ -9,10 +9,9 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 #pragma warning disable IL2026
 
 [Table("_Operations")]
-[Index(nameof(Uuid), Name = "IX_Uuid")] // "Uuid -> Index" queries
+[Index(nameof(Uuid), IsUnique = true, Name = "IX_Uuid")] // "Uuid -> Index" queries
 [Index(nameof(LoggedAt), Name = "IX_LoggedAt")] // "LoggedAt > minLoggedAt -> min(Index)" queries
-public sealed class DbOperation
-    : ILogEntry, IHasId<string>, IHasId<long>
+public sealed class DbOperation : ILogEntry, IHasId<string>, IHasId<long>
 {
     public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;
 
@@ -26,7 +25,8 @@ public sealed class DbOperation
     long IHasId<long>.Id => Index;
     // DbOperations are never updated, but only deleted, so...
     long ILogEntry.Version { get => 0; set { } }
-    bool ILogEntry.IsProcessed { get => false; set { } }
+    DateTime ILogEntry.FiresAt => default;
+    LogEntryState ILogEntry.State { get => default; set { } }
 
     [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long Index {

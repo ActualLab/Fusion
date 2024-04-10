@@ -25,6 +25,7 @@ public class TestDbContext : DbContextBase
     // ActualLab.Fusion.EntityFramework.Operations tables
     public DbSet<DbOperation> Operations { get; protected set; } = null!;
     public DbSet<DbOperationEvent> OperationEvents { get; protected set; } = null!;
+    public DbSet<DbOperationTimer> OperationTimers { get; protected set; } = null!;
 
     public TestDbContext(DbContextOptions options) : base(options)
         => this.EnableChangeTracking(false);

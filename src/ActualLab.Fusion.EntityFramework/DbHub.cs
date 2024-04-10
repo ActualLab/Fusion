@@ -27,7 +27,7 @@ public class DbHub<TDbContext>(IServiceProvider services)
     public IShardDbContextFactory<TDbContext> ContextFactory
         => _contextFactory ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
     public VersionGenerator<long> VersionGenerator
-        => _versionGenerator ??= Services.VersionGenerator<long>();
+        => _versionGenerator ??= Commander.Hub.VersionGenerator;
 
     public IsolationLevel CommandIsolationLevel {
         get {

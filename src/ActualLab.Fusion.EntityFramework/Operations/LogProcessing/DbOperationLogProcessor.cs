@@ -7,7 +7,7 @@ public class DbOperationLogProcessor<TDbContext>
     : DbLogProcessor<TDbContext, DbOperation, DbOperationLogProcessor<TDbContext>.Options>
     where TDbContext : DbContext
 {
-    public record Options : CooperativeDbLogProcessorOptions
+    public record Options : DbOperationLogProcessorOptions
     {
         public static Options Default { get; set; } = new();
     }

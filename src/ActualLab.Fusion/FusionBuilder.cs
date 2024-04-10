@@ -62,7 +62,6 @@ public readonly struct FusionBuilder
         // Common services
         services.AddOptions();
         services.AddConverters();
-        services.TryAddSingleton(_ => ClockBasedVersionGenerator.DefaultCoarse);
         services.TryAddSingleton(c => new FusionInternalHub(c));
 
         // Compute services & their dependencies

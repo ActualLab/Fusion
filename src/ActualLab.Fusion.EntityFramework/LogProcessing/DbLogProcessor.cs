@@ -1,60 +1,27 @@
-using ActualLab.OS;
 using ActualLab.Resilience;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
-public enum DbLogProcessingMode
+public enum DbLogKind
 {
-    Cooperative = 0, // Every reader processes each entry - used for operation log / invalidations
-    Exclusive = 1, // Just a single reader processes each entry - used for outbox items
+    Operations = 0, // Every reader processes each entry - used for operation log / invalidations
+    Events, // Just a single reader processes each entry - used for outbox items
+    Timers, // Just a single reader processes each entry - used for outbox items
 }
 
-public abstract record DbLogProcessorOptions
-{
-    public int BatchSize { get; init; } = 128;
-    public RandomTimeSpan GapRetryDelay { get; init; } = TimeSpan.FromSeconds(0.1).ToRandom(0.1);
-    public IRetryPolicy GapRetryPolicy { get; init; } = null!;
-    public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(1, 5);
-    public RandomTimeSpan ForcedCheckPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.1);
-    public int ProcessConcurrencyLevel { get; init; } = HardwareInfo.GetProcessorCountFactor(4);
-    public LogLevel LogLevel { get; init; } = LogLevel.Information;
-}
-
-public abstract record CooperativeDbLogProcessorOptions : DbLogProcessorOptions
-{
-    public TimeSpan StartOffset { get; init; } = TimeSpan.FromSeconds(3);
-
-    protected CooperativeDbLogProcessorOptions()
-    {
-        GapRetryPolicy = new RetryPolicy(
-            10, TimeSpan.FromSeconds(30),
-            RetryDelaySeq.Exp(0.25, 1, 0.1, 2)); // Up to 1 second, 2x longer on each iteration
-    }
-}
-
-public abstract record ExclusiveDbLogProcessorOptions : DbLogProcessorOptions
-{
-    protected ExclusiveDbLogProcessorOptions()
-    {
-        GapRetryPolicy = new RetryPolicy(
-            TimeSpan.FromMinutes(5),
-            RetryDelaySeq.Exp(0.25, 1, 0.1, 2)); // Up to 1 second, 2x longer on each iteration
-    }
-}
+public interface IDbLogProcessor;
 
 public static class DbLogProcessor
 {
     public static DbHint[] CooperativeReadHints { get; set; } = DbHintSet.Empty;
     public static DbHint[] ExclusiveReadHints { get; set; } =  DbHintSet.UpdateSkipLocked;
 
-    public static DbHint[] GetProcessQueryHints(DbLogProcessingMode mode)
-        => mode is DbLogProcessingMode.Cooperative
+    public static DbHint[] GetProcessQueryHints(DbLogKind mode)
+        => mode is DbLogKind.Operations
             ? CooperativeReadHints
             : ExclusiveReadHints;
 }
-
-public interface IDbLogProcessor;
 
 public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
     TOptions settings,
@@ -73,9 +40,10 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
     protected ILogger? DebugLog => Log.IfEnabled(LogLevel.Debug);
 
     public TOptions Settings { get; } = settings;
-    public DbLogProcessingMode Mode { get; } = settings switch {
-        CooperativeDbLogProcessorOptions => DbLogProcessingMode.Cooperative,
-        ExclusiveDbLogProcessorOptions => DbLogProcessingMode.Exclusive,
+    public DbLogKind LogKind { get; } = settings switch {
+        DbOperationLogProcessorOptions => DbLogKind.Operations,
+        DbEventLogProcessorOptions => DbLogKind.Events,
+        DbTimerLogProcessorOptions => DbLogKind.Timers,
         _ => throw new ArgumentOutOfRangeException(nameof(settings))
     };
 
@@ -127,7 +95,7 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
         dbContext.EnableChangeTracking(false);
 
         var batchSize = Settings.BatchSize;
-        var entries = await dbContext.Set<TDbEntry>(DbLogProcessor.GetProcessQueryHints(Mode))
+        var entries = await dbContext.Set<TDbEntry>(DbLogProcessor.GetProcessQueryHints(LogKind))
             // ReSharper disable once AccessToModifiedClosure
             .Where(o => o.Index >= nextIndex)
             .OrderBy(o => o.Index)
@@ -144,15 +112,15 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
             return false;
 
         await GetProcessTasks(shard, entries, nextIndex, cancellationToken)
-            .Collect(Settings.ProcessConcurrencyLevel)
+            .Collect(Settings.ConcurrencyLevel)
             .ConfigureAwait(false);
         nextIndex = entries[^1].Index + 1;
 
-        if (Mode is DbLogProcessingMode.Exclusive) {
+        if (LogKind != DbLogKind.Operations) { // Events or Timers
             var dbEntries = dbContext.Set<TDbEntry>();
             foreach (var entry in entries) {
                 dbEntries.Attach(entry);
-                MarkProcessed(dbEntries, entry);
+                UpdateEntryState(dbEntries, entry, LogEntryState.Processed);
             }
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -184,12 +152,12 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
         dbContext.EnableChangeTracking(false);
 
         var candidateEntries = dbContext.Set<TDbEntry>().AsQueryable();
-        if (Settings is CooperativeDbLogProcessorOptions cooperativeSettings) {
+        if (Settings is DbOperationLogProcessorOptions cooperativeSettings) {
             var minLoggedAt = SystemClock.Now.ToDateTime() - cooperativeSettings.StartOffset;
             candidateEntries = candidateEntries.Where(e => e.LoggedAt >= minLoggedAt);
         }
         else
-            candidateEntries = candidateEntries.Where(e => !e.IsProcessed);
+            candidateEntries = candidateEntries.Where(e => e.State == LogEntryState.New);
         return await candidateEntries
             .OrderBy(e => e.Index)
             .FirstOrDefaultAsync(cancellationToken)
@@ -211,7 +179,7 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
         DbShard shard, TDbEntry entry, bool fallbackToProcessGap, CancellationToken cancellationToken)
     {
         // This method should never fail (unless cancelled)!
-        if (entry.IsProcessed)
+        if (entry.State != LogEntryState.New)
             return;
 
         try {
@@ -278,7 +246,7 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
         dbContext.EnableChangeTracking(false);
 
         TDbEntry? entry;
-        if (Mode is DbLogProcessingMode.Cooperative) {
+        if (LogKind is DbLogKind.Operations) {
             // Cooperative mode flow
             entry = await GetEntry(dbContext, index, cancellationToken).ConfigureAwait(false);
             if (entry == null)
@@ -295,12 +263,12 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
         entry = await GetEntry(dbContext, index, cancellationToken).ConfigureAwait(false);
         if (entry == null)
             throw new LogEntryNotFoundException();
-        if (entry.IsProcessed)
+        if (entry.State != LogEntryState.New)
             return false;
 
         var dbEntries = dbContext.Set<TDbEntry>();
         dbEntries.Attach(entry);
-        MarkProcessed(dbEntries, entry);
+        UpdateEntryState(dbEntries, entry, LogEntryState.Processed);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // If we're here, the entry's row is x-locked due to update above
@@ -314,16 +282,16 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
 
     private async Task<TDbEntry?> GetEntry(TDbContext dbContext, long index, CancellationToken cancellationToken)
     {
-        var dbEntries = Mode is DbLogProcessingMode.Exclusive
-            ? dbContext.Set<TDbEntry>().WithHints(DbLockingHint.Update)
-            : dbContext.Set<TDbEntry>();
+        var dbEntries = LogKind == DbLogKind.Operations
+            ? dbContext.Set<TDbEntry>()
+            : dbContext.Set<TDbEntry>().WithHints(DbLockingHint.Update);
         return await dbEntries.FirstOrDefaultAsync(x => x.Index == index, cancellationToken).ConfigureAwait(false);
     }
 
-    protected void MarkProcessed(DbSet<TDbEntry> dbEntries, TDbEntry entry)
+    protected void UpdateEntryState(DbSet<TDbEntry> dbEntries, TDbEntry entry, LogEntryState state)
     {
-        entry.Version = DbHub.VersionGenerator.NextVersion(entry.Version);
-        entry.IsProcessed = true;
         dbEntries.Update(entry);
+        entry.State = state;
+        entry.Version = DbHub.VersionGenerator.NextVersion(entry.Version);
     }
 }

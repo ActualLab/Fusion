@@ -15,7 +15,7 @@ public sealed class TransientOperationScope : AsyncDisposableBase, IOperationSco
 
     public CommandContext CommandContext { get; }
     public Operation Operation { get; }
-    public bool AllowsEvents => false;
+    public bool IsTransient => true;
     public bool IsUsed { get; private set; }
     public bool IsClosed { get; private set; }
     public bool? IsConfirmed { get; private set; }

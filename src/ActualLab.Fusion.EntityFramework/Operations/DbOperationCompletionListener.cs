@@ -50,7 +50,7 @@ public class DbOperationCompletionListener<TDbContext>
     protected virtual Task Notify(DbShard shard, Operation operation, CancellationToken cancellationToken)
     {
         var notifyOperationLogTask = LogWatcher.NotifyChanged(shard, cancellationToken);
-        if (!operation.HasEvents)
+        if (operation.Events.Count == 0)
             return notifyOperationLogTask;
 
         var notifyOperationEventLogTask = EventLogWatcher.NotifyChanged(shard, cancellationToken);

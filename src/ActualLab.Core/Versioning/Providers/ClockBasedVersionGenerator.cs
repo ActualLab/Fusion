@@ -2,8 +2,7 @@ namespace ActualLab.Versioning.Providers;
 
 public sealed class ClockBasedVersionGenerator(IMomentClock clock) : VersionGenerator<long>
 {
-    public static VersionGenerator<long> DefaultPrecise { get; set; } = new ClockBasedVersionGenerator(MomentClockSet.Default.SystemClock);
-    public static VersionGenerator<long> DefaultCoarse { get; set; } = new ClockBasedVersionGenerator(MomentClockSet.Default.CoarseSystemClock);
+    public static VersionGenerator<long> Default { get; set; } = new ClockBasedVersionGenerator(MomentClockSet.Default.SystemClock);
 
 #pragma warning disable MA0061
     public override long NextVersion(long currentVersion = 0)

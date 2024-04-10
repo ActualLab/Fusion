@@ -9,31 +9,23 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 
 #pragma warning disable IL2026
 
-[Table("_OperationEvents")]
-[Index(nameof(Uuid), IsUnique = true, Name = "IX_Uuid")] // "Uuid -> Index" queries
-[Index(nameof(State), nameof(LoggedAt), Name = "IX_State")] // "!IsProcessed -> min(Index)" queries
-[Index(nameof(LoggedAt), Name = "IX_LoggedAt")] // "LoggedAt > minLoggedAt -> min(Index)" queries
-public sealed class DbOperationEvent : ILogEntry, IHasId<string>, IHasId<long>
+[Table("_OperationTimers")]
+[Index(nameof(State), nameof(FiresAt), Name = "IX_State2")] // "!IsProcessed & FiresAt < now" queries
+[Index(nameof(LoggedAt), Name = "IX_LoggedAt")] // "LoggedAt < trimAt" queries
+[Index(nameof(FiresAt), Name = "IX_FiresAt")] // "FiresAt < trimAt" queries
+public sealed class DbOperationTimer : ILogEntry, IHasId<string>
 {
     public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;
 
-    private long? _index;
     private Symbol _uuid;
     private DateTime _loggedAt;
+    private DateTime _firesAt;
 
     Symbol IHasUuid.Uuid => _uuid;
     string IHasId<string>.Id => _uuid.Value;
-    long IHasId<long>.Id => Index;
-    DateTime ILogEntry.FiresAt => default;
+    long ILogEntry.Index => 0;
 
-    [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public long Index {
-        get => _index ?? 0;
-        set => _index = value;
-    }
-    [NotMapped] public bool HasIndex => _index.HasValue;
-
-    public string Uuid { get => _uuid; set => _uuid = value; }
+    [Key] public string Uuid { get => _uuid; set => _uuid = value; }
     [ConcurrencyCheck] public long Version { get; set; }
 
     public DateTime LoggedAt {
@@ -41,11 +33,16 @@ public sealed class DbOperationEvent : ILogEntry, IHasId<string>, IHasId<long>
         set => _loggedAt = value.DefaultKind(DateTimeKind.Utc);
     }
 
+    public DateTime FiresAt {
+        get => _firesAt.DefaultKind(DateTimeKind.Utc);
+        set => _firesAt = value.DefaultKind(DateTimeKind.Utc);
+    }
+
     public string ValueJson { get; set; } = "";
     public LogEntryState State { get; set; }
 
-    public DbOperationEvent() { }
-    public DbOperationEvent(OperationEvent model, VersionGenerator<long> versionGenerator)
+    public DbOperationTimer() { }
+    public DbOperationTimer(OperationEvent model, VersionGenerator<long> versionGenerator)
         => UpdateFrom(model, versionGenerator);
 
     public OperationEvent ToModel()
@@ -53,13 +50,14 @@ public sealed class DbOperationEvent : ILogEntry, IHasId<string>, IHasId<long>
         var value = ValueJson.IsNullOrEmpty()
             ? null
             : Serializer.Read(ValueJson, typeof(object));
-        return new OperationEvent(Uuid, LoggedAt, default, value);
+        return new OperationEvent(Uuid, LoggedAt, FiresAt, value);
     }
 
-    public DbOperationEvent UpdateFrom(OperationEvent model, VersionGenerator<long> versionGenerator)
+    public DbOperationTimer UpdateFrom(OperationEvent model, VersionGenerator<long> versionGenerator)
     {
         Uuid = model.Uuid;
         LoggedAt = model.LoggedAt;
+        FiresAt = model.FiresAt;
         ValueJson = Serializer.Write(model.Value, typeof(object));
         Version = versionGenerator.NextVersion(Version);
         return this;
