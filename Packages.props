@@ -6,7 +6,7 @@
 
   <PropertyGroup>
     <!-- Core packages -->
-    <AspNetCoreVersion>8.*</AspNetCoreVersion>
+    <AspNetCoreVersion>8.0.0</AspNetCoreVersion>
     <AspNetCoreVersion7>7.*</AspNetCoreVersion7>
     <AspNetCoreVersion6>6.*</AspNetCoreVersion6>
     <AspNetCoreVersion5>5.*</AspNetCoreVersion5>
@@ -20,7 +20,7 @@
     <SystemXxxVersion7>$(AspNetCoreVersion7)</SystemXxxVersion7>
     <SystemXxxVersion6>$(AspNetCoreVersion6)</SystemXxxVersion6>
     <SystemXxxVersion5>$(AspNetCoreVersion5)</SystemXxxVersion5>
-    <MicrosoftExtensionsVersion>$(AspNetCoreVersion)</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsVersion>8.0.0</MicrosoftExtensionsVersion>
     <MicrosoftExtensionsVersion7>$(AspNetCoreVersion7)</MicrosoftExtensionsVersion7>
     <MicrosoftExtensionsVersion6>$(AspNetCoreVersion6)</MicrosoftExtensionsVersion6>
     <CSharpVersion>4.4.*</CSharpVersion>
