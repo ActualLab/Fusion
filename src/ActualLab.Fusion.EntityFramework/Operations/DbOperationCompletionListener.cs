@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
 public class DbOperationCompletionListener<TDbContext>
-    : DbServiceBase<TDbContext>, IOperationCompletionListener
+    : DbProcessorBase<TDbContext>, IOperationCompletionListener
     where TDbContext : DbContext
 {
     public record Options
@@ -39,9 +39,9 @@ public class DbOperationCompletionListener<TDbContext>
             return Task.CompletedTask; // Nothing is committed to TDbContext
 
         var shard = operationScope.Shard;
-        var notifyChain = new AsyncChain($"Notify({shard})", ct => Notify(shard, operation, operationScope, ct))
-            .Retry(Settings.NotifyRetryDelays, Settings.NotifyRetryCount, Clocks.CpuClock, Log);
-        _ = notifyChain.RunIsolated(CancellationToken.None);
+        _ = new AsyncChain($"Notify({shard})", ct => Notify(shard, operation, operationScope, ct))
+            .Retry(Settings.NotifyRetryDelays, Settings.NotifyRetryCount, Clocks.CpuClock, Log)
+            .RunIsolated(StopToken);
         return Task.CompletedTask;
     }
 
