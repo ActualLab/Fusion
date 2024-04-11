@@ -29,9 +29,12 @@ public static class RpcSettings
 
     private static void Recompute()
     {
+        // Disabled for now due to possible perf. issues
+#if false
         var isServer = Mode is RpcMode.Server;
         WebSocketWriteDelayFactory = isServer
             ? null
             : TaskExt.YieldDelay;
+#endif
     }
 }

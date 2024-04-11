@@ -3,6 +3,7 @@ namespace ActualLab.Fusion.Internal;
 public static class Timeouts
 {
     public static readonly IMomentClock Clock;
+    public static readonly TickSource TickSource;
     public static readonly ConcurrentTimerSet<object> KeepAlive;
     public static readonly ConcurrentTimerSet<IComputed> Invalidate;
     public static readonly Moment StartedAt;
@@ -12,18 +13,19 @@ public static class Timeouts
     static Timeouts()
     {
         Clock = MomentClockSet.Default.CpuClock;
+        TickSource = new TickSource(KeepAliveQuanta);
         StartedAt = Clock.Now - KeepAliveQuanta.Multiply(2); // In past to make timer priorities strictly positive
         KeepAlive = new ConcurrentTimerSet<object>(
             new() {
-                Quanta = KeepAliveQuanta,
-                ConcurrencyLevel = FusionSettings.TimeoutsConcurrencyLevel,
                 Clock = Clock,
+                TickSource = TickSource,
+                ConcurrencyLevel = FusionSettings.TimeoutsConcurrencyLevel,
             }, null, StartedAt);
         Invalidate = new ConcurrentTimerSet<IComputed>(
             new() {
-                Quanta = KeepAliveQuanta,
-                ConcurrencyLevel = FusionSettings.TimeoutsConcurrencyLevel,
                 Clock = Clock,
+                TickSource = TickSource,
+                ConcurrencyLevel = FusionSettings.TimeoutsConcurrencyLevel,
             },
             t => t.Invalidate(true), StartedAt);
     }

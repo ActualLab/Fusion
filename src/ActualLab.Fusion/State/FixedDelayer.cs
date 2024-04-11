@@ -1,50 +1,43 @@
+using ActualLab.Fusion.Internal;
+
 namespace ActualLab.Fusion;
 
-public sealed record FixedDelayer(
-    TimeSpan UpdateDelay,
-    RetryDelaySeq RetryDelays,
-    bool IsSafe = true
-) : IUpdateDelayer
+public abstract record FixedDelayer(RetryDelaySeq RetryDelays) : IUpdateDelayer
 {
     private static readonly ConcurrentDictionary<TimeSpan, FixedDelayer> Cache = new();
 
-    public static FixedDelayer ZeroUnsafe { get; set; } = new(TimeSpan.Zero, Defaults.RetryDelays, false);
-    public static FixedDelayer Zero { get; set; } = new(TimeSpan.Zero, Defaults.RetryDelays);
+    public static ZeroFixedDelayer NoneUnsafe { get; set; } = new(Defaults.RetryDelays);
+    public static YieldFixedDelayer YieldUnsafe { get; set; } = new(Defaults.RetryDelays);
+    public static NextTickFixedDelayer NextTick { get; set; } = new(Defaults.RetryDelays);
     public static FixedDelayer MinDelay { get; set; } = Get(Defaults.MinDelay);
-
-    public FixedDelayer(double updateDelay)
-        : this(TimeSpan.FromSeconds(updateDelay), Defaults.RetryDelays) { }
-    public FixedDelayer(double updateDelay, RetryDelaySeq retryDelays)
-        : this(TimeSpan.FromSeconds(updateDelay), retryDelays) { }
-    public FixedDelayer(TimeSpan updateDelay)
-        : this(updateDelay, Defaults.RetryDelays) { }
 
     public static FixedDelayer Get(double updateDelay)
         => Get(TimeSpan.FromSeconds(updateDelay));
     public static FixedDelayer Get(TimeSpan updateDelay)
-        => Cache.GetOrAdd(TimeSpanExt.Max(updateDelay, Defaults.MinDelay), static d => new FixedDelayer(d));
+        => Cache.GetOrAdd(TimeSpanExt.Max(updateDelay, Defaults.MinDelay),
+            static d => new TaskDelayFixedDelayer(d, Defaults.RetryDelays));
 
-    public async ValueTask Delay(int retryCount, CancellationToken cancellationToken = default)
+    public abstract Task Delay(int retryCount, CancellationToken cancellationToken = default);
+
+    protected Task? RetryDelay(int retryCount, CancellationToken cancellationToken)
     {
-        var delay = TimeSpanExt.Max(UpdateDelay, GetDelay(retryCount));
-        if (delay <= TimeSpan.Zero) {
-            if (IsSafe)
-                await Task.Yield();
-            return;
-        }
+        cancellationToken.ThrowIfCancellationRequested();
 
-        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+#pragma warning disable MA0022, RCS1210
+        if (retryCount <= 0)
+            return null;
+#pragma warning restore MA0022, RCS1210
+
+        return Task.Delay(RetryDelays[retryCount], cancellationToken);
     }
-
-    public TimeSpan GetDelay(int retryCount)
-        => retryCount > 0 ? RetryDelays[retryCount] : UpdateDelay;
 
     // Nested types
 
     public static class Defaults
     {
+        // ~= 1/60 sec., matches Windows timer period of 15.6ms (it has to be slightly smaller)
         private static TimeSpan _minDelay = TimeSpan.FromMilliseconds(32); // ~= 1/30 sec.
-        private static RetryDelaySeq _retryDelays = new(TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(2));
+        private static RetryDelaySeq _retryDelays = new(TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(1));
         private static IMomentClock _clock = MomentClockSet.Default.CpuClock;
 
         // ReSharper disable once MemberHidesStaticFromOuterClass
@@ -53,6 +46,7 @@ public sealed record FixedDelayer(
             set {
                 if (value < TimeSpan.Zero)
                     throw new ArgumentOutOfRangeException(nameof(value));
+
                 _minDelay = value;
                 Thread.MemoryBarrier();
                 Cache.Clear();

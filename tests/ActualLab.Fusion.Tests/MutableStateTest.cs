@@ -18,7 +18,7 @@ public class MutableStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
         ms2.Value.Should().Be("B");
 
         var cs = factory.NewComputed<string>(
-            FixedDelayer.MinDelay,
+            FixedDelayer.NextTick,
             async (s, ct) => {
                 var value1 = await ms1.Computed.Use(ct);
                 var value2 = await ms2.Computed.Use(ct);

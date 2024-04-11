@@ -12,7 +12,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IDisposable
 
         public Options()
         {
-            var updateDelayer = FixedDelayer.MinDelay;
+            var updateDelayer = FixedDelayer.NextTick;
             UpdateDelayer = updateDelayer with {
                 RetryDelays = updateDelayer.RetryDelays with { Max = TimeSpan.FromSeconds(10) },
             };

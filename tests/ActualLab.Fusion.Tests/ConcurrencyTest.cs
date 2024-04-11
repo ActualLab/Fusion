@@ -14,10 +14,13 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
         var services = CreateServices();
         var factory = services.StateFactory();
 
-        var updateDelayer = FixedDelayer.ZeroUnsafe;
+        var updateDelayer = (FixedDelayer)FixedDelayer.NoneUnsafe;
         await Test(50);
         await Test(1000);
-        updateDelayer = FixedDelayer.Zero;
+        updateDelayer = FixedDelayer.YieldUnsafe;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.NextTick;
         await Test(50);
         await Test(1000);
         updateDelayer = FixedDelayer.MinDelay;
@@ -82,10 +85,13 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
         var services = CreateServices();
         var factory = services.StateFactory();
 
-        var updateDelayer = FixedDelayer.ZeroUnsafe;
+        var updateDelayer = (FixedDelayer)FixedDelayer.NoneUnsafe;
         await Test(50);
         await Test(1000);
-        updateDelayer = FixedDelayer.Zero;
+        updateDelayer = FixedDelayer.YieldUnsafe;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.NextTick;
         await Test(50);
         await Test(1000);
         updateDelayer = FixedDelayer.MinDelay;
@@ -151,10 +157,13 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
         var services = CreateServices();
         var counterSum = services.GetRequiredService<CounterSumService>();
 
-        var updateDelayer = FixedDelayer.ZeroUnsafe;
+        var updateDelayer = (FixedDelayer)FixedDelayer.NoneUnsafe;
         await Test(50);
         await Test(1000);
-        updateDelayer = FixedDelayer.Zero;
+        updateDelayer = FixedDelayer.YieldUnsafe;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.NextTick;
         await Test(50);
         await Test(1000);
         updateDelayer = FixedDelayer.MinDelay;

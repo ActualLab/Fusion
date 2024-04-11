@@ -14,7 +14,7 @@ public class TimerTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var cTime = await Computed.Capture(() => ctp.GetTime()).AsTask().WaitAsync(TimeSpan.FromMinutes(1));
         var count = 0;
         using var state = WebServices.StateFactory().NewComputed<DateTime>(
-            FixedDelayer.MinDelay,
+            FixedDelayer.NextTick,
             async (_, ct) => await ctp.GetTime(ct));
         state.Updated += (s, _) => {
             Out.WriteLine($"Client: {s.Value}");

@@ -9,7 +9,7 @@ public static class AnonymousComputedSourceExt
     public static Task<Computed<T>> When<T>(this AnonymousComputedSource<T> source,
         Func<T, bool> predicate,
         CancellationToken cancellationToken = default)
-        => source.When(predicate, FixedDelayer.MinDelay, cancellationToken);
+        => source.When(predicate, FixedDelayer.NextTick, cancellationToken);
     public static async Task<Computed<T>> When<T>(this AnonymousComputedSource<T> source,
         Func<T, bool> predicate,
         IUpdateDelayer updateDelayer,
@@ -28,7 +28,7 @@ public static class AnonymousComputedSourceExt
     public static Task<Computed<T>> When<T>(this AnonymousComputedSource<T> source,
         Func<T, Exception?, bool> predicate,
         CancellationToken cancellationToken = default)
-        => source.When(predicate, FixedDelayer.MinDelay, cancellationToken);
+        => source.When(predicate, FixedDelayer.NextTick, cancellationToken);
     public static async Task<Computed<T>> When<T>(this AnonymousComputedSource<T> source,
         Func<T, Exception?, bool> predicate,
         IUpdateDelayer updateDelayer,
@@ -50,7 +50,7 @@ public static class AnonymousComputedSourceExt
     public static IAsyncEnumerable<Computed<T>> Changes<T>(
         this AnonymousComputedSource<T> source,
         CancellationToken cancellationToken = default)
-        => source.Changes(FixedDelayer.MinDelay, cancellationToken);
+        => source.Changes(FixedDelayer.NextTick, cancellationToken);
     public static async IAsyncEnumerable<Computed<T>> Changes<T>(
         this AnonymousComputedSource<T> source,
         IUpdateDelayer updateDelayer,

@@ -26,8 +26,8 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
         var clock = MomentClockSet.Default.CpuClock;
         await using var timerSet = new ConcurrentTimerSet<Timer>(
             new() {
-                Quanta = TimeSpan.FromMilliseconds(10),
                 Clock = clock,
+                TickSource = new TickSource(TimeSpan.FromMilliseconds(10)),
             },
             timer => timer.FiredAt = clock.Now);
 
@@ -69,8 +69,8 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
         var clock = MomentClockSet.Default.CpuClock;
         await using var timerSet = new ConcurrentTimerSet<Timer>(
             new() {
-                Quanta = TimeSpan.FromMilliseconds(10),
                 Clock = clock,
+                TickSource = new TickSource(TimeSpan.FromMilliseconds(10)),
             },
             timer => timer.FiredAt = clock.Now);
 
@@ -103,10 +103,10 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact(Skip = "Performance")]
     public async Task TimerPerformanceTest()
     {
-        var clock = MomentClockSet.Default.CoarseCpuClock;
+        var clock = MomentClockSet.Default.CpuClock;
         var timerSet = new ConcurrentTimerSet<Timer>(
             new() {
-                Quanta = TimeSpan.FromMilliseconds(100),
+                TickSource = new TickSource(TimeSpan.FromMilliseconds(100)),
             },
             timer => timer.FiredAt = clock.Now);
         await using (timerSet) {
@@ -121,10 +121,10 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
 
     private async Task OneRandomTest(int timerCount, int maxDuration, int maxDelta)
     {
-        var clock = MomentClockSet.Default.CoarseCpuClock;
+        var clock = MomentClockSet.Default.CpuClock;
         await using var timerSet = new ConcurrentTimerSet<Timer>(
             new() {
-                Quanta = TimeSpan.FromMilliseconds(100),
+                TickSource = new TickSource(TimeSpan.FromMilliseconds(100)),
             },
             timer => timer.FiredAt = clock.Now);
         await OneRandomTest(timerSet, timerCount, maxDuration, maxDelta);

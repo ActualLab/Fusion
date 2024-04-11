@@ -2,11 +2,13 @@ namespace ActualLab.Time;
 
 public record TimerSetOptions
 {
+    public static readonly TickSource DefaultTickSource = new(TimeSpan.FromSeconds(1));
     public static readonly TimerSetOptions Default = new();
     public static readonly TimeSpan MinQuanta = TimeSpan.FromMilliseconds(10);
 
-    public TimeSpan Quanta { get; init; } = TimeSpan.FromSeconds(1);
     public IMomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
+    public TickSource TickSource { get; init; } = DefaultTickSource;
+    public TimeSpan Quanta => TickSource.Period;
 }
 
 public sealed class TimerSet<TTimer> : WorkerBase
@@ -18,8 +20,9 @@ public sealed class TimerSet<TTimer> : WorkerBase
     private readonly object _lock = new();
     private int _minPriority = 0;
 
-    public TimeSpan Quanta { get; }
     public IMomentClock Clock { get; }
+    public TickSource TickSource { get; }
+    public TimeSpan Quanta { get; }
     public int Count {
         get {
             lock (_lock) return _timers.Count;
@@ -28,11 +31,9 @@ public sealed class TimerSet<TTimer> : WorkerBase
 
     public TimerSet(TimerSetOptions options, Action<TTimer>? fireHandler = null, Moment? start = null)
     {
-        if (options.Quanta < TimerSetOptions.MinQuanta)
-            throw new ArgumentOutOfRangeException(nameof(options), "Quanta < MinQuanta.");
-
-        Quanta = options.Quanta;
         Clock = options.Clock;
+        TickSource = options.TickSource;
+        Quanta = options.Quanta;
         _fireHandler = fireHandler;
         _start = start ?? Clock.Now;
         _ = Run();
@@ -83,10 +84,10 @@ public sealed class TimerSet<TTimer> : WorkerBase
         for (;; dueAt += Quanta) {
             cancellationToken.ThrowIfCancellationRequested();
             if (dueAt > Clock.Now)
-                // We intentionally don't pass CancellationToken here:
+                // We intentionally don't use CancellationToken here:
                 // the delay is supposed to be short & we want to save on
                 // CancellationToken registration/de-registration.
-                await Clock.Delay(dueAt, CancellationToken.None).ConfigureAwait(false);
+                await TickSource.WhenNextTick().ConfigureAwait(false);
             IReadOnlyDictionary<TTimer, long> minSet;
             lock (_lock) {
                 minSet = _timers.ExtractMinSet(_minPriority);

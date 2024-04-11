@@ -16,18 +16,17 @@ public sealed class ConcurrentTimerSet<TTimer> : SafeAsyncDisposableBase
     private readonly int _concurrencyLevelMask;
     private readonly Moment _start;
 
-    public TimeSpan Quanta { get; }
     public IMomentClock Clock { get; }
+    public TickSource TickSource { get; }
+    public TimeSpan Quanta { get; }
     public int ConcurrencyLevel { get; }
     public int Count => _timerSets.Sum(ts => ts.Count);
 
     public ConcurrentTimerSet(ConcurrentTimerSetOptions options, Action<TTimer>? fireHandler = null, Moment? start = null)
     {
-        if (options.Quanta < TimerSetOptions.MinQuanta)
-            throw new ArgumentOutOfRangeException(nameof(options), "Quanta < MinQuanta.");
-
-        Quanta = options.Quanta;
         Clock = options.Clock;
+        TickSource = options.TickSource;
+        Quanta = options.Quanta;
         ConcurrencyLevel = (int) Bits.GreaterOrEqualPowerOf2((ulong) Math.Max(1, options.ConcurrencyLevel));
         _concurrencyLevelMask = ConcurrencyLevel - 1;
         _start = start ?? Clock.Now;

@@ -54,7 +54,7 @@ public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
         _usedShards = stateFactory.NewMutable(ImmutableHashSet<DbShard>.Empty,
             StateCategories.Get(GetType(), nameof(UsedShards)));
         _eventProcessorShards = stateFactory.NewComputed<ImmutableHashSet<DbShard>>(
-            FixedDelayer.Zero,
+            FixedDelayer.NoneUnsafe,
             async (_, ct) => {
                 var filter = await EventProcessorShardFilter.Use(ct).ConfigureAwait(false);
                 var shards1 = await Shards.Use(ct).ConfigureAwait(false);
