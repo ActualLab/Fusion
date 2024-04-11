@@ -18,15 +18,15 @@ public class DbOperationCompletionListener<TDbContext>
 
     protected Options Settings { get; init; }
 
-    protected IDbLogWatcher<TDbContext, DbOperation> LogWatcher { get; }
-    protected IDbLogWatcher<TDbContext, DbOperationEvent> EventLogWatcher { get; }
+    protected IDbIndexedLogWatcher<TDbContext, DbOperation> OperationLogWatcher { get; }
+    protected IDbIndexedLogWatcher<TDbContext, DbOperationEvent> EventLogWatcher { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public DbOperationCompletionListener(Options settings, IServiceProvider services) : base(services)
     {
         Settings = settings;
-        LogWatcher = services.DbLogWatcher<TDbContext, DbOperation>();
-        EventLogWatcher = services.DbLogWatcher<TDbContext, DbOperationEvent>();
+        OperationLogWatcher = services.GetRequiredService<IDbIndexedLogWatcher<TDbContext, DbOperation>>();
+        EventLogWatcher = services.GetRequiredService<IDbIndexedLogWatcher<TDbContext, DbOperationEvent>>();
     }
 
     public Task OnOperationCompleted(Operation operation, CommandContext? commandContext)
@@ -49,7 +49,7 @@ public class DbOperationCompletionListener<TDbContext>
 
     protected virtual Task Notify(DbShard shard, Operation operation, CancellationToken cancellationToken)
     {
-        var notifyOperationLogTask = LogWatcher.NotifyChanged(shard, cancellationToken);
+        var notifyOperationLogTask = OperationLogWatcher.NotifyChanged(shard, cancellationToken);
         if (operation.Events.Count == 0)
             return notifyOperationLogTask;
 

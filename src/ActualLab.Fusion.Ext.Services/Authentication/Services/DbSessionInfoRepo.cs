@@ -97,6 +97,8 @@ public class DbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>(
 #if NET7_0_OR_GREATER
         return await dbContext.Set<TDbSessionInfo>(DbHintSet.UpdateSkipLocked)
             .Where(o => o.LastSeenAt < maxLastSeenAt)
+            .OrderBy(o => o.LastSeenAt)
+            .Take(maxCount)
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
 #else

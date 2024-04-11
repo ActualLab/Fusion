@@ -1,40 +1,27 @@
+using ActualLab.Internal;
 using ActualLab.Resilience;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
-public enum DbLogKind
+public interface IDbLogProcessor
 {
-    Operations = 0, // Every reader processes each entry - used for operation log / invalidations
-    Events, // Just a single reader processes each entry - used for outbox items
-    Timers, // Just a single reader processes each entry - used for outbox items
+    DbLogKind LogKind { get; }
 }
 
-public interface IDbLogProcessor;
-
-public static class DbLogProcessor
-{
-    public static DbHint[] CooperativeReadHints { get; set; } = DbHintSet.Empty;
-    public static DbHint[] ExclusiveReadHints { get; set; } =  DbHintSet.UpdateSkipLocked;
-
-    public static DbHint[] GetProcessQueryHints(DbLogKind mode)
-        => mode is DbLogKind.Operations
-            ? CooperativeReadHints
-            : ExclusiveReadHints;
-}
-
-public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
+public abstract class DbIndexedLogProcessor<TDbContext, TDbEntry, TOptions>(
     TOptions settings,
-    IServiceProvider services)
-    : DbShardWorkerBase<TDbContext>(services), IDbLogProcessor
+    IServiceProvider services
+    ) : DbShardWorkerBase<TDbContext>(services), IDbLogProcessor
     where TDbContext : DbContext
-    where TDbEntry : class, ILogEntry
+    where TDbEntry : class, IDbIndexedLogEntry
     where TOptions : DbLogProcessorOptions
 {
     protected ConcurrentDictionary<DbShard, long> NextIndexes { get; } = new();
-    protected Dictionary<(DbShard Shard, long Index), Task> ProcessGapTasks { get; } = new();
+    protected Dictionary<(DbShard Shard, long Index), Task> ReprocessTasks { get; } = new();
 
-    protected IDbLogWatcher<TDbContext, TDbEntry> LogWatcher { get; } = services.DbLogWatcher<TDbContext, TDbEntry>();
+    protected IDbIndexedLogWatcher<TDbContext, TDbEntry> LogWatcher { get; }
+        = services.GetRequiredService<IDbIndexedLogWatcher<TDbContext, TDbEntry>>();
     protected IMomentClock SystemClock { get; init; } = services.Clocks().SystemClock;
     protected ILogger? DefaultLog => Log.IfEnabled(Settings.LogLevel);
     protected ILogger? DebugLog => Log.IfEnabled(LogLevel.Debug);
@@ -43,7 +30,6 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
     public DbLogKind LogKind { get; } = settings switch {
         DbOperationLogProcessorOptions => DbLogKind.Operations,
         DbEventLogProcessorOptions => DbLogKind.Events,
-        DbTimerLogProcessorOptions => DbLogKind.Timers,
         _ => throw new ArgumentOutOfRangeException(nameof(settings))
     };
 
@@ -63,7 +49,7 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
     {
         var timeoutCts = cancellationToken.CreateLinkedTokenSource();
         try {
-            var timeoutTask = SystemClock.Delay(Settings.ForcedCheckPeriod.Next(), timeoutCts.Token);
+            var timeoutTask = SystemClock.Delay(Settings.CheckPeriod.Next(), timeoutCts.Token);
             // WhenEntriesAdded should be invoked before we start reading!
             var whenEntriesAdded = await Task
                 .WhenAny(WhenChanged(shard, timeoutCts.Token), timeoutTask)
@@ -95,12 +81,14 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
         dbContext.EnableChangeTracking(false);
 
         var batchSize = Settings.BatchSize;
-        var entries = await dbContext.Set<TDbEntry>(DbLogProcessor.GetProcessQueryHints(LogKind))
+        var dbEntries = dbContext.Set<TDbEntry>();
+        var entries = await dbEntries.WithHints(LogKind.GetReadBatchQueryHints())
             // ReSharper disable once AccessToModifiedClosure
             .Where(o => o.Index >= nextIndex)
             .OrderBy(o => o.Index)
             .Take(batchSize)
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         var logLevel = entries.Count == batchSize ? LogLevel.Warning : LogLevel.Debug;
         // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
@@ -116,8 +104,7 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
             .ConfigureAwait(false);
         nextIndex = entries[^1].Index + 1;
 
-        if (LogKind != DbLogKind.Operations) { // Events or Timers
-            var dbEntries = dbContext.Set<TDbEntry>();
+        if (LogKind.IsUnoProcessed()) { // Events or Timers
             foreach (var entry in entries) {
                 dbEntries.Attach(entry);
                 UpdateEntryState(dbEntries, entry, LogEntryState.Processed);
@@ -169,14 +156,14 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
     {
         foreach (var entry in entries) {
             while (nextIndex != entry.Index)
-                ProcessGapSafe(shard, nextIndex++, entry.LoggedAt, null);
-            yield return ProcessSafe(shard, entry, true, cancellationToken);
+                ReprocessSafe(shard, nextIndex++, entry.LoggedAt, null);
+            yield return ProcessSafe(shard, entry, fallbackToReprocess: true, cancellationToken);
             nextIndex++;
         }
     }
 
     protected async Task ProcessSafe(
-        DbShard shard, TDbEntry entry, bool fallbackToProcessGap, CancellationToken cancellationToken)
+        DbShard shard, TDbEntry entry, bool fallbackToReprocess, CancellationToken cancellationToken)
     {
         // This method should never fail (unless cancelled)!
         if (entry.State != LogEntryState.New)
@@ -186,68 +173,82 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
             await Process(shard, entry, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            var suffix = fallbackToProcessGap ? ", will reprocess it as gap" : "";
+            var suffix = fallbackToReprocess ? ", will reprocess it" : "";
             // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
             Log.LogError(e,
-                $"{nameof(Process)}[{{Shard}}]: failed for log entry #{{Index}}{suffix}",
+                $"{nameof(Process)}[{{Shard}}]: failed for entry #{{Index}}{suffix}",
                 shard, entry.Index);
-            if (fallbackToProcessGap)
-                ProcessGapSafe(shard, entry.Index, entry.LoggedAt, entry);
+            if (fallbackToReprocess)
+                ReprocessSafe(shard, entry.Index, entry.LoggedAt, entry);
         }
     }
 
-    protected void ProcessGapSafe(DbShard shard, long index, Moment maxLoggedAt, TDbEntry? foundEntry)
+    protected void ReprocessSafe(DbShard shard, long index, Moment maxLoggedAt, TDbEntry? foundEntry)
     {
         // This method should never fail!
-        lock (ProcessGapTasks) {
+        lock (ReprocessTasks) {
             var key = (shard, index);
-            if (ProcessGapTasks.ContainsKey(key))
+            if (ReprocessTasks.ContainsKey(key))
                 return;
 
-            var task = Task.Run(() => ProcessGap(shard, index, maxLoggedAt, foundEntry, StopToken));
-            ProcessGapTasks[key] = task;
+            var task = Task.Run(() => Reprocess(shard, index, maxLoggedAt, foundEntry, StopToken));
+            ReprocessTasks[key] = task;
             _ = task.ContinueWith(_ => {
-                lock (ProcessGapTasks)
-                    ProcessGapTasks.Remove(key);
+                lock (ReprocessTasks)
+                    ReprocessTasks.Remove(key);
             }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
     }
 
-    protected async Task ProcessGap(
+    protected async Task Reprocess(
         DbShard shard, long index, Moment loggedAt, TDbEntry? foundEntry, CancellationToken cancellationToken)
     {
-        try {
-            await Task.Delay(Settings.GapRetryDelay.Next(), cancellationToken).ConfigureAwait(false);
-            var isProcessed = await Settings.GapRetryPolicy
-                .Apply(ct => ProcessGapImpl(shard, index, ct), cancellationToken)
-                .ConfigureAwait(false);
-            if (isProcessed) {
-                DefaultLog?.Log(Settings.LogLevel,
-                    $"{nameof(ProcessGap)}[{{Shard}}]: log entry #{{Index}} is processed",
+        for (var i = 0; i < 2; i++) {
+            var (mustDiscard, sProcess, sProcessed, sErrorExtra) = i switch {
+                0 => (false, "process", "processed", ", will try to discard it"),
+                _ => (true, "discard", "discarded", ""),
+            };
+            try {
+                await Task.Delay(Settings.ReprocessDelay.Next(), cancellationToken).ConfigureAwait(false);
+                var isProcessed = await Settings.ReprocessPolicy
+                    .Apply(ct => ReprocessImpl(shard, index, mustDiscard, ct), cancellationToken)
+                    .ConfigureAwait(false);
+                if (isProcessed) {
+                    // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                    DefaultLog?.Log(Settings.LogLevel,
+                        $"{nameof(Reprocess)}[{{Shard}}]: entry #{{Index}} is {sProcessed}",
+                        shard, index);
+                    return;
+                }
+
+                // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                DebugLog?.LogDebug(
+                    $"{nameof(Reprocess)}[{{Shard}}]: entry #{{Index}} is handled by another host",
                     shard, index);
                 return;
             }
-
-            DebugLog?.LogDebug(
-                $"{nameof(ProcessGap)}[{{Shard}}]: log entry #{{Index}} is already processed by another host",
-                shard, index);
-        }
-        catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            Log.LogError(e,
-                $"{nameof(ProcessGap)}[{{Shard}}]: failed to process log entry #{{Index}}",
-                shard, index);
+            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+                // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                Log.LogError(e,
+                    $"{nameof(Reprocess)}[{{Shard}}]: failed to {sProcess} entry #{{Index}}{sErrorExtra}",
+                    shard, index);
+            }
         }
     }
 
-    protected async Task<bool> ProcessGapImpl(DbShard shard, long index, CancellationToken cancellationToken)
+    protected async Task<bool> ReprocessImpl(
+        DbShard shard, long index, bool mustDiscard, CancellationToken cancellationToken)
     {
         var dbContext = await DbHub.CreateDbContext(shard, readWrite: true, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);
 
         TDbEntry? entry;
-        if (LogKind is DbLogKind.Operations) {
+        if (LogKind.IsCoProcessed()) {
             // Cooperative mode flow
+            if (mustDiscard)
+                throw Errors.InternalError("Can't discard the entry from co-processed log.");
+
             entry = await GetEntry(dbContext, index, cancellationToken).ConfigureAwait(false);
             if (entry == null)
                 throw new LogEntryNotFoundException();
@@ -268,11 +269,12 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
 
         var dbEntries = dbContext.Set<TDbEntry>();
         dbEntries.Attach(entry);
-        UpdateEntryState(dbEntries, entry, LogEntryState.Processed);
+        UpdateEntryState(dbEntries, entry, mustDiscard ? LogEntryState.Discarded : LogEntryState.Processed);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // If we're here, the entry's row is x-locked due to update above
-        await Process(shard, entry, cancellationToken).ConfigureAwait(false);
+        if (!mustDiscard)
+            await Process(shard, entry, cancellationToken).ConfigureAwait(false);
 
         if (DbHub.ChaosMaker.IsEnabled)
             await DbHub.ChaosMaker.Act(this, cancellationToken).ConfigureAwait(false);
@@ -280,13 +282,10 @@ public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
         return true;
     }
 
-    private async Task<TDbEntry?> GetEntry(TDbContext dbContext, long index, CancellationToken cancellationToken)
-    {
-        var dbEntries = LogKind == DbLogKind.Operations
-            ? dbContext.Set<TDbEntry>()
-            : dbContext.Set<TDbEntry>().WithHints(DbLockingHint.Update);
-        return await dbEntries.FirstOrDefaultAsync(x => x.Index == index, cancellationToken).ConfigureAwait(false);
-    }
+    protected async Task<TDbEntry?> GetEntry(TDbContext dbContext, long index, CancellationToken cancellationToken)
+        => await dbContext.Set<TDbEntry>(LogKind.GetReadOneQueryHints())
+            .FirstOrDefaultAsync(x => x.Index == index, cancellationToken)
+            .ConfigureAwait(false);
 
     protected void UpdateEntryState(DbSet<TDbEntry> dbEntries, TDbEntry entry, LogEntryState state)
     {

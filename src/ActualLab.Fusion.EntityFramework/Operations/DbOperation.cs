@@ -10,23 +10,18 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 
 [Table("_Operations")]
 [Index(nameof(Uuid), IsUnique = true, Name = "IX_Uuid")] // "Uuid -> Index" queries
-[Index(nameof(LoggedAt), Name = "IX_LoggedAt")] // "LoggedAt > minLoggedAt -> min(Index)" queries
-public sealed class DbOperation : ILogEntry, IHasId<string>, IHasId<long>
+[Index(nameof(LoggedAt), Name = "IX_LoggedAt")] // "LoggedAt > minLoggedAt -> min(Index)" queries + min(LoggedAt)
+public sealed class DbOperation : IDbIndexedLogEntry
 {
     public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;
 
     private long? _index;
-    private Symbol _uuid;
     private Symbol _hostId;
     private DateTime _loggedAt;
 
-    Symbol IHasUuid.Uuid => _uuid;
-    string IHasId<string>.Id => _uuid.Value;
-    long IHasId<long>.Id => Index;
     // DbOperations are never updated, but only deleted, so...
-    long ILogEntry.Version { get => 0; set { } }
-    DateTime ILogEntry.FiresAt => default;
-    LogEntryState ILogEntry.State { get => default; set { } }
+    long IDbLogEntry.Version { get => 0; set { } }
+    LogEntryState IDbLogEntry.State { get => default; set { } }
 
     [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long Index {
@@ -35,7 +30,7 @@ public sealed class DbOperation : ILogEntry, IHasId<string>, IHasId<long>
     }
     [NotMapped] public bool HasIndex => _index.HasValue;
 
-    public string Uuid { get => _uuid; set => _uuid = value; }
+    public string Uuid { get; set; } = "";
     public string HostId { get => _hostId; set => _hostId = value; }
 
     public DateTime LoggedAt {

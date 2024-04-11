@@ -11,7 +11,7 @@ using ActualLab.Rpc;
 using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
 using Templates.TodoApp.Abstractions;
-using Templates.TodoApp.Services;
+using Templates.TodoApp.UI.Services;
 
 namespace Templates.TodoApp.UI;
 

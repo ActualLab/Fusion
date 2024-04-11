@@ -14,7 +14,7 @@ var dbChaosMaker = (
     (0.0*ChaosMaker.TransientError)
     ).Filtered("OF types", o => o is IDbOperationScope or IDbLogProcessor).Gated();
 WriteLine(dbChaosMaker);
-ChaosMaker.Default = dbChaosMaker;
+// ChaosMaker.Default = dbChaosMaker;
 // Create services
 AppBase? app;
 while(true) {

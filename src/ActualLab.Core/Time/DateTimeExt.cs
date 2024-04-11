@@ -3,9 +3,9 @@ namespace ActualLab.Time;
 public static class DateTimeExt
 {
 #if !NETSTANDARD2_0
-    public static readonly DateTime UnixEpoch = DateTime.UnixEpoch;
+    public static readonly DateTime UnixEpoch = DateTime.UnixEpoch; // Must be in UTC!
 #else
-    public static readonly DateTime UnixEpoch = new(621355968000000000L, DateTimeKind.Utc);
+    public static readonly DateTime UnixEpoch = new(621355968000000000L, DateTimeKind.Utc); // Must be in UTC!
 #endif
 
     public static Moment ToMoment(this DateTime source)

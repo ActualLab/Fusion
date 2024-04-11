@@ -10,28 +10,16 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 #pragma warning disable IL2026
 
 [Table("_OperationTimers")]
-[Index(nameof(State), nameof(FiresAt), Name = "IX_State2")] // "!IsProcessed & FiresAt < now" queries
-[Index(nameof(LoggedAt), Name = "IX_LoggedAt")] // "LoggedAt < trimAt" queries
+[Index(nameof(State), nameof(FiresAt), Name = "IX_StateFiresAt")] // "!IsProcessed & FiresAt < now" queries
 [Index(nameof(FiresAt), Name = "IX_FiresAt")] // "FiresAt < trimAt" queries
-public sealed class DbOperationTimer : ILogEntry, IHasId<string>
+public sealed class DbOperationTimer : IDbTimerLogEntry
 {
     public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;
 
-    private Symbol _uuid;
-    private DateTime _loggedAt;
     private DateTime _firesAt;
 
-    Symbol IHasUuid.Uuid => _uuid;
-    string IHasId<string>.Id => _uuid.Value;
-    long ILogEntry.Index => 0;
-
-    [Key] public string Uuid { get => _uuid; set => _uuid = value; }
+    [Key] public string Uuid { get; set; } = "";
     [ConcurrencyCheck] public long Version { get; set; }
-
-    public DateTime LoggedAt {
-        get => _loggedAt.DefaultKind(DateTimeKind.Utc);
-        set => _loggedAt = value.DefaultKind(DateTimeKind.Utc);
-    }
 
     public DateTime FiresAt {
         get => _firesAt.DefaultKind(DateTimeKind.Utc);
@@ -50,13 +38,12 @@ public sealed class DbOperationTimer : ILogEntry, IHasId<string>
         var value = ValueJson.IsNullOrEmpty()
             ? null
             : Serializer.Read(ValueJson, typeof(object));
-        return new OperationEvent(Uuid, LoggedAt, FiresAt, value);
+        return new OperationEvent(Uuid, FiresAt, value);
     }
 
     public DbOperationTimer UpdateFrom(OperationEvent model, VersionGenerator<long> versionGenerator)
     {
         Uuid = model.Uuid;
-        LoggedAt = model.LoggedAt;
         FiresAt = model.FiresAt;
         ValueJson = Serializer.Write(model.Value, typeof(object));
         Version = versionGenerator.NextVersion(Version);

@@ -39,6 +39,7 @@ public class DbProductServiceUsingEntityResolver(
             ? $"Product removed: {productId}"
             : $"Product updated: {productId} with Price = {product.Price}";
         context.Operation.AddEvent(new LogMessageCommand(Ulid.NewUlid().ToString(), message));
+        context.Operation.AddEvent(LogMessageCommand.NewDelayed());
     }
 
     public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)

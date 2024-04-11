@@ -5,9 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Redis;
 
-public class RedisDbLogWatcher<TDbContext, TDbEntry> : DbLogWatcher<TDbContext, TDbEntry>
+public class RedisDbLogWatcher<TDbContext, TDbEntry> : DbIndexedLogWatcher<TDbContext, TDbEntry>
     where TDbContext : DbContext
-    where TDbEntry : class, ILogEntry
+    where TDbEntry : class, IDbIndexedLogEntry
 {
     protected readonly ConcurrentDictionary<
         DbShard,

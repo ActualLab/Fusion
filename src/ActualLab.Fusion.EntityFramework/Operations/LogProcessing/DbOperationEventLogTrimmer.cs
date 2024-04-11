@@ -4,18 +4,17 @@ using Microsoft.EntityFrameworkCore;
 namespace ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 
 public class DbOperationEventLogTrimmer<TDbContext>
-    : DbLogTrimmer<TDbContext, DbOperation, DbOperationEventLogTrimmer<TDbContext>.Options>
+    : DbIndexedLogTrimmer<TDbContext, DbOperationEvent, DbOperationEventLogTrimmer<TDbContext>.Options>
     where TDbContext : DbContext
 {
     public record Options : DbLogTrimmerOptions
     {
         public static Options Default { get; set; } = new();
-
-        public Options()
-            => MaxEntryAge = TimeSpan.FromDays(1);
     }
 
     protected override IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
+
+    public override DbLogKind LogKind => DbLogKind.Events;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public DbOperationEventLogTrimmer(Options settings, IServiceProvider services)

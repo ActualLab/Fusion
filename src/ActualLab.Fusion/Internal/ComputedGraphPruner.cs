@@ -8,10 +8,10 @@ public sealed class ComputedGraphPruner : WorkerBase
 
         public bool AutoActivate { get; init; } = true;
         public bool MustPruneRegistry { get; init; } = true;
-        public RandomTimeSpan CheckPeriod { get; init; } = TimeSpan.FromMinutes(5).ToRandom(0.1);
-        public RandomTimeSpan NextBatchDelay { get; init; } = TimeSpan.FromSeconds(0.1).ToRandom(0.25);
-        public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
         public int BatchSize { get; init; } = FusionSettings.ComputedGraphPrunerBatchSize;
+        public RandomTimeSpan CheckPeriod { get; init; } = TimeSpan.FromMinutes(5).ToRandom(0.1);
+        public RandomTimeSpan InterBatchDelay { get; init; } = TimeSpan.FromSeconds(0.1).ToRandom(0.25);
+        public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
     }
 
     private readonly TaskCompletionSource<Unit> _whenActivatedSource;
@@ -109,7 +109,7 @@ public sealed class ComputedGraphPruner : WorkerBase
         var batchCount = 0;
         while (keyEnumerator.MoveNext()) {
             if (--remainingBatchCapacity <= 0) {
-                await Clock.Delay(Settings.NextBatchDelay.Next(), cancellationToken).ConfigureAwait(false);
+                await Clock.Delay(Settings.InterBatchDelay.Next(), cancellationToken).ConfigureAwait(false);
                 remainingBatchCapacity = Settings.BatchSize;
                 batchCount++;
             }
@@ -141,7 +141,7 @@ public sealed class ComputedGraphPruner : WorkerBase
         var batchCount = 0;
         while (keyEnumerator.MoveNext()) {
             if (--remainingBatchCapacity <= 0) {
-                await Clock.Delay(Settings.NextBatchDelay.Next(), ct).ConfigureAwait(false);
+                await Clock.Delay(Settings.InterBatchDelay.Next(), ct).ConfigureAwait(false);
                 remainingBatchCapacity = Settings.BatchSize;
                 batchCount++;
             }
@@ -155,7 +155,7 @@ public sealed class ComputedGraphPruner : WorkerBase
                 removedEdgeCount += oldEdgeCount - newEdgeCount;
             }
         }
-        await Clock.Delay(Settings.NextBatchDelay.Next(), ct).ConfigureAwait(false);
+        await Clock.Delay(Settings.InterBatchDelay.Next(), ct).ConfigureAwait(false);
         if (Settings.MustPruneRegistry)
             await registry.Prune().ConfigureAwait(false);
 

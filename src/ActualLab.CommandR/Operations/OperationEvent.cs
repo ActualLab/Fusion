@@ -2,7 +2,6 @@ namespace ActualLab.CommandR.Operations;
 
 public readonly record struct OperationEvent(
     Symbol Uuid,
-    Moment LoggedAt,
     Moment FiresAt,
     object? Value
     ) : IHasUuid, IHasId<Symbol>

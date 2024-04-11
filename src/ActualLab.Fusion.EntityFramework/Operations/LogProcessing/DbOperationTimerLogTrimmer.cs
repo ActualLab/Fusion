@@ -3,22 +3,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 
-public class DbOperationLogTrimmer<TDbContext>
-    : DbIndexedLogTrimmer<TDbContext, DbOperation, DbOperationLogTrimmer<TDbContext>.Options>
+public class DbOperationTimerLogTrimmer<TDbContext>
+    : DbTimerLogTrimmer<TDbContext, DbOperationTimer, DbOperationTimerLogTrimmer<TDbContext>.Options>
     where TDbContext : DbContext
 {
     public record Options : DbLogTrimmerOptions
     {
         public static Options Default { get; set; } = new();
-
-        public Options()
-            => MaxEntryAge = TimeSpan.FromMinutes(30);
     }
 
-    public override DbLogKind LogKind => DbLogKind.Operations;
+    protected override IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
+
+    public override DbLogKind LogKind => DbLogKind.Timers;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public DbOperationLogTrimmer(Options settings, IServiceProvider services)
+    public DbOperationTimerLogTrimmer(Options settings, IServiceProvider services)
         : base(settings, services)
     { }
 }

@@ -58,7 +58,7 @@ public static class AsyncChainExt
                 try {
                     await asyncChain.Start(cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception e) {
+                catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                     if (!asyncChain.TerminalErrorDetector.Invoke(e, cancellationToken))
                         log.LogError(e, "{ChainName} failed", asyncChain.Name);
                     throw;
@@ -83,8 +83,12 @@ public static class AsyncChainExt
                         "{ChainName} completed", asyncChain.Name);
                 }
                 catch (Exception e) {
-                    if (!asyncChain.TerminalErrorDetector.Invoke(e, cancellationToken))
-                        log.LogError(e, "{ChainName} failed", asyncChain.Name);
+                    if (e.IsCancellationOf(cancellationToken))
+                        log.IfEnabled(logLevel)?.Log(logLevel,
+                            "{ChainName} completed (cancelled)", asyncChain.Name);
+                    else if (!asyncChain.TerminalErrorDetector.Invoke(e, cancellationToken))
+                        log.LogError(e,
+                            "{ChainName} failed", asyncChain.Name);
                     else
                         log.IfEnabled(logLevel)?.Log(logLevel,
                             "{ChainName} completed (terminal error)", asyncChain.Name);
@@ -111,7 +115,7 @@ public static class AsyncChainExt
             try {
                 await asyncChain.Start(cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception e) {
+            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                 if (!asyncChain.TerminalErrorDetector.Invoke(e, cancellationToken))
                     log?.IfEnabled(LogLevel.Error)?.LogError(e,
                         "{ChainName} failed, the error is silenced", asyncChain.Name);
@@ -170,7 +174,7 @@ public static class AsyncChainExt
                     await asyncChain.Start(cancellationToken).ConfigureAwait(false);
                     return;
                 }
-                catch (Exception e) {
+                catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                     if (asyncChain.TerminalErrorDetector.Invoke(e, cancellationToken))
                         throw;
                     // Everything else must be retried
@@ -199,7 +203,7 @@ public static class AsyncChainExt
                         await asyncChain.Start(cancellationToken).ConfigureAwait(false);
                         return;
                     }
-                    catch (Exception e) {
+                    catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                         if (asyncChain.TerminalErrorDetector.Invoke(e, cancellationToken) || failedTryCount >= maxCount)
                             throw;
                         // Everything else must be retried

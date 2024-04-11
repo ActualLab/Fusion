@@ -11,9 +11,9 @@ namespace ActualLab.Fusion.EntityFramework.Npgsql;
 public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
     NpgsqlDbLogWatcherOptions<TDbContext> settings,
     IServiceProvider services
-    ) : DbLogWatcher<TDbContext, TDbEntry>(services)
+    ) : DbIndexedLogWatcher<TDbContext, TDbEntry>(services)
     where TDbContext : DbContext
-    where TDbEntry : class, ILogEntry
+    where TDbEntry : class, IDbIndexedLogEntry
 {
     protected readonly ConcurrentDictionary<
         DbShard,

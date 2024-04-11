@@ -46,7 +46,8 @@ public class Operation(
     { }
 
     public OperationEvent AddEvent(object value, Symbol uuid = default)
-        => AddEvent(value, default, uuid);
+        => AddEvent(value, default(Moment), uuid);
+
     public OperationEvent AddEvent(object value, Moment firesAt, Symbol uuid = default)
     {
         if (Scope is not { IsUsed: true })
@@ -55,7 +56,6 @@ public class Operation(
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
         var commanderHub = Scope.CommandContext.Commander.Hub;
-        var clock = commanderHub.Clocks.SystemClock;
         if (uuid.IsEmpty) {
             if (value is IHasUuid hasUuid)
                 uuid = hasUuid.Uuid;
@@ -66,7 +66,28 @@ public class Operation(
         if (firesAt == default && value is IHasFiresAt hasFiresAt)
             firesAt = hasFiresAt.FiresAt;
 
-        var result = new OperationEvent(uuid, clock.Now, firesAt, value);
+        var result = new OperationEvent(uuid, firesAt, value);
+        (_events ??= new()).Add(result);
+        return result;
+    }
+
+    public OperationEvent AddEvent(object value, TimeSpan fireDelay, Symbol uuid = default)
+    {
+        if (Scope is not { IsUsed: true })
+            throw Errors.ActiveOperationRequired();
+        if (Scope.IsTransient)
+            throw Errors.TransientScopeOperationCannotHaveEvents();
+
+        var commanderHub = Scope.CommandContext.Commander.Hub;
+        if (uuid.IsEmpty) {
+            if (value is IHasUuid hasUuid)
+                uuid = hasUuid.Uuid;
+            else
+                uuid = commanderHub.UuidGenerator.Next();
+        }
+        var firesAt = commanderHub.Clocks.SystemClock.Now + fireDelay;
+
+        var result = new OperationEvent(uuid, firesAt, value);
         (_events ??= new()).Add(result);
         return result;
     }

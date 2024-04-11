@@ -1,13 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net7.0;netstandard2.0</TargetFrameworks>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <PackageTags>actual_chat actual_lab actual_lab_fusion generators</PackageTags>
     <Description>ActualLab.Generators - ActualLab.Fusion proxy type generator.</Description>
   </PropertyGroup>
+
+  <!-- Generator-specific settings -->
+  <PropertyGroup>
+    <!-- Ensures consuming project doesn't get a reference to the source generator assembly -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Ensures the library will be packaged as a source generator with `dotnet pack` -->
+    <None Include="$(OutputPath)\netstandard2.0\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" />
@@ -22,11 +32,6 @@
     <Using Include="System.Collections.Immutable" />
     <Using Include="ActualLab.Generators.Internal" />
     <Using Include="ActualLab.Generators.Internal.DiagnosticsHelpers" Static="true" />
-  </ItemGroup>
-
-  <!-- This ensures the library will be packaged as a source generator when we use `dotnet pack` -->
-  <ItemGroup>
-    <None Include="$(OutputPath)\netstandard2.0\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
 </Project>

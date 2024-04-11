@@ -11,10 +11,13 @@ public abstract class DbSessionInfoTrimmer<TDbContext>(
 {
     public record Options
     {
+#if NET7_0_OR_GREATER
+        public int BatchSize { get; init; } = 4096; // .NET 7+ uses ExecuteDeleteAsync
+#else
+        public int BatchSize { get; init; } = 1024; // .NET 6- deletes rows one-by-one
+#endif
         public TimeSpan MaxSessionAge { get; init; } = TimeSpan.FromDays(60);
-        public int BatchSize { get; init; } = 1024;
-        public RandomTimeSpan CheckPeriod { get; init; } =  TimeSpan.FromMinutes(10).ToRandom(0.25);
-        public RandomTimeSpan InterBatchDelay { get; init; } = TimeSpan.FromSeconds(1).ToRandom(0.25);
+        public RandomTimeSpan CheckPeriod { get; init; } =  TimeSpan.FromMinutes(15).ToRandom(0.25);
         public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(10));
         public LogLevel LogLevel { get; init; } = LogLevel.Information;
     }
@@ -40,7 +43,7 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
             .RetryForever(Settings.RetryDelays, SystemClock, Log)
             .CycleForever()
             .Log(Log)
-            .PrependDelay(Settings.InterBatchDelay, SystemClock)
+            .PrependDelay(Settings.CheckPeriod.Next().Multiply(0.1), SystemClock)
             .Start(cancellationToken);
 
     protected virtual async Task Trim(DbShard shard, CancellationToken cancellationToken)
@@ -48,15 +51,13 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
         var batchSize = Settings.BatchSize;
         while (true) {
             var maxLastSeenAt = (SystemClock.Now - Settings.MaxSessionAge).ToDateTime();
-            using (var _ = ActivitySource.StartActivity().AddShardTags(shard)) {
-                var count = await Sessions.Trim(shard, maxLastSeenAt, batchSize, cancellationToken)
-                    .ConfigureAwait(false);
-                if (count > 0)
-                    DefaultLog?.Log(Settings.LogLevel, "Trim({Shard}) trimmed {Count} sessions", shard.Value, count);
-                if (count != batchSize)
-                    break;
-            }
-            await SystemClock.Delay(Settings.InterBatchDelay.Next(), cancellationToken).ConfigureAwait(false);
+            using var _ = ActivitySource.StartActivity().AddShardTags(shard);
+            var count = await Sessions.Trim(shard, maxLastSeenAt, batchSize, cancellationToken)
+                .ConfigureAwait(false);
+            if (count > 0)
+                DefaultLog?.Log(Settings.LogLevel, "Trim({Shard}) trimmed {Count} sessions", shard.Value, count);
+            if (count < batchSize)
+                break;
         }
         await SystemClock.Delay(Settings.CheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
     }

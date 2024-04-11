@@ -165,6 +165,7 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
             }
 
             var now = Clocks.SystemClock.Now;
+            var nowAsDateTime = now.ToDateTime();
             Operation.LoggedAt = now;
             if (Operation.Command == null)
                 throw ActualLab.Fusion.Operations.Internal.Errors.OperationHasNoCommand();
@@ -182,7 +183,9 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
                         dbContext.Add(dbOperationTimer);
                     }
                     else {
-                        var dbOperationEvent = new DbOperationEvent(operationEvent, DbHub.VersionGenerator);
+                        var dbOperationEvent = new DbOperationEvent(operationEvent, DbHub.VersionGenerator) {
+                            LoggedAt = nowAsDateTime,
+                        };
                         dbContext.Add(dbOperationEvent);
                     }
                 }

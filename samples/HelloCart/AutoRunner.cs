@@ -19,7 +19,7 @@ public static class AutoRunner
             var command = new EditCommand<Product>(product! with { Price = price });
             WriteLine(command);
             _ = commander.Run(command, cancellationToken);
-            await Task.Delay(333, cancellationToken);
+            await Task.Delay(500, cancellationToken);
         }
     }
 }

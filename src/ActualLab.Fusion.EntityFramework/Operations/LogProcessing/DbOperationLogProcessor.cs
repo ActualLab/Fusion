@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 
 public class DbOperationLogProcessor<TDbContext>
-    : DbLogProcessor<TDbContext, DbOperation, DbOperationLogProcessor<TDbContext>.Options>
+    : DbIndexedLogProcessor<TDbContext, DbOperation, DbOperationLogProcessor<TDbContext>.Options>
     where TDbContext : DbContext
 {
     public record Options : DbOperationLogProcessorOptions

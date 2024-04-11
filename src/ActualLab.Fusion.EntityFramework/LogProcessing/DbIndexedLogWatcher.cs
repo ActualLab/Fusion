@@ -3,20 +3,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
-public interface IDbLogWatcher<TDbContext, TDbEntry>
+public interface IDbIndexedLogWatcher<TDbContext, TDbEntry>
     where TDbContext : DbContext
-    where TDbEntry : class, ILogEntry
+    where TDbEntry : class, IDbIndexedLogEntry
 {
     Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default);
     Task WhenChanged(DbShard shard, CancellationToken cancellationToken = default);
 }
 
-public abstract class DbLogWatcher<TDbContext, TDbEntry>(IServiceProvider services)
-    : DbWorkerBase<TDbContext>(services), IDbLogWatcher<TDbContext, TDbEntry>
+public abstract class DbIndexedLogWatcher<TDbContext, TDbEntry>(IServiceProvider services)
+    : DbWorkerBase<TDbContext>(services), IDbIndexedLogWatcher<TDbContext, TDbEntry>
     where TDbContext : DbContext
-    where TDbEntry : class, ILogEntry
+    where TDbEntry : class, IDbIndexedLogEntry
 {
-    protected ConcurrentDictionary<DbShard, LazySlim<DbShard, DbLogWatcher<TDbContext, TDbEntry>, DbShardWatcher>>
+    protected ConcurrentDictionary<DbShard, LazySlim<DbShard, DbIndexedLogWatcher<TDbContext, TDbEntry>, DbShardWatcher>>
         ShardWatchers { get; set; } = new();
 
     public abstract Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default);

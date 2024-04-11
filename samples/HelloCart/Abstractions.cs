@@ -1,4 +1,5 @@
 using System.Runtime.Serialization;
+using ActualLab.CommandR.Operations;
 using MemoryPack;
 using Newtonsoft.Json;
 
@@ -35,12 +36,27 @@ public partial record EditCommand<TItem>(
 [method: JsonConstructor, MemoryPackConstructor]
 public partial record LogMessageCommand(
     [property: DataMember] Symbol Uuid,
-    [property: DataMember] string Message
-) : ILocalCommand<Unit>, IHasUuid
+    [property: DataMember] string Message,
+    [property: DataMember] Moment FiresAt = default
+) : ILocalCommand<Unit>, IHasUuid, IHasFiresAt
 {
+    private static long _nextIndex;
+
+    public static LogMessageCommand NewDelayed()
+    {
+        var index = Interlocked.Increment(ref _nextIndex);
+        var firesAt = SystemClock.Now + TimeSpan.FromSeconds((30*Random.Shared.NextDouble()) - 5);
+        return new(Ulid.NewUlid().ToString(), $"#{index}: should fire at {firesAt.ToDateTime():T}", firesAt);
+    }
+
     public Task Run(CommandContext context, CancellationToken cancellationToken)
     {
-        Console.WriteLine($"[{Uuid}] {Message}");
+        var hasFiresAt = FiresAt != default;
+        var delay = hasFiresAt ? $" (delay: {(SystemClock.Now - FiresAt).ToShortString()})" : "";
+        var color = hasFiresAt ? ConsoleColor.DarkRed : ConsoleColor.DarkBlue;
+        Console.BackgroundColor = color;
+        Console.WriteLine($"[{Uuid}] {Message}{delay}");
+        Console.ResetColor();
         if (false && char.IsDigit(Uuid.Value[^1]))
             throw new InvalidOperationException("Can't run this command!");
         return Task.CompletedTask;

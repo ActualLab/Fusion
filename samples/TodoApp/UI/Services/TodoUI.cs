@@ -2,7 +2,7 @@ using ActualLab.DependencyInjection;
 using ActualLab.Fusion.Extensions;
 using Templates.TodoApp.Abstractions;
 
-namespace Templates.TodoApp.Services;
+namespace Templates.TodoApp.UI.Services;
 
 public class TodoUI(Session session, ITodos todos) : IComputeService, IDisposable, IHasIsDisposed
 {

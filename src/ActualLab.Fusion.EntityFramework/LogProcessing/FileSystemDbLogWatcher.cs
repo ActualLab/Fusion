@@ -8,9 +8,9 @@ namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 public class FileSystemDbLogWatcher<TDbContext, TDbEntry>(
     FileSystemDbLogWatcherOptions<TDbContext> settings,
     IServiceProvider services
-    ) : DbLogWatcher<TDbContext, TDbEntry>(services)
+    ) : DbIndexedLogWatcher<TDbContext, TDbEntry>(services)
     where TDbContext : DbContext
-    where TDbEntry : class, ILogEntry
+    where TDbEntry : class, IDbIndexedLogEntry
 {
     public FileSystemDbLogWatcherOptions<TDbContext> Settings { get; } = settings;
 
