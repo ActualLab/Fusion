@@ -9,7 +9,7 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 
 #pragma warning disable IL2026
 
-[Table("_OperationTimers")]
+[Table("_Timers")]
 [Index(nameof(State), nameof(FiresAt))] // "!IsProcessed & FiresAt < now" queries
 [Index(nameof(FiresAt))] // "FiresAt < trimAt" queries
 public sealed class DbOperationTimer : IDbTimerLogEntry
