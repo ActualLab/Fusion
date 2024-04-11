@@ -10,8 +10,8 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 #pragma warning disable IL2026
 
 [Table("_OperationTimers")]
-[Index(nameof(State), nameof(FiresAt), Name = "IX_StateFiresAt")] // "!IsProcessed & FiresAt < now" queries
-[Index(nameof(FiresAt), Name = "IX_FiresAt")] // "FiresAt < trimAt" queries
+[Index(nameof(State), nameof(FiresAt))] // "!IsProcessed & FiresAt < now" queries
+[Index(nameof(FiresAt))] // "FiresAt < trimAt" queries
 public sealed class DbOperationTimer : IDbTimerLogEntry
 {
     public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;

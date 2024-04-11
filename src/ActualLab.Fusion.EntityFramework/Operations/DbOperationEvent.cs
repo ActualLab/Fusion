@@ -10,9 +10,9 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 #pragma warning disable IL2026
 
 [Table("_OperationEvents")]
-[Index(nameof(Uuid), IsUnique = true, Name = "IX_Uuid")] // "Uuid -> Index" queries
-[Index(nameof(State), nameof(LoggedAt), Name = "IX_State")] // "!IsProcessed -> min(Index)" queries
-[Index(nameof(LoggedAt), Name = "IX_LoggedAt")] // "LoggedAt > minLoggedAt -> min(Index)" queries + min(LoggedAt)
+[Index(nameof(Uuid), IsUnique = true)] // "Uuid -> Index" queries
+[Index(nameof(State), nameof(LoggedAt))] // "!IsProcessed -> min(Index)" queries
+[Index(nameof(LoggedAt))] // "LoggedAt > minLoggedAt -> min(Index)" queries + min(LoggedAt)
 public sealed class DbOperationEvent : IDbIndexedLogEntry
 {
     public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;
