@@ -35,6 +35,7 @@ public abstract record FixedDelayer(RetryDelaySeq RetryDelays) : IUpdateDelayer
 
     public static class Defaults
     {
+        // Windows timer period is 15.6ms, so 32ms = 2...3 timer ticks
         private static TimeSpan _minDelay = TimeSpan.FromMilliseconds(32); // ~= 1/30 sec.
         private static RetryDelaySeq _retryDelays = new(TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(1));
         private static IMomentClock _clock = MomentClockSet.Default.CpuClock;
