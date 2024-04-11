@@ -48,6 +48,7 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
     public bool IsUsed => MasterDbContext != null;
     public bool IsClosed { get; private set; }
     public bool? IsConfirmed { get; private set; }
+    public bool HasEvents { get; private set; }
 
     public DbShard Shard {
         get => _shard;
@@ -187,6 +188,7 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
                             LoggedAt = nowAsDateTime,
                         };
                         dbContext.Add(dbOperationEvent);
+                        HasEvents = true;
                     }
                 }
             }

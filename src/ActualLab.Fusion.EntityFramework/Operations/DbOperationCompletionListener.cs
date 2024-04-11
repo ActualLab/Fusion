@@ -39,7 +39,7 @@ public class DbOperationCompletionListener<TDbContext>
             return Task.CompletedTask; // Nothing is committed to TDbContext
 
         var shard = operationScope.Shard;
-        var notifyChain = new AsyncChain($"Notify({shard})", ct => Notify(shard, operation, ct))
+        var notifyChain = new AsyncChain($"Notify({shard})", ct => Notify(shard, operation, operationScope, ct))
             .Retry(Settings.NotifyRetryDelays, Settings.NotifyRetryCount, Clocks.CpuClock, Log);
         _ = notifyChain.RunIsolated(CancellationToken.None);
         return Task.CompletedTask;
@@ -47,10 +47,12 @@ public class DbOperationCompletionListener<TDbContext>
 
     // Protected methods
 
-    protected virtual Task Notify(DbShard shard, Operation operation, CancellationToken cancellationToken)
+    protected virtual Task Notify(
+        DbShard shard, Operation operation, DbOperationScope<TDbContext> operationScope,
+        CancellationToken cancellationToken)
     {
         var notifyOperationLogTask = OperationLogWatcher.NotifyChanged(shard, cancellationToken);
-        if (operation.Events.Count == 0)
+        if (!operationScope.HasEvents)
             return notifyOperationLogTask;
 
         var notifyOperationEventLogTask = EventLogWatcher.NotifyChanged(shard, cancellationToken);
