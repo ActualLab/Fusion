@@ -2,6 +2,8 @@ namespace ActualLab.Time;
 
 public sealed class TickSource(TimeSpan period)
 {
+    // 15.6ms is Windows timer tick period, this value should be slightly smaller than that.
+    // On other OSes it will be ~= t = N*NativeTimerPeriod so that t >= 15ms.
     public static TickSource Default { get; set; } = new(TimeSpan.FromMilliseconds(15));
 
     private readonly object _lock = new();
