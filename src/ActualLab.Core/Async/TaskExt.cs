@@ -19,9 +19,11 @@ public static partial class TaskExt
     // The tasks these methods return aren't referenced,
     // so unless whatever awaits them is referenced,
     // it may simply evaporate on the next GC cycle.
+    //
     // Earlier such tasks were stored in a static var, which is actually wrong:
     // if one of them get N dependencies, all of these N dependencies will stay
     // in RAM forever, since there is no way to "unsubscribe" an awaiter.
+    //
     // So the best option here is to return a task that won't prevent
     // GC from collecting the awaiter in case nothing else "holds" it -
     // and assuming the task is really never ending, this is the right thing to do.
