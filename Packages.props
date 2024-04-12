@@ -187,7 +187,7 @@
 
     <!-- Generators -->
     <PackageReference Update="MemoryPack.Generator" Version="$(MemoryPackVersion)" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
-    <PackageReference Update="Microsoft.CodeAnalysis.CSharp" Version="$(CSharpVersion)" />
+    <PackageReference Update="Microsoft.CodeAnalysis.CSharp" Version="$(CSharpVersion)" PrivateAssets="all" />
     <PackageReference Update="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
   </ItemGroup>
 </Project>

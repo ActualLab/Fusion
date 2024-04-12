@@ -12,6 +12,11 @@
 
   <!-- Generator-specific settings -->
   <PropertyGroup>
+    <AnalyzerLanguage>cs</AnalyzerLanguage>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <IncludeSymbols>false</IncludeSymbols>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <!-- Ensures consuming project doesn't get a reference to the source generator assembly -->
     <IncludeBuildOutput>false</IncludeBuildOutput>
   </PropertyGroup>
@@ -21,8 +26,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
