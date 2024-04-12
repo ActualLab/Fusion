@@ -14,7 +14,7 @@ public static partial class TaskExt
     public static readonly Task<bool> TrueTask = Task.FromResult(true);
     public static readonly Task<bool> FalseTask = Task.FromResult(false);
 
-    // NewUnreferencedNeverEnding
+    // NewNeverEndingUnreferenced
 
     // The tasks these methods return aren't referenced,
     // so unless whatever awaits them is referenced,
@@ -22,6 +22,9 @@ public static partial class TaskExt
     // Earlier such tasks were stored in a static var, which is actually wrong:
     // if one of them get N dependencies, all of these N dependencies will stay
     // in RAM forever, since there is no way to "unsubscribe" an awaiter.
+    // So the best option here is to return a task that won't prevent
+    // GC from collecting the awaiter in case nothing else "holds" it -
+    // and assuming the task is really never ending, this is the right thing to do.
     public static Task NewNeverEndingUnreferenced()
         => TaskCompletionSourceExt.New<Unit>().Task;
     public static Task NewNeverEndingUnreferenced<T>()
