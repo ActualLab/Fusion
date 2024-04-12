@@ -23,9 +23,7 @@ public abstract class DbIndexedLogWatcher<TDbContext, TDbEntry>(IServiceProvider
 
     public virtual Task WhenChanged(DbShard shard, CancellationToken cancellationToken = default)
     {
-        if (StopToken.IsCancellationRequested)
-            return TaskExt.NeverEndingTask.WaitAsync(cancellationToken);
-
+        StopToken.ThrowIfCancellationRequested();
         var watcher = ShardWatchers.GetOrAdd(shard,
             static (shard1, self) => self.CreateShardWatcher(shard1),
             this);
@@ -37,7 +35,7 @@ public abstract class DbIndexedLogWatcher<TDbContext, TDbEntry>(IServiceProvider
     protected abstract DbShardWatcher CreateShardWatcher(DbShard shard);
 
     protected override Task OnRun(CancellationToken cancellationToken)
-        => TaskExt.NeverEndingTask.WaitAsync(cancellationToken);
+        => TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken);
 
     protected override async Task OnStop()
     {

@@ -10,17 +10,22 @@ public static partial class TaskExt
         typeof(TaskExt).GetMethod(nameof(FromTypedTaskInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
     private static readonly ConcurrentDictionary<Type, Func<Task, IResult>> ToTypedResultCache = new();
 
-    public static readonly Task NeverEndingTask;
-    public static readonly Task<Unit> NeverEndingUnitTask;
     public static readonly Task<Unit> UnitTask = Task.FromResult(Unit.Default);
     public static readonly Task<bool> TrueTask = Task.FromResult(true);
     public static readonly Task<bool> FalseTask = Task.FromResult(false);
 
-    static TaskExt()
-    {
-        NeverEndingUnitTask = TaskCompletionSourceExt.New<Unit>().Task;
-        NeverEndingTask = NeverEndingUnitTask;
-    }
+    // NewUnreferencedNeverEnding
+
+    // The tasks these methods return aren't referenced,
+    // so unless whatever awaits them is referenced,
+    // it may simply evaporate on the next GC cycle.
+    // Earlier such tasks were stored in a static var, which is actually wrong:
+    // if one of them get N dependencies, all of these N dependencies will stay
+    // in RAM forever, since there is no way to "unsubscribe" an awaiter.
+    public static Task NewNeverEndingUnreferenced()
+        => TaskCompletionSourceExt.New<Unit>().Task;
+    public static Task NewNeverEndingUnreferenced<T>()
+        => TaskCompletionSourceExt.New<T>().Task;
 
     // ToValueTask
 

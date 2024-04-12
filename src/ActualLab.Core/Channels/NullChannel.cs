@@ -6,7 +6,11 @@ public class NullChannel<T> : Channel<T>
 
     private sealed class NullChannelReader : ChannelReader<T>
     {
-        public override Task Completion => TaskExt.NeverEndingUnitTask;
+        internal NullChannelReader()
+        { }
+
+        public override Task Completion
+            => TaskCompletionSourceExt.New<Unit>().Task; // Note that it returns unreferenced Task!
 
         public override bool TryRead(out T item)
         {
@@ -23,6 +27,9 @@ public class NullChannel<T> : Channel<T>
 
     private sealed class NullChannelWriter : ChannelWriter<T>
     {
+        internal NullChannelWriter()
+        { }
+
         public override bool TryComplete(Exception? error = null)
             => false;
 

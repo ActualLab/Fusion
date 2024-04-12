@@ -6,8 +6,6 @@ namespace ActualLab.Async;
 
 public static partial class ValueTaskExt
 {
-    public static readonly ValueTask NeverEndingTask = TaskExt.NeverEndingTask.ToValueTask();
-    public static readonly ValueTask<Unit> NeverEndingUnitTask = TaskExt.NeverEndingUnitTask.ToValueTask();
     public static readonly ValueTask CompletedTask = Task.CompletedTask.ToValueTask();
     public static readonly ValueTask<bool> TrueTask = FromResult(true);
     public static readonly ValueTask<bool> FalseTask = FromResult(false);
