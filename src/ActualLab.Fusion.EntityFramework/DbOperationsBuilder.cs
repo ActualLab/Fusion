@@ -46,33 +46,24 @@ public readonly struct DbOperationsBuilder<TDbContext>
         services.AddHostedService(c => c.GetRequiredService<DbOperationLogProcessor<TDbContext>>());
         services.AddHostedService(c => c.GetRequiredService<DbOperationLogTrimmer<TDbContext>>());
 
-        // DbOperationEventLogProcessor & trimmer - hosted services!
-        DbContext.TryAddEntityResolver<long, DbOperationEvent>();
-        services.TryAddSingleton(_ => DbOperationEventLogProcessor<TDbContext>.Options.Default);
-        services.TryAddSingleton<DbOperationEventLogProcessor<TDbContext>>();
-        services.TryAddSingleton(_ => DbOperationEventLogTrimmer<TDbContext>.Options.Default);
-        services.TryAddSingleton<DbOperationEventLogTrimmer<TDbContext>>();
-        services.AddHostedService(c => c.GetRequiredService<DbOperationEventLogProcessor<TDbContext>>());
-        services.AddHostedService(c => c.GetRequiredService<DbOperationEventLogTrimmer<TDbContext>>());
-
-        // DbOperationTimerLogProcessor & trimmer - hosted services!
-        DbContext.TryAddEntityResolver<long, DbOperationTimer>();
-        services.TryAddSingleton(_ => DbOperationTimerLogProcessor<TDbContext>.Options.Default);
-        services.TryAddSingleton<DbOperationTimerLogProcessor<TDbContext>>();
-        services.TryAddSingleton(_ => DbOperationTimerLogTrimmer<TDbContext>.Options.Default);
-        services.TryAddSingleton<DbOperationTimerLogTrimmer<TDbContext>>();
-        services.AddHostedService(c => c.GetRequiredService<DbOperationTimerLogProcessor<TDbContext>>());
-        services.AddHostedService(c => c.GetRequiredService<DbOperationTimerLogTrimmer<TDbContext>>());
+        // DbEventLogProcessor & trimmer - hosted services!
+        DbContext.TryAddEntityResolver<long, DbEvent>();
+        services.TryAddSingleton(_ => DbEventLogProcessor<TDbContext>.Options.Default);
+        services.TryAddSingleton<DbEventLogProcessor<TDbContext>>();
+        services.TryAddSingleton(_ => DbEventLogTrimmer<TDbContext>.Options.Default);
+        services.TryAddSingleton<DbEventLogTrimmer<TDbContext>>();
+        services.AddHostedService(c => c.GetRequiredService<DbEventLogProcessor<TDbContext>>());
+        services.AddHostedService(c => c.GetRequiredService<DbEventLogTrimmer<TDbContext>>());
 
         // Fake operation log watchers - they just log warnings stating log watchers aren't setup,
         // everything will still work with them, but operations & events will be processed
         // with 5-second delays or so.
         var fakeOperationLogWatcherType = typeof(FakeDbLogWatcher<,>);
         DbContext.TryAddLogWatcher<DbOperation>(fakeOperationLogWatcherType);
-        DbContext.TryAddLogWatcher<DbOperationEvent>(fakeOperationLogWatcherType);
-        // No log watcher for DbOperationTimer - they're processed on recurring 5s basis;
-        // timers don't make sense for this log, coz there is no good way to implement
-        // Index-like property in this log.
+        // DbEvent log watcher is local: there is no need to notify watchers on other hosts,
+        // coz the current host can instantly process new events right once it completes the transaction,
+        // and if it can't do this, one of hosts will anyway do that on the next check.
+        DbContext.TryAddLogWatcher<DbEvent>(typeof(LocalDbLogWatcher<,>));
 
         configure?.Invoke(this);
     }
@@ -164,7 +155,7 @@ public readonly struct DbOperationsBuilder<TDbContext>
         var services = Services;
         services.AddSingleton(optionsFactory, defaultOptionsFactory);
         DbContext.TryAddLogWatcher<DbOperation>(implementationGenericType);
-        DbContext.TryAddLogWatcher<DbOperationEvent>(implementationGenericType);
+        DbContext.TryAddLogWatcher<DbEvent>(implementationGenericType);
         return this;
     }
 

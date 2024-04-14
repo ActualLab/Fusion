@@ -1,5 +1,10 @@
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+public interface IDbLogTrimmer
+{
+    DbLogKind LogKind { get; }
+}
+
 public record DbLogTrimmerOptions
 {
     public TimeSpan MaxEntryAge { get; init; } = TimeSpan.FromDays(1);

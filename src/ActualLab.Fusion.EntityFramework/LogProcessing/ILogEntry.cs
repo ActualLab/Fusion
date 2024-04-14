@@ -5,15 +5,15 @@ public interface IDbLogEntry
     string Uuid { get; }
     long Version { get; set; } // Used only by events
     LogEntryState State { get; set; } // Used only by events
+    DateTime LoggedAt { get; }
 }
 
 public interface IDbIndexedLogEntry : IDbLogEntry
 {
     long Index { get; }
-    DateTime LoggedAt { get; }
 }
 
-public interface IDbTimerLogEntry : IDbLogEntry
+public interface IDbEventLogEntry : IDbLogEntry
 {
     DateTime FiresAt { get; } // Used only by timed events
 }

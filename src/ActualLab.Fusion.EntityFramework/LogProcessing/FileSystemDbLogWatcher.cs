@@ -8,24 +8,10 @@ namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 public class FileSystemDbLogWatcher<TDbContext, TDbEntry>(
     FileSystemDbLogWatcherOptions<TDbContext> settings,
     IServiceProvider services
-    ) : DbIndexedLogWatcher<TDbContext, TDbEntry>(services)
+    ) : DbLogWatcher<TDbContext, TDbEntry>(services)
     where TDbContext : DbContext
-    where TDbEntry : class, IDbIndexedLogEntry
 {
     public FileSystemDbLogWatcherOptions<TDbContext> Settings { get; } = settings;
-
-    public override Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default)
-    {
-        if (StopToken.IsCancellationRequested)
-            return Task.CompletedTask;
-
-        var filePath = Settings.FilePathFormatter.Invoke(shard, typeof(TDbEntry));
-        if (!File.Exists(filePath))
-            File.WriteAllText(filePath, "");
-        else
-            File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow);
-        return Task.CompletedTask;
-    }
 
     protected override DbShardWatcher CreateShardWatcher(DbShard shard)
         => new ShardWatcher(this, shard);
@@ -34,11 +20,11 @@ public class FileSystemDbLogWatcher<TDbContext, TDbEntry>(
 
     protected class ShardWatcher : DbShardWatcher
     {
-        protected FileSystemDbLogWatcher<TDbContext, TDbEntry> Owner { get; }
-        protected FilePath FilePath { get; }
-        protected FileSystemWatcher Watcher { get; init; }
-        protected IObservable<FileSystemEventArgs> Observable { get; init; }
-        protected IDisposable Subscription { get; init; }
+        public FileSystemDbLogWatcher<TDbContext, TDbEntry> Owner { get; }
+        public FilePath FilePath { get; }
+        public FileSystemWatcher Watcher { get; init; }
+        public IObservable<FileSystemEventArgs> Observable { get; init; }
+        public IDisposable Subscription { get; init; }
 
         public ShardWatcher(FileSystemDbLogWatcher<TDbContext, TDbEntry> owner, DbShard shard) : base(shard)
         {
@@ -48,6 +34,24 @@ public class FileSystemDbLogWatcher<TDbContext, TDbEntry>(
             Observable = Watcher.ToObservable();
             Subscription = Observable.Subscribe(_ => MarkChanged());
             Watcher.EnableRaisingEvents = true;
+        }
+
+        protected override Task DisposeAsyncCore()
+        {
+            Subscription.Dispose();
+            return Task.CompletedTask;
+        }
+
+        public override Task NotifyChanged(CancellationToken cancellationToken)
+        {
+#pragma warning disable MA0042
+            var filePath = FilePath.Value;
+            if (!File.Exists(filePath))
+                File.WriteAllText(filePath, ""); // We do it just once, so fine to use sync version
+            else
+                File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow);
+            return Task.CompletedTask;
+#pragma warning restore MA0042
         }
     }
 }

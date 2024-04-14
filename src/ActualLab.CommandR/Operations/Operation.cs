@@ -56,17 +56,13 @@ public class Operation(
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
         var commanderHub = Scope.CommandContext.Commander.Hub;
-        if (uuid.IsEmpty) {
-            if (value is IHasUuid hasUuid)
-                uuid = hasUuid.Uuid;
-            else
-                uuid = commanderHub.UuidGenerator.Next();
-        }
+        if (uuid.IsEmpty)
+            uuid = commanderHub.UuidGenerator.Next();
+        var loggedAt = commanderHub.Clocks.SystemClock.Now;
+        if (firesAt == default)
+            firesAt = value is IHasFiresAt hasFiresAt ? hasFiresAt.FiresAt : loggedAt;
 
-        if (firesAt == default && value is IHasFiresAt hasFiresAt)
-            firesAt = hasFiresAt.FiresAt;
-
-        var result = new OperationEvent(uuid, firesAt, value);
+        var result = new OperationEvent(uuid, loggedAt, firesAt, value);
         (_events ??= new()).Add(result);
         return result;
     }
@@ -79,15 +75,12 @@ public class Operation(
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
         var commanderHub = Scope.CommandContext.Commander.Hub;
-        if (uuid.IsEmpty) {
-            if (value is IHasUuid hasUuid)
-                uuid = hasUuid.Uuid;
-            else
-                uuid = commanderHub.UuidGenerator.Next();
-        }
-        var firesAt = commanderHub.Clocks.SystemClock.Now + fireDelay;
+        if (uuid.IsEmpty)
+            uuid = commanderHub.UuidGenerator.Next();
+        var loggedAt = commanderHub.Clocks.SystemClock.Now;
+        var firesAt = loggedAt + fireDelay;
 
-        var result = new OperationEvent(uuid, firesAt, value);
+        var result = new OperationEvent(uuid, loggedAt, firesAt, value);
         (_events ??= new()).Add(result);
         return result;
     }
@@ -101,15 +94,7 @@ public class Operation(
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
-        if (_events == null)
-            return false;
-
-        var index = _events.FindIndex(x => x.Uuid == uuid);
-        if (index < 0)
-            return false;
-
-        _events.RemoveAt(index);
-        return true;
+        return _events?.RemoveAll(x => x.Uuid == uuid) > 0;
     }
 
     public void ClearEvents()

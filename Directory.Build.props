@@ -48,6 +48,11 @@
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
   </PropertyGroup>
 
+  <!-- Multitargeting -->
+  <PropertyGroup Condition="'$(UseMultitargeting)' == ''">
+    <UseMultitargeting>false</UseMultitargeting>
+  </PropertyGroup>
+
   <!-- Common properties -->
   <PropertyGroup>
     <ProjectKind>Other</ProjectKind>

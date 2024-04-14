@@ -117,17 +117,17 @@ public readonly struct DbContextBuilder<TDbContext>
     // Log watchers
 
     public DbContextBuilder<TDbContext> AddLogWatcher<TDbEntry>(Type implementationGenericType)
-        where TDbEntry : class, IDbIndexedLogEntry
+        where TDbEntry : class, IDbLogEntry
     {
         var services = Services;
         var implementationType = implementationGenericType.MakeGenericType(typeof(TDbContext), typeof(TDbEntry));
         services.AddSingleton(implementationType);
-        services.AddAlias(typeof(IDbIndexedLogWatcher<TDbContext, TDbEntry>), implementationType);
+        services.AddAlias(typeof(IDbLogWatcher<TDbContext, TDbEntry>), implementationType);
         return this;
     }
 
     public DbContextBuilder<TDbContext> TryAddLogWatcher<TDbEntry>(Type implementationGenericType)
-        where TDbEntry : class, IDbIndexedLogEntry
+        where TDbEntry : class, IDbLogEntry
     {
         var services = Services;
         var implementationType = implementationGenericType.MakeGenericType(typeof(TDbContext), typeof(TDbEntry));
@@ -135,7 +135,7 @@ public readonly struct DbContextBuilder<TDbContext>
             return this;
 
         services.AddSingleton(implementationType);
-        services.AddAlias(typeof(IDbIndexedLogWatcher<TDbContext, TDbEntry>), implementationType);
+        services.AddAlias(typeof(IDbLogWatcher<TDbContext, TDbEntry>), implementationType);
         return this;
     }
 

@@ -7,6 +7,8 @@ public abstract class DbShardWatcher(DbShard shard) : ProcessorBase
     public DbShard Shard { get; } = shard;
     public Task WhenChanged => _state.WhenNext();
 
+    public abstract Task NotifyChanged(CancellationToken cancellationToken);
+
     protected void MarkChanged()
     {
         lock (Lock)

@@ -78,6 +78,9 @@ internal static class Program
         var dotnetExePath = TryFindDotNetExePath() ?? throw new FileNotFoundException(
             "'dotnet' command isn't found. Use DOTNET_ROOT env. var to specify the path to custom 'dotnet' tool.");
 
+        // Multitargeting
+        var multitargetingProperty = "-p:UseMultitargeting=true";
+
         // For Nerdbank.GitVersioning: https://github.com/dotnet/Nerdbank.GitVersioning/blob/master/doc/public_vs_stable.md
         var publicReleaseProperty = isPublicRelease ? "-p:PublicRelease=true" : "";
 
@@ -104,6 +107,7 @@ internal static class Program
                     "-t:Restore",
                     "-p:RestoreForce=true",
                     "-p:RestoreIgnoreFailedSources=True",
+                    multitargetingProperty,
                     publicReleaseProperty
                 }).ToConsole()
                 .ExecuteAsync(cancellationToken).ConfigureAwait(false);
@@ -116,6 +120,7 @@ internal static class Program
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
                     .Add("--no-restore")
+                    .Add(multitargetingProperty)
                     .Add(publicReleaseProperty)
                 )
                 .ToConsole()
@@ -132,6 +137,7 @@ internal static class Program
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
                     .Add("--no-restore")
+                    .Add(multitargetingProperty)
                     .Add(publicReleaseProperty)
                 )
                 .ToConsole()
@@ -143,12 +149,13 @@ internal static class Program
             var nugetApiKey = Environment.GetEnvironmentVariable("ActualChat_NuGet_API_Key") ?? "";
             if (string.IsNullOrWhiteSpace(nugetApiKey))
                 throw new InvalidOperationException("ActualChat_NuGet_API_Key env. var isn't set.");
+
             var nupkgPaths = Directory
                 .EnumerateFiles(nupkgPath.FullPath, "*.nupkg", SearchOption.TopDirectoryOnly)
                 .Select(FilePath.New)
                 .ToArray();
             foreach (var nupkgPath in nupkgPaths) {
-                await Cli.Wrap(dotnetExePath).WithArguments(new string[] {
+                await Cli.Wrap(dotnetExePath).WithArguments(new[] {
                         "nuget",
                         "push",
                         nupkgPath,
@@ -177,6 +184,7 @@ internal static class Program
                     .Add("--results-directory").Add(testOutputPath)
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
+                    .Add(multitargetingProperty)
                     .Add("--")
                     .Add("DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=json,cobertura")
                 ).ToConsole()

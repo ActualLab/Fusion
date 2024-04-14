@@ -2,11 +2,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
-public abstract class DbTimerLogTrimmer<TDbContext, TDbEntry, TOptions>(
+public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
     TOptions settings, IServiceProvider services)
     : DbShardWorkerBase<TDbContext>(services), IDbLogTrimmer
     where TDbContext : DbContext
-    where TDbEntry : class, IDbTimerLogEntry
+    where TDbEntry : class, IDbEventLogEntry
     where TOptions : DbLogTrimmerOptions
 {
     protected TOptions Settings { get; } = settings;

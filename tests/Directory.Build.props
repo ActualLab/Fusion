@@ -2,12 +2,13 @@
 <Project ToolsVersion="latest" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
   <PropertyGroup>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;net48;net471</TargetFrameworks>
+    <TargetFramework Condition="!$(UseMultitargeting)">net8.0</TargetFramework>
     <!-- Compiler & toolchain -->
     <BaseIntermediateOutputPath>$(SolutionDir)artifacts\obj\$(MSBuildProjectName)</BaseIntermediateOutputPath>
     <OutputPath>$(SolutionDir)artifacts\tests</OutputPath>
     <IsPackable>false</IsPackable>
     <IsPublishable>false</IsPublishable>
-    <TargetFrameworks>net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;net48;net471</TargetFrameworks>
     <!-- PolySharp -->
     <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
     <!-- Copy all references to output folder (important for coverage tools) -->

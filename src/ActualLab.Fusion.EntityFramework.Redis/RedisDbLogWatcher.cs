@@ -2,59 +2,45 @@ using ActualLab.Fusion.EntityFramework.LogProcessing;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Redis;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 namespace ActualLab.Fusion.EntityFramework.Redis;
 
-public class RedisDbLogWatcher<TDbContext, TDbEntry> : DbIndexedLogWatcher<TDbContext, TDbEntry>
+public class RedisDbLogWatcher<TDbContext, TDbEntry>(
+    RedisDbLogWatcherOptions<TDbContext> settings,
+    IServiceProvider services
+    ) : DbLogWatcher<TDbContext, TDbEntry>(services)
     where TDbContext : DbContext
-    where TDbEntry : class, IDbIndexedLogEntry
 {
-    protected readonly ConcurrentDictionary<
-        DbShard,
-        LazySlim<DbShard, RedisDbLogWatcher<TDbContext, TDbEntry>, RedisPub>> RedisPubCache = new();
     protected RedisDb RedisDb { get; }
+        = services.GetService<RedisDb<TDbContext>>() ?? services.GetRequiredService<RedisDb>();
 
-    public RedisDbLogWatcherOptions<TDbContext> Settings { get; }
-
-    public RedisDbLogWatcher(RedisDbLogWatcherOptions<TDbContext> settings, IServiceProvider services)
-        : base(services)
-    {
-        Settings = settings;
-        RedisDb = services.GetService<RedisDb<TDbContext>>() ?? services.GetRequiredService<RedisDb>();
-        var redisPub = GetRedisPub(default);
-        Log.LogInformation("Using pub/sub key = '{Key}'", redisPub.FullKey);
-    }
-
-    public override async Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default)
-    {
-        var redisPub = GetRedisPub(shard);
-        if (StopToken.IsCancellationRequested)
-            return;
-
-        await redisPub.Publish("").ConfigureAwait(false);
-    }
+    public RedisDbLogWatcherOptions<TDbContext> Settings { get; } = settings;
 
     protected override DbShardWatcher CreateShardWatcher(DbShard shard)
         => new ShardWatcher(this, shard);
-
-    protected RedisPub GetRedisPub(DbShard shard)
-        => RedisPubCache.GetOrAdd(shard,
-            static (shard1, self) => {
-                var key = self.Settings.PubSubKeyFormatter.Invoke(shard1, typeof(TDbEntry));
-                return self.RedisDb.GetPub(key);
-            }, this);
 
     // Nested types
 
     protected class ShardWatcher : DbShardWatcher
     {
+        public RedisDbLogWatcher<TDbContext, TDbEntry> Owner { get; }
+        public string Key { get; }
+        public RedisPub RedisPub { get; }
+        public RedisValue NotifyPayload { get; }
+
         public ShardWatcher(RedisDbLogWatcher<TDbContext, TDbEntry> owner, DbShard shard) : base(shard)
         {
-            var hostId = owner.Services.GetRequiredService<HostId>();
-            var key = owner.Settings.PubSubKeyFormatter.Invoke(Shard, typeof(TDbEntry));
+            Owner = owner;
+            var hostId = owner.DbHub.HostId;
+            Key = owner.Settings.PubSubKeyFormatter.Invoke(Shard, typeof(TDbEntry));
+            RedisPub = owner.RedisDb.GetPub(Key);
+            NotifyPayload = "";
+            Owner.Log.IfEnabled(LogLevel.Debug)
+                ?.LogDebug("Watch[{Shard}]: pub/sub key = '{Key}'", shard, RedisPub.FullKey);
 
             var watchChain = new AsyncChain($"Watch({shard})", async cancellationToken => {
-                var redisSub = owner.RedisDb.GetChannelSub(key);
+                var redisSub = owner.RedisDb.GetChannelSub(Key);
                 await using var _ = redisSub.ConfigureAwait(false);
 
                 await redisSub.Subscribe().ConfigureAwait(false);
@@ -68,6 +54,12 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry> : DbIndexedLogWatcher<TDbCo
             }).RetryForever(owner.Settings.WatchRetryDelays, owner.Log);
 
             _ = watchChain.RunIsolated(StopToken);
+        }
+
+        public override Task NotifyChanged(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return RedisPub.Publish(NotifyPayload);
         }
     }
 }

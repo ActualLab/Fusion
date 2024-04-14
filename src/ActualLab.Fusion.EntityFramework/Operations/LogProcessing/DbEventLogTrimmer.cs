@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 
-public class DbOperationTimerLogTrimmer<TDbContext>
-    : DbTimerLogTrimmer<TDbContext, DbOperationTimer, DbOperationTimerLogTrimmer<TDbContext>.Options>
+public class DbEventLogTrimmer<TDbContext>
+    : DbEventLogTrimmer<TDbContext, DbEvent, DbEventLogTrimmer<TDbContext>.Options>
     where TDbContext : DbContext
 {
     public record Options : DbLogTrimmerOptions
@@ -14,10 +14,10 @@ public class DbOperationTimerLogTrimmer<TDbContext>
 
     protected override IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
 
-    public override DbLogKind LogKind => DbLogKind.Timers;
+    public override DbLogKind LogKind => DbLogKind.Events;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public DbOperationTimerLogTrimmer(Options settings, IServiceProvider services)
+    public DbEventLogTrimmer(Options settings, IServiceProvider services)
         : base(settings, services)
     { }
 }

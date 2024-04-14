@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 
 public class DbOperationLogTrimmer<TDbContext>
-    : DbIndexedLogTrimmer<TDbContext, DbOperation, DbOperationLogTrimmer<TDbContext>.Options>
+    : DbOperationLogTrimmer<TDbContext, DbOperation, DbOperationLogTrimmer<TDbContext>.Options>
     where TDbContext : DbContext
 {
     public record Options : DbLogTrimmerOptions

@@ -166,7 +166,6 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
             }
 
             var now = Clocks.SystemClock.Now;
-            var nowAsDateTime = now.ToDateTime();
             Operation.LoggedAt = now;
             if (Operation.Command == null)
                 throw ActualLab.Fusion.Operations.Internal.Errors.OperationHasNoCommand();
@@ -174,22 +173,16 @@ public class DbOperationScope<TDbContext> : SafeAsyncDisposableBase, IDbOperatio
             var dbContext = MasterDbContext!;
             dbContext.EnableChangeTracking(false); // Just to speed up things a bit
             if (Operation.Events.Count != 0) {
+                var eventVersion = DbHub.VersionGenerator.NextVersion();
                 foreach (var operationEvent in Operation.Events) {
                     if (ReferenceEquals(operationEvent.Value, null))
                         continue; // We don't store events with null values
 
-                    var firesAt = operationEvent.FiresAt;
-                    if (firesAt >= now) {
-                        var dbOperationTimer = new DbOperationTimer(operationEvent, DbHub.VersionGenerator);
-                        dbContext.Add(dbOperationTimer);
-                    }
-                    else {
-                        var dbOperationEvent = new DbOperationEvent(operationEvent, DbHub.VersionGenerator) {
-                            LoggedAt = nowAsDateTime,
-                        };
-                        dbContext.Add(dbOperationEvent);
-                        HasEvents = true;
-                    }
+                    var dbEvent = new DbEvent(operationEvent) {
+                        Version = eventVersion, // Just to avoid extra calls to NextVersion
+                    };
+                    dbContext.Add(dbEvent);
+                    HasEvents = true;
                 }
             }
             var dbOperation = new DbOperation(Operation);

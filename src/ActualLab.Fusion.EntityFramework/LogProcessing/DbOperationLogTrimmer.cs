@@ -2,12 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
-public interface IDbLogTrimmer
-{
-    DbLogKind LogKind { get; }
-}
-
-public abstract class DbIndexedLogTrimmer<TDbContext, TDbEntry, TOptions>(
+public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
     TOptions settings, IServiceProvider services)
     : DbShardWorkerBase<TDbContext>(services), IDbLogTrimmer
     where TDbContext : DbContext
@@ -68,31 +63,13 @@ public abstract class DbIndexedLogTrimmer<TDbContext, TDbEntry, TOptions>(
                 .OrderBy(o => o.LoggedAt)
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
+            var totalCount = await dbEntries
+                .CountAsync(cancellationToken)
+                .ConfigureAwait(false);
+
             var firstEntryAge = Clocks.SystemClock.Now - firstEntry?.LoggedAt.ToMoment();
-            if (LogKind.IsUnoProcessed()) {
-                var pendingCount = await dbEntries
-                    .CountAsync(o => o.State == LogEntryState.New, cancellationToken)
-                    .ConfigureAwait(false);
-                var processedCount = await dbEntries
-                    .CountAsync(o => o.State == LogEntryState.Processed, cancellationToken)
-                    .ConfigureAwait(false);
-                var discardedCount = await dbEntries
-                    .CountAsync(o => o.State == LogEntryState.Discarded, cancellationToken)
-                    .ConfigureAwait(false);
-                var totalCount = pendingCount + processedCount + discardedCount;
-                var entryRate = firstEntryAge is { } interval ? totalCount / interval.TotalSeconds : 0;
-                Log.LogInformation(
-                    "Statistics: {PendingCount} pending, {ProcessedCount} processed, {DiscardedCount} discarded " +
-                    "out of {TotalCount} entries, +{EntryRate} entries/s",
-                    pendingCount, processedCount, discardedCount, totalCount, entryRate);
-            }
-            else {
-                var totalCount = await dbEntries
-                    .CountAsync(cancellationToken)
-                    .ConfigureAwait(false);
-                var entryRate = firstEntryAge is { } interval ? totalCount / interval.TotalSeconds : 0;
-                Log.LogInformation("Statistics: {TotalCount} entries, +{EntryRate} entries/s", totalCount, entryRate);
-            }
+            var entryRate = firstEntryAge is { } interval ? totalCount / interval.TotalSeconds : 0;
+            Log.LogInformation("Statistics: {TotalCount} entries, +{EntryRate} entries/s", totalCount, entryRate);
         }
     }
 

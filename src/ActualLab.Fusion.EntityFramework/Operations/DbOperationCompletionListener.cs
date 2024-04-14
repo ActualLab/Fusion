@@ -18,15 +18,15 @@ public class DbOperationCompletionListener<TDbContext>
 
     protected Options Settings { get; init; }
 
-    protected IDbIndexedLogWatcher<TDbContext, DbOperation> OperationLogWatcher { get; }
-    protected IDbIndexedLogWatcher<TDbContext, DbOperationEvent> EventLogWatcher { get; }
+    protected IDbLogWatcher<TDbContext, DbOperation> OperationLogWatcher { get; }
+    protected IDbLogWatcher<TDbContext, DbEvent> EventLogWatcher { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public DbOperationCompletionListener(Options settings, IServiceProvider services) : base(services)
     {
         Settings = settings;
-        OperationLogWatcher = services.GetRequiredService<IDbIndexedLogWatcher<TDbContext, DbOperation>>();
-        EventLogWatcher = services.GetRequiredService<IDbIndexedLogWatcher<TDbContext, DbOperationEvent>>();
+        OperationLogWatcher = services.GetRequiredService<IDbLogWatcher<TDbContext, DbOperation>>();
+        EventLogWatcher = services.GetRequiredService<IDbLogWatcher<TDbContext, DbEvent>>();
     }
 
     public Task OnOperationCompleted(Operation operation, CommandContext? commandContext)

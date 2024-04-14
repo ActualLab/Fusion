@@ -11,21 +11,16 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 
 [Table("_Events")]
 [Index(nameof(Uuid), IsUnique = true)] // "Uuid -> Index" queries
-[Index(nameof(State), nameof(LoggedAt))] // "!IsProcessed -> min(Index)" queries
-[Index(nameof(LoggedAt))] // "LoggedAt > minLoggedAt -> min(Index)" queries + min(LoggedAt)
-public sealed class DbOperationEvent : IDbIndexedLogEntry
+[Index(nameof(State), nameof(FiresAt))] // "!IsProcessed & FiresAt < now" queries
+[Index(nameof(FiresAt))] // "FiresAt < trimAt" queries
+public sealed class DbEvent : IDbEventLogEntry
 {
     public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;
 
-    private long? _index;
     private DateTime _loggedAt;
+    private DateTime _firesAt;
 
     [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public long Index {
-        get => _index ?? 0;
-        set => _index = value;
-    }
-    [NotMapped] public bool HasIndex => _index.HasValue;
 
     public string Uuid { get; set; } = "";
     [ConcurrencyCheck] public long Version { get; set; }
@@ -35,11 +30,16 @@ public sealed class DbOperationEvent : IDbIndexedLogEntry
         set => _loggedAt = value.DefaultKind(DateTimeKind.Utc);
     }
 
+    public DateTime FiresAt {
+        get => _firesAt.DefaultKind(DateTimeKind.Utc);
+        set => _firesAt = value.DefaultKind(DateTimeKind.Utc);
+    }
+
     public string ValueJson { get; set; } = "";
     public LogEntryState State { get; set; }
 
-    public DbOperationEvent() { }
-    public DbOperationEvent(OperationEvent model, VersionGenerator<long> versionGenerator)
+    public DbEvent() { }
+    public DbEvent(OperationEvent model, VersionGenerator<long>? versionGenerator = null)
         => UpdateFrom(model, versionGenerator);
 
     public OperationEvent ToModel()
@@ -47,13 +47,16 @@ public sealed class DbOperationEvent : IDbIndexedLogEntry
         var value = ValueJson.IsNullOrEmpty()
             ? null
             : Serializer.Read(ValueJson, typeof(object));
-        return new OperationEvent(Uuid, default, value);
+        return new OperationEvent(Uuid, LoggedAt, FiresAt, value);
     }
 
-    public DbOperationEvent UpdateFrom(OperationEvent model, VersionGenerator<long> versionGenerator)
+    public DbEvent UpdateFrom(OperationEvent model, VersionGenerator<long>? versionGenerator = null)
     {
         Uuid = model.Uuid;
-        Version = versionGenerator.NextVersion(Version);
+        if (versionGenerator != null)
+            Version = versionGenerator.NextVersion(Version);
+        LoggedAt = model.LoggedAt;
+        FiresAt = model.FiresAt;
         ValueJson = Serializer.Write(model.Value, typeof(object));
         return this;
     }
