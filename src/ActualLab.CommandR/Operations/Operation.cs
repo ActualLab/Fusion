@@ -61,6 +61,8 @@ public class Operation(
         var loggedAt = commanderHub.Clocks.SystemClock.Now;
         if (firesAt == default)
             firesAt = value is IHasFiresAt hasFiresAt ? hasFiresAt.FiresAt : loggedAt;
+        if (firesAt < loggedAt)
+            firesAt = loggedAt;
 
         var result = new OperationEvent(uuid, loggedAt, firesAt, value);
         (_events ??= new()).Add(result);
@@ -78,7 +80,7 @@ public class Operation(
         if (uuid.IsEmpty)
             uuid = commanderHub.UuidGenerator.Next();
         var loggedAt = commanderHub.Clocks.SystemClock.Now;
-        var firesAt = loggedAt + delay;
+        var firesAt = loggedAt + delay.Positive();
 
         var result = new OperationEvent(uuid, loggedAt, firesAt, value);
         (_events ??= new()).Add(result);

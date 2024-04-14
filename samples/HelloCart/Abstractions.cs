@@ -45,7 +45,7 @@ public partial record LogMessageCommand(
     public static LogMessageCommand NewDelayed()
     {
         var index = Interlocked.Increment(ref _nextIndex);
-        var firesAt = SystemClock.Now + TimeSpan.FromSeconds((30*Random.Shared.NextDouble()) - 5);
+        var firesAt = SystemClock.Now + TimeSpan.FromSeconds((30*Random.Shared.NextDouble()) - 10).Positive();
         return new(Ulid.NewUlid().ToString(), $"#{index}: should fire at {firesAt.ToDateTime():T}", firesAt);
     }
 
