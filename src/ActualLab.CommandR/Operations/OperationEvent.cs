@@ -8,7 +8,4 @@ public sealed record OperationEvent(
     ) : IHasUuid, IHasId<Symbol>
 {
     Symbol IHasId<Symbol>.Id => Uuid;
-
-    // Computed
-    public bool HasFiresAt => FiresAt != default;
 }

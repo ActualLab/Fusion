@@ -67,7 +67,7 @@ public class Operation(
         return result;
     }
 
-    public OperationEvent AddEvent(object value, TimeSpan fireDelay, Symbol uuid = default)
+    public OperationEvent AddEvent(object value, TimeSpan delay, Symbol uuid = default)
     {
         if (Scope is not { IsUsed: true })
             throw Errors.ActiveOperationRequired();
@@ -78,7 +78,7 @@ public class Operation(
         if (uuid.IsEmpty)
             uuid = commanderHub.UuidGenerator.Next();
         var loggedAt = commanderHub.Clocks.SystemClock.Now;
-        var firesAt = loggedAt + fireDelay;
+        var firesAt = loggedAt + delay;
 
         var result = new OperationEvent(uuid, loggedAt, firesAt, value);
         (_events ??= new()).Add(result);
