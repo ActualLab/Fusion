@@ -12,7 +12,7 @@ using static System.Console;
 var dbChaosMaker = (
     (0.5*ChaosMaker.Delay(0.75, 1)) |
     (0.0*ChaosMaker.TransientError)
-    ).Filtered("OF types", o => o is IDbOperationScope or IDbLogProcessor).Gated();
+    ).Filtered("OF types", o => o is IDbOperationScope or IDbLogReader).Gated();
 WriteLine(dbChaosMaker);
 // ChaosMaker.Default = dbChaosMaker;
 // Create services

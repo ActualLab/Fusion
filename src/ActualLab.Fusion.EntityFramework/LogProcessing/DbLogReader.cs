@@ -2,13 +2,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
-public abstract class DbLogProcessor<TDbContext, TDbEntry, TOptions>(
+public abstract class DbLogReader<TDbContext, TDbEntry, TOptions>(
     TOptions settings,
     IServiceProvider services
-    ) : DbShardWorkerBase<TDbContext>(services), IDbLogProcessor
+    ) : DbShardWorkerBase<TDbContext>(services), IDbLogReader
     where TDbContext : DbContext
     where TDbEntry : class, IDbLogEntry
-    where TOptions : DbLogProcessorOptions
+    where TOptions : DbLogReaderOptions
 {
     protected IDbLogWatcher<TDbContext, TDbEntry> LogWatcher { get; }
         = services.GetRequiredService<IDbLogWatcher<TDbContext, TDbEntry>>();

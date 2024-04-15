@@ -101,7 +101,7 @@ void ConfigureServices()
         // Uncomment if you'll be using AddRedisOperationLogChangeTracking
         // db.AddRedisDb("localhost", "Fusion.Samples.TodoApp");
         db.AddOperations(operations => {
-            operations.ConfigureOperationLogProcessor(_ => new() {
+            operations.ConfigureOperationLogReader(_ => new() {
                 // We use FileBasedDbOperationLogChangeTracking, so unconditional wake up period
                 // can be arbitrary long - all depends on the reliability of Notifier-Watcher chain.
                 CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),

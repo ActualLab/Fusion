@@ -10,9 +10,9 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
 {
     public record Options
     {
-        // Should be >= BatchSize @ DbOperationLogProcessor.Options
+        // Should be >= BatchSize @ DbOperationLogReader.Options
         public int MaxKnownOperationCount { get; init; } = 16384;
-        // Should be >= max commit + processing time @ DbOperationLogProcessor.Options
+        // Should be >= max commit + processing time @ DbOperationLogReader.Options
         public TimeSpan MaxKnownOperationAge { get; init; } = TimeSpan.FromMinutes(15);
         public IMomentClock? Clock { get; init; }
     }

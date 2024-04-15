@@ -3,11 +3,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 
-public class DbEventLogProcessor<TDbContext>
-    : DbEventLogProcessor<TDbContext, DbEvent, DbEventLogProcessor<TDbContext>.Options>
+public class DbEventLogReader<TDbContext>
+    : DbEventLogReader<TDbContext, DbEvent, DbEventLogReader<TDbContext>.Options>
     where TDbContext : DbContext
 {
-    public record Options : DbEventLogProcessorOptions
+    public record Options : DbEventLogReaderOptions
     {
         public static Options Default { get; set; } = new();
 
@@ -26,7 +26,7 @@ public class DbEventLogProcessor<TDbContext>
     protected override IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public DbEventLogProcessor(Options settings, IServiceProvider services)
+    public DbEventLogReader(Options settings, IServiceProvider services)
         : base(settings, services)
         => EventProcessor = services.GetRequiredService<DbEventProcessor<TDbContext>>();
 

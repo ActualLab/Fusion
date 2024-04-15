@@ -3,12 +3,12 @@ using ActualLab.Resilience;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
-public interface IDbLogProcessor
+public interface IDbLogReader
 {
     DbLogKind LogKind { get; }
 }
 
-public abstract record DbLogProcessorOptions
+public abstract record DbLogReaderOptions
 {
     // Gap / separate item processing settings
     public RandomTimeSpan ReprocessDelay { get; init; } = TimeSpan.FromSeconds(0.1).ToRandom(0.1);
@@ -21,11 +21,11 @@ public abstract record DbLogProcessorOptions
     public LogLevel LogLevel { get; init; } = LogLevel.Information;
 }
 
-public abstract record DbOperationLogProcessorOptions : DbLogProcessorOptions
+public abstract record DbOperationLogReaderOptions : DbLogReaderOptions
 {
     public TimeSpan StartOffset { get; init; } = TimeSpan.FromSeconds(3);
 
-    protected DbOperationLogProcessorOptions()
+    protected DbOperationLogReaderOptions()
     {
         ReprocessPolicy = new RetryPolicy(
             10, TimeSpan.FromSeconds(30),
@@ -33,9 +33,9 @@ public abstract record DbOperationLogProcessorOptions : DbLogProcessorOptions
     }
 }
 
-public abstract record DbEventLogProcessorOptions : DbLogProcessorOptions
+public abstract record DbEventLogReaderOptions : DbLogReaderOptions
 {
-    protected DbEventLogProcessorOptions()
+    protected DbEventLogReaderOptions()
     {
         ReprocessPolicy = new RetryPolicy(
             TimeSpan.FromMinutes(5),

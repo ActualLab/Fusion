@@ -190,7 +190,7 @@ public abstract class FusionTestBase : RpcTestBase
                     if (!UseOperationLogChangeTracking)
                         return;
 
-                    operations.ConfigureOperationLogProcessor(_ => new() {
+                    operations.ConfigureOperationLogReader(_ => new() {
                         // Enable this if you debug multi-host invalidation
                         // MaxCommitDuration = TimeSpan.FromMinutes(5),
                     });

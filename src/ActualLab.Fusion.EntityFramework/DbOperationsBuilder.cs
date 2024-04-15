@@ -37,22 +37,22 @@ public readonly struct DbOperationsBuilder<TDbContext>
         // DbEventProcessor
         services.TryAddSingleton<DbEventProcessor<TDbContext>>();
 
-        // DbOperationLogProcessor & trimmer - hosted services!
+        // DbOperationLogReader & trimmer - hosted services!
         DbContext.TryAddEntityResolver<long, DbOperation>();
-        services.TryAddSingleton(_ => DbOperationLogProcessor<TDbContext>.Options.Default);
-        services.TryAddSingleton<DbOperationLogProcessor<TDbContext>>();
+        services.TryAddSingleton(_ => DbOperationLogReader<TDbContext>.Options.Default);
+        services.TryAddSingleton<DbOperationLogReader<TDbContext>>();
         services.TryAddSingleton(_ => DbOperationLogTrimmer<TDbContext>.Options.Default);
         services.TryAddSingleton<DbOperationLogTrimmer<TDbContext>>();
-        services.AddHostedService(c => c.GetRequiredService<DbOperationLogProcessor<TDbContext>>());
+        services.AddHostedService(c => c.GetRequiredService<DbOperationLogReader<TDbContext>>());
         services.AddHostedService(c => c.GetRequiredService<DbOperationLogTrimmer<TDbContext>>());
 
-        // DbEventLogProcessor & trimmer - hosted services!
+        // DbEventLogReader & trimmer - hosted services!
         DbContext.TryAddEntityResolver<long, DbEvent>();
-        services.TryAddSingleton(_ => DbEventLogProcessor<TDbContext>.Options.Default);
-        services.TryAddSingleton<DbEventLogProcessor<TDbContext>>();
+        services.TryAddSingleton(_ => DbEventLogReader<TDbContext>.Options.Default);
+        services.TryAddSingleton<DbEventLogReader<TDbContext>>();
         services.TryAddSingleton(_ => DbEventLogTrimmer<TDbContext>.Options.Default);
         services.TryAddSingleton<DbEventLogTrimmer<TDbContext>>();
-        services.AddHostedService(c => c.GetRequiredService<DbEventLogProcessor<TDbContext>>());
+        services.AddHostedService(c => c.GetRequiredService<DbEventLogReader<TDbContext>>());
         services.AddHostedService(c => c.GetRequiredService<DbEventLogTrimmer<TDbContext>>());
 
         // Fake operation log watchers - they just log warnings stating log watchers aren't setup,
@@ -77,8 +77,8 @@ public readonly struct DbOperationsBuilder<TDbContext>
         return this;
     }
 
-    public DbOperationsBuilder<TDbContext> ConfigureOperationLogProcessor(
-        Func<IServiceProvider, DbOperationLogProcessor<TDbContext>.Options> optionsFactory)
+    public DbOperationsBuilder<TDbContext> ConfigureOperationLogReader(
+        Func<IServiceProvider, DbOperationLogReader<TDbContext>.Options> optionsFactory)
     {
         Services.AddSingleton(optionsFactory);
         return this;

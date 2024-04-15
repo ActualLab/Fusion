@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
-public abstract class DbOperationLogProcessor<TDbContext, TDbEntry, TOptions>(
+public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
     TOptions settings,
     IServiceProvider services
-    ) : DbLogProcessor<TDbContext, TDbEntry, TOptions>(settings, services), IDbLogProcessor
+    ) : DbLogReader<TDbContext, TDbEntry, TOptions>(settings, services), IDbLogReader
     where TDbContext : DbContext
     where TDbEntry : class, IDbIndexedLogEntry
-    where TOptions : DbOperationLogProcessorOptions
+    where TOptions : DbOperationLogReaderOptions
 {
     protected ConcurrentDictionary<DbShard, long> NextIndexes { get; } = new();
     protected Dictionary<(DbShard Shard, long Index), Task> ReprocessTasks { get; } = new();
@@ -81,7 +81,7 @@ public abstract class DbOperationLogProcessor<TDbContext, TDbEntry, TOptions>(
         dbContext.EnableChangeTracking(false);
 
         var candidateEntries = dbContext.Set<TDbEntry>().AsQueryable();
-        if (Settings is DbOperationLogProcessorOptions cooperativeSettings) {
+        if (Settings is DbOperationLogReaderOptions cooperativeSettings) {
             var minLoggedAt = SystemClock.Now.ToDateTime() - cooperativeSettings.StartOffset;
             candidateEntries = candidateEntries.Where(e => e.LoggedAt >= minLoggedAt);
         }

@@ -3,11 +3,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 
-public class DbOperationLogProcessor<TDbContext>
-    : DbOperationLogProcessor<TDbContext, DbOperation, DbOperationLogProcessor<TDbContext>.Options>
+public class DbOperationLogReader<TDbContext>
+    : DbOperationLogReader<TDbContext, DbOperation, DbOperationLogReader<TDbContext>.Options>
     where TDbContext : DbContext
 {
-    public record Options : DbOperationLogProcessorOptions
+    public record Options : DbOperationLogReaderOptions
     {
         public static Options Default { get; set; } = new();
     }
@@ -15,7 +15,7 @@ public class DbOperationLogProcessor<TDbContext>
     protected IOperationCompletionNotifier OperationCompletionNotifier { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public DbOperationLogProcessor(Options settings, IServiceProvider services)
+    public DbOperationLogReader(Options settings, IServiceProvider services)
         : base(settings, services)
         => OperationCompletionNotifier = services.GetRequiredService<IOperationCompletionNotifier>();
 

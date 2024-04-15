@@ -3,13 +3,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
-public abstract class DbEventLogProcessor<TDbContext, TDbEntry, TOptions>(
+public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
     TOptions settings,
     IServiceProvider services
-    ) : DbLogProcessor<TDbContext, TDbEntry, TOptions>(settings, services), IDbLogProcessor
+    ) : DbLogReader<TDbContext, TDbEntry, TOptions>(settings, services), IDbLogReader
     where TDbContext : DbContext
     where TDbEntry : class, IDbEventLogEntry
-    where TOptions : DbEventLogProcessorOptions
+    where TOptions : DbEventLogReaderOptions
 {
     protected Dictionary<(DbShard Shard, Symbol Uuid), Task> ReprocessTasks { get; } = new();
 
