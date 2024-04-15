@@ -60,10 +60,10 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
             var now = Clocks.SystemClock.Now.ToDateTime();
             var dbEntries = dbContext.Set<TDbEntry>().AsQueryable();
             var queuedCount = await dbEntries
-                .CountAsync(o => o.State == LogEntryState.New && o.FiresAt > now, cancellationToken)
+                .CountAsync(o => o.State == LogEntryState.New && o.DelayUntil > now, cancellationToken)
                 .ConfigureAwait(false);
             var pendingCount = await dbEntries
-                .CountAsync(o => o.State == LogEntryState.New && o.FiresAt <= now, cancellationToken)
+                .CountAsync(o => o.State == LogEntryState.New && o.DelayUntil <= now, cancellationToken)
                 .ConfigureAwait(false);
             var processedCount = await dbEntries
                 .CountAsync(o => o.State == LogEntryState.Processed, cancellationToken)
@@ -82,7 +82,7 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
 
     protected virtual async Task<long> TrimBatch(DbShard shard, int batchSize, CancellationToken cancellationToken)
     {
-        var minFiresAt = SystemClock.Now.ToDateTime() - Settings.MaxEntryAge;
+        var minDelayUntil = SystemClock.Now.ToDateTime() - Settings.MaxEntryAge;
 
         using var _ = ActivitySource.StartActivity().AddShardTags(shard);
         var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
@@ -91,8 +91,8 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
 
 #if NET7_0_OR_GREATER
         return await dbContext.Set<TDbEntry>(DbHintSet.UpdateSkipLocked)
-            .Where(o => o.FiresAt <= minFiresAt)
-            .OrderBy(o => o.FiresAt)
+            .Where(o => o.DelayUntil <= minDelayUntil)
+            .OrderBy(o => o.DelayUntil)
             .Take(batchSize)
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -101,8 +101,8 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
         await using var _2 = tx.ConfigureAwait(false);
 
         var entries = await dbContext.Set<TDbEntry>(DbHintSet.UpdateSkipLocked)
-            .Where(o => o.FiresAt <= minFiresAt)
-            .OrderBy(o => o.FiresAt)
+            .Where(o => o.DelayUntil <= minDelayUntil)
+            .OrderBy(o => o.DelayUntil)
             .Take(batchSize)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
         if (entries.Count == 0)

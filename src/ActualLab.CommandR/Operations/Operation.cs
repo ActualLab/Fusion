@@ -48,7 +48,7 @@ public class Operation(
     public OperationEvent AddEvent(object value, Symbol uuid = default)
         => AddEvent(value, default(Moment), uuid);
 
-    public OperationEvent AddEvent(object value, Moment firesAt, Symbol uuid = default)
+    public OperationEvent AddEvent(object value, Moment delayUntil, Symbol uuid = default)
     {
         if (Scope is not { IsUsed: true })
             throw Errors.ActiveOperationRequired();
@@ -59,12 +59,12 @@ public class Operation(
         if (uuid.IsEmpty)
             uuid = commanderHub.UuidGenerator.Next();
         var loggedAt = commanderHub.Clocks.SystemClock.Now;
-        if (firesAt == default)
-            firesAt = value is IHasFiresAt hasFiresAt ? hasFiresAt.FiresAt : loggedAt;
-        if (firesAt < loggedAt)
-            firesAt = loggedAt;
+        if (delayUntil == default)
+            delayUntil = value is IHasDelayUntil hasDelayUntil ? hasDelayUntil.DelayUntil : loggedAt;
+        if (delayUntil < loggedAt)
+            delayUntil = loggedAt;
 
-        var result = new OperationEvent(uuid, loggedAt, firesAt, value);
+        var result = new OperationEvent(uuid, loggedAt, delayUntil, value);
         (_events ??= new()).Add(result);
         return result;
     }
@@ -80,9 +80,9 @@ public class Operation(
         if (uuid.IsEmpty)
             uuid = commanderHub.UuidGenerator.Next();
         var loggedAt = commanderHub.Clocks.SystemClock.Now;
-        var firesAt = loggedAt + delay.Positive();
+        var delayUntil = loggedAt + delay.Positive();
 
-        var result = new OperationEvent(uuid, loggedAt, firesAt, value);
+        var result = new OperationEvent(uuid, loggedAt, delayUntil, value);
         (_events ??= new()).Add(result);
         return result;
     }

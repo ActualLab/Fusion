@@ -28,8 +28,8 @@ public abstract class DbEventLogProcessor<TDbContext, TDbEntry, TOptions>(
         var batchSize = Settings.BatchSize;
         var dbEntries = dbContext.Set<TDbEntry>();
         var entries = await dbEntries.WithHints(LogKind.GetReadBatchQueryHints())
-            .Where(o => o.State == LogEntryState.New && o.FiresAt < now)
-            .OrderBy(o => o.FiresAt)
+            .Where(o => o.State == LogEntryState.New && o.DelayUntil < now)
+            .OrderBy(o => o.DelayUntil)
             .Take(batchSize)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

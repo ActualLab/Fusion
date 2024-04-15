@@ -3,7 +3,7 @@ namespace ActualLab.CommandR.Operations;
 public sealed record OperationEvent(
     Symbol Uuid,
     Moment LoggedAt,
-    Moment FiresAt,
+    Moment DelayUntil,
     object? Value
     ) : IHasUuid, IHasId<Symbol>
 {

@@ -10,7 +10,7 @@ public static class AppLogging
             logging.SetMinimumLevel(LogLevel.Debug);
             logging.AddFilter("", LogLevel.Information);
             logging.AddFilter("ActualLab.Fusion.Operations", LogLevel.Warning);
-            logging.AddFilter("ActualLab.Fusion.EntityFramework.Operations", LogLevel.Warning);
+            logging.AddFilter("ActualLab.Fusion.EntityFramework.Operations", LogLevel.Information);
             logging.AddFilter("ActualLab.Fusion.EntityFramework.Operations.LogProcessing", LogLevel.Information);
             logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Connection", LogLevel.Warning);
             logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);

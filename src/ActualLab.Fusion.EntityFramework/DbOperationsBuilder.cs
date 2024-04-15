@@ -34,8 +34,8 @@ public readonly struct DbOperationsBuilder<TDbContext>
         services.TryAddSingleton(_ => DbOperationCompletionListener<TDbContext>.Options.Default);
         AddOperationCompletionListener<DbOperationCompletionListener<TDbContext>>();
 
-        // DbOperationEventHandler
-        services.TryAddSingleton<DbOperationEventHandler>();
+        // DbEventProcessor
+        services.TryAddSingleton<DbEventProcessor<TDbContext>>();
 
         // DbOperationLogProcessor & trimmer - hosted services!
         DbContext.TryAddEntityResolver<long, DbOperation>();

@@ -2,7 +2,8 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace Samples.HelloCart.V2;
 
-public class DbProductService(DbHub<AppDbContext> dbHub) : IProductService
+public class DbProductService(IServiceProvider services)
+    : DbServiceBase<AppDbContext>(services), IProductService
 {
     public virtual async Task Edit(EditCommand<Product> command, CancellationToken cancellationToken = default)
     {
@@ -15,7 +16,7 @@ public class DbProductService(DbHub<AppDbContext> dbHub) : IProductService
             return;
         }
 
-        await using var dbContext = await dbHub.CreateCommandDbContext(cancellationToken);
+        await using var dbContext = await DbHub.CreateCommandDbContext(cancellationToken);
         var dbProduct = await dbContext.Products.FindAsync(DbKey.Compose(productId), cancellationToken);
         if (product == null) {
             if (dbProduct != null)
@@ -34,13 +35,15 @@ public class DbProductService(DbHub<AppDbContext> dbHub) : IProductService
         var message = product == null
             ? $"Product removed: {productId}"
             : $"Product updated: {productId} with Price = {product.Price}";
-        context.Operation.AddEvent(new LogMessageCommand(Ulid.NewUlid().ToString(), message));
-        context.Operation.AddEvent(LogMessageCommand.NewDelayed());
+        var logEvent = new LogMessageCommand(Ulid.NewUlid().ToString(), message);
+        context.Operation.AddEvent(logEvent, logEvent.Uuid);
+        var randomEvent = LogMessageCommand.NewRandom();
+        context.Operation.AddEvent(randomEvent, randomEvent.Uuid);
     }
 
     public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)
     {
-        await using var dbContext = await dbHub.CreateDbContext(cancellationToken);
+        await using var dbContext = await DbHub.CreateDbContext(cancellationToken);
         var dbProduct = await dbContext.Products.FindAsync(DbKey.Compose(id), cancellationToken);
         if (dbProduct == null)
             return null;

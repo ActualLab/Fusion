@@ -37,25 +37,28 @@ public partial record EditCommand<TItem>(
 public partial record LogMessageCommand(
     [property: DataMember] Symbol Uuid,
     [property: DataMember] string Message,
-    [property: DataMember] Moment FiresAt = default
-) : ILocalCommand<Unit>, IHasUuid, IHasFiresAt
+    [property: DataMember] Moment DelayUntil = default
+) : ILocalCommand<Unit>, IHasUuid, IHasDelayUntil
 {
     private static long _nextIndex;
 
-    public static LogMessageCommand NewDelayed()
+    public static LogMessageCommand NewRandom()
     {
+        var now = SystemClock.Now;
+        var delay = TimeSpan.FromSeconds((10*Random.Shared.NextDouble()) - 5).Positive();
         var index = Interlocked.Increment(ref _nextIndex);
-        var firesAt = SystemClock.Now + TimeSpan.FromSeconds((30*Random.Shared.NextDouble()) - 10).Positive();
-        return new(Ulid.NewUlid().ToString(), $"#{index}: should fire at {firesAt.ToDateTime():T}", firesAt);
+        var message = delay > TimeSpan.Zero
+            ? $"Message #{index}, triggered with {delay.ToShortString()} delay"
+            : $"Message #{index}";
+        return new(Ulid.NewUlid().ToString(), message, now + delay);
     }
 
     public Task Run(CommandContext context, CancellationToken cancellationToken)
     {
-        var hasFiresAt = FiresAt != default;
-        var delay = hasFiresAt ? $" (delay: {(SystemClock.Now - FiresAt).ToShortString()})" : "";
-        var color = hasFiresAt ? ConsoleColor.DarkRed : ConsoleColor.DarkBlue;
+        var hasDelayUntil = DelayUntil != default;
+        var color = hasDelayUntil ? ConsoleColor.DarkRed : ConsoleColor.DarkBlue;
         Console.BackgroundColor = color;
-        Console.WriteLine($"[{Uuid}] {Message}{delay}");
+        Console.WriteLine($"[{Uuid}] {Message}");
         Console.ResetColor();
         if (false && char.IsDigit(Uuid.Value[^1]))
             throw new InvalidOperationException("Can't run this command!");

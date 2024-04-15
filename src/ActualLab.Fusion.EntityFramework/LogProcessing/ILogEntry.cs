@@ -15,5 +15,5 @@ public interface IDbIndexedLogEntry : IDbLogEntry
 
 public interface IDbEventLogEntry : IDbLogEntry
 {
-    DateTime FiresAt { get; } // Used only by timed events
+    DateTime DelayUntil { get; } // Used only by timed events
 }

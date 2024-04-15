@@ -2,8 +2,11 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace Samples.HelloCart.V2;
 
-public class DbCartService(DbHub<AppDbContext> dbHub, IProductService products) : ICartService
+public class DbCartService(IServiceProvider services)
+    : DbServiceBase<AppDbContext>(services), ICartService
 {
+    protected IProductService Products { get; } = services.GetRequiredService<IProductService>();
+
     public virtual async Task Edit(EditCommand<Cart> command, CancellationToken cancellationToken = default)
     {
         var (cartId, cart) = command;
@@ -15,7 +18,7 @@ public class DbCartService(DbHub<AppDbContext> dbHub, IProductService products) 
             return;
         }
 
-        await using var dbContext = await dbHub.CreateCommandDbContext(cancellationToken);
+        await using var dbContext = await DbHub.CreateCommandDbContext(cancellationToken);
         var dbCart = await dbContext.Carts.FindAsync(DbKey.Compose(cartId), cancellationToken);
         if (cart == null) {
             if (dbCart != null)
@@ -55,7 +58,7 @@ public class DbCartService(DbHub<AppDbContext> dbHub, IProductService products) 
 
     public virtual async Task<Cart?> Get(string id, CancellationToken cancellationToken = default)
     {
-        await using var dbContext = await dbHub.CreateDbContext(cancellationToken);
+        await using var dbContext = await DbHub.CreateDbContext(cancellationToken);
         dbContext.EnableChangeTracking(true); // Otherwise LoadAsync below won't work
 
         var dbCart = await dbContext.Carts.FindAsync(DbKey.Compose(id), cancellationToken);
@@ -76,7 +79,7 @@ public class DbCartService(DbHub<AppDbContext> dbHub, IProductService products) 
 
         var total = 0M;
         foreach (var (productId, quantity) in cart.Items) {
-            var product = await products.Get(productId, cancellationToken);
+            var product = await Products.Get(productId, cancellationToken);
             total += (product?.Price ?? 0M) * quantity;
         }
         return total;
