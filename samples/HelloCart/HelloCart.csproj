@@ -13,6 +13,7 @@
     <PackageReference Include="MemoryPack.Generator" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Pastel" />
   </ItemGroup>
 
   <ItemGroup>

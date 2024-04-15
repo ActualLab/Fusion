@@ -2,6 +2,7 @@ using System.Runtime.Serialization;
 using ActualLab.CommandR.Operations;
 using MemoryPack;
 using Newtonsoft.Json;
+using Pastel;
 
 namespace Samples.HelloCart;
 
@@ -57,9 +58,7 @@ public partial record LogMessageCommand(
     {
         var hasDelayUntil = DelayUntil != default;
         var color = hasDelayUntil ? ConsoleColor.DarkRed : ConsoleColor.DarkBlue;
-        Console.BackgroundColor = color;
-        Console.WriteLine($"[{Uuid}] {Message}");
-        Console.ResetColor();
+        Console.WriteLine($"[{Uuid}] {Message}".PastelBg(color));
         if (false && char.IsDigit(Uuid.Value[^1]))
             throw new InvalidOperationException("Can't run this command!");
         return Task.CompletedTask;

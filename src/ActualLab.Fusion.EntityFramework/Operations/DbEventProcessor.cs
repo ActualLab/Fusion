@@ -22,7 +22,7 @@ public class DbEventProcessor<TDbContext>(IServiceProvider services)
             : $"{ulid} ({processingDelay.ToShortString()} delay)";
 
         if (value is ICommand command) {
-            Log.LogInformation("Processing: command event {CommandType}: {Info}", eventType, info);
+            Log.LogInformation("Processing command event {CommandType}: {Info}", eventType, info);
             await Commander.Call(command, true, cancellationToken).ConfigureAwait(false);
             return;
         }
