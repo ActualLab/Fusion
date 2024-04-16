@@ -101,15 +101,15 @@ internal static class Program
         });
 
         Target("restore", async () => {
-            await Cli.Wrap(dotnetExePath).WithArguments(new[] {
-                    "msbuild",
-                    "-noLogo",
-                    "-t:Restore",
-                    "-p:RestoreForce=true",
-                    "-p:RestoreIgnoreFailedSources=True",
-                    multitargetingProperty,
-                    publicReleaseProperty
-                }).ToConsole()
+            await Cli.Wrap(dotnetExePath).WithArguments(args => args
+                    .Add("msbuild")
+                    .Add("-noLogo")
+                    .Add("-t:Restore")
+                    .Add("-p:RestoreForce=true")
+                    .Add("-p:RestoreIgnoreFailedSources=True")
+                    .AddIfNonEmpty(multitargetingProperty)
+                    .AddIfNonEmpty(publicReleaseProperty)
+                ).ToConsole()
                 .ExecuteAsync(cancellationToken).ConfigureAwait(false);
         });
 
@@ -120,8 +120,8 @@ internal static class Program
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
                     .Add("--no-restore")
-                    .Add(multitargetingProperty)
-                    .Add(publicReleaseProperty)
+                    .AddIfNonEmpty(multitargetingProperty)
+                    .AddIfNonEmpty(publicReleaseProperty)
                 )
                 .ToConsole()
                 .ExecuteAsync(cancellationToken).ConfigureAwait(false);
@@ -137,8 +137,8 @@ internal static class Program
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
                     .Add("--no-restore")
-                    .Add(multitargetingProperty)
-                    .Add(publicReleaseProperty)
+                    .AddIfNonEmpty(multitargetingProperty)
+                    .AddIfNonEmpty(publicReleaseProperty)
                 )
                 .ToConsole()
                 .ExecuteAsync(cancellationToken).ConfigureAwait(false);
@@ -184,7 +184,7 @@ internal static class Program
                     .Add("--results-directory").Add(testOutputPath)
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
-                    .Add(multitargetingProperty)
+                    .AddIfNonEmpty(multitargetingProperty)
                     .Add("--")
                     .Add("DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=json,cobertura")
                 ).ToConsole()
