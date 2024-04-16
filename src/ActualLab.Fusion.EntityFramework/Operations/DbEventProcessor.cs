@@ -32,6 +32,6 @@ public class DbEventProcessor<TDbContext>(IServiceProvider services)
             }
             return;
         }
-        Log.LogError("Skipping unsupported event {Event}: {Info}", eventType, info);
+        Log.LogError("Unsupported event {EventType}: {Info}", eventType, info);
     }
 }
