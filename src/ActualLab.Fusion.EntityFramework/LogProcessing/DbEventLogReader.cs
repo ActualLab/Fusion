@@ -48,7 +48,7 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
             .Collect(Settings.ConcurrencyLevel)
             .ConfigureAwait(false);
 
-        foreach (var (entry, isProcessed) in entries.Zip(results))
+        foreach (var (entry, isProcessed) in entries.Zip(results, static (entry, isProcessed) => (entry, isProcessed)))
             if (isProcessed)
                 SetEntryState(dbEntries, entry, LogEntryState.Processed);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
