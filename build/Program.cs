@@ -155,7 +155,7 @@ internal static class Program
                 .Select(FilePath.New)
                 .ToArray();
             foreach (var nupkgPath in nupkgPaths) {
-                await Cli.Wrap(dotnetExePath).WithArguments(new[] {
+                await Cli.Wrap(dotnetExePath).WithArguments(new string[] {
                         "nuget",
                         "push",
                         nupkgPath,
