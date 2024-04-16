@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Net;
+using ActualLab.Resilience;
 
 namespace ActualLab.Fusion.EntityFramework;
 
@@ -65,7 +66,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         = new Func<IEnumerable<TKey>, TKey, bool>(Enumerable.Contains).Method;
 
     private ConcurrentDictionary<DbShard, BatchProcessor<TKey, TDbEntity?>>? _batchProcessors;
-    private ITransientErrorDetector<TDbContext>? _transientErrorDetector;
+    private TransiencyResolver<TDbContext>? _transiencyResolver;
     private ActivitySource? _activitySource;
 
     protected Options Settings { get; }
@@ -75,8 +76,8 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
     public Func<TDbEntity, TKey> KeyExtractor { get; init; }
     public Expression<Func<TDbEntity, TKey>> KeyExtractorExpression { get; init; }
-    public ITransientErrorDetector<TDbContext> TransientErrorDetector =>
-        _transientErrorDetector ??= Services.GetRequiredService<ITransientErrorDetector<TDbContext>>();
+    public TransiencyResolver<TDbContext> TransiencyResolver =>
+        _transiencyResolver ??= Services.GetRequiredService<TransiencyResolver<TDbContext>>();
 
     public DbEntityResolver(Options settings, IServiceProvider services) : base(services)
     {
@@ -311,7 +312,8 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
         using var activity = StartProcessBatchActivity(shard, batchSize);
         var query = Queries[batchSize];
-        for (var tryIndex = 0;; tryIndex++) {
+        var tryIndex = 0;
+        while (true) {
             var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
             await using var _ = dbContext.ConfigureAwait(false);
 
@@ -352,12 +354,14 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
                 return;
             }
             catch (Exception e) when (!cancellationToken.IsCancellationRequested) {
-                var isTransient = e is TimeoutException || TransientErrorDetector.IsTransient(e);
-                if (!isTransient)
+                var transiency = TransiencyResolver.Invoke(e);
+                if (!transiency.IsTransient())
                     throw;
 
+                if (!transiency.IsSuperTransient())
+                    tryIndex++;
                 var delayLogger = new RetryDelayLogger("process batch", Log);
-                var delay = Settings.RetryDelayer.GetDelay(tryIndex + 1, delayLogger, cancellationToken);
+                var delay = Settings.RetryDelayer.GetDelay(Math.Max(1, tryIndex), delayLogger, cancellationToken);
                 if (delay.IsLimitExceeded)
                     throw;
 

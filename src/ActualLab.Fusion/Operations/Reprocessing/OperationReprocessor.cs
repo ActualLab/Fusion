@@ -1,4 +1,5 @@
 using ActualLab.Fusion.Operations.Internal;
+using ActualLab.Resilience;
 using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Operations.Reprocessing;
@@ -9,9 +10,9 @@ namespace ActualLab.Fusion.Operations.Reprocessing;
 /// </summary>
 public interface IOperationReprocessor : ICommandHandler<ICommand>
 {
-    void AddTransientFailure(Exception error);
-    bool IsTransientFailure(IReadOnlyList<Exception> allErrors);
-    bool WillRetry(IReadOnlyList<Exception> allErrors);
+    void MarkTransient(Exception error, Transiency transiency);
+    Transiency GetTransiency(IReadOnlyList<Exception> allErrors);
+    bool WillRetry(IReadOnlyList<Exception> allErrors, out Transiency transiency);
 }
 
 /// <summary>
@@ -42,18 +43,18 @@ public class OperationReprocessor : IOperationReprocessor
         }
     }
 
-    private ITransientErrorDetector<IOperationReprocessor>? _transientErrorDetector;
+    private TransiencyResolver<IOperationReprocessor>? _transiencyResolver;
     private IMomentClock? _delayClock;
     private ILogger? _log;
 
-    protected HashSet<Exception> KnownTransientFailures { get; } = new();
+    protected Dictionary<Exception, Transiency> KnownTransiencies { get; } = new();
     protected CommandContext CommandContext { get; set; } = null!;
-    protected int FailedTryCount { get; set; }
+    protected int TryIndex { get; set; }
     protected Exception? LastError { get; set; }
 
     protected IServiceProvider Services { get; }
-    protected ITransientErrorDetector<IOperationReprocessor> TransientErrorDetector
-        => _transientErrorDetector ??= Services.GetRequiredService<ITransientErrorDetector<IOperationReprocessor>>();
+    protected TransiencyResolver<IOperationReprocessor> TransiencyResolver
+        => _transiencyResolver ??= Services.TransiencyResolver<IOperationReprocessor>();
     public IMomentClock DelayClock => _delayClock ??= Settings.DelayClock ?? Services.Clocks().CpuClock;
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
@@ -66,42 +67,47 @@ public class OperationReprocessor : IOperationReprocessor
         Settings = settings;
     }
 
-    public void AddTransientFailure(Exception error)
+    public void MarkTransient(Exception error, Transiency transiency)
     {
-        lock (KnownTransientFailures)
-            KnownTransientFailures.Add(error);
+        if (!transiency.IsTransient())
+            throw new ArgumentOutOfRangeException(nameof(transiency));
+
+        lock (KnownTransiencies)
+            KnownTransiencies.Add(error, transiency);
     }
 
-    public virtual bool IsTransientFailure(IReadOnlyList<Exception> allErrors)
+    public virtual Transiency GetTransiency(IReadOnlyList<Exception> allErrors)
     {
-#pragma warning disable CA1851
-        lock (KnownTransientFailures) {
+        lock (KnownTransiencies) {
             // ReSharper disable once PossibleMultipleEnumeration
-            if (allErrors.Any(KnownTransientFailures.Contains))
-                return true;
+            foreach (var error in allErrors)
+                if (KnownTransiencies.TryGetValue(error, out var transiency))
+                    return transiency;
         }
         // ReSharper disable once PossibleMultipleEnumeration
         foreach (var error in allErrors) {
-            if (TransientErrorDetector.IsTransient(error)) {
-                lock (KnownTransientFailures)
-                    KnownTransientFailures.Add(error);
-                return true;
-            }
+            var transiency = TransiencyResolver.Invoke(error);
+            if (transiency.IsNonTransient())
+                continue;
+
+            lock (KnownTransiencies)
+                KnownTransiencies.Add(error, transiency);
+            return transiency;
         }
-#pragma warning restore CA1851
-        return false;
+        return Transiency.Unknown;
     }
 
-    public virtual bool WillRetry(IReadOnlyList<Exception> allErrors)
+    public virtual bool WillRetry(IReadOnlyList<Exception> allErrors, out Transiency transiency)
     {
-        if (FailedTryCount > Settings.MaxRetryCount)
+        transiency = GetTransiency(allErrors);
+        if (transiency.IsNonTransient())
+            return false;
+
+        if (!transiency.IsSuperTransient() && TryIndex >= Settings.MaxRetryCount)
             return false;
 
         var operation = CommandContext.TryGetOperation();
-        if (operation == null || operation.Scope is TransientOperationScope)
-            return false;
-
-        return IsTransientFailure(allErrors);
+        return operation is { Scope: not TransientOperationScope };
     }
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.OperationReprocessor)]
@@ -133,16 +139,17 @@ public class OperationReprocessor : IOperationReprocessor
             }
             catch (Exception error) when (!error.IsCancellationOf(cancellationToken)) {
                 LastError = error;
-                FailedTryCount++;
-                if (!this.WillRetry(error))
+                if (!this.WillRetry(error, out var transiency))
                     throw;
 
+                if (!transiency.IsSuperTransient())
+                    TryIndex++;
                 context.Items.Items = itemsBackup;
                 context.ExecutionState = executionStateBackup;
-                var delay = Settings.RetryDelays[FailedTryCount];
+                var delay = Settings.RetryDelays[TryIndex];
                 Log.LogWarning(
-                    "Retry #{FailedTryCount}/{MaxTryCount} on {Error}: {Command} with {Delay} delay",
-                    FailedTryCount, Settings.MaxRetryCount,
+                    "Retry #{TryIndex}/{MaxTryCount} on {Error}: {Command} with {Delay} delay",
+                    TryIndex, Settings.MaxRetryCount,
                     new ExceptionInfo(error), command, delay.ToShortString());
                 await DelayClock.Delay(delay, cancellationToken).ConfigureAwait(false);
             }

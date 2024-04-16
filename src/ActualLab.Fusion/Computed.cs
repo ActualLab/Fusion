@@ -3,6 +3,7 @@ using ActualLab.Collections.Slim;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
 using ActualLab.Fusion.Operations.Internal;
+using ActualLab.Resilience;
 using ActualLab.Versioning;
 using Errors = ActualLab.Fusion.Internal.Errors;
 
@@ -468,15 +469,15 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         if (error is OperationCanceledException)
             return true; // Must be transient under any circumstances in IComputed
 
-        ITransientErrorDetector? transientErrorDetector = null;
+        TransiencyResolver<IComputed>? transiencyResolver = null;
         try {
             var services = Input.Function.Services;
-            transientErrorDetector = services.GetService<ITransientErrorDetector<IComputed>>();
+            transiencyResolver = services.GetService<TransiencyResolver<IComputed>>();
         }
         catch (ObjectDisposedException) {
             // We want to handle IServiceProvider disposal gracefully
         }
-        transientErrorDetector ??= TransientErrorDetector.DefaultPreferTransient;
-        return transientErrorDetector.IsTransient(error);
+        return transiencyResolver?.Invoke(error).IsTransient()
+            ?? TransiencyResolvers.PreferTransient.Invoke(error).IsTransient();
     }
 }

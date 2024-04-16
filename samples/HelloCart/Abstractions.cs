@@ -1,4 +1,5 @@
 using System.Runtime.Serialization;
+using System.Transactions;
 using ActualLab.CommandR.Operations;
 using MemoryPack;
 using Newtonsoft.Json;
@@ -54,14 +55,15 @@ public partial record LogMessageCommand(
         return new(Ulid.NewUlid().ToString(), message, now + delay);
     }
 
-    public Task Run(CommandContext context, CancellationToken cancellationToken)
+    public async Task Run(CommandContext context, CancellationToken cancellationToken)
     {
         var hasDelayUntil = DelayUntil != default;
         var color = hasDelayUntil ? ConsoleColor.DarkRed : ConsoleColor.DarkBlue;
         Console.WriteLine($"[{Uuid}] {Message}".PastelBg(color));
-        if (false && char.IsDigit(Uuid.Value[^1]))
-            throw new InvalidOperationException("Can't run this command!");
-        return Task.CompletedTask;
+        if (char.IsDigit(Uuid.Value[^1])) {
+            await Task.Delay(300, CancellationToken.None).ConfigureAwait(false);
+            throw new TransactionException("Can't run this command!");
+        }
     }
 }
 

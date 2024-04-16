@@ -1,3 +1,5 @@
+using ActualLab.Resilience;
+
 namespace ActualLab.Fusion.Tests.Services;
 
 #pragma warning disable CA1024, CA1067

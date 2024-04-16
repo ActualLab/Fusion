@@ -1,20 +1,24 @@
+using ActualLab.Resilience;
+
 namespace ActualLab.Async;
 
 [StructLayout(LayoutKind.Auto)]
-public readonly record struct AsyncChain(
-    string Name,
-    Func<CancellationToken, Task> Start,
-    TerminalErrorDetector TerminalErrorDetector)
+public readonly record struct AsyncChain
 {
     public static readonly AsyncChain None = new("(no-operation)",
         _ => Task.CompletedTask);
     public static readonly AsyncChain NeverEnding = new("(never-ending)",
         cancellationToken => TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken));
 
-    public AsyncChain(string name, Func<CancellationToken, Task> start)
-        : this(name, start, TerminalError.Detector) { }
-    public AsyncChain(Func<CancellationToken, Task> start)
-        : this("(unnamed)", start, TerminalError.Detector) { }
+    private readonly TransiencyResolver? _transiencyResolver;
+
+    public string Name { get; init; }
+    public Func<CancellationToken, Task> Start { get; init; }
+
+    public TransiencyResolver TransiencyResolver {
+        get => _transiencyResolver ?? TransiencyResolvers.PreferTransient;
+        init => _transiencyResolver = value;
+    }
 
     // Constructor-like methods
 
@@ -34,7 +38,33 @@ public readonly record struct AsyncChain(
         => new($"Delay({delay.ToString()})",
             ct => (clock ?? MomentClockSet.Default.CpuClock).Delay(delay.Next(), ct));
 
+    // Constructors
+
+    public AsyncChain(Func<CancellationToken, Task> start)
+        : this("(unnamed)", start) { }
+    public AsyncChain(string name,
+        Func<CancellationToken, Task> start,
+        TransiencyResolver? transiencyResolver = null)
+    {
+        Name = name;
+        Start = start;
+        _transiencyResolver = transiencyResolver;
+    }
+
     // Conversion
+
+    public void Deconstruct(out string name, out Func<CancellationToken, Task> start)
+    {
+        name = Name;
+        start = Start;
+    }
+
+    public void Deconstruct(out string name, out Func<CancellationToken, Task> start, out TransiencyResolver transiencyResolver)
+    {
+        name = Name;
+        start = Start;
+        transiencyResolver = TransiencyResolver;
+    }
 
     public override string ToString() => Name;
 

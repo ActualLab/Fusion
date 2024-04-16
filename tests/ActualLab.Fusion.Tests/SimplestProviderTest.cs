@@ -1,4 +1,5 @@
 using ActualLab.Fusion.Tests.Services;
+using ActualLab.Resilience;
 
 namespace ActualLab.Fusion.Tests;
 

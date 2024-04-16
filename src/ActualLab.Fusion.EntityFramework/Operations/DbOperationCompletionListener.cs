@@ -1,5 +1,6 @@
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.EntityFramework.LogProcessing;
+using ActualLab.Resilience;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
@@ -12,8 +13,11 @@ public class DbOperationCompletionListener<TDbContext>
     {
         public static Options Default { get; set; } = new();
 
-        public int? NotifyRetryCount { get; init; } = 3;
-        public RetryDelaySeq NotifyRetryDelays { get; init; } = RetryDelaySeq.Linear(0.1);
+        public IRetryPolicy NotifyRetryPolicy { get; init; } = new RetryPolicy(
+            TimeSpan.FromSeconds(10),
+            RetryDelaySeq.Exp(0.25, 1, 0.1, 2)) {
+            RetryOnNonTransient = true,
+        };
     }
 
     protected Options Settings { get; init; }
@@ -39,9 +43,9 @@ public class DbOperationCompletionListener<TDbContext>
             return Task.CompletedTask; // Nothing is committed to TDbContext
 
         var shard = operationScope.Shard;
-        _ = new AsyncChain($"Notify({shard})", ct => Notify(shard, operation, operationScope, ct))
-            .Retry(Settings.NotifyRetryDelays, Settings.NotifyRetryCount, Clocks.CpuClock, Log)
-            .RunIsolated(StopToken);
+        _ = Settings.NotifyRetryPolicy.RunIsolated(
+            ct => Notify(shard, operation, operationScope, ct),
+            new RetryLogger($"Notify[{shard}]", Log));
         return Task.CompletedTask;
     }
 

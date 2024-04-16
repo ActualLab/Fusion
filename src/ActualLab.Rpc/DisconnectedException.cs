@@ -1,3 +1,5 @@
+using ActualLab.Resilience;
+
 namespace ActualLab.Rpc;
 
 #pragma warning disable SYSLIB0051

@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.Operations.Reprocessing;
+using ActualLab.Resilience;
+using RetryLimitExceededException = Microsoft.EntityFrameworkCore.Storage.RetryLimitExceededException;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
@@ -59,10 +61,10 @@ public class DbOperationScopeProvider<TDbContext>(IServiceProvider services)
                     throw;
 
                 // It's a transient failure - let's tag it so that IOperationReprocessor retries on it
-                operationReprocessor.AddTransientFailure(transientError);
+                operationReprocessor.MarkTransient(transientError, Transiency.Transient);
 
                 // But if retry still won't happen (too many retries?) - let's log error here
-                if (!operationReprocessor.WillRetry(allErrors))
+                if (!operationReprocessor.WillRetry(allErrors, out var _))
                     Log.LogError(error, "Operation failed: {Command}", command);
                 else
                     Log.LogInformation("Transient failure on {Command}: {TransientError}",

@@ -1,4 +1,5 @@
 using ActualLab.Fusion.EntityFramework.LogProcessing;
+using ActualLab.Resilience;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -21,7 +22,7 @@ public readonly struct DbContextBuilder<TDbContext>
 
         services.TryAddSingleton<DbHub<TDbContext>>();
         AddSharding(); // Core sharding services
-        TryAddTransientErrorDetector(_ => TransientErrorDetector.DefaultPreferTransient);
+        TryAddTransiencyResolver(_ => TransiencyResolvers.PreferTransient);
 
         configure?.Invoke(this);
     }
@@ -34,17 +35,17 @@ public readonly struct DbContextBuilder<TDbContext>
     public DbContextBuilder<TDbContext> AddSharding(Action<ShardDbContextBuilder<TDbContext>> configure)
         => new ShardDbContextBuilder<TDbContext>(this, configure).DbContext;
 
-    // Transient error detector
+    // Transiency resolvers
 
-    public DbContextBuilder<TDbContext> AddTransientErrorDetector(Func<IServiceProvider, ITransientErrorDetector> detectorFactory)
+    public DbContextBuilder<TDbContext> AddTransiencyResolver(Func<IServiceProvider, TransiencyResolver> resolverFactory)
     {
-        Services.AddSingleton(c => detectorFactory.Invoke(c).For<TDbContext>());
+        Services.AddTransiencyResolver<TDbContext>(resolverFactory);
         return this;
     }
 
-    public DbContextBuilder<TDbContext> TryAddTransientErrorDetector(Func<IServiceProvider, ITransientErrorDetector> detectorFactory)
+    public DbContextBuilder<TDbContext> TryAddTransiencyResolver(Func<IServiceProvider, TransiencyResolver> resolverFactory)
     {
-        Services.TryAddSingleton(c => detectorFactory.Invoke(c).For<TDbContext>());
+        Services.TryAddTransiencyResolver<TDbContext>(resolverFactory);
         return this;
     }
 

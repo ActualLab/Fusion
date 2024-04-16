@@ -1,4 +1,5 @@
 using ActualLab.CommandR.Operations;
+using ActualLab.Resilience;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
@@ -23,7 +24,12 @@ public class DbEventProcessor<TDbContext>(IServiceProvider services)
 
         if (value is ICommand command) {
             Log.LogInformation("Processing command event {CommandType}: {Info}", eventType, info);
-            await Commander.Call(command, true, cancellationToken).ConfigureAwait(false);
+            try {
+                await Commander.Call(command, true, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+                throw new TerminalException("Already reprocessed.", e);
+            }
             return;
         }
         Log.LogError("Skipping unsupported event {Event}: {Info}", eventType, info);

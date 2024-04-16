@@ -1,4 +1,3 @@
-using ActualLab.Resilience;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
@@ -45,18 +44,19 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
             $"{nameof(ProcessBatch)}[{{Shard}}]: got {{Count}}/{{BatchSize}} entries",
             shard.Value, entries.Count, batchSize);
 
-        await GetProcessTasks(shard, entries, cancellationToken)
+        var results = await GetProcessTasks(shard, entries, cancellationToken)
             .Collect(Settings.ConcurrencyLevel)
             .ConfigureAwait(false);
 
-        foreach (var entry in entries)
-            SetEntryState(dbEntries, entry, LogEntryState.Processed);
+        foreach (var (entry, isProcessed) in entries.Zip(results))
+            if (isProcessed)
+                SetEntryState(dbEntries, entry, LogEntryState.Processed);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return entries.Count;
     }
 
-    protected virtual IEnumerable<Task> GetProcessTasks(
+    protected virtual IEnumerable<Task<bool>> GetProcessTasks(
         DbShard shard, List<TDbEntry> entries, CancellationToken cancellationToken)
     {
         foreach (var entry in entries)

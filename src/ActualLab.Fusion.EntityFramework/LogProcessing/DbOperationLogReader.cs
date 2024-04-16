@@ -56,22 +56,6 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         return entries.Count;
     }
 
-    protected async ValueTask<long?> TryGetNextIndex(DbShard shard, CancellationToken cancellationToken)
-    {
-        if (NextIndexes.TryGetValue(shard, out var nextIndex))
-            return nextIndex;
-
-        var startEntry = await GetStartEntry(shard, cancellationToken).ConfigureAwait(false);
-        if (startEntry == null)
-            return null;
-
-        nextIndex = NextIndexes.GetOrAdd(shard, startEntry.Index);
-        DefaultLog?.Log(Settings.LogLevel,
-            $"{nameof(ProcessNewEntries)}[{{Shard}}]: starting from #{{StartIndex}}",
-            shard, nextIndex);
-        return nextIndex;
-    }
-
     protected virtual IEnumerable<Task> GetProcessTasks(
         DbShard shard, List<TDbEntry> entries, long nextIndex, CancellationToken cancellationToken)
     {
@@ -104,6 +88,22 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
     }
 
     // Helpers
+
+    protected async ValueTask<long?> TryGetNextIndex(DbShard shard, CancellationToken cancellationToken)
+    {
+        if (NextIndexes.TryGetValue(shard, out var nextIndex))
+            return nextIndex;
+
+        var startEntry = await GetStartEntry(shard, cancellationToken).ConfigureAwait(false);
+        if (startEntry == null)
+            return null;
+
+        nextIndex = NextIndexes.GetOrAdd(shard, startEntry.Index);
+        DefaultLog?.Log(Settings.LogLevel,
+            $"{nameof(ProcessNewEntries)}[{{Shard}}]: starting from #{{StartIndex}}",
+            shard, nextIndex);
+        return nextIndex;
+    }
 
     protected virtual async Task<TDbEntry?> GetStartEntry(DbShard shard, CancellationToken cancellationToken)
     {

@@ -1,13 +1,11 @@
-namespace ActualLab;
+namespace ActualLab.Resilience;
 
-public delegate bool TerminalErrorDetector(Exception exception, CancellationToken cancellationToken);
-
-public static class TerminalError
+public static class ExceptionExt
 {
-    public static TerminalErrorDetector Detector { get; set; }
-        = static (e, ct) => e.IsCancellationOf(ct) || e.Any(IsServiceProviderDisposedException);
+    public static bool IsServiceProviderDisposedException(this Exception error)
+        => error.Any(IsServiceProviderDisposedExceptionImpl);
 
-    public static bool IsServiceProviderDisposedException(Exception error)
+    private static bool IsServiceProviderDisposedExceptionImpl(Exception error)
     {
         if (Equals(error.GetType().Name, "JSDisconnectedException"))
             return true; // This is specific to Blazor Server, it also indicates the scope is going to die soon
@@ -19,7 +17,7 @@ public static class TerminalError
             || ode.Message.Contains("'IServiceProvider'");
 #else
         return ode.ObjectName.Contains("IServiceProvider", StringComparison.Ordinal)
-            || ode.Message.Contains("'IServiceProvider'", StringComparison.Ordinal);
+               || ode.Message.Contains("'IServiceProvider'", StringComparison.Ordinal);
 #endif
     }
 }

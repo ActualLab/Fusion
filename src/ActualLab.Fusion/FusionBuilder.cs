@@ -9,6 +9,7 @@ using ActualLab.Fusion.Operations.Reprocessing;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.UI;
+using ActualLab.Resilience;
 using ActualLab.Rpc;
 using ActualLab.Versioning.Providers;
 
@@ -66,7 +67,7 @@ public readonly struct FusionBuilder
 
         // Compute services & their dependencies
         services.TryAddSingleton(_ => new ComputedOptionsProvider());
-        services.TryAddSingleton(_ => TransientErrorDetector.DefaultPreferTransient.For<IComputed>());
+        services.TryAddSingleton(_ => TransiencyResolvers.PreferTransient.ForContext<IComputed>());
         services.TryAddSingleton(_ => new ComputeServiceInterceptor.Options());
         services.TryAddSingleton(c => new ComputeServiceInterceptor(
             c.GetRequiredService<ComputeServiceInterceptor.Options>(), c));
@@ -349,7 +350,7 @@ public readonly struct FusionBuilder
         services.AddTransient<TOperationReprocessor>();
         services.AddAlias<IOperationReprocessor, TOperationReprocessor>(ServiceLifetime.Transient);
         Commander.AddHandlers<TOperationReprocessor>();
-        services.AddSingleton(TransientErrorDetector.DefaultPreferNonTransient.For<IOperationReprocessor>());
+        services.AddSingleton(TransiencyResolvers.PreferNonTransient.ForContext<IOperationReprocessor>());
         return this;
     }
 

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Locking;
+using ActualLab.Resilience;
 
 namespace ActualLab.Fusion.EntityFramework;
 

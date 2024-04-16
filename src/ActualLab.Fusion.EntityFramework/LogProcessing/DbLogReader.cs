@@ -70,31 +70,36 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
         }
     }
 
-    protected async Task ProcessSafe(
+    protected async Task<bool> ProcessSafe(
         DbShard shard, TDbKey key, TDbEntry entry, bool canReprocess,
         CancellationToken cancellationToken)
     {
         // This method should never fail when canReprocess == true
         if (entry.State != LogEntryState.New)
-            return;
+            return false;
 
         try {
             await Process(shard, entry, cancellationToken).ConfigureAwait(false);
+            return true;
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
             if (!canReprocess)
                 throw;
 
-            var suffix = canReprocess ? ", will reprocess it" : "";
+            var mustReprocess = Settings.ReprocessPolicy.MustRetry(e, out _);
+            var suffix = mustReprocess
+                ? ", will reprocess it"
+                : ", will discard it";
             // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
             Log.LogError(e,
                 $"{nameof(Process)}[{{Shard}}]: failed for entry #{{Key}}{suffix}",
                 shard, key);
-            ReprocessSafe(shard, key);
+            ReprocessSafe(shard, key, mustDiscard: !mustReprocess);
+            return false;
         }
     }
 
-    protected void ReprocessSafe(DbShard shard, TDbKey key)
+    protected void ReprocessSafe(DbShard shard, TDbKey key, bool mustDiscard = false)
     {
         // This method should never fail!
         lock (ReprocessTasks) {
@@ -102,7 +107,7 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
             if (ReprocessTasks.ContainsKey(fullKey))
                 return;
 
-            var task = Task.Run(() => Reprocess(shard, key, StopToken));
+            var task = Task.Run(() => Reprocess(shard, key, mustDiscard, StopToken));
             ReprocessTasks[fullKey] = task;
             _ = task.ContinueWith(_ => {
                 lock (ReprocessTasks)
@@ -111,24 +116,25 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
         }
     }
 
-    protected async Task Reprocess(DbShard shard, TDbKey key, CancellationToken cancellationToken)
+    protected async Task Reprocess(DbShard shard, TDbKey key, bool mustDiscard, CancellationToken cancellationToken)
     {
-        for (var i = 0; i < 2; i++) {
-            var (mustDiscard, sProcess, sProcessed, sErrorExtra) = i switch {
+        for (var i = mustDiscard ? 1 : 0; i < 2; i++) {
+            var (mustDiscard1, sProcess, sProcessed, sErrorExtra) = i switch {
                 0 => (false, "process", "processed", ", will try to discard it"),
                 _ => (true, "discard", "discarded", ""),
             };
-            if (mustDiscard && LogKind == DbLogKind.Operations)
+            if (mustDiscard1 && LogKind == DbLogKind.Operations)
                 return; // No need for discard in operation log
 
             try {
                 await Task.Delay(Settings.ReprocessDelay.Next(), cancellationToken).ConfigureAwait(false);
                 var isProcessed = await Settings.ReprocessPolicy
-                    .Apply(ct => ProcessOne(shard, key, mustDiscard, ct), cancellationToken)
+                    .Apply(ct => ProcessOne(shard, key, mustDiscard1, ct), cancellationToken)
                     .ConfigureAwait(false);
                 if (isProcessed) {
+                    var logLevel = mustDiscard1 ? LogLevel.Error : Settings.LogLevel;
                     // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-                    DefaultLog?.Log(Settings.LogLevel,
+                    DefaultLog?.Log(logLevel,
                         $"{nameof(Reprocess)}[{{Shard}}]: entry #{{Key}} is {sProcessed}",
                         shard, key);
                     return;
