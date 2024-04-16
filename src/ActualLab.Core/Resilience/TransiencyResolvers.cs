@@ -11,6 +11,21 @@ namespace ActualLab.Resilience;
 public static class TransiencyResolvers
 {
     /// <summary>
+    /// This detector classifies only core errors & returns <see cref="Transiency.Unknown"/>
+    /// for everything else.
+    /// </summary>
+    public static TransiencyResolver CoreOnly { get; set; }
+        = static e => e switch {
+            ITerminalException => Transiency.Terminal,
+            _ when e.IsServiceProviderDisposedException() => Transiency.Terminal,
+            ISuperTransientException => Transiency.SuperTransient,
+            ITransientException => Transiency.Transient,
+            RetryPolicyTimeoutExceededException => Transiency.NonTransient,
+            TimeoutException => Transiency.Transient, // Must be transient
+            _ => Transiency.Unknown,
+        };
+
+    /// <summary>
     /// This detector is used by Fusion's IComputed by default, see
     /// FusionBuilder's constructor to understand how to replace it in
     /// the DI container, or simply set this property to whatever you prefer
@@ -55,19 +70,4 @@ public static class TransiencyResolvers
     /// </summary>
     public static TransiencyResolver PreferNonTransient { get; set; }
         = static e => CoreOnly.Invoke(e).Or(Transiency.NonTransient);
-
-    /// <summary>
-    /// This detector classifies only core errors & returns <see cref="Transiency.Unknown"/>
-    /// for everything else.
-    /// </summary>
-    public static TransiencyResolver CoreOnly { get; set; }
-        = static e => e switch {
-            ITerminalException => Transiency.Terminal,
-            _ when e.IsServiceProviderDisposedException() => Transiency.Terminal,
-            ISuperTransientException => Transiency.SuperTransient,
-            ITransientException => Transiency.Transient,
-            RetryPolicyTimeoutExceededException => Transiency.NonTransient,
-            TimeoutException => Transiency.Transient, // Must be transient
-            _ => Transiency.Unknown,
-        };
 }
