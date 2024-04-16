@@ -50,7 +50,7 @@ public class Operation(
 
     public OperationEvent AddEvent(object value, Moment delayUntil, Symbol uuid = default)
     {
-        if (Scope is not { IsUsed: true })
+        if (Scope is not { IsUsed: true, IsClosed: false })
             throw Errors.ActiveOperationRequired();
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
@@ -71,7 +71,7 @@ public class Operation(
 
     public OperationEvent AddEvent(object value, TimeSpan delay, Symbol uuid = default)
     {
-        if (Scope is not { IsUsed: true })
+        if (Scope is not { IsUsed: true, IsClosed: false })
             throw Errors.ActiveOperationRequired();
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
@@ -91,7 +91,7 @@ public class Operation(
         => RemoveEvent(operationEvent.Uuid);
     public bool RemoveEvent(Symbol uuid)
     {
-        if (Scope is not { IsUsed: true })
+        if (Scope is not { IsUsed: true, IsClosed: false })
             throw Errors.ActiveOperationRequired();
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
@@ -100,7 +100,14 @@ public class Operation(
     }
 
     public void ClearEvents()
-        => _events = null;
+    {
+        if (Scope is not { IsUsed: true, IsClosed: false })
+            throw Errors.ActiveOperationRequired();
+        if (Scope.IsTransient)
+            throw Errors.TransientScopeOperationCannotHaveEvents();
+
+        _events = null;
+    }
 
     public ClosedDisposable<(Operation, List<NestedOperation>)> SuppressNestedOperationLogging()
     {

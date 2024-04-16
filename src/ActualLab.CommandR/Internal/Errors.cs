@@ -51,7 +51,7 @@ public static class Errors
     public static Exception CommandContextHasNoOperation()
         => new InvalidOperationException("CommandContext has no handlers providing an Operation (CommandContext.Operation is null).");
     public static Exception ActiveOperationRequired()
-        => new InvalidOperationException("This action cannot be performed on archived / inactive Operation.");
+        => new InvalidOperationException("This action cannot be performed on completed or inactive Operation.");
     public static Exception TransientScopeOperationCannotHaveEvents()
         => new NotSupportedException("An operation from transient scope cannot have events.");
 }
