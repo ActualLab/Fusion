@@ -8,15 +8,12 @@ public class LocalDbLogWatcher<TDbContext, TDbEntry>(IServiceProvider services)
     where TDbContext : DbContext
 {
     protected override DbShardWatcher CreateShardWatcher(DbShard shard)
-        => new ShardWatcher(this, shard);
+        => new ShardWatcher(shard);
 
     // Nested types
 
-    protected class ShardWatcher(LocalDbLogWatcher<TDbContext, TDbEntry> owner, DbShard shard)
-        : DbShardWatcher(shard)
+    protected class ShardWatcher(DbShard shard) : DbShardWatcher(shard)
     {
-        protected LocalDbLogWatcher<TDbContext, TDbEntry> Owner { get; } = owner;
-
         public override Task NotifyChanged(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();

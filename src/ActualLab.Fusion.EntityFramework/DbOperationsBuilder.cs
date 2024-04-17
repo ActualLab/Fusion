@@ -144,9 +144,9 @@ public readonly struct DbOperationsBuilder<TDbContext>
         return this;
     }
 
-    // Operation log watchers
+    // Operation log watcher
 
-    public DbOperationsBuilder<TDbContext> AddOperationLogWatchers<TOptions>(
+    public DbOperationsBuilder<TDbContext> AddOperationLogWatcher<TOptions>(
         Type implementationGenericType,
         Func<IServiceProvider, TOptions> defaultOptionsFactory,
         Func<IServiceProvider, TOptions>? optionsFactory = null)
@@ -154,16 +154,15 @@ public readonly struct DbOperationsBuilder<TDbContext>
     {
         var services = Services;
         services.AddSingleton(optionsFactory, defaultOptionsFactory);
-        DbContext.TryAddLogWatcher<DbOperation>(implementationGenericType);
-        DbContext.TryAddLogWatcher<DbEvent>(implementationGenericType);
+        DbContext.AddLogWatcher<DbOperation>(implementationGenericType);
         return this;
     }
 
     // FileSystem operation log watchers
 
-    public DbOperationsBuilder<TDbContext> AddFileSystemOperationLogWatchers(
+    public DbOperationsBuilder<TDbContext> AddFileSystemOperationLogWatcher(
         Func<IServiceProvider, FileSystemDbLogWatcherOptions<TDbContext>>? optionsFactory = null)
-        => AddOperationLogWatchers(
+        => AddOperationLogWatcher(
             typeof(FileSystemDbLogWatcher<,>),
             _ => FileSystemDbLogWatcherOptions<TDbContext>.Default,
             optionsFactory);

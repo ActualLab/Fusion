@@ -39,12 +39,12 @@ public static class AppDb
 
                 if (UseRedisOperationLogWatchers) {
                     db.AddRedisDb("localhost", "Fusion.Samples.HelloCart");
-                    operations.AddRedisOperationLogWatchers();
+                    operations.AddRedisOperationLogWatcher();
                 }
                 else if (UsePostgreSql)
-                    operations.AddNpgsqlOperationLogWatchers();
+                    operations.AddNpgsqlOperationLogWatcher();
                 else
-                    operations.AddFileSystemOperationLogWatchers();
+                    operations.AddFileSystemOperationLogWatcher();
             });
             db.AddEntityResolver<string, DbProduct>();
             db.AddEntityResolver<string, DbCart>(_ => new() {

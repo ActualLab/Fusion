@@ -54,10 +54,11 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
             var isFromLocalAgent = StringComparer.Ordinal.Equals(operation.HostId, HostId.Id.Value);
             // An important assertion
             if (isLocal != isFromLocalAgent) {
-                if (isFromLocalAgent)
-                    Log.LogError("Assertion failed: operation w/o CommandContext originates from local agent");
-                else
-                    Log.LogError("Assertion failed: operation with CommandContext originates from another agent");
+                var message = isFromLocalAgent
+                    ? "Assertion failed: operation w/o CommandContext originates from local agent"
+                    : "Assertion failed: operation with CommandContext originates from another agent";
+                // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                Log.LogError(message);
             }
 
             // Notification

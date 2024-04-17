@@ -195,11 +195,11 @@ public abstract class FusionTestBase : RpcTestBase
                         // MaxCommitDuration = TimeSpan.FromMinutes(5),
                     });
                     if (useRedis)
-                        operations.AddRedisOperationLogWatchers();
+                        operations.AddRedisOperationLogWatcher();
                     else if (DbType == FusionTestDbType.PostgreSql)
-                        operations.AddNpgsqlOperationLogWatchers();
+                        operations.AddNpgsqlOperationLogWatcher();
                     else
-                        operations.AddFileSystemOperationLogWatchers();
+                        operations.AddFileSystemOperationLogWatcher();
                 });
 
                 db.AddEntityResolver<long, User>();

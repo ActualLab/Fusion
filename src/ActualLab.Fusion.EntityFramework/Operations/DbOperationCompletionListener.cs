@@ -59,7 +59,7 @@ public class DbOperationCompletionListener<TDbContext>
         if (!operationScope.HasEvents)
             return notifyOperationLogTask;
 
-        var notifyOperationEventLogTask = EventLogWatcher.NotifyChanged(shard, cancellationToken);
-        return Task.WhenAll(notifyOperationLogTask, notifyOperationEventLogTask);
+        var notifyEventLogTask = EventLogWatcher.NotifyChanged(shard, cancellationToken);
+        return Task.WhenAll(notifyOperationLogTask, notifyEventLogTask);
     }
 }
