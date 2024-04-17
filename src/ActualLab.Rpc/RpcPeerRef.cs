@@ -12,6 +12,9 @@ public record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBackend = fal
     public override string ToString()
         => $"{(IsBackend ? "backend-" : "")}{(IsServer ? "server" : "client")}:{Key}";
 
+    public virtual VersionSet GetVersions()
+        => IsBackend ? RpcDefaults.BackendPeerVersions : RpcDefaults.ApiPeerVersions;
+
     // Operators
 
     public static implicit operator RpcPeerRef(RpcPeer peer) => peer.Ref;

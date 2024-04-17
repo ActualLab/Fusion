@@ -43,11 +43,7 @@ public class RpcInboundContext
 
     private RpcMethodDef? GetMethodDef()
     {
-        var service = Peer.Hub.ServiceRegistry.Get(Message.Service);
-        if (service is not { HasServer: true })
-            return null;
-
-        var method = service.Get(Message.Method);
+        var method = Peer.ServerMethodResolver[Message.Service, Message.Method];
         if (method == null || method.IsSystem)
             return method;
 

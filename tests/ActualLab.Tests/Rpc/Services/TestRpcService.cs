@@ -21,6 +21,8 @@ public interface ITestRpcService : ICommandService
     Task<TimeSpan> Delay(TimeSpan duration, CancellationToken cancellationToken = default);
     Task<int> GetCancellationCount();
 
+    Task<string> GetVersion();
+
     Task<int> PolymorphArg(ITuple argument, CancellationToken cancellationToken = default);
     Task<ITuple> PolymorphResult(int argument, CancellationToken cancellationToken = default);
 
@@ -36,7 +38,18 @@ public interface ITestRpcService : ICommandService
     Task<string> OnHello(HelloCommand command, CancellationToken cancellationToken = default);
 }
 
-public interface ITestRpcServiceClient : ITestRpcService, IRpcService
+[LegacyName(nameof(ITestRpcService), "0.1")]
+[LegacyName(nameof(ITestRpcService))]
+public interface ITestRpcLegacyService : IRpcService
+{
+    Task<string> GetVersion();
+    [LegacyName("GetVersion", "0.5")]
+    Task<string> GetVersion0_5();
+    [LegacyName("GetVersion", "1.0")]
+    Task<string> GetVersion1_0();
+}
+
+public interface ITestRpcServiceClient : ITestRpcService
 {
     Task<int> NoSuchMethod(int i1, int i2, int i3, int i4, CancellationToken cancellationToken = default);
 }
@@ -69,6 +82,9 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
 
     public Task<int> GetCancellationCount()
         => Task.FromResult(_cancellationCount);
+
+    public Task<string> GetVersion()
+        => Task.FromResult("1.0");
 
     public Task<int> PolymorphArg(ITuple argument, CancellationToken cancellationToken = default)
         => Task.FromResult(argument.Length);
@@ -154,4 +170,16 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
                 await Task.Delay(duration, cancellationToken);
         }
     }
+}
+
+public class TestRpcLegacyService : ITestRpcLegacyService
+{
+    public Task<string> GetVersion()
+        => Task.FromResult("0.1");
+
+    public Task<string> GetVersion0_5()
+        => Task.FromResult("0.5");
+
+    public Task<string> GetVersion1_0()
+        => Task.FromResult("1.0*");
 }

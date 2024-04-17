@@ -13,8 +13,8 @@ public class RpcClientPeer : RpcPeer
 
     public AsyncState<Moment> ReconnectsAt => _reconnectAt;
 
-    public RpcClientPeer(RpcHub hub, RpcPeerRef @ref)
-        : base(hub, @ref)
+    public RpcClientPeer(RpcHub hub, RpcPeerRef @ref, VersionSet? versions = null)
+        : base(hub, @ref, versions)
     {
         ClientId = Id.ToBase64Url();
         ConnectionFactory = Hub.ClientConnectionFactory;

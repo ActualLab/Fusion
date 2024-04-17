@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Interception.Interceptors;
 using ActualLab.Rpc.Diagnostics;
 
 namespace ActualLab.Rpc;
@@ -38,6 +37,7 @@ public sealed class RpcMethodDef : MethodDef
     public bool AllowArgumentPolymorphism { get; init; }
     public bool AllowResultPolymorphism { get; init; }
     public RpcMethodTracer? Tracer { get; init; }
+    public LegacyNames LegacyNames { get; init; }
 
     public RpcMethodDef(
         RpcServiceDef service,
@@ -59,7 +59,8 @@ public sealed class RpcMethodDef : MethodDef
         IsStream = IsSystem && StreamMethodNames.Contains(method.Name);
 
         Service = service;
-        Name =  $"{Method.Name}:{ParameterTypes.Length}";
+        var nameSuffix = $":{ParameterTypes.Length}";
+        Name = Method.Name + nameSuffix;
         AllowResultPolymorphism = AllowArgumentPolymorphism = IsSystem || IsBackend;
 
 #pragma warning disable IL2055, IL2072
@@ -73,6 +74,9 @@ public sealed class RpcMethodDef : MethodDef
             IsValid = false;
 
         Tracer = Hub.MethodTracerFactory.Invoke(this);
+        LegacyNames = new LegacyNames(Method
+            .GetCustomAttributes<LegacyNameAttribute>(false)
+            .Select(x => LegacyName.New(x, nameSuffix)));
     }
 
     public override string ToString()

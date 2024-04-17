@@ -3,7 +3,6 @@ using StackExchange.Redis;
 namespace ActualLab.Redis;
 
 [StructLayout(LayoutKind.Auto)]
-[Serializable]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [method: Newtonsoft.Json.JsonConstructor, JsonConstructor, MemoryPackConstructor]

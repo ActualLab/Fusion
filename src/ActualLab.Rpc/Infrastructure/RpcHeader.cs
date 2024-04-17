@@ -1,6 +1,7 @@
 namespace ActualLab.Rpc.Infrastructure;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial record struct RpcHeader
 {
     private readonly string? _name;

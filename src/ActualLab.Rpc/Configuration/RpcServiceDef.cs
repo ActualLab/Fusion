@@ -11,6 +11,8 @@ public sealed class RpcServiceDef
     private object? _server;
     private string? _toStringCached;
 
+    internal Dictionary<Symbol, RpcMethodDef> MethodByName => _methodByName;
+
     public RpcHub Hub { get; }
     public Type Type { get; }
     public ServiceResolver? ServerResolver { get; init; }
@@ -20,6 +22,8 @@ public sealed class RpcServiceDef
     public bool HasServer => ServerResolver != null;
     public object Server => _server ??= ServerResolver.Resolve(Hub.Services);
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
+    public Symbol Scope { get; init; }
+    public LegacyNames LegacyNames { get; init; }
 
     public RpcMethodDef this[MethodInfo method] => Get(method) ?? throw Errors.NoMethod(Type, method);
     public RpcMethodDef this[Symbol methodName] => Get(methodName) ?? throw Errors.NoMethod(Type, methodName);
@@ -36,6 +40,10 @@ public sealed class RpcServiceDef
         ServerResolver = service.ServerResolver;
         IsSystem = typeof(IRpcSystemService).IsAssignableFrom(Type);
         IsBackend = hub.BackendServiceDetector.Invoke(service.Type);
+        Scope = hub.ServiceScopeResolver.Invoke(this);
+        LegacyNames = new LegacyNames(Type
+            .GetCustomAttributes<LegacyNameAttribute>(false)
+            .Select(x => LegacyName.New(x)));
     }
 
     internal void BuildMethods(

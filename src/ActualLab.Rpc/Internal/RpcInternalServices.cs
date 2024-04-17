@@ -6,6 +6,7 @@ public readonly record struct RpcInternalServices(RpcHub Hub)
 {
     public RpcServiceDefBuilder ServiceDefBuilder => Hub.ServiceDefBuilder;
     public RpcMethodDefBuilder MethodDefBuilder => Hub.MethodDefBuilder;
+    public RpcServiceScopeResolver ServiceScopeResolver => Hub.ServiceScopeResolver;
     public RpcCallRouter CallRouter => Hub.CallRouter;
     public RpcArgumentSerializer ArgumentSerializer => Hub.ArgumentSerializer;
     public RpcInboundContextFactory InboundContextFactory => Hub.InboundContextFactory;

@@ -22,6 +22,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     public RpcHub Hub { get; }
     public RpcPeerRef Ref { get; }
+    public VersionSet Versions { get; init; }
+    public RpcServerMethodResolver ServerMethodResolver { get; protected set; }
     public int InboundConcurrencyLevel { get; init; } = 0; // 0 = no concurrency limit, 1 = one call at a time, etc.
     public RpcArgumentSerializer ArgumentSerializer { get; init; }
     public RpcInboundContextFactory InboundContextFactory { get; init; }
@@ -35,7 +37,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public RpcPeerInternalServices InternalServices => new(this);
     public Guid Id { get; } = Guid.NewGuid();
 
-    protected RpcPeer(RpcHub hub, RpcPeerRef @ref)
+    protected RpcPeer(RpcHub hub, RpcPeerRef @ref, VersionSet? versions)
     {
         // ServiceRegistry is resolved in lazy fashion in RpcHub.
         // We access it here to make sure any configuration error gets thrown at this point.
@@ -43,6 +45,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         var services = hub.Services;
         Hub = hub;
         Ref = @ref;
+        Versions = versions ?? @ref.GetVersions();
+        ServerMethodResolver = Hub.ServiceRegistry.DefaultServerMethodResolver;
 
         ArgumentSerializer = Hub.ArgumentSerializer;
         InboundContextFactory = Hub.InboundContextFactory;
@@ -160,7 +164,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         handshake = await Task
                             .Run(async () => {
                                 await Hub.SystemCallSender
-                                    .Handshake(this, sender, new RpcHandshake(Id))
+                                    .Handshake(this, sender, new RpcHandshake(Id, Versions))
                                     .ConfigureAwait(false);
                                 var message = await reader.ReadAsync(handshakeToken).ConfigureAwait(false);
                                 var handshakeContext = await ProcessMessage(message, handshakeToken).ConfigureAwait(false);
@@ -169,6 +173,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                             }, handshakeToken)
                             .WaitAsync(handshakeToken)
                             .ConfigureAwait(false);
+                        if (handshake.RemoteApiVersionSet == null)
+                            handshake = handshake with { RemoteApiVersionSet = new() };
                     }
                     catch (OperationCanceledException) {
                         if (!readerAbortToken.IsCancellationRequested && handshakeToken.IsCancellationRequested)
@@ -349,6 +355,14 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 newState = newState with { TryIndex = 0 };
             }
             _connectionState = connectionState = connectionState.SetNext(newState);
+            try {
+                ServerMethodResolver =
+                    Hub.ServiceRegistry.GetServerMethodResolver(newState.Handshake?.RemoteApiVersionSet);
+            }
+            catch (Exception e) {
+                Log.LogError(e, "[LegacyName] conflict");
+                ServerMethodResolver = Hub.ServiceRegistry.DefaultServerMethodResolver;
+            }
             if (newState.Error != null && Hub.UnrecoverableErrorDetector.Invoke(newState.Error, StopToken)) {
                 terminalError = newState.Error is ConnectionUnrecoverableException
                     ? newState.Error

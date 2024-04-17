@@ -67,6 +67,7 @@ public readonly struct RpcBuilder
         services.TryAddSingleton(c => new RpcServiceRegistry(c));
         services.TryAddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
         services.TryAddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);
+        services.TryAddSingleton(_ => RpcDefaultDelegates.ServiceScopeResolver);
         services.TryAddSingleton(_ => RpcDefaultDelegates.InboundCallFilter);
         services.TryAddSingleton(_ => RpcDefaultDelegates.CallRouter);
         services.TryAddSingleton(_ => RpcDefaultDelegates.InboundContextFactory);

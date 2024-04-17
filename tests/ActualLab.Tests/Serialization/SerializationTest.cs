@@ -93,6 +93,24 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
+    public void VersionSetSerialization()
+    {
+        Test(null);
+        Test(new VersionSet());
+        Test(new VersionSet(("", new Version())));
+        Test(new VersionSet(("X", "1.0"), ("Y", "1.1.1")));
+
+        Assert.Throws<ArgumentException>(() => new VersionSet(("X", "A")));
+        Assert.Throws<ArgumentException>(() => new VersionSet(("X", "1"), ("X", "2")));
+
+        void Test(VersionSet? s) {
+            Out.WriteLine(s?.ToString() ?? "null");
+            var hs = s.PassThroughAllSerializers();
+            hs.Should().Be(s);
+        }
+    }
+
+    [Fact]
     public void RpcHeaderSerialization()
     {
         Test(default);
@@ -111,8 +129,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void RpcHandshakeSerialization()
     {
-        Test(new RpcHandshake(default));
-        Test(new RpcHandshake(new Guid()));
+        Test(new RpcHandshake(default, null));
+        Test(new RpcHandshake(new Guid(), new VersionSet(("Test", "1.0"))));
 
         void Test(RpcHandshake h) {
             var hs = h.PassThroughAllSerializers();

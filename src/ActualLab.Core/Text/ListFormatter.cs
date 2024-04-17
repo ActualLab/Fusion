@@ -49,19 +49,6 @@ public ref struct ListFormatter
         }
     }
 
-    public void AppendWithEscape(in ReadOnlySpan<char> item)
-    {
-        if (ItemIndex++ != 0)
-            OutputBuilder.Append(Delimiter);
-        var isFirst = true;
-        foreach (var c in item) {
-            if (isFirst || c == Delimiter || c == Escape)
-                OutputBuilder.Append(Escape);
-            OutputBuilder.Append(c);
-            isFirst = false;
-        }
-    }
-
     public void AppendEnd()
     {
         if (ItemIndex == 0)

@@ -35,6 +35,11 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
 
     public override string ToString() => Value;
 
+    // Helpers
+
+    public Symbol Or(Symbol alternative)
+        => IsEmpty ? alternative : this;
+
     // Conversion
 
     string IConvertibleTo<string>.Convert() => Value;

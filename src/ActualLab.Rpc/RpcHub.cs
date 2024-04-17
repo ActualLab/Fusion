@@ -1,4 +1,3 @@
-using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using Errors = ActualLab.Internal.Errors;
@@ -14,6 +13,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 
     internal readonly RpcServiceDefBuilder ServiceDefBuilder;
     internal readonly RpcMethodDefBuilder MethodDefBuilder;
+    internal readonly RpcServiceScopeResolver ServiceScopeResolver;
     internal readonly RpcCallRouter CallRouter;
     internal readonly RpcArgumentSerializer ArgumentSerializer;
     internal readonly RpcInboundCallFilter InboundCallFilter;
@@ -51,6 +51,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         // Delegates
         ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
         MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
+        ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();
         CallRouter = services.GetRequiredService<RpcCallRouter>();
         ArgumentSerializer = services.GetRequiredService<RpcArgumentSerializer>();
         InboundCallFilter = services.GetRequiredService<RpcInboundCallFilter>();

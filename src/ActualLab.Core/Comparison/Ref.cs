@@ -1,12 +1,10 @@
 namespace ActualLab.Comparison;
 
 // Shouldn't be serializable!
-public readonly struct Ref<T> : IEquatable<Ref<T>>
-    where T: class?
+public readonly struct Ref<T>(T target) : IEquatable<Ref<T>>
+    where T : class?
 {
-    public T Target { get; }
-
-    public Ref(T target) => Target = target;
+    public T Target { get; } = target;
 
     public override string ToString()
         => $"{GetType().GetName()}({Target?.ToString() ?? "␀"})";

@@ -3,7 +3,8 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc;
 
-public class RpcServerPeer(RpcHub hub, RpcPeerRef @ref) : RpcPeer(hub, @ref)
+public class RpcServerPeer(RpcHub hub, RpcPeerRef @ref, VersionSet? versions = null)
+    : RpcPeer(hub, @ref, versions)
 {
     private volatile AsyncState<RpcConnection?> _nextConnection = new(null, true);
 
