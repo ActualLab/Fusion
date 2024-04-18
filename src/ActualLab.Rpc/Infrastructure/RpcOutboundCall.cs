@@ -72,6 +72,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public Task SendNoWait(bool allowPolymorphism, ChannelWriter<RpcMessage>? sender = null)
     {
+        // No "using (Context.Activate())" here: we assume NoWait calls
+        // don't require RpcOutboundContext.Current to serialize their arguments.
         var message = CreateMessage(Context.RelatedId, allowPolymorphism);
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
@@ -85,8 +87,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         try {
             using (Context.Activate())
                 message = CreateMessage(Id, MethodDef.AllowArgumentPolymorphism);
-            if (Context.CacheInfoCapture is { Key: null } cacheInfoCapture) {
-                cacheInfoCapture.Key = new RpcCacheKey(MethodDef.Service.Name, MethodDef.Name, message.ArgumentData);
+            if (Context.CacheInfoCapture is { } cacheInfoCapture) {
+                cacheInfoCapture.Key ??= new RpcCacheKey(MethodDef.Service.Name, MethodDef.Name, message.ArgumentData);
                 if (cacheInfoCapture.CaptureMode == RpcCacheInfoCaptureMode.KeyOnly) {
                     SetResult(null, null);
                     return Task.CompletedTask;

@@ -83,6 +83,31 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
+    public Task WhenConnected(TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        return ConnectionState.Value.IsConnected()
+            ? Task.CompletedTask
+            : timeout > TimeSpan.Zero && timeout != TimeSpan.MaxValue
+                ? WhenConnectedAsync(this, timeout, cancellationToken)
+                : ConnectionState.WhenConnected(cancellationToken);
+
+        static async Task WhenConnectedAsync(RpcPeer peer, TimeSpan timeout1, CancellationToken cancellationToken1)
+        {
+            using var timeoutCts = cancellationToken1.CreateLinkedTokenSource();
+            var timeoutToken = timeoutCts.Token;
+            timeoutCts.CancelAfter(timeout1);
+            try {
+                await peer.ConnectionState.WhenConnected(timeoutToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (timeoutToken.IsCancellationRequested) {
+                if (cancellationToken1.IsCancellationRequested)
+                    throw; // Not a timeout
+
+                throw Errors.Disconnected(peer);
+            }
+        }
+    }
+
     public Task Disconnect(
         bool abortReader = false,
         Exception? writeError = null,
@@ -143,7 +168,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionState.IsFinal)
                         return;
 
-                    while (connectionState.Value.IsConnected())
+                    if (connectionState.Value.IsConnected())
                         connectionState = SetConnectionState(connectionState.Value.NextDisconnected(), connectionState);
                     var connection = await GetConnection(connectionState.Value, cancellationToken).ConfigureAwait(false);
                     if (connection == null)
@@ -239,6 +264,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 // which becomes RpcInboundCallContext.CancellationToken.
                 InboundCalls.Clear();
                 connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
+                if (Ref.IsObsolete)
+                    OutboundCalls.TryReroute();
             }
         }
         finally {

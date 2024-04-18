@@ -106,8 +106,8 @@ void ConfigureServices()
                 // can be arbitrary long - all depends on the reliability of Notifier-Watcher chain.
                 CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
             });
-            operations.AddFileSystemOperationLogWatchers();
-            // db.AddRedisOperationLogChangeTracking();
+            operations.AddFileSystemOperationLogWatcher();
+            // operations.AddRedisOperationLogWatcher();
         });
 
         if (hostSettings.UseMultitenancy) {

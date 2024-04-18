@@ -69,6 +69,7 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
     // Serialization
 
 #pragma warning disable CS8618
+    [Obsolete("Obsolete")]
     private Symbol(SerializationInfo info, StreamingContext context)
     {
         _value = info.GetString(nameof(Value)) ?? "";
@@ -76,6 +77,7 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
     }
 #pragma warning restore CS8618
 
+    [Obsolete("Obsolete")]
     void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
         => info.AddValue(nameof(Value), Value);
 }

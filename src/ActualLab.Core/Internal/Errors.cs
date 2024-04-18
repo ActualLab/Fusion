@@ -99,10 +99,16 @@ public static class Errors
 
     public static Exception AlreadyInvoked(string methodName)
         => new InvalidOperationException($"'{methodName}' can be invoked just once.");
+    public static Exception NotInvoked(string methodName)
+        => new InvalidOperationException($"'{methodName}' must be invoked first.");
     public static Exception AlreadyInitialized(string? propertyName = null)
         => new InvalidOperationException(propertyName == null
             ? "Already initialized."
             : $"Property {propertyName} is already initialized.");
+    public static Exception NotInitialized(string? propertyName = null)
+        => new InvalidOperationException(propertyName == null
+            ? "Not initialized."
+            : $"Property {propertyName} is not initialized.");
 
     public static Exception AlreadyReadOnly<TObject>()
         => new InvalidOperationException($"{typeof(TObject).GetName()} is already transitioned to read-only state.");
@@ -110,16 +116,9 @@ public static class Errors
         => new InvalidOperationException("The lock is already acquired by one of callers of the current method.");
     public static Exception AlreadyUsed()
         => new InvalidOperationException("The object was already used somewhere else.");
-    public static Exception AlreadyCompleted()
-        => new InvalidOperationException("The event source is already completed.");
-    public static Exception ThisValueCanBeSetJustOnce()
-        => new InvalidOperationException("This value can be set just once.");
+
     public static Exception NoDefaultConstructor(Type type)
         => new InvalidOperationException($"Type '{type}' doesn't have a default constructor.");
-    public static Exception NotInitialized(string? propertyName = null)
-        => new InvalidOperationException(propertyName == null
-            ? "Not initialized."
-            : $"Property {propertyName} is not initialized.");
     public static Exception NotSupported(string message)
         => new NotSupportedException(message);
 
@@ -130,11 +129,6 @@ public static class Errors
 #pragma warning disable CA2201
         => new SystemException(message);
 #pragma warning restore CA2201
-
-    public static Exception GenericMatchForConcreteType(Type type, Type matchType)
-        => new InvalidOperationException($"Generic type '{matchType}' can't be a match for concrete type '{type}'.");
-    public static Exception ConcreteMatchForGenericType(Type type, Type matchType)
-        => new InvalidOperationException($"Concrete type '{matchType}' can't be a match for generic type '{type}'.");
 
     public static Exception Constraint(string message)
         => new InvalidOperationException(message);

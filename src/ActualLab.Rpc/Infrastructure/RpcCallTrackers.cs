@@ -69,6 +69,16 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public void TryReroute()
+    {
+        var error = new RpcRerouteException();
+        foreach (var call in this) {
+            if (call.Context.IsPeerChanged())
+                call.SetError(error, null, true);
+        }
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Abort(Exception error)
     {
         var abortedCallIds = new HashSet<long>();

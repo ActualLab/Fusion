@@ -51,7 +51,7 @@ public static class Errors
         => new InvalidOperationException($"{nameof(RpcOutboundContext)}.{nameof(RpcOutboundContext.Current)} is unavailable.");
     public static Exception RpcOutboundContextChanged()
         => new InvalidOperationException(
-            $"The scope returned from {nameof(RpcOutboundContext)}.{nameof(RpcOutboundContext.Use)} " +
+            $"The scope returned from {nameof(RpcOutboundContext)}.{nameof(RpcOutboundContext.Activate)} " +
             $"detected context change on its disposal. " +
             $"Most likely the scope was disposed in async continuation / another thread, which should never happen - " +
             $"this scope should be used only in synchronous part of your code that happens " +

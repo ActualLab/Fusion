@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Interception.Interceptors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -43,20 +42,66 @@ public sealed class RpcHybridInterceptor : RpcInterceptorBase
         if (ClientInterceptor == null)
             return invocation => {
                 var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
-                var service = peer == null ? LocalService : Client;
-                return rpcMethodDef.Invoker.Invoke(service, invocation.Arguments);
+                if (peer == null)
+                    return rpcMethodDef.Invoker.Invoke(LocalService, invocation.Arguments);
+                if (!peer.Ref.CanBecomeObsolete)
+                    return rpcMethodDef.Invoker.Invoke(Client, invocation.Arguments);
+                return InvokeWithRerouting<T>(rpcMethodDef, invocation);
             };
 
         var chainIntercept = ClientInterceptor.GetChainInterceptFunc<T>(methodDef);
         return invocation => {
             var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
-            return peer == null
-                ? rpcMethodDef.Invoker.Invoke(LocalService, invocation.Arguments)
-                : chainIntercept.Invoke(invocation);
+            if (peer == null)
+                return rpcMethodDef.Invoker.Invoke(LocalService, invocation.Arguments);
+            if (!peer.Ref.CanBecomeObsolete)
+                return chainIntercept.Invoke(invocation);
+            return InvokeWithRerouting<T>(rpcMethodDef, invocation, chainIntercept);
         };
     }
 
     // We don't need to decorate this method with any dynamic access attributes
     protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
         => ServiceDef.Methods.FirstOrDefault(m => m.Method == method);
+
+    // Private methods
+
+    private async Task<T> InvokeWithRerouting<T>(RpcMethodDef methodDef, Invocation invocation)
+    {
+        while (true) {
+            try {
+                var resultTask = (Task<T>)methodDef.Invoker.Invoke(Client, invocation.Arguments);
+                return await resultTask.ConfigureAwait(false);
+            }
+            catch (RpcRerouteException) {
+                var peer1 = CallRouter.Invoke(methodDef, invocation.Arguments);
+                if (peer1 != null)
+                    continue;
+
+                var resultTask = (Task<T>)methodDef.Invoker.Invoke(LocalService, invocation.Arguments);
+                return await resultTask.ConfigureAwait(false);
+            }
+        }
+    }
+
+    private async Task<T> InvokeWithRerouting<T>(RpcMethodDef methodDef, Invocation invocation, Func<Invocation, object?> chainIntercept)
+    {
+        while (true) {
+            while (true) {
+                try {
+                    var resultTask = (Task<T>)chainIntercept.Invoke(invocation)!;
+                    return await resultTask.ConfigureAwait(false);
+                }
+                catch (RpcRerouteException) {
+                    var peer1 = CallRouter.Invoke(methodDef, invocation.Arguments);
+                    if (peer1 != null)
+                        continue;
+
+                    var resultTask = (Task<T>)methodDef.Invoker.Invoke(LocalService, invocation.Arguments);
+                    return await resultTask.ConfigureAwait(false);
+                }
+            }
+        }
+    }
+
 }

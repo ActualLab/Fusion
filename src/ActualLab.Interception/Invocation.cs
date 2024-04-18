@@ -7,7 +7,8 @@ public readonly record struct Invocation(
     object Proxy,
     MethodInfo Method,
     ArgumentList Arguments,
-    Delegate InterceptedDelegate)
+    Delegate InterceptedDelegate,
+    object? Context = null)
 {
     private static readonly MethodInfo InterceptedUntypedMethod = typeof(Invocation)
         .GetMethods(BindingFlags.Static | BindingFlags.NonPublic)

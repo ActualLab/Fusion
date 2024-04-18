@@ -51,6 +51,10 @@ public class ClientComputeMethodFunction<T>(
     {
         var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
         var call = SendRpcCall(input, cacheInfoCapture, cancellationToken);
+        if (call == null) {
+            // TODO: Properly handle routing to local service
+            throw new RpcRerouteException();
+        }
 
         var result = await call.GetResult(cancellationToken).ConfigureAwait(false);
         var cacheEntry = await UpdateCache(cache!, cacheInfoCapture, result, cancellationToken).ConfigureAwait(false);
@@ -108,6 +112,10 @@ public class ClientComputeMethodFunction<T>(
         // 1. Start the RPC call
         var cacheInfoCapture = new RpcCacheInfoCapture();
         var call = SendRpcCall(input, cacheInfoCapture, default);
+        if (call == null) {
+            cachedComputed.Invalidate(true);
+            return;
+        }
 
         // 2. Bind the call to cachedComputed
         if (!cachedComputed.BindToCall(call)) {
@@ -206,33 +214,34 @@ public class ClientComputeMethodFunction<T>(
 
     // Private methods
 
-    private static RpcOutboundComputeCall<T> SendRpcCall(
+    private static RpcOutboundComputeCall<T>? SendRpcCall(
         ComputeMethodInput input,
         RpcCacheInfoCapture? cacheInfoCapture,
         CancellationToken cancellationToken)
     {
-        using var scope = RpcOutboundContext.Use(RpcComputeCallType.Id);
-        scope.Context.CacheInfoCapture = cacheInfoCapture;
-
-        // The block below triggers RPC call by invoking RpcClientInterceptor
+        var context = new RpcOutboundContext(RpcComputeCallType.Id) {
+            CacheInfoCapture = cacheInfoCapture
+        };
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;
         var interceptor = proxy.Interceptor;
-        if (interceptor is RpcHybridInterceptor hybridInterceptor)
-            interceptor = hybridInterceptor.ClientInterceptor!;
-        var clientInterceptor = ((ClientComputeServiceInterceptor)interceptor).ClientInterceptor;
         var ctIndex = input.MethodDef.CancellationTokenIndex;
-        if (ctIndex >= 0) {
-            var newArguments = invocation.Arguments with { };
-            newArguments.SetCancellationToken(ctIndex, cancellationToken);
-            invocation = invocation with { Arguments = newArguments };
+        if (ctIndex >= 0 && invocation.Arguments.GetCancellationToken(ctIndex) != cancellationToken) {
+            var arguments = invocation.Arguments with { }; // Cloning
+            arguments.SetCancellationToken(ctIndex, cancellationToken);
+            invocation = invocation with { Context = context, Arguments = arguments };
         }
-        clientInterceptor.ChainIntercept<T>(input.MethodDef, invocation);
+        else
+            invocation = invocation with { Context = context };
 
-        var call = (RpcOutboundComputeCall<T>?)scope.Context.Call;
-        return call ?? throw Errors.InternalError(
-            "No call is sent, which means the service behind this proxy isn't an RPC client proxy (misconfiguration), " +
-            "or RpcPeerResolver routed the call to a local service, which shouldn't happen at this point.");
+        if (interceptor is RpcHybridInterceptor hybridInterceptor) {
+            // TODO: Handle the routing between the local service & client
+            // var rpcMethodDef = (RpcMethodDef)hybridInterceptor.GetMethodDef(invocation.Method, invocation.Proxy.GetType())!;
+            interceptor = hybridInterceptor.ClientInterceptor!;
+        }
+        var clientInterceptor = ((ClientComputeServiceInterceptor)interceptor).ClientInterceptor;
+        clientInterceptor.ChainIntercept<T>(input.MethodDef, invocation);
+        return (RpcOutboundComputeCall<T>?)context.Call;
     }
 
     private static RpcCacheEntry? UpdateCache(

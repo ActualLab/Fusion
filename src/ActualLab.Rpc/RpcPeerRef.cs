@@ -9,6 +9,9 @@ public record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBackend = fal
     public static RpcPeerRef NewClient(Symbol key, bool isBackend = false)
         => new(key, false, isBackend);
 
+    public bool CanBecomeObsolete { get; } = false;
+    public virtual bool IsObsolete => false;
+
     public override string ToString()
         => $"{(IsBackend ? "backend-" : "")}{(IsServer ? "server" : "client")}:{Key}";
 
