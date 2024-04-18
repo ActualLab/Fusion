@@ -61,7 +61,6 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
                 var delta = await time.Now(TimeSpan.FromSeconds(0.1)) - t0;
                 Out.WriteLine($"* {delta.ToShortString()}");
                 Assert.Fail("Ok");
-                return delta;
             }, TimeSpan.FromSeconds(1));
             Assert.Fail();
         }
