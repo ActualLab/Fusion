@@ -21,7 +21,7 @@ public class TimerTest(ITestOutputHelper @out) : FusionTestBase(@out)
             count++;
         };
 
-        await TestExt.WhenMet(
+        await TestExt.When(
             () => count.Should().BeGreaterThan(2),
             TimeSpan.FromSeconds(5));
     }

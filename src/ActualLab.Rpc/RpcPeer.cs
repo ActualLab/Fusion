@@ -93,9 +93,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
         static async Task WhenConnectedAsync(RpcPeer peer, TimeSpan timeout1, CancellationToken cancellationToken1)
         {
-            using var timeoutCts = cancellationToken1.CreateLinkedTokenSource();
+            using var timeoutCts = cancellationToken1.CreateLinkedTokenSource(timeout1);
             var timeoutToken = timeoutCts.Token;
-            timeoutCts.CancelAfter(timeout1);
             try {
                 await peer.ConnectionState.WhenConnected(timeoutToken).ConfigureAwait(false);
             }

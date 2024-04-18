@@ -31,7 +31,7 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         c1.Should().BeSameAs(c);
 
         await counters.Increment("a");
-        await TestExt.WhenMet(
+        await TestExt.When(
             () => c.IsConsistent().Should().BeFalse(),
             TimeSpan.FromSeconds(1));
 

@@ -25,7 +25,7 @@ public class KeyValueModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
         c.IsConsistent().Should().BeFalse();
         c.Value.Should().Be(null);
 
-        await TestExt.WhenMet(() => {
+        await TestExt.When(() => {
             var snapshot = kvm.Snapshot;
             snapshot.Computed.HasValue.Should().BeTrue();
             var c = snapshot.Computed;

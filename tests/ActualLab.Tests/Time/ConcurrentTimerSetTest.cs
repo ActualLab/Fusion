@@ -50,7 +50,7 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
         timerSet.AddOrUpdateToEarlier(t, clock.Now + TimeSpan.FromMilliseconds(200))
             .Should().BeTrue();
         t.FiredAt.Should().Be(default);
-        await TestExt.WhenMet(() => t.FiredAt.Should().NotBe(default), TimeSpan.FromMilliseconds(500));
+        await TestExt.When(() => t.FiredAt.Should().NotBe(default), TimeSpan.FromMilliseconds(500));
 
         // Remove
         t = new Timer();
@@ -150,7 +150,7 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
 
         var maxDueAt = timers.Count != 0 ? timers.Max(t => t.DueAt) : start;
         await clock.Delay(maxDueAt);
-        await TestExt.WhenMet(() => timerSet.Count.Should().Be(0), TimeSpan.FromSeconds(1));
+        await TestExt.When(() => timerSet.Count.Should().Be(0), TimeSpan.FromSeconds(1));
         Out.WriteLine($"{runner}: All timers should be fired.");
 
         foreach (var timer in timers) {

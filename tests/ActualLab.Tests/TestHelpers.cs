@@ -45,13 +45,13 @@ public static class TestHelpers
     // Rpc
 
     public static Task AssertNoCalls(RpcPeer peer)
-        => TestExt.WhenMet(() => {
+        => TestExt.When(() => {
             peer.OutboundCalls.Count.Should().Be(0);
             peer.InboundCalls.Count.Should().Be(0);
         }, TimeSpan.FromSeconds(1));
 
     public static Task AssertNoObjects(RpcPeer peer)
-        => TestExt.WhenMet(() => {
+        => TestExt.When(() => {
             peer.RemoteObjects.Count.Should().Be(0);
             peer.SharedObjects.Count.Should().Be(0);
         }, TimeSpan.FromSeconds(1));

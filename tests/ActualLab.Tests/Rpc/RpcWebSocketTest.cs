@@ -91,13 +91,13 @@ public class RpcWebSocketTest : RpcTestBase
         await client.Add(1, 1);
 
         await client.MaybeSet("a", "b");
-        await TestExt.WhenMetAsync(async () => {
+        await TestExt.When(async () => {
             var result = await client.Get("a");
             result.Should().Be("b");
         }, TimeSpan.FromSeconds(1));
 
         await client.MaybeSet("a", "c");
-        await TestExt.WhenMetAsync(async () => {
+        await TestExt.When(async () => {
             var result = await client.Get("a");
             result.Should().Be("c");
         }, TimeSpan.FromSeconds(1));

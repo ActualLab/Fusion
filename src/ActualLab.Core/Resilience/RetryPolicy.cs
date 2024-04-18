@@ -46,10 +46,8 @@ public record RetryPolicy(
         ExceptionDispatchInfo? lastError = null;
         var tryIndex = 0;
         while (true) {
-            using var timeoutCts = cancellationToken.CreateLinkedTokenSource();
+            using var timeoutCts = cancellationToken.CreateLinkedTokenSource(TryTimeout);
             var timeoutToken = timeoutCts.Token;
-            if (TryTimeout is { } maxDuration)
-                timeoutCts.CancelAfter(maxDuration);
             try {
                 return await taskFactory.Invoke(timeoutToken).ConfigureAwait(false);
             }

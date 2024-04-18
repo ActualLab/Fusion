@@ -16,19 +16,19 @@ public static class TestExt
     public static Func<Task<T>> AsAsyncFunc<T>(this ValueTask<T> task)
         => task.AsTask;
 
-    public static Task WhenMet(Action condition,
+    public static Task When(Action condition,
         TimeSpan waitDuration)
-        => WhenMet(condition, null, waitDuration);
+        => When(condition, null, waitDuration);
 
-    public static async Task WhenMet(Action condition,
+    public static async Task When(Action condition,
         IEnumerable<TimeSpan>? checkIntervals,
         TimeSpan waitDuration)
     {
         using var cts = new CancellationTokenSource(waitDuration);
-        await WhenMet(condition, checkIntervals, cts.Token).ConfigureAwait(false);
+        await When(condition, checkIntervals, cts.Token).ConfigureAwait(false);
     }
 
-    public static async Task WhenMet(Action condition,
+    public static async Task When(Action condition,
         IEnumerable<TimeSpan>? checkIntervals,
         CancellationToken cancellationToken)
     {
@@ -49,19 +49,19 @@ public static class TestExt
         }
     }
 
-    public static Task WhenMetAsync(Func<Task> condition,
+    public static Task When(Func<Task> condition,
         TimeSpan waitDuration)
-        => WhenMetAsync(condition, null, waitDuration);
+        => When(condition, null, waitDuration);
 
-    public static async Task WhenMetAsync(Func<Task> condition,
+    public static async Task When(Func<Task> condition,
         IEnumerable<TimeSpan>? checkIntervals,
         TimeSpan waitDuration)
     {
         using var cts = new CancellationTokenSource(waitDuration);
-        await WhenMetAsync(condition, checkIntervals, cts.Token).ConfigureAwait(false);
+        await When(condition, checkIntervals, cts.Token).ConfigureAwait(false);
     }
 
-    public static async Task WhenMetAsync(Func<Task> condition,
+    public static async Task When(Func<Task> condition,
         IEnumerable<TimeSpan>? checkIntervals,
         CancellationToken cancellationToken)
     {

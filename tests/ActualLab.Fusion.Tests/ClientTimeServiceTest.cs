@@ -31,7 +31,7 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
         }
         (DateTime.Now - cTime.Value).Should().BeLessThan(epsilon);
 
-        await TestExt.WhenMet(
+        await TestExt.When(
             () => cTime.IsConsistent().Should().BeFalse(),
             TimeSpan.FromSeconds(5));
         var time = await cTime.Use();

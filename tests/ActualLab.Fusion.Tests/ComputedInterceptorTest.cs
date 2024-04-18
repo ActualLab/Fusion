@@ -18,7 +18,7 @@ public class ComputedInterceptorTest(ITestOutputHelper @out) : FusionTestBase(@o
         state.Updated += (s, _)
             => Log?.LogInformation($"{++count} -> {s.Value:hh:mm:ss:fff}");
 
-        await TestExt.WhenMet(
+        await TestExt.When(
             () => count.Should().BeGreaterThan(2),
             TimeSpan.FromSeconds(5));
         var lastCount = count;
@@ -47,7 +47,7 @@ public class ComputedInterceptorTest(ITestOutputHelper @out) : FusionTestBase(@o
             task.IsCanceled.Should().BeTrue();
 
             task = time.GetTimeWithDelay(default);
-            await TestExt.WhenMet(
+            await TestExt.When(
                 () => task.IsCompletedSuccessfully().Should().BeTrue(),
                 TimeSpan.FromSeconds(1));
         }
