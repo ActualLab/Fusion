@@ -7,13 +7,20 @@ public static class CancellationTokenExt
         => CancellationTokenSource.CreateLinkedTokenSource(token1, token2);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static CancellationTokenSource CreateLinkedTokenSource(this CancellationToken cancellationToken, TimeSpan? cancelAfter = null)
+    public static CancellationTokenSource CreateLinkedTokenSource(this CancellationToken cancellationToken)
+        => CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+    public static CancellationTokenSource CreateLinkedTokenSource(this CancellationToken cancellationToken, TimeSpan cancelAfter)
     {
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (cancelAfter != null)
-            cts.CancelAfter(cancelAfter.Value);
+        cts.CancelAfter(cancelAfter);
         return cts;
     }
+
+    public static CancellationTokenSource CreateLinkedTokenSource(this CancellationToken cancellationToken, TimeSpan? cancelAfter)
+        => cancelAfter is { } vCancelAfter
+            ? cancellationToken.CreateLinkedTokenSource(vCancelAfter)
+            : cancellationToken.CreateLinkedTokenSource();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static CancellationTokenSource CreateDelayedTokenSource(
