@@ -7,8 +7,13 @@ public static class CancellationTokenExt
         => CancellationTokenSource.CreateLinkedTokenSource(token1, token2);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static CancellationTokenSource CreateLinkedTokenSource(this CancellationToken cancellationToken)
-        => CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+    public static CancellationTokenSource CreateLinkedTokenSource(this CancellationToken cancellationToken, TimeSpan? cancelAfter = null)
+    {
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (cancelAfter != null)
+            cts.CancelAfter(cancelAfter.Value);
+        return cts;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static CancellationTokenSource CreateDelayedTokenSource(
