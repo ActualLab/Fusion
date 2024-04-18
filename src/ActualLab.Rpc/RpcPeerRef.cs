@@ -9,7 +9,7 @@ public record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBackend = fal
     public static RpcPeerRef NewClient(Symbol key, bool isBackend = false)
         => new(key, false, isBackend);
 
-    public bool CanBecomeObsolete { get; } = false;
+    public bool CanBecomeObsolete { get; protected init;  } = false;
     public virtual bool IsObsolete => false;
 
     public override string ToString()
