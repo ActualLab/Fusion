@@ -3,11 +3,8 @@ using ActualLab.Fusion.Testing;
 
 namespace ActualLab.Fusion.Tests.Testing;
 
-public class ComputedTestTest : FusionTestBase
+public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
-    public ComputedTestTest(ITestOutputHelper @out) : base(@out)
-        => UseTestClock = true;
-
     [Fact]
     public async Task WhenTest1()
     {
