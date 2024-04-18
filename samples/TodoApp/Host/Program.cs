@@ -7,6 +7,7 @@ using ActualLab.Fusion.Blazor.Authentication;
 using Microsoft.Extensions.Configuration.Memory;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.EntityFramework.Npgsql;
+using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Fusion.EntityFramework.Redis;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Server;
@@ -94,9 +95,7 @@ void ConfigureServices()
     services.AddSingleton(hostSettings);
 
     // DbContext & related services
-    services.AddSingleton(_ => new DbOperationScope<AppDbContext>.Options() {
-        DefaultIsolationLevel = IsolationLevel.RepeatableRead,
-    });
+    DbOperationScope.Options.DefaultIsolationLevel = IsolationLevel.RepeatableRead;
     services.AddDbContextServices<AppDbContext>(db => {
         // Uncomment if you'll be using AddRedisOperationLogChangeTracking
         // db.AddRedisDb("localhost", "Fusion.Samples.TodoApp");

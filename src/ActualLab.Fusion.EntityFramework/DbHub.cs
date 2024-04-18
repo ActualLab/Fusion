@@ -1,12 +1,13 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Resilience;
 using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.EntityFramework;
 
-public class DbHub<TDbContext>(IServiceProvider services)
+public class DbHub<TDbContext>(IServiceProvider services) : IHasServices
     where TDbContext : DbContext
 {
     private HostId? _hostId;
@@ -19,8 +20,8 @@ public class DbHub<TDbContext>(IServiceProvider services)
     private ILogger? _log;
 
     protected ILogger Log => _log ??= Services.LogFor(GetType());
-    protected IServiceProvider Services { get; } = services;
 
+    public IServiceProvider Services { get; } = services;
     public HostId HostId => _hostId ??= Commander.Hub.HostId;
     public IDbShardRegistry<TDbContext> ShardRegistry
         => _shardRegistry ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
@@ -28,19 +29,6 @@ public class DbHub<TDbContext>(IServiceProvider services)
         => _contextFactory ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
     public VersionGenerator<long> VersionGenerator
         => _versionGenerator ??= Commander.Hub.VersionGenerator;
-
-    public IsolationLevel CommandIsolationLevel {
-        get {
-            var context = CommandContext.GetCurrent();
-            var operationScope = context.Items.Get<DbOperationScope<TDbContext>>().Require();
-            return operationScope.IsolationLevel;
-        }
-        set {
-            var context = CommandContext.GetCurrent();
-            var operationScope = context.Items.Get<DbOperationScope<TDbContext>>().Require();
-            operationScope.IsolationLevel = value;
-        }
-    }
 
     public ChaosMaker ChaosMaker
         => _chaosMaker ??= Commander.Hub.ChaosMaker;
@@ -70,15 +58,27 @@ public class DbHub<TDbContext>(IServiceProvider services)
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<TDbContext> CreateCommandDbContext(CancellationToken cancellationToken = default)
-        => CreateCommandDbContext(default, cancellationToken);
+        => CreateCommandDbContext(default, IsolationLevel.Unspecified, cancellationToken);
 
-    public async ValueTask<TDbContext> CreateCommandDbContext(DbShard shard, CancellationToken cancellationToken = default)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<TDbContext> CreateCommandDbContext(DbShard shard, CancellationToken cancellationToken = default)
+        => CreateCommandDbContext(shard, IsolationLevel.Unspecified, cancellationToken);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<TDbContext> CreateCommandDbContext(
+        IsolationLevel isolationLevel,
+        CancellationToken cancellationToken = default)
+        => CreateCommandDbContext(default, isolationLevel, cancellationToken);
+
+    public async ValueTask<TDbContext> CreateCommandDbContext(
+        DbShard shard,
+        IsolationLevel isolationLevel,
+        CancellationToken cancellationToken = default)
     {
         if (Computed.IsInvalidating())
             throw Errors.CreateCommandDbContextIsCalledFromInvalidationCode();
 
-        var commandContext = CommandContext.GetCurrent();
-        var operationScope = commandContext.Items.Get<DbOperationScope<TDbContext>>().Require();
+        var operationScope = DbOperationScope<TDbContext>.GetOrCreate(CommandContext.GetCurrent(), isolationLevel);
         var dbContext = await CreateDbContext(shard, readWrite: true, cancellationToken).ConfigureAwait(false);
         await operationScope.InitializeDbContext(dbContext, shard, cancellationToken).ConfigureAwait(false);
         return dbContext;

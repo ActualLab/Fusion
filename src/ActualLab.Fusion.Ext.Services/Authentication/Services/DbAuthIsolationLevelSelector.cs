@@ -12,7 +12,7 @@ public static class DbAuthIsolationLevelSelector
         case Auth_SignOut:
         case AuthBackend_SetupSession:
         case Auth_SetSessionOptions:
-            return IsolationLevel.ReadCommitted;
+            return IsolationLevel.RepeatableRead;
         }
         return IsolationLevel.Unspecified;
     }

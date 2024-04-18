@@ -10,6 +10,9 @@ namespace ActualLab.Fusion.EntityFramework;
 public readonly struct DbOperationsBuilder<TDbContext>
     where TDbContext : DbContext
 {
+    private sealed class AddedTag;
+    private static readonly ServiceDescriptor AddedTagDescriptor = new(typeof(AddedTag), new AddedTag());
+
     public DbContextBuilder<TDbContext> DbContext { get; }
     public IServiceCollection Services => DbContext.Services;
 
@@ -19,16 +22,19 @@ public readonly struct DbOperationsBuilder<TDbContext>
     {
         DbContext = dbContext;
         var services = Services;
-        if (services.HasService<DbOperationScopeProvider<TDbContext>>()) {
+        if (services.Contains(AddedTagDescriptor)) {
             configure?.Invoke(this);
             return;
         }
 
+        services.Add(AddedTagDescriptor);
+
         // DbOperationScope & its CommandR handler
-        services.AddSingleton<DbOperationScopeProvider<TDbContext>>();
-        services.AddCommander().AddHandlers<DbOperationScopeProvider<TDbContext>>();
         services.TryAddSingleton<DbOperationScope<TDbContext>.Options>();
-        // DbOperationScope<TDbContext> is created w/ services.Activate
+        if (!services.HasService<DbOperationScopeProvider>()) { // No TDbContext here, so it's added just once
+            services.AddSingleton<DbOperationScopeProvider>();
+            services.AddCommander().AddHandlers<DbOperationScopeProvider>();
+        }
 
         // DbOperationCompletionListener
         services.TryAddSingleton(_ => DbOperationCompletionListener<TDbContext>.Options.Default);
@@ -91,35 +97,10 @@ public readonly struct DbOperationsBuilder<TDbContext>
         return this;
     }
 
-    // Isolation level selectors
-
     public DbOperationsBuilder<TDbContext> AddIsolationLevelSelector(
         Func<IServiceProvider, DbIsolationLevelSelector<TDbContext>> dbIsolationLevelSelector)
     {
         Services.AddSingleton(dbIsolationLevelSelector);
-        return this;
-    }
-
-    public DbOperationsBuilder<TDbContext> AddIsolationLevelSelector(
-        Func<IServiceProvider, CommandContext, IsolationLevel> dbIsolationLevelSelector)
-    {
-        Services.AddSingleton(c => new DbIsolationLevelSelector<TDbContext>(
-            context => dbIsolationLevelSelector.Invoke(c, context)));
-        return this;
-    }
-
-    public DbOperationsBuilder<TDbContext> TryAddIsolationLevelSelector(
-        Func<IServiceProvider, DbIsolationLevelSelector<TDbContext>> dbIsolationLevelSelector)
-    {
-        Services.TryAddSingleton(dbIsolationLevelSelector);
-        return this;
-    }
-
-    public DbOperationsBuilder<TDbContext> TryAddIsolationLevelSelector(
-        Func<IServiceProvider, CommandContext, IsolationLevel> dbIsolationLevelSelector)
-    {
-        Services.TryAddSingleton(c => new DbIsolationLevelSelector<TDbContext>(
-            context => dbIsolationLevelSelector.Invoke(c, context)));
         return this;
     }
 

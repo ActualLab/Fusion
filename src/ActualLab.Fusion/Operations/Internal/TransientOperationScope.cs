@@ -6,39 +6,31 @@ namespace ActualLab.Fusion.Operations.Internal;
 /// This scope serves as the outermost, "catch-all" operation scope for
 /// commands that don't use any other scopes.
 /// </summary>
-public sealed class TransientOperationScope : AsyncDisposableBase, IOperationScope
+public sealed class TransientOperationScope : IOperationScope
 {
     private ILogger? _log;
 
-    private IServiceProvider Services { get; }
+    private IServiceProvider Services => CommandContext.Services;
     private ILogger Log => _log ??= Services.LogFor(GetType());
 
     public CommandContext CommandContext { get; }
     public Operation Operation { get; }
     public bool IsTransient => true;
-    public bool IsUsed { get; private set; }
-    public bool IsClosed { get; private set; }
-    public bool? IsConfirmed { get; private set; }
+    public bool IsUsed => true;
+    public bool? IsCommitted { get; private set; }
 
-    public TransientOperationScope(IServiceProvider services)
+    public TransientOperationScope(CommandContext outermostContext)
     {
-        Services = services;
-        CommandContext = CommandContext.GetCurrent();
+        CommandContext = outermostContext;
         Operation = Operation.NewTransient(this);
+        Operation.Command = outermostContext.UntypedCommand;
+        outermostContext.ChangeOperation(Operation);
     }
 
-    protected override ValueTask DisposeAsyncCore()
+    public ValueTask DisposeAsync()
     {
-        IsConfirmed ??= true;
-        IsClosed = true;
+        Close(false);
         return default;
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        // Intentionally ignore disposing flag here
-        IsConfirmed ??= true;
-        IsClosed = true;
     }
 
     public Task Commit(CancellationToken cancellationToken = default)
@@ -47,21 +39,15 @@ public sealed class TransientOperationScope : AsyncDisposableBase, IOperationSco
         return Task.CompletedTask;
     }
 
-    public Task Rollback()
-    {
-        Close(false);
-        return Task.CompletedTask;
-    }
+    // Private methods
 
-    public void Close(bool isConfirmed)
+    private void Close(bool isConfirmed)
     {
-        if (IsClosed)
+        if (IsCommitted.HasValue)
             return;
 
+        IsCommitted = isConfirmed;
         if (isConfirmed)
             Operation.LoggedAt = CommandContext.Commander.Hub.Clocks.SystemClock.Now;
-        IsConfirmed = isConfirmed;
-        IsClosed = true;
-        IsUsed = CommandContext.Items.Replace<IOperationScope?>(null, this);
     }
 }

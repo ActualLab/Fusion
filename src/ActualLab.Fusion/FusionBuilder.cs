@@ -11,7 +11,6 @@ using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.UI;
 using ActualLab.Resilience;
 using ActualLab.Rpc;
-using ActualLab.Versioning.Providers;
 
 namespace ActualLab.Fusion;
 

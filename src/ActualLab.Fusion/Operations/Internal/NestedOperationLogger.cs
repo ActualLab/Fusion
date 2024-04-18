@@ -46,7 +46,7 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
                 // Downstream handler may change Operation to its own one,
                 // current command must be logged as part of that operation.
                 operation = context.Operation;
-                if (operation.Scope is { IsClosed: false })
+                if (operation.Scope is { IsCommitted: null })
                     operation.NestedOperations.Add(new(command, operationItems));
             }
         }

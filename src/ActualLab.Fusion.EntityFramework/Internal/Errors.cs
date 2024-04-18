@@ -11,17 +11,15 @@ public static class Errors
     public static Exception DbContextIsReadOnly()
         => new InvalidOperationException("This DbContext is read-only.");
 
-    public static Exception DbOperationScopeIsAlreadyUsed()
-        => new InvalidOperationException("DbOperationScope is already used, so this operation cannot be performed.");
+    public static Exception WrongDbOperationScopeType(Type expectedScopeType, Type actualScopeType)
+        => new InvalidOperationException($"{expectedScopeType} is requested, but {actualScopeType.GetName()} is already used.");
+    public static Exception WrongDbOperationScopeShard(Type scopeType, DbShard shard, DbShard requestedShard)
+        => new InvalidOperationException($"{scopeType} is already bound to shard '{shard}', which differs from '{requestedShard}'.");
     public static Exception DbOperationIndexWasNotAssigned()
         => new InvalidOperationException("DbOperation.Index wasn't assigned on save.");
 
     public static Exception NoShard(DbShard shard)
         => new InvalidOperationException($"Shard doesn't exist: '{shard}'.");
-    public static Exception ShardMustBeNone()
-        => new NotSupportedException("DbShard other than None is used in non-sharded setup.");
-    public static Exception ShardMustNotBeNone()
-        => new NotSupportedException("DbShard.None is used in sharded setup.");
 
     public static Exception EntityNotFound<TEntity>()
         => EntityNotFound(typeof(TEntity));

@@ -6,9 +6,7 @@ public interface IOperationScope : IAsyncDisposable
     Operation Operation { get; }
     bool IsTransient { get; }
     bool IsUsed { get; }
-    bool IsClosed { get; }
-    bool? IsConfirmed { get; }
+    bool? IsCommitted { get; }
 
     Task Commit(CancellationToken cancellationToken = default);
-    Task Rollback();
 }

@@ -50,7 +50,7 @@ public class Operation(
 
     public OperationEvent AddEvent(object value, Moment delayUntil, Symbol uuid = default)
     {
-        if (Scope is not { IsUsed: true, IsClosed: false })
+        if (Scope is not { IsUsed: true, IsCommitted: null })
             throw Errors.ActiveOperationRequired();
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
@@ -71,7 +71,7 @@ public class Operation(
 
     public OperationEvent AddEvent(object value, TimeSpan delay, Symbol uuid = default)
     {
-        if (Scope is not { IsUsed: true, IsClosed: false })
+        if (Scope is not { IsUsed: true, IsCommitted: null })
             throw Errors.ActiveOperationRequired();
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
@@ -91,7 +91,7 @@ public class Operation(
         => RemoveEvent(operationEvent.Uuid);
     public bool RemoveEvent(Symbol uuid)
     {
-        if (Scope is not { IsUsed: true, IsClosed: false })
+        if (Scope is not { IsUsed: true, IsCommitted: null })
             throw Errors.ActiveOperationRequired();
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
@@ -101,7 +101,7 @@ public class Operation(
 
     public void ClearEvents()
     {
-        if (Scope is not { IsUsed: true, IsClosed: false })
+        if (Scope is not { IsUsed: true, IsCommitted: null })
             throw Errors.ActiveOperationRequired();
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();

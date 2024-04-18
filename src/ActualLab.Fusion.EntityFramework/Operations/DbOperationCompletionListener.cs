@@ -38,9 +38,12 @@ public class DbOperationCompletionListener<TDbContext>
         if (commandContext == null)
             return Task.CompletedTask; // Not a local operation
 
-        var operationScope = commandContext.Items.Get<DbOperationScope<TDbContext>>();
-        if (operationScope is not { IsConfirmed: true })
-            return Task.CompletedTask; // Nothing is committed to TDbContext
+        if (operation.Scope is not DbOperationScope<TDbContext> operationScope)
+            return Task.CompletedTask; // Not our own scope
+
+        // TransientOperationScope already does the same check, but just in case:
+        if (operationScope is not { IsUsed: true, IsCommitted: true })
+            return Task.CompletedTask; // Nothing is committed
 
         var shard = operationScope.Shard;
         _ = Settings.NotifyRetryPolicy.RunIsolated(

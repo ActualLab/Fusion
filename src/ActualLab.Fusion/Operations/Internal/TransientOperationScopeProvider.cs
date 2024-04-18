@@ -14,7 +14,6 @@ public class TransientOperationScopeProvider(IServiceProvider services) : IComma
     private IOperationCompletionNotifier? _operationCompletionNotifier;
 
     protected IServiceProvider Services { get; } = services;
-
     protected IOperationCompletionNotifier OperationCompletionNotifier
         => _operationCompletionNotifier ??= Services.GetRequiredService<IOperationCompletionNotifier>();
     protected ILogger Log => _log ??= Services.LogFor(GetType());
@@ -22,41 +21,42 @@ public class TransientOperationScopeProvider(IServiceProvider services) : IComma
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.TransientOperationScopeProvider)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
-        var isOperationRequired =
+        var isRequired =
             context.IsOutermost // Should be a top-level command
             && command is not ISystemCommand // No operations for system commands
             && !Computed.IsInvalidating();
-        if (!isOperationRequired) {
+        if (!isRequired) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
         }
 
-        var scope = context.Services.Activate<TransientOperationScope>();
-        await using var _ = scope.ConfigureAwait(false);
-
-        var operation = scope.Operation;
-        operation.Command = command;
-        context.Items.Set(scope);
-        context.ChangeOperation(operation);
-
+        var scope = new TransientOperationScope(context);
+        var error = (Exception?)null;
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
-            scope.Close(true);
+            _ = scope.Commit(cancellationToken); // TransientOperationScope "commits" synchronously
         }
-        catch (Exception error) {
-            scope.Close(false);
-            if (error.IsCancellationOf(cancellationToken))
-                throw;
-
-            // When this operation scope is used, no reprocessing is possible
-            if (scope.IsUsed)
-                Log.LogError(error, "Operation failed: {Command}", command);
+        catch (Exception e) {
+            error = e;
             throw;
         }
+        finally {
+            // ReSharper disable once MethodHasAsyncOverload
+            _ = scope.DisposeAsync();
 
-        // Since this is the outermost scope handler, it's reasonable to
-        // call OperationCompletionNotifier.NotifyCompleted from it
-        operation = context.Operation; // It could be changed by one of nested operation scope providers
-        await OperationCompletionNotifier.NotifyCompleted(operation, context).ConfigureAwait(false);
+            // The operation could be changed by one of nested operation scope providers
+            var operation = context.Operation;
+            if (operation.Scope is { IsUsed: true } operationScope) {
+                if (scope.IsCommitted == true) {
+                    // Since this is the outermost scope handler, it's reasonable to
+                    // call OperationCompletionNotifier.NotifyCompleted from it
+                    await OperationCompletionNotifier.NotifyCompleted(operation, context).ConfigureAwait(false);
+                }
+                else if (operationScope == scope) {
+                    // No other operation scopes were used, so no reprocessing is possible
+                    Log.LogError(error, "Transient operation failed: {Command}", command);
+                }
+            }
+        }
     }
 }
