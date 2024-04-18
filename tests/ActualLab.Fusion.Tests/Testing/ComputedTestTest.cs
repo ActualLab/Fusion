@@ -35,7 +35,6 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
     public async Task WhenFailTest1()
     {
         var time = Services.GetRequiredService<IFusionTime>();
-
         var t0 = await time.Now();
         try {
             await ComputedTest.When(async _ => {
