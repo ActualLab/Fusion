@@ -1,10 +1,25 @@
 namespace ActualLab.Async;
 
+#pragma warning disable CA1068
+
 public static class CancellationTokenExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static CancellationTokenSource LinkWith(this CancellationToken token1, CancellationToken token2)
         => CancellationTokenSource.CreateLinkedTokenSource(token1, token2);
+
+    public static CancellationTokenSource LinkWith(this CancellationToken token1, CancellationToken token2, TimeSpan cancelAfter)
+    {
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(token1, token2);
+        cts.CancelAfter(cancelAfter);
+        return cts;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static CancellationTokenSource LinkWith(this CancellationToken token1, CancellationToken token2, TimeSpan? cancelAfter)
+        => cancelAfter is { } vCancelAfter
+            ? token1.LinkWith(token2, vCancelAfter)
+            : token1.LinkWith(token2);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static CancellationTokenSource CreateLinkedTokenSource(this CancellationToken cancellationToken)
