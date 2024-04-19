@@ -4,16 +4,14 @@ namespace ActualLab.Fusion.Authentication.Services;
 
 public static class DbAuthIsolationLevelSelector
 {
-    public static IsolationLevel GetIsolationLevel(CommandContext commandContext)
-    {
-        var command = commandContext.UntypedCommand;
-        switch (command) {
-        case AuthBackend_SignIn:
-        case Auth_SignOut:
-        case AuthBackend_SetupSession:
-        case Auth_SetSessionOptions:
-            return IsolationLevel.RepeatableRead;
-        }
-        return IsolationLevel.Unspecified;
-    }
+    public static IsolationLevel IsolationLevel { get; set; } = IsolationLevel.ReadCommitted;
+
+    public static IsolationLevel SelectIsolationLevel(CommandContext context)
+        => context.UntypedCommand switch {
+            AuthBackend_SignIn
+                or Auth_SignOut
+                or AuthBackend_SetupSession
+                or Auth_SetSessionOptions => IsolationLevel,
+            _ => IsolationLevel.Unspecified
+        };
 }

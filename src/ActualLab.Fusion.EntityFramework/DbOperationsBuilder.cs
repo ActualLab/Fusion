@@ -98,6 +98,13 @@ public readonly struct DbOperationsBuilder<TDbContext>
     }
 
     public DbOperationsBuilder<TDbContext> AddIsolationLevelSelector(
+        DbIsolationLevelSelector<TDbContext> dbIsolationLevelSelector)
+    {
+        Services.AddSingleton(dbIsolationLevelSelector);
+        return this;
+    }
+
+    public DbOperationsBuilder<TDbContext> AddIsolationLevelSelector(
         Func<IServiceProvider, DbIsolationLevelSelector<TDbContext>> dbIsolationLevelSelector)
     {
         Services.AddSingleton(dbIsolationLevelSelector);
