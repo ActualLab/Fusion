@@ -25,13 +25,16 @@ public static class ComputedTest
         Func<CancellationToken, Task> assertion,
         TimeSpan? timeout = null)
     {
+        var lastError = (ExceptionDispatchInfo?)null;
         var computedSource = new AnonymousComputedSource<bool>(services,
             async (_, ct) => {
                 try {
                     await assertion.Invoke(ct).ConfigureAwait(false);
+                    lastError = null;
                     return true;
                 }
                 catch (Exception e) when (!e.IsCancellationOf(ct)) {
+                    lastError = ExceptionDispatchInfo.Capture(e);
                     return false;
                 }
             });
@@ -41,6 +44,7 @@ public static class ComputedTest
             await computedSource.When(x => x, timeoutCts.Token).ConfigureAwait(false);
         }
         catch (Exception e) when (e.IsCancellationOf(timeoutCts.Token)) {
+            lastError?.Throw();
             throw new TimeoutException($"{nameof(ComputedTest)}.{nameof(When)} timed out ({vTimeout.ToShortString()}).");
         }
     }
@@ -51,14 +55,17 @@ public static class ComputedTest
         TimeSpan? timeout = null)
     {
         var lastResult = default(T);
+        var lastError = (ExceptionDispatchInfo?)null;
         var computedSource = new AnonymousComputedSource<bool>(services,
             async (_, ct) => {
                 try {
                     lastResult = await assertion.Invoke(ct).ConfigureAwait(false);
+                    lastError = null;
                     return true;
                 }
                 catch (Exception e) when (!e.IsCancellationOf(ct)) {
                     lastResult = default;
+                    lastError = ExceptionDispatchInfo.Capture(e);
                     return false;
                 }
             });
@@ -68,6 +75,7 @@ public static class ComputedTest
             await computedSource.When(x => x, timeoutCts.Token).ConfigureAwait(false);
         }
         catch (Exception e) when (e.IsCancellationOf(timeoutCts.Token)) {
+            lastError?.Throw();
             throw new TimeoutException($"{nameof(ComputedTest)}.{nameof(When)} timed out ({vTimeout.ToShortString()}).");
         }
         return lastResult!;

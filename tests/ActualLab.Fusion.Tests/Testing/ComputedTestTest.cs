@@ -1,5 +1,6 @@
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Testing;
+using Xunit.Sdk;
 
 namespace ActualLab.Fusion.Tests.Testing;
 
@@ -43,9 +44,9 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
                 Assert.Fail("Ok");
                 return delta;
             }, TimeSpan.FromSeconds(1));
-            Assert.Fail();
+            throw new InvalidCastException("Not ok.");
         }
-        catch (TimeoutException e) {
+        catch (FailException e) {
             Out.WriteLine($"Expected error: {e}");
         }
     }
@@ -61,7 +62,36 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
                 Out.WriteLine($"* {delta.ToShortString()}");
                 Assert.Fail("Ok");
             }, TimeSpan.FromSeconds(1));
-            Assert.Fail();
+            throw new InvalidCastException("Not ok.");
+        }
+        catch (FailException e) {
+            Out.WriteLine($"Expected error: {e}");
+        }
+    }
+
+    [Fact]
+    public async Task WhenTimeoutTest1()
+    {
+        try {
+            await ComputedTest.When(async ct => {
+                await Task.Delay(2000, ct);
+                return 1;
+            }, TimeSpan.FromSeconds(1));
+            throw new InvalidCastException("Not ok.");
+        }
+        catch (TimeoutException e) {
+            Out.WriteLine($"Expected error: {e}");
+        }
+    }
+
+    [Fact]
+    public async Task WhenTimeoutTest2()
+    {
+        try {
+            await ComputedTest.When(async ct => {
+                await Task.Delay(2000, ct);
+            }, TimeSpan.FromSeconds(1));
+            throw new InvalidCastException("Not ok.");
         }
         catch (TimeoutException e) {
             Out.WriteLine($"Expected error: {e}");
