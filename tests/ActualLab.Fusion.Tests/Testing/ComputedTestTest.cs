@@ -7,7 +7,7 @@ namespace ActualLab.Fusion.Tests.Testing;
 public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
     [Fact]
-    public async Task WhenTest1()
+    public async Task Test1()
     {
         var time = Services.GetRequiredService<IFusionTime>();
         var t0 = await time.Now();
@@ -21,7 +21,7 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
     }
 
     [Fact]
-    public async Task WhenTest2()
+    public async Task Test2()
     {
         var time = Services.GetRequiredService<IFusionTime>();
         var t0 = await time.Now();
@@ -33,7 +33,7 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
     }
 
     [Fact]
-    public async Task WhenFailTest1()
+    public async Task FailTest1()
     {
         var time = Services.GetRequiredService<IFusionTime>();
         var t0 = await time.Now();
@@ -52,7 +52,7 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
     }
 
     [Fact]
-    public async Task WhenFailTest2()
+    public async Task FailTest2()
     {
         var time = Services.GetRequiredService<IFusionTime>();
         var t0 = await time.Now();
@@ -70,7 +70,7 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
     }
 
     [Fact]
-    public async Task WhenTimeoutTest1()
+    public async Task TimeoutTest1()
     {
         try {
             await ComputedTest.When(async ct => {
@@ -85,7 +85,7 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
     }
 
     [Fact]
-    public async Task WhenTimeoutTest2()
+    public async Task TimeoutTest2()
     {
         try {
             await ComputedTest.When(async ct => {
