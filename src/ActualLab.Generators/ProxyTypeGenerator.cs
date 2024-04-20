@@ -97,7 +97,9 @@ public class ProxyTypeGenerator
             .NormalizeWhitespace();
         // WriteDebug?.Invoke(ProxyDef.ToString());
 
-        var proxyNamespaceRef = QualifiedName(NamespaceRef, IdentifierName(ProxyNamespaceSuffix));
+        var proxyNamespaceRef = (NameSyntax)(NamespaceRef.GetText().ToString().Length == 0
+            ? IdentifierName(ProxyNamespaceSuffix)
+            : QualifiedName(NamespaceRef, IdentifierName(ProxyNamespaceSuffix)));
         var proxyNamespaceDef = FileScopedNamespaceDeclaration(proxyNamespaceRef)
             .AddMembers(ProxyDef);
 

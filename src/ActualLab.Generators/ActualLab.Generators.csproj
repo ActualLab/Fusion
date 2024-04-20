@@ -9,6 +9,11 @@
     <Description>ActualLab.Generators - ActualLab.Fusion proxy type generator.</Description>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <EnableDebugOutput>false</EnableDebugOutput>
+    <DefineConstants Condition="$(EnableDebugOutput)">$(DefineConstants);DEBUG_OUTPUT</DefineConstants>
+  </PropertyGroup>
+
   <!-- Generator-specific settings -->
   <PropertyGroup>
     <AnalyzerLanguage>cs</AnalyzerLanguage>

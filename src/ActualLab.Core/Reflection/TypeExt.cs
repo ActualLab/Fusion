@@ -204,11 +204,13 @@ public static partial class TypeExt
 
     public static Type DefaultNonProxyTypeResolver(Type type)
     {
-        const string proxyNamespaceSuffix = ".ActualLabProxies";
+        const string proxyNamespace = "ActualLabProxies";
+        const string proxyNamespaceSuffix = "." + proxyNamespace;
         const string proxy = "Proxy";
 
         var @namespace = type.Namespace ?? "";
-        if (!@namespace.EndsWith(proxyNamespaceSuffix, StringComparison.Ordinal))
+        var hasProxyNamespaceSuffix = @namespace.EndsWith(proxyNamespaceSuffix, StringComparison.Ordinal);
+        if (!hasProxyNamespaceSuffix && !@namespace.Equals(proxyNamespace, StringComparison.Ordinal))
             return type;
 
         if (type.IsConstructedGenericType) {
@@ -236,9 +238,9 @@ public static partial class TypeExt
         if (!namePrefix.EndsWith(proxy, StringComparison.Ordinal))
             return type;
 
-        var nonProxyNamespace = @namespace[..^proxyNamespaceSuffix.Length];
+        var nonProxyNamespacePrefix = @namespace[..^proxyNamespace.Length];
         var nonProxyNamePrefix = namePrefix[..^proxy.Length];
-        var nonProxyName = ZString.Concat(nonProxyNamespace, '.', nonProxyNamePrefix, nameSuffix);
+        var nonProxyName = ZString.Concat(nonProxyNamespacePrefix, nonProxyNamePrefix, nameSuffix);
         try {
 #pragma warning disable IL2026
             return type.Assembly.GetType(nonProxyName) ?? type;

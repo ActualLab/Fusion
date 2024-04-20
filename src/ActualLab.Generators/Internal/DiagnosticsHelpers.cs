@@ -1,19 +1,18 @@
 namespace ActualLab.Generators.Internal;
 
-// [RS2008] Enable analyzer release tracking for the analyzer project containing rule 'STLG0001'
+// [RS2008] Enable analyzer release tracking for the analyzer project containing rule 'ALG0001'
 #pragma warning disable RS2008
 
 public static class DiagnosticsHelpers
 {
-    public static readonly bool IsDebugOutputEnabled =
-#if DEBUG
-        false;
+#if DEBUG_OUTPUT
+    public static readonly bool IsDebugOutputEnabled = true;
 #else
-        false;
+    public static readonly bool IsDebugOutputEnabled = false;
 #endif
 
     private static readonly DiagnosticDescriptor DebugDescriptor = new(
-        id: "STLGDEBUG",
+        id: "ALGDEBUG",
         title: "Debug warning",
         messageFormat: "Debug warning: {0}",
         category: nameof(ProxyGenerator),
@@ -21,7 +20,7 @@ public static class DiagnosticsHelpers
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor GenerateProxyTypeProcessedDescriptor = new(
-        id: "STLG0001",
+        id: "ALG0001",
         title: "[GenerateProxy]: type processed",
         messageFormat: "[GenerateProxy]: type '{0}' is processed",
         category: nameof(ProxyGenerator),
@@ -72,16 +71,18 @@ public static class DiagnosticsHelpers
 
     private static void WriteDebugImpl(string message)
     {
-        /*
+#if DEBUG_OUTPUT
         for (var i = 0; i < 5; i++) {
             try {
+#pragma warning disable RS1035
                 File.AppendAllText("C:/Temp/ActualLab.Generators.txt", message + Environment.NewLine, Encoding.UTF8);
+#pragma warning restore RS1035
                 return;
             }
             catch (IOException) {
                 // Intended
             }
         }
-        */
+#endif
     }
 }

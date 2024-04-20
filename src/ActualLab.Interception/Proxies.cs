@@ -151,7 +151,8 @@ public static class Proxies
             }
             var proxyTypeName = ZString.Concat(
                 type1.Namespace,
-                ".ActualLabProxies.",
+                type1.Namespace.IsNullOrEmpty() ? "" : ".",
+                "ActualLabProxies.",
                 namePrefix,
                 "Proxy",
                 nameSuffix);
