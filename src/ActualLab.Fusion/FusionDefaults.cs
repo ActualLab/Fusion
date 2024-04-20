@@ -2,7 +2,7 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion;
 
-public static class FusionSettings
+public static class FusionDefaults
 {
     private static readonly object Lock = new();
     private static FusionMode _mode;
@@ -26,8 +26,10 @@ public static class FusionSettings
     public static int ComputedRegistryCapacity { get; set; }
     public static int ComputedGraphPrunerBatchSize { get; set; }
 
-    static FusionSettings()
+    static FusionDefaults()
         => Mode = OSInfo.IsAnyClient ? FusionMode.Client : FusionMode.Server;
+
+    // Private & internal methods
 
     private static void Recompute()
     {

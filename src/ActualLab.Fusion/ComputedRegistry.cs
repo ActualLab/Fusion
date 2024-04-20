@@ -14,8 +14,8 @@ public sealed class ComputedRegistry : IDisposable
 
     public sealed record Options
     {
-        public int InitialCapacity { get; init; } = FusionSettings.ComputedRegistryCapacity;
-        public int ConcurrencyLevel { get; init; } = FusionSettings.ComputedRegistryConcurrencyLevel;
+        public int InitialCapacity { get; init; } = FusionDefaults.ComputedRegistryCapacity;
+        public int ConcurrencyLevel { get; init; } = FusionDefaults.ComputedRegistryConcurrencyLevel;
         public Func<AsyncLockSet<ComputedInput>>? LocksFactory { get; init; } = null;
         public GCHandlePool? GCHandlePool { get; init; } = null;
     }

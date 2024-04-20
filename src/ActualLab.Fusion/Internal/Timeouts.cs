@@ -19,13 +19,13 @@ public static class Timeouts
             new() {
                 Clock = Clock,
                 TickSource = TickSource,
-                ConcurrencyLevel = FusionSettings.TimeoutsConcurrencyLevel,
+                ConcurrencyLevel = FusionDefaults.TimeoutsConcurrencyLevel,
             }, null, StartedAt);
         Invalidate = new ConcurrentTimerSet<IComputed>(
             new() {
                 Clock = Clock,
                 TickSource = TickSource,
-                ConcurrencyLevel = FusionSettings.TimeoutsConcurrencyLevel,
+                ConcurrencyLevel = FusionDefaults.TimeoutsConcurrencyLevel,
             },
             t => t.Invalidate(true), StartedAt);
     }

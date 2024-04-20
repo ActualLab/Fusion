@@ -29,7 +29,7 @@ public class RpcOutboundCommandCallMiddleware : RpcOutboundMiddleware
         CallTimeout = Default.CallTimeout;
         BackendConnectTimeout = Default.BackendConnectTimeout;
         BackendCallTimeout = Default.BackendCallTimeout;
-        if (RpcSettings.DebugMode)
+        if (RpcDefaults.DebugMode)
             ConnectTimeout = CallTimeout = BackendConnectTimeout = BackendCallTimeout = Default.DebugModeTimeouts;
     }
 

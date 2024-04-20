@@ -8,7 +8,7 @@ public sealed class ComputedGraphPruner : WorkerBase
 
         public bool AutoActivate { get; init; } = true;
         public bool MustPruneRegistry { get; init; } = true;
-        public int BatchSize { get; init; } = FusionSettings.ComputedGraphPrunerBatchSize;
+        public int BatchSize { get; init; } = FusionDefaults.ComputedGraphPrunerBatchSize;
         public RandomTimeSpan CheckPeriod { get; init; } = TimeSpan.FromMinutes(5).ToRandom(0.1);
         public RandomTimeSpan InterBatchDelay { get; init; } = TimeSpan.FromSeconds(0.1).ToRandom(0.25);
         public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));

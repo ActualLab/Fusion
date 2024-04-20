@@ -32,7 +32,7 @@ public class OperationReprocessor : IOperationReprocessor
 
         public static bool DefaultFilter(ICommand command, CommandContext context)
         {
-            if (FusionSettings.Mode != FusionMode.Server)
+            if (FusionDefaults.Mode != FusionMode.Server)
                 return false; // Only server can do the reprocessing
 
             // No reprocessing for commands running from scoped Commander instances,
