@@ -27,7 +27,7 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
     }
 
     public static TypeDecoratingByteSerializer DefaultTypeDecorating {
-        get => _defaultTypeDecorating ??= new(Default);
+        get => _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
         set => _defaultTypeDecorating = value;
     }
 

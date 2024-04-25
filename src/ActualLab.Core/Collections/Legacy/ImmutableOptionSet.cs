@@ -9,6 +9,7 @@ namespace ActualLab.Collections;
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[Obsolete("Use PropertySet instead.")]
 public readonly partial record struct ImmutableOptionSet
 {
     private static readonly ImmutableDictionary<Symbol, object> EmptyItems = ImmutableDictionary<Symbol, object>.Empty;
@@ -20,7 +21,10 @@ public readonly partial record struct ImmutableOptionSet
     // Computed properties
 
     [JsonIgnore, MemoryPackIgnore]
-    public ImmutableDictionary<Symbol, object> Items => _items ?? EmptyItems;
+    public ImmutableDictionary<Symbol, object> Items {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items ?? EmptyItems;
+    }
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     [JsonPropertyName(nameof(Items)), Newtonsoft.Json.JsonIgnore]
@@ -29,11 +33,10 @@ public readonly partial record struct ImmutableOptionSet
 
     // ReSharper disable once CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
     public object? this[Symbol key] => Items.TryGetValue(key, out var v) ? v : null;
-    public object? this[Type optionType] => this[optionType.ToSymbol()];
 
     [Newtonsoft.Json.JsonConstructor]
     // ReSharper disable once ConvertToPrimaryConstructor
-    public ImmutableOptionSet(ImmutableDictionary<Symbol, object>? items)
+    public ImmutableOptionSet(ImmutableDictionary<Symbol, object> items)
         => _items = items;
 
     [JsonConstructor, MemoryPackConstructor]
@@ -43,11 +46,13 @@ public readonly partial record struct ImmutableOptionSet
     public override string ToString()
         => $"{nameof(ImmutableOptionSet)}({OptionSetHelper.GetToStringArgs(Items)})";
 
-    public bool Contains(Type optionType)
-        => this[optionType] != null;
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains<T>()
         => this[typeof(T)] != null;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Contains(Symbol key)
+        => this[key] != null;
 
     public bool TryGet<T>(out T value)
     {
@@ -75,8 +80,6 @@ public readonly partial record struct ImmutableOptionSet
 
     // ReSharper disable once HeapView.PossibleBoxingAllocation
     public ImmutableOptionSet Set<T>(T value) => Set(typeof(T), value);
-    public ImmutableOptionSet Set(Type optionType, object? value)
-        => Set(optionType.ToSymbol(), value);
     public ImmutableOptionSet Set(Symbol key, object? value)
         => new(value != null ? Items.SetItem(key, value) : Items.Remove(key));
 
@@ -91,15 +94,6 @@ public readonly partial record struct ImmutableOptionSet
     }
 
     public ImmutableOptionSet Remove<T>() => Set(typeof(T), null);
-
-    public ImmutableOptionSet Replace<T>(T expectedValue, T value)
-    {
-        var key = typeof(T).ToSymbol();
-        var currentValue = (T?) this[key];
-        return !EqualityComparer<T>.Default.Equals(currentValue!, expectedValue)
-            ? this
-            : Set(key, value);
-    }
 
     // Equality
 

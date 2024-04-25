@@ -22,15 +22,13 @@ public static class ByteSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class ByteSerialized<T>
 {
-    private byte[]? _data;
-
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public T Value { get; init; } = default!;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public byte[] Data {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-        get => _data ??= Serialize();
+        get => Serialize();
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         init => Value = Deserialize(value);
     }
@@ -45,26 +43,21 @@ public partial class ByteSerialized<T>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private byte[] Serialize()
     {
-        byte[] serializedValue;
+        byte[] data;
         if (!typeof(T).IsValueType && ReferenceEquals(Value, null))
-            serializedValue = Array.Empty<byte>();
+            data = Array.Empty<byte>();
         else {
             using var bufferWriter = GetSerializer().Write(Value);
-            serializedValue = bufferWriter.WrittenSpan.ToArray();
+            data = bufferWriter.WrittenSpan.ToArray();
         }
-        _data = serializedValue;
-        return serializedValue;
+        return data;
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private T Deserialize(byte[] data)
-    {
-        var value = data.Length == 0
+        => data.Length == 0
             ? default!
             : GetSerializer().Read(data, out _);
-        _data = data;
-        return value;
-    }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected virtual IByteSerializer<T> GetSerializer()

@@ -3,11 +3,11 @@ using ActualLab.Internal;
 
 namespace ActualLab.Serialization;
 
-public static class TypeDecoratingSerialized
+public static class UniSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TypeDecoratingSerialized<TValue> New<TValue>(TValue value = default!)
-        => new() { Value = value };
+    public static UniSerialized<TValue> New<TValue>(TValue value = default!)
+        => new(value);
 }
 
 #if !NET5_0
@@ -15,7 +15,7 @@ public static class TypeDecoratingSerialized
 #endif
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public partial class TypeDecoratingSerialized<T>
+public readonly partial struct UniSerialized<T>
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public T Value { get; init; } = default!;
@@ -29,7 +29,7 @@ public partial class TypeDecoratingSerialized<T>
     }
 
     [JsonIgnore, MemoryPackIgnore]
-    public string NJson {
+    public string NewtonsoftJson {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => SerializeText(Value, SerializerKind.NewtonsoftJson);
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -52,6 +52,13 @@ public partial class TypeDecoratingSerialized<T>
         init => Value = DeserializeBytes(value, SerializerKind.MemoryPack);
     }
 
+    public UniSerialized(T value)
+        => Value = value;
+
+    [MemoryPackConstructor]
+    public UniSerialized(byte[] memoryPack)
+        => MemoryPack = memoryPack;
+
     // ToString
 
     public override string ToString()
@@ -62,14 +69,14 @@ public partial class TypeDecoratingSerialized<T>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private static string SerializeText(T value, SerializerKind serializerKind)
     {
-        var serializer = (ITextSerializer)serializerKind.GetDefaultTypeDecoratingSerializer();
+        var serializer = (ITextSerializer)serializerKind.GetDefaultSerializer();
         return serializer.Write(value);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private static byte[] SerializeBytes(T value, SerializerKind serializerKind)
     {
-        var serializer = serializerKind.GetDefaultTypeDecoratingSerializer();
+        var serializer = serializerKind.GetDefaultSerializer();
         using var buffer = serializer.Write(value);
         return buffer.WrittenSpan.ToArray();
     }
@@ -77,14 +84,14 @@ public partial class TypeDecoratingSerialized<T>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private static T DeserializeText(string text, SerializerKind serializerKind)
     {
-        var serializer = (ITextSerializer)serializerKind.GetDefaultTypeDecoratingSerializer();
+        var serializer = (ITextSerializer)serializerKind.GetDefaultSerializer();
         return serializer.Read<T>(text);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private static T DeserializeBytes(byte[] bytes, SerializerKind serializerKind)
     {
-        var serializer = serializerKind.GetDefaultTypeDecoratingSerializer();
+        var serializer = serializerKind.GetDefaultSerializer();
         return serializer.Read<T>(bytes);
     }
 }

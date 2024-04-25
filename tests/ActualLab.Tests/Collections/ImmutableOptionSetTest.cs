@@ -82,17 +82,4 @@ public class ImmutableOptionSetTest(ITestOutputHelper @out) : TestBase(@out)
         copy.GetOrDefault<long>().Should().Be(1L);
         copy.Get<string>().Should().Be("A");
     }
-
-    [Fact]
-    public void ReplaceTest()
-    {
-        var options = new ImmutableOptionSet();
-        options = options.Replace(null, "A");
-        options.Get<string>().Should().Be("A");
-        options = options.Replace("A", "B");
-        options.Get<string>().Should().Be("B");
-
-        options = options.Replace("C", "D");
-        options.Get<string>().Should().Be("B");
-    }
 }

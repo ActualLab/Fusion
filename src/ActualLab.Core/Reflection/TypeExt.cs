@@ -165,11 +165,14 @@ public static partial class TypeExt
             });
     }
 
-    public static Symbol ToSymbol(this Type type, bool withPrefix = true)
+    public static Symbol ToSymbol(this Type type)
+        => ToSymbolCache.GetOrAdd(type,
+                static type1 => new Symbol(SymbolPrefix + type1.ToIdentifierName(true, true)));
+
+    public static Symbol ToSymbol(this Type type, bool withPrefix)
         => withPrefix
-            ? ToSymbolCache.GetOrAdd(type,
-                static type1 => new Symbol(SymbolPrefix + type1.ToIdentifierName(true, true)))
-            : (Symbol) type.ToIdentifierName(true, true);
+            ? type.ToSymbol()
+            : (Symbol)type.ToIdentifierName(true, true);
 
     public static bool IsTaskOrValueTask(this Type type)
         => type.GetTaskOrValueTaskType() != null;

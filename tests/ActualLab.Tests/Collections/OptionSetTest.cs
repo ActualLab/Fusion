@@ -84,17 +84,4 @@ public class OptionSetTest(ITestOutputHelper @out) : TestBase(@out)
         copy.GetOrDefault<long>().Should().Be(1L);
         copy.Get<string>().Should().Be("A");
     }
-
-    [Fact]
-    public void ReplaceTest()
-    {
-        var options = new OptionSet();
-        options.Replace(null, "A").Should().BeTrue();
-        options.Get<string>().Should().Be("A");
-        options.Replace("A", "B").Should().BeTrue();
-        options.Get<string>().Should().Be("B");
-
-        options.Replace("C", "D").Should().BeFalse();
-        options.Get<string>().Should().Be("B");
-    }
 }
