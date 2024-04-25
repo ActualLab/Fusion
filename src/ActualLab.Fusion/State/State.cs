@@ -329,7 +329,7 @@ public abstract class State<T> : ComputedInput,
         StateBoundComputed<T> computed;
         while (true) {
             computed = CreateComputed();
-            using (ComputeContext.BeginCompute(computed)) {
+            using (Fusion.Computed.BeginCompute(computed)) {
                 try {
                     var value = await Compute(cancellationToken).ConfigureAwait(false);
                     computed.TrySetOutput(Result.New(value));

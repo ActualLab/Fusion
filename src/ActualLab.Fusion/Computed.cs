@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Collections.Slim;
 using ActualLab.Conversion;
-using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Resilience;
@@ -289,7 +288,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         if (this.IsConsistent())
             return this;
 
-        using var scope = ComputeContext.BeginIsolation();
+        using var scope = Computed.BeginIsolation();
         return await Function
             .Invoke(Input, null, scope.Context, cancellationToken)
             .ConfigureAwait(false);

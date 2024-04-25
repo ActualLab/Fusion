@@ -130,7 +130,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
             FixedDelayer.YieldUnsafe,
             async (s, cancellationToken) => {
                 var a = await s1.Use(cancellationToken);
-                using var _ = ComputeContext.BeginIsolation();
+                using var _ = Computed.BeginIsolation();
                 var b = await s2.Use(cancellationToken);
                 return (a, b);
             }).Update();

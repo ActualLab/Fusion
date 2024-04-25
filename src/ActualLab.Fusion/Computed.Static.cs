@@ -22,12 +22,17 @@ public static class Computed
     public static Computed<T> GetCurrent<T>()
         => (Computed<T>)(Current ?? throw Errors.CurrentComputedIsNull());
 
-    // IsInvalidating
+    public static ComputeContextScope BeginCompute(IComputed computed)
+        => new(new(computed));
 
-    public static bool IsInvalidating {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => ComputeContext.Current.IsInvalidating;
-    }
+    public static ComputeContextScope BeginIsolation()
+        => new(ComputeContext.None);
+
+    public static ComputeContextScope BeginCapture()
+        => new(new ComputeContext(CallOptions.Capture));
+
+    public static ComputeContextScope BeginCaptureExisting()
+        => new(new ComputeContext(CallOptions.Capture | CallOptions.GetExisting));
 
     // TryCapture
 
@@ -35,7 +40,7 @@ public static class Computed
         Func<Task> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = ComputeContext.BeginCapture();
+        using var ccs = BeginCapture();
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.TryGetCaptured();
@@ -52,7 +57,7 @@ public static class Computed
         Func<Task<T>> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = ComputeContext.BeginCapture();
+        using var ccs = BeginCapture();
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.TryGetCaptured<T>();
@@ -69,7 +74,7 @@ public static class Computed
         Func<ValueTask> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = ComputeContext.BeginCapture();
+        using var ccs = BeginCapture();
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.TryGetCaptured();
@@ -86,7 +91,7 @@ public static class Computed
         Func<ValueTask<T>> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = ComputeContext.BeginCapture();
+        using var ccs = BeginCapture();
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.TryGetCaptured<T>();
@@ -105,7 +110,7 @@ public static class Computed
         Func<Task> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = ComputeContext.BeginCapture();
+        using var ccs = BeginCapture();
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.GetCaptured();
@@ -122,7 +127,7 @@ public static class Computed
         Func<Task<T>> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = ComputeContext.BeginCapture();
+        using var ccs = BeginCapture();
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.GetCaptured<T>();
@@ -139,7 +144,7 @@ public static class Computed
         Func<ValueTask> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = ComputeContext.BeginCapture();
+        using var ccs = BeginCapture();
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.GetCaptured();
@@ -156,7 +161,7 @@ public static class Computed
         Func<ValueTask<T>> producer,
         CancellationToken cancellationToken = default)
     {
-        using var ccs = ComputeContext.BeginCapture();
+        using var ccs = BeginCapture();
         try {
             await producer.Invoke().ConfigureAwait(false);
             return ccs.Context.GetCaptured<T>();
@@ -173,7 +178,7 @@ public static class Computed
 
     public static Computed<T>? GetExisting<T>(Func<Task<T>> producer)
     {
-        using var ccs = ComputeContext.BeginCaptureExisting();
+        using var ccs = BeginCaptureExisting();
         var task = producer.Invoke();
         _ = task.AssertCompleted(); // The must be always synchronous in this case
         return ccs.Context.TryGetCaptured<T>().ValueOrDefault;
@@ -181,7 +186,7 @@ public static class Computed
 
     public static Computed<T>? GetExisting<T>(Func<ValueTask<T>> producer)
     {
-        using var ccs = ComputeContext.BeginCaptureExisting();
+        using var ccs = BeginCaptureExisting();
         var task = producer.Invoke();
         _ = task.AssertCompleted(); // The must be always synchronous in this case
         return ccs.Context.TryGetCaptured<T>().ValueOrDefault;

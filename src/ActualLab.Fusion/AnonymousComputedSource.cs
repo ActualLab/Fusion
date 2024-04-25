@@ -91,7 +91,7 @@ public class AnonymousComputedSource<T> : ComputedInput,
 
     public async ValueTask<Computed<T>> Update(CancellationToken cancellationToken = default)
     {
-        using var scope = ComputeContext.BeginIsolation();
+        using var scope = Fusion.Computed.BeginIsolation();
         return await Invoke(null, scope.Context, cancellationToken).ConfigureAwait(false);
     }
 
@@ -179,7 +179,7 @@ public class AnonymousComputedSource<T> : ComputedInput,
         var tryIndex = 0;
         while (true) {
             Computed = computed = new AnonymousComputed<T>(ComputedOptions, this);
-            using var _ = ComputeContext.BeginCompute(computed);
+            using var _ = Fusion.Computed.BeginCompute(computed);
             try {
                 var value = await Computer.Invoke(this, cancellationToken).ConfigureAwait(false);
                 computed.TrySetOutput(Result.New(value));

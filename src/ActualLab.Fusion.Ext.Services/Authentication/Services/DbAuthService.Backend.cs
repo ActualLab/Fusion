@@ -17,7 +17,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<TDbContext>(command);
-        if (Computed.IsInvalidating) {
+        if (InvalidationMode.IsOn) {
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
@@ -83,7 +83,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<TDbContext>(command);
-        if (Computed.IsInvalidating) {
+        if (InvalidationMode.IsOn) {
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo == null)
                 return null!;
@@ -128,7 +128,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         session.RequireValid();
 
         var shard = ShardResolver.Resolve<TDbContext>(command);
-        if (Computed.IsInvalidating) {
+        if (InvalidationMode.IsOn) {
             _ = GetSessionInfo(session, default); // Must go first!
             return;
         }

@@ -42,7 +42,7 @@ public class ClientComputeServiceInterceptor(
         }
 
         // If we're here, it's a compute method
-        if (!Computed.IsInvalidating)
+        if (!InvalidationMode.IsOn)
             return (TResult)handler.Invoke(invocation)!;
 
         // And we're inside Computed.Invalidate() block

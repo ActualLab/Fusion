@@ -8,9 +8,10 @@ public sealed class ComputeContext
     private volatile IComputed? _captured;
 
     public static readonly ComputeContext None = new(default(CallOptions));
-    public static readonly ComputeContext Invalidating = new(CallOptions.Invalidate);
+    public static readonly ComputeContext Invalidation = new(CallOptions.Invalidate);
 
     public static ComputeContext Current {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => CurrentLocal.Value ?? None;
         internal set {
             if (value == None)
@@ -21,27 +22,16 @@ public sealed class ComputeContext
 
     public CallOptions CallOptions { get; }
     public IComputed? Computed { get; }
-    public bool IsCapturing => (CallOptions & CallOptions.Capture) == CallOptions.Capture;
-    public bool IsInvalidating => (CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ComputeContextScope BeginCapture()
-        => new(new ComputeContext(CallOptions.Capture));
+    public bool IsCapturing {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => (CallOptions & CallOptions.Capture) == CallOptions.Capture;
+    }
 
-    public static ComputeContextScope BeginCaptureExisting()
-        => new(new ComputeContext(CallOptions.Capture | CallOptions.GetExisting));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ComputeContextScope BeginIsolation()
-        => new(None);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ComputeContextScope BeginInvalidation()
-        => new(Invalidating);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ComputeContextScope BeginCompute(IComputed computed)
-        => new(new(computed));
+    public bool IsInvalidating {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => (CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
+    }
 
     // Constructors
 

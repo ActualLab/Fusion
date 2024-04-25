@@ -40,7 +40,7 @@ public class CounterServiceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         var c = Computed.GetExisting(() => counters.Get(key));
         c!.ConsistencyState.Should().Be(ConsistencyState.Computing);
 
-        using (ComputeContext.BeginInvalidation())
+        using (InvalidationMode.Begin())
             _ = counters.Get(key);
 
         var c1 = Computed.GetExisting(() => counters.Get(key));

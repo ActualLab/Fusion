@@ -61,7 +61,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         var (user, orUpdate) = command;
         var existingUser = (User?) null;
         var context = CommandContext.GetCurrent();
-        if (Computed.IsInvalidating) {
+        if (InvalidationMode.IsOn) {
             _ = Get(user.Id, default).AssertCompleted();
             existingUser = context.Operation.Items.Get<User>();
             if (existingUser == null)
@@ -88,7 +88,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
     public virtual async Task Update(UserService_Update command, CancellationToken cancellationToken = default)
     {
         var user = command.User;
-        if (Computed.IsInvalidating) {
+        if (InvalidationMode.IsOn) {
             _ = Get(user.Id, default).AssertCompleted();
             return;
         }
@@ -109,7 +109,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         dbContext.Users.Update(user);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        if (Computed.IsInvalidating)
+        if (InvalidationMode.IsOn)
             _ = Get(user.Id, default).AssertCompleted();
     }
 
@@ -117,7 +117,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
     {
         var user = command.User;
         var context = CommandContext.GetCurrent();
-        if (Computed.IsInvalidating) {
+        if (InvalidationMode.IsOn) {
             var success = context.Operation.Items.GetOrDefault<bool>();
             if (success) {
                 _ = Get(user.Id, default).AssertCompleted();
@@ -176,7 +176,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         if (!IsProxy)
             return Task.CompletedTask;
 
-        using (ComputeContext.BeginInvalidation())
+        using (InvalidationMode.Begin())
             _ = Everything().AssertCompleted();
 
         return Task.CompletedTask;

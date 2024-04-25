@@ -21,7 +21,7 @@ public class Todos(ISandboxedKeyValueStore store, IAuth auth) : ITodos
 
     public virtual async Task<Todo> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default)
     {
-        if (Computed.IsInvalidating)
+        if (InvalidationMode.IsOn)
             return default!;
 
         var (session, todo) = command;
@@ -56,7 +56,7 @@ public class Todos(ISandboxedKeyValueStore store, IAuth auth) : ITodos
 
     public virtual async Task Remove(Todos_Remove command, CancellationToken cancellationToken = default)
     {
-        if (Computed.IsInvalidating) return;
+        if (InvalidationMode.IsOn) return;
         var (session, id) = command;
 
         var user = await auth.GetUser(session, cancellationToken).Require();

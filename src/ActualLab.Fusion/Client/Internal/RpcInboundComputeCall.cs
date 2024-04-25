@@ -26,7 +26,7 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
 
     protected override async Task<TResult> InvokeTarget()
     {
-        var ccs = ComputeContext.BeginCapture();
+        var ccs = Fusion.Computed.BeginCapture();
         try {
             return await base.InvokeTarget().ConfigureAwait(false);
         }

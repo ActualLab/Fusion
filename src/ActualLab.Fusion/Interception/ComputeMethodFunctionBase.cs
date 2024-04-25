@@ -16,7 +16,7 @@ public abstract class ComputeMethodFunctionBase<T>(
         while (true) {
             var computed = CreateComputed(typedInput);
             try {
-                using var _ = ComputeContext.BeginCompute(computed);
+                using var _ = Computed.BeginCompute(computed);
                 var result = typedInput.InvokeOriginalFunction(cancellationToken);
                 if (typedInput.MethodDef.ReturnsValueTask) {
                     var output = await ((ValueTask<T>) result).ConfigureAwait(false);
