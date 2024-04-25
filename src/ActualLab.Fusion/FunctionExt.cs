@@ -17,7 +17,7 @@ public static class FunctionExt
             }
             catch (OperationCanceledException e) when (!cancellationToken.IsCancellationRequested) {
                 log ??= input.Function.Services.LogFor(function.GetType());
-                var retryDelay = Computed.InternalCancellationRetryDelay;
+                var retryDelay = Computed.CancellationInvalidationDelay;
                 log.LogWarning(e,
                     "Update was cancelled internally for {Category}, will retry in {Delay}",
                     input.Category, retryDelay.ToShortString());
@@ -41,7 +41,7 @@ public static class FunctionExt
             }
             catch (OperationCanceledException e) when (!cancellationToken.IsCancellationRequested) {
                 log ??= input.Function.Services.LogFor(function.GetType());
-                var retryDelay = Computed.InternalCancellationRetryDelay;
+                var retryDelay = Computed.CancellationInvalidationDelay;
                 log.LogWarning(e,
                     "Update was cancelled internally for {Category}, will retry in {Delay}",
                     input.Category, retryDelay.ToShortString());

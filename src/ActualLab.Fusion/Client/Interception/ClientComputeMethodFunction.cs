@@ -76,7 +76,7 @@ public class ClientComputeMethodFunction<T>(
                     cacheEntry, call, synchronizedSource);
             }
             catch (OperationCanceledException e) when (!cancellationToken.IsCancellationRequested) {
-                var retryDelay = Computed.InternalCancellationRetryDelay;
+                var retryDelay = Computed.CancellationInvalidationDelay;
                 Log.LogWarning(e,
                     "ComputeRpc was cancelled on the server side for {Category}, will retry in {Delay}",
                     input.Category, retryDelay.ToShortString());
@@ -151,7 +151,7 @@ public class ClientComputeMethodFunction<T>(
             // The call was cancelled on the server side - e.g. due to peer termination.
             // Retrying is the best we can do here; and since this call is already bound to `cachedComputed`,
             // we should invalidate the `call` rather than `cachedComputed`.
-            var retryDelay = Computed.InternalCancellationRetryDelay;
+            var retryDelay = Computed.CancellationInvalidationDelay;
             Log.LogWarning(e,
                 "ApplyRpcUpdate was cancelled on the server side for {Category}, will invalidate IComputed in {Delay}",
                 input.Category, retryDelay.ToShortString());

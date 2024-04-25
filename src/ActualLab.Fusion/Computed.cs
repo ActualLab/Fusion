@@ -258,7 +258,14 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         if (!this.IsConsistent())
             return;
 
-        var hasTransientError = _output.Error is { } error && IsTransientError(error);
+        if (_output.Error is not { } error)
+            return;
+
+        if (error is OperationCanceledException) {
+            this.Invalidate(Computed.CancellationInvalidationDelay);
+        }
+
+        var hasTransientError = IsTransientError(error);
         var timeout = hasTransientError
             ? _options.TransientErrorInvalidationDelay
             : _options.AutoInvalidationDelay;

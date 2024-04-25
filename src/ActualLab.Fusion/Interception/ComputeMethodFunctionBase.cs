@@ -25,20 +25,15 @@ public abstract class ComputeMethodFunctionBase<T>(
                 computed.TrySetOutput(output);
             }
         }
-        catch (OperationCanceledException e) {
-            computed.TrySetOutput(Result.Error<T>(e));
-            if (cancellationToken.IsCancellationRequested)
-                computed.Invalidate(); // Instant invalidation
-            throw;
-        }
         catch (Exception e) {
-            if (e is AggregateException ae)
-                e = ae.GetFirstInnerException();
+            // if (e is AggregateException ae)
+            //     e = ae.GetFirstInnerException();
+            if (cancellationToken.IsCancellationRequested) {
+                computed.Invalidate(true); // Instant invalidation
+                computed.TrySetOutput(Result.Error<T>(e));
+                throw;
+            }
             computed.TrySetOutput(Result.Error<T>(e));
-            // If the output is already set, all we can
-            // is to ignore the exception we've just caught;
-            // throwing it further will probably make it just worse,
-            // since the the caller have to take this scenario into acc.
         }
         return computed;
     }

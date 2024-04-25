@@ -331,7 +331,12 @@ public abstract class State<T> : ComputedInput,
                 var value = await Compute(cancellationToken).ConfigureAwait(false);
                 computed.TrySetOutput(Result.New(value));
             }
-            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+            catch (Exception e) {
+                if (cancellationToken.IsCancellationRequested) {
+                    computed.Invalidate(true); // Instant invalidation
+                    computed.TrySetOutput(Result.Error<T>(e));
+                    throw;
+                }
                 computed.TrySetOutput(Result.Error<T>(e));
             }
         }
