@@ -52,6 +52,7 @@ public class PropertyBagTest(ITestOutputHelper @out) : TestBase(@out)
         // We use Int64 type here b/c JSON serializer
         // deserializes integers to this type.
 
+        o = o.Set(0L);
         o = o.Set(1L);
         o = o.AssertPassesThroughAllSerializers(x => {
             x.GetOrDefault<long>().Should().Be(1L);
@@ -72,6 +73,23 @@ public class PropertyBagTest(ITestOutputHelper @out) : TestBase(@out)
             x.GetOrDefault(-1L).Should().Be(-1L);
             x.Count.Should().Be(0);
         });
+        o = o.Remove<long>();
+        o.Count.Should().Be(0);
+
+        o.GetOrDefault<long>().Should().Be(0L);
+        o.GetOrDefault<long?>().Should().Be(null);
+        o = o.Set(1L);
+        o = o.Set((long?)2L);
+        o.Count.Should().Be(2);
+        o.GetOrDefault<long>().Should().Be(1L);
+        o.GetOrDefault<long?>().Should().Be(2L);
+        o = o.Set((long?)null);
+        o.Count.Should().Be(1);
+        o.GetOrDefault<long>().Should().Be(1L);
+        o.GetOrDefault<long?>().Should().Be(null);
+
+        o = o.Remove<long>();
+        o.Count.Should().Be(0);
     }
 
     [Fact]

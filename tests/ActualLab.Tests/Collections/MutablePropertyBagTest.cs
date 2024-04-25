@@ -57,6 +57,7 @@ public class MutablePropertyBagTest(ITestOutputHelper @out) : TestBase(@out)
         // We use Int64 type here b/c JSON serializer
         // deserializes integers to this type.
 
+        o.Set(0L);
         o.Set(1L);
         o = o.AssertPassesThroughAllSerializers(x => {
             x.GetOrDefault<long>().Should().Be(1L);
@@ -78,7 +79,26 @@ public class MutablePropertyBagTest(ITestOutputHelper @out) : TestBase(@out)
             x.Count.Should().Be(0);
         });
 
+        o.Remove<long>();
+        o.Count.Should().Be(0);
+
+        o.GetOrDefault<long>().Should().Be(0L);
+        o.GetOrDefault<long?>().Should().Be(null);
+        o.Set(1L);
+        o.Set((long?)2L);
+        o.Count.Should().Be(2);
+        o.GetOrDefault<long>().Should().Be(1L);
+        o.GetOrDefault<long?>().Should().Be(2L);
+        o.Set((long?)null);
+        o.Count.Should().Be(1);
+        o.GetOrDefault<long>().Should().Be(1L);
+        o.GetOrDefault<long?>().Should().Be(null);
+        o.Remove<long>();
+        o.Count.Should().Be(0);
+
         o.Set(3L);
+        o.Count.Should().Be(1);
+
         o.Clear();
         o.Count.Should().Be(0);
     }
