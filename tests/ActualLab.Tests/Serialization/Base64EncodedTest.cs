@@ -10,7 +10,7 @@ public class Base64EncodedTest(ITestOutputHelper @out) : TestBase(@out)
         b0.Data.Length.Should().Be(0);
         b0.Encode().Should().Be("");
 
-        var b0a = new Base64Encoded(Array.Empty<byte>());
+        var b0a = new Base64Encoded([]);
         b0a.Count.Should().Be(0);
         b0a.Data.Length.Should().Be(0);
         b0a.Encode().Should().Be("");

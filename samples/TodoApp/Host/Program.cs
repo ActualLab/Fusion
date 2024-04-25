@@ -166,7 +166,7 @@ void ConfigureServices()
         }
     });
     fusionServer.ConfigureServerAuthHelper(_ => new() {
-        NameClaimKeys = Array.Empty<string>(),
+        NameClaimKeys = [],
     });
     fusion.AddSandboxedKeyValueStore<AppDbContext>();
     fusion.AddOperationReprocessor();

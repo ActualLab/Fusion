@@ -87,12 +87,11 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo == null)
                 return null!;
+
             _ = GetSessionInfo(session, default); // Must go first!
             var invIsNew = context.Operation.Items.GetOrDefault<bool>();
-            if (invIsNew) {
+            if (invIsNew)
                 _ = GetAuthInfo(session, default);
-                _ = GetOptions(session, default);
-            }
             if (invSessionInfo.IsAuthenticated())
                 _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             return null!;
@@ -123,7 +122,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
     // [CommandHandler] inherited
     public override async Task SetOptions(
-        Auth_SetSessionOptions command, CancellationToken cancellationToken = default)
+        AuthBackend_SetSessionOptions command, CancellationToken cancellationToken = default)
     {
         var (session, options, expectedVersion) = command;
         session.RequireValid();
@@ -131,7 +130,6 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var shard = ShardResolver.Resolve<TDbContext>(command);
         if (Computed.IsInvalidating()) {
             _ = GetSessionInfo(session, default); // Must go first!
-            _ = GetOptions(session, default);
             return;
         }
 

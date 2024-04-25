@@ -17,7 +17,7 @@ public readonly partial struct Base64Encoded(byte[] data)
     private readonly byte[]? _data = data;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    public byte[] Data => _data ?? Array.Empty<byte>();
+    public byte[] Data => _data ?? [];
 
     [MemoryPackIgnore]
     public int Count => Data.Length;
@@ -38,7 +38,7 @@ public readonly partial struct Base64Encoded(byte[] data)
     public string? Encode()
         => Convert.ToBase64String(Data);
     public static Base64Encoded Decode(string? encodedData)
-        => encodedData.IsNullOrEmpty() ? Array.Empty<byte>() : Convert.FromBase64String(encodedData);
+        => encodedData.IsNullOrEmpty() ? [] : Convert.FromBase64String(encodedData);
 
     // Operators
     public static implicit operator Base64Encoded(byte[] data) => new(data);

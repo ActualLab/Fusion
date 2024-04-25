@@ -10,7 +10,7 @@ public partial record Screenshot
     [DataMember, MemoryPackOrder(0)] public int Width { get; init; }
     [DataMember, MemoryPackOrder(1)] public int Height { get; init; }
     [DataMember, MemoryPackOrder(2)] public Moment CapturedAt { get; init; }
-    [DataMember, MemoryPackOrder(3)] public byte[] Image { get; init; } = Array.Empty<byte>();
+    [DataMember, MemoryPackOrder(3)] public byte[] Image { get; init; } = [];
 }
 
 public interface IScreenshotService : IComputeService

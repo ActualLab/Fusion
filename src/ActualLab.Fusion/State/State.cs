@@ -197,7 +197,7 @@ public abstract class State<T> : ComputedInput,
             UntypedInvalidated?.Invoke(this, StateEventKind.Invalidated);
         }
         catch (Exception e) {
-            Log.LogError(e, "Invalidated / UntypedInvalidated handler failed");
+            Log.LogError(e, "Invalidated / UntypedInvalidated handler failed for {Category}", Category);
         }
     }
 
@@ -213,7 +213,7 @@ public abstract class State<T> : ComputedInput,
             UntypedUpdating?.Invoke(this, StateEventKind.Updating);
         }
         catch (Exception e) {
-            Log.LogError(e, "Updating / UntypedUpdating handler failed");
+            Log.LogError(e, "Updating / UntypedUpdating handler failed for {Category}", Category);
         }
     }
 
@@ -229,7 +229,7 @@ public abstract class State<T> : ComputedInput,
             UntypedUpdated?.Invoke(this, StateEventKind.Updated);
         }
         catch (Exception e) {
-            Log.LogError(e, "Updated / UntypedUpdated handler failed");
+            Log.LogError(e, "Updated / UntypedUpdated handler failed for {Category}", Category);
         }
     }
 

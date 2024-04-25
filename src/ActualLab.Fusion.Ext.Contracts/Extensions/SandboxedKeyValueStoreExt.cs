@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Fusion.Authentication;
 
 namespace ActualLab.Fusion.Extensions;
 

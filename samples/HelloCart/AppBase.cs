@@ -11,8 +11,8 @@ public abstract class AppBase
     public IServiceProvider ClientServices { get; protected set; } = null!;
     public virtual IServiceProvider WatchedServices => ClientServices;
 
-    public Product[] ExistingProducts { get; set; } = Array.Empty<Product>();
-    public Cart[] ExistingCarts { get; set; } = Array.Empty<Cart>();
+    public Product[] ExistingProducts { get; set; } = [];
+    public Cart[] ExistingCarts { get; set; } = [];
     public bool MustRecreateDb { get; set; } = true;
     public int ExtraProductCount { get; set; } = 5;
 

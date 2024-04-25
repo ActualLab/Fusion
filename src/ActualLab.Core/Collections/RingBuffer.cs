@@ -62,7 +62,7 @@ public struct RingBuffer<T> : IReadOnlyList<T>
     public readonly T[] ToArray()
     {
         if (Count == 0)
-            return Array.Empty<T>();
+            return [];
 
         var result = new T[Count];
         var resultSpan = result.AsSpan();

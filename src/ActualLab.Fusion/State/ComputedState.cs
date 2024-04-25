@@ -98,18 +98,7 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>
         var cancellationToken = DisposeToken;
         try {
             await Computed.Update(cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception e) {
-            if (e.IsCancellationOf(cancellationToken)) {
-                Computed.Invalidate();
-                return;
-            }
-
-            Log.LogError(e, "Failure inside UpdateCycle()");
-        }
-
-        while (!cancellationToken.IsCancellationRequested) {
-            try {
+            while (true) {
                 var snapshot = Snapshot;
                 var computed = snapshot.Computed;
                 if (!computed.IsInvalidated())
@@ -118,14 +107,14 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>
                 if (!snapshot.WhenUpdated().IsCompleted)
                     await computed.Update(cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception e) {
-                if (e.IsCancellationOf(cancellationToken))
-                    break;
-
-                Log.LogError(e, "Failure inside UpdateCycle()");
-            }
         }
-        Computed.Invalidate();
+        catch (Exception e) {
+            if (!e.IsCancellationOf(cancellationToken))
+                Log.LogError(e, "UpdateCycle() failed and stopped for {Category}", Category);
+        }
+        finally {
+            Computed.Invalidate();
+        }
     }
 
     public override IComputed? GetExistingComputed()

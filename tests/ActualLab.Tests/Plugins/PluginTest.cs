@@ -108,8 +108,8 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
         testPlugin1Caps.Items.Count.Should().Be(0);
         var testPlugin2Caps = plugins.InfoByType[typeof(TestPlugin2)].Capabilities;
         testPlugin2Caps.Items.Count.Should().Be(2);
-        testPlugin2Caps.Items.GetValueOrDefault("Client").Should().Be(true);
-        testPlugin2Caps.Items.GetValueOrDefault("Server").Should().Be(false);
+        testPlugin2Caps.GetOrDefault<bool>("Client").Should().Be(true);
+        testPlugin2Caps.GetOrDefault<bool>("Server").Should().Be(false);
 
         // Dependencies extraction
         var testPlugin1Deps = plugins.InfoByType[typeof(TestPlugin1)].Dependencies;

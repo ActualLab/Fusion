@@ -17,8 +17,8 @@ public abstract partial record ArgumentList
     public static ArgumentList New()
         => Empty;
 
-    public virtual object?[] ToArray() => Array.Empty<object?>();
-    public virtual object?[] ToArray(int skipIndex) => Array.Empty<object?>();
+    public virtual object?[] ToArray() => [];
+    public virtual object?[] ToArray(int skipIndex) => [];
 
     public virtual Type?[]? GetNonDefaultItemTypes()
         => null;

@@ -8,12 +8,12 @@ public class Operation(
     Symbol hostId,
     Moment loggedAt = default,
     ICommand? command = null,
-    OptionSet? items = null,
-    List<NestedOperation>? nestedOperations = null,
+    MutablePropertyBag? items = null,
+    ImmutableList<NestedOperation>? nestedOperations = null,
     IOperationScope? scope = null
     ) : IHasUuid, IHasId<Symbol>
 {
-    private List<OperationEvent>? _events;
+    private readonly object _lock = new();
     Symbol IHasId<Symbol>.Id => Uuid;
 
     public long? Index { get; set; }
@@ -21,12 +21,12 @@ public class Operation(
     public Symbol HostId { get; set; } = hostId;
     public Moment LoggedAt { get; set; } = loggedAt;
     public ICommand Command { get; set; } = command!;
-    public OptionSet Items { get; set; } = items ?? new();
-    public List<NestedOperation> NestedOperations { get; set; } = nestedOperations ?? new();
+    public MutablePropertyBag Items { get; set; } = items ?? new();
+    public ImmutableList<NestedOperation> NestedOperations { get; set; }
+        = nestedOperations ?? ImmutableList<NestedOperation>.Empty;
     public IOperationScope? Scope { get; set; } = scope;
-
-    public IReadOnlyList<OperationEvent> Events
-        => (IReadOnlyList<OperationEvent>?)_events ?? Array.Empty<OperationEvent>();
+    public ImmutableList<OperationEvent> Events { get; private set; }
+        = ImmutableList<OperationEvent>.Empty;
 
     public static Operation New(IOperationScope scope, Symbol uuid = default)
     {
@@ -55,18 +55,20 @@ public class Operation(
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
-        var commanderHub = Scope.CommandContext.Commander.Hub;
-        if (uuid.IsEmpty)
-            uuid = commanderHub.UuidGenerator.Next();
-        var loggedAt = commanderHub.Clocks.SystemClock.Now;
-        if (delayUntil == default)
-            delayUntil = value is IHasDelayUntil hasDelayUntil ? hasDelayUntil.DelayUntil : loggedAt;
-        if (delayUntil < loggedAt)
-            delayUntil = loggedAt;
+        lock (_lock) {
+            var commanderHub = Scope.CommandContext.Commander.Hub;
+            if (uuid.IsEmpty)
+                uuid = commanderHub.UuidGenerator.Next();
+            var loggedAt = commanderHub.Clocks.SystemClock.Now;
+            if (delayUntil == default)
+                delayUntil = value is IHasDelayUntil hasDelayUntil ? hasDelayUntil.DelayUntil : loggedAt;
+            if (delayUntil < loggedAt)
+                delayUntil = loggedAt;
 
-        var result = new OperationEvent(uuid, loggedAt, delayUntil, value);
-        (_events ??= new()).Add(result);
-        return result;
+            var result = new OperationEvent(uuid, loggedAt, delayUntil, value);
+            Events = Events.Add(result);
+            return result;
+        }
     }
 
     public OperationEvent AddEvent(object value, TimeSpan delay, Symbol uuid = default)
@@ -76,15 +78,17 @@ public class Operation(
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
-        var commanderHub = Scope.CommandContext.Commander.Hub;
-        if (uuid.IsEmpty)
-            uuid = commanderHub.UuidGenerator.Next();
-        var loggedAt = commanderHub.Clocks.SystemClock.Now;
-        var delayUntil = loggedAt + delay.Positive();
+        lock (_lock) {
+            var commanderHub = Scope.CommandContext.Commander.Hub;
+            if (uuid.IsEmpty)
+                uuid = commanderHub.UuidGenerator.Next();
+            var loggedAt = commanderHub.Clocks.SystemClock.Now;
+            var delayUntil = loggedAt + delay.Positive();
 
-        var result = new OperationEvent(uuid, loggedAt, delayUntil, value);
-        (_events ??= new()).Add(result);
-        return result;
+            var result = new OperationEvent(uuid, loggedAt, delayUntil, value);
+            Events = Events.Add(result);
+            return result;
+        }
     }
 
     public bool RemoveEvent(OperationEvent operationEvent)
@@ -96,7 +100,11 @@ public class Operation(
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
-        return _events?.RemoveAll(x => x.Uuid == uuid) > 0;
+        lock (_lock) {
+            var oldEvents = Events;
+            Events = oldEvents.RemoveAll(x => x.Uuid == uuid);
+            return Events != oldEvents;
+        }
     }
 
     public void ClearEvents()
@@ -106,13 +114,14 @@ public class Operation(
         if (Scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
-        _events = null;
+        lock (_lock)
+            Events = ImmutableList<OperationEvent>.Empty;
     }
 
-    public ClosedDisposable<(Operation, List<NestedOperation>)> SuppressNestedOperationLogging()
+    public ClosedDisposable<(Operation, ImmutableList<NestedOperation>)> SuppressNestedOperationLogging()
     {
         var nestedCommands = NestedOperations;
-        NestedOperations = new();
+        NestedOperations = ImmutableList<NestedOperation>.Empty;
         return Disposable.NewClosed(
             (Operation: this, OldNestedCommands: nestedCommands),
             state => state.Operation.NestedOperations = state.OldNestedCommands);

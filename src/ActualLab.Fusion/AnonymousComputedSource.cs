@@ -194,7 +194,7 @@ public class AnonymousComputedSource<T> : ComputedInput,
             Invalidated?.Invoke(computed);
         }
         catch (Exception e) {
-            Log.LogError(e, "Invalidated handler failed");
+            Log.LogError(e, "Invalidated handler failed for {Category}", Category);
         }
     }
 

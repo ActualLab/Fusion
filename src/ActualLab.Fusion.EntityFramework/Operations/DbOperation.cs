@@ -39,8 +39,8 @@ public sealed class DbOperation : IDbIndexedLogEntry
     }
 
     public string CommandJson { get; set; } = "";
-    public string ItemsJson { get; set; } = "";
-    public string NestedOperations { get; set; } = "";
+    public string? ItemsJson { get; set; }
+    public string? NestedOperations { get; set; }
 
     public DbOperation() { }
     public DbOperation(Operation operation)
@@ -52,18 +52,18 @@ public sealed class DbOperation : IDbIndexedLogEntry
             ? null
             : Serializer.Read<ICommand>(CommandJson);
         var items = ItemsJson.IsNullOrEmpty()
-            ? new()
-            : Serializer.Read<OptionSet>(ItemsJson);
-        var nestedCommands = NestedOperations.IsNullOrEmpty()
-            ? new()
-            : Serializer.Read<List<NestedOperation>>(NestedOperations);
+            ? default
+            : Serializer.Read<PropertyBag>(ItemsJson);
+        var nestedOperations = NestedOperations.IsNullOrEmpty()
+            ? ImmutableList<NestedOperation>.Empty
+            : Serializer.Read<ImmutableList<NestedOperation>>(NestedOperations);
         return new Operation(
             Uuid,
             HostId,
             LoggedAt,
             command!,
-            items,
-            nestedCommands) {
+            items.ToMutable(),
+            nestedOperations) {
             Index = HasIndex ? Index : null,
         };
     }
@@ -76,8 +76,8 @@ public sealed class DbOperation : IDbIndexedLogEntry
         HostId = operation.HostId;
         LoggedAt = operation.LoggedAt;
         CommandJson = Serializer.Write(operation.Command);
-        ItemsJson = operation.Items.Items.Count == 0 ? "" : Serializer.Write(operation.Items);
-        NestedOperations = operation.NestedOperations.Count == 0 ? "" : Serializer.Write(operation.NestedOperations);
+        ItemsJson = operation.Items.Items.Count == 0 ? null : Serializer.Write(operation.Items.Snapshot);
+        NestedOperations = operation.NestedOperations.Count == 0 ? null : Serializer.Write(operation.NestedOperations);
         return this;
     }
 }

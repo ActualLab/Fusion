@@ -8,7 +8,7 @@ namespace ActualLab.Collections;
 #endif
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[Obsolete("Use MutablePropertySet instead.")]
+// [Obsolete("Use MutablePropertyBag instead.")]
 public sealed partial class OptionSet
 {
     private volatile ImmutableDictionary<Symbol, object> _items;

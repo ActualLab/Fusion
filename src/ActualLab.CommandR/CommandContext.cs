@@ -10,7 +10,7 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
 
     protected static readonly AsyncLocal<CommandContext?> CurrentLocal = new();
 
-    private readonly OptionSet _items = null!;
+    private readonly MutablePropertyBag _items = null!;
     private Operation? _operation;
 
 #pragma warning disable CA1721
@@ -31,7 +31,8 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
     public bool IsOutermost => ReferenceEquals(OutermostContext, this);
     public CommandExecutionState ExecutionState { get; set; }
     public IServiceProvider Services => ServiceScope.ServiceProvider;
-    public OptionSet Items {
+
+    public MutablePropertyBag Items {
         get => OutermostContext._items;
         protected init => _items = value;
     }
@@ -164,7 +165,7 @@ public sealed class CommandContext<TResult> : CommandContext
             OuterContext = null;
             OutermostContext = this;
             ServiceScope = Commander.Services.CreateScope();
-            Items = new OptionSet();
+            Items = new MutablePropertyBag();
         }
         else {
             OuterContext = outerContext;

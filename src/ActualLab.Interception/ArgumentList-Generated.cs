@@ -126,11 +126,11 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
     }
 
     public override object?[] ToArray()
-        => new object?[] { Item0 };
+        => [Item0];
 
     public override object?[] ToArray(int skipIndex)
         => skipIndex == 0
-            ? Array.Empty<object?>()
+            ? []
             : throw new ArgumentOutOfRangeException(nameof(skipIndex));
 
     // GetNonDefaultItemTypes
@@ -5025,4 +5025,3 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
         }
     }
 }
-

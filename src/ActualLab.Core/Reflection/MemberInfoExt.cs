@@ -10,21 +10,21 @@ public static class MemberInfoExt
 
     public static Func<TType, TValue> GetGetter<TType, TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
-        => (Func<TType, TValue>) GetGetter(propertyOrField, typeof(TType), isValueUntyped);
-    public static Func<object, TValue> GetGetter<TValue>(
+        => (Func<TType, TValue>)GetGetter(propertyOrField, typeof(TType), isValueUntyped);
+    public static Func<object?, TValue> GetGetter<TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
-        => (Func<object, TValue>) GetGetter(propertyOrField, typeof(object), isValueUntyped);
-    public static Func<object, object> GetGetter(this MemberInfo propertyOrField)
-        => (Func<object, object>) GetGetter(propertyOrField, typeof(object), true);
+        => (Func<object?, TValue>)GetGetter(propertyOrField, typeof(object), isValueUntyped);
+    public static Func<object?, object?> GetGetter(this MemberInfo propertyOrField)
+        => (Func<object?, object?>)GetGetter(propertyOrField, typeof(object), true);
 
     public static Action<TType, TValue> GetSetter<TType, TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
-        => (Action<TType, TValue>) GetSetter(propertyOrField, typeof(TType), isValueUntyped);
-    public static Action<object, TValue> GetSetter<TValue>(
+        => (Action<TType, TValue>)GetSetter(propertyOrField, typeof(TType), isValueUntyped);
+    public static Action<object?, TValue> GetSetter<TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
-        => (Action<object, TValue>) GetSetter(propertyOrField, typeof(object), isValueUntyped);
-    public static Action<object, object> GetSetter(this MemberInfo propertyOrField)
-        => (Action<object, object>) GetSetter(propertyOrField, typeof(object), true);
+        => (Action<object?, TValue>)GetSetter(propertyOrField, typeof(object), isValueUntyped);
+    public static Action<object?, object?> GetSetter(this MemberInfo propertyOrField)
+        => (Action<object?, object?>)GetSetter(propertyOrField, typeof(object), true);
 
     public static Delegate GetGetter(this MemberInfo propertyOrField, Type sourceType, bool isValueUntyped = false)
     {

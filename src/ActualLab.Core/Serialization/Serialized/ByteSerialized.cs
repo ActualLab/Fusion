@@ -36,7 +36,7 @@ public partial class ByteSerialized<T>
     // ToString
 
     public override string ToString()
-        => $"{GetType().GetName()}(...)";
+        => $"{GetType().GetName()}({Value})";
 
     // Private & protected methods
 
@@ -45,7 +45,7 @@ public partial class ByteSerialized<T>
     {
         byte[] data;
         if (!typeof(T).IsValueType && ReferenceEquals(Value, null))
-            data = Array.Empty<byte>();
+            data = [];
         else {
             using var bufferWriter = GetSerializer().Write(Value);
             data = bufferWriter.WrittenSpan.ToArray();

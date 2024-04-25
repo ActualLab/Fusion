@@ -14,7 +14,7 @@ public class AuthCommandSerializationTest(ITestOutputHelper @out) : TestBase(@ou
         new Auth_SignOut(session, true).PassThroughAllSerializers().Session.Should().Be(session);
         new Auth_EditUser(session, "X").PassThroughAllSerializers().Session.Should().Be(session);
         new AuthBackend_SetupSession(session, "a", "b").PassThroughAllSerializers().Session.Should().Be(session);
-        var sso = new Auth_SetSessionOptions(session, ImmutableOptionSet.Empty.Set(true), 1);
+        var sso = new AuthBackend_SetSessionOptions(session, ImmutableOptionSet.Empty.Set(true), 1);
         sso.Options.GetOrDefault<bool>().Should().BeTrue();
         sso.ExpectedVersion.Should().Be(1);
     }

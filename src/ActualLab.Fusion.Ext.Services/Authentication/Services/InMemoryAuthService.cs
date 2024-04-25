@@ -34,10 +34,8 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
 
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
-            if (force) {
+            if (force)
                 _ = IsSignOutForced(session, default);
-                _ = GetOptions(session, default);
-            }
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo != null) {
                 _ = GetUser(shard, invSessionInfo.UserId, default);
@@ -128,23 +126,6 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
     // Compute methods
 
     // [ComputeMethod] inherited
-    public virtual async Task<bool> IsSignOutForced(Session session, CancellationToken cancellationToken = default)
-    {
-        var sessionInfo = await GetAuthInfo(session, cancellationToken).ConfigureAwait(false);
-        return sessionInfo?.IsSignOutForced ?? false;
-    }
-
-    // [ComputeMethod] inherited
-    public virtual Task<SessionAuthInfo?> GetAuthInfo(
-        Session session, CancellationToken cancellationToken = default)
-    {
-        session.RequireValid();
-        var shard = ShardResolver.Resolve<Unit>(session);
-        var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
-        return Task.FromResult(sessionInfo?.ToAuthInfo());
-    }
-
-    // [ComputeMethod] inherited
     public virtual Task<SessionInfo?> GetSessionInfo(
         Session session, CancellationToken cancellationToken = default)
     {
@@ -155,13 +136,21 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
     }
 
     // [ComputeMethod] inherited
-    public virtual Task<ImmutableOptionSet> GetOptions(
+    public virtual async Task<SessionAuthInfo?> GetAuthInfo(
         Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        var shard = ShardResolver.Resolve<Unit>(session);
-        var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
-        return Task.FromResult(sessionInfo?.Options ?? ImmutableOptionSet.Empty);
+        using var _ = Computed.SuspendDependencyCapture();
+        var sessionInfo = await GetSessionInfo(session, cancellationToken).ConfigureAwait(false);
+        return sessionInfo?.ToAuthInfo();
+    }
+
+    // [ComputeMethod] inherited
+    public virtual async Task<bool> IsSignOutForced(Session session, CancellationToken cancellationToken = default)
+    {
+        using var _ = Computed.SuspendDependencyCapture();
+        var sessionInfo = await GetAuthInfo(session, cancellationToken).ConfigureAwait(false);
+        return sessionInfo?.IsSignOutForced ?? false;
     }
 
     // [ComputeMethod] inherited

@@ -72,7 +72,7 @@ public readonly partial struct Tile<T>
     {
         var smallerLayer = Layer.Smaller;
         if (smallerLayer == null)
-            return Array.Empty<Tile<T>>();
+            return [];
 
         var a = Layer.Arithmetics;
         var tiles = new Tile<T>[Layer.TileSizeMultiplier];

@@ -16,7 +16,7 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
             var mGetConverter = self.GetType()
                 .GetMethod(nameof(GetConverter), BindingFlags.Instance | BindingFlags.NonPublic)!
                 .MakeGenericMethod(targetType1);
-            return (Converter) mGetConverter.Invoke(self, Array.Empty<object>())!;
+            return (Converter) mGetConverter.Invoke(self, [])!;
         }, this);
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]

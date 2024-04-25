@@ -17,7 +17,7 @@ public delegate bool RpcInboundCallFilter(RpcPeer peer, RpcMethodDef method);
 public delegate Task<RpcConnection> RpcClientConnectionFactory(
     RpcClientPeer peer, CancellationToken cancellationToken);
 public delegate Task<RpcConnection> RpcServerConnectionFactory(
-    RpcServerPeer peer, Channel<RpcMessage> channel, ImmutableOptionSet options, CancellationToken cancellationToken);
+    RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties, CancellationToken cancellationToken);
 public delegate bool RpcUnrecoverableErrorDetector(Exception error, CancellationToken cancellationToken);
 public delegate RpcMethodTracer? RpcMethodTracerFactory(RpcMethodDef method);
 public delegate RpcCallLogger RpcCallLoggerFactory(RpcPeer peer, RpcCallLoggerFilter filter, ILogger log, LogLevel logLevel);

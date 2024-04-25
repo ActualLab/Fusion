@@ -36,7 +36,7 @@ public partial class TextSerialized<T>
     // ToString
 
     public override string ToString()
-        => $"{GetType().GetName()}(...)";
+        => $"{GetType().GetName()}({Value})";
 
     // Private & protected methods
 

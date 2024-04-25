@@ -10,7 +10,7 @@ public interface IAuthBackend : IComputeService
     [CommandHandler]
     Task<SessionInfo> SetupSession(AuthBackend_SetupSession command, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task SetOptions(Auth_SetSessionOptions command, CancellationToken cancellationToken = default);
+    Task SetOptions(AuthBackend_SetSessionOptions command, CancellationToken cancellationToken = default);
 
     // Queries
     [ComputeMethod(MinCacheDuration = 10)]

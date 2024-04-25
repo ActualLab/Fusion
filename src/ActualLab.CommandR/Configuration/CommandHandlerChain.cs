@@ -2,12 +2,12 @@ namespace ActualLab.CommandR.Configuration;
 
 public readonly struct CommandHandlerChain : IEquatable<CommandHandlerChain>
 {
-    public static readonly CommandHandlerChain Empty = new(Array.Empty<CommandHandler>());
+    public static readonly CommandHandlerChain Empty = new([]);
 
     private readonly CommandHandler[]? _items;
     private readonly int _finalHandlerIndex;
 
-    public CommandHandler[] Items => _items ?? Array.Empty<CommandHandler>();
+    public CommandHandler[] Items => _items ?? [];
     public bool IsEmpty => _items == null || _items.Length == 0;
     public int Length => Items.Length;
     public int FinalHandlerIndex => _items == null ? -1 : _finalHandlerIndex;

@@ -31,7 +31,7 @@ public static partial class TaskExt
                     await buffer[i++].SilentAwait(false);
             }
             return buffer.Count == 0
-                ? Array.Empty<T>()
+                ? []
                 : await Task.WhenAll(buffer.ToArray()).ConfigureAwait(false);
         }
         finally {
@@ -74,7 +74,7 @@ public static partial class TaskExt
                     await buffer[i++].SilentAwait(false);
             }
             return buffer.Count == 0
-                ? Array.Empty<Result<T>>()
+                ? []
                 : await ToResults(buffer.ToArray()).ConfigureAwait(false);
         }
         finally {

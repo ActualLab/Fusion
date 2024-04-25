@@ -1,5 +1,6 @@
 namespace ActualLab.Collections.Internal;
 
+[StructLayout(LayoutKind.Auto)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
