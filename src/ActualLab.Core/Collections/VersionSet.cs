@@ -103,9 +103,9 @@ public sealed partial record VersionSet(
     public static VersionSet Parse(string? s, bool ignoreErrors = false)
         => TryParse(s, ignoreErrors, out var result) ? result : throw Errors.Format<VersionSet>(s);
 
-    public static bool TryParse(string? s, [NotNullWhen(true)] out VersionSet? result)
+    public static bool TryParse(string? s, [MaybeNullWhen(false)] out VersionSet result)
         => TryParse(s, false, out result);
-    public static bool TryParse(string? s, bool ignoreErrors, [NotNullWhen(true)] out VersionSet? result)
+    public static bool TryParse(string? s, bool ignoreErrors, [MaybeNullWhen(false)] out VersionSet result)
     {
         if (s.IsNullOrEmpty()) {
             result = new VersionSet();

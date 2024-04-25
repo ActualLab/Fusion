@@ -11,7 +11,7 @@ public class DbProductService(IServiceProvider services)
         if (string.IsNullOrEmpty(productId))
             throw new ArgumentOutOfRangeException(nameof(command));
 
-        if (Computed.IsInvalidating()) {
+        if (Computed.IsInvalidating) {
             _ = Get(productId, default);
             return;
         }

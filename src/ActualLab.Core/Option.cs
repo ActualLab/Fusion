@@ -100,6 +100,7 @@ public readonly partial struct Option<T> : IEquatable<Option<T>>, IOption
         value = ValueOrDefault!;
         return HasValue;
     }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsNone() => !HasValue;
 

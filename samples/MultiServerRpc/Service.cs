@@ -57,7 +57,7 @@ public class Chat : IChat
     public virtual Task Post(Chat_Post command, CancellationToken cancellationToken)
     {
         var chatId = command.ChatId;
-        if (Computed.IsInvalidating()) {
+        if (Computed.IsInvalidating) {
             _ = GetRecentMessages(chatId, default); // No need to invalidate GetWordCount
             return Task.CompletedTask;
         }

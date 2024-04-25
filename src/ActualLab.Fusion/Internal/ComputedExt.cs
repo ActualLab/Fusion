@@ -37,7 +37,7 @@ public static class ComputedExt
 
         // CallOptions.GetExisting | CallOptions.Capture can be intact from here
         if (mustGetExisting) {
-            context.Capture(existing);
+            context.TryCapture(existing);
             ((IComputedImpl)existing).RenewTimeouts(false);
             return true;
         }
@@ -72,7 +72,7 @@ public static class ComputedExt
         if (usedBy != null)
             ((IComputedImpl)usedBy).AddUsed(computed);
         computed.RenewTimeouts(!ReferenceEquals(computed, existing));
-        context.Capture(computed);
+        context.TryCapture(computed);
     }
 
     internal static T Strip<T>(this Computed<T>? computed, ComputeContext context)

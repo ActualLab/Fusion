@@ -63,7 +63,7 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<ITimeService>();
 
-        using (Computed.Invalidate()) {
+        using (ComputeContext.BeginInvalidation()) {
             var time = await service.GetTime();
             time.Should().Be(default);
             time = await service.GetTimeAsValueTask();

@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Collections.Slim;
 using ActualLab.Conversion;
+using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Resilience;
@@ -258,15 +259,21 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         if (!this.IsConsistent())
             return;
 
-        if (_output.Error is not { } error)
+        TimeSpan timeout;
+        if (_output.Error == null) {
+            timeout = _options.AutoInvalidationDelay;
+            if (timeout != TimeSpan.MaxValue)
+                this.Invalidate(timeout);
             return;
-
-        if (error is OperationCanceledException) {
-            this.Invalidate(Computed.CancellationInvalidationDelay);
         }
 
-        var hasTransientError = IsTransientError(error);
-        var timeout = hasTransientError
+        if (_output.Error is OperationCanceledException) {
+            // This error requires instant invalidation
+            Invalidate(true);
+            return;
+        }
+
+        timeout = IsTransientError(_output.Error)
             ? _options.TransientErrorInvalidationDelay
             : _options.AutoInvalidationDelay;
         if (timeout != TimeSpan.MaxValue)
@@ -282,7 +289,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         if (this.IsConsistent())
             return this;
 
-        using var scope = ComputeContext.Suppress();
+        using var scope = ComputeContext.BeginIsolation();
         return await Function
             .Invoke(Input, null, scope.Context, cancellationToken)
             .ConfigureAwait(false);
@@ -294,7 +301,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         => (await Use(cancellationToken).ConfigureAwait(false))!;
     public virtual async ValueTask<T> Use(CancellationToken cancellationToken = default)
     {
-        var usedBy = Computed.GetCurrent();
+        var usedBy = Computed.Current;
         var context = ComputeContext.Current;
         if ((context.CallOptions & CallOptions.GetExisting) != 0) // Both GetExisting & Invalidate
             throw Errors.InvalidContextCallOptions(context.CallOptions);

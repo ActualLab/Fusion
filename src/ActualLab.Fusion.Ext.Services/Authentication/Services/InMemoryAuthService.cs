@@ -28,7 +28,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<Unit>(command);
 
-        if (Computed.IsInvalidating()) {
+        if (Computed.IsInvalidating) {
             if (isKickCommand)
                 return;
 
@@ -82,7 +82,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<Unit>(command);
 
-        if (Computed.IsInvalidating()) {
+        if (Computed.IsInvalidating) {
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo != null)
                 _ = GetUser(shard, invSessionInfo.UserId, default);
@@ -140,7 +140,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        using var _ = Computed.SuspendDependencyCapture();
+        using var _ = ComputeContext.BeginIsolation();
         var sessionInfo = await GetSessionInfo(session, cancellationToken).ConfigureAwait(false);
         return sessionInfo?.ToAuthInfo();
     }
@@ -148,7 +148,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
     // [ComputeMethod] inherited
     public virtual async Task<bool> IsSignOutForced(Session session, CancellationToken cancellationToken = default)
     {
-        using var _ = Computed.SuspendDependencyCapture();
+        using var _ = ComputeContext.BeginIsolation();
         var sessionInfo = await GetAuthInfo(session, cancellationToken).ConfigureAwait(false);
         return sessionInfo?.IsSignOutForced ?? false;
     }

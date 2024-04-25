@@ -48,6 +48,7 @@ public class ClientComputeMethodFunction<T>(
         ClientComputed<T>? existing,
         CancellationToken cancellationToken)
     {
+        var tryIndex = 0;
         while (true) {
             try {
                 var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
@@ -76,11 +77,14 @@ public class ClientComputeMethodFunction<T>(
                     cacheEntry, call, synchronizedSource);
             }
             catch (OperationCanceledException e) when (!cancellationToken.IsCancellationRequested) {
-                var retryDelay = Computed.CancellationInvalidationDelay;
+                if (++tryIndex > Computed.StrangeCancellationReprocessingLimit)
+                    throw;
+
+                var delay = Computed.StrangeCancellationReprocessingDelays[tryIndex];
                 Log.LogWarning(e,
-                    "ComputeRpc was cancelled on the server side for {Category}, will retry in {Delay}",
-                    input.Category, retryDelay.ToShortString());
-                await Task.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
+                    "ComputeRpc #{TryIndex} was cancelled on the server side for {Category}, will retry in {Delay}",
+                    tryIndex, input.Category, delay.ToShortString());
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -151,11 +155,11 @@ public class ClientComputeMethodFunction<T>(
             // The call was cancelled on the server side - e.g. due to peer termination.
             // Retrying is the best we can do here; and since this call is already bound to `cachedComputed`,
             // we should invalidate the `call` rather than `cachedComputed`.
-            var retryDelay = Computed.CancellationInvalidationDelay;
+            var delay = Computed.StrangeCancellationReprocessingDelays[1];
             Log.LogWarning(e,
                 "ApplyRpcUpdate was cancelled on the server side for {Category}, will invalidate IComputed in {Delay}",
-                input.Category, retryDelay.ToShortString());
-            await Task.Delay(retryDelay).ConfigureAwait(false);
+                input.Category, delay.ToShortString());
+            await Task.Delay(delay).ConfigureAwait(false);
             call.SetInvalidated(true);
             return;
         }

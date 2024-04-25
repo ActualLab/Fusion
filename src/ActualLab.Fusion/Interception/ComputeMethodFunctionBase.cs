@@ -11,31 +11,47 @@ public abstract class ComputeMethodFunctionBase<T>(
         ComputedInput input, Computed<T>? existing,
         CancellationToken cancellationToken)
     {
-        var typedInput = (ComputeMethodInput) input;
-        var computed = CreateComputed(typedInput);
-        try {
-            using var _ = Computed.ChangeCurrent(computed);
-            var result = typedInput.InvokeOriginalFunction(cancellationToken);
-            if (typedInput.MethodDef.ReturnsValueTask) {
-                var output = await ((ValueTask<T>) result).ConfigureAwait(false);
-                computed.TrySetOutput(output);
+        var typedInput = (ComputeMethodInput)input;
+        var tryIndex = 0;
+        while (true) {
+            var computed = CreateComputed(typedInput);
+            try {
+                using var _ = ComputeContext.BeginCompute(computed);
+                var result = typedInput.InvokeOriginalFunction(cancellationToken);
+                if (typedInput.MethodDef.ReturnsValueTask) {
+                    var output = await ((ValueTask<T>) result).ConfigureAwait(false);
+                    computed.TrySetOutput(output);
+                }
+                else {
+                    var output = await ((Task<T>) result).ConfigureAwait(false);
+                    computed.TrySetOutput(output);
+                }
+                return computed;
             }
-            else {
-                var output = await ((Task<T>) result).ConfigureAwait(false);
-                computed.TrySetOutput(output);
-            }
-        }
-        catch (Exception e) {
-            // if (e is AggregateException ae)
-            //     e = ae.GetFirstInnerException();
-            if (cancellationToken.IsCancellationRequested) {
-                computed.Invalidate(true); // Instant invalidation
+            catch (Exception e) {
+                if (cancellationToken.IsCancellationRequested) {
+                    computed.Invalidate(true); // Instant invalidation on cancellation
+                    computed.TrySetOutput(Result.Error<T>(e));
+                    if (e is OperationCanceledException)
+                        throw;
+
+                    cancellationToken.ThrowIfCancellationRequested(); // Always throws here
+                }
+
+                if (e is not OperationCanceledException || ++tryIndex > Computed.StrangeCancellationReprocessingLimit) {
+                    computed.TrySetOutput(Result.Error<T>(e));
+                    return computed;
+                }
+
+                computed.Invalidate(true); // Instant invalidation on cancellation
                 computed.TrySetOutput(Result.Error<T>(e));
-                throw;
+                var delay = Computed.StrangeCancellationReprocessingDelays[tryIndex];
+                Log.LogWarning(e,
+                    "Compute #{TryIndex} for {Category} was cancelled internally, retry in {Delay}",
+                    tryIndex, typedInput.Category, delay.ToShortString());
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
-            computed.TrySetOutput(Result.Error<T>(e));
         }
-        return computed;
     }
 
     protected abstract Computed<T> CreateComputed(ComputeMethodInput input);

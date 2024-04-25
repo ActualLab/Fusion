@@ -1,88 +1,93 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
-public class ComputeContext
+public sealed class ComputeContext
 {
-    private static readonly ComputeContext[] ContextCache;
     private static readonly AsyncLocal<ComputeContext?> CurrentLocal = new();
     private volatile IComputed? _captured;
 
-    internal static readonly ComputeContext Invalidate;
-    public static readonly ComputeContext Default;
+    public static readonly ComputeContext None = new(default(CallOptions));
+    public static readonly ComputeContext Invalidating = new(CallOptions.Invalidate);
+
     public static ComputeContext Current {
-        get => CurrentLocal.Value ?? Default;
+        get => CurrentLocal.Value ?? None;
         internal set {
-            if (value == Default)
+            if (value == None)
                 value = null!;
             CurrentLocal.Value = value;
         }
     }
 
-    public CallOptions CallOptions { get; private set; }
+    public CallOptions CallOptions { get; }
+    public IComputed? Computed { get; }
+    public bool IsCapturing => (CallOptions & CallOptions.Capture) == CallOptions.Capture;
+    public bool IsInvalidating => (CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
 
-    internal static ComputeContext New(CallOptions options)
-    {
-        var canUseCache = (options & CallOptions.Capture) == 0;
-        var context = canUseCache
-            ? ContextCache[(int) options]
-            : new ComputeContext(options);
-        return context;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ComputeContextScope BeginCapture()
+        => new(new ComputeContext(CallOptions.Capture));
 
-    static ComputeContext()
-    {
-        var allCallOptions = CallOptions.GetExisting | CallOptions.Invalidate;
-        var cache = new ComputeContext[1 + (int) allCallOptions];
-        for (var i = 0; i <= (int) allCallOptions; i++) {
-            var action = (CallOptions) i;
-            cache[i] = new CachedComputeContext(action);
-        }
-        ContextCache = cache;
-        Default = New(default);
-        Invalidate = New(CallOptions.Invalidate);
-    }
+    public static ComputeContextScope BeginCaptureExisting()
+        => new(new ComputeContext(CallOptions.Capture | CallOptions.GetExisting));
 
-    protected ComputeContext(CallOptions callOptions)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ComputeContextScope BeginIsolation()
+        => new(None);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ComputeContextScope BeginInvalidation()
+        => new(Invalidating);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ComputeContextScope BeginCompute(IComputed computed)
+        => new(new(computed));
+
+    // Constructors
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ComputeContext(CallOptions callOptions)
         => CallOptions = callOptions;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ComputeContext(IComputed computed)
+        => Computed = computed;
+
+    // Conversion
 
     public override string ToString()
         => $"{GetType().GetName()}({CallOptions})";
 
-    public ComputeContextScope Activate() => new (this);
-    public static ComputeContextScope Suppress() => new(Default);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ComputeContextScope Activate()
+        => new(this);
+
+    // (Try)GetCaptured
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IComputed GetCaptured() => _captured ?? throw Errors.NoComputedCaptured();
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Computed<T> GetCaptured<T>() => (Computed<T>) GetCaptured();
+    public IComputed GetCaptured()
+        => _captured ?? throw Errors.NoComputedCaptured();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGetCaptured([MaybeNullWhen(false)] out IComputed computed)
-    {
-        computed = _captured;
-        return computed != null;
-    }
+    public Computed<T> GetCaptured<T>()
+        => (Computed<T>)(_captured ?? throw Errors.NoComputedCaptured());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGetCaptured<T>([MaybeNullWhen(false)] out Computed<T> computed)
-    {
-        computed = _captured as Computed<T>;
-        return computed != null;
-    }
+    public Option<IComputed> TryGetCaptured()
+        => _captured is { } result ? Option.Some(result) : default;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Option<Computed<T>> TryGetCaptured<T>()
+        => _captured is Computed<T> result ? Option.Some(result) : default;
 
     // Internal methods
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void Capture(IComputed computed)
+    internal void TryCapture(IComputed computed)
     {
         if ((CallOptions & CallOptions.Capture) == 0)
             return;
 
-        if (Interlocked.CompareExchange(ref _captured, computed, null) == null)
-            CallOptions &= ~CallOptions.Capture; // Reset CallOptions.Capture on actual capture
+        _captured = computed;
     }
 }
-
-internal sealed class CachedComputeContext(CallOptions callOptions) : ComputeContext(callOptions);

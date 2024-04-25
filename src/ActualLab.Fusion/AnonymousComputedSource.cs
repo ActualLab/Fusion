@@ -91,13 +91,13 @@ public class AnonymousComputedSource<T> : ComputedInput,
 
     public async ValueTask<Computed<T>> Update(CancellationToken cancellationToken = default)
     {
-        using var scope = ComputeContext.Suppress();
+        using var scope = ComputeContext.BeginIsolation();
         return await Invoke(null, scope.Context, cancellationToken).ConfigureAwait(false);
     }
 
     public virtual async ValueTask<T> Use(CancellationToken cancellationToken = default)
     {
-        var usedBy = ActualLab.Fusion.Computed.GetCurrent();
+        var usedBy = ActualLab.Fusion.Computed.Current;
         var context = ComputeContext.Current;
         if ((context.CallOptions & CallOptions.GetExisting) != 0) // Both GetExisting & Invalidate
             throw Errors.InvalidContextCallOptions(context.CallOptions);
@@ -175,21 +175,40 @@ public class AnonymousComputedSource<T> : ComputedInput,
 
     private async ValueTask<AnonymousComputed<T>> GetComputed(CancellationToken cancellationToken)
     {
-        var computed = new AnonymousComputed<T>(ComputedOptions, this);
-        Computed = computed;
-        using var _ = Fusion.Computed.ChangeCurrent(computed);
-        try {
-            var value = await Computer.Invoke(this, cancellationToken).ConfigureAwait(false);
-            computed.TrySetOutput(Result.New(value));
-        }
-        catch (Exception e) {
-            if (cancellationToken.IsCancellationRequested) {
-                computed.Invalidate(true); // Instant invalidation
-                computed.TrySetOutput(Result.Error<T>(e));
-                throw;
+        AnonymousComputed<T> computed;
+        var tryIndex = 0;
+        while (true) {
+            computed = new AnonymousComputed<T>(ComputedOptions, this);
+            using var _ = ComputeContext.BeginCompute(computed);
+            try {
+                var value = await Computer.Invoke(this, cancellationToken).ConfigureAwait(false);
+                computed.TrySetOutput(Result.New(value));
             }
-            computed.TrySetOutput(Result.Error<T>(e));
+            catch (Exception e) {
+                if (cancellationToken.IsCancellationRequested) {
+                    computed.Invalidate(true); // Instant invalidation on cancellation
+                    computed.TrySetOutput(Result.Error<T>(e));
+                    if (e is OperationCanceledException)
+                        throw;
+
+                    cancellationToken.ThrowIfCancellationRequested(); // Always throws here
+                }
+
+                if (e is not OperationCanceledException || ++tryIndex > Fusion.Computed.StrangeCancellationReprocessingLimit) {
+                    computed.TrySetOutput(Result.Error<T>(e));
+                    break;
+                }
+
+                computed.Invalidate(true); // Instant invalidation on cancellation
+                computed.TrySetOutput(Result.Error<T>(e));
+                var delay = Fusion.Computed.StrangeCancellationReprocessingDelays[tryIndex];
+                Log.LogWarning(e,
+                    "GetComputed #{TryIndex} for {Category} was cancelled internally, retry in {Delay}",
+                    tryIndex, Category, delay.ToShortString());
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
         }
+        Computed = computed;
         return computed;
     }
 

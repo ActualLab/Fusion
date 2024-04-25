@@ -11,8 +11,8 @@ public interface IReadOnlyPropertyBag
 
     bool Contains<T>();
     bool Contains(Symbol key);
-    bool TryGet<T>([NotNullWhen(true)] out T value);
-    bool TryGet<T>(Symbol key, [NotNullWhen(true)] out T value);
+    bool TryGet<T>([MaybeNullWhen(false)] out T value);
+    bool TryGet<T>(Symbol key, [MaybeNullWhen(false)] out T value);
     T? Get<T>() where T : class;
     T? Get<T>(Symbol key) where T : class;
     T GetOrDefault<T>();
@@ -97,10 +97,10 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
     // TryGet
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGet<T>([NotNullWhen(true)] out T value)
+    public bool TryGet<T>([MaybeNullWhen(false)] out T value)
         => TryGet(typeof(T), out value);
 
-    public bool TryGet<T>(Symbol key, [NotNullWhen(true)] out T value)
+    public bool TryGet<T>(Symbol key, [MaybeNullWhen(false)] out T value)
     {
         var objValue = this[key];
         if (objValue == null) {

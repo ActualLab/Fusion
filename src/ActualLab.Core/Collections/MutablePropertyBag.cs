@@ -97,11 +97,11 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
     // TryGet
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGet<T>([NotNullWhen(true)] out T value)
+    public bool TryGet<T>([MaybeNullWhen(false)] out T value)
         => _snapshot.TryGet(typeof(T), out value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGet<T>(Symbol key, [NotNullWhen(true)] out T value)
+    public bool TryGet<T>(Symbol key, [MaybeNullWhen(false)] out T value)
         => _snapshot.TryGet(key, out value);
 
     // Get

@@ -26,12 +26,13 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
 
     protected override async Task<TResult> InvokeTarget()
     {
-        var ccs = Fusion.Computed.BeginCapture();
+        var ccs = ComputeContext.BeginCapture();
         try {
             return await base.InvokeTarget().ConfigureAwait(false);
         }
         finally {
-            if (ccs.Context.TryGetCaptured<TResult>(out var computed)) {
+            var computedOpt = ccs.Context.TryGetCaptured<TResult>();
+            if (computedOpt.IsSome(out var computed)) {
                 lock (Lock)
                     Computed ??= computed;
             }

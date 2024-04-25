@@ -43,7 +43,7 @@ public class PostCompletionInvalidator(
         var command = operation.Command;
         var mayRequireInvalidation =
             MayRequireInvalidation(command)
-            && !Computed.IsInvalidating();
+            && !Computed.IsInvalidating;
         if (!mayRequireInvalidation) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
@@ -56,7 +56,7 @@ public class PostCompletionInvalidator(
         var operationItems = operation.Items;
         var oldOperation = context.TryGetOperation();
         context.ChangeOperation(operation);
-        var invalidateScope = Computed.Invalidate();
+        var invalidateScope = ComputeContext.BeginInvalidation();
         try {
             // If we care only about the eventual consistency, the invalidation order
             // doesn't matter:

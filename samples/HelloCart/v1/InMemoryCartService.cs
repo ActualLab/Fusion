@@ -13,7 +13,7 @@ public class InMemoryCartService : ICartService
         var (cartId, cart) = command;
         if (string.IsNullOrEmpty(cartId))
             throw new ArgumentOutOfRangeException(nameof(command));
-        if (Computed.IsInvalidating()) {
+        if (Computed.IsInvalidating) {
             _ = Get(cartId, default);
             return Task.CompletedTask;
         }

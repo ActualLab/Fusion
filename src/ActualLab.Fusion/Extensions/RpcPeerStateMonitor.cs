@@ -187,5 +187,5 @@ public class RpcPeerStateMonitor : WorkerBase
     }
 
     protected void InvalidateIn(TimeSpan delay)
-        => Computed.GetCurrent()!.Invalidate(delay + ExtraInvalidationDelay);
+        => Computed.GetCurrent().Invalidate(delay + ExtraInvalidationDelay);
 }
