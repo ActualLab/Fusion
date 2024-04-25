@@ -1,3 +1,5 @@
+using ActualLab.Fusion.EntityFramework;
+
 namespace ActualLab.Tests.Collections;
 
 public class MutablePropertyBagTest(ITestOutputHelper @out) : TestBase(@out)
@@ -10,24 +12,34 @@ public class MutablePropertyBagTest(ITestOutputHelper @out) : TestBase(@out)
         o.Count.Should().Be(0);
 
         o.Set("A");
-        o = o.AssertPassesThroughAllSerializers(o => {
-            o.Get<string>().Should().Be("A");
-            o.GetOrDefault("").Should().Be("A");
-            o.Count.Should().Be(1);
+        o = o.AssertPassesThroughAllSerializers(x => {
+            x.Get<string>().Should().Be("A");
+            x.GetOrDefault("").Should().Be("A");
+            x.Count.Should().Be(1);
         });
 
         o.Set("B");
-        o = o.AssertPassesThroughAllSerializers(o => {
-            o.Get<string>().Should().Be("B");
-            o.GetOrDefault("").Should().Be("B");
-            o.Count.Should().Be(1);
+        o = o.AssertPassesThroughAllSerializers(x => {
+            x.Get<string>().Should().Be("B");
+            x.GetOrDefault("").Should().Be("B");
+            x.Count.Should().Be(1);
+        });
+
+        var s = new DbShard("S");
+        o.Set(s);
+        o = o.AssertPassesThroughAllSerializers(x => {
+            x.Get<string>().Should().Be("B");
+            x.GetOrDefault("").Should().Be("B");
+            x.GetOrDefault<DbShard>().Should().Be(s);
+            x.Count.Should().Be(2);
         });
 
         o.Remove<string>();
-        o = o.AssertPassesThroughAllSerializers(o => {
-            o.Get<string>().Should().BeNull();
-            o.GetOrDefault("").Should().Be("");
-            o.Count.Should().Be(0);
+        o.Remove<DbShard>();
+        o = o.AssertPassesThroughAllSerializers(x => {
+            x.Get<string>().Should().BeNull();
+            x.GetOrDefault("").Should().Be("");
+            x.Count.Should().Be(0);
         });
 
         o.Set("C");
@@ -46,24 +58,24 @@ public class MutablePropertyBagTest(ITestOutputHelper @out) : TestBase(@out)
         // deserializes integers to this type.
 
         o.Set(1L);
-        o = o.AssertPassesThroughAllSerializers(o => {
-            o.GetOrDefault<long>().Should().Be(1L);
-            o.GetOrDefault(-1L).Should().Be(1L);
-            o.Count.Should().Be(1);
+        o = o.AssertPassesThroughAllSerializers(x => {
+            x.GetOrDefault<long>().Should().Be(1L);
+            x.GetOrDefault(-1L).Should().Be(1L);
+            x.Count.Should().Be(1);
         });
 
         o.Set(2L);
-        o = o.AssertPassesThroughAllSerializers(o => {
-            o.GetOrDefault<long>().Should().Be(2L);
-            o.GetOrDefault(-1L).Should().Be(2L);
-            o.Count.Should().Be(1);
+        o = o.AssertPassesThroughAllSerializers(x => {
+            x.GetOrDefault<long>().Should().Be(2L);
+            x.GetOrDefault(-1L).Should().Be(2L);
+            x.Count.Should().Be(1);
         });
 
         o.Remove<long>();
-        o = o.AssertPassesThroughAllSerializers(o => {
-            o.GetOrDefault<long>().Should().Be(0L);
-            o.GetOrDefault(-1L).Should().Be(-1L);
-            o.Count.Should().Be(0);
+        o = o.AssertPassesThroughAllSerializers(x => {
+            x.GetOrDefault<long>().Should().Be(0L);
+            x.GetOrDefault(-1L).Should().Be(-1L);
+            x.Count.Should().Be(0);
         });
 
         o.Set(3L);
