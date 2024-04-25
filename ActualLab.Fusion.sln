@@ -115,7 +115,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiniRpc", "samples\MiniRpc\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultiServerRpc", "samples\MultiServerRpc\MultiServerRpc.csproj", "{DDD38FE8-3105-44E6-9128-921B0713FF64}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Flow", "src\ActualLab.Flow\ActualLab.Flow.csproj", "{99A4BB54-C2A0-4391-9C95-76D062301F55}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Flows", "src\ActualLab.Flows\ActualLab.Flows.csproj", "{99A4BB54-C2A0-4391-9C95-76D062301F55}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
