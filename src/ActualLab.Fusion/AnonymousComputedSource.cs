@@ -178,11 +178,12 @@ public class AnonymousComputedSource<T> : ComputedInput,
         AnonymousComputed<T> computed;
         var tryIndex = 0;
         while (true) {
-            computed = new AnonymousComputed<T>(ComputedOptions, this);
+            Computed = computed = new AnonymousComputed<T>(ComputedOptions, this);
             using var _ = ComputeContext.BeginCompute(computed);
             try {
                 var value = await Computer.Invoke(this, cancellationToken).ConfigureAwait(false);
                 computed.TrySetOutput(Result.New(value));
+                break;
             }
             catch (Exception e) {
                 if (cancellationToken.IsCancellationRequested) {
@@ -208,7 +209,6 @@ public class AnonymousComputedSource<T> : ComputedInput,
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
         }
-        Computed = computed;
         return computed;
     }
 

@@ -333,6 +333,7 @@ public abstract class State<T> : ComputedInput,
                 try {
                     var value = await Compute(cancellationToken).ConfigureAwait(false);
                     computed.TrySetOutput(Result.New(value));
+                    break;
                 }
                 catch (Exception e) {
                     if (cancellationToken.IsCancellationRequested) {
