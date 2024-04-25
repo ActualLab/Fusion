@@ -8,13 +8,16 @@ namespace ActualLab.Collections;
 #endif
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[Obsolete("Use MutablePropertySet instead.")]
 public sealed partial class OptionSet
 {
     private volatile ImmutableDictionary<Symbol, object> _items;
 
     [JsonIgnore, MemoryPackIgnore]
     public ImmutableDictionary<Symbol, object> Items {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set => _items = value;
     }
 
@@ -42,11 +45,6 @@ public sealed partial class OptionSet
         }
     }
 
-    public object? this[Type optionType] {
-        get => this[optionType.ToSymbol()];
-        set => this[optionType.ToSymbol()] = value;
-    }
-
     public OptionSet()
         => _items = ImmutableDictionary<Symbol, object>.Empty;
 
@@ -62,11 +60,13 @@ public sealed partial class OptionSet
     public override string ToString()
         => $"{nameof(OptionSet)}({OptionSetHelper.GetToStringArgs(Items)})";
 
-    public bool Contains(Type optionType)
-        => this[optionType] != null;
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains<T>()
         => this[typeof(T)] != null;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Contains(Symbol key)
+        => this[key] != null;
 
     public bool TryGet<T>(out T value)
     {
@@ -104,17 +104,6 @@ public sealed partial class OptionSet
     }
 
     public void Remove<T>() => this[typeof(T)] = null;
-
-    public bool Replace<T>(T expectedValue, T value)
-    {
-        var key = typeof(T).ToSymbol();
-        var currentValue = (T?) this[key];
-        if (!EqualityComparer<T>.Default.Equals(currentValue!, expectedValue))
-            return false;
-
-        this[key] = value;
-        return true;
-    }
 
     public void Clear()
     {

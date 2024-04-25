@@ -77,7 +77,7 @@ public static class SerializationTestExt
 
     public static T PassThroughSerialized<T>(this T value, ITestOutputHelper? output = null)
     {
-        var v = Serialized.New(value);
+        var v = UniSerialized.New(value);
         v = PassThroughSystemJsonSerializer(v, output);
         v = PassThroughNewtonsoftJsonSerializer(v, output);
         v = PassThroughMessagePackByteSerializer(v, output);
@@ -87,7 +87,7 @@ public static class SerializationTestExt
 
     public static T PassThroughTypeDecoratingSerialized<T>(this T value, ITestOutputHelper? output = null)
     {
-        var v = TypeDecoratingSerialized.New((object?)value);
+        var v = TypeDecoratingUniSerialized.New((object?)value);
         v = PassThroughSystemJsonSerializer(v, output);
         v = PassThroughNewtonsoftJsonSerializer(v, output);
         v = PassThroughMessagePackByteSerializer(v, output);

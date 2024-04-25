@@ -22,15 +22,13 @@ public static class TextSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class TextSerialized<T>
 {
-    private string? _data;
-
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public T Value { get; init; } = default!;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public string Data {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-        get => _data ??= Serialize();
+        get => Serialize();
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         init => Value = Deserialize(value);
     }
@@ -50,13 +48,9 @@ public partial class TextSerialized<T>
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private T Deserialize(string data)
-    {
-        var value = data.IsNullOrEmpty()
+        => data.IsNullOrEmpty()
             ? default!
             : GetSerializer().Read(data);
-        _data = data;
-        return value;
-    }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected virtual ITextSerializer<T> GetSerializer()

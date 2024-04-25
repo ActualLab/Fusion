@@ -29,7 +29,7 @@ public class SystemJsonSerializer : TextSerializerBase
     }
 
     public static TypeDecoratingTextSerializer DefaultTypeDecorating {
-        get => _defaultTypeDecorating ??= new(Default);
+        get => _defaultTypeDecorating ??= new TypeDecoratingTextSerializer(Default);
         set => _defaultTypeDecorating = value;
     }
 
