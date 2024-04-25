@@ -15,7 +15,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public readonly RpcOutboundContext Context = context;
     public readonly RpcPeer Peer = context.Peer!; // Calls
     public RpcMessage? Message;
-    public Task ResultTask { get; protected init; } = null!;
+    public abstract Task UntypedResultTask { get; }
     public TimeSpan ConnectTimeout;
     public TimeSpan Timeout;
 
@@ -64,7 +64,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         // coz it's possible that ResultTask is already completed
         // at this point (e.g. due to an error), and thus
         // cancellation handler isn't necessary.
-        if (!ResultTask.IsCompleted)
+        if (!UntypedResultTask.IsCompleted)
             RegisterCancellationHandler();
         return sendTask;
     }
@@ -180,7 +180,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
                 call.SetError(error, null);
             }
         }, this, useSynchronizationContext: false);
-        _ = ResultTask.ContinueWith(_ => {
+        _ = UntypedResultTask.ContinueWith(_ => {
                 ctr.Dispose();
                 linkedCts?.Dispose();
                 timeoutCts?.Dispose();
@@ -193,23 +193,15 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
 {
     protected readonly TaskCompletionSource<TResult> ResultSource;
 
+    public override Task UntypedResultTask => ResultSource.Task;
+    public Task<TResult> ResultTask => ResultSource.Task;
+
     public RpcOutboundCall(RpcOutboundContext context)
         : base(context)
     {
         ResultSource = NoWait
             ? (TaskCompletionSource<TResult>)(object)RpcNoWait.TaskSources.Completed
             : new TaskCompletionSource<TResult>();
-        ResultTask = ResultSource.Task;
-    }
-
-    public async ValueTask<Result<TResult>> GetResult(CancellationToken cancellationToken = default)
-    {
-        try {
-            return await ResultSource.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            return Result.Error<TResult>(e);
-        }
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]

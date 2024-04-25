@@ -3,47 +3,31 @@ namespace ActualLab.Async.Internal;
 // Based on https://github.com/dotnet/runtime/issues/22144#issuecomment-1328319861
 
 [StructLayout(LayoutKind.Auto)]
-public readonly struct ResultValueTaskAwaiter : ICriticalNotifyCompletion
+public readonly struct ResultValueTaskAwaiter(ValueTask task, bool captureContext = true)
+    : ICriticalNotifyCompletion
 {
-    private readonly ValueTask _task;
-    private readonly bool _captureContext;
-
-    public bool IsCompleted => _task.IsCompleted;
-
-    public ResultValueTaskAwaiter(ValueTask task, bool captureContext = true)
-    {
-        _task = task;
-        _captureContext = captureContext;
-    }
+    public bool IsCompleted => task.IsCompleted;
 
     public ResultValueTaskAwaiter GetAwaiter() => this;
-    public Result<Unit> GetResult() => _task.ToResultSynchronously();
+    public Result<Unit> GetResult() => task.ToResultSynchronously();
 
     public void OnCompleted(Action action)
-        => _task.ConfigureAwait(_captureContext).GetAwaiter().OnCompleted(action);
+        => task.ConfigureAwait(captureContext).GetAwaiter().OnCompleted(action);
     public void UnsafeOnCompleted(Action action)
-        => _task.ConfigureAwait(_captureContext).GetAwaiter().UnsafeOnCompleted(action);
+        => task.ConfigureAwait(captureContext).GetAwaiter().UnsafeOnCompleted(action);
 }
 
 [StructLayout(LayoutKind.Auto)]
-public readonly struct ResultValueTaskAwaiter<T> : ICriticalNotifyCompletion
+public readonly struct ResultValueTaskAwaiter<T>(ValueTask<T> task, bool captureContext = true)
+    : ICriticalNotifyCompletion
 {
-    private readonly ValueTask<T> _task;
-    private readonly bool _captureContext;
-
-    public bool IsCompleted => _task.IsCompleted;
-
-    public ResultValueTaskAwaiter(ValueTask<T> task, bool captureContext = true)
-    {
-        _task = task;
-        _captureContext = captureContext;
-    }
+    public bool IsCompleted => task.IsCompleted;
 
     public ResultValueTaskAwaiter<T> GetAwaiter() => this;
-    public Result<T> GetResult() => _task.ToResultSynchronously();
+    public Result<T> GetResult() => task.ToResultSynchronously();
 
     public void OnCompleted(Action action)
-        => _task.ConfigureAwait(_captureContext).GetAwaiter().OnCompleted(action);
+        => task.ConfigureAwait(captureContext).GetAwaiter().OnCompleted(action);
     public void UnsafeOnCompleted(Action action)
-        => _task.ConfigureAwait(_captureContext).GetAwaiter().UnsafeOnCompleted(action);
+        => task.ConfigureAwait(captureContext).GetAwaiter().UnsafeOnCompleted(action);
 }

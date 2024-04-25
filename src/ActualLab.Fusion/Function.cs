@@ -9,10 +9,6 @@ public interface IFunction : IHasServices
         IComputed? usedBy,
         ComputeContext? context,
         CancellationToken cancellationToken = default);
-    Task InvokeAndStrip(ComputedInput input,
-        IComputed? usedBy,
-        ComputeContext? context,
-        CancellationToken cancellationToken = default);
 }
 
 public interface IFunction<T> : IFunction
@@ -21,7 +17,7 @@ public interface IFunction<T> : IFunction
         IComputed? usedBy,
         ComputeContext? context,
         CancellationToken cancellationToken = default);
-    new Task<T> InvokeAndStrip(ComputedInput input,
+    Task<T> InvokeAndStrip(ComputedInput input,
         IComputed? usedBy,
         ComputeContext? context,
         CancellationToken cancellationToken = default);
@@ -69,12 +65,6 @@ public abstract class FunctionBase<T>(IServiceProvider services) : IFunction<T>
         computed.UseNew(context, usedBy);
         return computed;
     }
-
-    Task IFunction.InvokeAndStrip(ComputedInput input,
-        IComputed? usedBy,
-        ComputeContext? context,
-        CancellationToken cancellationToken)
-        => InvokeAndStrip(input, usedBy, context, cancellationToken);
 
     public virtual Task<T> InvokeAndStrip(ComputedInput input,
         IComputed? usedBy,

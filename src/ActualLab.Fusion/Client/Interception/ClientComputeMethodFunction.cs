@@ -7,7 +7,6 @@ using ActualLab.Fusion.Internal;
 using ActualLab.Interception;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
-using Errors = ActualLab.Internal.Errors;
 using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Fusion.Client.Interception;
@@ -43,30 +42,51 @@ public class ClientComputeMethodFunction<T>(
             : ComputeRpc(typedInput, cache, (ClientComputed<T>)existing!, cancellationToken).ToValueTask();
     }
 
-    private static async Task<Computed<T>> ComputeRpc(
+    private async Task<Computed<T>> ComputeRpc(
         ComputeMethodInput input,
         IClientComputedCache? cache,
         ClientComputed<T>? existing,
         CancellationToken cancellationToken)
     {
-        var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
-        var call = SendRpcCall(input, cacheInfoCapture, cancellationToken);
-        if (call == null) {
-            // TODO: Properly handle routing to local service
-            throw new RpcRerouteException();
-        }
+        while (true) {
+            try {
+                var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
+                var call = SendRpcCall(input, cacheInfoCapture, cancellationToken);
+                if (call == null) {
+                    // TODO: Properly handle routing to local service
+                    throw new RpcRerouteException();
+                }
 
-        var result = await call.GetResult(cancellationToken).ConfigureAwait(false);
-        var cacheEntry = await UpdateCache(cache!, cacheInfoCapture, result, cancellationToken).ConfigureAwait(false);
-        var synchronizedSource = existing?.SynchronizedSource ?? AlwaysSynchronized.Source;
-        return new ClientComputed<T>(
-            input.MethodDef.ComputedOptions,
-            input, result,
-            cacheEntry, call, synchronizedSource);
+                var result = await call.ResultTask.ResultAwait(false);
+                if (result.Error is OperationCanceledException e)
+                    throw e; // We treat server-side cancellations the same way as client-side cancellations
+
+                RpcCacheEntry? cacheEntry = null;
+                if (cacheInfoCapture != null && cacheInfoCapture.HasKeyAndData(out var key, out var dataSource)) {
+                    // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
+                    var dataResult = await dataSource.Task.ResultAwait(false);
+                    var data = dataResult.IsValue(out var vData) ? (TextOrBytes?)vData : null;
+                    cacheEntry = UpdateCache(cache!, key, data);
+                }
+
+                var synchronizedSource = existing?.SynchronizedSource ?? AlwaysSynchronized.Source;
+                return new ClientComputed<T>(
+                    input.MethodDef.ComputedOptions,
+                    input, result,
+                    cacheEntry, call, synchronizedSource);
+            }
+            catch (OperationCanceledException e) when (!cancellationToken.IsCancellationRequested) {
+                var retryDelay = Computed.InternalCancellationRetryDelay;
+                Log.LogWarning(e,
+                    "ComputeRpc was cancelled on the server side for {Category}, will retry in {Delay}",
+                    input.Category, retryDelay.ToShortString());
+                await Task.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
+            }
+        }
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    private static async ValueTask<Computed<T>> ComputeCachedOrRpc(
+    private async ValueTask<Computed<T>> ComputeCachedOrRpc(
         ComputeMethodInput input,
         IClientComputedCache cache,
         CancellationToken cancellationToken)
@@ -104,7 +124,7 @@ public class ClientComputeMethodFunction<T>(
         return cachedComputed;
     }
 
-    private static async Task ApplyRpcUpdate(
+    private async Task ApplyRpcUpdate(
         ComputeMethodInput input,
         IClientComputedCache cache,
         ClientComputed<T> cachedComputed)
@@ -126,10 +146,27 @@ public class ClientComputeMethodFunction<T>(
         }
 
         // 3. Await for its completion
-        var result = await call.GetResult().ConfigureAwait(false);
+        var result = await call.ResultTask.ResultAwait(false);
+        if (result.Error is OperationCanceledException e) {
+            // The call was cancelled on the server side - e.g. due to peer termination.
+            // Retrying is the best we can do here; and since this call is already bound to `cachedComputed`,
+            // we should invalidate the `call` rather than `cachedComputed`.
+            var retryDelay = Computed.InternalCancellationRetryDelay;
+            Log.LogWarning(e,
+                "ApplyRpcUpdate was cancelled on the server side for {Category}, will invalidate IComputed in {Delay}",
+                input.Category, retryDelay.ToShortString());
+            await Task.Delay(retryDelay).ConfigureAwait(false);
+            call.SetInvalidated(true);
+            return;
+        }
 
         // 4. Get cache key & data
-        var (key, data) = await cacheInfoCapture.GetKeyAndData(default).ConfigureAwait(false);
+        TextOrBytes? data = null;
+        if (cacheInfoCapture.HasKeyAndData(out var key, out var dataSource)) {
+            // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
+            var dataResult = await dataSource.Task.ResultAwait(false);
+            data = dataResult.IsValue(out var vData) ? (TextOrBytes?)vData : null;
+        }
 
         // 5. Re-entering the lock & check if cachedComputed is still consistent
         using var releaser = await InputLocks.Lock(input).ConfigureAwait(false);
@@ -259,23 +296,6 @@ public class ClientComputeMethodFunction<T>(
 
         cache.Set(key, data.GetValueOrDefault());
         return new RpcCacheEntry(key, data.GetValueOrDefault());
-    }
-
-    private static async ValueTask<RpcCacheEntry?> UpdateCache(
-        IClientComputedCache cache,
-        RpcCacheInfoCapture? cacheInfoCapture,
-        Result<T> result,
-        CancellationToken cancellationToken)
-    {
-        if (result.Error is { } error) {
-            // No need to await for dataSource.Task in this case
-            if (!error.IsCancellationOf(cancellationToken) && cacheInfoCapture?.Key is { } key1)
-                cache.Remove(key1); // Error -> wipe cache entry
-            return null;
-        }
-
-        var (key, data) = await cacheInfoCapture.GetKeyAndData(cancellationToken).ConfigureAwait(false);
-        return UpdateCache(cache, key, data);
     }
 
     private IClientComputedCache? GetCache(ComputeMethodInput input)

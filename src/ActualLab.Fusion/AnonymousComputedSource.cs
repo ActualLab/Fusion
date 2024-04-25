@@ -200,7 +200,8 @@ public class AnonymousComputedSource<T> : ComputedInput,
 
     // IFunction<T> & IFunction
 
-    ValueTask<Computed<T>> IFunction<T>.Invoke(ComputedInput input, IComputed? usedBy, ComputeContext? context,
+    ValueTask<Computed<T>> IFunction<T>.Invoke(
+        ComputedInput input, IComputed? usedBy, ComputeContext? context,
         CancellationToken cancellationToken)
     {
         if (!ReferenceEquals(input, this))
@@ -210,7 +211,8 @@ public class AnonymousComputedSource<T> : ComputedInput,
         return Invoke(usedBy, context, cancellationToken);
     }
 
-    async ValueTask<IComputed> IFunction.Invoke(ComputedInput input, IComputed? usedBy, ComputeContext? context,
+    async ValueTask<IComputed> IFunction.Invoke(
+        ComputedInput input, IComputed? usedBy, ComputeContext? context,
         CancellationToken cancellationToken)
     {
         if (!ReferenceEquals(input, this))
@@ -220,18 +222,8 @@ public class AnonymousComputedSource<T> : ComputedInput,
         return await Invoke(usedBy, context, cancellationToken).ConfigureAwait(false);
     }
 
-    async Task IFunction.InvokeAndStrip(
+    Task<T> IFunction<T>.InvokeAndStrip(
         ComputedInput input, IComputed? usedBy, ComputeContext? context,
-        CancellationToken cancellationToken)
-    {
-        if (!ReferenceEquals(input, this))
-            // This "Function" supports just a single input == this
-            throw new ArgumentOutOfRangeException(nameof(input));
-
-        await InvokeAndStrip(usedBy, context, cancellationToken).ConfigureAwait(false);
-    }
-
-    Task<T> IFunction<T>.InvokeAndStrip(ComputedInput input, IComputed? usedBy, ComputeContext? context,
         CancellationToken cancellationToken)
     {
         if (!ReferenceEquals(input, this))

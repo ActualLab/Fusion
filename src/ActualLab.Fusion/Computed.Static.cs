@@ -7,6 +7,7 @@ public static class Computed
     private static readonly AsyncLocal<IComputed?> CurrentLocal = new();
 
     public static TimeSpan PreciseInvalidationDelayThreshold { get; set; } = TimeSpan.FromSeconds(1);
+    public static TimeSpan InternalCancellationRetryDelay { get; set; } = TimeSpan.FromMilliseconds(50);
 
     // GetCurrent & ChangeCurrent
 

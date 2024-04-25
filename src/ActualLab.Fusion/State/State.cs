@@ -283,18 +283,8 @@ public abstract class State<T> : ComputedInput,
         return computed;
     }
 
-    async Task IFunction.InvokeAndStrip(
+    Task<T> IFunction<T>.InvokeAndStrip(
         ComputedInput input, IComputed? usedBy, ComputeContext? context,
-        CancellationToken cancellationToken)
-    {
-        if (!ReferenceEquals(input, this))
-            // This "Function" supports just a single input == this
-            throw new ArgumentOutOfRangeException(nameof(input));
-
-        await InvokeAndStrip(usedBy, context, cancellationToken).ConfigureAwait(false);
-    }
-
-    Task<T> IFunction<T>.InvokeAndStrip(ComputedInput input, IComputed? usedBy, ComputeContext? context,
         CancellationToken cancellationToken)
     {
         if (!ReferenceEquals(input, this))

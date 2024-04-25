@@ -242,7 +242,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
             // We should never throw errors during the invalidation
             try {
                 var log = Input.Function.Services.LogFor(GetType());
-                log.LogError(e, "Error on invalidation");
+                log.LogError(e, "Error while invalidating {Category}", Input.Category);
             }
             catch {
                 // Intended: Invalidate doesn't throw!
