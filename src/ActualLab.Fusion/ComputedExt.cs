@@ -104,9 +104,12 @@ public static partial class ComputedExt
     {
         if (computed.ConsistencyState == ConsistencyState.Invalidated)
             return Task.CompletedTask;
+
         var tcs = TaskCompletionSourceExt.New<Unit>();
-        if (cancellationToken != default)
+        if (cancellationToken.CanBeCanceled) {
+            cancellationToken.ThrowIfCancellationRequested();
             return new WhenInvalidatedClosure(tcs, computed, cancellationToken).Task;
+        }
 
         // No way to cancel / unregister the handler here
         computed.Invalidated += _ => tcs.TrySetResult(default);
@@ -120,8 +123,10 @@ public static partial class ComputedExt
             return Task.CompletedTask;
 
         var tcs = TaskCompletionSourceExt.New<Unit>();
-        if (cancellationToken != default)
+        if (cancellationToken.CanBeCanceled) {
+            cancellationToken.ThrowIfCancellationRequested();
             return new WhenInvalidatedClosure(tcs, computed, cancellationToken).Task;
+        }
 
         // No way to cancel / unregister the handler here
         computed.Invalidated += _ => tcs.TrySetResult(default);
