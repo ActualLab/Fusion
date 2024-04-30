@@ -40,12 +40,12 @@ public abstract class PerformanceTestBase : FusionTestBase
         plainUsers.UseEntityResolver = UseEntityResolver;
 
         var fusionOpCountPerCore = 16_000_000;
-        var fusionReadersPerCore = 32;
+        var fusionReadersPerCore = 20;
         var fusionIterationCount = fusionOpCountPerCore / fusionReadersPerCore;
         var fusionReaderCount = HardwareInfo.GetProcessorCountFactor(fusionReadersPerCore);
 
         var nonFusionOpCountPerCore = fusionOpCountPerCore / (UseEntityResolver ? 1000 : 2000);
-        var nonFusionReadersPerCore = 32; // We may need more readers here to maximize the throughput w/ parallel queries
+        var nonFusionReadersPerCore = 40; // We may need more readers here to maximize the throughput w/ parallel queries
         var nonFusionIterationCount = nonFusionOpCountPerCore / nonFusionReadersPerCore;
         var nonFusionReaderCount = HardwareInfo.GetProcessorCountFactor(nonFusionReadersPerCore);
 
