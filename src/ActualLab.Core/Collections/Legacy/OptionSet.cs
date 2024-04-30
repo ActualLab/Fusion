@@ -13,7 +13,7 @@ public sealed partial class OptionSet
 {
     private volatile ImmutableDictionary<Symbol, object> _items;
 
-    [JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, MemoryPackIgnore]
     public ImmutableDictionary<Symbol, object> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items;

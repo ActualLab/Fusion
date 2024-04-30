@@ -29,7 +29,7 @@ public readonly partial struct TypeDecoratingUniSerialized<T>
         init => Value = DeserializeText(value, SerializerKind.SystemJson);
     }
 
-    [JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, MemoryPackIgnore]
     public string NewtonsoftJson {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => SerializeText(Value, SerializerKind.NewtonsoftJson);
