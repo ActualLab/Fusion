@@ -159,18 +159,18 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
 
     public bool TrySetOutput(Result<T> output)
     {
-        bool mustInvalidate;
+        ComputedFlags flags;
         lock (Lock) {
             if (ConsistencyState != ConsistencyState.Computing)
                 return false;
 
             SetStateUnsafe(ConsistencyState.Consistent);
             _output = output;
-            mustInvalidate = (_flags & ComputedFlags.InvalidateOnSetOutput) != 0;
+            flags = _flags;
         }
 
-        if (mustInvalidate) {
-            Invalidate();
+        if ((flags & ComputedFlags.InvalidateOnSetOutput) != 0) {
+            Invalidate((flags & ComputedFlags.InvalidateOnSetOutputImmediately) != 0);
             return true;
         }
 
@@ -194,21 +194,21 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
             case ConsistencyState.Computing:
                 flags |= ComputedFlags.InvalidateOnSetOutput;
                 if (immediately)
-                    flags |= ComputedFlags.InvalidationDelayStarted;
+                    flags |= ComputedFlags.InvalidateOnSetOutputImmediately;
                 _flags = flags;
                 return;
-            }
+            default: // == ConsistencyState.Computed
+                immediately |= Options.InvalidationDelay <= TimeSpan.Zero;
+                if (immediately) {
+                    SetStateUnsafe(ConsistencyState.Invalidated);
+                    break;
+                }
 
-            // ConsistencyState == ConsistencyState.Computing from here
-
-            immediately |= Options.InvalidationDelay == default;
-            if (immediately)
-                SetStateUnsafe(ConsistencyState.Invalidated);
-            else {
-                if ((flags & ComputedFlags.InvalidationDelayStarted) != 0)
+                if ((flags & ComputedFlags.DelayedInvalidationStarted) != 0)
                     return; // Already started
 
-                _flags = flags | ComputedFlags.InvalidationDelayStarted;
+                _flags = flags | ComputedFlags.DelayedInvalidationStarted;
+                break;
             }
         }
 
@@ -259,20 +259,21 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
             return;
 
         TimeSpan timeout;
-        if (_output.Error == null) {
+        var error = _output.Error;
+        if (error == null) {
             timeout = _options.AutoInvalidationDelay;
             if (timeout != TimeSpan.MaxValue)
                 this.Invalidate(timeout);
             return;
         }
 
-        if (_output.Error is OperationCanceledException) {
+        if (error is OperationCanceledException) {
             // This error requires instant invalidation
             Invalidate(true);
             return;
         }
 
-        timeout = IsTransientError(_output.Error)
+        timeout = IsTransientError(error)
             ? _options.TransientErrorInvalidationDelay
             : _options.AutoInvalidationDelay;
         if (timeout != TimeSpan.MaxValue)
@@ -289,9 +290,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
             return this;
 
         using var scope = Computed.BeginIsolation();
-        return await Function
-            .Invoke(Input, null, scope.Context, cancellationToken)
-            .ConfigureAwait(false);
+        return await Function.Invoke(Input, scope.Context, cancellationToken).ConfigureAwait(false);
     }
 
     // Use
@@ -300,16 +299,21 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         => (await Use(cancellationToken).ConfigureAwait(false))!;
     public virtual async ValueTask<T> Use(CancellationToken cancellationToken = default)
     {
-        var usedBy = Computed.Current;
         var context = ComputeContext.Current;
         if ((context.CallOptions & CallOptions.GetExisting) != 0) // Both GetExisting & Invalidate
             throw Errors.InvalidContextCallOptions(context.CallOptions);
-        if (this.IsConsistent() && this.TryUseExistingFromLock(context, usedBy))
-            return Value;
 
-        var computed = await Function
-            .Invoke(Input, usedBy, context, cancellationToken)
-            .ConfigureAwait(false);
+        // Slightly faster version of this.TryUseExistingFromLock(context)
+        if (this.IsConsistent()) {
+            // It can become inconsistent here, but we don't care, since...
+            this.UseNew(context);
+            // it can also become inconsistent here & later, and UseNew handles this.
+            // So overall, Use(...) guarantees the dependency chain will be there even
+            // if computed is invalidated right after above "if".
+            return Value;
+        }
+
+        var computed = await Function.Invoke(Input, context, cancellationToken).ConfigureAwait(false);
         return computed.Value;
     }
 

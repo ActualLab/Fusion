@@ -20,11 +20,11 @@ public abstract class ComputeMethodFunctionBase<T>(
                 using var _ = Computed.BeginCompute(computed);
                 var result = typedInput.InvokeOriginalFunction(cancellationToken);
                 if (typedInput.MethodDef.ReturnsValueTask) {
-                    var output = await ((ValueTask<T>) result).ConfigureAwait(false);
+                    var output = await ((ValueTask<T>)result).ConfigureAwait(false);
                     computed.TrySetOutput(output);
                 }
                 else {
-                    var output = await ((Task<T>) result).ConfigureAwait(false);
+                    var output = await ((Task<T>)result).ConfigureAwait(false);
                     computed.TrySetOutput(output);
                 }
                 return computed;

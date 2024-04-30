@@ -82,6 +82,7 @@ public static class StateExt
         Func<T, bool> predicate,
         CancellationToken cancellationToken = default)
         => state.Computed.When(predicate, cancellationToken);
+
     public static Task<Computed<T>> When<T>(this IState<T> state,
         Func<T, bool> predicate,
         IUpdateDelayer updateDelayer,
@@ -92,6 +93,7 @@ public static class StateExt
         Func<T, Exception?, bool> predicate,
         CancellationToken cancellationToken = default)
         => state.Computed.When(predicate, cancellationToken);
+
     public static Task<Computed<T>> When<T>(this IState<T> state,
         Func<T, Exception?, bool> predicate,
         IUpdateDelayer updateDelayer,
@@ -104,6 +106,7 @@ public static class StateExt
         this IState<T> state,
         CancellationToken cancellationToken = default)
         => state.Computed.Changes(cancellationToken);
+
     public static IAsyncEnumerable<Computed<T>> Changes<T>(
         this IState<T> state,
         IUpdateDelayer updateDelayer,

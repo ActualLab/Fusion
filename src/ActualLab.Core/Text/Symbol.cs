@@ -22,14 +22,14 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
         get => _value ?? "";
     }
 
-    [MemoryPackIgnore]
+    [IgnoreDataMember, MemoryPackIgnore]
 #pragma warning disable CA1721
     public int HashCode {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _hashCode;
     }
 #pragma warning restore CA1721
-    [MemoryPackIgnore]
+    [IgnoreDataMember, MemoryPackIgnore]
     public bool IsEmpty {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Value.Length == 0;

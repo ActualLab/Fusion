@@ -20,7 +20,7 @@ public readonly partial record struct ImmutableOptionSet
 
     // Computed properties
 
-    [JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public ImmutableDictionary<Symbol, object> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items ?? EmptyItems;

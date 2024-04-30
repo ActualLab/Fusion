@@ -1,4 +1,5 @@
 using ActualLab.Fusion.Tests.Services;
+using ActualLab.Generators.Internal;
 using ActualLab.Rpc;
 using ActualLab.Testing.Collections;
 
@@ -27,6 +28,58 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
         // ReSharper disable once MethodSupportsCancellation
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async ()
             => await Computed.Capture(() => counters.Get("wait", cts.Token)));
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ConcurrentCancelTest(bool useClient)
+    {
+        var services = CreateServices();
+        var serverCounters = services.GetRequiredService<CounterService>();
+        var counters = useClient ? services.GetRequiredService<ICounterService>() : serverCounters;
+        var key = useClient ? "wait250" : "wait125";
+        var cancellationDelay = TimeSpan.FromMilliseconds(50);
+        var cancellationDelayThreshold = cancellationDelay + TimeSpan.FromMilliseconds(25);
+        var timeout = Debugger.IsAttached
+            ? TimeSpan.FromMinutes(10)
+            : TimeSpan.FromSeconds(10);
+
+        await counters.Get(key);
+        await counters.Increment(key);
+
+        await Enumerable.Range(0, 1000)
+            .Select(i => Task.Run(() => Test(i)))
+            .Collect(100);
+
+        async Task<Unit> Test(int index) {
+            var mustCancel = RandomShared.NextDouble() < 0.5;
+            await Task.Delay(TimeSpan.FromMilliseconds(RandomShared.NextDouble() * 30));
+            var callStartedAt = CpuTimestamp.Now;
+
+            if (!mustCancel) {
+                var c = await counters.Get(key).WaitAsync(timeout);
+                Out.WriteLine($"{index}: {c} in {callStartedAt.Elapsed.ToShortString()}");
+                for (var j = 0; j < 100; j++)
+                    await Task.Yield();
+                _ = serverCounters.Increment(key);
+                return default;
+            }
+
+            using var cts = new CancellationTokenSource(cancellationDelay);
+            try {
+                var c = await counters.Get(key, cts.Token).WaitAsync(timeout, CancellationToken.None);
+                var elapsed = callStartedAt.Elapsed;
+                if (cts.IsCancellationRequested && elapsed >= cancellationDelayThreshold)
+                    Assert.Fail("Should not be here.");
+                Out.WriteLine($"!!! {index}: {c} in {elapsed.ToShortString()}");
+            }
+            catch (OperationCanceledException) {
+                var elapsed = callStartedAt.Elapsed;
+                Out.WriteLine($"{index}: cancelled in {elapsed.ToShortString()}");
+            }
+            return default;
+        }
     }
 
     [Fact]
@@ -61,6 +114,5 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
                 c.Value.Should().Be(i);
             }
         }
-
     }
 }

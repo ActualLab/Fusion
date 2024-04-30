@@ -8,7 +8,7 @@ public partial record struct PropertyBagItem(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] Symbol Key,
     [property: DataMember(Order = 1), MemoryPackOrder(1)] TypeDecoratingUniSerialized<object> Serialized
 ) {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public object Value => Serialized.Value;
 
     // Constructor-like methods

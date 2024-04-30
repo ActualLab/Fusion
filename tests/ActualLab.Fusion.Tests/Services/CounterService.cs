@@ -28,8 +28,11 @@ public class CounterService(IMutableState<int> offset) : ICounterService
             if (RandomShared.NextDouble() * 100 < chance)
                 throw new OperationCanceledException();
         }
-        if (key.Contains("wait"))
-            await Task.Delay(500, cancellationToken).ConfigureAwait(false);
+        if (key.IndexOf("wait", StringComparison.Ordinal) is var waitIndex and >= 0) {
+            if (!int.TryParse(key[(waitIndex + 4)..], out var duration))
+                duration = 500;
+            await Task.Delay(duration, cancellationToken).ConfigureAwait(false);
+        }
         if (key.Contains("fail"))
             throw new ArgumentOutOfRangeException(nameof(key));
 

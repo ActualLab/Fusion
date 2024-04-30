@@ -2,18 +2,18 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
+#pragma warning disable CA1721
+
 public static class Computed
 {
     public static TimeSpan PreciseInvalidationDelayThreshold { get; set; } = TimeSpan.FromSeconds(1);
 
     // Current & GetCurrent
 
-#pragma warning disable CA1721
     public static IComputed? Current {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => ComputeContext.Current.Computed;
     }
-#pragma warning restore CA1721
 
     public static IComputed GetCurrent()
         => Current ?? throw Errors.CurrentComputedIsNull();

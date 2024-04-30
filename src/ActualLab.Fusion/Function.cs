@@ -3,23 +3,17 @@ using ActualLab.Locking;
 
 namespace ActualLab.Fusion;
 
-public interface IFunction : IHasServices
-{
-    ValueTask<IComputed> Invoke(ComputedInput input,
-        IComputed? usedBy,
-        ComputeContext? context,
-        CancellationToken cancellationToken = default);
-}
+public interface IFunction : IHasServices;
 
 public interface IFunction<T> : IFunction
 {
-    new ValueTask<Computed<T>> Invoke(ComputedInput input,
-        IComputed? usedBy,
-        ComputeContext? context,
+    ValueTask<Computed<T>> Invoke(
+        ComputedInput input,
+        ComputeContext context,
         CancellationToken cancellationToken = default);
-    Task<T> InvokeAndStrip(ComputedInput input,
-        IComputed? usedBy,
-        ComputeContext? context,
+    Task<T> InvokeAndStrip(
+        ComputedInput input,
+        ComputeContext context,
         CancellationToken cancellationToken = default);
 }
 
@@ -35,63 +29,53 @@ public abstract class FunctionBase<T>(IServiceProvider services) : IFunction<T>
 
     public IServiceProvider Services { get; } = services;
 
-    async ValueTask<IComputed> IFunction.Invoke(ComputedInput input,
-        IComputed? usedBy,
-        ComputeContext? context,
-        CancellationToken cancellationToken)
-        => await Invoke(input, usedBy, context, cancellationToken).ConfigureAwait(false);
-
-    public virtual async ValueTask<Computed<T>> Invoke(ComputedInput input,
-        IComputed? usedBy,
-        ComputeContext? context,
+    public virtual async ValueTask<Computed<T>> Invoke(
+        ComputedInput input,
+        ComputeContext context,
         CancellationToken cancellationToken = default)
     {
-        context ??= ComputeContext.Current;
-
-        // Read-Lock-RetryRead-Compute-Store pattern
-
+        // Double-check locking
         var computed = GetExisting(input);
-        if (computed.TryUseExisting(context, usedBy))
+        if (computed.TryUseExisting(context))
             return computed!;
 
         using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
 
         computed = GetExisting(input);
-        if (computed.TryUseExistingFromLock(context, usedBy))
+        if (computed.TryUseExistingFromLock(context))
             return computed!;
 
         releaser.MarkLockedLocally();
         computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context, usedBy);
+        computed.UseNew(context);
         return computed;
     }
 
-    public virtual Task<T> InvokeAndStrip(ComputedInput input,
-        IComputed? usedBy,
-        ComputeContext? context,
+    public virtual Task<T> InvokeAndStrip(
+        ComputedInput input,
+        ComputeContext context,
         CancellationToken cancellationToken = default)
     {
-        context ??= ComputeContext.Current;
         var computed = GetExisting(input);
-        return computed.TryUseExisting(context, usedBy)
+        return computed.TryUseExisting(context)
             ? computed.StripToTask(context)
-            : TryRecompute(input, usedBy, context, cancellationToken);
+            : TryRecompute(input, context, cancellationToken);
     }
 
-    protected async Task<T> TryRecompute(ComputedInput input,
-        IComputed? usedBy,
+    protected async Task<T> TryRecompute(
+        ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken = default)
     {
         using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
 
         var computed = GetExisting(input);
-        if (computed.TryUseExistingFromLock(context, usedBy))
+        if (computed.TryUseExistingFromLock(context))
             return computed.Strip(context);
 
         releaser.MarkLockedLocally();
         computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context, usedBy);
+        computed.UseNew(context);
         return computed.Value;
     }
 

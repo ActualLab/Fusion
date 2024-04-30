@@ -1,3 +1,5 @@
+using ActualLab.Fusion.Internal;
+
 namespace ActualLab.Fusion;
 
 public static class Invalidation

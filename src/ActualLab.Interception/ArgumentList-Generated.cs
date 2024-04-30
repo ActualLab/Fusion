@@ -88,7 +88,7 @@ public abstract record ArgumentList1 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[1];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 1;
 }
 
@@ -350,7 +350,7 @@ public abstract record ArgumentList2 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[2];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 2;
 }
 
@@ -665,7 +665,7 @@ public abstract record ArgumentList3 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[3];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 3;
 }
 
@@ -1032,7 +1032,7 @@ public abstract record ArgumentList4 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[4];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 4;
 }
 
@@ -1451,7 +1451,7 @@ public abstract record ArgumentList5 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[5];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 5;
 }
 
@@ -1922,7 +1922,7 @@ public abstract record ArgumentList6 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[6];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 6;
 }
 
@@ -2445,7 +2445,7 @@ public abstract record ArgumentList7 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[7];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 7;
 }
 
@@ -3020,7 +3020,7 @@ public abstract record ArgumentList8 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[8];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 8;
 }
 
@@ -3647,7 +3647,7 @@ public abstract record ArgumentList9 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[9];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 9;
 }
 
@@ -4326,7 +4326,7 @@ public abstract record ArgumentList10 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[10];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 10;
 }
 
@@ -5025,4 +5025,3 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
         }
     }
 }
-

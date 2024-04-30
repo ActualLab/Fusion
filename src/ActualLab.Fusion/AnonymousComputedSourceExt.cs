@@ -1,73 +1,57 @@
-using ActualLab.Fusion.Internal;
-
 namespace ActualLab.Fusion;
 
 public static class AnonymousComputedSourceExt
 {
+    // Computed-like methods
+
+    public static ValueTask<T> Use<T>(
+        this AnonymousComputedSource<T> source, CancellationToken cancellationToken = default)
+        => source.Computed.Use(cancellationToken);
+
+    public static void Invalidate(this IAnonymousComputedSource source, bool immediately = false)
+        => source.Computed.Invalidate(immediately);
+
+    public static async ValueTask<TAnonymousComputedSource> Update<TAnonymousComputedSource>(
+        this TAnonymousComputedSource source, CancellationToken cancellationToken = default)
+        where TAnonymousComputedSource : class, IAnonymousComputedSource
+    {
+        await source.Computed.Update(cancellationToken).ConfigureAwait(false);
+        return source;
+    }
+
     // When
 
     public static Task<Computed<T>> When<T>(this AnonymousComputedSource<T> source,
         Func<T, bool> predicate,
         CancellationToken cancellationToken = default)
-        => source.When(predicate, FixedDelayer.NextTick, cancellationToken);
-    public static async Task<Computed<T>> When<T>(this AnonymousComputedSource<T> source,
+        => source.Computed.When(predicate, cancellationToken);
+
+    public static Task<Computed<T>> When<T>(this AnonymousComputedSource<T> source,
         Func<T, bool> predicate,
         IUpdateDelayer updateDelayer,
         CancellationToken cancellationToken = default)
-    {
-        while (true) {
-            var computed = await source.Update(cancellationToken).ConfigureAwait(false);
-            if (predicate.Invoke(computed.Value))
-                return computed;
-
-            await computed.WhenInvalidated(cancellationToken).ConfigureAwait(false);
-            await updateDelayer.Delay(0, cancellationToken).ConfigureAwait(false);
-        }
-    }
+        => source.Computed.When(predicate, updateDelayer, cancellationToken);
 
     public static Task<Computed<T>> When<T>(this AnonymousComputedSource<T> source,
         Func<T, Exception?, bool> predicate,
         CancellationToken cancellationToken = default)
-        => source.When(predicate, FixedDelayer.NextTick, cancellationToken);
-    public static async Task<Computed<T>> When<T>(this AnonymousComputedSource<T> source,
+        => source.Computed.When(predicate, cancellationToken);
+
+    public static Task<Computed<T>> When<T>(this AnonymousComputedSource<T> source,
         Func<T, Exception?, bool> predicate,
         IUpdateDelayer updateDelayer,
         CancellationToken cancellationToken = default)
-    {
-        while (true) {
-            var computed = await source.Update(cancellationToken).ConfigureAwait(false);
-            var (value, error) = computed;
-            if (predicate.Invoke(value, error))
-                return computed;
-
-            await computed.WhenInvalidated(cancellationToken).ConfigureAwait(false);
-            await updateDelayer.Delay(0, cancellationToken).ConfigureAwait(false);
-        }
-    }
+        => source.Computed.When(predicate, updateDelayer, cancellationToken);
 
     // Changes
 
     public static IAsyncEnumerable<Computed<T>> Changes<T>(
         this AnonymousComputedSource<T> source,
         CancellationToken cancellationToken = default)
-        => source.Changes(FixedDelayer.NextTick, cancellationToken);
-    public static async IAsyncEnumerable<Computed<T>> Changes<T>(
+        => source.Computed.Changes(cancellationToken);
+    public static IAsyncEnumerable<Computed<T>> Changes<T>(
         this AnonymousComputedSource<T> source,
         IUpdateDelayer updateDelayer,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        var retryCount = 0;
-        while (true) {
-            var computed = await source.Update(cancellationToken).ConfigureAwait(false);
-            yield return computed;
-
-            await computed.WhenInvalidated(cancellationToken).ConfigureAwait(false);
-
-            var hasTransientError = computed.Error is { } error && computed.IsTransientError(error);
-            retryCount = hasTransientError ? retryCount + 1 : 0;
-
-            await updateDelayer.Delay(retryCount, cancellationToken).ConfigureAwait(false);
-        }
-        // ReSharper disable once IteratorNeverReturns
-    }
+        CancellationToken cancellationToken = default)
+        => source.Computed.Changes(updateDelayer, cancellationToken);
 }

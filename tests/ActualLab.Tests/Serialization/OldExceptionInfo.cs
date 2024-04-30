@@ -11,7 +11,7 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
     private static readonly Type[] ExceptionCtorArgumentTypes1 = [typeof(string), typeof(Exception)];
     private static readonly Type[] ExceptionCtorArgumentTypes2 = [typeof(string)];
 
-    public static readonly OldExceptionInfo None = default;
+    public static readonly OldExceptionInfo None;
     public static Func<OldExceptionInfo, Exception?> ToExceptionConverter { get; set; } = DefaultToExceptionConverter;
 
     private readonly string _message;
@@ -22,9 +22,9 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
     public string Message => _message ?? "";
     [DataMember(Order = 2), MemoryPackOrder(2)]
     public TypeRef WrappedTypeRef { get; }
-    [MemoryPackIgnore]
+    [IgnoreDataMember, MemoryPackIgnore]
     public bool IsNone => TypeRef.AssemblyQualifiedName.IsEmpty;
-    [MemoryPackIgnore]
+    [IgnoreDataMember, MemoryPackIgnore]
     public bool HasWrappedTypeRef => !WrappedTypeRef.AssemblyQualifiedName.IsEmpty;
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]

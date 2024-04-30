@@ -9,19 +9,20 @@ namespace ActualLab.Collections;
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record VersionSet(
-    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore] IReadOnlyDictionary<Symbol, Version> Items
+    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    IReadOnlyDictionary<Symbol, Version> Items
 ) {
     public static readonly Version ZeroVersion = new();
     public static readonly ListFormat ListFormat = ListFormat.CommaSeparated;
 
     private int _hashCode;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public int Count => Items.Count;
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public string Versions => Format();
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public int HashCode {
         get {
             if (_hashCode == 0) {

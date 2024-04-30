@@ -46,13 +46,13 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
 
     // Computed properties
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public int Count {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items?.Length ?? 0;
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public IReadOnlyList<PropertyBagItem> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items ?? [];

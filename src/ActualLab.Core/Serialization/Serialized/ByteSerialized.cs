@@ -22,7 +22,7 @@ public static class ByteSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class ByteSerialized<T>
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public T Value { get; init; } = default!;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]

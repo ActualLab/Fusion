@@ -46,20 +46,20 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
 
     // Computed properties
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public PropertyBag Snapshot {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _snapshot;
         set => Update(value, (bag, _) => bag);
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public int Count {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _snapshot.Count;
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public IReadOnlyList<PropertyBagItem> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _snapshot.Items;

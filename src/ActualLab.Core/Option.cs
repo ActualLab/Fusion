@@ -36,7 +36,7 @@ public readonly partial struct Option<T> : IEquatable<Option<T>>, IOption
     /// <summary>
     /// Retrieves option's value. Throws <see cref="InvalidOperationException"/> in case option doesn't have one.
     /// </summary>
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public T Value {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get { AssertHasValue(); return ValueOrDefault!; }
@@ -45,7 +45,7 @@ public readonly partial struct Option<T> : IEquatable<Option<T>>, IOption
     /// <inheritdoc />
     // ReSharper disable once HeapView.BoxingAllocation
     object? IOption.Value => Value;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     private string DebugValue => ToString();
 
     /// <summary>

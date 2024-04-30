@@ -171,6 +171,7 @@ public static partial class ComputedExt
         Func<T, bool> predicate,
         CancellationToken cancellationToken = default)
         => computed.When(predicate, FixedDelayer.NextTick, cancellationToken);
+
     public static async Task<Computed<T>> When<T>(this Computed<T> computed,
         Func<T, bool> predicate,
         IUpdateDelayer updateDelayer,
@@ -191,6 +192,7 @@ public static partial class ComputedExt
         Func<T, Exception?, bool> predicate,
         CancellationToken cancellationToken = default)
         => computed.When(predicate, FixedDelayer.NextTick, cancellationToken);
+
     public static async Task<Computed<T>> When<T>(this Computed<T> computed,
         Func<T, Exception?, bool> predicate,
         IUpdateDelayer updateDelayer,
@@ -214,6 +216,7 @@ public static partial class ComputedExt
         this Computed<T> computed,
         CancellationToken cancellationToken = default)
         => computed.Changes(FixedDelayer.NextTick, cancellationToken);
+
     public static async IAsyncEnumerable<Computed<T>> Changes<T>(
         this Computed<T> computed,
         IUpdateDelayer updateDelayer,

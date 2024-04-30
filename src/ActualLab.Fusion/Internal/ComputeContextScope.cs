@@ -1,4 +1,4 @@
-namespace ActualLab.Fusion;
+namespace ActualLab.Fusion.Internal;
 
 public readonly struct ComputeContextScope : IDisposable
 {

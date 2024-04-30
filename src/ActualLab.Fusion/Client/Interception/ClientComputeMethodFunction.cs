@@ -202,60 +202,55 @@ public class ClientComputeMethodFunction<T>(
         computed.RenewTimeouts(true);
     }
 
-    public override async ValueTask<Computed<T>> Invoke(ComputedInput input,
-        IComputed? usedBy,
-        ComputeContext? context,
+    public override async ValueTask<Computed<T>> Invoke(
+        ComputedInput input,
+        ComputeContext context,
         CancellationToken cancellationToken = default)
     {
-        context ??= ComputeContext.Current;
-
-        // Read-Lock-RetryRead-Compute-Store pattern
-
-        var existing = GetExisting(input);
-        if (existing.TryUseExisting(context, usedBy))
-            return existing!;
+        // Double-check locking
+        var computed = GetExisting(input);
+        if (computed.TryUseExisting(context))
+            return computed!;
 
         using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
 
-        existing = GetExisting(input);
-        if (existing.TryUseExistingFromLock(context, usedBy))
-            return existing!;
+        computed = GetExisting(input);
+        if (computed.TryUseExistingFromLock(context))
+            return computed!;
 
         releaser.MarkLockedLocally();
-        var computed = await Compute(input, existing, cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context, usedBy, existing);
+        computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
+        computed.UseNew(context);
         return computed;
     }
 
-    public override Task<T> InvokeAndStrip(ComputedInput input,
-        IComputed? usedBy,
-        ComputeContext? context,
+    public override Task<T> InvokeAndStrip(
+        ComputedInput input,
+        ComputeContext context,
         CancellationToken cancellationToken = default)
     {
-        context ??= ComputeContext.Current;
-
         var computed = GetExisting(input);
-        return computed.TryUseExisting(context, usedBy)
+        return computed.TryUseExisting(context)
             ? computed.StripToTask(context)
-            : TryRecompute(input, usedBy, context, cancellationToken);
+            : TryRecompute(input, context, cancellationToken);
     }
 
     // Protected methods
 
-    protected new async Task<T> TryRecompute(ComputedInput input,
-        IComputed? usedBy,
+    protected new async Task<T> TryRecompute(
+        ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken = default)
     {
         using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
 
         var existing = GetExisting(input);
-        if (existing.TryUseExistingFromLock(context, usedBy))
+        if (existing.TryUseExistingFromLock(context))
             return existing.Strip(context);
 
         releaser.MarkLockedLocally();
         var computed = await Compute(input, existing, cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context, usedBy, existing);
+        computed.UseNew(context);
         return computed.Value;
     }
 

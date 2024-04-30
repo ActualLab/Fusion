@@ -10,7 +10,7 @@ public abstract partial record ArgumentList
 
     public static readonly ArgumentList Empty = new ArgumentList0();
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public abstract int Length { get; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

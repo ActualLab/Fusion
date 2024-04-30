@@ -20,8 +20,8 @@ public sealed class ComputeContext
         }
     }
 
-    public CallOptions CallOptions { get; }
-    public IComputed? Computed { get; }
+    public readonly CallOptions CallOptions;
+    public readonly IComputed? Computed;
 
     public bool IsCapturing {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
