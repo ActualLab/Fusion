@@ -337,6 +337,9 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
 
     // IComputedImpl methods
 
+    void IGenericTimeoutHandler.OnTimeout()
+        => Invalidate(true);
+
     IComputedImpl[] IComputedImpl.Used => Used;
     protected internal IComputedImpl[] Used {
         get {

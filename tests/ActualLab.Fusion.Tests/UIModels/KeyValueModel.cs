@@ -18,7 +18,7 @@ public class StringKeyValueModelState : ComputedState<KeyValueModel<string>>
         => Services.GetRequiredService<IKeyValueService<string>>();
 
     public StringKeyValueModelState(IServiceProvider services)
-        : base(null!, services, false)
+        : base(new(), services, false)
     {
         Locals = services.StateFactory().NewMutable("");
         Locals.AddEventHandler(StateEventKind.Updated, (_, _) => _ = this.Recompute());

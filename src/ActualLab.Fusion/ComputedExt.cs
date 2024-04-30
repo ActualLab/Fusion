@@ -19,8 +19,8 @@ public static partial class ComputedExt
 
         var bPrecise = usePreciseTimer ?? delay <= Computed.PreciseInvalidationDelayThreshold;
         if (!bPrecise) {
-            Timeouts.Invalidate.AddOrUpdateToEarlier(computed, Timeouts.Clock.Now + delay);
-            computed.Invalidated += c => Timeouts.Invalidate.Remove(c);
+            Timeouts.Generic.AddOrUpdateToEarlier((IGenericTimeoutHandler)computed, Timeouts.Clock.Now + delay);
+            computed.Invalidated += static c => Timeouts.Generic.Remove((IGenericTimeoutHandler)c);
             return;
         }
 
@@ -65,8 +65,8 @@ public static partial class ComputedExt
 
         var bPrecise = usePreciseTimer ?? delay <= Computed.PreciseInvalidationDelayThreshold;
         if (!bPrecise) {
-            Timeouts.Invalidate.AddOrUpdateToEarlier(computed, Timeouts.Clock.Now + delay);
-            computed.Invalidated += c => Timeouts.Invalidate.Remove(c);
+            Timeouts.Generic.AddOrUpdateToEarlier(computed, Timeouts.Clock.Now + delay);
+            computed.Invalidated += static c => Timeouts.Generic.Remove((IGenericTimeoutHandler)c);
             return;
         }
 

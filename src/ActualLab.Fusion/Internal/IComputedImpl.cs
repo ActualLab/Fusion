@@ -1,6 +1,6 @@
 namespace ActualLab.Fusion.Internal;
 
-public interface IComputedImpl : IComputed
+public interface IComputedImpl : IComputed, IGenericTimeoutHandler
 {
     IComputedImpl[] Used { get; }
     (ComputedInput Input, ulong Version)[] UsedBy { get; }
