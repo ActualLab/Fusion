@@ -1,8 +1,8 @@
 namespace ActualLab.Fusion;
 
-public static class InvalidationMode
+public static class Invalidation
 {
-    public static bool IsOn
+    public static bool IsActive
         => ComputeContext.Current.IsInvalidating;
 
     public static ComputeContextScope Begin()

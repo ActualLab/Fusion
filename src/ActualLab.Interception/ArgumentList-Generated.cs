@@ -1,4 +1,4 @@
-// ReSharper disable UnusedAutoPropertyAccessor.Global
+﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable ArrangeConstructorOrDestructorBody
 using System.Diagnostics.CodeAnalysis;
@@ -120,17 +120,17 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
 
     public override object?[] ToArray()
-        => [Item0];
+        => new object?[] { Item0 };
 
     public override object?[] ToArray(int skipIndex)
         => skipIndex == 0
-            ? []
+            ? Array.Empty<object?>()
             : throw new ArgumentOutOfRangeException(nameof(skipIndex));
 
     // GetNonDefaultItemTypes
@@ -387,9 +387,9 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -707,11 +707,11 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -1079,13 +1079,13 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -1503,15 +1503,15 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -1979,17 +1979,17 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -2507,19 +2507,19 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -3087,21 +3087,21 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(", ");
-        sb.Append(Item7);
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -3719,23 +3719,23 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8> : 
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(", ");
-        sb.Append(Item7);
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
         sb.Append(", ");
-        sb.Append(Item8);
+        sb.Append(Item8 is CancellationToken ct8 ? ct8.Format() : Item8);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -4403,25 +4403,25 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(", ");
-        sb.Append(Item7);
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
         sb.Append(", ");
-        sb.Append(Item8);
+        sb.Append(Item8 is CancellationToken ct8 ? ct8.Format() : Item8);
         sb.Append(", ");
-        sb.Append(Item9);
+        sb.Append(Item9 is CancellationToken ct9 ? ct9.Format() : Item9);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -5025,3 +5025,4 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
         }
     }
 }
+

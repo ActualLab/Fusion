@@ -37,6 +37,7 @@ public class ClientComputeMethodFunction<T>(
     {
         var typedInput = (ComputeMethodInput)input;
         var cache = GetCache(typedInput);
+        // existing != null -> it's invalidated, so no matter what's cached, we ignore it
         return existing == null && cache != null
             ? ComputeCachedOrRpc(typedInput, cache, cancellationToken)
             : ComputeRpc(typedInput, cache, (ClientComputed<T>)existing!, cancellationToken).ToValueTask();
@@ -49,6 +50,7 @@ public class ClientComputeMethodFunction<T>(
         CancellationToken cancellationToken)
     {
         var tryIndex = 0;
+        var startedAt = CpuTimestamp.Now;
         while (true) {
             try {
                 var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
@@ -77,10 +79,13 @@ public class ClientComputeMethodFunction<T>(
                     cacheEntry, call, synchronizedSource);
             }
             catch (OperationCanceledException e) when (!cancellationToken.IsCancellationRequested) {
-                if (++tryIndex > Computed.StrangeCancellationReprocessingLimit)
+                var cancellationReprocessingOptions = input.MethodDef.ComputedOptions.CancellationReprocessing;
+                if (++tryIndex > cancellationReprocessingOptions.MaxTryCount)
+                    throw;
+                if (startedAt.Elapsed > cancellationReprocessingOptions.MaxDuration)
                     throw;
 
-                var delay = Computed.StrangeCancellationReprocessingDelays[tryIndex];
+                var delay = cancellationReprocessingOptions.RetryDelays[tryIndex];
                 Log.LogWarning(e,
                     "ComputeRpc #{TryIndex} was cancelled on the server side for {Category}, will retry in {Delay}",
                     tryIndex, input.Category, delay.ToShortString());
@@ -155,7 +160,8 @@ public class ClientComputeMethodFunction<T>(
             // The call was cancelled on the server side - e.g. due to peer termination.
             // Retrying is the best we can do here; and since this call is already bound to `cachedComputed`,
             // we should invalidate the `call` rather than `cachedComputed`.
-            var delay = Computed.StrangeCancellationReprocessingDelays[1];
+            var cancellationReprocessingOptions = cachedComputed.Options.CancellationReprocessing;
+            var delay = cancellationReprocessingOptions.RetryDelays[1];
             Log.LogWarning(e,
                 "ApplyRpcUpdate was cancelled on the server side for {Category}, will invalidate IComputed in {Delay}",
                 input.Category, delay.ToShortString());

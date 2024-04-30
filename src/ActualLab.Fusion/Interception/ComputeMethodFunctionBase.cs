@@ -13,6 +13,7 @@ public abstract class ComputeMethodFunctionBase<T>(
     {
         var typedInput = (ComputeMethodInput)input;
         var tryIndex = 0;
+        var startedAt = CpuTimestamp.Now;
         while (true) {
             var computed = CreateComputed(typedInput);
             try {
@@ -38,14 +39,17 @@ public abstract class ComputeMethodFunctionBase<T>(
                     cancellationToken.ThrowIfCancellationRequested(); // Always throws here
                 }
 
-                if (e is not OperationCanceledException || ++tryIndex > Computed.StrangeCancellationReprocessingLimit) {
+                var cancellationReprocessingOptions = typedInput.MethodDef.ComputedOptions.CancellationReprocessing;
+                if (e is not OperationCanceledException
+                    || ++tryIndex > cancellationReprocessingOptions.MaxTryCount
+                    || startedAt.Elapsed > cancellationReprocessingOptions.MaxDuration) {
                     computed.TrySetOutput(Result.Error<T>(e));
                     return computed;
                 }
 
                 computed.Invalidate(true); // Instant invalidation on cancellation
                 computed.TrySetOutput(Result.Error<T>(e));
-                var delay = Computed.StrangeCancellationReprocessingDelays[tryIndex];
+                var delay = cancellationReprocessingOptions.RetryDelays[tryIndex];
                 Log.LogWarning(e,
                     "Compute #{TryIndex} for {Category} was cancelled internally, retry in {Delay}",
                     tryIndex, typedInput.Category, delay.ToShortString());

@@ -4,12 +4,8 @@ namespace ActualLab.Fusion.Client.Caching;
 
 public abstract class FlushingClientComputedCache : ClientComputedCache
 {
-    public new record Options : ClientComputedCache.Options
+    public new record Options(string Version = "") : ClientComputedCache.Options(Version)
     {
-        public Options() { }
-        public Options(string version)
-            => Version = version;
-
         public static new Options Default { get; set; } = new();
 
         public TimeSpan FlushDelay { get; init; } = TimeSpan.FromSeconds(0.25);
@@ -49,6 +45,7 @@ public abstract class FlushingClientComputedCache : ClientComputedCache
 
     public override void Set(RpcCacheKey key, TextOrBytes value)
     {
+        DefaultLog?.Log(Settings.LogLevel, "[+] {Key} = {Value}", key, value);
         lock (Lock) {
             FlushQueue[key] = value;
             FlushTask ??= DelayedFlush(null, FlushCts.Token);
@@ -57,6 +54,7 @@ public abstract class FlushingClientComputedCache : ClientComputedCache
 
     public override void Remove(RpcCacheKey key)
     {
+        DefaultLog?.Log(Settings.LogLevel, "[-] {Key}", key);
         lock (Lock) {
             FlushQueue[key] = null;
             FlushTask ??= DelayedFlush(null, FlushCts.Token);

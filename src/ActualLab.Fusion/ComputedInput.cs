@@ -22,7 +22,7 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
     }
 
     public override string ToString()
-        => $"{Category} #{HashCode}";
+        => $"{Category}-Hash={HashCode}";
 
     public abstract IComputed? GetExistingComputed();
 

@@ -143,10 +143,11 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item<#=0#>);
-<# for (var t = 1; t < itemCount; t++) { #>
+<# for (var t = 0; t < itemCount; t++) { #>
+<# if (t != 0) { #>
         sb.Append(", ");
-        sb.Append(Item<#=t#>);
+<# }#>
+        sb.Append(Item<#=t#> is CancellationToken ct<#=t#> ? ct<#=t#>.Format() : Item<#=t#>);
 <# } #>
         sb.Append(')');
         return sb.ToStringAndRelease();

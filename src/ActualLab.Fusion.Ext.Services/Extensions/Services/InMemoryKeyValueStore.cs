@@ -28,7 +28,7 @@ public class InMemoryKeyValueStore(
         var items = command.Items;
         var shard = command.Shard;
 
-        if (InvalidationMode.IsOn) {
+        if (Invalidation.IsActive) {
             foreach (var item in items)
                 PseudoGetAllPrefixes(shard, item.Key);
             return Task.CompletedTask;
@@ -44,7 +44,7 @@ public class InMemoryKeyValueStore(
         var keys = command.Keys;
         var shard = command.Shard;
 
-        if (InvalidationMode.IsOn) {
+        if (Invalidation.IsActive) {
             foreach (var key in keys)
                 PseudoGetAllPrefixes(shard, key);
             return Task.CompletedTask;

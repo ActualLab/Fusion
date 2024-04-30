@@ -34,14 +34,14 @@ public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var actualService = WebServices.GetRequiredService<IEdgeCaseService>();
 
         (await service.GetNullable(1)).Should().Be((long?) 1);
-        using (InvalidationMode.Begin())
+        using (Invalidation.Begin())
             _ = actualService.GetNullable(1);
         await Delay(0.2);
         (await service.GetNullable(1)).Should().Be((long?) 1);
 
         var c = await Computed.Capture(() => service.GetNullable(0));
         c.Value.Should().Be(null);
-        using (InvalidationMode.Begin())
+        using (Invalidation.Begin())
             _ = actualService.GetNullable(0);
         await Delay(0.2);
         c.IsConsistent().Should().BeFalse();

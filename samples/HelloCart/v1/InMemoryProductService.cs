@@ -9,7 +9,7 @@ public class InMemoryProductService : IProductService
         var (productId, product) = command;
         if (string.IsNullOrEmpty(productId))
             throw new ArgumentOutOfRangeException(nameof(command));
-        if (InvalidationMode.IsOn) {
+        if (Invalidation.IsActive) {
             _ = Get(productId, default);
             return Task.CompletedTask;
         }

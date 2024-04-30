@@ -326,6 +326,7 @@ public abstract class State<T> : ComputedInput,
     protected async ValueTask<StateBoundComputed<T>> GetComputed(CancellationToken cancellationToken)
     {
         var tryIndex = 0;
+        var startedAt = CpuTimestamp.Now;
         StateBoundComputed<T> computed;
         while (true) {
             computed = CreateComputed();
@@ -345,14 +346,17 @@ public abstract class State<T> : ComputedInput,
                         cancellationToken.ThrowIfCancellationRequested(); // Always throws here
                     }
 
-                    if (e is not OperationCanceledException || ++tryIndex > Fusion.Computed.StrangeCancellationReprocessingLimit) {
+                    var cancellationReprocessingOptions = ComputedOptions.CancellationReprocessing;
+                    if (e is not OperationCanceledException
+                        || ++tryIndex > cancellationReprocessingOptions.MaxTryCount
+                        || startedAt.Elapsed > cancellationReprocessingOptions.MaxDuration) {
                         computed.TrySetOutput(Result.Error<T>(e));
                         break;
                     }
 
                     computed.Invalidate(true); // Instant invalidation on cancellation
                     computed.TrySetOutput(Result.Error<T>(e));
-                    var delay = Fusion.Computed.StrangeCancellationReprocessingDelays[tryIndex];
+                    var delay = cancellationReprocessingOptions.RetryDelays[tryIndex];
                     Log.LogWarning(e,
                         "GetComputed #{TryIndex} for {Category} was cancelled internally, retry in {Delay}",
                         tryIndex, Category, delay.ToShortString());

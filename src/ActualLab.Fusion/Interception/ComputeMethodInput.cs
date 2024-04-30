@@ -26,7 +26,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     }
 
     public override string ToString()
-        => ZString.Concat(Category, "(", ZString.Join(", ", Arguments), ") #", HashCode);
+        => ZString.Concat(Category, Arguments, "-Hash=", HashCode);
 
     public override IComputed? GetExistingComputed()
         => ComputedRegistry.Instance.Get(this);

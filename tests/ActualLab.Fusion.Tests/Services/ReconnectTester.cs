@@ -26,7 +26,7 @@ public class ReconnectTester : IReconnectTester
 
     public void InvalidateGetTime()
     {
-        using var scope = InvalidationMode.Begin();
+        using var scope = Invalidation.Begin();
         _ = GetTime();
     }
 }

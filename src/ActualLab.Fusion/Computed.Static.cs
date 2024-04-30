@@ -5,8 +5,6 @@ namespace ActualLab.Fusion;
 public static class Computed
 {
     public static TimeSpan PreciseInvalidationDelayThreshold { get; set; } = TimeSpan.FromSeconds(1);
-    public static RetryDelaySeq StrangeCancellationReprocessingDelays { get; set; } = RetryDelaySeq.Exp(0.05, 1);
-    public static int StrangeCancellationReprocessingLimit { get; set; } = 20;
 
     // Current & GetCurrent
 

@@ -17,7 +17,7 @@ public partial class InMemoryAuthService
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<Unit>(command);
 
-        if (InvalidationMode.IsOn) {
+        if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
@@ -89,7 +89,7 @@ public partial class InMemoryAuthService
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<Unit>(command);
 
-        if (InvalidationMode.IsOn) {
+        if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
             var invIsNew = context.Operation.Items.GetOrDefault<bool>();
             if (invIsNew)
@@ -120,7 +120,7 @@ public partial class InMemoryAuthService
         session.RequireValid();
         var shard = ShardResolver.Resolve<Unit>(command);
 
-        if (InvalidationMode.IsOn) {
+        if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
             return Task.CompletedTask;
         }
