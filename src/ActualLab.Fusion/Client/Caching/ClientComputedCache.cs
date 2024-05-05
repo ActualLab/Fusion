@@ -12,14 +12,15 @@ public abstract class ClientComputedCache : RpcServiceBase, IClientComputedCache
 {
     public static RpcCacheKey VersionKey { get; set; } = new("", "Version", TextOrBytes.EmptyBytes);
 
-    public record Options
+    public record Options(string Version = "")
     {
         public static Options Default { get; set; } = new();
 
-        public string Version { get; init; } = "";
+        public LogLevel LogLevel { get; init; } = LogLevel.Debug;
     }
 
     protected RpcArgumentSerializer ArgumentSerializer;
+    protected ILogger? DefaultLog;
 
     public Options Settings { get; }
     public Task WhenInitialized { get; protected set; } = Task.CompletedTask;
@@ -28,6 +29,7 @@ public abstract class ClientComputedCache : RpcServiceBase, IClientComputedCache
         : base(services)
     {
         Settings = settings;
+        DefaultLog = Log.IfEnabled(Settings.LogLevel);
         ArgumentSerializer = Hub.InternalServices.ArgumentSerializer;
         if (initialize)
             // ReSharper disable once VirtualMemberCallInConstructor
@@ -38,16 +40,21 @@ public abstract class ClientComputedCache : RpcServiceBase, IClientComputedCache
 
     public virtual async Task Initialize(string version, CancellationToken cancellationToken = default)
     {
-        if (version.IsNullOrEmpty())
+        if (version.IsNullOrEmpty()) {
+            DefaultLog?.Log(Settings.LogLevel, "Initialize: no version -> will reuse cache content");
             return;
+        }
 
         var expectedValue = new TextOrBytes(Encoding.UTF8.GetBytes(version));
         var value = await Get(VersionKey, cancellationToken).ConfigureAwait(false);
         if (value is { } vValue) {
-            if (vValue.DataEquals(expectedValue))
+            if (vValue.DataEquals(expectedValue)) {
+                DefaultLog?.Log(Settings.LogLevel, "Initialize: version match -> will reuse cache content");
                 return;
+            }
         }
 
+        DefaultLog?.Log(Settings.LogLevel, "Initialize: version mismatch -> will clear cache content");
         await Clear(cancellationToken).ConfigureAwait(false);
         Set(VersionKey, expectedValue);
     }
@@ -65,9 +72,12 @@ public abstract class ClientComputedCache : RpcServiceBase, IClientComputedCache
                 await WhenInitializedUnlessVersionKey(key).WaitAsync(cancellationToken).SilentAwait(false);
 
             var resultDataOpt = await Get(key, cancellationToken).ConfigureAwait(false);
-            if (resultDataOpt is not { } resultData)
+            if (resultDataOpt is not { } resultData) {
+                DefaultLog?.Log(Settings.LogLevel, "[?] {Key} -> miss", key);
                 return null;
+            }
 
+            DefaultLog?.Log(Settings.LogLevel, "[?] {Key} -> hit", key);
             var resultList = methodDef.ResultListFactory.Invoke();
             ArgumentSerializer.Deserialize(ref resultList, methodDef.AllowResultPolymorphism, resultData);
             return (resultList.Get0<T>(), resultData);

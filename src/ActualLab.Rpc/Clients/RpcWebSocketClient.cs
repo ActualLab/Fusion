@@ -28,7 +28,7 @@ public class RpcWebSocketClient(
         public string BackendRequestPath { get; init; } = "/backend/rpc/ws";
         public string ClientIdParameterName { get; init; } = "clientId";
 #pragma warning disable IL2026
-        public Func<RpcWebSocketClient, WebSocketOwner, ImmutableOptionSet, WebSocketChannel<RpcMessage>>
+        public Func<RpcWebSocketClient, WebSocketOwner, PropertyBag, WebSocketChannel<RpcMessage>>
             WebSocketChannelFactory { get; init; } = DefaultWebSocketChannelFactory;
 #pragma warning restore IL2026
 
@@ -68,7 +68,7 @@ public class RpcWebSocketClient(
 
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public static WebSocketChannel<RpcMessage> DefaultWebSocketChannelFactory(
-            RpcWebSocketClient client, WebSocketOwner webSocketOwner, ImmutableOptionSet options)
+            RpcWebSocketClient client, WebSocketOwner webSocketOwner, PropertyBag properties)
             => new(WebSocketChannel<RpcMessage>.Options.Default, webSocketOwner);
     }
 
@@ -120,12 +120,12 @@ public class RpcWebSocketClient(
             throw;
         }
 
-        var options = ImmutableOptionSet.Empty
+        var properties = PropertyBag.Empty
             .Set((RpcPeer)peer)
             .Set(uri)
             .Set(webSocketOwner)
             .Set(webSocketOwner.WebSocket);
-        var channel = Settings.WebSocketChannelFactory.Invoke(this, webSocketOwner, options);
-        return new RpcConnection(channel, options);
+        var channel = Settings.WebSocketChannelFactory.Invoke(this, webSocketOwner, properties);
+        return new RpcConnection(channel, properties);
     }
 }

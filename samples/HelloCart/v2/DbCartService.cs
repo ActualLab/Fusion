@@ -13,7 +13,7 @@ public class DbCartService(IServiceProvider services)
         if (string.IsNullOrEmpty(cartId))
             throw new ArgumentOutOfRangeException(nameof(command));
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = Get(cartId, default);
             return;
         }

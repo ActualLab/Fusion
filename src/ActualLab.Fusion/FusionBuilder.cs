@@ -357,12 +357,12 @@ public readonly struct FusionBuilder
 
     public FusionBuilder AddClientComputedCache<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TCache, TOptions>(
-        Func<IServiceProvider, TOptions>? optionsFactory = null)
+        Func<IServiceProvider, TOptions> optionsFactory)
         where TCache : class, IClientComputedCache
-        where TOptions : class, new()
+        where TOptions : class
     {
         var services = Services;
-        services.AddSingleton(optionsFactory, _ => new TOptions());
+        services.AddSingleton(optionsFactory);
         if (services.HasService<TCache>())
             return this;
 
@@ -373,12 +373,12 @@ public readonly struct FusionBuilder
 
     public FusionBuilder AddSharedClientComputedCache<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TCache, TOptions>(
-        Func<IServiceProvider, TOptions>? optionsFactory = null)
+        Func<IServiceProvider, TOptions> optionsFactory)
         where TCache : ClientComputedCache
-        where TOptions : class, new()
+        where TOptions : class
     {
         var services = Services;
-        services.AddSingleton(optionsFactory, _ => new TOptions());
+        services.AddSingleton(optionsFactory);
         if (services.HasService<TCache>())
             return this;
 
@@ -387,6 +387,11 @@ public readonly struct FusionBuilder
         services.AddAlias<IClientComputedCache, SharedClientComputedCache>();
         return this;
     }
+
+    public FusionBuilder AddInMemoryClientComputedCache(
+        Func<IServiceProvider, InMemoryClientComputedCache.Options>? optionsFactory = null)
+        => AddClientComputedCache<InMemoryClientComputedCache, InMemoryClientComputedCache.Options>(
+            optionsFactory ?? (_ => InMemoryClientComputedCache.Options.Default));
 
     // AddComputedGraphPruner
 

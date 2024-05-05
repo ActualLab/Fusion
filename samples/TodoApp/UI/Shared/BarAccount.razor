@@ -42,7 +42,7 @@
 </BarDropdown>
 
 @code {
-    private (string Name, string DisplayName)[] AuthSchemas { get; set; } = Array.Empty<(string, string)>();
+    private (string Name, string DisplayName)[] AuthSchemas { get; set; } = [];
 
     [Parameter]
     public string CssClass { get; set; } = "";

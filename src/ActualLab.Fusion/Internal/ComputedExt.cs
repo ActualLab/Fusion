@@ -7,7 +7,7 @@ public static class ComputedExt
         public static readonly Task<T> DefaultResultTask = Task.FromResult(default(T)!);
     }
 
-    internal static bool TryUseExisting<T>(this Computed<T>? existing, ComputeContext context, IComputed? usedBy)
+    internal static bool TryUseExisting<T>(this Computed<T>? existing, ComputeContext context)
     {
         var callOptions = context.CallOptions;
         if (callOptions == 0) {
@@ -16,8 +16,8 @@ public static class ComputedExt
                 return false;
 
             // Inlined existing.UseNew(context, usedBy)
-            if (usedBy != null)
-                ((IComputedImpl)usedBy).AddUsed(existing);
+            if (context.Computed is IComputedImpl usedBy)
+                usedBy.AddUsed(existing);
             existing.RenewTimeouts(false);
             return true;
         }
@@ -37,7 +37,7 @@ public static class ComputedExt
 
         // CallOptions.GetExisting | CallOptions.Capture can be intact from here
         if (mustGetExisting) {
-            context.Capture(existing);
+            context.TryCapture(existing);
             ((IComputedImpl)existing).RenewTimeouts(false);
             return true;
         }
@@ -48,12 +48,12 @@ public static class ComputedExt
         if (!existing.IsConsistent())
             return false;
 
-        existing.UseNew(context, usedBy);
+        existing.UseNew(context);
         return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static bool TryUseExistingFromLock<T>(this Computed<T>? existing, ComputeContext context, IComputed? usedBy)
+    internal static bool TryUseExistingFromLock<T>(this Computed<T>? existing, ComputeContext context)
     {
         // We know that:
         // - CallOptions.GetExisting is unused here - it always leads to true in TryUseExisting,
@@ -63,16 +63,16 @@ public static class ComputedExt
         if (existing == null || !existing.IsConsistent())
             return false;
 
-        existing.UseNew(context, usedBy);
+        existing.UseNew(context);
         return true;
     }
 
-    internal static void UseNew<T>(this Computed<T> computed, ComputeContext context, IComputed? usedBy, IComputed? existing = null)
+    internal static void UseNew<T>(this Computed<T> computed, ComputeContext context)
     {
-        if (usedBy != null)
-            ((IComputedImpl)usedBy).AddUsed(computed);
-        computed.RenewTimeouts(!ReferenceEquals(computed, existing));
-        context.Capture(computed);
+        if (context.Computed is IComputedImpl usedBy)
+            usedBy.AddUsed(computed);
+        computed.RenewTimeouts(true);
+        context.TryCapture(computed);
     }
 
     internal static T Strip<T>(this Computed<T>? computed, ComputeContext context)

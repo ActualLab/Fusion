@@ -22,7 +22,7 @@ public static class ByteSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class ByteSerialized<T>
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public T Value { get; init; } = default!;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
@@ -36,7 +36,7 @@ public partial class ByteSerialized<T>
     // ToString
 
     public override string ToString()
-        => $"{GetType().GetName()}(...)";
+        => $"{GetType().GetName()}({Value})";
 
     // Private & protected methods
 
@@ -45,7 +45,7 @@ public partial class ByteSerialized<T>
     {
         byte[] data;
         if (!typeof(T).IsValueType && ReferenceEquals(Value, null))
-            data = Array.Empty<byte>();
+            data = [];
         else {
             using var bufferWriter = GetSerializer().Write(Value);
             data = bufferWriter.WrittenSpan.ToArray();

@@ -15,7 +15,7 @@
         "Rendering, Computed.Version = {Version}, IsConsistent = {IsConsistent}",
         c.Version, c.IsConsistent());
     var error = c.Error;
-    var todos = c.ValueOrDefault ?? Array.Empty<Todo>(); // ValueOrDefault returns default if there is an Error
+    var todos = c.ValueOrDefault ?? []; // ValueOrDefault returns default if there is an Error
 }
 
 <h1>Todo List</h1>
@@ -85,6 +85,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        return;
         var objectId = await Todos.GetTestObjectId();
         Log.LogInformation("Test ObjectId: {ObjectId}", objectId);
         var stream = await Todos.GetTestStream();

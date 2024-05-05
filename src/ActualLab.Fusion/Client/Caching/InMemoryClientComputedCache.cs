@@ -3,10 +3,15 @@ using ActualLab.Rpc.Caching;
 namespace ActualLab.Fusion.Client.Caching;
 
 public sealed class InMemoryClientComputedCache(
-    FlushingClientComputedCache.Options settings,
+    InMemoryClientComputedCache.Options settings,
     IServiceProvider services
     ) : FlushingClientComputedCache(settings, services)
 {
+    public new sealed record Options : FlushingClientComputedCache.Options
+    {
+        public static new Options Default { get; set; } = new();
+    }
+
     private static readonly ValueTask<TextOrBytes?> MissValueTask = new((TextOrBytes?)null);
 
     private readonly ConcurrentDictionary<RpcCacheKey, TextOrBytes> _cache = new();
@@ -18,6 +23,7 @@ public sealed class InMemoryClientComputedCache(
 
     protected override Task Flush(Dictionary<RpcCacheKey, TextOrBytes?> flushingQueue)
     {
+        DefaultLog?.Log(Settings.LogLevel, "Flushing {Count} item(s)", flushingQueue.Count);
         foreach (var (key, result) in flushingQueue) {
             if (result is { } vResult)
                 _cache[key] = vResult;

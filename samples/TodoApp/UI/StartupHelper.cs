@@ -2,6 +2,7 @@ using Blazorise;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using ActualLab.Fusion.Blazor;
 using ActualLab.Fusion.Blazor.Authentication;
+using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Client.Interception;
@@ -24,11 +25,13 @@ public static class StartupHelper
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.Logging.AddFilter(typeof(App).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(Computed).Namespace, LogLevel.Information);
+        builder.Logging.AddFilter(typeof(InMemoryClientComputedCache).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(RpcHub).Namespace, LogLevel.Debug);
         builder.Logging.AddFilter(typeof(CommandHandlerResolver).Namespace, LogLevel.Debug);
 
         // Fusion services
         var fusion = services.AddFusion();
+        fusion.AddInMemoryClientComputedCache(_ => new() { LogLevel = LogLevel.Information });
         fusion.AddAuthClient();
         fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
 
@@ -79,6 +82,7 @@ public static class StartupHelper
         services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
 
         // Diagnostics
+        return;
         services.AddHostedService(c => {
             var isWasm = OSInfo.IsWebAssembly;
             return new FusionMonitor(c) {

@@ -18,7 +18,7 @@ public class DbKeyValueStore<TDbContext, TDbKeyValue>(IServiceProvider services)
         var items = command.Items;
         var shard = command.Shard;
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             foreach (var item in items)
                 PseudoGetAllPrefixes(shard, item.Key);
             return;
@@ -55,7 +55,7 @@ public class DbKeyValueStore<TDbContext, TDbKeyValue>(IServiceProvider services)
         var keys = command.Keys;
         var shard = command.Shard;
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             foreach (var key in keys)
                 PseudoGetAllPrefixes(shard, key);
             return;

@@ -22,7 +22,7 @@ public static class TextSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class TextSerialized<T>
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public T Value { get; init; } = default!;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
@@ -36,7 +36,7 @@ public partial class TextSerialized<T>
     // ToString
 
     public override string ToString()
-        => $"{GetType().GetName()}(...)";
+        => $"{GetType().GetName()}({Value})";
 
     // Private & protected methods
 

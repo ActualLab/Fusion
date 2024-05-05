@@ -4,6 +4,13 @@ namespace ActualLab.Async;
 
 public static class CancellationTokenExt
 {
+    public static string Format(this CancellationToken cancellationToken)
+        => cancellationToken.CanBeCanceled
+            ? $"ct-#{(uint)cancellationToken.GetHashCode():x}"
+            : "ct-none";
+
+    // LinkWith
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static CancellationTokenSource LinkWith(this CancellationToken token1, CancellationToken token2)
         => CancellationTokenSource.CreateLinkedTokenSource(token1, token2);

@@ -44,17 +44,19 @@ public abstract class ComputeServiceInterceptorBase(
             var cancellationToken = ctIndex >= 0
                 ? arguments.GetCancellationToken(ctIndex)
                 : default;
-            var usedBy = Computed.GetCurrent();
 
-            // InvokeAndStrip allows to get rid of one extra allocation
-            // of a task stripping the result of regular Invoke.
-            var task = function.InvokeAndStrip(input, usedBy, null, cancellationToken);
-            if (cancellationToken != default)
-                // We don't want memory leaks + unexpected cancellation later
-                arguments.SetCancellationToken(ctIndex, default);
-
-            // ReSharper disable once HeapView.BoxingAllocation
-            return computeMethodDef.ReturnsValueTask ? new ValueTask<T>(task) : task;
+            try {
+                // InvokeAndStrip allows to get rid of one extra allocation
+                // of a task stripping the result of regular Invoke.
+                var task = function.InvokeAndStrip(input, ComputeContext.Current, cancellationToken);
+                // ReSharper disable once HeapView.BoxingAllocation
+                return computeMethodDef.ReturnsValueTask ? new ValueTask<T>(task) : task;
+            }
+            finally {
+                if (cancellationToken != default)
+                    // We don't want memory leaks + unexpected cancellation later
+                    arguments.SetCancellationToken(ctIndex, default);
+            }
         };
     }
 

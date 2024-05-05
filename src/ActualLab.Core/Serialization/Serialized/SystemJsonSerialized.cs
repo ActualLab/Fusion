@@ -27,4 +27,9 @@ public partial class SystemJsonSerialized<T> : TextSerialized<T>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override ITextSerializer<T> GetSerializer()
         => _serializer ??= SystemJsonSerializer.Default.ToTyped<T>();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator SystemJsonSerialized<T>(T value) => new() { Value = value };
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator SystemJsonSerialized<T>(string data) => new() { Data = data };
 }

@@ -10,14 +10,14 @@ public readonly partial struct Tile<T>
 {
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public Range<T> Range { get; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public TileLayer<T> Layer { get; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public TileStack<T> Stack => Layer.Stack;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public T Start => Range.Start;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public T End => Range.End;
 
     public Tile(T start, T end, TileLayer<T> layer)
@@ -72,7 +72,7 @@ public readonly partial struct Tile<T>
     {
         var smallerLayer = Layer.Smaller;
         if (smallerLayer == null)
-            return Array.Empty<Tile<T>>();
+            return [];
 
         var a = Layer.Arithmetics;
         var tiles = new Tile<T>[Layer.TileSizeMultiplier];

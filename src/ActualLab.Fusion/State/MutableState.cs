@@ -116,47 +116,43 @@ public class MutableState<T> : State<T>, IMutableState<T>
     }
 
     protected override ValueTask<Computed<T>> Invoke(
-        IComputed? usedBy, ComputeContext? context,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
-        context ??= ComputeContext.Current;
-
         var computed = Computed;
-        if (computed.TryUseExisting(context, usedBy))
+        if (computed.TryUseExisting(context))
             return ValueTaskExt.FromResult(computed);
 
         // Double-check locking
         lock (Lock) {
             computed = Computed;
-            if (computed.TryUseExistingFromLock(context, usedBy))
+            if (computed.TryUseExistingFromLock(context))
                 return ValueTaskExt.FromResult(computed);
 
             OnUpdating(computed);
             computed = CreateComputed();
-            computed.UseNew(context, usedBy);
+            computed.UseNew(context);
             return ValueTaskExt.FromResult(computed);
         }
     }
 
     protected override Task<T> InvokeAndStrip(
-        IComputed? usedBy, ComputeContext? context,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
-        context ??= ComputeContext.Current;
-
         var computed = Computed;
-        if (computed.TryUseExisting(context, usedBy))
+        if (computed.TryUseExisting(context))
             return computed.StripToTask(context);
 
         // Double-check locking
         lock (Lock) {
             computed = Computed;
-            if (computed.TryUseExistingFromLock(context, usedBy))
+            if (computed.TryUseExistingFromLock(context))
                 return computed.StripToTask(context);
 
             OnUpdating(computed);
             computed = CreateComputed();
-            computed.UseNew(context, usedBy);
+            computed.UseNew(context);
             return computed.StripToTask(context);
         }
     }

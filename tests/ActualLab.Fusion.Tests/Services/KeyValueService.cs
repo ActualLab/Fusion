@@ -64,7 +64,7 @@ public class KeyValueService<TValue> : IKeyValueService<TValue>
     {
         _values[cmd.Key] = cmd.Value;
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = TryGet(cmd.Key, default).AssertCompleted();
             _ = Get(cmd.Key, default).AssertCompleted();
         }
@@ -75,7 +75,7 @@ public class KeyValueService<TValue> : IKeyValueService<TValue>
     {
         _values.TryRemove(cmd.Key, out _);
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = TryGet(cmd.Key, default).AssertCompleted();
             _ = Get(cmd.Key, default).AssertCompleted();
         }

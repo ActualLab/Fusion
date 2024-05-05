@@ -9,7 +9,7 @@ namespace ActualLab.Collections;
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[Obsolete("Use PropertySet instead.")]
+// [Obsolete("Use PropertyBag instead.")]
 public readonly partial record struct ImmutableOptionSet
 {
     private static readonly ImmutableDictionary<Symbol, object> EmptyItems = ImmutableDictionary<Symbol, object>.Empty;

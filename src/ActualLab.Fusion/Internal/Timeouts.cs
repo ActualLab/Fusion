@@ -5,7 +5,7 @@ public static class Timeouts
     public static readonly IMomentClock Clock;
     public static readonly TickSource TickSource;
     public static readonly ConcurrentTimerSet<object> KeepAlive;
-    public static readonly ConcurrentTimerSet<IComputed> Invalidate;
+    public static readonly ConcurrentTimerSet<IGenericTimeoutHandler> Generic;
     public static readonly Moment StartedAt;
     public const int KeepAliveQuantaPo2 = 21; // ~ 2M ticks or 0.2 sec.
     public static readonly TimeSpan KeepAliveQuanta = TimeSpan.FromTicks(1L << KeepAliveQuantaPo2);
@@ -21,13 +21,13 @@ public static class Timeouts
                 TickSource = TickSource,
                 ConcurrencyLevel = FusionDefaults.TimeoutsConcurrencyLevel,
             }, null, StartedAt);
-        Invalidate = new ConcurrentTimerSet<IComputed>(
+        Generic = new ConcurrentTimerSet<IGenericTimeoutHandler>(
             new() {
                 Clock = Clock,
                 TickSource = TickSource,
                 ConcurrencyLevel = FusionDefaults.TimeoutsConcurrencyLevel,
             },
-            t => t.Invalidate(true), StartedAt);
+            t => t.OnTimeout(), StartedAt);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

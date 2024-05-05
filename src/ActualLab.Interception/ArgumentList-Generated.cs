@@ -1,4 +1,4 @@
-// ReSharper disable UnusedAutoPropertyAccessor.Global
+﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable ArrangeConstructorOrDestructorBody
 using System.Diagnostics.CodeAnalysis;
@@ -88,7 +88,7 @@ public abstract record ArgumentList1 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[1];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 1;
 }
 
@@ -120,7 +120,7 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -350,7 +350,7 @@ public abstract record ArgumentList2 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[2];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 2;
 }
 
@@ -387,9 +387,9 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -665,7 +665,7 @@ public abstract record ArgumentList3 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[3];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 3;
 }
 
@@ -707,11 +707,11 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -1032,7 +1032,7 @@ public abstract record ArgumentList4 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[4];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 4;
 }
 
@@ -1079,13 +1079,13 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -1451,7 +1451,7 @@ public abstract record ArgumentList5 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[5];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 5;
 }
 
@@ -1503,15 +1503,15 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -1922,7 +1922,7 @@ public abstract record ArgumentList6 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[6];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 6;
 }
 
@@ -1979,17 +1979,17 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -2445,7 +2445,7 @@ public abstract record ArgumentList7 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[7];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 7;
 }
 
@@ -2507,19 +2507,19 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -3020,7 +3020,7 @@ public abstract record ArgumentList8 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[8];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 8;
 }
 
@@ -3087,21 +3087,21 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(", ");
-        sb.Append(Item7);
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -3647,7 +3647,7 @@ public abstract record ArgumentList9 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[9];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 9;
 }
 
@@ -3719,23 +3719,23 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8> : 
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(", ");
-        sb.Append(Item7);
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
         sb.Append(", ");
-        sb.Append(Item8);
+        sb.Append(Item8 is CancellationToken ct8 ? ct8.Format() : Item8);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -4326,7 +4326,7 @@ public abstract record ArgumentList10 : ArgumentList
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[10];
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 10;
 }
 
@@ -4403,25 +4403,25 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(", ");
-        sb.Append(Item7);
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
         sb.Append(", ");
-        sb.Append(Item8);
+        sb.Append(Item8 is CancellationToken ct8 ? ct8.Format() : Item8);
         sb.Append(", ");
-        sb.Append(Item9);
+        sb.Append(Item9 is CancellationToken ct9 ? ct9.Format() : Item9);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -5025,4 +5025,3 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
         }
     }
 }
-

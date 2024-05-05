@@ -16,6 +16,6 @@ namespace ActualLab.CommandR.Commands;
 /// - PostCompletionInvalidator assumes any IApiCommand doesn't require
 ///   invalidation, coz it can't change anything directly,
 ///   thus such commands aren't logged as nested ones,
-///   and don't need to have "if (Computed.IsInvalidating() ...)" block.
+///   and don't need to have "if (Invalidation.IsOn() ...)" block.
 /// </remarks>
 public interface IApiCommand : ICommand;

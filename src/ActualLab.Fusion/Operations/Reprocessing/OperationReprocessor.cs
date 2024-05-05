@@ -116,7 +116,7 @@ public class OperationReprocessor : IOperationReprocessor
         var isReprocessingAllowed =
             context.IsOutermost // Should be a top-level command
             && command is not ISystemCommand // No reprocessing for system commands
-            && !Computed.IsInvalidating()
+            && !Invalidation.IsActive
             && Settings.Filter.Invoke(command, context);
         if (!isReprocessingAllowed) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
@@ -129,7 +129,7 @@ public class OperationReprocessor : IOperationReprocessor
         CommandContext = context;
 
         context.Items.Set((IOperationReprocessor)this);
-        var itemsBackup = context.Items.Items;
+        var itemsBackup = context.Items.Snapshot;
         var executionStateBackup = context.ExecutionState;
         while (true) {
             try {
@@ -144,7 +144,7 @@ public class OperationReprocessor : IOperationReprocessor
 
                 if (!transiency.IsSuperTransient())
                     TryIndex++;
-                context.Items.Items = itemsBackup;
+                context.Items.Snapshot = itemsBackup;
                 context.ExecutionState = executionStateBackup;
                 var delay = Settings.RetryDelays[TryIndex];
                 Log.LogWarning(

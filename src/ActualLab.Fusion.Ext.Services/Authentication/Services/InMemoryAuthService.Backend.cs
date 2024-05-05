@@ -17,7 +17,7 @@ public partial class InMemoryAuthService
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<Unit>(command);
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
@@ -89,13 +89,11 @@ public partial class InMemoryAuthService
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<Unit>(command);
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
             var invIsNew = context.Operation.Items.GetOrDefault<bool>();
-            if (invIsNew) {
+            if (invIsNew)
                 _ = GetAuthInfo(session, default);
-                _ = GetOptions(session, default);
-            }
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo?.IsAuthenticated() ?? false)
                 _ = GetUserSessions(shard, invSessionInfo.UserId, default);
@@ -116,16 +114,14 @@ public partial class InMemoryAuthService
     }
 
     // [CommandHandler] inherited
-    public virtual Task SetOptions(Auth_SetSessionOptions command, CancellationToken cancellationToken = default)
+    public virtual Task SetOptions(AuthBackend_SetSessionOptions command, CancellationToken cancellationToken = default)
     {
         var (session, options, baseVersion) = command;
         session.RequireValid();
-        var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<Unit>(command);
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
-            _ = GetOptions(session, default);
             return Task.CompletedTask;
         }
 

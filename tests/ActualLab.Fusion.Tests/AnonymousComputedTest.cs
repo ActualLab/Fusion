@@ -9,21 +9,25 @@ public class AnonymousComputedTest(ITestOutputHelper @out) : SimpleFusionTestBas
 
         var id = 0;
         var ci = new AnonymousComputedSource<int>(services,
+            -1,
             (_, _) => {
                 var value = Interlocked.Increment(ref id);
                 Out.WriteLine($"Computed: {value}");
                 return new ValueTask<int>(value);
             });
 
-        ci.IsComputed.Should().BeFalse();
-        Assert.Throws<InvalidOperationException>(() => ci.Computed);
+        ci.Computed.IsConsistent().Should().BeFalse();
+        ci.Computed.Value.Should().Be(-1);
 
         (await ci.Use()).Should().Be(1);
-        ci.IsComputed.Should().BeTrue();
-        (await ci.Use()).Should().Be(1);
+        ci.Computed.IsConsistent().Should().BeTrue();
         ci.Computed.Value.Should().Be(1);
-        (await ci.Computed.Use()).Should().Be(1);
 
+        (await ci.Use()).Should().Be(1);
+        ci.Computed.IsConsistent().Should().BeTrue();
+        ci.Computed.Value.Should().Be(1);
+
+        (await ci.Computed.Use()).Should().Be(1);
         ci.Computed.Invalidate();
 
         (await ci.Use()).Should().Be(2);
@@ -48,10 +52,10 @@ public class AnonymousComputedTest(ITestOutputHelper @out) : SimpleFusionTestBas
                 AutoInvalidationDelay = TimeSpan.FromSeconds(0.2),
             }
         };
-        ci.IsComputed.Should().BeFalse();
+        ci.Computed.IsConsistent().Should().BeFalse();
 
         (await ci.Use()).Should().Be(1);
-        ci.IsComputed.Should().BeTrue();
+        ci.Computed.IsConsistent().Should().BeTrue();
 
         await ci.When(x => x > 1).WaitAsync(TimeSpan.FromSeconds(1));
         await ci.Changes().Take(3).CountAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2));

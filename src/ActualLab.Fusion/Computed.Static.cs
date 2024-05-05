@@ -2,55 +2,35 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
+#pragma warning disable CA1721
+
 public static class Computed
 {
-    private static readonly AsyncLocal<IComputed?> CurrentLocal = new();
-
     public static TimeSpan PreciseInvalidationDelayThreshold { get; set; } = TimeSpan.FromSeconds(1);
 
-    // GetCurrent & ChangeCurrent
+    // Current & GetCurrent
 
-    public static IComputed? GetCurrent() => CurrentLocal.Value;
+    public static IComputed? Current {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => ComputeContext.Current.Computed;
+    }
 
+    public static IComputed GetCurrent()
+        => Current ?? throw Errors.CurrentComputedIsNull();
     public static Computed<T> GetCurrent<T>()
-    {
-        var untypedCurrent = GetCurrent();
-        if (untypedCurrent is Computed<T> c)
-            return c;
-        if (untypedCurrent == null)
-            throw Errors.ComputedCurrentIsNull();
-        throw Errors.ComputedCurrentIsOfIncompatibleType(typeof(Computed<T>));
-    }
+        => (Computed<T>)(Current ?? throw Errors.CurrentComputedIsNull());
 
-    public static ClosedDisposable<IComputed?> ChangeCurrent(IComputed? newCurrent)
-    {
-        var oldCurrent = GetCurrent();
-        if (newCurrent != null)
-            ComputeContext.Current.Capture(newCurrent);
-        if (oldCurrent == newCurrent)
-            return default;
-        CurrentLocal.Value = newCurrent;
-        return Disposable.NewClosed(oldCurrent, oldCurrent1 => CurrentLocal.Value = oldCurrent1);
-    }
+    public static ComputeContextScope BeginCompute(IComputed computed)
+        => new(new(computed));
 
-    public static ClosedDisposable<IComputed?> SuspendDependencyCapture()
-        => ChangeCurrent(null);
+    public static ComputeContextScope BeginIsolation()
+        => new(ComputeContext.None);
 
-    // Invalidation
-
-    public static bool IsInvalidating()
-        => (ComputeContext.Current.CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
-
-    public static ComputeContextScope Invalidate()
-        => ComputeContext.Invalidate.Activate();
-    public static ComputeContextScope SuspendInvalidate()
-        => ComputeContext.Default.Activate();
-
-    // BeginCapture (sync Capture API)
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComputeContextScope BeginCapture()
-        => ComputeContext.New(CallOptions.Capture).Activate();
+        => new(new ComputeContext(CallOptions.Capture));
+
+    public static ComputeContextScope BeginCaptureExisting()
+        => new(new ComputeContext(CallOptions.Capture | CallOptions.GetExisting));
 
     // TryCapture
 
@@ -59,16 +39,16 @@ public static class Computed
         CancellationToken cancellationToken = default)
     {
         using var ccs = BeginCapture();
-        IComputed result;
         try {
-            await producer().ConfigureAwait(false);
+            await producer.Invoke().ConfigureAwait(false);
+            return ccs.Context.TryGetCaptured();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            if (ccs.Context.TryGetCaptured(out result!) && result.HasError)
-                return Option.Some(result); // Return the original error, if possible
+            var result = ccs.Context.TryGetCaptured();
+            if (result.IsSome(out var computed) && computed.HasError)
+                return result; // Return the original error, if possible
             throw;
         }
-        return ccs.Context.TryGetCaptured(out result!) ? Option.Some(result) : default;
     }
 
     public static async ValueTask<Option<Computed<T>>> TryCapture<T>(
@@ -76,16 +56,16 @@ public static class Computed
         CancellationToken cancellationToken = default)
     {
         using var ccs = BeginCapture();
-        Computed<T> result;
         try {
-            await producer().ConfigureAwait(false);
+            await producer.Invoke().ConfigureAwait(false);
+            return ccs.Context.TryGetCaptured<T>();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            if (ccs.Context.TryGetCaptured(out result!) && result.HasError)
-                return Option.Some(result); // Return the original error, if possible
+            var result = ccs.Context.TryGetCaptured<T>();
+            if (result.IsSome(out var computed) && computed.HasError)
+                return result; // Return the original error, if possible
             throw;
         }
-        return ccs.Context.TryGetCaptured(out result!) ? Option.Some(result) : default;
     }
 
     public static async ValueTask<Option<IComputed>> TryCapture(
@@ -93,16 +73,16 @@ public static class Computed
         CancellationToken cancellationToken = default)
     {
         using var ccs = BeginCapture();
-        IComputed result;
         try {
-            await producer().ConfigureAwait(false);
+            await producer.Invoke().ConfigureAwait(false);
+            return ccs.Context.TryGetCaptured();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            if (ccs.Context.TryGetCaptured(out result!) && result.HasError)
-                return Option.Some(result); // Return the original error, if possible
+            var result = ccs.Context.TryGetCaptured();
+            if (result.IsSome(out var computed) && computed.HasError)
+                return result; // Return the original error, if possible
             throw;
         }
-        return ccs.Context.TryGetCaptured(out result!) ? Option.Some(result) : default;
     }
 
     public static async ValueTask<Option<Computed<T>>> TryCapture<T>(
@@ -110,16 +90,16 @@ public static class Computed
         CancellationToken cancellationToken = default)
     {
         using var ccs = BeginCapture();
-        Computed<T> result;
         try {
-            await producer().ConfigureAwait(false);
+            await producer.Invoke().ConfigureAwait(false);
+            return ccs.Context.TryGetCaptured<T>();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            if (ccs.Context.TryGetCaptured(out result!) && result.HasError)
-                return Option.Some(result); // Return the original error, if possible
+            var result = ccs.Context.TryGetCaptured<T>();
+            if (result.IsSome(out var computed) && computed.HasError)
+                return result; // Return the original error, if possible
             throw;
         }
-        return ccs.Context.TryGetCaptured(out result!) ? Option.Some(result) : default;
     }
 
     // Capture
@@ -130,14 +110,15 @@ public static class Computed
     {
         using var ccs = BeginCapture();
         try {
-            await producer().ConfigureAwait(false);
+            await producer.Invoke().ConfigureAwait(false);
+            return ccs.Context.GetCaptured();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            if (ccs.Context.TryGetCaptured(out var result) && result.HasError)
-                return result; // Return the original error, if possible
+            var result = ccs.Context.TryGetCaptured();
+            if (result.IsSome(out var computed) && computed.HasError)
+                return computed; // Return the original error, if possible
             throw;
         }
-        return ccs.Context.GetCaptured();
     }
 
     public static async ValueTask<Computed<T>> Capture<T>(
@@ -146,14 +127,15 @@ public static class Computed
     {
         using var ccs = BeginCapture();
         try {
-            await producer().ConfigureAwait(false);
+            await producer.Invoke().ConfigureAwait(false);
+            return ccs.Context.GetCaptured<T>();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            if (ccs.Context.TryGetCaptured<T>(out var result) && result.HasError)
-                return result; // Return the original error, if possible
+            var result = ccs.Context.TryGetCaptured<T>();
+            if (result.IsSome(out var computed) && computed.HasError)
+                return computed; // Return the original error, if possible
             throw;
         }
-        return ccs.Context.GetCaptured<T>();
     }
 
     public static async ValueTask<IComputed> Capture(
@@ -162,14 +144,15 @@ public static class Computed
     {
         using var ccs = BeginCapture();
         try {
-            await producer().ConfigureAwait(false);
+            await producer.Invoke().ConfigureAwait(false);
+            return ccs.Context.GetCaptured();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            if (ccs.Context.TryGetCaptured(out var result) && result.HasError)
-                return result; // Return the original error, if possible
+            var result = ccs.Context.TryGetCaptured();
+            if (result.IsSome(out var computed) && computed.HasError)
+                return computed; // Return the original error, if possible
             throw;
         }
-        return ccs.Context.GetCaptured();
     }
 
     public static async ValueTask<Computed<T>> Capture<T>(
@@ -178,31 +161,32 @@ public static class Computed
     {
         using var ccs = BeginCapture();
         try {
-            await producer().ConfigureAwait(false);
+            await producer.Invoke().ConfigureAwait(false);
+            return ccs.Context.GetCaptured<T>();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            if (ccs.Context.TryGetCaptured<T>(out var result) && result.HasError)
-                return result; // Return the original error, if possible
+            var result = ccs.Context.TryGetCaptured<T>();
+            if (result.IsSome(out var computed) && computed.HasError)
+                return computed; // Return the original error, if possible
             throw;
         }
-        return ccs.Context.GetCaptured<T>();
     }
 
     // GetExisting
 
     public static Computed<T>? GetExisting<T>(Func<Task<T>> producer)
     {
-        using var ccs = ComputeContext.New(CallOptions.Capture | CallOptions.GetExisting).Activate();
-        var task = producer();
+        using var ccs = BeginCaptureExisting();
+        var task = producer.Invoke();
         _ = task.AssertCompleted(); // The must be always synchronous in this case
-        return ccs.Context.TryGetCaptured<T>(out var result) ? result : default;
+        return ccs.Context.TryGetCaptured<T>().ValueOrDefault;
     }
 
     public static Computed<T>? GetExisting<T>(Func<ValueTask<T>> producer)
     {
-        using var ccs = ComputeContext.New(CallOptions.Capture | CallOptions.GetExisting).Activate();
-        var task = producer();
+        using var ccs = BeginCaptureExisting();
+        var task = producer.Invoke();
         _ = task.AssertCompleted(); // The must be always synchronous in this case
-        return ccs.Context.TryGetCaptured<T>(out var result) ? result : default;
+        return ccs.Context.TryGetCaptured<T>().ValueOrDefault;
     }
 }

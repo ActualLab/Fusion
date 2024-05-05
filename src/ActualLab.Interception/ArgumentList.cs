@@ -10,15 +10,15 @@ public abstract partial record ArgumentList
 
     public static readonly ArgumentList Empty = new ArgumentList0();
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public abstract int Length { get; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New()
         => Empty;
 
-    public virtual object?[] ToArray() => Array.Empty<object?>();
-    public virtual object?[] ToArray(int skipIndex) => Array.Empty<object?>();
+    public virtual object?[] ToArray() => [];
+    public virtual object?[] ToArray(int skipIndex) => [];
 
     public virtual Type?[]? GetNonDefaultItemTypes()
         => null;

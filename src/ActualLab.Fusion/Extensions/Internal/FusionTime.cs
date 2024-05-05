@@ -22,13 +22,13 @@ public class FusionTime : IFusionTime
 
     public virtual Task<Moment> Now()
     {
-        Computed.GetCurrent()!.Invalidate(TrimInvalidationDelay(Settings.DefaultUpdatePeriod));
+        Computed.GetCurrent().Invalidate(TrimInvalidationDelay(Settings.DefaultUpdatePeriod));
         return Task.FromResult(Clock.Now);
     }
 
     public virtual Task<Moment> Now(TimeSpan updatePeriod)
     {
-        Computed.GetCurrent()!.Invalidate(TrimInvalidationDelay(updatePeriod));
+        Computed.GetCurrent().Invalidate(TrimInvalidationDelay(updatePeriod));
         return Task.FromResult(Clock.Now);
     }
 
@@ -50,7 +50,7 @@ public class FusionTime : IFusionTime
 
         // Invalidate the result when it's supposed to change
         var delay = TrimInvalidationDelay(unit.Multiply(unitCount + 1) - delta + TimeSpan.FromMilliseconds(100));
-        Computed.GetCurrent()!.Invalidate(delay, false);
+        Computed.GetCurrent().Invalidate(delay, false);
         return Task.FromResult(result);
     }
 

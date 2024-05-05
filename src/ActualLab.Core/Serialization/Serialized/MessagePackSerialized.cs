@@ -24,4 +24,9 @@ public partial class MessagePackSerialized<T> : ByteSerialized<T>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override IByteSerializer<T> GetSerializer()
         => _serializer ??= MessagePackByteSerializer.Default.ToTyped<T>();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator MessagePackSerialized<T>(T value) => new() { Value = value };
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator MessagePackSerialized<T>(byte[] data) => new() { Data = data };
 }

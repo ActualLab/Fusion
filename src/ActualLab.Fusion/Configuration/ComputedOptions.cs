@@ -9,6 +9,7 @@ public record ComputedOptions
     public static ComputedOptions ClientDefault { get; set; } = new() {
         MinCacheDuration = TimeSpan.FromMinutes(1),
         ClientCacheMode = ClientCacheMode.Cache,
+        CancellationReprocessing = ComputedCancellationReprocessingOptions.ClientDefault,
     };
     public static ComputedOptions MutableStateDefault { get; set; } = new() {
         TransientErrorInvalidationDelay = TimeSpan.MaxValue,
@@ -19,6 +20,8 @@ public record ComputedOptions
     public TimeSpan AutoInvalidationDelay { get; init; } = TimeSpan.MaxValue; // No auto invalidation
     public TimeSpan InvalidationDelay { get; init; }
     public ClientCacheMode ClientCacheMode { get; init; } = ClientCacheMode.NoCache;
+    public ComputedCancellationReprocessingOptions CancellationReprocessing { get; init; }
+        = ComputedCancellationReprocessingOptions.Default;
 
     public static ComputedOptions? Get(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
@@ -48,13 +51,14 @@ public record ComputedOptions
         if (rmaCacheMode == ClientCacheMode.Default)
             rmaCacheMode = null;
 
-        var options = new ComputedOptions() {
+        var options = defaultOptions with {
             MinCacheDuration = ToTimeSpan(a.MinCacheDuration) ?? defaultOptions.MinCacheDuration,
             TransientErrorInvalidationDelay = ToTimeSpan(a.TransientErrorInvalidationDelay) ?? defaultOptions.TransientErrorInvalidationDelay,
             AutoInvalidationDelay = ToTimeSpan(autoInvalidationDelay) ?? defaultOptions.AutoInvalidationDelay,
             InvalidationDelay = ToTimeSpan(invalidationDelay) ?? defaultOptions.InvalidationDelay,
             ClientCacheMode = rmaCacheMode ?? defaultOptions.ClientCacheMode,
         };
+        // We don't want to multiply instances of ComputedOptions here unless they differ from the default ones
         return options == defaultOptions ? defaultOptions : options;
     }
 

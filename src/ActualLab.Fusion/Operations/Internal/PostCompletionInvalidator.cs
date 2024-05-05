@@ -43,7 +43,7 @@ public class PostCompletionInvalidator(
         var command = operation.Command;
         var mayRequireInvalidation =
             MayRequireInvalidation(command)
-            && !Computed.IsInvalidating();
+            && !Invalidation.IsActive;
         if (!mayRequireInvalidation) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
@@ -56,7 +56,7 @@ public class PostCompletionInvalidator(
         var operationItems = operation.Items;
         var oldOperation = context.TryGetOperation();
         context.ChangeOperation(operation);
-        var invalidateScope = Computed.Invalidate();
+        var invalidateScope = Invalidation.Begin();
         try {
             // If we care only about the eventual consistency, the invalidation order
             // doesn't matter:
@@ -67,8 +67,10 @@ public class PostCompletionInvalidator(
             //   the last invalidated dependency causes N to invalidate no matter what -
             //   assuming the current version of N still depends it.
             var index = 1;
-            foreach (var (nestedCommand, nestedOperationItems) in operation.NestedOperations)
-                index = await TryInvalidate(context, operation, nestedCommand, nestedOperationItems, index).ConfigureAwait(false);
+            foreach (var (nestedCommand, nestedOperationItems) in operation.NestedOperations) {
+                index = await TryInvalidate(context, operation, nestedCommand, nestedOperationItems.ToMutable(), index)
+                    .ConfigureAwait(false);
+            }
             await TryInvalidate(context, operation, command, operationItems, index).ConfigureAwait(false);
         }
         finally {
@@ -131,7 +133,7 @@ public class PostCompletionInvalidator(
         CommandContext context,
         Operation operation,
         ICommand command,
-        OptionSet operationItems,
+        MutablePropertyBag operationItems,
         int index)
     {
         if (!RequiresInvalidation(command, out var handler))

@@ -6,7 +6,8 @@ namespace ActualLab.Rpc.Caching;
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
 {
-    private readonly int _hashCode;
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public readonly int HashCode;
 
     [DataMember(Order = 0), MemoryPackOrder(0)] public readonly Symbol Service;
     [DataMember(Order = 1), MemoryPackOrder(1)] public readonly Symbol Method;
@@ -18,26 +19,26 @@ public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
         Service = service;
         Method = method;
         ArgumentData = argumentData;
-        _hashCode = unchecked(
+        HashCode = unchecked(
             Service.Value.GetDjb2HashCode()
             ^ (353*Method.Value.GetDjb2HashCode())
             ^ argumentData.GetDataHashCode());
     }
 
     public override string ToString()
-        => $"#{_hashCode}: {Service}.{Method}({Convert.ToBase64String(ArgumentData.Bytes)})";
+        => $"#{(uint)HashCode:x}: {Service}.{Method}({Convert.ToBase64String(ArgumentData.Bytes)})";
 
     // Equality
 
     public bool Equals(RpcCacheKey? other)
         =>  !ReferenceEquals(other, null)
-            && _hashCode == other._hashCode
+            && HashCode == other.HashCode
             && StringComparer.Ordinal.Equals(Method.Value, other.Method.Value)
             && StringComparer.Ordinal.Equals(Service.Value, other.Service.Value)
             && ArgumentData.DataEquals(other.ArgumentData);
 
     public override bool Equals(object? obj) => obj is RpcCacheKey other && Equals(other);
-    public override int GetHashCode() => _hashCode;
+    public override int GetHashCode() => HashCode;
     public static bool operator ==(RpcCacheKey left, RpcCacheKey right) => left.Equals(right);
     public static bool operator !=(RpcCacheKey left, RpcCacheKey right) => !left.Equals(right);
 }

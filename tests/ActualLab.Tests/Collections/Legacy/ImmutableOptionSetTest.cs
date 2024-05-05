@@ -1,4 +1,4 @@
-namespace ActualLab.Tests.Collections;
+namespace ActualLab.Tests.Collections.Legacy;
 
 public class ImmutableOptionSetTest(ITestOutputHelper @out) : TestBase(@out)
 {

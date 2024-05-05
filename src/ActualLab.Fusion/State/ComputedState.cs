@@ -1,3 +1,5 @@
+using ActualLab.Fusion.Internal;
+
 namespace ActualLab.Fusion;
 
 public interface IComputedState : IState, IDisposable, IHasWhenDisposed
@@ -6,6 +8,7 @@ public interface IComputedState : IState, IDisposable, IHasWhenDisposed
     {
         public static bool TryComputeSynchronously { get; set; } = true;
         public static bool FlowExecutionContext { get; set; } = false;
+        public static TimeSpan GracefulDisposeDelay { get; set; } = TimeSpan.FromSeconds(10);
     }
 
     public new interface IOptions : IState.IOptions
@@ -13,6 +16,7 @@ public interface IComputedState : IState, IDisposable, IHasWhenDisposed
         IUpdateDelayer? UpdateDelayer { get; init; }
         public bool TryComputeSynchronously { get; init; }
         public bool FlowExecutionContext { get; init; }
+        public TimeSpan GracefulDisposeDelay { get; init; }
     }
 
     IUpdateDelayer UpdateDelayer { get; set; }
@@ -22,19 +26,22 @@ public interface IComputedState : IState, IDisposable, IHasWhenDisposed
 
 public interface IComputedState<T> : IState<T>, IComputedState;
 
-public abstract class ComputedState<T> : State<T>, IComputedState<T>
+public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTimeoutHandler
 {
     public new record Options : State<T>.Options, IComputedState.IOptions
     {
         public IUpdateDelayer? UpdateDelayer { get; init; }
         public bool TryComputeSynchronously { get; init; } = IComputedState.DefaultOptions.TryComputeSynchronously;
         public bool FlowExecutionContext { get; init; } = IComputedState.DefaultOptions.FlowExecutionContext;
+        public TimeSpan GracefulDisposeDelay { get; init; }
     }
 
     private volatile Computed<T>? _computingComputed;
     private volatile IUpdateDelayer _updateDelayer = null!;
     private volatile Task? _whenDisposed;
     private readonly CancellationTokenSource _disposeTokenSource;
+    private readonly CancellationTokenSource? _gracefulDisposeTokenSource;
+    private readonly TimeSpan _gracefulDisposeDelay;
 
     public IUpdateDelayer UpdateDelayer {
         get => _updateDelayer;
@@ -42,6 +49,7 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>
     }
 
     public CancellationToken DisposeToken { get; }
+    public CancellationToken GracefulDisposeToken { get; }
     public Task UpdateCycleTask { get; private set; } = null!;
     public Task? WhenDisposed => _whenDisposed;
     public override bool IsDisposed => _whenDisposed != null;
@@ -51,6 +59,12 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>
     {
         _disposeTokenSource = new CancellationTokenSource();
         DisposeToken = _disposeTokenSource.Token;
+
+        _gracefulDisposeDelay = settings.GracefulDisposeDelay;
+        _gracefulDisposeTokenSource = _gracefulDisposeDelay > TimeSpan.Zero
+            ? new CancellationTokenSource()
+            : _disposeTokenSource;
+        GracefulDisposeToken = _gracefulDisposeTokenSource.Token;
 
         // ReSharper disable once VirtualMemberCallInConstructor
         if (initialize)
@@ -91,41 +105,37 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>
         }
         GC.SuppressFinalize(this);
         _disposeTokenSource.CancelAndDisposeSilently();
+        if (!ReferenceEquals(_gracefulDisposeTokenSource, _disposeTokenSource))
+            Timeouts.Generic.AddOrUpdateToEarlier(this, Timeouts.Clock.Now + _gracefulDisposeDelay);
     }
+
+    // Handles the rest of Dispose
+    void IGenericTimeoutHandler.OnTimeout()
+        => _gracefulDisposeTokenSource.CancelAndDisposeSilently();
 
     protected virtual async Task UpdateCycle()
     {
         var cancellationToken = DisposeToken;
         try {
             await Computed.Update(cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception e) {
-            if (e.IsCancellationOf(cancellationToken)) {
-                Computed.Invalidate();
-                return;
-            }
-
-            Log.LogError(e, "Failure inside UpdateCycle()");
-        }
-
-        while (!cancellationToken.IsCancellationRequested) {
-            try {
+            while (true) {
                 var snapshot = Snapshot;
                 var computed = snapshot.Computed;
                 if (!computed.IsInvalidated())
                     await computed.WhenInvalidated(cancellationToken).ConfigureAwait(false);
                 await UpdateDelayer.Delay(snapshot.RetryCount, cancellationToken).ConfigureAwait(false);
                 if (!snapshot.WhenUpdated().IsCompleted)
-                    await computed.Update(cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception e) {
-                if (e.IsCancellationOf(cancellationToken))
-                    break;
-
-                Log.LogError(e, "Failure inside UpdateCycle()");
+                    await computed.Update(GracefulDisposeToken).ConfigureAwait(false);
             }
         }
-        Computed.Invalidate();
+        catch (Exception e) {
+            if (!e.IsCancellationOf(cancellationToken))
+                Log.LogError(e, "UpdateCycle() failed and stopped for {Category}", Category);
+        }
+        finally {
+            Computed.Invalidate();
+            _gracefulDisposeTokenSource.CancelAndDisposeSilently();
+        }
     }
 
     public override IComputed? GetExistingComputed()

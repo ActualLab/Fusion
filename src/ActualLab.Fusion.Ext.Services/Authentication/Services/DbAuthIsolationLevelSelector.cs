@@ -11,7 +11,7 @@ public static class DbAuthIsolationLevelSelector
             AuthBackend_SignIn
                 or Auth_SignOut
                 or AuthBackend_SetupSession
-                or Auth_SetSessionOptions => IsolationLevel,
+                or AuthBackend_SetSessionOptions => IsolationLevel,
             _ => IsolationLevel.Unspecified
         };
 }

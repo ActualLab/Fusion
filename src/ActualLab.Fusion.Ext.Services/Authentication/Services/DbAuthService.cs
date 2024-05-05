@@ -40,16 +40,14 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<TDbContext>(command);
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             if (isKickCommand)
                 return;
 
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
-            if (force) {
+            if (force)
                 _ = IsSignOutForced(session, default);
-                _ = GetOptions(session, default);
-            }
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo != null) {
                 _ = GetUser(shard, invSessionInfo.UserId, default);
@@ -101,7 +99,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<TDbContext>(command);
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo != null)
                 _ = GetUser(shard, invSessionInfo.UserId, default);
@@ -145,6 +143,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
     public override async Task<bool> IsSignOutForced(
         Session session, CancellationToken cancellationToken = default)
     {
+        using var _ = Computed.BeginIsolation();
         var sessionInfo = await GetAuthInfo(session, cancellationToken).ConfigureAwait(false);
         return sessionInfo?.IsSignOutForced ?? false;
     }
@@ -154,7 +153,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        using var _ = Computed.SuspendDependencyCapture();
+        using var _ = Computed.BeginIsolation();
         var sessionInfo = await GetSessionInfo(session, cancellationToken).ConfigureAwait(false);
         return sessionInfo?.ToAuthInfo();
     }
@@ -166,15 +165,6 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var shard = ShardResolver.Resolve<TDbContext>(session);
         var dbSessionInfo = await Sessions.Get(shard, session.Id, cancellationToken).ConfigureAwait(false);
         return dbSessionInfo == null ? null : SessionConverter.ToModel(dbSessionInfo);
-    }
-
-    // [ComputeMethod] inherited
-    public override async Task<ImmutableOptionSet> GetOptions(Session session, CancellationToken cancellationToken = default)
-    {
-        session.RequireValid();
-        using var _ = Computed.SuspendDependencyCapture();
-        var sessionInfo = await GetSessionInfo(session, cancellationToken).ConfigureAwait(false);
-        return sessionInfo?.Options ?? ImmutableOptionSet.Empty;
     }
 
     // [ComputeMethod] inherited

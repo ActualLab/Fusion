@@ -31,4 +31,13 @@ public sealed class RpcCacheInfoCapture
         dataSource = DataSource;
         return true;
     }
+
+    public async ValueTask<(RpcCacheKey? Key, TextOrBytes? Data)> GetKeyAndData()
+    {
+        if (!HasKeyAndData(out var key, out var dataSource))
+            return (null, null);
+
+        var dataResult = await dataSource.Task.ResultAwait(false);
+        return (key, dataResult.IsValue(out var data) ? (TextOrBytes?)data : null);
+    }
 }

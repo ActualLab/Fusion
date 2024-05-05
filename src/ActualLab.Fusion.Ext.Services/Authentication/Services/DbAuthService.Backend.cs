@@ -17,7 +17,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<TDbContext>(command);
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
@@ -83,16 +83,15 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve<TDbContext>(command);
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo == null)
                 return null!;
+
             _ = GetSessionInfo(session, default); // Must go first!
             var invIsNew = context.Operation.Items.GetOrDefault<bool>();
-            if (invIsNew) {
+            if (invIsNew)
                 _ = GetAuthInfo(session, default);
-                _ = GetOptions(session, default);
-            }
             if (invSessionInfo.IsAuthenticated())
                 _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             return null!;
@@ -123,15 +122,14 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
     // [CommandHandler] inherited
     public override async Task SetOptions(
-        Auth_SetSessionOptions command, CancellationToken cancellationToken = default)
+        AuthBackend_SetSessionOptions command, CancellationToken cancellationToken = default)
     {
         var (session, options, expectedVersion) = command;
         session.RequireValid();
 
         var shard = ShardResolver.Resolve<TDbContext>(command);
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
-            _ = GetOptions(session, default);
             return;
         }
 

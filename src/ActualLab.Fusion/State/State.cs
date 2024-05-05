@@ -197,7 +197,7 @@ public abstract class State<T> : ComputedInput,
             UntypedInvalidated?.Invoke(this, StateEventKind.Invalidated);
         }
         catch (Exception e) {
-            Log.LogError(e, "Invalidated / UntypedInvalidated handler failed");
+            Log.LogError(e, "Invalidated / UntypedInvalidated handler failed for {Category}", Category);
         }
     }
 
@@ -213,7 +213,7 @@ public abstract class State<T> : ComputedInput,
             UntypedUpdating?.Invoke(this, StateEventKind.Updating);
         }
         catch (Exception e) {
-            Log.LogError(e, "Updating / UntypedUpdating handler failed");
+            Log.LogError(e, "Updating / UntypedUpdating handler failed for {Category}", Category);
         }
     }
 
@@ -229,7 +229,7 @@ public abstract class State<T> : ComputedInput,
             UntypedUpdated?.Invoke(this, StateEventKind.Updated);
         }
         catch (Exception e) {
-            Log.LogError(e, "Updated / UntypedUpdated handler failed");
+            Log.LogError(e, "Updated / UntypedUpdated handler failed for {Category}", Category);
         }
     }
 
@@ -238,111 +238,119 @@ public abstract class State<T> : ComputedInput,
     public override IComputed? GetExistingComputed()
         => _snapshot?.Computed;
 
-    // IFunction<T> & IFunction
+    // IFunction<T>
 
-    ValueTask<Computed<T>> IFunction<T>.Invoke(ComputedInput input, IComputed? usedBy, ComputeContext? context,
+    ValueTask<Computed<T>> IFunction<T>.Invoke(
+        ComputedInput input,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
         if (!ReferenceEquals(input, this))
             // This "Function" supports just a single input == this
             throw new ArgumentOutOfRangeException(nameof(input));
 
-        return Invoke(usedBy, context, cancellationToken);
-    }
-
-    async ValueTask<IComputed> IFunction.Invoke(ComputedInput input, IComputed? usedBy, ComputeContext? context,
-        CancellationToken cancellationToken)
-    {
-        if (!ReferenceEquals(input, this))
-            // This "Function" supports just a single input == this
-            throw new ArgumentOutOfRangeException(nameof(input));
-
-        return await Invoke(usedBy, context, cancellationToken).ConfigureAwait(false);
+        return Invoke(context, cancellationToken);
     }
 
     protected virtual async ValueTask<Computed<T>> Invoke(
-        IComputed? usedBy, ComputeContext? context,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
-        context ??= ComputeContext.Current;
-
         var computed = Computed;
-        if (computed.TryUseExisting(context, usedBy))
+        if (computed.TryUseExisting(context))
             return computed;
 
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
         computed = Computed;
-        if (computed.TryUseExistingFromLock(context, usedBy))
+        if (computed.TryUseExistingFromLock(context))
             return computed;
 
         releaser.MarkLockedLocally();
         OnUpdating(computed);
         computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context, usedBy);
+        computed.UseNew(context);
         return computed;
     }
 
-    async Task IFunction.InvokeAndStrip(
-        ComputedInput input, IComputed? usedBy, ComputeContext? context,
+    Task<T> IFunction<T>.InvokeAndStrip(
+        ComputedInput input,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
         if (!ReferenceEquals(input, this))
             // This "Function" supports just a single input == this
             throw new ArgumentOutOfRangeException(nameof(input));
 
-        await InvokeAndStrip(usedBy, context, cancellationToken).ConfigureAwait(false);
-    }
-
-    Task<T> IFunction<T>.InvokeAndStrip(ComputedInput input, IComputed? usedBy, ComputeContext? context,
-        CancellationToken cancellationToken)
-    {
-        if (!ReferenceEquals(input, this))
-            // This "Function" supports just a single input == this
-            throw new ArgumentOutOfRangeException(nameof(input));
-
-        return InvokeAndStrip(usedBy, context, cancellationToken);
+        return InvokeAndStrip(context, cancellationToken);
     }
 
     protected virtual Task<T> InvokeAndStrip(
-        IComputed? usedBy, ComputeContext? context,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
-        context ??= ComputeContext.Current;
-
         var result = Computed;
-        return result.TryUseExisting(context, usedBy)
+        return result.TryUseExisting(context)
             ? result.StripToTask(context)
-            : TryRecompute(usedBy, context, cancellationToken);
+            : TryRecompute(context, cancellationToken);
     }
 
     protected async Task<T> TryRecompute(
-        IComputed? usedBy, ComputeContext context,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
         var computed = Computed;
-        if (computed.TryUseExistingFromLock(context, usedBy))
+        if (computed.TryUseExistingFromLock(context))
             return computed.Strip(context);
 
         releaser.MarkLockedLocally();
         OnUpdating(computed);
         computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context, usedBy);
+        computed.UseNew(context);
         return computed.Value;
     }
 
     protected async ValueTask<StateBoundComputed<T>> GetComputed(CancellationToken cancellationToken)
     {
-        var computed = CreateComputed();
-        using (Fusion.Computed.ChangeCurrent(computed)) {
-            try {
-                var value = await Compute(cancellationToken).ConfigureAwait(false);
-                computed.TrySetOutput(Result.New(value));
-            }
-            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-                computed.TrySetOutput(Result.Error<T>(e));
+        var tryIndex = 0;
+        var startedAt = CpuTimestamp.Now;
+        StateBoundComputed<T> computed;
+        while (true) {
+            computed = CreateComputed();
+            using (Fusion.Computed.BeginCompute(computed)) {
+                try {
+                    var value = await Compute(cancellationToken).ConfigureAwait(false);
+                    computed.TrySetOutput(Result.New(value));
+                    break;
+                }
+                catch (Exception e) {
+                    if (cancellationToken.IsCancellationRequested) {
+                        computed.Invalidate(true); // Instant invalidation on cancellation
+                        computed.TrySetOutput(Result.Error<T>(e));
+                        if (e is OperationCanceledException)
+                            throw;
+
+                        cancellationToken.ThrowIfCancellationRequested(); // Always throws here
+                    }
+
+                    var cancellationReprocessingOptions = ComputedOptions.CancellationReprocessing;
+                    if (e is not OperationCanceledException
+                        || ++tryIndex > cancellationReprocessingOptions.MaxTryCount
+                        || startedAt.Elapsed > cancellationReprocessingOptions.MaxDuration) {
+                        computed.TrySetOutput(Result.Error<T>(e));
+                        break;
+                    }
+
+                    computed.Invalidate(true); // Instant invalidation on cancellation
+                    computed.TrySetOutput(Result.Error<T>(e));
+                    var delay = cancellationReprocessingOptions.RetryDelays[tryIndex];
+                    Log.LogWarning(e,
+                        "GetComputed #{TryIndex} for {Category} was cancelled internally, retry in {Delay}",
+                        tryIndex, Category, delay.ToShortString());
+                    await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                }
             }
         }
 

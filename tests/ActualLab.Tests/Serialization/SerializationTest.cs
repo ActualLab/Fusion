@@ -1,3 +1,4 @@
+using ActualLab.Collections.Internal;
 using ActualLab.Interception;
 using ActualLab.IO;
 using ActualLab.Reflection;
@@ -212,7 +213,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     {
         Test(default);
         Test(new Base64Encoded(null!));
-        Test(new Base64Encoded(Array.Empty<byte>()));
+        Test(new Base64Encoded([]));
         Test(new Base64Encoded([1]));
         Test(new Base64Encoded([1, 2]));
 
@@ -275,5 +276,81 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         s = s.Set((1, "X"));
         var s1 = s.PassThroughAllSerializers(Out);
         s1.Items.Should().BeEquivalentTo(s.Items);
+    }
+
+    [Fact]
+    public void UniSerializedSerialization()
+    {
+        UniSerialized.New(default(Unit)).AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New(1).AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New((int?)null).AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New((int?)1).AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New((string?)null).AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New("").AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New("A").AssertPassesThroughAllSerializers(Out);
+    }
+
+    [Fact]
+    public void TypeDecoratingUniSerializedSerialization()
+    {
+        TypeDecoratingUniSerialized.New(default(Unit)).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New(1).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New((int?)null).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New((int?)1).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New((string?)null).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New("").AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New("A").AssertPassesThroughAllSerializers(Out);
+    }
+
+    [Fact]
+    public void PropertyBagItemSerialization()
+    {
+        PropertyBagItem.New("X", default(Unit)).AssertPassesThroughAllSerializers(Out);
+        var a = PropertyBagItem.New("X", 3).AssertPassesThroughAllSerializers(Out);
+        a.Value.Should().Be(3);
+        var b = PropertyBagItem.New("X", (int?)3).AssertPassesThroughAllSerializers(Out);
+        b.Value.Should().Be(3);
+    }
+
+    [Fact]
+    public void PropertyBagSerialization()
+    {
+        default(PropertyBag).AssertPassesThroughAllSerializers();
+        var s = new PropertyBag();
+        s.Set(default(Unit));
+        s.Set(3);
+        s.Set((int?)4);
+        s.Set("X");
+        Out.WriteLine(s.ToString());
+        var s1 = s.PassThroughSystemJsonSerializer(Out);
+        Out.WriteLine(s1.ToString());
+        s1.Items.Should().BeEquivalentTo(s.Items, o => o.ComparingRecordsByMembers());
+    }
+
+    [Fact]
+    public void MutablePropertyBagSerialization()
+    {
+        default(MutablePropertyBag).AssertPassesThroughAllSerializers();
+        var s = new MutablePropertyBag();
+        s.Set(default(Unit));
+        s.Set(3);
+        s.Set((int?)4);
+        s.Set("X");
+        Out.WriteLine(s.ToString());
+        var s1 = s.PassThroughAllSerializers(Out);
+        Out.WriteLine(s.ToString());
+        s1.Items.Should().BeEquivalentTo(s.Items, o => o.ComparingRecordsByMembers());
+    }
+
+    [Fact]
+    public void ValueTupleSerialization()
+    {
+        // System.Text.Json fails to serialize ValueTuple fields, see:
+        // - https://stackoverflow.com/questions/70436689/net-jsonserializer-does-not-serialize-tuples-values
+        var s = (1, "X");
+        Out.WriteLine(s.ToString());
+        var s1 = s.PassThroughSystemJsonSerializer(Out);
+        Out.WriteLine(s1.ToString());
+        s1.Should().NotBe(s);
     }
 }

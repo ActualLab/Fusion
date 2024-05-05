@@ -24,14 +24,14 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
             operation != null // Should have an operation
             && context.OuterContext != null // Should be a nested context
             && PostCompletionInvalidator.MayRequireInvalidation(command)
-            && !Computed.IsInvalidating();
+            && !Invalidation.IsActive;
         if (!mustBeLogged) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
         }
 
         var oldOperationItems = operation!.Items;
-        var operationItems = operation.Items = new OptionSet();
+        var operationItems = operation.Items = new MutablePropertyBag();
         Exception? error = null;
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
@@ -47,7 +47,7 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
                 // current command must be logged as part of that operation.
                 operation = context.Operation;
                 if (operation.Scope is { IsCommitted: null })
-                    operation.NestedOperations.Add(new(command, operationItems));
+                    operation.NestedOperations = operation.NestedOperations.Add(new(command, operationItems.Snapshot));
             }
         }
     }

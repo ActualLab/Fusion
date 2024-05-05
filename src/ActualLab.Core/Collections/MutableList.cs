@@ -5,7 +5,6 @@ namespace ActualLab.Collections;
 public interface IReadOnlyMutableList<T> : IReadOnlyCollection<T>
 {
     ImmutableList<T> Items { get; }
-    Task WhenChanged { get; }
     event Action? Changed;
 }
 
@@ -23,7 +22,6 @@ public interface IMutableList<T> : IReadOnlyMutableList<T>, IList<T>
 public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
 {
     private readonly object _lock = new();
-    private volatile TaskCompletionSource<Unit> _whenChangedSource = TaskCompletionSourceExt.New<Unit>();
     private volatile ImmutableList<T> _items = items;
 
     public ImmutableList<T> Items {
@@ -31,7 +29,6 @@ public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
         set => Update(value);
     }
 
-    public Task WhenChanged => _whenChangedSource.Task;
     public event Action? Changed;
 
     public int Count => _items.Count;
@@ -54,9 +51,6 @@ public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
                 return false;
 
             _items = items;
-            var oldWhenChangedSource = _whenChangedSource;
-            _whenChangedSource = TaskCompletionSourceExt.New<Unit>();
-            oldWhenChangedSource.TrySetResult(default);
         }
         Changed?.Invoke();
         return true;
@@ -69,9 +63,6 @@ public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
                 return false;
 
             _items = items;
-            var oldWhenChangedSource = _whenChangedSource;
-            _whenChangedSource = TaskCompletionSourceExt.New<Unit>();
-            oldWhenChangedSource.TrySetResult(default);
         }
         Changed?.Invoke();
         return true;
@@ -86,9 +77,6 @@ public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
                 return false;
 
             _items = newItems;
-            var oldWhenChangedSource = _whenChangedSource;
-            _whenChangedSource = TaskCompletionSourceExt.New<Unit>();
-            oldWhenChangedSource.TrySetResult(default);
         }
         Changed?.Invoke();
         return true;
@@ -103,9 +91,6 @@ public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
                 return false;
 
             _items = newItems;
-            var oldWhenChangedSource = _whenChangedSource;
-            _whenChangedSource = TaskCompletionSourceExt.New<Unit>();
-            oldWhenChangedSource.TrySetResult(default);
         }
         Changed?.Invoke();
         return true;

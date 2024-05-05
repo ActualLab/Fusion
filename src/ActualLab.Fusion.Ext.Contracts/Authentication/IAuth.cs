@@ -17,8 +17,6 @@ public interface IAuth : IComputeService
     [ComputeMethod(MinCacheDuration = 10)]
     Task<SessionInfo?> GetSessionInfo(Session session, CancellationToken cancellationToken = default);
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<ImmutableOptionSet> GetOptions(Session session, CancellationToken cancellationToken = default);
-    [ComputeMethod(MinCacheDuration = 10)]
     Task<User?> GetUser(Session session, CancellationToken cancellationToken = default);
     [ComputeMethod]
     Task<ImmutableArray<SessionInfo>> GetUserSessions(Session session, CancellationToken cancellationToken = default);

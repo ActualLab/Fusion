@@ -75,7 +75,7 @@ public class DbHub<TDbContext>(IServiceProvider services) : IHasServices
         IsolationLevel isolationLevel,
         CancellationToken cancellationToken = default)
     {
-        if (Computed.IsInvalidating())
+        if (Invalidation.IsActive)
             throw Errors.CreateCommandDbContextIsCalledFromInvalidationCode();
 
         var operationScope = DbOperationScope<TDbContext>.GetOrCreate(CommandContext.GetCurrent(), isolationLevel);

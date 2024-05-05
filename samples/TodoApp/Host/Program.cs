@@ -17,6 +17,7 @@ using ActualLab.IO;
 using ActualLab.OS;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
+using ActualLab.Rpc.Testing;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using Microsoft.AspNetCore.Hosting.StaticWebAssets;
@@ -134,10 +135,10 @@ void ConfigureServices()
             ? throw new NotSupportedException("No client peers are allowed on the server.")
             : new RpcServerPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
     );
-#if false
+#if true
     // Enable this to test how the client behaves w/ a delay
     fusion.Rpc.AddInboundMiddleware(c => new RpcRandomDelayMiddleware(c) {
-        Delay = new(0.1, 0.05),
+        Delay = new(1, 0.1),
     });
 #endif
 
@@ -166,7 +167,7 @@ void ConfigureServices()
         }
     });
     fusionServer.ConfigureServerAuthHelper(_ => new() {
-        NameClaimKeys = Array.Empty<string>(),
+        NameClaimKeys = [],
     });
     fusion.AddSandboxedKeyValueStore<AppDbContext>();
     fusion.AddOperationReprocessor();

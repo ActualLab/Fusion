@@ -21,7 +21,7 @@ public interface IPluginInfoProvider
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     ImmutableHashSet<TypeRef> GetDependencies(Type pluginType);
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
-    ImmutableOptionSet GetCapabilities(Type pluginType);
+    PropertyBag GetCapabilities(Type pluginType);
 }
 
 public class PluginInfoProvider : IPluginInfoProvider
@@ -39,11 +39,11 @@ public class PluginInfoProvider : IPluginInfoProvider
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
-    public virtual ImmutableOptionSet GetCapabilities(Type pluginType)
+    public virtual PropertyBag GetCapabilities(Type pluginType)
     {
         var plugin = GetPlugin(pluginType);
         if (plugin is not IHasCapabilities hasCapabilities)
-            return ImmutableOptionSet.Empty;
+            return PropertyBag.Empty;
         return hasCapabilities.Capabilities;
     }
 
@@ -56,7 +56,7 @@ public class PluginInfoProvider : IPluginInfoProvider
             if (ctor != null)
                 return ctor.Invoke([IPluginInfoProvider.Query.Instance]);
             ctor = pluginType1.GetConstructor(Type.EmptyTypes);
-            return ctor?.Invoke(Array.Empty<object>());
+            return ctor?.Invoke([]);
 #pragma warning restore IL2070
         });
 }
