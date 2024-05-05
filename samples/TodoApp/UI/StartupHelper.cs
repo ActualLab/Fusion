@@ -82,7 +82,6 @@ public static class StartupHelper
         services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
 
         // Diagnostics
-        return;
         services.AddHostedService(c => {
             var isWasm = OSInfo.IsWebAssembly;
             return new FusionMonitor(c) {
