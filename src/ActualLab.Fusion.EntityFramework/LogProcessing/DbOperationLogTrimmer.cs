@@ -89,7 +89,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
             return 0;
 
 #if NET7_0_OR_GREATER
-        return await dbContext.Set<TDbEntry>(DbHintSet.UpdateSkipLocked)
+        return await dbContext.Set<TDbEntry>()
             .Where(o => o.Index <= lastCandidate.Index)
             .OrderBy(o => o.Index)
             .Take(batchSize)

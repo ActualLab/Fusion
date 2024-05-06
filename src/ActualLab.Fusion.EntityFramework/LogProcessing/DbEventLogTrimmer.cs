@@ -90,7 +90,7 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
         dbContext.EnableChangeTracking(false);
 
 #if NET7_0_OR_GREATER
-        return await dbContext.Set<TDbEntry>(DbHintSet.UpdateSkipLocked)
+        return await dbContext.Set<TDbEntry>()
             .Where(o => o.DelayUntil <= minDelayUntil)
             .OrderBy(o => o.DelayUntil)
             .Take(batchSize)

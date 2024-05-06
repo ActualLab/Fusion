@@ -111,15 +111,10 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         await using var _ = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);
 
-        var candidateEntries = dbContext.Set<TDbEntry>().AsQueryable();
-        if (Settings is DbOperationLogReaderOptions cooperativeSettings) {
-            var minLoggedAt = SystemClock.Now.ToDateTime() - cooperativeSettings.StartOffset;
-            candidateEntries = candidateEntries.Where(e => e.LoggedAt >= minLoggedAt);
-        }
-        else
-            candidateEntries = candidateEntries.Where(e => e.State == LogEntryState.New);
-        return await candidateEntries
-            .OrderBy(e => e.Index)
+        var minLoggedAt = SystemClock.Now.ToDateTime() - Settings.StartOffset;
+        return await dbContext.Set<TDbEntry>()
+            .Where(e => e.LoggedAt >= minLoggedAt)
+            .OrderBy(e => e.LoggedAt).ThenBy(e => e.Index)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
     }
