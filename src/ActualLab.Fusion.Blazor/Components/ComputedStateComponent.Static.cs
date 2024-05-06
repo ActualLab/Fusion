@@ -56,5 +56,7 @@ public static class ComputedStateComponent
     // Private methods
 
     private static IComputedState.IOptions CreateDefaultStateOptionsImpl<TState>(Type componentType)
-        => ComputedStateComponent.GetStateOptions(componentType);
+        => new ComputedState<TState>.Options() {
+            Category = GetStateCategory(componentType),
+        };
 }
