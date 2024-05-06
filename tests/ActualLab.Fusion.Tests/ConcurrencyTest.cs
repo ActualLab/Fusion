@@ -79,7 +79,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
     }
 
     [Fact]
-    public async Task AnonymousComputedConcurrencyTest()
+    public async Task ComputedSourceConcurrencyTest()
     {
         const int iterationCount = 10_000;
         var services = CreateServices();
@@ -107,7 +107,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
             var ms2 = factory.NewMutable(2);
             var readers = Enumerable.Range(0, HardwareInfo.GetProcessorCountFactor(2))
                 .Select(_ => {
-                    var source =  new AnonymousComputedSource<int>(
+                    var source =  new ComputedSource<int>(
                         services,
                         async (_, ct) => {
                             var m1 = await ms1.Use(ct).ConfigureAwait(false);
@@ -177,7 +177,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
         {
             var readers = (await Enumerable.Range(0, HardwareInfo.GetProcessorCountFactor())
                 .Select(async _ => {
-                    var source =  new AnonymousComputedSource<int>(
+                    var source =  new ComputedSource<int>(
                         services,
                         async (_, ct) => await counterSum.Sum(0, 1));
                     var computed = await Computed.Capture(() => counterSum.Sum(0, 1));

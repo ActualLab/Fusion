@@ -64,7 +64,7 @@ public static class StartupHelper
 
     public static void ConfigureSharedServices(IServiceCollection services)
     {
-        IComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
+        ComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
 
         // Blazorise
         services.AddBlazorise(options => options.Immediate = true)

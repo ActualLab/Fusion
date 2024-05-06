@@ -10,8 +10,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     // Shortcuts
     public object Service => Invocation.Proxy;
     public ArgumentList Arguments => Invocation.Arguments;
-    public override bool IsDisposed => MethodDef.IsDisposable
-        && Service is IHasIsDisposed { IsDisposed: true };
+    public override bool IsDisposed => MethodDef.IsDisposable && Service is IHasIsDisposed { IsDisposed: true };
 
     public ComputeMethodInput(IFunction function, ComputeMethodDef methodDef, Invocation invocation)
     {
@@ -61,9 +60,4 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
         => obj is ComputeMethodInput other && Equals(other);
     public override int GetHashCode()
         => HashCode;
-
-    // Protected methods
-
-    protected override Type GetDisposedType()
-        => Service.GetType();
 }

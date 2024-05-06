@@ -5,11 +5,6 @@ namespace ActualLab.Fusion.Internal;
 
 public static class Errors
 {
-    public static Exception TypeMustBeOpenGenericType(Type type)
-        => new InvalidOperationException($"'{type}' must be open generic type.");
-    public static Exception MustHaveASingleGenericArgument(Type type)
-        => new InvalidOperationException($"'{type}' must have a single generic argument.");
-
     public static Exception WrongComputedState(
         ConsistencyState expectedState, ConsistencyState state)
         => new InvalidOperationException(
@@ -26,12 +21,6 @@ public static class Errors
     public static Exception ComputedInputCategoryCannotBeSet()
         => new NotSupportedException(
             "Only IState and IAnonymousComputedInput allow to manually set Category property.");
-
-    public static Exception AnonymousComputedSourceIsNotComputedYet()
-        => new InvalidOperationException("This anonymous computed source isn't computed yet.");
-
-    public static Exception WebSocketConnectTimeout()
-        => new WebSocketException("Connection timeout.");
 
     public static Exception ComputeServiceMethodAttributeOnStaticMethod(MethodInfo method)
         => new InvalidOperationException($"{nameof(ComputeMethodAttribute)} is applied to static method '{method}'.");
@@ -56,6 +45,6 @@ public static class Errors
 
     public static Exception SessionUnavailable()
         => new SecurityException("The Session is unavailable.");
-    public static Exception NotAuthenticated()
+    public static Exception SignInRequired()
         => new SecurityException("You must sign in to perform this action.");
 }

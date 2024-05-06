@@ -1,28 +1,6 @@
 using ActualLab.Fusion.Blazor.Internal;
-using ActualLab.OS;
 
 namespace ActualLab.Fusion.Blazor;
-
-public static class ComputedStateComponent
-{
-    private static readonly ConcurrentDictionary<Type, string> StateCategoryCache = new();
-
-    public static ComputedStateComponentOptions DefaultOptions { get; set; }
-
-    static ComputedStateComponent()
-    {
-        DefaultOptions = ComputedStateComponentOptions.SynchronizeComputeState
-            | ComputedStateComponentOptions.RecomputeOnParametersSet;
-        if (HardwareInfo.IsSingleThreaded)
-           DefaultOptions = ComputedStateComponentOptions.RecomputeOnParametersSet;
-    }
-
-    public static string GetStateCategory(Type componentType)
-        => StateCategoryCache.GetOrAdd(componentType, static t => $"{t.GetName()}.State");
-
-    public static string GetMutableStateCategory(Type componentType)
-        => StateCategoryCache.GetOrAdd(componentType, static t => $"{t.GetName()}.MutableState");
-}
 
 public abstract class ComputedStateComponent<TState> : StatefulComponentBase<IComputedState<TState>>
 {
@@ -37,13 +15,10 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<ICo
         return Task.CompletedTask;
     }
 
-    protected virtual string GetStateCategory()
-        => ComputedStateComponent.GetStateCategory(GetType());
-
     protected virtual ComputedState<TState>.Options GetStateOptions()
-        => new() { Category = GetStateCategory() };
+        => ComputedStateComponent.GetStateOptions<TState>(GetType());
 
-    protected override IComputedState<TState> CreateState()
+    protected override (IComputedState<TState> State, object? StateOptions) CreateState()
     {
         // Synchronizes ComputeState call as per:
         // https://github.com/servicetitan/Stl.Fusion/issues/202
@@ -54,7 +29,7 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<ICo
                 : stateOptions.FlowExecutionContext && DispatcherInfo.IsExecutionContextFlowSupported(this)
                     ? SynchronizedComputeState
                     : SynchronizedComputeStateWithManualExecutionContextFlow;
-        return new ComputedStateComponentState<TState>(stateOptions, computer, Services);
+        return (new ComputedStateComponentState<TState>(stateOptions, computer, Services), stateOptions);
 
         Task<TState> UnsynchronizedComputeState(
             IComputedState<TState> state, CancellationToken cancellationToken)

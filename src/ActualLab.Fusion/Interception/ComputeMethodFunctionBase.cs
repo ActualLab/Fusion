@@ -12,6 +12,11 @@ public abstract class ComputeMethodFunctionBase<T>(
         CancellationToken cancellationToken)
     {
         var typedInput = (ComputeMethodInput)input;
+        if (typedInput.IsDisposed) {
+            // Compute takes indefinitely long for disposed compute service's methods
+            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         var tryIndex = 0;
         var startedAt = CpuTimestamp.Now;
         while (true) {

@@ -3,19 +3,18 @@ using ActualLab.Locking;
 
 namespace ActualLab.Fusion;
 
-public interface IAnonymousComputedSource : IFunction, IHasIsDisposed
+public interface IComputedSource : IFunction
 {
     ComputedOptions ComputedOptions { get; init; }
     IComputed Computed { get; }
 }
 
-public class AnonymousComputedSource<T> : ComputedInput,
-    IFunction<T>, IAnonymousComputedSource,
-    IEquatable<AnonymousComputedSource<T>>,
-    IDisposable
+public class ComputedSource<T> : ComputedInput,
+    IFunction<T>, IComputedSource,
+    IEquatable<ComputedSource<T>>
 {
-    private volatile AnonymousComputed<T> _computed;
-    private volatile Func<AnonymousComputedSource<T>, CancellationToken, ValueTask<T>>? _computer;
+    private volatile ComputedSourceComputed<T> _computed;
+    private volatile Func<ComputedSource<T>, CancellationToken, ValueTask<T>>? _computer;
     private string? _category;
     private ILogger? _log;
 
@@ -31,15 +30,13 @@ public class AnonymousComputedSource<T> : ComputedInput,
     }
 
     public ComputedOptions ComputedOptions { get; init; }
-    public Func<AnonymousComputedSource<T>, CancellationToken, ValueTask<T>> Computer
+    public Func<ComputedSource<T>, CancellationToken, ValueTask<T>> Computer
         => _computer ?? throw new ObjectDisposedException(ToString());
-    public event Action<AnonymousComputed<T>>? Invalidated;
-    public event Action<AnonymousComputed<T>>? Updated;
+    public event Action<ComputedSourceComputed<T>>? Invalidated;
+    public event Action<ComputedSourceComputed<T>>? Updated;
 
-    public override bool IsDisposed => _computer == null;
-
-    IComputed IAnonymousComputedSource.Computed => Computed;
-    public AnonymousComputed<T> Computed {
+    IComputed IComputedSource.Computed => Computed;
+    public ComputedSourceComputed<T> Computed {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _computed;
         private set {
@@ -55,17 +52,17 @@ public class AnonymousComputedSource<T> : ComputedInput,
         }
     }
 
-    public AnonymousComputedSource(
+    public ComputedSource(
         IServiceProvider services,
-        Func<AnonymousComputedSource<T>, CancellationToken, ValueTask<T>> computer,
+        Func<ComputedSource<T>, CancellationToken, ValueTask<T>> computer,
         string? category = null)
         : this(services, default, computer, category)
     { }
 
-    public AnonymousComputedSource(
+    public ComputedSource(
         IServiceProvider services,
         Result<T> initialOutput,
-        Func<AnonymousComputedSource<T>, CancellationToken, ValueTask<T>> computer,
+        Func<ComputedSource<T>, CancellationToken, ValueTask<T>> computer,
         string? category = null)
     {
         Services = services;
@@ -76,23 +73,7 @@ public class AnonymousComputedSource<T> : ComputedInput,
         AsyncLock = new AsyncLock(LockReentryMode.CheckedFail);
         Initialize(this, RuntimeHelpers.GetHashCode(this));
         lock (Lock)
-            _computed = new AnonymousComputed<T>(ComputedOptions, this, initialOutput, false);
-    }
-
-    public void Dispose()
-    {
-        if (_computer == null)
-            return;
-
-        Computed<T> computed;
-        lock (Lock) {
-            if (_computer == null)
-                return;
-
-            computed = Computed;
-            _computer = null;
-        }
-        computed.Invalidate();
+            _computed = new ComputedSourceComputed<T>(ComputedOptions, this, initialOutput, false);
     }
 
     // ComputedInput
@@ -102,7 +83,7 @@ public class AnonymousComputedSource<T> : ComputedInput,
 
     // Equality
 
-    public bool Equals(AnonymousComputedSource<T>? other)
+    public bool Equals(ComputedSource<T>? other)
         => ReferenceEquals(this, other);
     public override bool Equals(ComputedInput? other)
         => ReferenceEquals(this, other);
@@ -185,13 +166,13 @@ public class AnonymousComputedSource<T> : ComputedInput,
         return computed.Value;
     }
 
-    private async ValueTask<AnonymousComputed<T>> GetComputed(CancellationToken cancellationToken)
+    private async ValueTask<ComputedSourceComputed<T>> GetComputed(CancellationToken cancellationToken)
     {
-        AnonymousComputed<T> computed;
+        ComputedSourceComputed<T> computed;
         var tryIndex = 0;
         var startedAt = CpuTimestamp.Now;
         while (true) {
-            Computed = computed = new AnonymousComputed<T>(ComputedOptions, this);
+            Computed = computed = new ComputedSourceComputed<T>(ComputedOptions, this);
             using var _ = Fusion.Computed.BeginCompute(computed);
             try {
                 var value = await Computer.Invoke(this, cancellationToken).ConfigureAwait(false);
@@ -228,7 +209,7 @@ public class AnonymousComputedSource<T> : ComputedInput,
         return computed;
     }
 
-    internal void OnInvalidated(AnonymousComputed<T> computed)
+    internal void OnInvalidated(ComputedSourceComputed<T> computed)
     {
         try {
             Invalidated?.Invoke(computed);

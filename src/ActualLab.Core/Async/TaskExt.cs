@@ -29,7 +29,7 @@ public static partial class TaskExt
     // and assuming the task is really never ending, this is the right thing to do.
     public static Task NewNeverEndingUnreferenced()
         => TaskCompletionSourceExt.New<Unit>().Task;
-    public static Task NewNeverEndingUnreferenced<T>()
+    public static Task<T> NewNeverEndingUnreferenced<T>()
         => TaskCompletionSourceExt.New<T>().Task;
 
     // ToValueTask

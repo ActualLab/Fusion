@@ -2,7 +2,7 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
-public interface IComputedState : IState, IDisposable, IHasWhenDisposed
+public static class ComputedState
 {
     public static class DefaultOptions
     {
@@ -10,7 +10,10 @@ public interface IComputedState : IState, IDisposable, IHasWhenDisposed
         public static bool FlowExecutionContext { get; set; } = false;
         public static TimeSpan GracefulDisposeDelay { get; set; } = TimeSpan.FromSeconds(10);
     }
+}
 
+public interface IComputedState : IState, IDisposable, IHasWhenDisposed
+{
     public new interface IOptions : IState.IOptions
     {
         IUpdateDelayer? UpdateDelayer { get; init; }
@@ -22,6 +25,7 @@ public interface IComputedState : IState, IDisposable, IHasWhenDisposed
     IUpdateDelayer UpdateDelayer { get; set; }
     Task UpdateCycleTask { get; }
     CancellationToken DisposeToken { get; }
+    CancellationToken GracefulDisposeToken { get; }
 }
 
 public interface IComputedState<T> : IState<T>, IComputedState;
@@ -31,9 +35,9 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
     public new record Options : State<T>.Options, IComputedState.IOptions
     {
         public IUpdateDelayer? UpdateDelayer { get; init; }
-        public bool TryComputeSynchronously { get; init; } = IComputedState.DefaultOptions.TryComputeSynchronously;
-        public bool FlowExecutionContext { get; init; } = IComputedState.DefaultOptions.FlowExecutionContext;
-        public TimeSpan GracefulDisposeDelay { get; init; }
+        public bool TryComputeSynchronously { get; init; } = ComputedState.DefaultOptions.TryComputeSynchronously;
+        public bool FlowExecutionContext { get; init; } = ComputedState.DefaultOptions.FlowExecutionContext;
+        public TimeSpan GracefulDisposeDelay { get; init; } = ComputedState.DefaultOptions.GracefulDisposeDelay;
     }
 
     private volatile Computed<T>? _computingComputed;
@@ -95,12 +99,14 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
 
     public virtual void Dispose()
     {
+        // Double-check locking
         if (_whenDisposed != null)
             return;
         lock (Lock) {
             if (_whenDisposed != null)
                 return;
 
+            // UpdateCycleTask == null if Initialize wasn't called somehow
             _whenDisposed = UpdateCycleTask ?? Task.CompletedTask;
         }
         GC.SuppressFinalize(this);
@@ -133,7 +139,6 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
                 Log.LogError(e, "UpdateCycle() failed and stopped for {Category}", Category);
         }
         finally {
-            Computed.Invalidate();
             _gracefulDisposeTokenSource.CancelAndDisposeSilently();
         }
     }

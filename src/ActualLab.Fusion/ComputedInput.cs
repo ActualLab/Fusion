@@ -26,13 +26,6 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
 
     public abstract IComputed? GetExistingComputed();
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void ThrowIfDisposed()
-    {
-        if (IsDisposed)
-            throw ActualLab.Internal.Errors.AlreadyDisposed(GetDisposedType());
-    }
-
     // Equality
 
     public abstract bool Equals(ComputedInput? other);
@@ -47,9 +40,4 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
         => Equals(left, right);
     public static bool operator !=(ComputedInput? left, ComputedInput? right)
         => !Equals(left, right);
-
-    // Protected methods
-
-    protected virtual Type GetDisposedType()
-        => GetType();
 }
