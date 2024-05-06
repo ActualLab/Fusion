@@ -112,7 +112,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         dbContext.EnableChangeTracking(false);
 
         var minLoggedAt = SystemClock.Now.ToDateTime() - Settings.StartOffset;
-        return await dbContext.Set<TDbEntry>()
+        return await dbContext.Set<TDbEntry>().AsQueryable()
             .Where(e => e.LoggedAt >= minLoggedAt)
             .OrderBy(e => e.LoggedAt).ThenBy(e => e.Index)
             .FirstOrDefaultAsync(cancellationToken)
