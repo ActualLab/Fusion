@@ -74,7 +74,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         var error = new RpcRerouteException();
         foreach (var call in this) {
             if (call.Context.IsPeerChanged())
-                call.SetError(error, null, true);
+                call.SetError(error, context: null, assumeCancelled: true);
         }
     }
 
@@ -86,7 +86,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
             var abortedCallCountBefore = abortedCallIds.Count;
             foreach (var call in this) {
                 if (abortedCallIds.Add(call.Id))
-                    call.SetError(error, null, true);
+                    call.SetError(error, context: null, assumeCancelled: true);
             }
             if (i >= 2 && abortedCallCountBefore == abortedCallIds.Count)
                 break;

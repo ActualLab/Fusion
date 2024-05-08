@@ -81,7 +81,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public Task SendRegistered(bool isFirst = true)
+    public Task SendRegistered(bool isFirstAttempt = true)
     {
         RpcMessage message;
         try {
@@ -96,7 +96,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             }
         }
         catch (Exception error) {
-            SetError(error, null, isFirst);
+            SetError(error, context: null, assumeCancelled: isFirstAttempt);
             return Task.CompletedTask;
         }
         if (Peer.CallLogger.IsLogged(this))
@@ -177,7 +177,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             else {
                 // timeoutCts is timed out
                 var error = Errors.CallTimeout(call.Peer);
-                call.SetError(error, null);
+                call.SetError(error, context: null);
             }
         }, this, useSynchronizationContext: false);
         _ = UntypedResultTask.ContinueWith(_ => {
