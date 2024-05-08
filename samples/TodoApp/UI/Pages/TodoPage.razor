@@ -85,7 +85,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        return;
         var objectId = await Todos.GetTestObjectId();
         Log.LogInformation("Test ObjectId: {ObjectId}", objectId);
         var stream = await Todos.GetTestStream();

@@ -1,24 +1,24 @@
-namespace ActualLab.Fusion;
+namespace ActualLab.Fusion.Internal;
 
-public interface IAnonymousComputed: IComputed
+public interface IComputedSourceComputed: IComputed
 {
-    public IAnonymousComputedSource Source { get; }
+    public IComputedSource Source { get; }
 }
 
-public sealed class AnonymousComputed<T> : Computed<T>, IAnonymousComputed
+public sealed class ComputedSourceComputed<T> : Computed<T>, IComputedSourceComputed
 {
-    IAnonymousComputedSource IAnonymousComputed.Source => Source;
-    public AnonymousComputedSource<T> Source { get; }
+    IComputedSource IComputedSourceComputed.Source => Source;
+    public ComputedSource<T> Source { get; }
 
-    public AnonymousComputed(ComputedOptions options, AnonymousComputedSource<T> source)
+    public ComputedSourceComputed(ComputedOptions options, ComputedSource<T> source)
         : base(options, source)
     {
         Source = source;
         ComputedRegistry.Instance.PseudoRegister(this);
     }
 
-    public AnonymousComputed(
-        ComputedOptions options, AnonymousComputedSource<T> source,
+    public ComputedSourceComputed(
+        ComputedOptions options, ComputedSource<T> source,
         Result<T> output, bool isConsistent)
         : base(options, source, output, isConsistent)
     {

@@ -26,7 +26,7 @@ public static class ComputedTest
         TimeSpan? timeout = null)
     {
         var lastError = (ExceptionDispatchInfo?)null;
-        var computedSource = new AnonymousComputedSource<bool>(services,
+        var computedSource = new ComputedSource<bool>(services,
             async (_, ct) => {
                 try {
                     await assertion.Invoke(ct).ConfigureAwait(false);
@@ -56,7 +56,7 @@ public static class ComputedTest
     {
         var lastResult = default(T);
         var lastError = (ExceptionDispatchInfo?)null;
-        var computedSource = new AnonymousComputedSource<bool>(services,
+        var computedSource = new ComputedSource<bool>(services,
             async (_, ct) => {
                 try {
                     lastResult = await assertion.Invoke(ct).ConfigureAwait(false);

@@ -111,7 +111,7 @@ public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLeve
 
     public readonly struct Releaser(object entry, AsyncLock.Releaser releaser) : IAsyncLockReleaser
     {
-        private readonly Entry _entry = (Entry)entry;
+        private readonly Entry? _entry = (Entry)entry;
 
         public void MarkLockedLocally()
             => releaser.MarkLockedLocally();
@@ -119,7 +119,7 @@ public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLeve
         public void Dispose()
         {
             releaser.Dispose();
-            _entry.EndUse();
+            _entry?.EndUse();
         }
     }
 }

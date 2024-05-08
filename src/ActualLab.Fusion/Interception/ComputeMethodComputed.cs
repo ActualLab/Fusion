@@ -9,10 +9,7 @@ public class ComputeMethodComputed<T> : Computed<T>, IComputedMethodComputed
 {
     public ComputeMethodComputed(ComputedOptions options, ComputeMethodInput input)
         : base(options, input)
-    {
-        input.ThrowIfDisposed();
-        ComputedRegistry.Instance.Register(this);
-    }
+        => ComputedRegistry.Instance.Register(this);
 
     protected ComputeMethodComputed(ComputedOptions options, ComputeMethodInput input, Result<T> output, bool isConsistent = true)
         : base(options, input, output, isConsistent)
@@ -20,7 +17,6 @@ public class ComputeMethodComputed<T> : Computed<T>, IComputedMethodComputed
         if (!isConsistent)
             return;
 
-        input.ThrowIfDisposed();
         ComputedRegistry.Instance.Register(this);
     }
 

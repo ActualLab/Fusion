@@ -95,7 +95,7 @@ public class DbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>(
         dbContext.EnableChangeTracking(false);
 
 #if NET7_0_OR_GREATER
-        return await dbContext.Set<TDbSessionInfo>(DbHintSet.UpdateSkipLocked)
+        return await dbContext.Set<TDbSessionInfo>()
             .Where(o => o.LastSeenAt < maxLastSeenAt)
             .OrderBy(o => o.LastSeenAt)
             .Take(maxCount)

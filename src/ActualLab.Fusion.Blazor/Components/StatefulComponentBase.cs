@@ -113,12 +113,13 @@ public abstract class StatefulComponentBase<TState> : StatefulComponentBase
             return;
         }
 
-        _state = CreateState();
-        _state.AddEventHandler(StateHasChangedTriggers, StateChanged);
-        if (_state is IHasInitialize hasInitialize)
-            hasInitialize.Initialize();
+        var (state, stateOptions) = CreateState();
+        _state = state;
+        state.AddEventHandler(StateHasChangedTriggers, StateChanged);
+        if (stateOptions != null && state is IHasInitialize hasInitialize)
+            hasInitialize.Initialize(stateOptions);
     }
 
-    protected virtual TState CreateState()
-        => Services.GetRequiredService<TState>();
+    protected virtual (TState State, object? StateOptions) CreateState()
+        => (Services.GetRequiredService<TState>(), null);
 }

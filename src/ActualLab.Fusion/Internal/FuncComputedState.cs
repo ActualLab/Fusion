@@ -16,9 +16,12 @@ public sealed class FuncComputedState<T> : ComputedState<T>
 
     protected override Task<T> Compute(CancellationToken cancellationToken)
     {
-        if (IsDisposed)
-            throw new ObjectDisposedException(ToString());
-
+        if (IsDisposed) {
+            // Once the state is disposed, any update will take indefinitely long time
+            return TaskExt
+                .NewNeverEndingUnreferenced<T>()
+                .WaitAsync(cancellationToken);
+        }
         return Computer.Invoke(this, cancellationToken);
     }
 }

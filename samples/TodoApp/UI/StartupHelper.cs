@@ -64,7 +64,7 @@ public static class StartupHelper
 
     public static void ConfigureSharedServices(IServiceCollection services)
     {
-        IComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
+        ComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
 
         // Blazorise
         services.AddBlazorise(options => options.Immediate = true)
@@ -82,7 +82,6 @@ public static class StartupHelper
         services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
 
         // Diagnostics
-        return;
         services.AddHostedService(c => {
             var isWasm = OSInfo.IsWebAssembly;
             return new FusionMonitor(c) {

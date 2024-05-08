@@ -18,7 +18,7 @@ public class SessionBoundRpcConnectionFactory
 
         var query = httpContext.Request.Query;
         var sessionId = query[SessionParameterName].SingleOrDefault() ?? "";
-        if (!sessionId.IsNullOrEmpty() && new Session(sessionId) is { } session1 && session1.IsValid())
+        if (!sessionId.IsNullOrEmpty() && new Session(sessionId) is var session1 && session1.IsValid())
             return SessionBoundRpcConnectionTask(channel, properties, session1);
 
         var sessionMiddleware = httpContext.RequestServices.GetService<SessionMiddleware>();

@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 
@@ -39,16 +40,31 @@ public abstract class FunctionBase<T>(IServiceProvider services) : IFunction<T>
         if (computed.TryUseExisting(context))
             return computed!;
 
-        using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
+        var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
+        try {
+            computed = GetExisting(input);
+            if (computed.TryUseExistingFromLock(context))
+                return computed!;
 
-        computed = GetExisting(input);
-        if (computed.TryUseExistingFromLock(context))
-            return computed!;
+            if (input.IsDisposed) {
+                // We're going to await for indefinitely long task here, and there is a chance
+                // this task is going to be GC-collected. So we need to release the async lock here
+                // to prevent a memory leak in AsyncLocks set, which is going to keep our
+                // never-released lock otherwise.
+                releaser.Dispose();
+                releaser = default;
+                // Compute takes indefinitely long for disposed compute service's methods
+                await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
 
-        releaser.MarkLockedLocally();
-        computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context);
-        return computed;
+            releaser.MarkLockedLocally();
+            computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
+            computed.UseNew(context);
+            return computed;
+        }
+        finally {
+            releaser.Dispose();
+        }
     }
 
     public virtual Task<T> InvokeAndStrip(
@@ -67,16 +83,32 @@ public abstract class FunctionBase<T>(IServiceProvider services) : IFunction<T>
         ComputeContext context,
         CancellationToken cancellationToken = default)
     {
-        using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
+        var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
+        try {
+            var computed = GetExisting(input);
+            if (computed.TryUseExistingFromLock(context))
+                return computed.Strip(context);
 
-        var computed = GetExisting(input);
-        if (computed.TryUseExistingFromLock(context))
-            return computed.Strip(context);
+            if (input.IsDisposed) {
+                // We're going to await for indefinitely long task here, and there is a chance
+                // this task is going to be GC-collected. So we need to release the async lock here
+                // to prevent a memory leak in AsyncLocks set, which is going to keep our
+                // never-released lock otherwise.
+                releaser.Dispose();
+                releaser = default;
+                // Compute takes indefinitely long for disposed compute service's methods
+                await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
 
-        releaser.MarkLockedLocally();
-        computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context);
-        return computed.Value;
+            releaser.MarkLockedLocally();
+            computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
+            computed.UseNew(context);
+            return computed.Value;
+        }
+        finally {
+            releaser.Dispose();
+        }
+
     }
 
     protected Computed<T>? GetExisting(ComputedInput input)

@@ -9,6 +9,9 @@ public class ServerTimeModel1State(IServiceProvider services)
 
     protected override async Task<ServerTimeModel1> Compute(CancellationToken cancellationToken)
     {
+        if (IsDisposed) // Never complete if the state is already disposed
+            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+
         var time = await TimeService.GetTime(cancellationToken).ConfigureAwait(false);
         return new ServerTimeModel1(time);
     }

@@ -32,7 +32,7 @@ public readonly struct FusionBuilder
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ClientComputeServiceInterceptor))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ClientComputeMethodFunction<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(FuncComputedState<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(AnonymousComputedSource<>))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComputedSource<>))]
     internal FusionBuilder(
         IServiceCollection services,
         Action<FusionBuilder>? configure,

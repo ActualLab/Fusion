@@ -12,6 +12,7 @@ public sealed class ComputedGraphPruner : WorkerBase
         public RandomTimeSpan CheckPeriod { get; init; } = TimeSpan.FromMinutes(5).ToRandom(0.1);
         public RandomTimeSpan InterBatchDelay { get; init; } = TimeSpan.FromSeconds(0.1).ToRandom(0.25);
         public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
+        public TimeSpan DisposedComputedInvalidationDelay { get; init; } = TimeSpan.FromSeconds(5);
     }
 
     private readonly TaskCompletionSource<Unit> _whenActivatedSource;
@@ -103,21 +104,25 @@ public sealed class ComputedGraphPruner : WorkerBase
     private async Task PruneDisposedInstances(CancellationToken cancellationToken)
     {
         var registry = ComputedRegistry.Instance;
+        var batchSize = Settings.BatchSize;
+        var interBatchDelay = Settings.InterBatchDelay;
+        var disposedComputedInvalidationDelay = Settings.DisposedComputedInvalidationDelay;
+
         using var keyEnumerator = registry.Keys.GetEnumerator();
         var disposedCount = 0L;
-        var remainingBatchCapacity = Settings.BatchSize;
+        var remainingBatchCapacity = batchSize;
         var batchCount = 0;
         while (keyEnumerator.MoveNext()) {
             if (--remainingBatchCapacity <= 0) {
-                await Clock.Delay(Settings.InterBatchDelay.Next(), cancellationToken).ConfigureAwait(false);
-                remainingBatchCapacity = Settings.BatchSize;
+                await Clock.Delay(interBatchDelay.Next(), cancellationToken).ConfigureAwait(false);
+                remainingBatchCapacity = batchSize;
                 batchCount++;
             }
 
             var computedInput = keyEnumerator.Current!;
             if (registry.Get(computedInput) is { } c && c.IsConsistent() && computedInput.IsDisposed) {
                 disposedCount++;
-                c.Invalidate();
+                c.Invalidate(disposedComputedInvalidationDelay);
             }
         }
         if (disposedCount == 0)
@@ -126,7 +131,7 @@ public sealed class ComputedGraphPruner : WorkerBase
         Log.LogInformation(
             "Removed {DisposedCount} instances originating from disposed compute services " +
             "in {BatchCount} batches (x {BatchSize})",
-            disposedCount, batchCount + 1, Settings.BatchSize);
+            disposedCount, batchCount + 1, batchSize);
     }
 
     private async Task PruneEdges(CancellationToken ct)

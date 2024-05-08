@@ -1,6 +1,6 @@
 namespace ActualLab.Fusion.Tests;
 
-public class AnonymousComputedTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
+public class ComputedSourceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
 {
     [Fact]
     public async Task BasicTest()
@@ -8,7 +8,7 @@ public class AnonymousComputedTest(ITestOutputHelper @out) : SimpleFusionTestBas
         var services = CreateServices();
 
         var id = 0;
-        var ci = new AnonymousComputedSource<int>(services,
+        var ci = new ComputedSource<int>(services,
             -1,
             (_, _) => {
                 var value = Interlocked.Increment(ref id);
@@ -42,7 +42,7 @@ public class AnonymousComputedTest(ITestOutputHelper @out) : SimpleFusionTestBas
         var services = CreateServices();
 
         var id = 0;
-        var ci = new AnonymousComputedSource<int>(services,
+        var ci = new ComputedSource<int>(services,
             (_, _) => {
                 var value = Interlocked.Increment(ref id);
                 Out.WriteLine($"Computed: {value}");
