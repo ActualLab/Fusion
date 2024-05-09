@@ -4,7 +4,7 @@
     <TargetFrameworks Condition="$(UseMultitargeting)">net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
     <TargetFramework Condition="!$(UseMultitargeting)">net8.0</TargetFramework>
     <PackageTags>actual_chat actual_lab actual_lab_fusion flow</PackageTags>
-    <Description>ActualLab.Flows - workflows/orchestration implemented on top of ActualLab.Fusion.</Description>
+    <Description>ActualLab.Flows.Contracts - workflows/orchestration implemented on top of ActualLab.Fusion.</Description>
     <IsServerSideOnly>true</IsServerSideOnly>
     <RootNamespace>ActualLab.Flows</RootNamespace>
   </PropertyGroup>
@@ -14,8 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ActualLab.Flows.Contracts\ActualLab.Flows.Contracts.csproj" />
-    <ProjectReference Include="..\ActualLab.Fusion.EntityFramework\ActualLab.Fusion.EntityFramework.csproj" />
+    <ProjectReference Include="..\ActualLab.Fusion\ActualLab.Fusion.csproj" />
   </ItemGroup>
 
 </Project>

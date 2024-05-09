@@ -14,7 +14,9 @@ public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long>
         = ImmutableDictionary<string, string>.Empty;
 
     [Key] public TDbUserId Id { get; set; } = default!;
-    [ConcurrencyCheck] public long Version { get; set; }
+
+    [ConcurrencyCheck]
+    public long Version { get; set; }
 
 #pragma warning disable IL2026
     [MinLength(3)]

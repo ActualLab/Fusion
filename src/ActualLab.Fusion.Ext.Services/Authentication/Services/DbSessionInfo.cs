@@ -18,7 +18,9 @@ public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
 
     [Key, StringLength(256)]
     public string Id { get; set; } = "";
-    [ConcurrencyCheck] public long Version { get; set; }
+
+    [ConcurrencyCheck]
+    public long Version { get; set; }
 
     public DateTime CreatedAt {
         get => _createdAt.DefaultKind(DateTimeKind.Utc);

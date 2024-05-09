@@ -22,8 +22,8 @@ public readonly struct ShardDbContextBuilder<TDbContext>
 
         // Default services are configured to provide fake sharding w/ a single shard,
         // where IDbContextFactory is the one that's registered in the container.
-        services.TryAddSingleton<IDbShardResolver, DbShardResolver>();
         services.TryAddSingleton<IDbShardRegistry<TDbContext>>(c => new DbShardRegistry<TDbContext>(c, DbShard.None));
+        services.TryAddSingleton<IDbShardResolver<TDbContext>>(c => new DbShardResolver<TDbContext>(c));
         services.TryAddSingleton<IShardDbContextFactory<TDbContext>, ShardDbContextFactory<TDbContext>>();
         services.TryAddSingleton<ShardDbContextFactoryBuilder<TDbContext>>(
             _ => (c, _) => c.GetRequiredService<IDbContextFactory<TDbContext>>());

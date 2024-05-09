@@ -15,7 +15,7 @@ public partial class InMemoryAuthService
         var (session, user, authenticatedIdentity) = (command.Session, command.User, command.AuthenticatedIdentity);
         session.RequireValid();
         var context = CommandContext.GetCurrent();
-        var shard = ShardResolver.Resolve<Unit>(command);
+        var shard = ShardResolver.Resolve(command);
 
         if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
@@ -87,7 +87,7 @@ public partial class InMemoryAuthService
         var (session, ipAddress, userAgent, options) = command;
         session.RequireValid();
         var context = CommandContext.GetCurrent();
-        var shard = ShardResolver.Resolve<Unit>(command);
+        var shard = ShardResolver.Resolve(command);
 
         if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
@@ -118,10 +118,10 @@ public partial class InMemoryAuthService
     {
         var (session, options, baseVersion) = command;
         session.RequireValid();
-        var shard = ShardResolver.Resolve<Unit>(command);
+        var shard = ShardResolver.Resolve(command);
 
         if (Invalidation.IsActive) {
-            _ = GetSessionInfo(session, default); // Must go first!
+            _ = GetSessionInfo(session, default);
             return Task.CompletedTask;
         }
 

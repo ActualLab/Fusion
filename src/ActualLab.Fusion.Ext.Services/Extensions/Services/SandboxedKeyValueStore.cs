@@ -43,7 +43,7 @@ public partial class SandboxedKeyValueStore<TContext>(
             newItems[i] = (item.Key, item.Value, expiresAt);
         }
 
-        var shard = ShardResolver.Resolve<TContext>(command);
+        var shard = ShardResolver.Resolve(command);
         await Store.Set(shard, newItems, cancellationToken).ConfigureAwait(false);
     }
 
@@ -56,7 +56,7 @@ public partial class SandboxedKeyValueStore<TContext>(
         foreach (var t in keys)
             keyChecker.CheckKey(t);
 
-        var shard = ShardResolver.Resolve<TContext>(command);
+        var shard = ShardResolver.Resolve(command);
         await Store.Remove(shard, keys, cancellationToken).ConfigureAwait(false);
     }
 
@@ -67,7 +67,7 @@ public partial class SandboxedKeyValueStore<TContext>(
         var keyChecker = await GetKeyChecker(session, cancellationToken).ConfigureAwait(false);
         keyChecker.CheckKey(key);
 
-        var shard = ShardResolver.Resolve<TContext>(session);
+        var shard = ShardResolver.Resolve(session);
         return await Store.Get(shard, key, cancellationToken).ConfigureAwait(false);
     }
 
@@ -76,7 +76,7 @@ public partial class SandboxedKeyValueStore<TContext>(
         var keyChecker = await GetKeyChecker(session, cancellationToken).ConfigureAwait(false);
         keyChecker.CheckKeyPrefix(prefix);
 
-        var shard = ShardResolver.Resolve<TContext>(session);
+        var shard = ShardResolver.Resolve(session);
         return await Store.Count(shard, prefix, cancellationToken).ConfigureAwait(false);
     }
 
@@ -87,7 +87,7 @@ public partial class SandboxedKeyValueStore<TContext>(
         var keyChecker = await GetKeyChecker(session, cancellationToken).ConfigureAwait(false);
         keyChecker.CheckKeyPrefix(prefix);
 
-        var shard = ShardResolver.Resolve<TContext>(session);
+        var shard = ShardResolver.Resolve(session);
         return await Store.ListKeySuffixes(shard, prefix, pageRef, sortDirection, cancellationToken).ConfigureAwait(false);
     }
 

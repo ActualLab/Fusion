@@ -39,7 +39,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var force = command.Force;
 
         var context = CommandContext.GetCurrent();
-        var shard = ShardResolver.Resolve<TDbContext>(command);
+        var shard = ShardResolver.Resolve(command);
         if (Invalidation.IsActive) {
             if (isKickCommand)
                 return;
@@ -98,7 +98,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var session = command.Session.RequireValid();
 
         var context = CommandContext.GetCurrent();
-        var shard = ShardResolver.Resolve<TDbContext>(command);
+        var shard = ShardResolver.Resolve(command);
         if (Invalidation.IsActive) {
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo != null)
@@ -162,7 +162,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
     public override async Task<SessionInfo?> GetSessionInfo(Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        var shard = ShardResolver.Resolve<TDbContext>(session);
+        var shard = ShardResolver.Resolve(session);
         var dbSessionInfo = await Sessions.Get(shard, session.Id, cancellationToken).ConfigureAwait(false);
         return dbSessionInfo == null ? null : SessionConverter.ToModel(dbSessionInfo);
     }
@@ -175,7 +175,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         if (!(authInfo?.IsAuthenticated() ?? false))
             return null;
 
-        var shard = ShardResolver.Resolve<TDbContext>(session);
+        var shard = ShardResolver.Resolve(session);
         var user = await GetUser(shard, authInfo.UserId, cancellationToken).ConfigureAwait(false);
         return user;
     }
@@ -188,8 +188,8 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         if (user == null)
             return ImmutableArray<SessionInfo>.Empty;
 
-        var shard = ShardResolver.Resolve<TDbContext>(session);
+        var shard = ShardResolver.Resolve(session);
         var sessions = await GetUserSessions(shard, user.Id, cancellationToken).ConfigureAwait(false);
-        return sessions.Select(p => p.SessionInfo).ToImmutableArray();
+        return [..sessions.Select(p => p.SessionInfo)];
     }
 }
