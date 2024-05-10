@@ -15,9 +15,6 @@ namespace ActualLab.CommandR;
 
 public readonly struct CommanderBuilder
 {
-    private sealed class AddedTag;
-    private static readonly ServiceDescriptor AddedTagDescriptor = new(typeof(AddedTag), new AddedTag());
-
     public IServiceCollection Services { get; }
     public HashSet<CommandHandler> Handlers { get; }
 
@@ -33,15 +30,16 @@ public readonly struct CommanderBuilder
         Action<CommanderBuilder>? configure)
     {
         Services = services;
-        if (services.Contains(AddedTagDescriptor)) {
+        var handlers = services.FindTag<HashSet<CommandHandler>>();
+        if (handlers != null) {
             // Already configured
-            Handlers = GetCommandHandlers(services);
+            Handlers = handlers;
             configure?.Invoke(this);
             return;
         }
 
-        // We want above Contains call to run in O(1), so...
-        services.Insert(0, AddedTagDescriptor);
+        Handlers = handlers = new(64);
+        services.AddTag(handlers, addInFront: true);
 
         // Core services
         services.TryAddSingleton(_ => new HostId());
@@ -54,7 +52,6 @@ public readonly struct CommanderBuilder
         // Commander, handlers, etc.
         services.TryAddSingleton<ICommander>(c => new Commander(c));
         services.TryAddSingleton(c => c.GetRequiredService<ICommander>().Hub);
-        services.TryAddSingleton(new HashSet<CommandHandler>());
         services.TryAddSingleton(c => new CommandHandlerRegistry(c));
         services.TryAddSingleton(_ => new CommandHandlerResolver.Options());
         services.TryAddSingleton(c => new CommandHandlerResolver(
@@ -64,7 +61,6 @@ public readonly struct CommanderBuilder
         Services.TryAddSingleton(_ => new CommandServiceInterceptor.Options());
         Services.TryAddSingleton(c => new CommandServiceInterceptor(
             c.GetRequiredService<CommandServiceInterceptor.Options>(), c));
-        Handlers = GetCommandHandlers(services);
 
         // Default handlers
         services.AddSingleton(_ => new PreparedCommandHandler());
@@ -276,25 +272,5 @@ public readonly struct CommanderBuilder
     {
         Services.RemoveAll<CommandHandlerFilter>();
         return this;
-    }
-
-    // Private methods
-
-    private static HashSet<CommandHandler> GetCommandHandlers(IServiceCollection services)
-    {
-        for (var i = 0; i < services.Count; i++) {
-            var descriptor = services[i];
-            if (descriptor.ServiceType == typeof(HashSet<CommandHandler>)) {
-                if (i > 16) {
-                    // Let's move it to the beginning of the list
-                    // to speed up future searches
-                    services.RemoveAt(i);
-                    services.Insert(0, descriptor);
-                }
-                return (HashSet<CommandHandler>?) descriptor.ImplementationInstance
-                    ?? throw Errors.CommandHandlerSetMustBeRegisteredAsInstance();
-            }
-        }
-        throw Errors.CommandHandlerSetIsNotRegistered();
     }
 }

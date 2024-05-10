@@ -51,7 +51,8 @@ public readonly struct RpcBuilder
         Action<RpcBuilder>? configure)
     {
         Services = services;
-        if (GetConfiguration(services) is { } configuration) {
+        var configuration = services.FindTag<RpcConfiguration>();
+        if (configuration != null) {
             // Already configured
             Configuration = configuration;
             configure?.Invoke(this);
@@ -59,11 +60,11 @@ public readonly struct RpcBuilder
         }
 
         // We want above GetConfiguration call to run in O(1), so...
-        Configuration = new RpcConfiguration();
-        services.Insert(0, new ServiceDescriptor(typeof(RpcConfiguration), Configuration));
-        services.AddSingleton(c => new RpcHub(c));
+        Configuration = configuration = new RpcConfiguration();
+        services.AddTag(configuration);
 
         // Common services
+        services.AddSingleton(c => new RpcHub(c));
         services.TryAddSingleton(c => new RpcServiceRegistry(c));
         services.TryAddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
         services.TryAddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);
@@ -345,24 +346,5 @@ public readonly struct RpcBuilder
             d.ImplementationType == middlewareType
             && d.ServiceType == typeof(RpcOutboundMiddleware));
         return this;
-    }
-
-    // Private methods
-
-    private static RpcConfiguration? GetConfiguration(IServiceCollection services)
-    {
-        for (var i = 0; i < services.Count; i++) {
-            var descriptor = services[i];
-            if (descriptor.ServiceType == typeof(RpcConfiguration)) {
-                if (i > 16) {
-                    // Let's move it to the beginning of the list to speed up future lookups
-                    services.RemoveAt(i);
-                    services.Insert(0, descriptor);
-                }
-                return (RpcConfiguration?)descriptor.ImplementationInstance
-                    ?? throw Errors.RpcOptionsMustBeRegisteredAsInstance();
-            }
-        }
-        return null;
     }
 }

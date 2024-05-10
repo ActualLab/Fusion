@@ -133,4 +133,39 @@ public static class ServiceCollectionExt
             var cfg = c.GetRequiredService<IConfiguration>();
             return cfg.GetSettings<TSettings>(sectionName, mustValidate);
         });
+
+    // AddTag, FindTag
+
+    public static IServiceCollection AddTag<TTag>(
+        this IServiceCollection services,
+        TTag tag,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton,
+        bool addInFront = false)
+        where TTag : class
+    {
+        var descriptor = new ServiceDescriptor(typeof(TTag), tag, lifetime);
+        if (addInFront)
+            services.Insert(0, descriptor);
+        else
+            services.Add(descriptor);
+        return services;
+    }
+
+    public static TTag? FindTag<TTag>(
+        this IServiceCollection services,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+        where TTag : class
+        => services.FindTag(typeof(TTag), lifetime) as TTag;
+
+    public static object? FindTag(
+        this IServiceCollection services,
+        Type tagType,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+    {
+        foreach (var d in services) {
+            if (d.ServiceType == tagType && d.Lifetime == lifetime)
+                return d.ImplementationInstance;
+        }
+        return null;
+    }
 }

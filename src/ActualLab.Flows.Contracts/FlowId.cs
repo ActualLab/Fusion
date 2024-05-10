@@ -24,7 +24,7 @@ public readonly partial struct FlowId : ISymbolIdentifier<FlowId>
 
     // Set on deserialization
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public Symbol TypeId { get; }
+    public Symbol Name { get; }
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public string Arguments { get; }
 
@@ -42,25 +42,25 @@ public readonly partial struct FlowId : ISymbolIdentifier<FlowId>
     public FlowId(string? id, ParseOrNone _)
         => this = ParseOrNone(id);
 
-    public FlowId(Symbol typeId, string arguments)
+    public FlowId(Symbol name, string arguments)
     {
-        if (typeId.IsEmpty) {
+        if (name.IsEmpty) {
             this = None;
             return;
         }
-        Id = Format(typeId, arguments);
-        TypeId = typeId;
+        Id = Format(name, arguments);
+        Name = name;
         Arguments = arguments;
     }
 
-    public FlowId(Symbol id, Symbol typeId, string arguments, AssumeValid _)
+    public FlowId(Symbol id, Symbol name, string arguments, AssumeValid _)
     {
-        if (id.IsEmpty || typeId.IsEmpty) {
+        if (id.IsEmpty || name.IsEmpty) {
             this = None;
             return;
         }
         Id = id;
-        TypeId = typeId;
+        Name = name;
         Arguments = arguments;
     }
 
@@ -94,11 +94,11 @@ public readonly partial struct FlowId : ISymbolIdentifier<FlowId>
         if (s.IsNullOrEmpty())
             return true; // None
 
-        var typeIdLength = s.IndexOf(':', StringComparison.Ordinal);
-        if (typeIdLength <= 0)
+        var nameLength = s.IndexOf(':', StringComparison.Ordinal);
+        if (nameLength <= 0)
             return false;
 
-        result = new FlowId(s, s[..typeIdLength], s[(typeIdLength + 1)..], AssumeValid.Option);
+        result = new FlowId(s, s[..nameLength], s[(nameLength + 1)..], AssumeValid.Option);
         return true;
     }
 }

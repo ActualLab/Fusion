@@ -42,8 +42,8 @@ public readonly struct FusionBuilder
         Services = services;
         Commander = services.AddCommander();
         Rpc = services.AddRpc();
-        var dFusionTag = services.FirstOrDefault(d => d.ServiceType == typeof(FusionTag));
-        if (dFusionTag is { ImplementationInstance: FusionTag fusionTag }) {
+        var fusionTag = services.FindTag<FusionTag>();
+        if (fusionTag != null) {
             ServiceMode = serviceMode.Or(fusionTag.ServiceMode);
             if (setDefaultServiceMode)
                 fusionTag.ServiceMode = ServiceMode;
@@ -52,12 +52,9 @@ public readonly struct FusionBuilder
             return;
         }
 
-        // We want above FusionTag lookup to run in O(1), so...
         ServiceMode = serviceMode.OrNone();
-        services.RemoveAll<FusionTag>();
-        services.Insert(0, new ServiceDescriptor(
-            typeof(FusionTag),
-            new FusionTag(setDefaultServiceMode ? ServiceMode : RpcServiceMode.Local)));
+        fusionTag = new FusionTag(setDefaultServiceMode ? ServiceMode : RpcServiceMode.Local);
+        services.AddTag(fusionTag, addInFront: true);
 
         // Common services
         services.AddOptions();
