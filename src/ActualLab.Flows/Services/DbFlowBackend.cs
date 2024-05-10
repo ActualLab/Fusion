@@ -31,12 +31,12 @@ public class DbFlowBackend : DbServiceBase, IFlowBackend
         var (id, expectedVersion, data) = command;
         id.Require();
 
-        var shard = DbHub.ShardResolver.Resolve(id);
         if (Invalidation.IsActive) {
             _ = GetData(id, default);
             return default;
         }
 
+        var shard = DbHub.ShardResolver.Resolve(id);
         var dbContext = await DbHub.CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(true);

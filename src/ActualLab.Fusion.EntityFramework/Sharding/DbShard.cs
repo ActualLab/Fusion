@@ -14,7 +14,6 @@ namespace ActualLab.Fusion.EntityFramework;
 public readonly partial struct DbShard : ISymbolIdentifier<DbShard>
 {
     private static ILogger? _log;
-
     private static ILogger Log => _log ??= StaticLog.For<DbShard>();
 
     public static DbShard None => default;
