@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Net.WebSockets;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Interception;
 using ActualLab.Rpc.Caching;
@@ -7,7 +6,6 @@ using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
-using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc;
 
@@ -51,7 +49,7 @@ public readonly struct RpcBuilder
         Action<RpcBuilder>? configure)
     {
         Services = services;
-        var configuration = services.FindTag<RpcConfiguration>();
+        var configuration = services.FindInstance<RpcConfiguration>();
         if (configuration != null) {
             // Already configured
             Configuration = configuration;
@@ -61,10 +59,10 @@ public readonly struct RpcBuilder
 
         // We want above GetConfiguration call to run in O(1), so...
         Configuration = configuration = new RpcConfiguration();
-        services.AddTag(configuration);
+        services.AddInstance(configuration);
+        services.AddSingleton(c => new RpcHub(c));
 
         // Common services
-        services.AddSingleton(c => new RpcHub(c));
         services.TryAddSingleton(c => new RpcServiceRegistry(c));
         services.TryAddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
         services.TryAddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);

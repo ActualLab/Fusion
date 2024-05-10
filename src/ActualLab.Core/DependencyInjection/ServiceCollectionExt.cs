@@ -136,14 +136,11 @@ public static class ServiceCollectionExt
 
     // AddTag, FindTag
 
-    public static IServiceCollection AddTag<TTag>(
-        this IServiceCollection services,
-        TTag tag,
-        ServiceLifetime lifetime = ServiceLifetime.Singleton,
-        bool addInFront = false)
-        where TTag : class
+    public static IServiceCollection AddInstance<T>(
+        this IServiceCollection services, T instance, bool addInFront = false)
+        where T : class
     {
-        var descriptor = new ServiceDescriptor(typeof(TTag), tag, lifetime);
+        var descriptor = new ServiceDescriptor(typeof(T), instance);
         if (addInFront)
             services.Insert(0, descriptor);
         else
@@ -151,20 +148,19 @@ public static class ServiceCollectionExt
         return services;
     }
 
-    public static TTag? FindTag<TTag>(
-        this IServiceCollection services,
-        ServiceLifetime lifetime = ServiceLifetime.Singleton)
-        where TTag : class
-        => services.FindTag(typeof(TTag), lifetime) as TTag;
+    public static T? FindInstance<T>(this IServiceCollection services)
+        where T : class
+        => services.FindInstance(typeof(T)) as T;
 
-    public static object? FindTag(
-        this IServiceCollection services,
-        Type tagType,
-        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+    public static object? FindInstance(this IServiceCollection services, Type type)
     {
         foreach (var d in services) {
-            if (d.ServiceType == tagType && d.Lifetime == lifetime)
-                return d.ImplementationInstance;
+            if (d.ServiceType != type)
+                continue;
+            if (d is not { Lifetime: ServiceLifetime.Singleton, IsKeyedService: false })
+                continue;
+
+            return d.ImplementationInstance;
         }
         return null;
     }

@@ -21,7 +21,7 @@ public readonly struct FlowBuilder
     {
         Services = services;
         Fusion = services.AddFusion();
-        var flows = services.FindTag<Dictionary<Symbol, Type>>();
+        var flows = services.FindInstance<Dictionary<Symbol, Type>>();
         if (flows != null) {
             // Already configured
             Flows = flows;
@@ -30,7 +30,7 @@ public readonly struct FlowBuilder
         }
 
         Flows = flows = new(64);
-        services.AddTag(flows, addInFront: true);
+        services.AddInstance(flows, addInFront: true);
 
         services.AddSingleton<ImmutableBimap<Symbol, Type>>(static c => {
             var flowDefs = c.GetRequiredService<Dictionary<Symbol, Type>>();

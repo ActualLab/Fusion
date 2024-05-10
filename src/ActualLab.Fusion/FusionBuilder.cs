@@ -42,7 +42,7 @@ public readonly struct FusionBuilder
         Services = services;
         Commander = services.AddCommander();
         Rpc = services.AddRpc();
-        var fusionTag = services.FindTag<FusionTag>();
+        var fusionTag = services.FindInstance<FusionTag>();
         if (fusionTag != null) {
             ServiceMode = serviceMode.Or(fusionTag.ServiceMode);
             if (setDefaultServiceMode)
@@ -54,7 +54,7 @@ public readonly struct FusionBuilder
 
         ServiceMode = serviceMode.OrNone();
         fusionTag = new FusionTag(setDefaultServiceMode ? ServiceMode : RpcServiceMode.Local);
-        services.AddTag(fusionTag, addInFront: true);
+        services.AddInstance(fusionTag, addInFront: true);
 
         // Common services
         services.AddOptions();
