@@ -1,3 +1,4 @@
+using ActualLab.CommandR;
 using ActualLab.CommandR.Commands;
 using ActualLab.CommandR.Configuration;
 using ActualLab.Fusion;
@@ -9,6 +10,10 @@ public interface IFlowBackend : IComputeService, IBackendService
 {
     [ComputeMethod]
     Task<(byte[]? Data, long Version)> GetData(FlowId flowId, CancellationToken cancellationToken = default);
+    [ComputeMethod]
+    Task<Flow?> Get(FlowId flowId, CancellationToken cancellationToken = default);
+    // Not a [ComputeMethod]!
+    Task<Flow> GetOrStart(FlowId flowId, CancellationToken cancellationToken = default);
 
     [CommandHandler]
     Task<long> SetData(FlowBackend_SetData command, CancellationToken cancellationToken = default);
@@ -23,7 +28,7 @@ public partial record FlowBackend_SetData(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] FlowId Id,
     [property: DataMember(Order = 1), MemoryPackOrder(1)] long? ExpectedVersion,
     [property: DataMember(Order = 2), MemoryPackOrder(2)] byte[]? Data
-) : IBackendCommand, INotLogged;
+) : ICommand<long>, IBackendCommand, INotLogged;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
@@ -31,4 +36,4 @@ public partial record FlowBackend_SetData(
 public partial record FlowBackend_Resume(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] FlowId Id,
     [property: DataMember(Order = 1), MemoryPackOrder(2)] byte[]? EventData
-) : IBackendCommand, INotLogged;
+) : ICommand<long>, IBackendCommand, INotLogged;

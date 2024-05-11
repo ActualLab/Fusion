@@ -12,7 +12,7 @@ public readonly struct FlowBuilder
     public FusionBuilder Fusion { get; }
     public CommanderBuilder Commander => Fusion.Commander;
     public RpcBuilder Rpc => Fusion.Rpc;
-    public Dictionary<Symbol, Type> Flows { get; }
+    public FlowConfiguration Flows { get; }
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     internal FlowBuilder(
@@ -21,7 +21,7 @@ public readonly struct FlowBuilder
     {
         Services = services;
         Fusion = services.AddFusion();
-        var flows = services.FindInstance<Dictionary<Symbol, Type>>();
+        var flows = services.FindInstance<FlowConfiguration>();
         if (flows != null) {
             // Already configured
             Flows = flows;
@@ -29,28 +29,19 @@ public readonly struct FlowBuilder
             return;
         }
 
-        Flows = flows = new(64);
+        Flows = flows = new();
         services.AddInstance(flows, addInFront: true);
-
-        services.AddSingleton<ImmutableBimap<Symbol, Type>>(static c => {
-            var flowDefs = c.GetRequiredService<Dictionary<Symbol, Type>>();
-            return new ImmutableBimap<Symbol, Type>(flowDefs);
-        });
-
+        services.AddSingleton<FlowRegistry>();
         configure?.Invoke(this);
     }
 
     public FlowBuilder AddFlow<TFlow>(Symbol name = default)
         where TFlow : Flow
         => AddFlow(typeof(TFlow), name);
+
     public FlowBuilder AddFlow(Type flowType, Symbol name = default)
     {
-        if (!typeof(Flow).IsAssignableFrom(flowType))
-            throw Errors.MustBeAssignableTo<Flow>(flowType);
-
-        if (name.IsEmpty)
-            name = flowType.GetName();
-        Flows.Add(name, flowType);
+        Flows.Add(flowType, name);
         return this;
     }
 }

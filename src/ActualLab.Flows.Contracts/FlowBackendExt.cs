@@ -5,22 +5,6 @@ namespace ActualLab.Flows;
 
 public static class FlowBackendExt
 {
-    // Get
-
-    public static async Task<Flow?> Get(this IFlowBackend flowBackend,
-        FlowId flowId,
-        CancellationToken cancellationToken = default)
-    {
-        var (data, version) = await flowBackend.GetData(flowId, cancellationToken).ConfigureAwait(false);
-        if (data == null || data.Length == 0)
-            return null;
-
-        var serializer = flowBackend.GetServices().GetRequiredService<FlowSerializer>();
-        var flow = serializer.Deserialize(data);
-        flow.Initialize(flowId, version);
-        return flow;
-    }
-
     // Save
 
     public static Task Save(this IFlowBackend flowBackend,

@@ -1,6 +1,8 @@
+using ActualLab.CommandR;
 using ActualLab.Flows.Infrastructure;
 using ActualLab.Fusion;
 using ActualLab.Fusion.EntityFramework;
+using ActualLab.Resilience;
 using ActualLab.Versioning;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,21 +10,48 @@ namespace ActualLab.Flows.Services;
 
 public class DbFlowBackend : DbServiceBase, IFlowBackend
 {
-    protected FlowSerializer FlowSerializer { get; }
-    protected IDbEntityResolver<string, DbFlow> FlowResolver { get; }
+    protected FlowRegistry Registry { get; }
+    protected FlowSerializer Serializer { get; }
+    protected IDbEntityResolver<string, DbFlow> EntityResolver { get; }
+    protected IRetryPolicy GetOrStartRetryPolicy { get; init; }
 
     public DbFlowBackend(IDbHub dbHub) : base(dbHub)
     {
         var services = dbHub.Services;
-        FlowSerializer = services.GetRequiredService<FlowSerializer>();
-        FlowResolver = services.DbEntityResolver<string, DbFlow>();
+        Registry = services.GetRequiredService<FlowRegistry>();
+        Serializer = services.GetRequiredService<FlowSerializer>();
+        EntityResolver = services.DbEntityResolver<string, DbFlow>();
+        GetOrStartRetryPolicy = new RetryPolicy(3, RetryDelaySeq.Exp(0.25, 1));
     }
 
     // [ComputeMethod]
     public virtual async Task<(byte[]? Data, long Version)> GetData(FlowId flowId, CancellationToken cancellationToken = default)
     {
-        var dbFlow = await FlowResolver.Get(flowId, cancellationToken).ConfigureAwait(false);
+        var dbFlow = await EntityResolver.Get(flowId, cancellationToken).ConfigureAwait(false);
         return (dbFlow?.Data, dbFlow?.Version ?? 0);
+    }
+
+    // [ComputeMethod]
+    public virtual Task<Flow?> Get(FlowId flowId, CancellationToken cancellationToken = default)
+        => GetDirectly(flowId, cancellationToken);
+
+    // Not a [ComputeMethod]!
+    public virtual Task<Flow> GetOrStart(FlowId flowId, CancellationToken cancellationToken = default)
+    {
+        var retryLogger = new RetryLogger(Log);
+        return GetOrStartRetryPolicy.RunIsolated(async ct => {
+            var flow = await Get(flowId, ct).ConfigureAwait(false);
+            if (flow != null)
+                return flow;
+
+            var type = Registry.Flows[flowId.Name];
+            flow = (Flow)type.CreateInstance();
+            var data = Serializer.Serialize(flow);
+            var setDataCommand = new FlowBackend_SetData(flow.Id, 0, data);
+            var version = await Commander.Call(setDataCommand, true, ct).ConfigureAwait(false);
+            flow.Initialize(flowId, version);
+            return flow;
+        }, retryLogger, cancellationToken);
     }
 
     // [CommandHandler]
@@ -33,9 +62,11 @@ public class DbFlowBackend : DbServiceBase, IFlowBackend
 
         if (Invalidation.IsActive) {
             _ = GetData(id, default);
+            _ = Get(id, default);
             return default;
         }
 
+        var context = CommandContext.GetCurrent();
         var shard = DbHub.ShardResolver.Resolve(id);
         var dbContext = await DbHub.CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
@@ -44,7 +75,7 @@ public class DbFlowBackend : DbServiceBase, IFlowBackend
         var dbFlow = await dbContext.Set<DbFlow>().ForUpdate()
             .FirstOrDefaultAsync(x => Equals(x.Id, id.Value), cancellationToken)
             .ConfigureAwait(false);
-        VersionChecker.RequireExpected(dbFlow?.Version, expectedVersion);
+        VersionChecker.RequireExpected(dbFlow?.Version ?? 0, expectedVersion);
 
         switch (dbFlow != null, data != null) {
         case (false, false): // Removed -> Removed
@@ -55,6 +86,7 @@ public class DbFlowBackend : DbServiceBase, IFlowBackend
                 Version = VersionGenerator.NextVersion(),
                 Data = data,
             });
+            context.Operation.AddEvent(new FlowBackend_Resume(id, null)); // Call Resume on create
             break;
         case (true, false):  // Remove
             dbContext.Remove(dbFlow!);
@@ -74,12 +106,33 @@ public class DbFlowBackend : DbServiceBase, IFlowBackend
         var (id, eventData) = command;
         id.Require();
 
-        var shard = DbHub.ShardResolver.Resolve(id);
         if (Invalidation.IsActive) {
             _ = GetData(id, default);
+            _ = Get(id, default);
             return default;
+        }
+
+        var flow = await GetDirectly(id, cancellationToken).ConfigureAwait(false);
+        if (flow == null) {
+            Log.LogWarning("Resume: no Flow: {FlowId}", id);
+            return 0;
         }
 
         throw new NotImplementedException();
     }
+
+    // Protected methods
+
+    public virtual async Task<Flow?> GetDirectly(FlowId flowId, CancellationToken cancellationToken = default)
+    {
+        var dbFlow = await EntityResolver.Get(flowId, cancellationToken).ConfigureAwait(false);
+        var data = dbFlow?.Data;
+        if (data == null || data.Length == 0)
+            return null;
+
+        var flow = Serializer.Deserialize(data);
+        flow.Initialize(flowId, dbFlow!.Version);
+        return flow;
+    }
+
 }

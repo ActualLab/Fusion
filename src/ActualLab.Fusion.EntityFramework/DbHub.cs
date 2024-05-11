@@ -10,8 +10,8 @@ namespace ActualLab.Fusion.EntityFramework;
 public interface IDbHub : IHasServices
 {
     HostId HostId { get; }
-    IDbShardRegistry ShardRegistry { get; }
     IDbShardResolver ShardResolver { get; }
+    IDbShardRegistry ShardRegistry { get; }
     IShardDbContextFactory ContextFactory { get; }
     VersionGenerator<long> VersionGenerator { get; }
     ChaosMaker ChaosMaker { get; }
@@ -32,7 +32,6 @@ public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
     where TDbContext : DbContext
 {
     private HostId? _hostId;
-    private IDbShardRegistry<TDbContext>? _shardRegistry;
     private IDbShardResolver<TDbContext>? _shardResolver;
     private IShardDbContextFactory<TDbContext>? _contextFactory;
     private VersionGenerator<long>? _versionGenerator;
@@ -45,10 +44,8 @@ public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
 
     public IServiceProvider Services { get; } = services;
     public HostId HostId => _hostId ??= Commander.Hub.HostId;
-    public IDbShardRegistry<TDbContext> ShardRegistry
-        => _shardRegistry ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
-    public IDbShardResolver<TDbContext> ShardResolver
-        => _shardResolver ??= Services.GetRequiredService<IDbShardResolver<TDbContext>>();
+    public IDbShardResolver<TDbContext> ShardResolver => _shardResolver ??= Services.DbShardResolver<TDbContext>();
+    public IDbShardRegistry<TDbContext> ShardRegistry => ShardResolver.ShardRegistry;
     public IShardDbContextFactory<TDbContext> ContextFactory
         => _contextFactory ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
     public VersionGenerator<long> VersionGenerator

@@ -42,8 +42,8 @@ public class DbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>(
         = services.DbEntityResolver<string, TDbSessionInfo>();
     protected IDbEntityConverter<TDbSessionInfo, SessionInfo> SessionConverter { get; init; }
         = services.DbEntityConverter<TDbSessionInfo, SessionInfo>();
-    protected IDbShardResolver ShardResolver { get; init; }
-        = services.GetRequiredService<IDbShardResolver>();
+    protected IDbShardResolver<TDbContext> ShardResolver { get; init; }
+        = services.DbShardResolver<TDbContext>();
 
     public Type SessionInfoEntityType => typeof(TDbSessionInfo);
 

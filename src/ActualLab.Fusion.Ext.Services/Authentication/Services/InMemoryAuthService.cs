@@ -10,7 +10,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
     protected ConcurrentDictionary<(DbShard Shard, Symbol UserId), User> Users { get; } = new();
     protected ConcurrentDictionary<(DbShard Shard, Symbol SessionId), SessionInfo> SessionInfos { get; } = new();
     protected VersionGenerator<long> VersionGenerator { get; } = services.VersionGenerator<long>();
-    protected IDbShardResolver<Unit> ShardResolver { get; } = services.GetRequiredService<IDbShardResolver<Unit>>();
+    protected IDbShardResolver<Unit> ShardResolver { get; } = services.DbShardResolver<Unit>();
     protected MomentClockSet Clocks { get; } = services.Clocks();
     protected ICommander Commander { get; } = services.Commander();
 

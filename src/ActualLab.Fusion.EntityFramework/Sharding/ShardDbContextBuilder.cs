@@ -32,16 +32,17 @@ public readonly struct ShardDbContextBuilder<TDbContext>
 
     // AddShardResolver
 
-    public ShardDbContextBuilder<TDbContext> AddShardResolver(Func<IServiceProvider, IDbShardResolver> factory)
+    public ShardDbContextBuilder<TDbContext> AddShardResolver(
+        Func<IServiceProvider, IDbShardResolver<TDbContext>> factory)
     {
         Services.AddSingleton(factory);
         return this;
     }
 
     public ShardDbContextBuilder<TDbContext> AddShardResolver<TShardResolver>()
-        where TShardResolver : class, IDbShardResolver
+        where TShardResolver : class, IDbShardResolver<TDbContext>
     {
-        Services.AddSingleton<IDbShardResolver, TShardResolver>();
+        Services.AddSingleton<IDbShardResolver<TDbContext>, TShardResolver>();
         return this;
     }
 
