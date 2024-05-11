@@ -33,7 +33,7 @@ public class DbFlowBackend : DbServiceBase, IFlowBackend
 
     // [ComputeMethod]
     public virtual Task<Flow?> Get(FlowId flowId, CancellationToken cancellationToken = default)
-        => GetDirectly(flowId, cancellationToken);
+        => Read(flowId, cancellationToken);
 
     // Not a [ComputeMethod]!
     public virtual Task<Flow> GetOrStart(FlowId flowId, CancellationToken cancellationToken = default)
@@ -112,7 +112,7 @@ public class DbFlowBackend : DbServiceBase, IFlowBackend
             return default;
         }
 
-        var flow = await GetDirectly(id, cancellationToken).ConfigureAwait(false);
+        var flow = await Read(id, cancellationToken).ConfigureAwait(false);
         if (flow == null) {
             Log.LogWarning("Resume: no Flow: {FlowId}", id);
             return 0;
@@ -123,7 +123,7 @@ public class DbFlowBackend : DbServiceBase, IFlowBackend
 
     // Protected methods
 
-    public virtual async Task<Flow?> GetDirectly(FlowId flowId, CancellationToken cancellationToken = default)
+    public virtual async Task<Flow?> Read(FlowId flowId, CancellationToken cancellationToken = default)
     {
         var dbFlow = await EntityResolver.Get(flowId, cancellationToken).ConfigureAwait(false);
         var data = dbFlow?.Data;
