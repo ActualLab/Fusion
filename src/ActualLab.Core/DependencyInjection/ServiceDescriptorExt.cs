@@ -2,15 +2,12 @@ namespace ActualLab.DependencyInjection;
 
 public static class ServiceDescriptorExt
 {
+#if USE_UNSAFE_ACCESSORS && NET8_0_OR_GREATER
+
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "GetImplementationType")]
     private static extern Type? GetImplementationTypeImpl(ServiceDescriptor @this);
-#if NET8_0_OR_GREATER
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_implementationFactory")]
     private static extern ref object? ImplementationFactoryImpl(ServiceDescriptor @this);
-#else
-    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_implementationFactory")]
-    private static extern ref Func<IServiceProvider, object>? ImplementationFactoryImpl(ServiceDescriptor @this);
-#endif
 
     public static Type? GetImplementationType(this ServiceDescriptor descriptor)
         => GetImplementationTypeImpl(descriptor);
@@ -21,4 +18,33 @@ public static class ServiceDescriptorExt
     public static void SetImplementationFactory(
         this ServiceDescriptor descriptor, Func<IServiceProvider, object>? implementationFactory)
         => ImplementationFactoryImpl(descriptor) = implementationFactory;
+
+#else // !USE_UNSAFE_ACCESSORS
+
+    private static readonly Func<ServiceDescriptor, Type?> ImplementationTypeGetter;
+    private static readonly Action<IServiceProvider, object?> ImplementationFactorySetter;
+
+    static ServiceDescriptorExt()
+    {
+        var bfInstanceNonPublic = BindingFlags.Instance | BindingFlags.NonPublic;
+        var type = typeof(ServiceDescriptor);
+        ImplementationTypeGetter = (Func<ServiceDescriptor, Type?>)type
+            .GetMethod("GetImplementationType", bfInstanceNonPublic)!
+            .CreateDelegate(typeof(Func<ServiceDescriptor, Type?>));
+        ImplementationFactorySetter = type
+            .GetField("_implementationFactory", bfInstanceNonPublic)!
+            .GetSetter();
+    }
+
+    public static Type? GetImplementationType(this ServiceDescriptor descriptor)
+        => ImplementationTypeGetter.Invoke(descriptor);
+
+    public static Func<IServiceProvider, object>? GetImplementationFactory(this ServiceDescriptor descriptor)
+        => descriptor.ImplementationFactory;
+
+    public static void SetImplementationFactory(
+        this ServiceDescriptor descriptor, Func<IServiceProvider, object>? implementationFactory)
+        => ImplementationFactorySetter.Invoke(descriptor, implementationFactory);
+
+#endif
 }
