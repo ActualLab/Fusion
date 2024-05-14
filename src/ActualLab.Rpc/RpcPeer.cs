@@ -285,7 +285,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     protected override Task OnStop()
 #pragma warning restore IL2046
     {
-        _ = DisposeAsync();
+        _ = DisposeAsync(); // Cancels StopToken even on normal exit from OnRun
         Hub.Peers.TryRemove(Ref, this);
 
         // We want to make sure the sequence of ConnectionStates terminates for sure

@@ -22,7 +22,7 @@ public static class ServiceDescriptorExt
 #else // !USE_UNSAFE_ACCESSORS
 
     private static readonly Func<ServiceDescriptor, Type?> ImplementationTypeGetter;
-    private static readonly Action<IServiceProvider, object?> ImplementationFactorySetter;
+    private static readonly Action<ServiceDescriptor, object?> ImplementationFactorySetter;
 
     static ServiceDescriptorExt()
     {

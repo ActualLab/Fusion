@@ -8,14 +8,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Flows.Services;
 
-public class DbFlowBackend : DbServiceBase, IFlowBackend
+public class DbFlows : DbServiceBase, IFlows
 {
     protected FlowRegistry Registry { get; }
     protected FlowSerializer Serializer { get; }
     protected IDbEntityResolver<string, DbFlow> EntityResolver { get; }
     protected IRetryPolicy GetOrStartRetryPolicy { get; init; }
 
-    public DbFlowBackend(IDbHub dbHub) : base(dbHub)
+    public DbFlows(IDbHub dbHub) : base(dbHub)
     {
         var services = dbHub.Services;
         Registry = services.GetRequiredService<FlowRegistry>();
@@ -44,8 +44,7 @@ public class DbFlowBackend : DbServiceBase, IFlowBackend
             if (flow != null)
                 return flow;
 
-            var type = Registry.Flows[flowId.Name];
-            flow = (Flow)type.CreateInstance();
+            flow = Registry.Create(flowId.Name);
             var data = Serializer.Serialize(flow);
             var setDataCommand = new FlowBackend_SetData(flow.Id, 0, data);
             var version = await Commander.Call(setDataCommand, true, ct).ConfigureAwait(false);
@@ -86,7 +85,7 @@ public class DbFlowBackend : DbServiceBase, IFlowBackend
                 Version = VersionGenerator.NextVersion(),
                 Data = data,
             });
-            context.Operation.AddEvent(new FlowBackend_Resume(id, null)); // Call Resume on create
+            context.Operation.AddEvent(new FlowBackend_Notify(id, null)); // Call Resume on create
             break;
         case (true, false):  // Remove
             dbContext.Remove(dbFlow!);
@@ -100,25 +99,19 @@ public class DbFlowBackend : DbServiceBase, IFlowBackend
         return dbFlow?.Version ?? 0;
     }
 
+    // Regular method
+    public virtual Task<long> Notify(FlowId flowId, object? @event, CancellationToken cancellationToken = default)
+    {
+        flowId.Require();
+        throw new NotImplementedException();
+    }
+
     // [CommandHandler]
-    public virtual async Task<long> Resume(FlowBackend_Resume command, CancellationToken cancellationToken = default)
+    public virtual Task<long> Notify(FlowBackend_Notify command, CancellationToken cancellationToken = default)
     {
         var (id, eventData) = command;
         id.Require();
-
-        if (Invalidation.IsActive) {
-            _ = GetData(id, default);
-            _ = Get(id, default);
-            return default;
-        }
-
-        var flow = await Read(id, cancellationToken).ConfigureAwait(false);
-        if (flow == null) {
-            Log.LogWarning("Resume: no Flow: {FlowId}", id);
-            return 0;
-        }
-
-        throw new NotImplementedException();
+        return Notify(id, Serializer.Deserialize(eventData), cancellationToken);
     }
 
     // Protected methods

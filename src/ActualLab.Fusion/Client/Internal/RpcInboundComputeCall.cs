@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Client.Internal;
 
@@ -63,7 +64,7 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
             if (computed != null) {
                 var versionHeader = FusionRpcHeaders.Version with {
                     // '@' is required to make it compatible with pre-v7.2 versions
-                    Value = ComputedVersion.Format('@', computed.Version),
+                    Value = computed.Version.FormatVersion('@'),
                 };
                 ResultHeaders = ResultHeaders.TryAdd(versionHeader);
             }

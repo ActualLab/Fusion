@@ -2,15 +2,27 @@ using System.Collections.Frozen;
 
 namespace ActualLab.Flows;
 
-public class FlowRegistry
+public class FlowRegistry : IHasServices
 {
-    public IReadOnlyDictionary<Symbol, Type> Flows { get; private set; }
-    public IReadOnlyDictionary<Type, Symbol> FlowNameByType { get; private set; }
 
-    public FlowRegistry(FlowConfiguration configuration)
+    public IServiceProvider Services { get; }
+    public IReadOnlyDictionary<Symbol, Type> Types { get; private set; }
+    public IReadOnlyDictionary<Type, Symbol> Names { get; private set; }
+
+    public FlowRegistry(IServiceProvider services)
     {
-        var flows = configuration.Flows;
-        Flows = flows.ToFrozenDictionary();
-        FlowNameByType = flows.ToFrozenDictionary(kv => kv.Value, kv => kv.Key);
+        Services = services;
+        var flowRegistryBuilder = services.GetRequiredService<FlowRegistryBuilder>();
+        var flows = flowRegistryBuilder.Flows;
+        Types = flows.ToFrozenDictionary();
+        Names = flows.ToFrozenDictionary(kv => kv.Value, kv => kv.Key);
+    }
+
+    public Flow Create(Symbol flowName)
+        => Create(Types[flowName]);
+    public virtual Flow Create(Type flowType)
+    {
+        Flow.RequireFlowType(flowType);
+        return (Flow)flowType.CreateInstance();
     }
 }

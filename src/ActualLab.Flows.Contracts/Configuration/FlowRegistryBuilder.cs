@@ -2,7 +2,7 @@ using ActualLab.Internal;
 
 namespace ActualLab.Flows;
 
-public class FlowConfiguration
+public class FlowRegistryBuilder
 {
     private readonly Dictionary<Symbol, Type> _flows = new(64);
     private readonly Dictionary<Type, Symbol> _flowNameByType = new(64);
@@ -11,8 +11,7 @@ public class FlowConfiguration
 
     public void Add(Type flowType, Symbol name = default)
     {
-        if (!typeof(Flow).IsAssignableFrom(flowType))
-            throw Errors.MustBeAssignableTo<Flow>(flowType);
+        Flow.RequireFlowType(flowType);
         if (_flowNameByType.ContainsKey(flowType))
             throw Errors.KeyAlreadyExists();
 

@@ -6,7 +6,7 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Flows;
 
-public interface IFlowBackend : IComputeService, IBackendService
+public interface IFlows : IComputeService, IBackendService
 {
     [ComputeMethod]
     Task<(byte[]? Data, long Version)> GetData(FlowId flowId, CancellationToken cancellationToken = default);
@@ -14,11 +14,12 @@ public interface IFlowBackend : IComputeService, IBackendService
     Task<Flow?> Get(FlowId flowId, CancellationToken cancellationToken = default);
     // Not a [ComputeMethod]!
     Task<Flow> GetOrStart(FlowId flowId, CancellationToken cancellationToken = default);
+    Task<long> Notify(FlowId flowId, object? @event, CancellationToken cancellationToken = default);
 
     [CommandHandler]
     Task<long> SetData(FlowBackend_SetData command, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task<long> Resume(FlowBackend_Resume command, CancellationToken cancellationToken = default);
+    Task<long> Notify(FlowBackend_Notify command, CancellationToken cancellationToken = default);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
@@ -33,7 +34,7 @@ public partial record FlowBackend_SetData(
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
 // ReSharper disable once InconsistentNaming
-public partial record FlowBackend_Resume(
+public partial record FlowBackend_Notify(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] FlowId Id,
     [property: DataMember(Order = 1), MemoryPackOrder(2)] byte[]? EventData
-) : ICommand<long>, IBackendCommand, INotLogged;
+) : ICommand<long>, IApiCommand, IBackendCommand, INotLogged;
