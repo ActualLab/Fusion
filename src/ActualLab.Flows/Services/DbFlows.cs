@@ -11,17 +11,18 @@ namespace ActualLab.Flows.Services;
 public class DbFlows : DbServiceBase, IFlows
 {
     protected FlowRegistry Registry { get; }
-    protected RunningFlows RunningFlows { get; }
+    protected FlowHost FlowHost { get; }
     protected FlowSerializer Serializer { get; }
     protected IDbEntityResolver<string, DbFlow> EntityResolver { get; }
 
     public IRetryPolicy GetOrStartRetryPolicy { get; init; } = new RetryPolicy(3, RetryDelaySeq.Exp(0.25, 1));
 
-    public DbFlows(DbFlowsDependencies dependencies) : base(dependencies.DbHub)
+    public DbFlows(DbFlowsDependencies dependencies)
+        : base(dependencies.DbHub)
     {
         var services = dependencies.Services;
         Registry = services.GetRequiredService<FlowRegistry>();
-        RunningFlows = services.GetRequiredService<RunningFlows>();
+        FlowHost = services.GetRequiredService<FlowHost>();
         Serializer = services.GetRequiredService<FlowSerializer>();
         EntityResolver = services.DbEntityResolver<string, DbFlow>();
     }
@@ -47,70 +48,74 @@ public class DbFlows : DbServiceBase, IFlows
                 return flow;
 
             flow = Registry.Create(flowId.Name);
-            var data = Serializer.Serialize(flow);
-            var setDataCommand = new FlowBackend_SetData(flow.Id, 0, data);
-            var version = await Commander.Call(setDataCommand, true, ct).ConfigureAwait(false);
+            var updateCommand = new Flows_Save(flow);
+            var version = await Commander.Call(updateCommand, true, ct).ConfigureAwait(false);
             flow.Initialize(flowId, version);
             return flow;
         }, retryLogger, cancellationToken);
     }
 
     // [CommandHandler]
-    public virtual async Task<long> SetData(FlowBackend_SetData command, CancellationToken cancellationToken = default)
+    public virtual async Task<long> Commit(Flows_Save command, CancellationToken cancellationToken = default)
     {
-        var (id, expectedVersion, data) = command;
-        id.Require();
+        var (flow, expectedVersion) = command;
+        var flowId = flow.Require().Id.Require();
 
         if (Invalidation.IsActive) {
-            _ = GetData(id, default);
-            _ = Get(id, default);
+            _ = GetData(flowId, default);
+            _ = Get(flowId, default);
             return default;
         }
 
         var context = CommandContext.GetCurrent();
-        var shard = DbHub.ShardResolver.Resolve(id);
+        var shard = DbHub.ShardResolver.Resolve(flowId);
         var dbContext = await DbHub.CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(true);
 
         var dbFlow = await dbContext.Set<DbFlow>().ForUpdate()
-            .FirstOrDefaultAsync(x => Equals(x.Id, id.Value), cancellationToken)
+            .FirstOrDefaultAsync(x => Equals(x.Id, flowId.Value), cancellationToken)
             .ConfigureAwait(false);
         VersionChecker.RequireExpected(dbFlow?.Version ?? 0, expectedVersion);
 
-        switch (dbFlow != null, data != null) {
+        switch (dbFlow != null, !command.MustRemove) {
         case (false, false): // Removed -> Removed
             break;
         case (false, true): // Create
             dbContext.Add(new DbFlow() {
-                Id = id,
+                Id = flowId,
                 Version = VersionGenerator.NextVersion(),
-                Data = data,
+                Data = Serializer.Serialize(flow),
             });
-            context.Operation.AddEvent(new FlowBackend_Notify(id, null)); // Call Resume on create
+            context.Operation.AddEvent(new Flows_Notify(flowId, null)); // Call Resume on create
             break;
         case (true, false):  // Remove
             dbContext.Remove(dbFlow!);
             break;
         case (true, true):  // Update
-            dbFlow!.Data = data;
-            dbFlow.Version = VersionGenerator.NextVersion(dbFlow.Version);
+            dbFlow!.Version = VersionGenerator.NextVersion(dbFlow.Version);
+            dbFlow.Data = Serializer.Serialize(flow);
             break;
         }
+
+        var operationBuilder = command.OperationBuilder;
+        if (operationBuilder != null)
+            await operationBuilder.Invoke(context, cancellationToken).ConfigureAwait(false);
+
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return dbFlow?.Version ?? 0;
     }
 
     // Regular method
     public virtual Task<long> Notify(FlowId flowId, object? @event, CancellationToken cancellationToken = default)
-        => RunningFlows.Notify(flowId, @event, cancellationToken);
+        => FlowHost.Notify(flowId, @event, cancellationToken);
 
     // [CommandHandler]
-    public virtual Task<long> Notify(FlowBackend_Notify command, CancellationToken cancellationToken = default)
+    public virtual Task<long> Notify(Flows_Notify command, CancellationToken cancellationToken = default)
     {
         var (flowId, eventData) = command;
         var @event = Serializer.Deserialize(eventData);
-        return RunningFlows.Notify(flowId, @event, cancellationToken);
+        return FlowHost.Notify(flowId, @event, cancellationToken);
     }
 
     // Protected methods

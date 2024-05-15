@@ -1,3 +1,4 @@
+using ActualLab.CommandR;
 using ActualLab.Flows.Infrastructure;
 using ActualLab.Internal;
 using ActualLab.Versioning;
@@ -10,48 +11,63 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
     string IHasId<string>.Id => Id.Value;
 
     [IgnoreDataMember, MemoryPackIgnore]
+    protected FlowWorker? Worker { get; private set; }
+    [IgnoreDataMember, MemoryPackIgnore]
+    protected object? Event { get; private set; }
+    [IgnoreDataMember, MemoryPackIgnore]
+    protected Func<CommandContext, CancellationToken, Task>? OperationBuilder { get; set; }
+
+    [IgnoreDataMember, MemoryPackIgnore]
     public FlowId Id { get; private set; }
     [IgnoreDataMember, MemoryPackIgnore]
     public long Version { get; private set; }
-    [IgnoreDataMember, MemoryPackIgnore]
-    public RunningFlow? Runner { get; private set; }
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    public Symbol NextStep { get; internal set; }
+    public Symbol Step { get; private init; } = FlowSteps.OnStart;
 
     // Computed
     [IgnoreDataMember, MemoryPackIgnore]
-    protected ILogger? Log => Runner?.Log;
+    protected ILogger? Log => Worker?.Log;
 
-    public void Initialize(FlowId id, long version, RunningFlow? runner = null)
+    public void Initialize(FlowId id, long version, FlowWorker? worker = null)
     {
         Id = id;
         Version = version;
-        Runner = runner;
+        Worker = worker;
     }
 
     public override string ToString()
-        => $"{GetType().Name}('{Id.Value}' @ {NextStep}, v.{Version.FormatVersion()})";
+        => $"{GetType().Name}('{Id.Value}' @ {Step}, v.{Version.FormatVersion()})";
 
     public virtual Flow Clone()
         => MemberwiseCloner.Invoke(this);
 
-    public virtual async Task MoveNext(object? @event, CancellationToken cancellationToken)
+    public virtual async Task<FlowTransition> MoveNext(object? @event, CancellationToken cancellationToken)
     {
+        Worker.Require();
+        Event = @event;
+        OperationBuilder = null;
+        FlowTransition result;
         try {
-            await FlowSteps.Invoke(this, NextStep, @event, cancellationToken).ConfigureAwait(false);
+            result = await FlowSteps.Invoke(this, Step, cancellationToken).ConfigureAwait(false);
+            if (result.MustSave)
+                await Save(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            var task = FlowSteps.Invoke(this, FlowSteps.Error, e, cancellationToken);
-            if (task is Task<bool> isHandledTask) {
-                var isHandled = await isHandledTask.ConfigureAwait(false);
-                if (isHandled)
-                    return;
-            }
-            else
-                await task.ConfigureAwait(false);
-            throw;
+            Event = e;
+            OperationBuilder = null;
+            result = await FlowSteps.Invoke(this, FlowSteps.OnError, cancellationToken).ConfigureAwait(false);
+            if (result.Step == FlowSteps.OnError)
+                throw;
+
+            if (result.MustSave)
+                await Save(cancellationToken).ConfigureAwait(false);
         }
+        finally {
+            Event = null;
+            OperationBuilder = null;
+        }
+        return result;
     }
 
     // Default options
@@ -61,20 +77,47 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
 
     // Default steps
 
-    protected abstract Task Start(object? @event, CancellationToken cancellationToken);
+    protected abstract Task<FlowTransition> OnStart(CancellationToken cancellationToken);
 
-    protected virtual Task NoStep(object? @event, CancellationToken cancellationToken)
-        => throw Internal.Errors.NoStep(GetType(), NextStep);
+    protected virtual Task<FlowTransition> OnMissingStep(CancellationToken cancellationToken)
+        => throw Internal.Errors.StepNotFound(GetType(), Step);
 
-    protected virtual Task UnsupportedEvent(object? @event, CancellationToken cancellationToken)
-        => throw Internal.Errors.UnsupportedEvent(GetType(), NextStep, @event?.GetType() ?? typeof(object));
+    protected virtual Task<FlowTransition> OnError(CancellationToken cancellationToken)
+        => Task.FromResult(Goto(nameof(OnError), false));
 
-    protected virtual Task<bool> Error(Exception error, CancellationToken cancellationToken)
-        => TaskExt.FalseTask;
+    // Transition helpers
 
-    // Helpers
+    protected void AddOperationBuilder(Func<CommandContext, CancellationToken, Task> operationBuilder)
+    {
+        Worker.Require();
+        var oldOperationBuilder = OperationBuilder;
+        OperationBuilder = async (context, ct) => {
+            if (oldOperationBuilder != null)
+                await oldOperationBuilder.Invoke(context, ct).ConfigureAwait(false);
+            await operationBuilder.Invoke(context, ct).ConfigureAwait(false);
+        };
+    }
 
-    public static void RequireFlowType(Type flowType)
+    protected FlowTransition Goto(Symbol step, bool mustCommit = true, bool mustWaitForEvent = true)
+    {
+        Worker.Require();
+        return new FlowTransition(step, mustCommit, mustWaitForEvent);
+    }
+
+    protected Task Save(CancellationToken cancellationToken)
+        => Save(false, cancellationToken);
+    protected async Task Save(bool ignoreVersion, CancellationToken cancellationToken)
+    {
+        Worker.Require();
+        var saveCommand = new Flows_Save(this, ignoreVersion ? null : Version) {
+            OperationBuilder = OperationBuilder,
+        };
+        Version = await Worker.Host.Commander.Call(saveCommand, cancellationToken).ConfigureAwait(false);
+    }
+
+    // Other helpers
+
+    public static void RequireCorrectType(Type flowType)
     {
         if (!typeof(Flow).IsAssignableFrom(flowType))
             throw Errors.MustBeAssignableTo<Flow>(flowType);

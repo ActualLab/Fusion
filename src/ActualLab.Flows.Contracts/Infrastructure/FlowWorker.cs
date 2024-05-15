@@ -2,23 +2,23 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Flows.Infrastructure;
 
-public class RunningFlow : WorkerBase, IGenericTimeoutHandler
+public class FlowWorker : WorkerBase, IGenericTimeoutHandler
 {
     protected static readonly ChannelClosedException ChannelClosedExceptionInstance = new();
 
     protected Channel<QueueEntry> Queue { get; set; }
     protected ChannelWriter<QueueEntry> Writer { get; init; }
 
-    public RunningFlows Owner { get; }
+    public FlowHost Host { get; }
     public FlowId FlowId { get; }
     public ILogger Log { get; }
 
-    public RunningFlow(RunningFlows owner, FlowId flowId)
+    public FlowWorker(FlowHost host, FlowId flowId)
     {
-        Owner = owner;
+        Host = host;
         FlowId = flowId;
-        var flowType = owner.Registry.Types[flowId.Name];
-        Log = owner.Services.LogFor(flowType);
+        var flowType = host.Registry.Types[flowId.Name];
+        Log = host.Services.LogFor(flowType);
 
         Queue = Channel.CreateUnbounded<QueueEntry>(new() {
             SingleReader = true,
@@ -50,7 +50,7 @@ public class RunningFlow : WorkerBase, IGenericTimeoutHandler
 
     protected override async Task OnRun(CancellationToken cancellationToken)
     {
-        var flow = await Owner.Flows.GetOrStart(FlowId, cancellationToken).ConfigureAwait(false);
+        var flow = await Host.Flows.GetOrStart(FlowId, cancellationToken).ConfigureAwait(false);
         flow = flow.Clone();
         flow.Initialize(flow.Id, flow.Version, this);
         var options = flow.GetOptions();
@@ -97,7 +97,7 @@ public class RunningFlow : WorkerBase, IGenericTimeoutHandler
                     }
 
                     entry.ResultSource.TrySetException(e);
-                    Log.LogError("'{Id}' @ {NextStep} failed", flow.Id, flow.NextStep);
+                    Log.LogError("'{Id}' @ {NextStep} failed", flow.Id, flow.Step);
                 }
             }
         }
@@ -111,7 +111,7 @@ public class RunningFlow : WorkerBase, IGenericTimeoutHandler
             catch {
                 // Intended
             }
-            Owner.Items.TryRemove(FlowId, this);
+            Host.Workers.TryRemove(FlowId, this);
         }
     }
 

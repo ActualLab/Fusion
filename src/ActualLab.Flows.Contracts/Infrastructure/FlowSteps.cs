@@ -4,78 +4,55 @@ namespace ActualLab.Flows.Infrastructure;
 
 public static class FlowSteps
 {
-    public static readonly Symbol Start = nameof(Start);
-    public static readonly Symbol Error = nameof(Error);
-    public static readonly Symbol UnsupportedEvent = nameof(UnsupportedEvent);
-    public static readonly Symbol NoStep = nameof(NoStep);
+    public static readonly Symbol OnStart = nameof(OnStart);
+    public static readonly Symbol OnError = nameof(OnError);
+    public static readonly Symbol OnMissingStep = nameof(OnMissingStep);
 
-    private static readonly MethodInfo WrappedSystemStepMethod = typeof(FlowSteps)
-        .GetMethod(nameof(WrappedSystemStep), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly MethodInfo WrappedStepMethod = typeof(FlowSteps)
-        .GetMethod(nameof(WrappedStep), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly ConcurrentDictionary<(Type, Symbol), Func<Flow, object?, CancellationToken, Task>>
+    private static readonly MethodInfo ToUntypedMethod = typeof(FlowSteps)
+        .GetMethod(nameof(ToUntyped), BindingFlags.Static | BindingFlags.NonPublic)!;
+    private static readonly ConcurrentDictionary<(Type, Symbol), Func<Flow, CancellationToken, Task<FlowTransition>>>
         Cache = new();
 
-    public static Task Invoke(Flow flow, Symbol stepName, object? @event, CancellationToken cancellationToken)
-        => Get(flow.GetType(), stepName).Invoke(flow, @event, cancellationToken);
+    public static Task<FlowTransition> Invoke(Flow flow, Symbol step, CancellationToken cancellationToken)
+        => Get(flow.GetType(), step).Invoke(flow, cancellationToken);
 
-    public static Func<Flow, object?, CancellationToken, Task> Get(Type flowType, Symbol stepName)
-        => Cache.GetOrAdd((flowType, stepName), static key => {
-            var (type, step) = key;
-            if (type.IsGenericTypeDefinition)
+    public static Func<Flow, CancellationToken, Task<FlowTransition>> Get(Type flowType, Symbol step)
+        => Cache.GetOrAdd((flowType, step), static key => {
+            var (flowType1, step1) = key;
+            if (step1.IsEmpty)
+                throw new ArgumentOutOfRangeException(nameof(step));
+            if (flowType1.IsGenericTypeDefinition)
                 throw new ArgumentOutOfRangeException(nameof(flowType));
 
-            step = step.Or("Start");
-            foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)) {
-                if (!Equals(method.Name, step.Value))
+            foreach (var method in flowType1.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)) {
+                if (!Equals(method.Name, step1.Value))
                     continue;
-                if (method.ReturnType != typeof(Task))
+                if (method.ReturnType != typeof(Task<FlowTransition>))
                     continue;
 
                 var parameters = method.GetParameters();
-                if (parameters.Length != 2)
+                if (parameters.Length != 1)
                     continue;
-                if (parameters[^1].ParameterType != typeof(CancellationToken))
+                if (parameters[0].ParameterType != typeof(CancellationToken))
                     continue;
 
-                var eventType = parameters[0].ParameterType;
-                var delegateType = typeof(Func<,,,>)
-                    .MakeGenericType(
-                        type,
-                        eventType,
-                        typeof(CancellationToken),
-                        typeof(Task));
-                var stepImpl = method.CreateDelegate(delegateType);
-                var isSystem = step == Error || step == UnsupportedEvent || step == NoStep;
-                var wrappedStepMethod = isSystem
-                    ? WrappedSystemStepMethod
-                    : WrappedStepMethod;
-                var result = (Func<Flow, object?, CancellationToken, Task>)wrappedStepMethod
-                    .MakeGenericMethod(type, eventType)
-                    .Invoke(null, [stepImpl])!;
+                var fnType = typeof(Func<,,,>)
+                    .MakeGenericType(flowType1, typeof(CancellationToken), typeof(Task<FlowTransition>));
+                var stepFn = method.CreateDelegate(fnType);
+                var result = (Func<Flow, CancellationToken, Task<FlowTransition>>)ToUntypedMethod
+                    .MakeGenericMethod(flowType1)
+                    .Invoke(null, [stepFn])!;
                 return result;
             }
-            return step == NoStep
-                ? throw Errors.NoStep(type, step.Value)
-                : Get(type, NoStep);
+            return step1 == OnMissingStep
+                ? throw Errors.StepNotFound(flowType1, step1.Value)
+                : Get(flowType1, OnMissingStep);
         });
 
-    private static Func<Flow, object?, CancellationToken, Task> WrappedSystemStep<TFlow, TEvent>(Delegate stepImpl)
+    private static Func<Flow, CancellationToken, Task<FlowTransition>> ToUntyped<TFlow>(Delegate stepFn)
         where TFlow : Flow
-        where TEvent : class
-        => (untypedFlow, untypedEvent, cancellationToken) => {
-            var fn = (Func<TFlow, TEvent?, CancellationToken, Task>)stepImpl;
-            return fn.Invoke((TFlow)untypedFlow, (TEvent?)untypedEvent, cancellationToken);
-        };
-
-    private static Func<Flow, object?, CancellationToken, Task> WrappedStep<TFlow, TEvent>(Delegate stepImpl)
-        where TFlow : Flow
-        where TEvent : class
-        => (untypedFlow, untypedEvent, cancellationToken) => {
-            var fn = untypedEvent switch {
-                TEvent => (Func<TFlow, TEvent?, CancellationToken, Task>)stepImpl,
-                _ => Get(typeof(TFlow), UnsupportedEvent),
-            };
-            return fn.Invoke((TFlow)untypedFlow, (TEvent?)untypedEvent, cancellationToken);
+        => (flow, cancellationToken) => {
+            var typedFn = (Func<TFlow, CancellationToken, Task<FlowTransition>>)stepFn;
+            return typedFn.Invoke((TFlow)flow, cancellationToken);
         };
 }

@@ -22,7 +22,7 @@ public class FlowRegistry : IHasServices
         => Create(Types[flowName]);
     public virtual Flow Create(Type flowType)
     {
-        Flow.RequireFlowType(flowType);
+        Flow.RequireCorrectType(flowType);
         return (Flow)flowType.CreateInstance();
     }
 }

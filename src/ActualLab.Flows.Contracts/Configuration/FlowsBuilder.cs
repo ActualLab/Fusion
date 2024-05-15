@@ -36,7 +36,7 @@ public readonly struct FlowsBuilder
         // Core services
         services.AddSingleton<FlowRegistry>();
         services.AddSingleton<FlowSerializer>();
-        services.AddSingleton<RunningFlows>();
+        services.AddSingleton<FlowHost>();
 
         configure?.Invoke(this);
     }

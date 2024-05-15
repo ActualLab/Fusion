@@ -14,27 +14,30 @@ public interface IFlows : IComputeService, IBackendService
     Task<Flow?> Get(FlowId flowId, CancellationToken cancellationToken = default);
     // Not a [ComputeMethod]!
     Task<Flow> GetOrStart(FlowId flowId, CancellationToken cancellationToken = default);
+    // Not a [ComputeMethod]!
     Task<long> Notify(FlowId flowId, object? @event, CancellationToken cancellationToken = default);
 
     [CommandHandler]
-    Task<long> SetData(FlowBackend_SetData command, CancellationToken cancellationToken = default);
+    Task<long> Notify(Flows_Notify command, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task<long> Notify(FlowBackend_Notify command, CancellationToken cancellationToken = default);
+    Task<long> Commit(Flows_Save command, CancellationToken cancellationToken = default);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
 // ReSharper disable once InconsistentNaming
-public partial record FlowBackend_SetData(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] FlowId Id,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] long? ExpectedVersion,
-    [property: DataMember(Order = 2), MemoryPackOrder(2)] byte[]? Data
-) : ICommand<long>, IBackendCommand, INotLogged;
-
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-// ReSharper disable once InconsistentNaming
-public partial record FlowBackend_Notify(
+public partial record Flows_Notify(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] FlowId Id,
     [property: DataMember(Order = 1), MemoryPackOrder(2)] byte[]? EventData
 ) : ICommand<long>, IApiCommand, IBackendCommand, INotLogged;
+
+// ReSharper disable once InconsistentNaming
+// This command should always run locally / shouldn't be serializable
+public record Flows_Save(
+    Flow Flow,
+    long? ExpectedVersion = null
+) : ICommand<long>, IBackendCommand, INotLogged
+{
+    public Func<CommandContext, CancellationToken, Task>? OperationBuilder { get; init; }
+    public bool MustRemove { get; init; }
+}

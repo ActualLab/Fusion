@@ -4,7 +4,7 @@ using ActualLab.Internal;
 
 namespace ActualLab.Flows.Infrastructure;
 
-public class RunningFlows : ProcessorBase, IHasServices
+public class FlowHost : ProcessorBase, IHasServices
 {
     private IFlows? _flows;
 
@@ -16,9 +16,28 @@ public class RunningFlows : ProcessorBase, IHasServices
     public MomentClockSet Clocks { get; }
     public ILogger Log { get; }
 
-    public ConcurrentDictionary<FlowId, RunningFlow> Items { get; set; } = new();
+    public ConcurrentDictionary<FlowId, FlowWorker> Workers { get; set; } = new();
 
-    public RunningFlows(IServiceProvider services)
+    public FlowWorker this[FlowId flowId] {
+        get {
+            if (Workers.TryGetValue(flowId, out var result))
+                return result;
+
+            lock (Lock) {
+                if (Workers.TryGetValue(flowId, out result))
+                    return result;
+                if (WhenDisposed != null)
+                    throw Errors.AlreadyDisposed(GetType());
+
+                flowId.Require();
+                result = Create(flowId).Start();
+                Workers[flowId] = result;
+                return result;
+            }
+        }
+    }
+
+    public FlowHost(IServiceProvider services)
     {
         Services = services;
         Log = services.LogFor(GetType());
@@ -32,50 +51,32 @@ public class RunningFlows : ProcessorBase, IHasServices
     protected override Task DisposeAsyncCore()
     {
         var disposeTasks = new List<Task>();
-        foreach (var (_, peer) in Items)
+        foreach (var (_, peer) in Workers)
             disposeTasks.Add(peer.DisposeAsync().AsTask());
         return Task.WhenAll(disposeTasks);
-    }
-
-    public RunningFlow Get(FlowId flowId)
-    {
-        if (Items.TryGetValue(flowId, out var result))
-            return result;
-
-        lock (Lock) {
-            if (Items.TryGetValue(flowId, out result))
-                return result;
-            if (WhenDisposed != null)
-                throw Errors.AlreadyDisposed(GetType());
-
-            flowId.Require();
-            result = Create(flowId).Start();
-            Items[flowId] = result;
-            return result;
-        }
     }
 
     public async Task<long> Notify(FlowId flowId, object? @event, CancellationToken cancellationToken)
     {
         while (true) {
-            var runner = Get(flowId);
-            var notifyTask = runner.Notify(@event, cancellationToken);
+            var worker = this[flowId];
+            var notifyTask = worker.Notify(@event, cancellationToken);
             try {
                 return await notifyTask.ConfigureAwait(false);
             }
             catch (ChannelClosedException) {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!runner.StopToken.IsCancellationRequested)
+                if (!worker.StopToken.IsCancellationRequested)
                     throw;
 
                 // runner is disposing - let's wait for its completion before requesting a new one
-                await runner.WhenRunning!.ConfigureAwait(false);
+                await worker.WhenRunning!.ConfigureAwait(false);
             }
         }
     }
 
     // Protected methods
 
-    protected virtual RunningFlow Create(FlowId flowId)
+    protected virtual FlowWorker Create(FlowId flowId)
         => new(this, flowId);
 }

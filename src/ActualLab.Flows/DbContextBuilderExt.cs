@@ -18,6 +18,7 @@ public static class DbContextBuilderExt
         var services = dbContext.Services;
         services.AddSingleton(c => new DbFlowsDependencies(c.GetRequiredService<DbHub<TDbContext>>()));
         services.AddFusion().AddService<IFlows, DbFlows>(serviceMode);
+        dbContext.AddEntityResolver<string, DbFlow>();
         return dbContext;
     }
 }
