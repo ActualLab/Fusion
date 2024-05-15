@@ -14,20 +14,20 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
     [IgnoreDataMember, MemoryPackIgnore]
     public long Version { get; private set; }
     [IgnoreDataMember, MemoryPackIgnore]
-    public LiveFlow? LiveFlow { get; private set; }
+    public RunningFlow? Runner { get; private set; }
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public Symbol NextStep { get; internal set; }
 
     // Computed
     [IgnoreDataMember, MemoryPackIgnore]
-    protected ILogger? Log => LiveFlow?.Log;
+    protected ILogger? Log => Runner?.Log;
 
-    public void Initialize(FlowId id, long version, LiveFlow? liveFlow = null)
+    public void Initialize(FlowId id, long version, RunningFlow? runner = null)
     {
         Id = id;
         Version = version;
-        LiveFlow = liveFlow;
+        Runner = runner;
     }
 
     public override string ToString()

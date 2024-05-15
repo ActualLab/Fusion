@@ -4,7 +4,7 @@ namespace ActualLab.Fusion.Extensions;
 
 public class RpcPeerStateMonitor : WorkerBase
 {
-    private IMutableState<RpcPeerRawState> _rawState = null!;
+    private MutableState<RpcPeerRawState> _rawState = null!;
     private ILogger? _log;
 
     protected IServiceProvider Services => RpcHub.Services;
@@ -20,7 +20,7 @@ public class RpcPeerStateMonitor : WorkerBase
 
     public IState<RpcPeerRawState> RawState {
         get => _rawState;
-        protected set => _rawState = (IMutableState<RpcPeerRawState>)value;
+        protected set => _rawState = (MutableState<RpcPeerRawState>)value;
     }
     public IState<Moment> LastReconnectDelayCancelledAt { get; protected set; } = null!;
     public IState<RpcPeerState> State { get; protected set; } = null!;

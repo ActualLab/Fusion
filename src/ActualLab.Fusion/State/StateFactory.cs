@@ -2,23 +2,14 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
-public interface IStateFactory : IHasServices
-{
-    IMutableState<T> NewMutable<T>(MutableState<T>.Options settings);
-
-    IComputedState<T> NewComputed<T>(
-        ComputedState<T>.Options settings,
-        Func<IComputedState<T>, CancellationToken, Task<T>> computer);
-}
-
-public class StateFactory(IServiceProvider services) : IStateFactory
+public class StateFactory(IServiceProvider services) : IHasServices
 {
     public IServiceProvider Services { get; } = services;
 
-    public IMutableState<T> NewMutable<T>(MutableState<T>.Options settings)
-        => new MutableState<T>(settings, Services);
+    public virtual MutableState<T> NewMutable<T>(MutableState<T>.Options settings)
+        => new(settings, Services);
 
-    public IComputedState<T> NewComputed<T>(
+    public virtual ComputedState<T> NewComputed<T>(
         ComputedState<T>.Options settings,
         Func<IComputedState<T>, CancellationToken, Task<T>> computer)
         => new FuncComputedState<T>(settings, Services, computer);

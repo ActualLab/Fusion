@@ -6,11 +6,11 @@ namespace ActualLab.Fusion.Blazor;
 public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposable, IHandleEvent
 {
     private StateEventKind _stateHasChangedTriggers = StateEventKind.Updated;
-    private IStateFactory? _stateFactory;
+    private StateFactory? _stateFactory;
 
     [Inject] protected IServiceProvider Services { get; init; } = null!;
 
-    protected IStateFactory StateFactory => _stateFactory ??= Services.StateFactory();
+    protected StateFactory StateFactory => _stateFactory ??= Services.StateFactory();
     protected abstract IState UntypedState { get; }
     protected Action<IState, StateEventKind> StateChanged { get; set; }
 

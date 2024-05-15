@@ -68,12 +68,10 @@ public readonly struct FusionBuilder
         services.TryAddSingleton(c => new ComputeServiceInterceptor(
             c.GetRequiredService<ComputeServiceInterceptor.Options>(), c));
 
-        // States
-        services.TryAddSingleton(c => new MixedModeService<IStateFactory>.Singleton(new StateFactory(c), c));
-        services.TryAddScoped(c => new MixedModeService<IStateFactory>.Scoped(new StateFactory(c), c));
-        services.TryAddTransient(c => c.GetRequiredMixedModeService<IStateFactory>());
-        services.TryAddSingleton(typeof(MutableState<>.Options));
-        services.TryAddTransient(typeof(IMutableState<>), typeof(MutableState<>));
+        // StateFactory
+        services.TryAddSingleton(c => new MixedModeService<StateFactory>.Singleton(new StateFactory(c), c));
+        services.TryAddScoped(c => new MixedModeService<StateFactory>.Scoped(new StateFactory(c), c));
+        services.TryAddTransient(c => c.GetRequiredMixedModeService<StateFactory>());
 
         // Update delayer & UI action tracker
         services.TryAddSingleton(_ => new UIActionTracker.Options());

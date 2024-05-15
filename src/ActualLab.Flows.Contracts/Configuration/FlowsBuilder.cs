@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR;
+using ActualLab.Flows.Infrastructure;
 using ActualLab.Fusion;
 using ActualLab.Internal;
 using ActualLab.Rpc;
@@ -31,7 +32,12 @@ public readonly struct FlowsBuilder
 
         Flows = flows = new();
         services.AddInstance(flows, addInFront: true);
+
+        // Core services
         services.AddSingleton<FlowRegistry>();
+        services.AddSingleton<FlowSerializer>();
+        services.AddSingleton<RunningFlows>();
+
         configure?.Invoke(this);
     }
 

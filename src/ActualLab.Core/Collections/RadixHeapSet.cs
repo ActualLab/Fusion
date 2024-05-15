@@ -79,6 +79,7 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
                 var oldPriority = bucket[value];
                 if (oldPriority <= priority)
                     return false;
+
                 bucket[value] = priority;
                 return true;
             }
@@ -87,6 +88,7 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
                 var oldPriority = oldBucket[value];
                 if (oldPriority <= priority)
                     return false;
+
                 oldBucket.Remove(value);
             }
         }
@@ -104,6 +106,7 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
                 var oldPriority = bucket[value];
                 if (oldPriority >= priority)
                     return false;
+
                 bucket[value] = priority;
                 return true;
             }
@@ -112,6 +115,7 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
                 var oldPriority = oldBucket[value];
                 if (oldPriority >= priority)
                     return false;
+
                 oldBucket.Remove(value);
             }
         }

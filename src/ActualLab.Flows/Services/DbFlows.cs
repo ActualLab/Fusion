@@ -11,17 +11,19 @@ namespace ActualLab.Flows.Services;
 public class DbFlows : DbServiceBase, IFlows
 {
     protected FlowRegistry Registry { get; }
+    protected RunningFlows RunningFlows { get; }
     protected FlowSerializer Serializer { get; }
     protected IDbEntityResolver<string, DbFlow> EntityResolver { get; }
-    protected IRetryPolicy GetOrStartRetryPolicy { get; init; }
 
-    public DbFlows(IDbHub dbHub) : base(dbHub)
+    public IRetryPolicy GetOrStartRetryPolicy { get; init; } = new RetryPolicy(3, RetryDelaySeq.Exp(0.25, 1));
+
+    public DbFlows(DbFlowsDependencies dependencies) : base(dependencies.DbHub)
     {
-        var services = dbHub.Services;
+        var services = dependencies.Services;
         Registry = services.GetRequiredService<FlowRegistry>();
+        RunningFlows = services.GetRequiredService<RunningFlows>();
         Serializer = services.GetRequiredService<FlowSerializer>();
         EntityResolver = services.DbEntityResolver<string, DbFlow>();
-        GetOrStartRetryPolicy = new RetryPolicy(3, RetryDelaySeq.Exp(0.25, 1));
     }
 
     // [ComputeMethod]
@@ -101,17 +103,14 @@ public class DbFlows : DbServiceBase, IFlows
 
     // Regular method
     public virtual Task<long> Notify(FlowId flowId, object? @event, CancellationToken cancellationToken = default)
-    {
-        flowId.Require();
-        throw new NotImplementedException();
-    }
+        => RunningFlows.Notify(flowId, @event, cancellationToken);
 
     // [CommandHandler]
     public virtual Task<long> Notify(FlowBackend_Notify command, CancellationToken cancellationToken = default)
     {
-        var (id, eventData) = command;
-        id.Require();
-        return Notify(id, Serializer.Deserialize(eventData), cancellationToken);
+        var (flowId, eventData) = command;
+        var @event = Serializer.Deserialize(eventData);
+        return RunningFlows.Notify(flowId, @event, cancellationToken);
     }
 
     // Protected methods
@@ -124,7 +123,7 @@ public class DbFlows : DbServiceBase, IFlows
             return null;
 
         var flow = Serializer.Deserialize(data);
-        flow.Initialize(flowId, dbFlow!.Version);
+        flow?.Initialize(flowId, dbFlow!.Version);
         return flow;
     }
 
