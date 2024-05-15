@@ -83,11 +83,11 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
         => throw Internal.Errors.StepNotFound(GetType(), Step);
 
     protected virtual Task<FlowTransition> OnError(CancellationToken cancellationToken)
-        => Task.FromResult(Goto(nameof(OnError), false));
+        => Task.FromResult(Goto(nameof(OnError), mustCommit: false));
 
     // Transition helpers
 
-    protected FlowTransition Goto(Symbol step, bool mustCommit = true, bool mustWaitForEvent = true)
+    protected FlowTransition Goto(Symbol step, bool mustWaitForEvent = true, bool mustCommit = true)
     {
         Worker.Require();
         return new FlowTransition(step, mustWaitForEvent);
