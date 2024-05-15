@@ -1,4 +1,5 @@
 using ActualLab.CommandR;
+using ActualLab.CommandR.Operations;
 using ActualLab.Flows.Infrastructure;
 using ActualLab.Internal;
 using ActualLab.Versioning;
@@ -14,8 +15,7 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
     protected FlowWorker? Worker { get; private set; }
     [IgnoreDataMember, MemoryPackIgnore]
     protected object? Event { get; private set; }
-    [IgnoreDataMember, MemoryPackIgnore]
-    protected Func<CommandContext, CancellationToken, Task>? OperationBuilder { get; set; }
+    protected event Action<Operation>? EventBuilder;
 
     [IgnoreDataMember, MemoryPackIgnore]
     public FlowId Id { get; private set; }
@@ -46,7 +46,7 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
     {
         Worker.Require();
         Event = @event;
-        OperationBuilder = null;
+        EventBuilder = null;
         FlowTransition result;
         try {
             result = await FlowSteps.Invoke(this, Step, cancellationToken).ConfigureAwait(false);
@@ -55,7 +55,7 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
             Event = e;
-            OperationBuilder = null;
+            EventBuilder = null;
             result = await FlowSteps.Invoke(this, FlowSteps.OnError, cancellationToken).ConfigureAwait(false);
             if (result.Step == FlowSteps.OnError)
                 throw;
@@ -65,7 +65,7 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
         }
         finally {
             Event = null;
-            OperationBuilder = null;
+            EventBuilder = null;
         }
         return result;
     }
@@ -87,21 +87,10 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
 
     // Transition helpers
 
-    protected void AddOperationBuilder(Func<CommandContext, CancellationToken, Task> operationBuilder)
-    {
-        Worker.Require();
-        var oldOperationBuilder = OperationBuilder;
-        OperationBuilder = async (context, ct) => {
-            if (oldOperationBuilder != null)
-                await oldOperationBuilder.Invoke(context, ct).ConfigureAwait(false);
-            await operationBuilder.Invoke(context, ct).ConfigureAwait(false);
-        };
-    }
-
     protected FlowTransition Goto(Symbol step, bool mustCommit = true, bool mustWaitForEvent = true)
     {
         Worker.Require();
-        return new FlowTransition(step, mustCommit, mustWaitForEvent);
+        return new FlowTransition(step, mustWaitForEvent);
     }
 
     protected Task Save(CancellationToken cancellationToken)
@@ -110,7 +99,7 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
     {
         Worker.Require();
         var saveCommand = new Flows_Save(this, ignoreVersion ? null : Version) {
-            OperationBuilder = OperationBuilder,
+            EventBuilder = EventBuilder,
         };
         Version = await Worker.Host.Commander.Call(saveCommand, cancellationToken).ConfigureAwait(false);
     }

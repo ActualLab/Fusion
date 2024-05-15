@@ -98,10 +98,7 @@ public class DbFlows : DbServiceBase, IFlows
             break;
         }
 
-        var operationBuilder = command.OperationBuilder;
-        if (operationBuilder != null)
-            await operationBuilder.Invoke(context, cancellationToken).ConfigureAwait(false);
-
+        command.EventBuilder?.Invoke(context.Operation);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return dbFlow?.Version ?? 0;
     }

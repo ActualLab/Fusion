@@ -1,6 +1,7 @@
 using ActualLab.CommandR;
 using ActualLab.CommandR.Commands;
 using ActualLab.CommandR.Configuration;
+using ActualLab.CommandR.Operations;
 using ActualLab.Fusion;
 using ActualLab.Rpc;
 
@@ -38,6 +39,6 @@ public record Flows_Save(
     long? ExpectedVersion = null
 ) : ICommand<long>, IBackendCommand, INotLogged
 {
-    public Func<CommandContext, CancellationToken, Task>? OperationBuilder { get; init; }
+    public Action<Operation>? EventBuilder { get; init; }
     public bool MustRemove { get; init; }
 }
