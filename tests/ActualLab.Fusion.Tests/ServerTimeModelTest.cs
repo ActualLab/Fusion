@@ -44,7 +44,7 @@ public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
     public async Task ServerTimeModelTest2()
     {
         await using var serving = await WebHost.Serve();
-        using var stm = ClientServices.GetRequiredService<IComputedState<ServerTimeModel2>>();
+        using var stm = ClientServices.GetRequiredService<ComputedState<ServerTimeModel2>>();
 
         var c = stm.Computed;
         c.IsConsistent().Should().BeFalse();
