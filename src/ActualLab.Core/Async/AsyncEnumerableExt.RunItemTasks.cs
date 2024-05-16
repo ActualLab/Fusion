@@ -28,6 +28,8 @@ public static partial class AsyncEnumerableExt
         var removedItems = new List<TItem>();
         try {
             await foreach (var items in itemSets.WithCancellation(cancellationToken).ConfigureAwait(false)) {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // Stopping previously queued tasks
                 await Task.WhenAll(stoppingTasks).SilentAwait(false);
                 stoppingTasks.Clear();
