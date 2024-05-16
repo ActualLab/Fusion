@@ -39,11 +39,11 @@ public abstract class Flow : IHasId<FlowId>, IWorkerFlow
     public virtual Flow Clone()
         => MemberwiseCloner.Invoke(this);
 
-    public virtual async Task<FlowTransition> HandleEvent(object? @event, CancellationToken cancellationToken)
+    public virtual async Task<FlowTransition> HandleEvent(object? evt, CancellationToken cancellationToken)
     {
         RequireWorker();
         var step = Step;
-        Event = new FlowEventSource(this, @event);
+        Event = new FlowEventSource(this, evt);
         FlowTransition transition;
         try {
             transition = await FlowSteps.Invoke(this, step, cancellationToken).ConfigureAwait(false);

@@ -50,6 +50,7 @@ public class DbFlows : DbServiceBase, IFlows
             var flowType = Registry.Types[flowId.Name];
             Flow.RequireCorrectType(flowType);
             flow = (Flow)flowType.CreateInstance();
+            flow.Initialize(flowId, 0);
 
             var saveCommand = new Flows_Save(flow);
             var version = await Commander.Call(saveCommand, true, ct).ConfigureAwait(false);
@@ -107,15 +108,15 @@ public class DbFlows : DbServiceBase, IFlows
     }
 
     // Regular method
-    public virtual Task<long> OnEvent(FlowId flowId, object? @event, CancellationToken cancellationToken = default)
-        => FlowHost.HandleEvent(flowId, @event, cancellationToken);
+    public virtual Task<long> OnEvent(FlowId flowId, object? evt, CancellationToken cancellationToken = default)
+        => FlowHost.HandleEvent(flowId, evt, cancellationToken);
 
     // [CommandHandler]
     public virtual Task<long> OnEventData(Flows_EventData command, CancellationToken cancellationToken = default)
     {
         var (_, flowId, eventData) = command;
-        var @event = Serializer.DeserializeEvent(eventData);
-        return FlowHost.HandleEvent(flowId, @event, cancellationToken);
+        var evt = Serializer.DeserializeEvent(eventData);
+        return FlowHost.HandleEvent(flowId, evt, cancellationToken);
     }
 
     // Protected methods

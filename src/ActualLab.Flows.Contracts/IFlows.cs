@@ -16,7 +16,7 @@ public interface IFlows : IComputeService, IBackendService
     // Not a [ComputeMethod]!
     Task<Flow> GetOrStart(FlowId flowId, CancellationToken cancellationToken = default);
     // Not a [ComputeMethod]!
-    Task<long> OnEvent(FlowId flowId, object? @event, CancellationToken cancellationToken = default);
+    Task<long> OnEvent(FlowId flowId, object? evt, CancellationToken cancellationToken = default);
 
     [CommandHandler]
     Task<long> OnEventData(Flows_EventData command, CancellationToken cancellationToken = default);

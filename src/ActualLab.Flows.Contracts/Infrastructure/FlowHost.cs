@@ -53,11 +53,11 @@ public class FlowHost : ProcessorBase, IHasServices
         return Task.WhenAll(disposeTasks);
     }
 
-    public async Task<long> HandleEvent(FlowId flowId, object? @event, CancellationToken cancellationToken)
+    public async Task<long> HandleEvent(FlowId flowId, object? evt, CancellationToken cancellationToken)
     {
         while (true) {
             var worker = this[flowId];
-            var whenHandled = worker.HandleEvent(@event, cancellationToken);
+            var whenHandled = worker.HandleEvent(evt, cancellationToken);
             try {
                 return await whenHandled.ConfigureAwait(false);
             }

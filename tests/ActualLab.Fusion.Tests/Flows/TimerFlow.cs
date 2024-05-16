@@ -2,7 +2,8 @@ using ActualLab.Flows;
 
 namespace ActualLab.Fusion.Tests.Flows;
 
-public class TimerFlow : Flow
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+public partial class TimerFlow : Flow
 {
     public override FlowOptions GetOptions()
         => new() { RemoveDelay = TimeSpan.FromSeconds(1) };

@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ActualLab.Flows;
 
-[Table("_Events")]
+[Table("_Flows")]
 public sealed class DbFlow
 {
     [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]

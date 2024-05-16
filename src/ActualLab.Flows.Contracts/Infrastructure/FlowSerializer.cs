@@ -20,13 +20,13 @@ public class FlowSerializer
         => data == null || data.Length == 0 ? null
             : ByteSerializer.Read<Flow?>(data);
 
-    public virtual byte[]? SerializeEvent(object? @event)
+    public virtual byte[]? SerializeEvent(object? evt)
     {
-        if (ReferenceEquals(@event, null))
+        if (ReferenceEquals(evt, null))
             return null;
 
         using var buffer = new ArrayPoolBuffer<byte>(256);
-        ByteSerializer.Write(buffer, @event, @event.GetType());
+        ByteSerializer.Write(buffer, evt, evt.GetType());
         return buffer.WrittenSpan.ToArray();
     }
 
