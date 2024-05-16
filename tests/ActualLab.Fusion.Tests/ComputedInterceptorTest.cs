@@ -14,7 +14,7 @@ public class ComputedInterceptorTest(ITestOutputHelper @out) : FusionTestBase(@o
         var count = 0L;
         using var state = stateFactory.NewComputed<DateTime>(
             FixedDelayer.YieldUnsafe,
-            async (_, ct) => await c.Use(ct));
+            async ct => await c.Use(ct));
         state.Updated += (s, _)
             => Log?.LogInformation($"{++count} -> {s.Value:hh:mm:ss:fff}");
 

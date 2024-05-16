@@ -2,11 +2,11 @@ namespace ActualLab.Fusion.Blazor.Internal;
 
 public sealed class ComputedStateComponentState<T>(
     ComputedState<T>.Options settings,
-    Func<IComputedState<T>, CancellationToken, Task<T>> computer,
+    Func<CancellationToken, Task<T>> computer,
     IServiceProvider services
     ) : ComputedState<T>(settings, services, false), IHasInitialize
 {
-    public readonly Func<IComputedState<T>, CancellationToken, Task<T>> Computer = computer;
+    public readonly Func<CancellationToken, Task<T>> Computer = computer;
 
     void IHasInitialize.Initialize(object? settings)
         => base.Initialize((Options)settings!);
@@ -19,6 +19,6 @@ public sealed class ComputedStateComponentState<T>(
                 .NewNeverEndingUnreferenced<T>()
                 .WaitAsync(cancellationToken);
         }
-        return Computer.Invoke(this, cancellationToken);
+        return Computer.Invoke(cancellationToken);
     }
 }

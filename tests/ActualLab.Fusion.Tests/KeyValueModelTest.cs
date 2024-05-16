@@ -17,7 +17,7 @@ public class KeyValueModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
         (await kv.TryGet("")).Should().Be(Option.Some("1"));
         (await kv.Get("")).Should().Be("1");
 
-        using var kvm = ClientServices.GetRequiredService<IComputedState<KeyValueModel<string>>>();
+        using var kvm = ClientServices.GetRequiredService<ComputedState<KeyValueModel<string>>>();
         var kvc = ClientServices.GetRequiredService<IKeyValueService<string>>();
 
         // First read

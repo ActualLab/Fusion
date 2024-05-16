@@ -25,7 +25,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IDisposable
 
     // These properties are intentionally public -
     // e.g. State is quite handy to consume in other compute methods or states
-    public IComputedState<AuthState> State { get; }
+    public ComputedState<AuthState> State { get; }
 
     protected IServiceProvider Services { get; }
     protected IAuth Auth { get; }
@@ -79,7 +79,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IDisposable
             FlowExecutionContext = true, // To preserve current culture
         };
 
-    protected virtual async Task<AuthState> ComputeState(IComputedState<AuthState> state, CancellationToken cancellationToken)
+    protected virtual async Task<AuthState> ComputeState(CancellationToken cancellationToken)
     {
         // We have to use ISessionResolver.GetSession() here
         _session ??= await SessionResolver.GetSession(cancellationToken).ConfigureAwait(false);

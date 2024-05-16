@@ -93,8 +93,8 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
 
         using var sText = await stateFactory.NewComputed<string>(
             FixedDelayer.YieldUnsafe,
-            async (s, cancellationToken) => {
-                var norris = await users.Get(int.MaxValue, cancellationToken).ConfigureAwait(false);
+            async ct => {
+                var norris = await users.Get(int.MaxValue, ct).ConfigureAwait(false);
                 var now = await time.GetTime().ConfigureAwait(false);
                 return $"@ {now:hh:mm:ss.fff}: {norris?.Name ?? "(none)"}";
             }).Update();
@@ -119,19 +119,21 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var count2 = 0;
 
 #pragma warning disable 1998
-        var s1 = await stateFactory.NewComputed<int>(
+        var s1 = await stateFactory.NewComputed(
             FixedDelayer.YieldUnsafe,
-            async (s, ct) => count1++).Update();
+            async _ => count1++
+        ).Update();
         var s2 = await stateFactory.NewComputed<int>(
             FixedDelayer.YieldUnsafe,
-            async (s, ct) => count2++).Update();
+            async _ => count2++
+        ).Update();
 #pragma warning restore 1998
         var s12 = await stateFactory.NewComputed<(int, int)>(
             FixedDelayer.YieldUnsafe,
-            async (s, cancellationToken) => {
-                var a = await s1.Use(cancellationToken);
+            async ct => {
+                var a = await s1.Use(ct);
                 using var _ = Computed.BeginIsolation();
-                var b = await s2.Use(cancellationToken);
+                var b = await s2.Use(ct);
                 return (a, b);
             }).Update();
 

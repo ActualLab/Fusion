@@ -23,7 +23,7 @@ public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
     protected readonly object Lock = new();
     private readonly MutableState<ImmutableHashSet<DbShard>> _shards;
     private readonly MutableState<ImmutableHashSet<DbShard>> _usedShards;
-    private readonly IComputedState<ImmutableHashSet<DbShard>> _eventProcessorShards;
+    private readonly ComputedState<ImmutableHashSet<DbShard>> _eventProcessorShards;
 
     public bool HasSingleShard { get; }
     public IState<ImmutableHashSet<DbShard>> Shards => _shards;
@@ -55,7 +55,7 @@ public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
             StateCategories.Get(GetType(), nameof(UsedShards)));
         _eventProcessorShards = stateFactory.NewComputed<ImmutableHashSet<DbShard>>(
             FixedDelayer.NoneUnsafe,
-            async (_, ct) => {
+            async ct => {
                 var filter = await EventProcessorShardFilter.Use(ct).ConfigureAwait(false);
                 var shards1 = await Shards.Use(ct).ConfigureAwait(false);
                 return shards1.Where(shard => filter.Invoke(shard) && !shard.IsTemplate).ToImmutableHashSet();

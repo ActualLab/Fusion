@@ -80,7 +80,7 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
 
         var state = ClientServices.StateFactory().NewComputed<string>(
             FixedDelayer.Get(0.5),
-            async (_, ct) => {
+            async ct => {
                 var s1 = await state1.Use(ct);
                 var s2 = await state2.Use(ct);
                 return $"{s1} {s2}";

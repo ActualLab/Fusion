@@ -1,13 +1,13 @@
 namespace ActualLab.Fusion.Internal;
 
-public sealed class FuncComputedState<T> : ComputedState<T>
+public sealed class FuncComputedStateEx<T> : ComputedState<T>
 {
-    public Func<CancellationToken, Task<T>> Computer { get; }
+    public Func<ComputedState<T>, CancellationToken, Task<T>> Computer { get; }
 
-    public FuncComputedState(
+    public FuncComputedStateEx(
         Options settings,
         IServiceProvider services,
-        Func<CancellationToken, Task<T>> computer)
+        Func<ComputedState<T>, CancellationToken, Task<T>> computer)
         : base(settings, services, false)
     {
         Computer = computer;
@@ -22,6 +22,6 @@ public sealed class FuncComputedState<T> : ComputedState<T>
                 .NewNeverEndingUnreferenced<T>()
                 .WaitAsync(cancellationToken);
         }
-        return Computer.Invoke(cancellationToken);
+        return Computer.Invoke(this, cancellationToken);
     }
 }

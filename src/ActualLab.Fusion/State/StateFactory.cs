@@ -11,6 +11,11 @@ public class StateFactory(IServiceProvider services) : IHasServices
 
     public virtual ComputedState<T> NewComputed<T>(
         ComputedState<T>.Options settings,
-        Func<IComputedState<T>, CancellationToken, Task<T>> computer)
+        Func<CancellationToken, Task<T>> computer)
         => new FuncComputedState<T>(settings, Services, computer);
+
+    public virtual ComputedState<T> NewComputed<T>(
+        ComputedState<T>.Options settings,
+        Func<ComputedState<T>, CancellationToken, Task<T>> computer)
+        => new FuncComputedStateEx<T>(settings, Services, computer);
 }

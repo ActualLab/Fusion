@@ -141,8 +141,7 @@ public class RpcPeerStateMonitor : WorkerBase
         }
     }
 
-    protected virtual Task<Moment> ComputeLastReconnectDelayCancelledAtState(
-        IComputedState<Moment> state, CancellationToken cancellationToken)
+    protected virtual Task<Moment> ComputeLastReconnectDelayCancelledAtState(CancellationToken cancellationToken)
     {
         var reconnectDelayer = RpcHub.InternalServices.ClientPeerReconnectDelayer;
         var computed = Computed.GetCurrent();
@@ -155,8 +154,7 @@ public class RpcPeerStateMonitor : WorkerBase
         return Task.FromResult(Now);
     }
 
-    protected virtual async Task<RpcPeerState> ComputeState(
-        IComputedState<RpcPeerState> state, CancellationToken cancellationToken)
+    protected virtual async Task<RpcPeerState> ComputeState(CancellationToken cancellationToken)
     {
         var s = await RawState.Use(cancellationToken).ConfigureAwait(false);
         var now = Now;

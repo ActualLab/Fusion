@@ -2,7 +2,7 @@ using ActualLab.Fusion.Blazor.Internal;
 
 namespace ActualLab.Fusion.Blazor;
 
-public abstract class ComputedStateComponent<TState> : StatefulComponentBase<IComputedState<TState>>
+public abstract class ComputedStateComponent<TState> : StatefulComponentBase<ComputedState<TState>>
 {
     protected ComputedStateComponentOptions Options { get; init; } = ComputedStateComponent.DefaultOptions;
 
@@ -18,12 +18,12 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<ICo
     protected virtual ComputedState<TState>.Options GetStateOptions()
         => ComputedStateComponent.GetStateOptions<TState>(GetType());
 
-    protected override (IComputedState<TState> State, object? StateOptions) CreateState()
+    protected override (ComputedState<TState> State, object? StateOptions) CreateState()
     {
         // Synchronizes ComputeState call as per:
         // https://github.com/servicetitan/Stl.Fusion/issues/202
         var stateOptions = GetStateOptions();
-        Func<IComputedState<TState>, CancellationToken, Task<TState>> computer =
+        Func<CancellationToken, Task<TState>> computer =
             (Options & ComputedStateComponentOptions.SynchronizeComputeState) == 0
                 ? UnsynchronizedComputeState
                 : stateOptions.FlowExecutionContext && DispatcherInfo.IsExecutionContextFlowSupported(this)
@@ -31,16 +31,13 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<ICo
                     : SynchronizedComputeStateWithManualExecutionContextFlow;
         return (new ComputedStateComponentState<TState>(stateOptions, computer, Services), stateOptions);
 
-        Task<TState> UnsynchronizedComputeState(
-            IComputedState<TState> state, CancellationToken cancellationToken)
+        Task<TState> UnsynchronizedComputeState(CancellationToken cancellationToken)
             => ComputeState(cancellationToken);
 
-        Task<TState> SynchronizedComputeState(
-            IComputedState<TState> state, CancellationToken cancellationToken)
+        Task<TState> SynchronizedComputeState(CancellationToken cancellationToken)
             => this.GetDispatcher().InvokeAsync(() => ComputeState(cancellationToken));
 
-        Task<TState> SynchronizedComputeStateWithManualExecutionContextFlow(
-            IComputedState<TState> state, CancellationToken cancellationToken)
+        Task<TState> SynchronizedComputeStateWithManualExecutionContextFlow(CancellationToken cancellationToken)
         {
             var executionContext = ExecutionContext.Capture();
             var taskFactory = () => ComputeState(cancellationToken);

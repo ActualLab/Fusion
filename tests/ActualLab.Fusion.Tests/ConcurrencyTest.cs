@@ -37,7 +37,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
             var computedStates = Enumerable.Range(0, HardwareInfo.GetProcessorCountFactor(2))
                 .Select(_ => factory.NewComputed<int>(
                     updateDelayer,
-                    async (_, ct) => {
+                    async ct => {
                         var m1 = await ms1.Use(ct).ConfigureAwait(false);
                         var m2 = await ms2.Use(ct).ConfigureAwait(false);
                         return m1 + m2;
