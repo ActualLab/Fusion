@@ -11,7 +11,7 @@ public class MeterTest(ITestOutputHelper @out) : TestBase(@out)
         Out.WriteLine(a.Name);
         Out.WriteLine(a.Version);
         a.Name.Should().Be("ActualLab.Core");
-        a.Version.Should().StartWith("7.");
+        a.Version.Should().StartWith("8.");
         a.Version.Should().Contain("+");
 
         var b = typeof(Result).GetMeter();
