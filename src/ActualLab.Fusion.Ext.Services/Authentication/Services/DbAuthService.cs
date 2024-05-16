@@ -190,6 +190,10 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var shard = ShardResolver.Resolve(session);
         var sessions = await GetUserSessions(shard, user.Id, cancellationToken).ConfigureAwait(false);
+#if NET8_0_OR_GREATER
         return [..sessions.Select(p => p.SessionInfo)];
+#else
+        return sessions.Select(p => p.SessionInfo).ToImmutableArray();
+#endif
     }
 }

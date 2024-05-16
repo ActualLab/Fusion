@@ -38,7 +38,7 @@ public readonly struct CommanderBuilder
             return;
         }
 
-        Handlers = handlers = new(64);
+        Handlers = handlers = new();
         services.AddInstance(handlers, addInFront: true);
 
         // Core services

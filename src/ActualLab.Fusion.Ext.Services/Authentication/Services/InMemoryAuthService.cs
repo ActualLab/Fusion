@@ -177,6 +177,10 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             return ImmutableArray<SessionInfo>.Empty;
 
         var sessions = await GetUserSessions(shard, user.Id, cancellationToken).ConfigureAwait(false);
+#if NET8_0_OR_GREATER
         return [..sessions.Select(p => p.SessionInfo)];
+#else
+        return sessions.Select(p => p.SessionInfo).ToImmutableArray();
+#endif
     }
 }

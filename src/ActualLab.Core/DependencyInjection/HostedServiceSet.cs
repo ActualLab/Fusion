@@ -36,9 +36,9 @@ public sealed class HostedServiceSet(IServiceProvider services)
             await whenStopped.WaitAsync(WarnTimeout, CancellationToken.None).ConfigureAwait(false);
         }
         catch (TimeoutException) {
-            var failedServices = services.Zip(tasks)
-                .Where(x => !x.Second.IsCompleted)
-                .Select(x => x.First.GetType().GetName())
+            var failedServices = services.Zip(tasks, (s, t) => (Service: s, Task: t))
+                .Where(x => !x.Task.IsCompleted)
+                .Select(x => x.Service.GetType().GetName())
                 .ToDelimitedString();
             Log.LogWarning("Hosted services failed to stop in time: {Services}", failedServices);
         }

@@ -157,8 +157,13 @@ public static class ServiceCollectionExt
         foreach (var d in services) {
             if (d.ServiceType != type)
                 continue;
+#if NET8_0_OR_GREATER
             if (d is not { Lifetime: ServiceLifetime.Singleton, IsKeyedService: false })
                 continue;
+#else
+            if (d is not { Lifetime: ServiceLifetime.Singleton })
+                continue;
+#endif
 
             return d.ImplementationInstance;
         }
