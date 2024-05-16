@@ -37,7 +37,7 @@ public class FlowWorker : WorkerBase, IGenericTimeoutHandler
     public override string ToString()
         => $"{GetType().Name}('{FlowId}')";
 
-    public Task<long> Notify(object? @event, CancellationToken cancellationToken)
+    public Task<long> HandleEvent(object? @event, CancellationToken cancellationToken)
     {
         var entry = new QueueEntry(@event, cancellationToken);
         bool couldWrite;
@@ -86,7 +86,13 @@ public class FlowWorker : WorkerBase, IGenericTimeoutHandler
 
                 var backup = flow.Clone();
                 try {
-                    await flow.MoveNext(entry.Event, gracefulStopToken).ConfigureAwait(false);
+                    var @event = entry.Event;
+                    while (true) {
+                        var transition = await flow.HandleEvent(@event, gracefulStopToken).ConfigureAwait(false);
+                        if (!transition.IsImmediate)
+                            break;
+                        @event = null;
+                    }
                     entry.ResultSource.TrySetResult(flow.Version);
                 }
                 catch (Exception e) {

@@ -47,16 +47,19 @@ public class DbFlows : DbServiceBase, IFlows
             if (flow != null)
                 return flow;
 
-            flow = Registry.Create(flowId.Name);
-            var updateCommand = new Flows_Save(flow);
-            var version = await Commander.Call(updateCommand, true, ct).ConfigureAwait(false);
+            var flowType = Registry.Types[flowId.Name];
+            Flow.RequireCorrectType(flowType);
+            flow = (Flow)flowType.CreateInstance();
+
+            var saveCommand = new Flows_Save(flow);
+            var version = await Commander.Call(saveCommand, true, ct).ConfigureAwait(false);
             flow.Initialize(flowId, version);
             return flow;
         }, retryLogger, cancellationToken);
     }
 
     // [CommandHandler]
-    public virtual async Task<long> Commit(Flows_Save command, CancellationToken cancellationToken = default)
+    public virtual async Task<long> OnSave(Flows_Save command, CancellationToken cancellationToken = default)
     {
         var (flow, expectedVersion) = command;
         var flowId = flow.Require().Id.Require();
@@ -78,7 +81,7 @@ public class DbFlows : DbServiceBase, IFlows
             .ConfigureAwait(false);
         VersionChecker.RequireExpected(dbFlow?.Version ?? 0, expectedVersion);
 
-        switch (dbFlow != null, !command.MustRemove) {
+        switch (dbFlow != null, flow.Step != FlowSteps.MustRemove) {
         case (false, false): // Removed -> Removed
             break;
         case (false, true): // Create
@@ -87,7 +90,7 @@ public class DbFlows : DbServiceBase, IFlows
                 Version = VersionGenerator.NextVersion(),
                 Data = Serializer.Serialize(flow),
             });
-            context.Operation.AddEvent(new Flows_Notify(flowId, null)); // Call Resume on create
+            context.Operation.AddEvent(new FlowStartEvent(flowId));
             break;
         case (true, false):  // Remove
             dbContext.Remove(dbFlow!);
@@ -104,15 +107,15 @@ public class DbFlows : DbServiceBase, IFlows
     }
 
     // Regular method
-    public virtual Task<long> Notify(FlowId flowId, object? @event, CancellationToken cancellationToken = default)
-        => FlowHost.Notify(flowId, @event, cancellationToken);
+    public virtual Task<long> OnEvent(FlowId flowId, object? @event, CancellationToken cancellationToken = default)
+        => FlowHost.HandleEvent(flowId, @event, cancellationToken);
 
     // [CommandHandler]
-    public virtual Task<long> Notify(Flows_Notify command, CancellationToken cancellationToken = default)
+    public virtual Task<long> OnEventData(Flows_EventData command, CancellationToken cancellationToken = default)
     {
-        var (flowId, eventData) = command;
-        var @event = Serializer.Deserialize(eventData);
-        return FlowHost.Notify(flowId, @event, cancellationToken);
+        var (_, flowId, eventData) = command;
+        var @event = Serializer.DeserializeEvent(eventData);
+        return FlowHost.HandleEvent(flowId, @event, cancellationToken);
     }
 
     // Protected methods

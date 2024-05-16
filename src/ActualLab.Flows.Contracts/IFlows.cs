@@ -16,21 +16,22 @@ public interface IFlows : IComputeService, IBackendService
     // Not a [ComputeMethod]!
     Task<Flow> GetOrStart(FlowId flowId, CancellationToken cancellationToken = default);
     // Not a [ComputeMethod]!
-    Task<long> Notify(FlowId flowId, object? @event, CancellationToken cancellationToken = default);
+    Task<long> OnEvent(FlowId flowId, object? @event, CancellationToken cancellationToken = default);
 
     [CommandHandler]
-    Task<long> Notify(Flows_Notify command, CancellationToken cancellationToken = default);
+    Task<long> OnEventData(Flows_EventData command, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task<long> Commit(Flows_Save command, CancellationToken cancellationToken = default);
+    Task<long> OnSave(Flows_Save command, CancellationToken cancellationToken = default);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
 // ReSharper disable once InconsistentNaming
-public partial record Flows_Notify(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] FlowId Id,
-    [property: DataMember(Order = 1), MemoryPackOrder(2)] byte[]? EventData
-) : ICommand<long>, IApiCommand, IBackendCommand, INotLogged;
+public partial record Flows_EventData(
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] Symbol Uuid,
+    [property: DataMember(Order = 1), MemoryPackOrder(1)] FlowId FlowId,
+    [property: DataMember(Order = 2), MemoryPackOrder(2)] byte[]? EventData
+) : IApiCommand<long>, IBackendCommand, IHasUuid, INotLogged;
 
 // ReSharper disable once InconsistentNaming
 // This command should always run locally / shouldn't be serializable
@@ -40,5 +41,4 @@ public record Flows_Save(
 ) : ICommand<long>, IBackendCommand, INotLogged
 {
     public Action<Operation>? EventBuilder { get; init; }
-    public bool MustRemove { get; init; }
 }

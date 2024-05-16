@@ -18,11 +18,10 @@ public class FlowRegistry : IHasServices
         Names = flows.ToFrozenDictionary(kv => kv.Value, kv => kv.Key);
     }
 
-    public Flow Create(Symbol flowName)
-        => Create(Types[flowName]);
-    public virtual Flow Create(Type flowType)
-    {
-        Flow.RequireCorrectType(flowType);
-        return (Flow)flowType.CreateInstance();
-    }
+    public FlowId NewId<TFlow>(string arguments)
+        where TFlow : Flow
+        => new(Names[typeof(TFlow)], arguments);
+
+    public FlowId NewId(Type flowType, string arguments)
+        => new(Names[flowType], arguments);
 }

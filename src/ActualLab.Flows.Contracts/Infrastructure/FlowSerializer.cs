@@ -18,5 +18,19 @@ public class FlowSerializer
 
     public virtual Flow? Deserialize(byte[]? data)
         => data == null || data.Length == 0 ? null
-            : ByteSerializer.Read<Flow>(data);
+            : ByteSerializer.Read<Flow?>(data);
+
+    public virtual byte[]? SerializeEvent(object? @event)
+    {
+        if (ReferenceEquals(@event, null))
+            return null;
+
+        using var buffer = new ArrayPoolBuffer<byte>(256);
+        ByteSerializer.Write(buffer, @event, @event.GetType());
+        return buffer.WrittenSpan.ToArray();
+    }
+
+    public virtual object? DeserializeEvent(byte[]? data)
+        => data == null || data.Length == 0 ? null
+            : ByteSerializer.Read<object?>(data);
 }

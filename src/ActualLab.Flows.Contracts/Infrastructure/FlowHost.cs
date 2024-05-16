@@ -1,5 +1,4 @@
 using ActualLab.CommandR;
-using ActualLab.Fusion;
 using ActualLab.Internal;
 
 namespace ActualLab.Flows.Infrastructure;
@@ -12,7 +11,6 @@ public class FlowHost : ProcessorBase, IHasServices
     public FlowRegistry Registry { get; }
     public IFlows Flows => _flows ??= Services.GetRequiredService<IFlows>();
     public ICommander Commander { get; }
-    public StateFactory StateFactory { get; }
     public MomentClockSet Clocks { get; }
     public ILogger Log { get; }
 
@@ -44,7 +42,6 @@ public class FlowHost : ProcessorBase, IHasServices
 
         Registry = services.GetRequiredService<FlowRegistry>();
         Commander = services.Commander();
-        StateFactory = services.StateFactory();
         Clocks = services.Clocks();
     }
 
@@ -56,13 +53,13 @@ public class FlowHost : ProcessorBase, IHasServices
         return Task.WhenAll(disposeTasks);
     }
 
-    public async Task<long> Notify(FlowId flowId, object? @event, CancellationToken cancellationToken)
+    public async Task<long> HandleEvent(FlowId flowId, object? @event, CancellationToken cancellationToken)
     {
         while (true) {
             var worker = this[flowId];
-            var notifyTask = worker.Notify(@event, cancellationToken);
+            var whenHandled = worker.HandleEvent(@event, cancellationToken);
             try {
-                return await notifyTask.ConfigureAwait(false);
+                return await whenHandled.ConfigureAwait(false);
             }
             catch (ChannelClosedException) {
                 cancellationToken.ThrowIfCancellationRequested();

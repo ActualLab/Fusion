@@ -8,3 +8,5 @@ namespace ActualLab.CommandR.Commands;
 /// but some of its own commands are decorated with this interface.
 /// </remarks>
 public interface IBackendCommand : ICommand;
+
+public interface IBackendCommand<TResult> : ICommand<TResult>, IBackendCommand;

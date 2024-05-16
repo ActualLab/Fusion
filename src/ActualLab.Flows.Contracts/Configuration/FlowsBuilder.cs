@@ -34,9 +34,11 @@ public readonly struct FlowsBuilder
         services.AddInstance(flows, addInFront: true);
 
         // Core services
-        services.AddSingleton<FlowRegistry>();
-        services.AddSingleton<FlowSerializer>();
-        services.AddSingleton<FlowHost>();
+        services.AddSingleton(c => new FlowRegistry(c));
+        services.AddSingleton(_ => new FlowSerializer());
+        services.AddSingleton(c => new FlowHost(c));
+        services.AddSingleton(c => new FlowEventHandler(c));
+        Commander.AddHandlers<FlowEventHandler>();
 
         configure?.Invoke(this);
     }

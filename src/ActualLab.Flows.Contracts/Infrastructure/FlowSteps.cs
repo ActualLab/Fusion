@@ -7,6 +7,7 @@ public static class FlowSteps
     public static readonly Symbol OnStart = nameof(OnStart);
     public static readonly Symbol OnError = nameof(OnError);
     public static readonly Symbol OnMissingStep = nameof(OnMissingStep);
+    public static readonly Symbol MustRemove = "-";
 
     private static readonly MethodInfo ToUntypedMethod = typeof(FlowSteps)
         .GetMethod(nameof(ToUntyped), BindingFlags.Static | BindingFlags.NonPublic)!;
@@ -45,7 +46,7 @@ public static class FlowSteps
                 return result;
             }
             return step1 == OnMissingStep
-                ? throw Errors.StepNotFound(flowType1, step1.Value)
+                ? throw Errors.NoStepImplementation(flowType1, step1.Value)
                 : Get(flowType1, OnMissingStep);
         });
 

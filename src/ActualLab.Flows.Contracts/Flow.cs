@@ -6,16 +6,9 @@ using ActualLab.Versioning;
 
 namespace ActualLab.Flows;
 
-public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
+public abstract class Flow : IHasId<FlowId>, IWorkerFlow
 {
-    Symbol IHasId<Symbol>.Id => Id.Id;
-    string IHasId<string>.Id => Id.Value;
-
-    [IgnoreDataMember, MemoryPackIgnore]
-    protected FlowWorker? Worker { get; private set; }
-    [IgnoreDataMember, MemoryPackIgnore]
-    protected object? Event { get; private set; }
-    protected event Action<Operation>? EventBuilder;
+    private FlowWorker? _worker;
 
     [IgnoreDataMember, MemoryPackIgnore]
     public FlowId Id { get; private set; }
@@ -23,17 +16,21 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
     public long Version { get; private set; }
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    public Symbol Step { get; private init; } = FlowSteps.OnStart;
+    public Symbol Step { get; private set; } = FlowSteps.OnStart;
 
     // Computed
     [IgnoreDataMember, MemoryPackIgnore]
-    protected ILogger? Log => Worker?.Log;
+    protected FlowHost Host => Worker.Host;
+    [IgnoreDataMember, MemoryPackIgnore]
+    protected FlowWorker Worker => RequireWorker();
+    [IgnoreDataMember, MemoryPackIgnore]
+    protected FlowEventSource Event { get; private set; }
 
     public void Initialize(FlowId id, long version, FlowWorker? worker = null)
     {
         Id = id;
         Version = version;
-        Worker = worker;
+        _worker = worker;
     }
 
     public override string ToString()
@@ -42,32 +39,33 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
     public virtual Flow Clone()
         => MemberwiseCloner.Invoke(this);
 
-    public virtual async Task<FlowTransition> MoveNext(object? @event, CancellationToken cancellationToken)
+    public virtual async Task<FlowTransition> HandleEvent(object? @event, CancellationToken cancellationToken)
     {
-        Worker.Require();
-        Event = @event;
-        EventBuilder = null;
-        FlowTransition result;
+        RequireWorker();
+        var step = Step;
+        Event = new FlowEventSource(this, @event);
+        FlowTransition transition;
         try {
-            result = await FlowSteps.Invoke(this, Step, cancellationToken).ConfigureAwait(false);
-            if (result.MustSave)
-                await Save(cancellationToken).ConfigureAwait(false);
+            transition = await FlowSteps.Invoke(this, step, cancellationToken).ConfigureAwait(false);
+            if (!Event.IsUsed)
+                Worker.Log.LogWarning(
+                    "Flow '{FlowType}' ignored event {Event} on step '{Step}'",
+                    GetType().Name, Event.Event, step);
+            await Apply(transition, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            Event = e;
-            EventBuilder = null;
-            result = await FlowSteps.Invoke(this, FlowSteps.OnError, cancellationToken).ConfigureAwait(false);
-            if (result.Step == FlowSteps.OnError)
+            Step = step;
+            Event = new FlowEventSource(this, e);
+            transition = await FlowSteps.Invoke(this, FlowSteps.OnError, cancellationToken).ConfigureAwait(false);
+            if (transition.Step == FlowSteps.OnError)
                 throw;
 
-            if (result.MustSave)
-                await Save(cancellationToken).ConfigureAwait(false);
+            await Apply(transition, cancellationToken).ConfigureAwait(false);
         }
         finally {
-            Event = null;
-            EventBuilder = null;
+            Event = default;
         }
-        return result;
+        return transition;
     }
 
     // Default options
@@ -79,30 +77,49 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
 
     protected abstract Task<FlowTransition> OnStart(CancellationToken cancellationToken);
 
+    protected virtual Task<FlowTransition> OnEnd(CancellationToken cancellationToken)
+    {
+        var removeDelay = GetOptions().RemoveDelay;
+        return Task.FromResult(removeDelay <= TimeSpan.Zero
+            ? Goto(FlowSteps.MustRemove)
+            : Goto(nameof(OnEndRemove)).AddTimerEvent(removeDelay));
+    }
+
+    protected virtual Task<FlowTransition> OnEndRemove(CancellationToken cancellationToken)
+    {
+        Event.MarkUsed();
+        return Task.FromResult(Goto(FlowSteps.MustRemove));
+    }
+
     protected virtual Task<FlowTransition> OnMissingStep(CancellationToken cancellationToken)
-        => throw Internal.Errors.StepNotFound(GetType(), Step);
+        => throw Internal.Errors.NoStepImplementation(GetType(), Step);
 
     protected virtual Task<FlowTransition> OnError(CancellationToken cancellationToken)
-        => Task.FromResult(Goto(nameof(OnError), mustCommit: false));
+        => Task.FromResult(Goto(nameof(OnError)) with { MustSave = false });
 
     // Transition helpers
 
-    protected FlowTransition Goto(Symbol step, bool mustWaitForEvent = true, bool mustCommit = true)
+    protected FlowTransition Goto(Symbol step)
     {
-        Worker.Require();
-        return new FlowTransition(step, mustWaitForEvent);
+        RequireWorker();
+        return new FlowTransition(this, step);
     }
 
-    protected Task Save(CancellationToken cancellationToken)
-        => Save(false, cancellationToken);
-    protected async Task Save(bool ignoreVersion, CancellationToken cancellationToken)
+    protected Task Save(CancellationToken cancellationToken = default)
+        => Save(null, cancellationToken);
+    protected async Task Save(Action<Operation>? eventBuilder, CancellationToken cancellationToken = default)
     {
-        Worker.Require();
-        var saveCommand = new Flows_Save(this, ignoreVersion ? null : Version) {
-            EventBuilder = EventBuilder,
+        RequireWorker();
+        var saveCommand = new Flows_Save(this, Version) {
+            EventBuilder = eventBuilder,
         };
         Version = await Worker.Host.Commander.Call(saveCommand, cancellationToken).ConfigureAwait(false);
     }
+
+    // IFlowImpl
+    FlowHost IWorkerFlow.Host => Worker.Host;
+    FlowWorker IWorkerFlow.Worker => Worker;
+    FlowEventSource IWorkerFlow.Event => Event;
 
     // Other helpers
 
@@ -110,5 +127,21 @@ public abstract class Flow : IHasId<FlowId>, IHasId<Symbol>, IHasId<string>
     {
         if (!typeof(Flow).IsAssignableFrom(flowType))
             throw Errors.MustBeAssignableTo<Flow>(flowType);
+    }
+
+    private FlowWorker RequireWorker()
+    {
+        if (_worker == null)
+            throw Errors.NotInitialized(nameof(Worker));
+
+        return _worker;
+    }
+
+    private Task Apply(FlowTransition transition, CancellationToken cancellationToken)
+    {
+        Step = transition.Step;
+        return transition.MustSave
+            ? Save(transition.EventBuilder, cancellationToken)
+            : Task.CompletedTask;
     }
 }

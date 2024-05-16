@@ -2,10 +2,14 @@ namespace ActualLab.Flows.Internal;
 
 public static class Errors
 {
-    public static Exception StepNotFound(Type flowType, string stepName)
-        => new InvalidOperationException($"Flow '{flowType.GetName()}' has no implementation for step '{stepName}'.");
+    public static Exception NoStepImplementation(Type flowType, string step)
+        => new InvalidOperationException($"Flow '{flowType.GetName()}' has no implementation for step '{step}'.");
 
-    public static Exception UnsupportedEvent(Type flowType, string stepName, Type eventType)
+    public static Exception NoEvent(Type flowType, string step, Type eventType)
         => new InvalidOperationException(
-            $"Flow '{flowType.GetName()}' has no implementation for step '{stepName}' which accepts {eventType.GetName()} event.");
+            $"Flow '{flowType.GetName()}' requires {eventType.GetName()} event on step '{step}'.");
+
+    public static Exception UnsupportedEvent(Type flowType, string step, Type eventType)
+        => new InvalidOperationException(
+            $"Flow '{flowType.GetName()}' has no implementation for step '{step}' which accepts {eventType.GetName()} event.");
 }
