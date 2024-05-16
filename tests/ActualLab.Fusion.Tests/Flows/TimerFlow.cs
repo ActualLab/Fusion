@@ -12,7 +12,7 @@ public partial class TimerFlow : Flow
     {
         Worker.Log.LogInformation(nameof(OnStart));
         await Task.Yield();
-        return Goto("Timer").AddTimerEvent(TimeSpan.FromSeconds(5), "");
+        return Goto(nameof(OnTimer)).AddTimerEvent(TimeSpan.FromSeconds(5), "");
     }
 
     protected async Task<FlowTransition> OnTimer(CancellationToken cancellationToken)
@@ -21,6 +21,6 @@ public partial class TimerFlow : Flow
         Worker.Log.LogInformation("OnTimer: {Event}", timerEvent);
         await Task.Yield();
         var nextTag = timerEvent.Tag + "+";
-        return Goto("Timer").AddTimerEvent(TimeSpan.FromSeconds(5), nextTag);
+        return Goto(nameof(OnTimer)).AddTimerEvent(TimeSpan.FromSeconds(5), nextTag);
     }
 }
