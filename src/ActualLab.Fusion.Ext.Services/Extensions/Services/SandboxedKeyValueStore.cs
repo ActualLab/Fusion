@@ -24,7 +24,7 @@ public partial class SandboxedKeyValueStore<TContext>(
     protected Options Settings { get; } = settings;
     protected IKeyValueStore Store { get; } = services.GetRequiredService<IKeyValueStore>();
     protected IAuth Auth { get; } = services.GetRequiredService<IAuth>();
-    protected IDbShardResolver ShardResolver { get; } = services.GetRequiredService<IDbShardResolver>();
+    protected IDbShardResolver<TContext> ShardResolver { get; } = services.GetRequiredService<IDbShardResolver<TContext>>();
     protected IMomentClock Clock { get; } = settings.Clock ?? services.Clocks().SystemClock;
 
     // Commands

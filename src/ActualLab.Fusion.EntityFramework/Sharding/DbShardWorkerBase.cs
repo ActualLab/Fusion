@@ -27,7 +27,10 @@ public abstract class DbShardWorkerBase<TDbContext>(
             .Changes(cancellationToken)
             .SkipSyncItems(cancellationToken)
             .Select(x => x.Value.Remove(DbShard.Template));
-        return changes.RunItemTasks(OnRun, cancellationToken);
+        return changes.RunItemTasks(
+            OnRun,
+            // (shards, _, _) => Log.LogWarning("New shards: {Shards}", shards.ToDelimitedString()),
+            cancellationToken);
     }
 
     protected abstract Task OnRun(DbShard shard, CancellationToken cancellationToken);

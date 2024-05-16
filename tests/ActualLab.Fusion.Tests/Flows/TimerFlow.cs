@@ -2,25 +2,38 @@ using ActualLab.Flows;
 
 namespace ActualLab.Fusion.Tests.Flows;
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class TimerFlow : Flow
 {
     public override FlowOptions GetOptions()
         => new() { RemoveDelay = TimeSpan.FromSeconds(1) };
 
+    protected override ValueTask ApplyTransition(FlowTransition transition, CancellationToken cancellationToken)
+    {
+        var output = Host.Services.GetRequiredService<ITestOutputHelper>();
+        output.WriteLine($"'{Step}' {transition}");
+        return base.ApplyTransition(transition, cancellationToken);
+    }
+
     protected override async Task<FlowTransition> OnStart(CancellationToken cancellationToken)
     {
-        Worker.Log.LogInformation(nameof(OnStart));
-        await Task.Yield();
-        return Goto(nameof(OnTimer)).AddTimerEvent(TimeSpan.FromSeconds(5), "");
+        var output = Host.Services.GetRequiredService<ITestOutputHelper>();
+        output.WriteLine(nameof(OnStart));
+        // return Goto(nameof(OnEnd)) with { IsStored = false, IsEventual = false };
+        return Goto(nameof(OnTimer)).AddTimerEvent(TimeSpan.FromSeconds(3), "+");
     }
 
     protected async Task<FlowTransition> OnTimer(CancellationToken cancellationToken)
     {
         var timerEvent = Event.Require<FlowTimerEvent>();
-        Worker.Log.LogInformation("OnTimer: {Event}", timerEvent);
-        await Task.Yield();
+        var output = Host.Services.GetRequiredService<ITestOutputHelper>();
+        output.WriteLine($"{nameof(OnTimer)}: {timerEvent}");
+
         var nextTag = timerEvent.Tag + "+";
-        return Goto(nameof(OnTimer)).AddTimerEvent(TimeSpan.FromSeconds(5), nextTag);
+        return nextTag.Length <= 2
+            ? Goto(nameof(OnTimer)).AddTimerEvent(TimeSpan.FromSeconds(5), nextTag)
+            : Goto(nameof(OnEnd)) with { IsStored = false, IsEventual = false };
     }
 }

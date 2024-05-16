@@ -81,7 +81,7 @@ public readonly record struct AsyncChain
     public Task Run(CancellationToken cancellationToken = default)
     {
         var start = Start;
-        return Task.Run(() => start(cancellationToken), cancellationToken);
+        return Task.Run(() => start.Invoke(cancellationToken), cancellationToken);
     }
 
     public Task RunIsolated(CancellationToken cancellationToken = default)

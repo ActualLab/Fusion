@@ -1,5 +1,4 @@
 using ActualLab.CommandR;
-using ActualLab.CommandR.Operations;
 using ActualLab.Flows.Infrastructure;
 using ActualLab.Internal;
 using ActualLab.Versioning;
@@ -10,15 +9,15 @@ public abstract class Flow : IHasId<FlowId>, IWorkerFlow
 {
     private FlowWorker? _worker;
 
+    // Persisted to the DB directly
     [IgnoreDataMember, MemoryPackIgnore]
     public FlowId Id { get; private set; }
     [IgnoreDataMember, MemoryPackIgnore]
     public long Version { get; private set; }
-
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [IgnoreDataMember, MemoryPackIgnore]
     public Symbol Step { get; private set; } = FlowSteps.OnStart;
 
-    // Computed
+    // IWorkerFlow properties (shouldn't be persisted)
     [IgnoreDataMember, MemoryPackIgnore]
     protected FlowHost Host => Worker.Host;
     [IgnoreDataMember, MemoryPackIgnore]
@@ -26,10 +25,11 @@ public abstract class Flow : IHasId<FlowId>, IWorkerFlow
     [IgnoreDataMember, MemoryPackIgnore]
     protected FlowEventSource Event { get; private set; }
 
-    public void Initialize(FlowId id, long version, FlowWorker? worker = null)
+    public void Initialize(FlowId id, long version, Symbol step, FlowWorker? worker = null)
     {
         Id = id;
         Version = version;
+        Step = step;
         _worker = worker;
     }
 
@@ -51,20 +51,19 @@ public abstract class Flow : IHasId<FlowId>, IWorkerFlow
                 Worker.Log.LogWarning(
                     "Flow '{FlowType}' ignored event {Event} on step '{Step}'",
                     GetType().Name, Event.Event, step);
-            await Apply(transition, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            Step = step;
-            Event = new FlowEventSource(this, e);
-            transition = await FlowSteps.Invoke(this, FlowSteps.OnError, cancellationToken).ConfigureAwait(false);
-            if (transition.Step == FlowSteps.OnError)
+            if (FlowSteps.Get(GetType(), FlowSteps.OnRecover) is not { } resetStep)
                 throw;
 
-            await Apply(transition, cancellationToken).ConfigureAwait(false);
+            Step = step;
+            Event = new FlowEventSource(this, e);
+            transition = await resetStep.Invoke(this, cancellationToken).ConfigureAwait(false);
         }
         finally {
             Event = default;
         }
+        await ApplyTransition(transition, cancellationToken).ConfigureAwait(false);
         return transition;
     }
 
@@ -79,6 +78,7 @@ public abstract class Flow : IHasId<FlowId>, IWorkerFlow
 
     protected virtual Task<FlowTransition> OnEnd(CancellationToken cancellationToken)
     {
+        Event.MarkUsed();
         var removeDelay = GetOptions().RemoveDelay;
         return Task.FromResult(removeDelay <= TimeSpan.Zero
             ? Goto(FlowSteps.MustRemove)
@@ -94,29 +94,30 @@ public abstract class Flow : IHasId<FlowId>, IWorkerFlow
     protected virtual Task<FlowTransition> OnMissingStep(CancellationToken cancellationToken)
         => throw Internal.Errors.NoStepImplementation(GetType(), Step);
 
-    protected virtual Task<FlowTransition> OnError(CancellationToken cancellationToken)
-        => Task.FromResult(Goto(nameof(OnError)) with { MustSave = false });
+    // protected virtual Task<FlowTransition> OnRecover(CancellationToken cancellationToken);
 
     // Transition helpers
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected FlowTransition Goto(Symbol step)
-    {
-        RequireWorker();
-        return new FlowTransition(this, step);
-    }
+        => new(this, step);
 
-    protected Task Save(CancellationToken cancellationToken = default)
-        => Save(null, cancellationToken);
-    protected async Task Save(Action<Operation>? eventBuilder, CancellationToken cancellationToken = default)
+    protected virtual async ValueTask ApplyTransition(FlowTransition transition, CancellationToken cancellationToken)
     {
         RequireWorker();
-        var saveCommand = new Flows_Save(this, Version) {
-            EventBuilder = eventBuilder,
+        Step = transition.Step;
+        if (!transition.EffectiveIsStored)
+            return;
+
+        var storeCommand = new Flows_Store(Id, Version) {
+            Flow = Clone(),
+            EventBuilder = transition.EventBuilder,
         };
-        Version = await Worker.Host.Commander.Call(saveCommand, cancellationToken).ConfigureAwait(false);
+        Version = await Worker.Host.Commander.Call(storeCommand, cancellationToken).ConfigureAwait(false);
     }
 
     // IFlowImpl
+
     FlowHost IWorkerFlow.Host => Worker.Host;
     FlowWorker IWorkerFlow.Worker => Worker;
     FlowEventSource IWorkerFlow.Event => Event;
@@ -135,13 +136,5 @@ public abstract class Flow : IHasId<FlowId>, IWorkerFlow
             throw Errors.NotInitialized(nameof(Worker));
 
         return _worker;
-    }
-
-    private Task Apply(FlowTransition transition, CancellationToken cancellationToken)
-    {
-        Step = transition.Step;
-        return transition.MustSave
-            ? Save(transition.EventBuilder, cancellationToken)
-            : Task.CompletedTask;
     }
 }

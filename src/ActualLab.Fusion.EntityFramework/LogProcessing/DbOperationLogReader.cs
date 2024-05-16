@@ -61,7 +61,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
     {
         foreach (var entry in entries) {
             while (nextIndex != entry.Index)
-                ReprocessSafe(shard, nextIndex++);
+                ReprocessSafe(shard, nextIndex++, false, cancellationToken);
             yield return ProcessSafe(shard, entry.Index, entry, canReprocess: true, cancellationToken);
             nextIndex++;
         }

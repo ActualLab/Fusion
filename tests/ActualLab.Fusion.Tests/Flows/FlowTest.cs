@@ -1,23 +1,25 @@
 using ActualLab.Flows;
+using ActualLab.Fusion.Testing;
 
 namespace ActualLab.Fusion.Tests.Flows;
 
-public class FlowTest(ITestOutputHelper @out) : FusionTestBase(@out)
+public class FlowTest : FusionTestBase
 {
+    public FlowTest(ITestOutputHelper @out) : base(@out)
+        => DbType = FusionTestDbType.InMemory;
+
     [Fact]
     public async Task BasicTest()
     {
         var flows = Services.GetRequiredService<IFlows>();
         var f0 = await flows.GetOrStart<TimerFlow>("1");
-        Out.WriteLine(f0.ToString());
+        Out.WriteLine($"[+] {f0}");
 
-        var c0 = await Computed.Capture(() => flows.Get(f0.Id)).ConfigureAwait(false);
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        await foreach (var (f, _) in c0.Changes(cts.Token)) {
-            if (f == null)
-                break;
-
-            Out.WriteLine(f.ToString());
-        }
+        await ComputedTest.When(async ct => {
+            var flow = await flows.Get(f0.Id, ct);
+            Out.WriteLine($"[*] {flow?.ToString() ?? "null"}");
+            flow.Should().BeNull();
+        }, TimeSpan.FromSeconds(30));
+        Out.WriteLine($"[-] {f0.Id}");
     }
 }

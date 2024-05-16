@@ -48,8 +48,8 @@ public class FlowHost : ProcessorBase, IHasServices
     protected override Task DisposeAsyncCore()
     {
         var disposeTasks = new List<Task>();
-        foreach (var (_, peer) in Workers)
-            disposeTasks.Add(peer.DisposeAsync().AsTask());
+        foreach (var (_, worker) in Workers)
+            disposeTasks.Add(worker.DisposeAsync().AsTask());
         return Task.WhenAll(disposeTasks);
     }
 

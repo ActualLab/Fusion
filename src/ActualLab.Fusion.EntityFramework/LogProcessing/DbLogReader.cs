@@ -94,12 +94,14 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
             Log.LogError(e,
                 $"{nameof(Process)}[{{Shard}}]: failed for entry #{{Key}}{suffix}",
                 shard, key);
-            ReprocessSafe(shard, key, mustDiscard: !mustReprocess);
+            ReprocessSafe(shard, key, mustDiscard: !mustReprocess, cancellationToken);
             return false;
         }
     }
 
-    protected void ReprocessSafe(DbShard shard, TDbKey key, bool mustDiscard = false)
+    protected void ReprocessSafe(
+        DbShard shard, TDbKey key, bool mustDiscard,
+        CancellationToken cancellationToken)
     {
         // This method should never fail!
         lock (ReprocessTasks) {
@@ -107,7 +109,7 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
             if (ReprocessTasks.ContainsKey(fullKey))
                 return;
 
-            var task = Task.Run(() => Reprocess(shard, key, mustDiscard, StopToken));
+            var task = Task.Run(() => Reprocess(shard, key, mustDiscard, cancellationToken), CancellationToken.None);
             ReprocessTasks[fullKey] = task;
             _ = task.ContinueWith(_ => {
                 lock (ReprocessTasks)

@@ -6,6 +6,8 @@ public class FlowSerializer
 {
     public IByteSerializer ByteSerializer { get; init; } = TypeDecoratingByteSerializer.Default;
 
+    // Serialize
+
     public virtual byte[]? Serialize(Flow? flow)
     {
         if (ReferenceEquals(flow, null))
@@ -15,10 +17,6 @@ public class FlowSerializer
         ByteSerializer.Write(buffer, flow, flow.GetType());
         return buffer.WrittenSpan.ToArray();
     }
-
-    public virtual Flow? Deserialize(byte[]? data)
-        => data == null || data.Length == 0 ? null
-            : ByteSerializer.Read<Flow?>(data);
 
     public virtual byte[]? SerializeEvent(object? evt)
     {
@@ -30,7 +28,15 @@ public class FlowSerializer
         return buffer.WrittenSpan.ToArray();
     }
 
+    // Deserialize
+
+    public virtual Flow? Deserialize(byte[]? data)
+        => data == null || data.Length == 0
+            ? null
+            : ByteSerializer.Read<Flow?>(data);
+
     public virtual object? DeserializeEvent(byte[]? data)
-        => data == null || data.Length == 0 ? null
+        => data == null || data.Length == 0
+            ? null
             : ByteSerializer.Read<object?>(data);
 }

@@ -12,5 +12,7 @@ public sealed class DbFlow
     [ConcurrencyCheck]
     public long Version { get; set; }
 
+    [MaxLength(250)]
+    public string Step { get; set; } = "";
     public byte[]? Data { get; set; }
 }

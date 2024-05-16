@@ -5,7 +5,7 @@ namespace ActualLab.Flows.Infrastructure;
 public static class FlowSteps
 {
     public static readonly Symbol OnStart = nameof(OnStart);
-    public static readonly Symbol OnError = nameof(OnError);
+    public static readonly Symbol OnRecover = nameof(OnRecover);
     public static readonly Symbol OnMissingStep = nameof(OnMissingStep);
     public static readonly Symbol MustRemove = "-";
 
@@ -37,7 +37,7 @@ public static class FlowSteps
                 if (parameters[0].ParameterType != typeof(CancellationToken))
                     continue;
 
-                var fnType = typeof(Func<,,,>)
+                var fnType = typeof(Func<,,>)
                     .MakeGenericType(flowType1, typeof(CancellationToken), typeof(Task<FlowTransition>));
                 var stepFn = method.CreateDelegate(fnType);
                 var result = (Func<Flow, CancellationToken, Task<FlowTransition>>)ToUntypedMethod

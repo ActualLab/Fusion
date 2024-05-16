@@ -52,7 +52,7 @@ public class FlowWorker : WorkerBase, IGenericTimeoutHandler
     {
         var flow = await Host.Flows.GetOrStart(FlowId, cancellationToken).ConfigureAwait(false);
         flow = flow.Clone();
-        flow.Initialize(flow.Id, flow.Version, this);
+        flow.Initialize(flow.Id, flow.Version, flow.Step, this);
         var options = flow.GetOptions();
 
         var clock = Timeouts.Generic.Clock;
@@ -89,7 +89,12 @@ public class FlowWorker : WorkerBase, IGenericTimeoutHandler
                     var evt = entry.Event;
                     while (true) {
                         var transition = await flow.HandleEvent(evt, gracefulStopToken).ConfigureAwait(false);
-                        if (!transition.IsImmediate)
+                        if (transition.Step == FlowSteps.MustRemove) {
+                            Log.LogInformation("'{Id}' is removed", flow.Id);
+                            entry.ResultSource.TrySetResult(0);
+                            return;
+                        }
+                        if (transition.IsEventual)
                             break;
                         evt = null;
                     }

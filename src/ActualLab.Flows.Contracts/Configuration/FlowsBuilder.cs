@@ -37,8 +37,8 @@ public readonly struct FlowsBuilder
         services.AddSingleton(c => new FlowRegistry(c));
         services.AddSingleton(_ => new FlowSerializer());
         services.AddSingleton(c => new FlowHost(c));
-        services.AddSingleton(c => new FlowEventHandler(c));
-        Commander.AddHandlers<FlowEventHandler>();
+        services.AddSingleton(c => new FlowEventForwarder(c));
+        Commander.AddHandlers<FlowEventForwarder>();
 
         configure?.Invoke(this);
     }

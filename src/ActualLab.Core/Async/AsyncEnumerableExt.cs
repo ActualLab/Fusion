@@ -120,4 +120,18 @@ public static partial class AsyncEnumerableExt
                 yield break;
         }
     }
+
+    public static async IAsyncEnumerable<T> EnforceCancellation<T>(
+        this IAsyncEnumerable<T> source,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var enumerator = source.GetAsyncEnumerator(cancellationToken);
+        try {
+            while (await enumerator.MoveNextAsync().AsTask().WaitAsync(cancellationToken).ConfigureAwait(false))
+                yield return enumerator.Current;
+        }
+        finally {
+            await enumerator.DisposeAsync().SilentAwait(false);
+        }
+    }
 }
