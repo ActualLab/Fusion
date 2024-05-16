@@ -9,7 +9,7 @@ public class FlowTest : FusionTestBase
         => DbType = FusionTestDbType.InMemory;
 
     [Fact]
-    public async Task BasicTest()
+    public async Task TimerFlowTest()
     {
         var flows = Services.GetRequiredService<IFlows>();
         var f0 = await flows.GetOrStart<TimerFlow>("1");

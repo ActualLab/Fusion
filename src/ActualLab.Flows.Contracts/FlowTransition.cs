@@ -7,18 +7,20 @@ namespace ActualLab.Flows;
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct FlowTransition(Flow Flow, Symbol Step)
 {
-    public bool IsStored { get; init; } = true;
-    public bool IsEventual { get; init; } = true;
+    public bool MustStore { get; init; } = true;
+    public bool MustWait { get; init; } = true;
     public Action<Operation>? EventBuilder { get; init; }
-    public bool EffectiveIsStored => IsStored || Step == FlowSteps.MustRemove || EventBuilder != null;
+
+    public bool EffectiveMustStore
+        => MustStore || Step == FlowSteps.MustRemove || EventBuilder != null;
 
     public override string ToString()
     {
-        var flags = (EffectiveIsStored, IsEventual) switch {
-            (true, true) => "stored, eventual",
-            (true, false) => "stored, immediate",
-            (false, true) => "non-stored, eventual",
-            (false, false) => "non-stored, immediate",
+        var flags = (EffectiveMustStore, MustWait) switch {
+            (true, true) => "store, wait",
+            (true, false) => "store",
+            (false, true) => "no-store, wait",
+            (false, false) => "no-store",
         };
         return $"->('{Step}', {flags})";
     }
@@ -27,7 +29,7 @@ public readonly record struct FlowTransition(Flow Flow, Symbol Step)
     {
         var oldEventBuilder = EventBuilder;
         return this with {
-            IsStored = true,
+            MustStore = true,
             EventBuilder = operation => {
                 oldEventBuilder?.Invoke(operation);
                 eventBuilder.Invoke(operation);

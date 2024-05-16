@@ -94,7 +94,7 @@ public class FlowWorker : WorkerBase, IGenericTimeoutHandler
                             entry.ResultSource.TrySetResult(0);
                             return;
                         }
-                        if (transition.IsEventual)
+                        if (transition.MustWait)
                             break;
                         evt = null;
                     }

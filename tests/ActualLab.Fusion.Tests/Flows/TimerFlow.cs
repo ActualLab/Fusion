@@ -22,7 +22,7 @@ public partial class TimerFlow : Flow
         var output = Host.Services.GetRequiredService<ITestOutputHelper>();
         output.WriteLine(nameof(OnStart));
         // return Goto(nameof(OnEnd)) with { IsStored = false, IsEventual = false };
-        return Goto(nameof(OnTimer)).AddTimerEvent(TimeSpan.FromSeconds(3), "+");
+        return Wait(nameof(OnTimer)).AddTimerEvent(TimeSpan.FromSeconds(3), "+");
     }
 
     protected async Task<FlowTransition> OnTimer(CancellationToken cancellationToken)
@@ -33,7 +33,7 @@ public partial class TimerFlow : Flow
 
         var nextTag = timerEvent.Tag + "+";
         return nextTag.Length <= 2
-            ? Goto(nameof(OnTimer)).AddTimerEvent(TimeSpan.FromSeconds(5), nextTag)
-            : Goto(nameof(OnEnd)) with { IsStored = false, IsEventual = false };
+            ? Wait(nameof(OnTimer)).AddTimerEvent(TimeSpan.FromSeconds(5), nextTag)
+            : JumpToEnd();
     }
 }

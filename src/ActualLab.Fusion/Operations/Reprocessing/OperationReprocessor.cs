@@ -34,6 +34,8 @@ public class OperationReprocessor : IOperationReprocessor
         {
             if (FusionDefaults.Mode != FusionMode.Server)
                 return false; // Only server can do the reprocessing
+            if (command is IApiCommand)
+                return false; // No reprocessing for IApiCommands
 
             // No reprocessing for commands running from scoped Commander instances,
             // i.e. no reprocessing for UI commands:

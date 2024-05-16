@@ -81,14 +81,14 @@ public abstract class Flow : IHasId<FlowId>, IWorkerFlow
         Event.MarkUsed();
         var removeDelay = GetOptions().RemoveDelay;
         return Task.FromResult(removeDelay <= TimeSpan.Zero
-            ? Goto(FlowSteps.MustRemove)
-            : Goto(nameof(OnEndRemove)).AddTimerEvent(removeDelay));
+            ? Jump(FlowSteps.MustRemove)
+            : Wait(nameof(OnRemove)).AddTimerEvent(removeDelay));
     }
 
-    protected virtual Task<FlowTransition> OnEndRemove(CancellationToken cancellationToken)
+    protected virtual Task<FlowTransition> OnRemove(CancellationToken cancellationToken)
     {
         Event.MarkUsed();
-        return Task.FromResult(Goto(FlowSteps.MustRemove));
+        return Task.FromResult(Jump(FlowSteps.MustRemove));
     }
 
     protected virtual Task<FlowTransition> OnMissingStep(CancellationToken cancellationToken)
@@ -99,14 +99,22 @@ public abstract class Flow : IHasId<FlowId>, IWorkerFlow
     // Transition helpers
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected FlowTransition Goto(Symbol step)
-        => new(this, step);
+    protected FlowTransition Wait(Symbol step, bool mustStore = true)
+        => new(this, step) { MustStore = mustStore };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected FlowTransition Jump(Symbol step, bool mustStore = false)
+        => new(this, step) { MustStore = mustStore, MustWait = false };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected FlowTransition JumpToEnd()
+        => Jump(nameof(OnEnd));
 
     protected virtual async ValueTask ApplyTransition(FlowTransition transition, CancellationToken cancellationToken)
     {
         RequireWorker();
         Step = transition.Step;
-        if (!transition.EffectiveIsStored)
+        if (!transition.EffectiveMustStore)
             return;
 
         var storeCommand = new Flows_Store(Id, Version) {

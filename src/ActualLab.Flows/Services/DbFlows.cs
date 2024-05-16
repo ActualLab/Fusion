@@ -39,7 +39,7 @@ public class DbFlows : DbServiceBase, IFlows
     public virtual Task<Flow?> Get(FlowId flowId, CancellationToken cancellationToken = default)
         => Read(flowId, cancellationToken);
 
-    // Not a [ComputeMethod]!
+    // Regular method!
     public virtual Task<Flow> GetOrStart(FlowId flowId, CancellationToken cancellationToken = default)
     {
         var retryLogger = new RetryLogger(Log);
@@ -60,17 +60,9 @@ public class DbFlows : DbServiceBase, IFlows
         }, retryLogger, cancellationToken);
     }
 
-    // Regular method
+    // Regular method!
     public virtual Task<long> OnEvent(FlowId flowId, object? evt, CancellationToken cancellationToken = default)
         => FlowHost.HandleEvent(flowId, evt, cancellationToken);
-
-    // [CommandHandler]
-    public virtual Task<long> OnEvent(Flows_EventData command, CancellationToken cancellationToken = default)
-    {
-        var (_, flowId, eventData) = command;
-        var evt = Serializer.DeserializeEvent(eventData);
-        return FlowHost.HandleEvent(flowId, evt, cancellationToken);
-    }
 
     // [CommandHandler]
     public virtual async Task<long> OnStore(Flows_Store command, CancellationToken cancellationToken = default)
