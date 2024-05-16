@@ -62,17 +62,6 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
     public new RpcStream<T> Stream { get; }
 
-    protected override async Task DisposeAsyncCore()
-    {
-        _acks.Writer.TryWrite((long.MaxValue, false)); // Just in case
-        try {
-            await base.DisposeAsyncCore().ConfigureAwait(false);
-        }
-        finally {
-            Peer.SharedObjects.Unregister(this);
-        }
-    }
-
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override Task OnAck(long nextIndex, Guid hostId)
     {
@@ -104,120 +93,126 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
     protected override async Task OnRun(CancellationToken cancellationToken)
 #pragma warning restore IL2046
     {
-        IAsyncEnumerator<T>? enumerator = null;
-        try {
-            enumerator = Stream.GetLocalSource().GetAsyncEnumerator(cancellationToken);
-            var isFullyBuffered = false;
-            var ackReader = _acks.Reader;
-            var buffer = new RingBuffer<Result<T>>(Stream.AckAdvance + 1);
-            var bufferStart = 0L;
-            var index = 0L;
-            var whenAckReady = ackReader.WaitToReadAsync(cancellationToken).AsTask();
-            var whenMovedNext = SafeMoveNext(enumerator);
-            var whenMovedNextAsTask = (Task<bool>?)null;
-            while (true) {
-                nextAck:
-                // 1. Await for an acknowledgement & process accumulated acknowledgements
-                await _batcher.Flush(index).ConfigureAwait(false);
-                (long NextIndex, bool MustReset) ack = (-1L, false);
-                if (!whenAckReady.IsCompleted) {
-                    // Debug.WriteLine($"{Id}: ?ACK");
-                    await whenAckReady.ConfigureAwait(false);
-                }
-                while (ackReader.TryRead(out var nextAck)) {
-                    ack = nextAck;
-                    // Debug.WriteLine($"{Id}: +ACK: {ack}");
-                    if (ack.NextIndex == long.MaxValue)
-                        return; // Client tells us it's done w/ this stream
+        var enumerator = Stream.GetLocalSource().GetAsyncEnumerator(cancellationToken);
+        await using var _ = enumerator.ConfigureAwait(false);
 
-                    if (ack.MustReset || index < ack.NextIndex)
-                        index = ack.NextIndex;
-                }
-                if (ack.NextIndex < 0) {
-                    Log.LogWarning("Something is off: couldn't read an acknowledgement");
-                    return;
-                }
-                whenAckReady = ackReader.WaitToReadAsync(cancellationToken).AsTask();
-                if (whenAckReady.IsCompleted)
-                    goto nextAck;
+        var isFullyBuffered = false;
+        var ackReader = _acks.Reader;
+        var buffer = new RingBuffer<Result<T>>(Stream.AckAdvance + 1);
+        var bufferStart = 0L;
+        var index = 0L;
+        var whenAckReady = ackReader.WaitToReadAsync(cancellationToken).AsTask();
+        var whenMovedNext = SafeMoveNext(enumerator);
+        var whenMovedNextAsTask = (Task<bool>?)null;
+        while (true) {
+            nextAck:
+            // 1. Await for an acknowledgement & process accumulated acknowledgements
+            await _batcher.Flush(index).ConfigureAwait(false);
+            (long NextIndex, bool MustReset) ack = (-1L, false);
+            if (!whenAckReady.IsCompleted) {
+                // Debug.WriteLine($"{Id}: ?ACK");
+                await whenAckReady.ConfigureAwait(false);
+            }
+            while (ackReader.TryRead(out var nextAck)) {
+                ack = nextAck;
+                // Debug.WriteLine($"{Id}: +ACK: {ack}");
+                if (ack.NextIndex == long.MaxValue)
+                    return; // Client tells us it's done w/ this stream
 
-                // 2. Remove what's useless from buffer
-                {
-                    var bufferShift = (int)(ack.NextIndex - bufferStart).Clamp(0, buffer.Count);
-                    buffer.MoveHead(bufferShift);
-                    bufferStart += bufferShift;
-                }
+                if (ack.MustReset || index < ack.NextIndex)
+                    index = ack.NextIndex;
+            }
+            if (ack.NextIndex < 0) {
+                Log.LogWarning("Something is off: couldn't read an acknowledgement");
+                return;
+            }
+            whenAckReady = ackReader.WaitToReadAsync(cancellationToken).AsTask();
+            if (whenAckReady.IsCompleted)
+                goto nextAck;
 
-                // 3. Recalculate the next range to send
-                if (index < bufferStart) {
-                    // The requested item is somewhere before the buffer start position
-                    await SendInvalidPosition(index).ConfigureAwait(false);
-                    goto nextAck;
-                }
-                var bufferIndex = (int)(index - bufferStart);
+            // 2. Remove what's useless from buffer
+            {
+                var bufferShift = (int)(ack.NextIndex - bufferStart).Clamp(0, buffer.Count);
+                buffer.MoveHead(bufferShift);
+                bufferStart += bufferShift;
+            }
 
-                // 3. Send as much as we can
-                var maxIndex = ack.NextIndex + Stream.AckAdvance;
-                while (index < maxIndex) {
-                    Result<T> item;
+            // 3. Recalculate the next range to send
+            if (index < bufferStart) {
+                // The requested item is somewhere before the buffer start position
+                await SendInvalidPosition(index).ConfigureAwait(false);
+                goto nextAck;
+            }
+            var bufferIndex = (int)(index - bufferStart);
 
-                    // 3.1. Buffer as much as we can
-                    while (buffer.HasRemainingCapacity && !isFullyBuffered) {
-                        if (!whenMovedNext.IsCompleted) {
-                            // Both tasks aren't completed yet.
-                            whenMovedNextAsTask ??= whenMovedNext.AsTask();
-                            break;
+            // 3. Send as much as we can
+            var maxIndex = ack.NextIndex + Stream.AckAdvance;
+            while (index < maxIndex) {
+                Result<T> item;
+
+                // 3.1. Buffer as much as we can
+                while (buffer.HasRemainingCapacity && !isFullyBuffered) {
+                    if (!whenMovedNext.IsCompleted) {
+                        // Both tasks aren't completed yet.
+                        whenMovedNextAsTask ??= whenMovedNext.AsTask();
+                        break;
+                    }
+
+                    try {
+                        if (whenMovedNext.Result) {
+                            item = enumerator.Current;
+                            whenMovedNext = SafeMoveNext(enumerator);
+                            whenMovedNextAsTask = null; // Must go after SafeMoveNext call (which may fail)
                         }
-
-                        try {
-                            if (whenMovedNext.Result) {
-                                item = enumerator.Current;
-                                whenMovedNext = SafeMoveNext(enumerator);
-                                whenMovedNextAsTask = null; // Must go after SafeMoveNext call (which may fail)
-                            }
-                            else {
-                                item = Result.Error<T>(NoMoreItemTag);
-                                isFullyBuffered = true;
-                            }
-                        }
-                        catch (Exception e) {
-                            item = Result.Error<T>(e.IsCancellationOf(cancellationToken)
-                                ? Errors.RpcStreamNotFound()
-                                : e);
+                        else {
+                            item = Result.Error<T>(NoMoreItemTag);
                             isFullyBuffered = true;
                         }
-                        buffer.PushTail(item);
                     }
-
-                    // 3.2. Add all buffered items to batcher
-                    while (index < maxIndex && bufferIndex < buffer.Count) {
-                        item = buffer[bufferIndex++];
-                        await _batcher.Add(index++, item).ConfigureAwait(false);
-                        if (item.HasError) {
-                            // It's the last item -> all we can do now is to wait for Ack;
-                            // Note that Batcher.Add automatically flushes on error.
-                            goto nextAck;
-                        }
+                    catch (Exception e) {
+                        item = Result.Error<T>(e.IsCancellationOf(cancellationToken)
+                            ? Errors.RpcStreamNotFound()
+                            : e);
+                        isFullyBuffered = true;
                     }
-                    if (isFullyBuffered)
-                        goto nextAck;
-                    if (whenMovedNextAsTask == null)
-                        continue;
-
-                    // 3.3. Flush & await whenMovedNextAsTask or whenAckReady
-                    await _batcher.Flush(index).ConfigureAwait(false);
-                    var completedTask = await Task
-                        .WhenAny(whenAckReady, whenMovedNextAsTask)
-                        .ConfigureAwait(false);
-                    if (completedTask == whenAckReady)
-                        goto nextAck; // Got Ack, must restart
+                    buffer.PushTail(item);
                 }
+
+                // 3.2. Add all buffered items to batcher
+                while (index < maxIndex && bufferIndex < buffer.Count) {
+                    item = buffer[bufferIndex++];
+                    await _batcher.Add(index++, item).ConfigureAwait(false);
+                    if (item.HasError) {
+                        // It's the last item -> all we can do now is to wait for Ack;
+                        // Note that Batcher.Add automatically flushes on error.
+                        goto nextAck;
+                    }
+                }
+                if (isFullyBuffered)
+                    goto nextAck;
+                if (whenMovedNextAsTask == null)
+                    continue;
+
+                // 3.3. Flush & await whenMovedNextAsTask or whenAckReady
+                await _batcher.Flush(index).ConfigureAwait(false);
+                var completedTask = await Task
+                    .WhenAny(whenAckReady, whenMovedNextAsTask)
+                    .ConfigureAwait(false);
+                if (completedTask == whenAckReady)
+                    goto nextAck; // Got Ack, must restart
             }
         }
-        finally {
-            _ = DisposeAsync();
-            _ = enumerator?.DisposeAsync();
+    }
+
+    protected override Task OnStop()
+    {
+        try {
+            _acks.Writer.TryWrite((long.MaxValue, false)); // Just in case
         }
+        finally {
+            Peer.SharedObjects.Unregister(this);
+        }
+        return Task.CompletedTask;
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

@@ -10,6 +10,10 @@ public static class ServiceProviderExt
         => services.GetRequiredService<DbHub<TDbContext>>();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IDbShardResolver<TDbContext> DbShardResolver<TDbContext>(this IServiceProvider services)
+        => services.GetRequiredService<IDbShardResolver<TDbContext>>();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IDbEntityResolver<TKey, TDbEntity> DbEntityResolver<TKey, TDbEntity>(this IServiceProvider services)
         where TKey : notnull
         where TDbEntity : class

@@ -1,20 +1,30 @@
 namespace ActualLab.Fusion.EntityFramework;
 
-public interface IDbShardResolver
+public interface IDbShardResolver : IHasServices
 {
-    DbShard Resolve(Type contextType, object source);
+    IDbShardRegistry ShardRegistry { get; }
+
+    DbShard Resolve(object source);
 }
 
-public class DbShardResolver(IServiceProvider services) : IDbShardResolver
+public interface IDbShardResolver<TDbContext> : IDbShardResolver
 {
-    private readonly ConcurrentDictionary<Type, IDbShardRegistry> _shardRegistryCache = new();
+    new IDbShardRegistry<TDbContext> ShardRegistry { get; }
+}
 
-    protected IServiceProvider Services { get; } = services;
+public class DbShardResolver<TDbContext>(IServiceProvider services) : IDbShardResolver<TDbContext>
+{
+    private IDbShardRegistry<TDbContext>? _shardRegistry;
 
-    public DbShard Resolve(Type contextType, object source)
+    public IServiceProvider Services { get; } = services;
+
+    IDbShardRegistry IDbShardResolver.ShardRegistry => ShardRegistry;
+    public IDbShardRegistry<TDbContext> ShardRegistry
+        => _shardRegistry ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
+
+    public virtual DbShard Resolve(object source)
     {
-        var shardRegistry = GetShardRegistry(contextType);
-        if (shardRegistry.HasSingleShard)
+        if (ShardRegistry.HasSingleShard)
             return default;
 
         switch (source) {
@@ -30,9 +40,4 @@ public class DbShardResolver(IServiceProvider services) : IDbShardResolver
                 return default;
         }
     }
-
-    protected IDbShardRegistry GetShardRegistry(Type dbContextType)
-        => _shardRegistryCache.GetOrAdd(dbContextType,
-            static (t, self) => (IDbShardRegistry)self.Services.GetRequiredService(typeof(IDbShardRegistry<>).MakeGenericType(t)),
-            this);
 }

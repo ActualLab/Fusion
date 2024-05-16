@@ -4,9 +4,9 @@ namespace ActualLab.Fusion.Blazor;
 
 public abstract class MixedStateComponent<TState, TMutableState> : ComputedStateComponent<TState>
 {
-    private IMutableState<TMutableState>? _mutableState;
+    private MutableState<TMutableState>? _mutableState;
 
-    protected IMutableState<TMutableState> MutableState {
+    protected MutableState<TMutableState> MutableState {
         get => _mutableState!;
         set {
             if (value == null)
@@ -33,6 +33,6 @@ public abstract class MixedStateComponent<TState, TMutableState> : ComputedState
     protected virtual MutableState<TMutableState>.Options GetMutableStateOptions()
         => new() { Category = GetMutableStateCategory() };
 
-    protected virtual IMutableState<TMutableState> CreateMutableState()
+    protected virtual MutableState<TMutableState> CreateMutableState()
         => StateFactory.NewMutable(GetMutableStateOptions());
 }

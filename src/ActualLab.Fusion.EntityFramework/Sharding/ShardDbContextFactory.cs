@@ -2,11 +2,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework;
 
-public interface IShardDbContextFactory<TDbContext>
+public interface IShardDbContextFactory
+{
+    DbContext CreateDbContext(DbShard shard);
+    ValueTask<DbContext> CreateDbContextAsync(DbShard shard, CancellationToken cancellationToken = default);
+}
+
+public interface IShardDbContextFactory<TDbContext> : IShardDbContextFactory
     where TDbContext : DbContext
 {
-    TDbContext CreateDbContext(DbShard shard);
-    ValueTask<TDbContext> CreateDbContextAsync(DbShard shard, CancellationToken cancellationToken = default);
+    new TDbContext CreateDbContext(DbShard shard);
+    new ValueTask<TDbContext> CreateDbContextAsync(DbShard shard, CancellationToken cancellationToken = default);
 }
 
 // ReSharper disable once TypeParameterCanBeVariant
@@ -48,6 +54,14 @@ public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbConte
         return new ValueTask<TDbContext>(factory.CreateDbContext());
 #endif
     }
+
+    // Explicit interface implementations
+
+    DbContext IShardDbContextFactory.CreateDbContext(DbShard shard)
+        => CreateDbContext(shard);
+    async ValueTask<DbContext> IShardDbContextFactory.CreateDbContextAsync(DbShard shard,
+        CancellationToken cancellationToken)
+        => await CreateDbContextAsync(shard, cancellationToken).ConfigureAwait(false);
 
     // Protected methods
 

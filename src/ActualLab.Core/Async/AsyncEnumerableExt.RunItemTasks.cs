@@ -23,63 +23,65 @@ public static partial class AsyncEnumerableExt
         where TItem : notnull
     {
         var runningTasks = new Dictionary<TItem, (CancellationTokenSource StopTokenSource, Task Task)>();
-        var stoppingTasks = new HashSet<Task>();
+        var stoppingTasks = new List<Task>();
         var addedItems = new List<TItem>();
         var removedItems = new List<TItem>();
-        var @lock = stoppingTasks;
         try {
-            await foreach (var itemSet in itemSets.ConfigureAwait(false).WithCancellation(cancellationToken)) {
+            await foreach (var items in itemSets.WithCancellation(cancellationToken).ConfigureAwait(false)) {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Stopping previously queued tasks
+                await Task.WhenAll(stoppingTasks).SilentAwait(false);
+                stoppingTasks.Clear();
+
 #if NET5_0_OR_GREATER
-                var activeItems = itemSet as IReadOnlySet<TItem> ?? itemSet.ToHashSet();
+                Update(items as IReadOnlySet<TItem> ?? items.ToHashSet());
 #else
-                var activeItems = itemSet.ToHashSet();
+                Update(items.ToHashSet());
 #endif
-                lock (@lock) {
-                    foreach (var item in activeItems)
-                        if (!runningTasks.ContainsKey(item))
-                            addedItems.Add(item);
-                    foreach (var item in runningTasks.Keys)
-                        if (!activeItems.Contains(item))
-                            removedItems.Add(item);
-                    changeHandler?.Invoke(activeItems, addedItems, removedItems);
-
-                    // Starting new tasks
-                    foreach (var item in addedItems) {
-                        var stopTokenSource = new CancellationTokenSource();
-                        var task = itemTaskFactory.Invoke(item, stopTokenSource.Token);
-                        runningTasks.Add(item, (stopTokenSource, task));
-                        _ = task.ContinueWith(t => {
-                                lock (@lock)
-                                    stoppingTasks.Remove(t); // Must be inside the lock
-                            },
-                            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-                    }
-
-                    // Stopping old tasks
-                    foreach (var item in removedItems) {
-                        var (stopTokenSource, task) = runningTasks[item];
-                        stoppingTasks.Add(task);
-                        runningTasks.Remove(item);
-                        stopTokenSource.CancelAndDisposeSilently();
-                    }
-                }
-
-                // Clean up temp lists
-                addedItems.Clear();
-                removedItems.Clear();
             }
         }
         finally {
-            // Terminating
-            Task[] lastStoppingTasks;
-            lock (@lock) {
-                foreach (var (_, (stopTokenSource, task)) in runningTasks) {
-                    stoppingTasks.Add(task);
-                    stopTokenSource.CancelAndDisposeSilently();
-                }
-                lastStoppingTasks = stoppingTasks.ToArray();
+            Update(new HashSet<TItem>());
+            await Task.WhenAll(stoppingTasks).SilentAwait(false);
+        }
+        return;
+
+#if NET5_0_OR_GREATER
+        void Update(IReadOnlySet<TItem> items)
+#else
+        void Update(HashSet<TItem> items)
+#endif
+        {
+            // Compute addedItems
+            addedItems.Clear();
+            foreach (var item in items)
+                if (!runningTasks.ContainsKey(item))
+                    addedItems.Add(item);
+
+            // Compute removedItems
+            removedItems.Clear();
+            foreach (var item in runningTasks.Keys)
+                if (!items.Contains(item))
+                    removedItems.Add(item);
+
+            // Invoke changeHandler
+            changeHandler?.Invoke(items, addedItems, removedItems);
+
+            // Starting new tasks
+            foreach (var item in addedItems) {
+                var stopTokenSource = new CancellationTokenSource();
+                var task = itemTaskFactory.Invoke(item, stopTokenSource.Token);
+                runningTasks.Add(item, (stopTokenSource, task));
             }
-            await Task.WhenAll(lastStoppingTasks).ConfigureAwait(false);
+
+            // Stopping old tasks
+            foreach (var item in removedItems) {
+                var (stopTokenSource, task) = runningTasks[item];
+                stoppingTasks.Add(task);
+                runningTasks.Remove(item);
+                stopTokenSource.CancelAndDisposeSilently();
+            }
         }
     }
 }

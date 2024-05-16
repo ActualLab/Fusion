@@ -133,4 +133,35 @@ public static class ServiceCollectionExt
             var cfg = c.GetRequiredService<IConfiguration>();
             return cfg.GetSettings<TSettings>(sectionName, mustValidate);
         });
+
+    // AddTag, FindTag
+
+    public static IServiceCollection AddInstance<T>(
+        this IServiceCollection services, T instance, bool addInFront = false)
+        where T : class
+    {
+        var descriptor = new ServiceDescriptor(typeof(T), instance);
+        if (addInFront)
+            services.Insert(0, descriptor);
+        else
+            services.Add(descriptor);
+        return services;
+    }
+
+    public static T? FindInstance<T>(this IServiceCollection services)
+        where T : class
+        => services.FindInstance(typeof(T)) as T;
+
+    public static object? FindInstance(this IServiceCollection services, Type type)
+    {
+        foreach (var d in services) {
+            if (d.ServiceType != type)
+                continue;
+            if (d is not { Lifetime: ServiceLifetime.Singleton, IsKeyedService: false })
+                continue;
+
+            return d.ImplementationInstance;
+        }
+        return null;
+    }
 }

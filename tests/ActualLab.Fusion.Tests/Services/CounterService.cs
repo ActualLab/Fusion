@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using ActualLab.Diagnostics;
 using ActualLab.Generators.Internal;
 
 namespace ActualLab.Fusion.Tests.Services;
@@ -16,8 +15,9 @@ public interface ICounterService : IComputeService
     Task SetOffset(int offset, CancellationToken cancellationToken = default);
 }
 
-public class CounterService(IMutableState<int> offset) : ICounterService
+public class CounterService(StateFactory stateFactory) : ICounterService
 {
+    private readonly MutableState<int> _offset = stateFactory.NewMutable<int>();
     private readonly ConcurrentDictionary<string, int> _counters = new(StringComparer.Ordinal);
 
     public virtual async Task<int> Get(string key, CancellationToken cancellationToken = default)
@@ -36,7 +36,7 @@ public class CounterService(IMutableState<int> offset) : ICounterService
         if (key.Contains("fail"))
             throw new ArgumentOutOfRangeException(nameof(key));
 
-        var offset1 = await offset.Use(cancellationToken).ConfigureAwait(false);
+        var offset1 = await _offset.Use(cancellationToken).ConfigureAwait(false);
         return offset1 + (_counters.TryGetValue(key, out var value) ? value : 0);
     }
 
@@ -74,7 +74,7 @@ public class CounterService(IMutableState<int> offset) : ICounterService
 
     public Task SetOffset(int offset1, CancellationToken cancellationToken = default)
     {
-        offset.Set(offset1);
+        _offset.Set(offset1);
         return Task.CompletedTask;
     }
 }

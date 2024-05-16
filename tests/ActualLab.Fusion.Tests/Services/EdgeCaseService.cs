@@ -14,12 +14,9 @@ public interface IEdgeCaseService : IComputeService
     Task<string> ThrowIfContainsErrorNonCompute(string source, CancellationToken cancellationToken = default);
 }
 
-public class EdgeCaseService : IEdgeCaseService
+public class EdgeCaseService(StateFactory stateFactory) : IEdgeCaseService
 {
-    public IMutableState<string> SuffixState { get; }
-
-    public EdgeCaseService(IStateFactory stateFactory)
-        => SuffixState = stateFactory.NewMutable<string>();
+    public MutableState<string> SuffixState { get; } = stateFactory.NewMutable<string>();
 
     public virtual Task<string> GetSuffix(CancellationToken cancellationToken = default)
         => Task.FromResult(SuffixState.Value);

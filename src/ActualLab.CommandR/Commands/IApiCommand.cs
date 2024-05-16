@@ -19,3 +19,5 @@ namespace ActualLab.CommandR.Commands;
 ///   and don't need to have "if (Invalidation.IsOn() ...)" block.
 /// </remarks>
 public interface IApiCommand : ICommand;
+
+public interface IApiCommand<TResult> : ICommand<TResult>, IApiCommand;

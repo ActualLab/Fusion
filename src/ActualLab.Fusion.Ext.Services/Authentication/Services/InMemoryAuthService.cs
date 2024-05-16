@@ -10,7 +10,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
     protected ConcurrentDictionary<(DbShard Shard, Symbol UserId), User> Users { get; } = new();
     protected ConcurrentDictionary<(DbShard Shard, Symbol SessionId), SessionInfo> SessionInfos { get; } = new();
     protected VersionGenerator<long> VersionGenerator { get; } = services.VersionGenerator<long>();
-    protected IDbShardResolver ShardResolver { get; } = services.GetRequiredService<IDbShardResolver>();
+    protected IDbShardResolver<Unit> ShardResolver { get; } = services.DbShardResolver<Unit>();
     protected MomentClockSet Clocks { get; } = services.Clocks();
     protected ICommander Commander { get; } = services.Commander();
 
@@ -26,7 +26,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         var force = command.Force;
 
         var context = CommandContext.GetCurrent();
-        var shard = ShardResolver.Resolve<Unit>(command);
+        var shard = ShardResolver.Resolve(command);
 
         if (Invalidation.IsActive) {
             if (isKickCommand)
@@ -80,7 +80,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
     {
         var session = command.Session.RequireValid();
         var context = CommandContext.GetCurrent();
-        var shard = ShardResolver.Resolve<Unit>(command);
+        var shard = ShardResolver.Resolve(command);
 
         if (Invalidation.IsActive) {
             var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
@@ -130,7 +130,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        var shard = ShardResolver.Resolve<Unit>(session);
+        var shard = ShardResolver.Resolve(session);
         var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
         return Task.FromResult(sessionInfo)!;
     }
@@ -157,7 +157,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
     public virtual async Task<User?> GetUser(Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        var shard = ShardResolver.Resolve<Unit>(session);
+        var shard = ShardResolver.Resolve(session);
         var authInfo = await GetAuthInfo(session, cancellationToken).ConfigureAwait(false);
         if (!(authInfo?.IsAuthenticated() ?? false))
             return null;
@@ -171,12 +171,12 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         Session session, CancellationToken cancellationToken = default)
     {
         session.RequireValid();
-        var shard = ShardResolver.Resolve<Unit>(session);
+        var shard = ShardResolver.Resolve(session);
         var user = await GetUser(session, cancellationToken).ConfigureAwait(false);
         if (user == null)
             return ImmutableArray<SessionInfo>.Empty;
 
         var sessions = await GetUserSessions(shard, user.Id, cancellationToken).ConfigureAwait(false);
-        return sessions.Select(p => p.SessionInfo).ToImmutableArray();
+        return [..sessions.Select(p => p.SessionInfo)];
     }
 }

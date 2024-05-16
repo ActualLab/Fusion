@@ -21,6 +21,7 @@ public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDis
         StopToken = StopTokenSource.Token;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose()
         => _ = DisposeAsync();
 

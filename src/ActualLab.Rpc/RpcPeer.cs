@@ -281,11 +281,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-#pragma warning disable IL2046
     protected override Task OnStop()
-#pragma warning restore IL2046
     {
-        _ = DisposeAsync();
         Hub.Peers.TryRemove(Ref, this);
 
         // We want to make sure the sequence of ConnectionStates terminates for sure

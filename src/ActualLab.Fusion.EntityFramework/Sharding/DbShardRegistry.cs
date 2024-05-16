@@ -6,7 +6,7 @@ public interface IDbShardRegistry
     IState<ImmutableHashSet<DbShard>> Shards { get; }
     IState<ImmutableHashSet<DbShard>> UsedShards { get; }
     IState<ImmutableHashSet<DbShard>> EventProcessorShards { get; }
-    IMutableState<Func<DbShard, bool>> EventProcessorShardFilter { get; }
+    MutableState<Func<DbShard, bool>> EventProcessorShardFilter { get; }
 
     bool Add(DbShard shard);
     bool Remove(DbShard shard);
@@ -21,15 +21,15 @@ public interface IDbShardRegistry<TContext> : IDbShardRegistry;
 public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
 {
     protected readonly object Lock = new();
-    private readonly IMutableState<ImmutableHashSet<DbShard>> _shards;
-    private readonly IMutableState<ImmutableHashSet<DbShard>> _usedShards;
+    private readonly MutableState<ImmutableHashSet<DbShard>> _shards;
+    private readonly MutableState<ImmutableHashSet<DbShard>> _usedShards;
     private readonly IComputedState<ImmutableHashSet<DbShard>> _eventProcessorShards;
 
     public bool HasSingleShard { get; }
     public IState<ImmutableHashSet<DbShard>> Shards => _shards;
     public IState<ImmutableHashSet<DbShard>> UsedShards => _usedShards;
     public IState<ImmutableHashSet<DbShard>> EventProcessorShards => _eventProcessorShards;
-    public IMutableState<Func<DbShard, bool>> EventProcessorShardFilter { get; }
+    public MutableState<Func<DbShard, bool>> EventProcessorShardFilter { get; }
 
     public DbShardRegistry(IServiceProvider services, params DbShard[] initialShards)
     {

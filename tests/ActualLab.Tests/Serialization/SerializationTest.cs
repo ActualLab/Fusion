@@ -255,6 +255,25 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
+    public void ImmutableBimapSerialization()
+    {
+        default(ImmutableBimap<string, string>).AssertPassesThroughAllSerializers(Out);
+        var m = new ImmutableBimap<string, int>().PassThroughAllSerializers();
+        m.Forward.Count.Should().Be(0);
+        m.Backward.Count.Should().Be(0);
+
+        m = new ImmutableBimap<string, int>() {
+            Forward = new Dictionary<string, int>() {{ "A", 1 }}
+        };
+        m.Backward.Count.Should().Be(1);
+        m.Backward[1].Should().Be("A");
+
+        var m1 = m.PassThroughAllSerializers(Out);
+        m1.Forward.Should().BeEquivalentTo(m.Forward);
+        m1.Backward.Should().BeEquivalentTo(m.Backward);
+    }
+
+    [Fact]
     public void OptionSetSerialization()
     {
         default(OptionSet).AssertPassesThroughAllSerializers(Out);

@@ -17,7 +17,7 @@ public static class FusionBuilderExt
         // which requires DbShard-based APIs, so we add fake IDbShardRegistry<Unit>
         // to let it use Unit as TDbContext.
         services.TryAddSingleton<IDbShardRegistry<Unit>>(c => new DbShardRegistry<Unit>(c, DbShard.None));
-        services.TryAddSingleton<IDbShardResolver, DbShardResolver>();
+        services.TryAddSingleton<IDbShardResolver<Unit>, DbShardResolver<Unit>>();
         return fusion.AddAuthService(typeof(InMemoryAuthService));
     }
 

@@ -8,31 +8,43 @@ public static class DbContextBuilderExt
 {
     // AddRedisDb
 
-    public static IServiceCollection AddRedisDb<TDbContext>(
-        this DbContextBuilder<TDbContext> dbContextBuilder,
+    public static DbContextBuilder<TDbContext> AddRedisDb<TDbContext>(
+        this DbContextBuilder<TDbContext> dbContext,
         Func<IServiceProvider, string> configurationFactory,
         string? keyPrefix = null)
         where TDbContext : DbContext
-        => dbContextBuilder.Services.AddRedisDb<TDbContext>(configurationFactory, keyPrefix);
+    {
+        dbContext.Services.AddRedisDb<TDbContext>(configurationFactory, keyPrefix);
+        return dbContext;
+    }
 
-    public static IServiceCollection AddRedisDb<TDbContext>(
-        this DbContextBuilder<TDbContext> dbContextBuilder,
+    public static DbContextBuilder<TDbContext> AddRedisDb<TDbContext>(
+        this DbContextBuilder<TDbContext> dbContext,
         string configuration,
         string? keyPrefix = null)
         where TDbContext : DbContext
-        => dbContextBuilder.Services.AddRedisDb<TDbContext>(configuration, keyPrefix);
+    {
+        dbContext.Services.AddRedisDb<TDbContext>(configuration, keyPrefix);
+        return dbContext;
+    }
 
-    public static IServiceCollection AddRedisDb<TDbContext>(
-        this DbContextBuilder<TDbContext> dbContextBuilder,
+    public static DbContextBuilder<TDbContext> AddRedisDb<TDbContext>(
+        this DbContextBuilder<TDbContext> dbContext,
         ConfigurationOptions configuration,
         string? keyPrefix = null)
         where TDbContext : DbContext
-        => dbContextBuilder.Services.AddRedisDb<TDbContext>(configuration, keyPrefix);
+    {
+        dbContext.Services.AddRedisDb<TDbContext>(configuration, keyPrefix);
+        return dbContext;
+    }
 
-    public static IServiceCollection AddRedisDb<TDbContext>(
-        this DbContextBuilder<TDbContext> dbContextBuilder,
+    public static DbContextBuilder<TDbContext> AddRedisDb<TDbContext>(
+        this DbContextBuilder<TDbContext> dbContext,
         Func<Task<IConnectionMultiplexer>> multiplexerFactory,
         string? keyPrefix = null)
         where TDbContext : DbContext
-        => dbContextBuilder.Services.AddRedisDb<TDbContext>(multiplexerFactory, keyPrefix);
+    {
+        dbContext.Services.AddRedisDb<TDbContext>(multiplexerFactory, keyPrefix);
+        return dbContext;
+    }
 }

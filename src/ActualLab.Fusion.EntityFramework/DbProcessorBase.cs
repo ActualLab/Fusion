@@ -1,8 +1,19 @@
-using System.Data;
 using ActualLab.Versioning;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework;
+
+public abstract class DbProcessorBase(IDbHub dbHub) : ProcessorBase
+{
+    private ILogger? _log;
+
+    protected IServiceProvider Services { get; init; } = dbHub.Services;
+    protected IDbHub DbHub { get; } = dbHub;
+    protected VersionGenerator<long> VersionGenerator => DbHub.VersionGenerator;
+    protected MomentClockSet Clocks => DbHub.Clocks;
+    protected ICommander Commander => DbHub.Commander;
+    protected ILogger Log => _log ??= Services.LogFor(GetType());
+}
 
 public abstract class DbProcessorBase<TDbContext>(IServiceProvider services) : ProcessorBase
     where TDbContext : DbContext

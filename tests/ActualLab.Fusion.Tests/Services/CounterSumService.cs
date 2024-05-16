@@ -6,7 +6,7 @@ public class CounterSumService : IComputeService
 
     public IMutableState<int> this[int counterIndex] => _counters[counterIndex];
 
-    public CounterSumService(IStateFactory stateFactory)
+    public CounterSumService(StateFactory stateFactory)
         => _counters = Enumerable.Range(0, 10)
             .Select(_ => stateFactory.NewMutable<int>())
             .ToArray();

@@ -42,8 +42,8 @@ public readonly struct FusionBuilder
         Services = services;
         Commander = services.AddCommander();
         Rpc = services.AddRpc();
-        var dFusionTag = services.FirstOrDefault(d => d.ServiceType == typeof(FusionTag));
-        if (dFusionTag is { ImplementationInstance: FusionTag fusionTag }) {
+        var fusionTag = services.FindInstance<FusionTag>();
+        if (fusionTag != null) {
             ServiceMode = serviceMode.Or(fusionTag.ServiceMode);
             if (setDefaultServiceMode)
                 fusionTag.ServiceMode = ServiceMode;
@@ -52,12 +52,9 @@ public readonly struct FusionBuilder
             return;
         }
 
-        // We want above FusionTag lookup to run in O(1), so...
         ServiceMode = serviceMode.OrNone();
-        services.RemoveAll<FusionTag>();
-        services.Insert(0, new ServiceDescriptor(
-            typeof(FusionTag),
-            new FusionTag(setDefaultServiceMode ? ServiceMode : RpcServiceMode.Local)));
+        fusionTag = new FusionTag(setDefaultServiceMode ? ServiceMode : RpcServiceMode.Local);
+        services.AddInstance(fusionTag, addInFront: true);
 
         // Common services
         services.AddOptions();
@@ -71,12 +68,10 @@ public readonly struct FusionBuilder
         services.TryAddSingleton(c => new ComputeServiceInterceptor(
             c.GetRequiredService<ComputeServiceInterceptor.Options>(), c));
 
-        // States
-        services.TryAddSingleton(c => new MixedModeService<IStateFactory>.Singleton(new StateFactory(c), c));
-        services.TryAddScoped(c => new MixedModeService<IStateFactory>.Scoped(new StateFactory(c), c));
-        services.TryAddTransient(c => c.GetRequiredMixedModeService<IStateFactory>());
-        services.TryAddSingleton(typeof(MutableState<>.Options));
-        services.TryAddTransient(typeof(IMutableState<>), typeof(MutableState<>));
+        // StateFactory
+        services.TryAddSingleton(c => new MixedModeService<StateFactory>.Singleton(new StateFactory(c), c));
+        services.TryAddScoped(c => new MixedModeService<StateFactory>.Scoped(new StateFactory(c), c));
+        services.TryAddTransient(c => c.GetRequiredMixedModeService<StateFactory>());
 
         // Update delayer & UI action tracker
         services.TryAddSingleton(_ => new UIActionTracker.Options());

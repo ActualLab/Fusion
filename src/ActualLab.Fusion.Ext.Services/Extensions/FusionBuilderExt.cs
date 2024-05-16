@@ -30,7 +30,7 @@ public static class FusionBuilderExt
         // SandboxedKeyValueStore uses DbShard-based APIs, so we add fake IDbShardRegistry<Unit>
         // to let it use Unit as TDbContext.
         services.TryAddSingleton<IDbShardRegistry<Unit>>(c => new DbShardRegistry<Unit>(c, DbShard.None));
-        services.TryAddSingleton<IDbShardResolver, DbShardResolver>();
+        services.TryAddSingleton<IDbShardResolver<Unit>>(c => new DbShardResolver<Unit>(c));
         services.AddSingleton(optionsFactory, _ => InMemoryKeyValueStore.Options.Default);
         fusion.AddService<IKeyValueStore, InMemoryKeyValueStore>();
         services.AddHostedService(c => (InMemoryKeyValueStore)c.GetRequiredService<IKeyValueStore>());

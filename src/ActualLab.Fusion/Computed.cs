@@ -149,7 +149,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
     }
 
     public override string ToString()
-        => $"{GetType().GetName()}({Input} v.{ComputedVersion.Format(Version)}, State: {ConsistencyState})";
+        => $"{GetType().GetName()}({Input} v.{Version.FormatVersion()}, State: {ConsistencyState})";
 
     // GetHashCode
 

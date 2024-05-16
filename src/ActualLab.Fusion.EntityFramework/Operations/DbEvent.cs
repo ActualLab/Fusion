@@ -21,9 +21,10 @@ public sealed class DbEvent : IDbEventLogEntry
     private DateTime _delayUntil;
 
     [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-
     public string Uuid { get; set; } = "";
-    [ConcurrencyCheck] public long Version { get; set; }
+
+    [ConcurrencyCheck]
+    public long Version { get; set; }
 
     public DateTime LoggedAt {
         get => _loggedAt.DefaultKind(DateTimeKind.Utc);

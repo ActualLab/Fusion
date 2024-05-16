@@ -31,7 +31,6 @@ public class ServerAuthHelper : IHasServices
     protected IAuthBackend AuthBackend { get; }
     protected ISessionResolver SessionResolver { get; }
     protected AuthSchemasCache AuthSchemasCache { get; }
-    protected IDbShardResolver DbShardResolver { get; }
     protected ICommander Commander { get; }
     protected MomentClockSet Clocks { get; }
 
@@ -50,7 +49,6 @@ public class ServerAuthHelper : IHasServices
         AuthBackend = services.GetRequiredService<IAuthBackend>();
         SessionResolver = services.GetRequiredService<ISessionResolver>();
         AuthSchemasCache = services.GetRequiredService<AuthSchemasCache>();
-        DbShardResolver = services.GetRequiredService<IDbShardResolver>();
         Commander = services.Commander();
         Clocks = services.Clocks();
     }
