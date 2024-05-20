@@ -134,19 +134,7 @@ public static class ServiceCollectionExt
             return cfg.GetSettings<TSettings>(sectionName, mustValidate);
         });
 
-    // AddTag, FindTag
-
-    public static IServiceCollection AddInstance<T>(
-        this IServiceCollection services, T instance, bool addInFront = false)
-        where T : class
-    {
-        var descriptor = new ServiceDescriptor(typeof(T), instance);
-        if (addInFront)
-            services.Insert(0, descriptor);
-        else
-            services.Add(descriptor);
-        return services;
-    }
+    // FindInstance, AddInstance
 
     public static T? FindInstance<T>(this IServiceCollection services)
         where T : class
@@ -168,5 +156,22 @@ public static class ServiceCollectionExt
             return d.ImplementationInstance;
         }
         return null;
+    }
+
+    public static T FindOrAddInstance<T>(
+        this IServiceCollection services, Func<T> instanceFactory, bool addInFront = false)
+        where T : class
+        => services.FindInstance<T>() ?? services.AddInstance(instanceFactory.Invoke(), addInFront);
+
+    public static T AddInstance<T>(
+        this IServiceCollection services, T instance, bool addInFront = false)
+        where T : class
+    {
+        var descriptor = new ServiceDescriptor(typeof(T), instance);
+        if (addInFront)
+            services.Insert(0, descriptor);
+        else
+            services.Add(descriptor);
+        return instance;
     }
 }

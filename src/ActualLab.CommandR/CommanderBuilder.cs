@@ -30,16 +30,14 @@ public readonly struct CommanderBuilder
         Action<CommanderBuilder>? configure)
     {
         Services = services;
-        var handlers = services.FindInstance<HashSet<CommandHandler>>();
-        if (handlers != null) {
+        if (services.FindInstance<HashSet<CommandHandler>>() is { } handlers) {
             // Already configured
             Handlers = handlers;
             configure?.Invoke(this);
             return;
         }
 
-        Handlers = handlers = new();
-        services.AddInstance(handlers, addInFront: true);
+        Handlers = services.AddInstance(new HashSet<CommandHandler>(), addInFront: true);
 
         // Core services
         services.TryAddSingleton(_ => new HostId());

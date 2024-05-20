@@ -49,8 +49,7 @@ public readonly struct RpcBuilder
         Action<RpcBuilder>? configure)
     {
         Services = services;
-        var configuration = services.FindInstance<RpcConfiguration>();
-        if (configuration != null) {
+        if (services.FindInstance<RpcConfiguration>() is { } configuration) {
             // Already configured
             Configuration = configuration;
             configure?.Invoke(this);
@@ -58,8 +57,7 @@ public readonly struct RpcBuilder
         }
 
         // We want above GetConfiguration call to run in O(1), so...
-        Configuration = configuration = new RpcConfiguration();
-        services.AddInstance(configuration);
+        Configuration = services.AddInstance(new RpcConfiguration());
         services.AddSingleton(c => new RpcHub(c));
 
         // Common services

@@ -11,6 +11,7 @@ using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.UI;
 using ActualLab.Resilience;
 using ActualLab.Rpc;
+using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion;
 
@@ -42,8 +43,7 @@ public readonly struct FusionBuilder
         Services = services;
         Commander = services.AddCommander();
         Rpc = services.AddRpc();
-        var fusionTag = services.FindInstance<FusionTag>();
-        if (fusionTag != null) {
+        if (services.FindInstance<FusionTag>() is { } fusionTag) {
             ServiceMode = serviceMode.Or(fusionTag.ServiceMode);
             if (setDefaultServiceMode)
                 fusionTag.ServiceMode = ServiceMode;
@@ -53,8 +53,7 @@ public readonly struct FusionBuilder
         }
 
         ServiceMode = serviceMode.OrNone();
-        fusionTag = new FusionTag(setDefaultServiceMode ? ServiceMode : RpcServiceMode.Local);
-        services.AddInstance(fusionTag, addInFront: true);
+        services.AddInstance(new FusionTag(setDefaultServiceMode ? ServiceMode : RpcServiceMode.Local), addInFront: true);
 
         // Common services
         services.AddOptions();
@@ -146,11 +145,11 @@ public readonly struct FusionBuilder
         if (!setDefaultServiceMode)
             return;
 
-        var dFusionTag = Services.FirstOrDefault(d => d.ServiceType == typeof(FusionTag));
-        if (dFusionTag is { ImplementationInstance: FusionTag fusionTag }) {
-            ServiceMode = serviceMode.Or(fusionTag.ServiceMode);
-            fusionTag.ServiceMode = ServiceMode;
-        }
+        if (Services.FindInstance<FusionTag>() is not { } fusionTag)
+            throw Errors.InternalError("Something is off: FusionTag service must be registered at this point.");
+
+        ServiceMode = serviceMode.Or(fusionTag.ServiceMode);
+        fusionTag.ServiceMode = ServiceMode;
     }
 
     public FusionBuilder WithServiceMode(
