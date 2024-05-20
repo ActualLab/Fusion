@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using ActualLab.Flows;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using ActualLab.IO;
@@ -11,7 +10,6 @@ using ActualLab.Fusion.EntityFramework.Redis;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Server;
 using ActualLab.Fusion.Tests.Extensions;
-using ActualLab.Fusion.Tests.Flows;
 using ActualLab.Fusion.Tests.Model;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Fusion.Tests.UIModels;
@@ -120,10 +118,6 @@ public abstract class FusionTestBase : RpcTestBase
         services.AddSingleton<ComputedState<KeyValueModel<string>>, StringKeyValueModelState>();
         fusion.AddService<ISimplestProvider, SimplestProvider>(ServiceLifetime.Scoped);
         fusion.AddService<NestedOperationLoggerTester>();
-
-        // Flows
-        var flows = services.AddFlows();
-        flows.Add<TimerFlow>();
     }
 
     protected override void ConfigureServices(IServiceCollection services, bool isClient)
@@ -134,9 +128,6 @@ public abstract class FusionTestBase : RpcTestBase
         var fusion = services.AddFusion();
         fusion.AddOperationReprocessor();
         fusion.AddFusionTime();
-
-        // Flows
-        var flows = services.AddFlows();
 
         if (!isClient) {
             fusion = fusion.WithServiceMode(RpcServiceMode.Server, true);
@@ -211,7 +202,6 @@ public abstract class FusionTestBase : RpcTestBase
                         operations.AddFileSystemOperationLogWatcher();
                 });
                 db.AddEntityResolver<long, User>();
-                db.AddFlows();
             });
         }
         else {
