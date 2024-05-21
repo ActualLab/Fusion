@@ -39,7 +39,7 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
         arguments.Write(deserializer);
     }
 
-    // Nested types
+    // ItemSerializer + its variants
 
     private abstract class ItemSerializer(IByteSerializer serializer, IBufferWriter<byte> buffer) : ArgumentListReader
     {
@@ -77,6 +77,8 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
             Serializer.Write(Buffer, item, type);
         }
     }
+
+    // ItemDeserializer + its variants
 
     private abstract class ItemDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data) : ArgumentListWriter
     {

@@ -6,42 +6,86 @@ using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
-#if NET6_0_OR_GREATER
+#pragma warning disable IL2116, IL2026
+
+#if !NET5_0
 [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
 #endif
-public class TypeDecoratingTextSerializer : TextSerializerBase
+[method: RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type, bool>? typeFilter = null)
+    : TextSerializerBase
 {
-    public static TypeDecoratingTextSerializer Default { get; set; }
+    public const string TypeDecoratorPrefix = "/* @type ";
+    public const string TypeDecoratorSuffix = " */ ";
+    public const char ExactTypeDecorator = '.';
 
-    private readonly ISerializationBinder _serializationBinder;
+    private static TypeDecoratingTextSerializer? _default;
+    private static TypeDecoratingTextSerializer? _defaultLegacy;
 
-    public ITextSerializer Serializer { get; }
-    public Func<Type, bool> TypeFilter { get; }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2116
-    static TypeDecoratingTextSerializer()
-#pragma warning restore IL2116
-#pragma warning disable IL2026
-        => Default = new(SystemJsonSerializer.Default);
-#pragma warning restore IL2026
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type, bool>? typeFilter = null)
-    {
-        Serializer = serializer;
-        TypeFilter = typeFilter ?? (_ => true);
-        var serializationBinder = (Serializer as NewtonsoftJsonSerializer)?.Settings?.SerializationBinder;
-#if NET5_0_OR_GREATER
-        serializationBinder ??= Internal.SerializationBinder.Instance;
-#else
-        serializationBinder ??= CrossPlatformSerializationBinder.Instance;
-#endif
-        _serializationBinder = serializationBinder;
+    public static TypeDecoratingTextSerializer Default {
+        get => _default ??= new(TextSerializer.Default);
+        set => _default = value;
     }
+
+    public static TypeDecoratingTextSerializer DefaultLegacy {
+        get => _defaultLegacy ??= new LegacyTypeDecoratingTextSerializer(TextSerializer.Default);
+        set => _defaultLegacy = value;
+    }
+
+    public ITextSerializer Serializer { get; } = serializer;
+    public Func<Type, bool> TypeFilter { get; } = typeFilter ?? (static _ => true);
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(string data, Type type)
+    {
+        if (data.IsNullOrEmpty())
+            return null;
+        if (!data.StartsWith(TypeDecoratorPrefix, StringComparison.Ordinal))
+            return ReadLegacy(data, type);
+
+        var typeSuffixIndex = data.IndexOf(TypeDecoratorSuffix, TypeDecoratorPrefix.Length, StringComparison.Ordinal);
+        if (typeSuffixIndex < 0)
+            throw Errors.WrongTypeDecoratorFormat();
+
+        var aqn = data.Substring(TypeDecoratorPrefix.Length, typeSuffixIndex - TypeDecoratorPrefix.Length);
+        var tail = data[(typeSuffixIndex + TypeDecoratorSuffix.Length)..];
+        if (aqn is [ExactTypeDecorator])
+            return Serializer.Read(tail, type);
+
+        var actualType = new TypeRef(aqn).Resolve();
+        if (!type.IsAssignableFrom(actualType))
+            throw Errors.UnsupportedSerializedType(actualType);
+        if (!TypeFilter.Invoke(actualType))
+            throw Errors.UnsupportedSerializedType(actualType);
+
+        return Serializer.Read(tail, actualType);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override string Write(object? value, Type type)
+    {
+        if (value == null)
+            return "";
+
+        var sb = StringBuilderExt.Acquire();
+        try {
+            sb.Append(TypeDecoratorPrefix);
+            var actualType = value.GetType();
+            if (actualType == type)
+                sb.Append(ExactTypeDecorator);
+            else
+                sb.Append(new TypeRef(actualType).WithoutAssemblyVersions());
+            sb.Append(TypeDecoratorSuffix);
+            sb.Append(Serializer.Write(value, actualType));
+            return sb.ToString();
+        }
+        finally {
+            sb.Release();
+        }
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    protected object? ReadLegacy(string data, Type type)
     {
         using var p = ListFormat.Default.CreateParser(data);
 
@@ -51,7 +95,7 @@ public class TypeDecoratingTextSerializer : TextSerializerBase
             return null;
 
         TypeNameHelpers.SplitAssemblyQualifiedName(p.Item, out var assemblyName, out var typeName);
-        var actualType = _serializationBinder.BindToType(assemblyName, typeName);
+        var actualType = NewtonsoftJsonSerializationBinder.Default.BindToType(assemblyName, typeName);
         if (!type.IsAssignableFrom(actualType))
             throw Errors.UnsupportedSerializedType(actualType);
         if (!TypeFilter.Invoke(actualType))
@@ -62,27 +106,28 @@ public class TypeDecoratingTextSerializer : TextSerializerBase
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override string Write(object? value, Type type)
+    protected string WriteLegacy(object? value, Type type)
     {
-        using var f = ListFormat.Default.CreateFormatter();
-        if (value == null) {
-            // Special case: null serialization
-            f.Append("");
-            f.AppendEnd();
-        }
-        else {
-            var actualType = value.GetType();
-            if (!type.IsAssignableFrom(actualType))
-                throw ActualLab.Internal.Errors.MustBeAssignableTo(actualType, type, nameof(type));
-            if (!TypeFilter.Invoke(actualType))
-                throw Errors.UnsupportedSerializedType(actualType);
+        if (value == null)
+            return "";
 
-            var aqn = actualType.GetAssemblyQualifiedName(false, _serializationBinder);
-            var json = Serializer.Write(value, actualType);
-            f.Append(aqn);
-            f.Append(json);
-            f.AppendEnd();
-        }
+        using var f = ListFormat.Default.CreateFormatter();
+        var actualType = value.GetType();
+        var aqn = actualType.GetAssemblyQualifiedName(false, NewtonsoftJsonSerializationBinder.Default);
+        var data = Serializer.Write(value, actualType);
+        f.Append(aqn);
+        f.Append(data);
+        f.AppendEnd();
         return f.Output;
     }
+}
+
+public class LegacyTypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type, bool>? typeFilter = null)
+    : TypeDecoratingTextSerializer(serializer, typeFilter)
+{
+    public override object? Read(string data, Type type)
+        => ReadLegacy(data, type);
+
+    public override string Write(object? value, Type type)
+        => WriteLegacy(value, type);
 }

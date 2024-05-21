@@ -1,100 +1,74 @@
-﻿using ActualLab.Interception;
+﻿using System.Diagnostics.CodeAnalysis;
+using ActualLab.Interception;
+using ActualLab.Internal;
 
 namespace ActualLab.Rpc;
 
 public sealed class RpcTextArgumentSerializer(ITextSerializer serializer) : RpcArgumentSerializer
 {
+    public ListFormat ListFormat { get; init; } = ListFormat.Default;
+
+    private readonly ITextSerializer _polymorphicSerializer = new TypeDecoratingTextSerializer(serializer);
+
     public override TextOrBytes Serialize(ArgumentList arguments, bool allowPolymorphism)
     {
         if (arguments.Length == 0)
             return TextOrBytes.EmptyText;
 
-        var collector = new List<string>();
-
-        var itemSerializer = allowPolymorphism
-            ? (ItemSerializer)new ItemPolymorphicSerializer(serializer, collector)
-            : new ItemNonPolymorphicSerializer(serializer, collector);
-
+        var items = new List<string>();
+        var itemSerializer = new ItemSerializer(GetSerializer(allowPolymorphism), items);
         arguments.Read(itemSerializer);
 
-        using var f = ListFormat.Default.CreateFormatter();
-
-        foreach (var item in collector) {
+        using var f = ListFormat.CreateFormatter();
+        foreach (var item in items)
             f.Append(item);
-        }
-
         f.AppendEnd();
-
         return new TextOrBytes(f.Output);
     }
 
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, TextOrBytes data)
     {
         if (!data.IsText(out var text))
             throw new ArgumentOutOfRangeException(nameof(data));
-
         if (text.IsEmpty)
             return;
 
-        var items = ListFormat.Default.CreateParser(text.Span).ParseAll();
-
-        var deserializer = new ItemDeserializer(serializer, items.ToArray());
-
+        var items = ListFormat.CreateParser(text.Span).ParseAll();
+        var deserializer = new ItemDeserializer(GetSerializer(allowPolymorphism), items);
         arguments.Write(deserializer);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ITextSerializer GetSerializer(bool allowPolymorphism)
+        => allowPolymorphism ? _polymorphicSerializer : serializer;
+
     // Nested types
 
-    private abstract class ItemSerializer(ITextSerializer serializer, List<string> collector) : ArgumentListReader
+    private sealed class ItemSerializer(ITextSerializer serializer, List<string> items) : ArgumentListReader
     {
-        protected readonly ITextSerializer Serializer = serializer;
-        protected readonly List<string> Collector = collector;
-
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnStruct<T>(T item, int index)
         {
-            if (typeof(T) != typeof(CancellationToken)) {
-                Collector.Add(Serializer.Write(item));
-            }
+            if (typeof(T) != typeof(CancellationToken))
+                items.Add(serializer.Write(item));
         }
-    }
 
-    private sealed class ItemPolymorphicSerializer(ITextSerializer serializer, List<string> collector)
-        : ItemSerializer(serializer, collector)
-    {
-        private readonly ITextSerializer _polymorphicSerializer = new TypeDecoratingTextSerializer(serializer);
-
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnObject(Type type, object? item, int index)
-            => Collector.Add(_polymorphicSerializer.Write(item, type));
+            => items.Add(serializer.Write(item, type));
     }
 
-    private sealed class ItemNonPolymorphicSerializer(ITextSerializer serializer, List<string> collector)
-        : ItemSerializer(serializer, collector)
+    private sealed class ItemDeserializer(ITextSerializer serializer, List<string> items) : ArgumentListWriter
     {
-        public override void OnObject(Type type, object? item, int index)
-            => Collector.Add(Serializer.Write(item, type));
-    }
-
-    private sealed class ItemDeserializer(ITextSerializer serializer, string[] data) : ArgumentListWriter
-    {
-        private readonly ITextSerializer _polymorphicSerializer = new TypeDecoratingTextSerializer(serializer);
-
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override T OnStruct<T>(int index)
-        {
-            if (typeof(T) == typeof(CancellationToken))
-                return default!;
+            => typeof(T) == typeof(CancellationToken)
+                ? default!
+                : serializer.Read<T>(items[index]);
 
-            return serializer.Read<T>(data[index]);
-        }
-
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnObject(Type type, int index)
-        {
-            var itemData = data[index];
-
-            var hasPolymorphValue = itemData.Split(ListFormat.Default.Delimiter).Length > 1;
-
-            var actualSerializer = hasPolymorphValue ? _polymorphicSerializer : serializer;
-
-            return actualSerializer.Read(itemData, type);
-        }
+            => serializer.Read(items[index], type);
     }
 }

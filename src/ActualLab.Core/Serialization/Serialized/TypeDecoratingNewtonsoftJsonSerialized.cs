@@ -26,7 +26,7 @@ public partial class TypeDecoratingNewtonsoftJsonSerialized<T> : TextSerialized<
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override ITextSerializer<T> GetSerializer()
-        => _serializer ??= new TypeDecoratingTextSerializer(SystemJsonSerializer.Default).ToTyped<T>();
+        => _serializer ??= new TypeDecoratingTextSerializer(NewtonsoftJsonSerializer.Default).ToTyped<T>();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator TypeDecoratingNewtonsoftJsonSerialized<T>(T value) => new() { Value = value };

@@ -21,9 +21,6 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
     private static TypeDecoratingTextSerializer? _defaultTypeDecorating;
 
     public static JsonSerializerSettings DefaultSettings { get; set; } = new() {
-#if !NET5_0_OR_GREATER
-        SerializationBinder = CrossPlatformSerializationBinder.Instance,
-#endif
         TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
         TypeNameHandling = TypeNameHandling.Auto,
         NullValueHandling = NullValueHandling.Ignore,
