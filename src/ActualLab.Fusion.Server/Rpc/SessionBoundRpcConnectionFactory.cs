@@ -14,25 +14,25 @@ public class SessionBoundRpcConnectionFactory
         CancellationToken cancellationToken)
     {
         if (!properties.TryGet<HttpContext>(out var httpContext))
-            return RpcConnectionTask(channel, properties);
+            return CreateRpcConnectionAsync(channel, properties);
 
         var query = httpContext.Request.Query;
         var sessionId = query[SessionParameterName].SingleOrDefault() ?? "";
         if (!sessionId.IsNullOrEmpty() && new Session(sessionId) is var session1 && session1.IsValid())
-            return SessionBoundRpcConnectionTask(channel, properties, session1);
+            return CreateSessionBoundRpcConnectionAsync(channel, properties, session1);
 
         var sessionMiddleware = httpContext.RequestServices.GetService<SessionMiddleware>();
         if (sessionMiddleware?.GetSession(httpContext) is { } session2 && session2.IsValid())
-            return SessionBoundRpcConnectionTask(channel, properties, session2);
+            return CreateSessionBoundRpcConnectionAsync(channel, properties, session2);
 
-        return RpcConnectionTask(channel, properties);
+        return CreateRpcConnectionAsync(channel, properties);
     }
 
-    protected static Task<RpcConnection> SessionBoundRpcConnectionTask(
+    protected static Task<RpcConnection> CreateSessionBoundRpcConnectionAsync(
         Channel<RpcMessage> channel, PropertyBag properties, Session session)
         => Task.FromResult<RpcConnection>(new SessionBoundRpcConnection(channel, properties, session));
 
-    protected static Task<RpcConnection> RpcConnectionTask(
+    protected static Task<RpcConnection> CreateRpcConnectionAsync(
         Channel<RpcMessage> channel, PropertyBag properties)
         => Task.FromResult(new RpcConnection(channel, properties));
 }
