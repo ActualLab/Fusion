@@ -14,7 +14,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public readonly RpcOutboundContext Context = context;
     public readonly RpcPeer Peer = context.Peer!; // Calls
-    public RpcMessage? Message;
     public abstract Task UntypedResultTask { get; }
     public TimeSpan ConnectTimeout;
     public TimeSpan Timeout;
@@ -87,7 +86,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         try {
             using (Context.Activate())
                 message = CreateMessage(Id, MethodDef.AllowArgumentPolymorphism);
-            if (Context.CacheInfoCapture is { } cacheInfoCapture) {
+            if (Context.CacheInfoCapture is { } cacheInfoCapture && message.Arguments == null) {
                 cacheInfoCapture.Key ??= new RpcCacheKey(MethodDef.Service.Name, MethodDef.Name, message.ArgumentData);
                 if (cacheInfoCapture.CaptureMode == RpcCacheInfoCaptureMode.KeyOnly) {
                     SetResult(null, null);
@@ -107,12 +106,27 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public virtual RpcMessage CreateMessage(long relatedId, bool allowPolymorphism)
     {
-        var argumentData = Peer.ArgumentSerializer.Serialize(Context.Arguments!, allowPolymorphism);
-        var message = new RpcMessage(
+        var argumentSerializer = Peer.HasLocalConnection;
+        var arguments = Context.Arguments!;
+        if (Peer.HasLocalConnection) {
+            var ctIndex = MethodDef.CancellationTokenIndex;
+            if (ctIndex >= 0) {
+                arguments = arguments with { }; // Clone
+                arguments.SetCancellationToken(ctIndex, default);
+            }
+            return new RpcMessage(
+                Context.CallTypeId, relatedId,
+                MethodDef.Service.Name, MethodDef.Name,
+                default, Context.Headers) {
+                Arguments = arguments,
+            };
+        }
+
+        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism);
+        return new RpcMessage(
             Context.CallTypeId, relatedId,
             MethodDef.Service.Name, MethodDef.Name,
             argumentData, Context.Headers);
-        return message;
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
@@ -217,7 +231,7 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
         }
         if (ResultSource.TrySetResult(typedResult)) {
             Unregister();
-            if (context != null && Context.CacheInfoCapture is { } cacheInfoCapture)
+            if (context != null && Context.CacheInfoCapture is { } cacheInfoCapture && context.Message.Arguments == null)
                 cacheInfoCapture.DataSource?.TrySetResult(context.Message.ArgumentData);
         }
     }

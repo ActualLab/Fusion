@@ -3,6 +3,7 @@ using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
+using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc;
 
@@ -34,6 +35,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public RpcSharedObjectTracker SharedObjects { get; init; }
     public LogLevel CallLogLevel { get; init; } = LogLevel.None;
     public AsyncState<RpcPeerConnectionState> ConnectionState => _connectionState;
+    public bool HasLocalConnection { get; private set; }
     public RpcPeerInternalServices InternalServices => new(this);
     public Guid Id { get; } = Guid.NewGuid();
 
@@ -400,8 +402,15 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 oldState.ReaderAbortSource.CancelAndDisposeSilently();
                 _sender = newState.Channel?.Writer;
             }
-            if (newState.Connection != oldState.Connection)
-                oldState.Channel?.Writer.TryComplete(newState.Error); // Reliably shut down the old channel
+
+            var newConnection = newState.Connection;
+            if (newConnection != oldState.Connection) {
+                // Reliably shut down the old channel
+                oldState.Channel?.Writer.TryComplete(newState.Error);
+                // Set ArgumentSerializer to either local (w/o serialization) or actual
+                if (newConnection != null)
+                    HasLocalConnection = newConnection.IsLocal;
+            }
             Monitor.Exit(Lock);
 
             // The code below is responsible solely for logging - all important stuff is already done

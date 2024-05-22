@@ -6,6 +6,7 @@ using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
+using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc;
 

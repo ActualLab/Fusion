@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Internal;
-using static ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -89,11 +88,13 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
                 StaticPeer = peer,
                 RelatedId = callId,
             };
-            var call = context.PrepareCall(OkMethodDef, ArgumentList.New(result))!;
-            return call.SendNoWait(allowPolymorphism);
+            var call = peer.HasLocalConnection
+                ? context.PrepareCall(OkMethodDef, ArgumentList.New<object?>(result))
+                : context.PrepareCall(OkMethodDef, ArgumentList.New(result));
+            return call!.SendNoWait(allowPolymorphism);
         }
         catch (Exception error) {
-            Log.LogError(error, "PrepareCall for call #{CallId} failed.", callId);
+            Log.LogError(error, "PrepareCall for call #{CallId} failed", callId);
             if (headers != null) {
                 while (headers.Count > headerCount)
                     headers.RemoveAt(headers.Count - 1);

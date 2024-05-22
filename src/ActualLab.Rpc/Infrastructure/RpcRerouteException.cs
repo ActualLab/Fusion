@@ -3,20 +3,15 @@ namespace ActualLab.Rpc.Infrastructure;
 #pragma warning disable SYSLIB0051
 
 [Serializable]
-public class RpcRerouteException : Exception
+public class RpcRerouteException : OperationCanceledException
 {
-    public RpcRerouteException()
-        : this(message: null, innerException: null) { }
-    public RpcRerouteException(string? message)
-        : this(message, innerException: null) { }
-    public RpcRerouteException(Exception? innerException)
-        : base(innerException == null
-            ? "Call will be re-routed to another peer."
-            : $"Call will be re-routed to another peer: {innerException.Message}", innerException) { }
-    public RpcRerouteException(string? message, Exception? innerException)
-        : base(message ?? "Call will be re-routed to another peer.", innerException) { }
+    private const string DefaultMessage = "Call will be re-routed to another peer.";
 
-    [Obsolete("Obsolete")]
-    protected RpcRerouteException(SerializationInfo info, StreamingContext context)
-        : base(info, context) { }
+    public RpcRerouteException() : base(DefaultMessage) { }
+    public RpcRerouteException(string? message) : base(message ?? DefaultMessage) { }
+    public RpcRerouteException(string? message, Exception? innerException) : base(message ?? DefaultMessage, innerException) { }
+    public RpcRerouteException(string? message, Exception? innerException, CancellationToken token)
+        : base(message ?? DefaultMessage, innerException, token) { }
+    public RpcRerouteException(string? message, CancellationToken token) : base(message ?? DefaultMessage, token) { }
+    public RpcRerouteException(CancellationToken token) : base(DefaultMessage, token) { }
 }

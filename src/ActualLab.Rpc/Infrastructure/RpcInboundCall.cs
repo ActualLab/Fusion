@@ -64,7 +64,9 @@ public abstract class RpcInboundCall : RpcCall
     {
         var message = Context.Message;
         var headers = message.Headers.OrEmpty();
-        var arguments = Arguments != null ? Arguments.ToString() : $"ArgumentData: {message.ArgumentData}";
+        var arguments = Arguments != null
+            ? Arguments.ToString()
+            : $"ArgumentData: {message.ArgumentData}";
         var relatedId = message.RelatedId;
         var relatedObject = relatedId == 0 ? (object?)null
             : MethodDef.IsStream
@@ -181,19 +183,23 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     {
         var peer = Context.Peer;
         var message = Context.Message;
-        var arguments = MethodDef.ArgumentListFactory.Invoke();
-        var allowPolymorphism = MethodDef.AllowArgumentPolymorphism;
-        if (!MethodDef.HasObjectTypedArguments)
-            peer.ArgumentSerializer.Deserialize(ref arguments, allowPolymorphism, message.ArgumentData);
-        else {
-            var dynamicCallHandler = (IRpcDynamicCallHandler)ServiceDef.Server;
-            var expectedArguments = arguments;
-            if (!dynamicCallHandler.IsValidCall(Context, ref expectedArguments, ref allowPolymorphism))
-                return null;
+        var argumentSerializer = peer.ArgumentSerializer;
+        var arguments = message.Arguments;
+        if (arguments == null) {
+            arguments = MethodDef.ArgumentListFactory.Invoke();
+            var allowPolymorphism = MethodDef.AllowArgumentPolymorphism;
+            if (!MethodDef.HasObjectTypedArguments)
+                argumentSerializer.Deserialize(ref arguments, allowPolymorphism, message.ArgumentData);
+            else {
+                var dynamicCallHandler = (IRpcDynamicCallHandler)ServiceDef.Server;
+                var expectedArguments = arguments;
+                if (!dynamicCallHandler.IsValidCall(Context, ref expectedArguments, ref allowPolymorphism))
+                    return null;
 
-            peer.ArgumentSerializer.Deserialize(ref expectedArguments, allowPolymorphism, message.ArgumentData);
-            if (!ReferenceEquals(arguments, expectedArguments))
-                arguments.SetFrom(expectedArguments);
+                argumentSerializer.Deserialize(ref expectedArguments, allowPolymorphism, message.ArgumentData);
+                if (!ReferenceEquals(arguments, expectedArguments))
+                    arguments.SetFrom(expectedArguments);
+            }
         }
 
         // Set CancellationToken

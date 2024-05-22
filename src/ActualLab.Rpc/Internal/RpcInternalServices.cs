@@ -1,4 +1,5 @@
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc.Internal;
 

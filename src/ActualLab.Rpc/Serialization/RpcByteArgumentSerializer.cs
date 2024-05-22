@@ -5,9 +5,7 @@ using ActualLab.Internal;
 using ActualLab.IO;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
-namespace ActualLab.Rpc;
-
-#pragma warning disable IL2046
+namespace ActualLab.Rpc.Serialization;
 
 public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcArgumentSerializer
 {

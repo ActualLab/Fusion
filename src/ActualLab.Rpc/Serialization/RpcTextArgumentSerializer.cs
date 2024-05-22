@@ -2,7 +2,7 @@
 using ActualLab.Interception;
 using ActualLab.Internal;
 
-namespace ActualLab.Rpc;
+namespace ActualLab.Rpc.Serialization;
 
 public sealed class RpcTextArgumentSerializer(ITextSerializer serializer) : RpcArgumentSerializer
 {
@@ -10,6 +10,7 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer serializer) : RpcA
 
     private readonly ITextSerializer _polymorphicSerializer = new TypeDecoratingTextSerializer(serializer);
 
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override TextOrBytes Serialize(ArgumentList arguments, bool allowPolymorphism)
     {
         if (arguments.Length == 0)

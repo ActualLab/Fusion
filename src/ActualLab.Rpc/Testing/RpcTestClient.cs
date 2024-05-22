@@ -67,9 +67,9 @@ public class RpcTestClient(
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override async Task<RpcConnection> Connect(RpcClientPeer peer, CancellationToken cancellationToken)
+    public override async Task<RpcConnection> Connect(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
-        var channel = await this[peer].PullClientChannel(cancellationToken).ConfigureAwait(false);
+        var channel = await this[clientPeer].PullClientChannel(cancellationToken).ConfigureAwait(false);
         return new RpcConnection(channel);
     }
 }

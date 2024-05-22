@@ -1,5 +1,6 @@
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
+using ActualLab.Rpc.Serialization;
 using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Rpc;

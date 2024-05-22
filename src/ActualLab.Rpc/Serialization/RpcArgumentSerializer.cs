@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Internal;
 
-namespace ActualLab.Rpc;
+namespace ActualLab.Rpc.Serialization;
 
 public abstract class RpcArgumentSerializer
 {

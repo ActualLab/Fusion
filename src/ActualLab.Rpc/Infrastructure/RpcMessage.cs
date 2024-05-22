@@ -1,3 +1,5 @@
+using ActualLab.Interception;
+
 namespace ActualLab.Rpc.Infrastructure;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
@@ -11,11 +13,16 @@ public sealed partial record RpcMessage(
     [property: DataMember(Order = 4), MemoryPackOrder(4)] TextOrBytes ArgumentData,
     [property: DataMember(Order = 5), MemoryPackOrder(5)] List<RpcHeader>? Headers
 ) {
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public ArgumentList? Arguments { get; init; }
+
     public override string ToString()
     {
         var headers = Headers.OrEmpty();
         return $"{nameof(RpcMessage)} #{RelatedId}/{CallTypeId}: {Service}.{Method}, "
-            + $"ArgumentData: {ArgumentData.ToString(16)}"
+            + (Arguments != null
+                ? $"Arguments: {Arguments}"
+                : $"ArgumentData: {ArgumentData.ToString(16)}")
             + (headers.Count > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
     }
 

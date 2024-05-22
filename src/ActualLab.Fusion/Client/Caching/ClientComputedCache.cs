@@ -5,6 +5,7 @@ using ActualLab.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Fusion.Client.Caching;
 
