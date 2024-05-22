@@ -38,7 +38,7 @@ public static class RpcProxies
         var localService = localServiceResolver.Resolve(services);
         var interceptor = new RpcHybridInterceptor(
             services.GetRequiredService<RpcHybridInterceptor.Options>(), services,
-            serviceDef, localService, client, true);
+            serviceDef, localService, client);
         interceptor.BindTo(client, null, initialize);
         return client;
     }
