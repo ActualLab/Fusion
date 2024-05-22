@@ -53,7 +53,7 @@ public sealed class RpcHybridInterceptor : RpcInterceptorBase
             var peer = CallRouter.Invoke(methodDef, invocation.Arguments);
             try {
                 var resultTask = peer == null
-                    ? (Task<T>)methodDef.Invoker.Invoke(LocalService, invocation.Arguments)
+                    ? (Task<T>)methodDef.AsyncInvoker.Invoke(LocalService, invocation.Arguments)
                     : (Task<T>)chainIntercept.Invoke(invocation)!;
                 return await resultTask.ConfigureAwait(false);
             }

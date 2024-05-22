@@ -184,6 +184,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public IEnumerator<IRpcSharedObject> GetEnumerator()
+        // ReSharper disable once NotDisposedResourceIsReturned
         => _objects.Values.GetEnumerator();
 
     public void Register(IRpcSharedObject obj)

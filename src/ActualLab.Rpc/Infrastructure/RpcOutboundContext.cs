@@ -15,12 +15,12 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
 
     public byte CallTypeId = callTypeId;
     public List<RpcHeader>? Headers = headers;
-    public RpcPeer? StaticPeer;
+    public RpcPeer? PreSelectedPeer;
     public RpcMethodDef? MethodDef;
     public ArgumentList? Arguments;
     public CancellationToken CancellationToken;
     public RpcOutboundCall? Call;
-    public RpcPeer? Peer;
+    public RpcPeer Peer = null!;
     public long RelatedId;
     public RpcCacheInfoCapture? CacheInfoCapture;
 
@@ -50,8 +50,8 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
 
         // Peer
         var hub = MethodDef.Hub;
-        Peer = StaticPeer ?? hub.CallRouter.Invoke(methodDef, arguments);
-        if (Peer == null) {
+        Peer = PreSelectedPeer ?? hub.CallRouter.Invoke(methodDef, arguments);
+        if (Peer.ConnectionKind == RpcPeerConnectionKind.None) {
             Call = null;
             return null;
         }
@@ -68,13 +68,13 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
     {
         if (MethodDef == null || Arguments == null)
             throw ActualLab.Internal.Errors.NotInvoked(nameof(PrepareCall));
-        if (StaticPeer != null)
+        if (PreSelectedPeer != null)
             throw ActualLab.Internal.Errors.InternalError("This call cannot be rerouted (StaticPeer != null).");
 
         // Peer
         var hub = MethodDef.Hub;
         Peer = hub.CallRouter.Invoke(MethodDef, Arguments);
-        if (Peer == null) {
+        if (Peer.ConnectionKind == RpcPeerConnectionKind.None) {
             Call = null;
             return null;
         }
@@ -87,7 +87,7 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
     }
 
     public bool IsPeerChanged()
-        => StaticPeer == null && Peer != MethodDef!.Hub.CallRouter.Invoke(MethodDef, Arguments!);
+        => PreSelectedPeer == null && Peer != MethodDef!.Hub.CallRouter.Invoke(MethodDef, Arguments!);
 
     // Nested types
 

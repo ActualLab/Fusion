@@ -8,7 +8,7 @@ public delegate RpcServiceDef RpcServiceDefBuilder(RpcHub hub, RpcServiceBuilder
 public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodInfo method);
 public delegate bool RpcBackendServiceDetector(Type serviceType);
 public delegate Symbol RpcServiceScopeResolver(RpcServiceDef serviceDef);
-public delegate RpcPeer? RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
+public delegate RpcPeer RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
 public delegate void RpcPeerTracker(RpcPeer peer);
 public delegate RpcPeer RpcPeerFactory(RpcHub hub, RpcPeerRef peerRef);
 public delegate RpcInboundContext RpcInboundContextFactory(

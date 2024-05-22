@@ -21,8 +21,6 @@ public class RpcWebSocketClient(
             = DefaultHostUrlResolver;
         public Func<RpcWebSocketClient, RpcClientPeer, Uri> ConnectionUriResolver { get; init; }
             = DefaultConnectionUriResolver;
-        public Func<RpcWebSocketClient, Uri, bool> LocalUriDetector { get; init; }
-            = DefaultLocalUriDetector;
         public Func<RpcWebSocketClient, RpcClientPeer, WebSocketOwner> WebSocketOwnerFactory { get; init; }
             = DefaultWebSocketOwnerFactory;
 
@@ -80,20 +78,16 @@ public class RpcWebSocketClient(
     public Options Settings { get; } = settings;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override Task<RpcConnection> Connect(RpcClientPeer clientPeer, CancellationToken cancellationToken)
+    public override Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
         var uri = Settings.ConnectionUriResolver(this, clientPeer);
-        return Connect(clientPeer, uri, cancellationToken);
+        return ConnectRemote(clientPeer, uri, cancellationToken);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public virtual async Task<RpcConnection> Connect(
+    public virtual async Task<RpcConnection> ConnectRemote(
         RpcClientPeer clientPeer, Uri uri, CancellationToken cancellationToken)
     {
-        var isLocal = Settings.LocalUriDetector.Invoke(this, uri);
-        if (isLocal)
-            return await ConnectLocal(clientPeer, cancellationToken).ConfigureAwait(false);
-
         var hub = clientPeer.Hub;
         var connectCts = new CancellationTokenSource();
         var connectToken = connectCts.Token;

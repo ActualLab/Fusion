@@ -67,7 +67,7 @@ public class RpcTestClient(
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override async Task<RpcConnection> Connect(RpcClientPeer clientPeer, CancellationToken cancellationToken)
+    public override async Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
         var channel = await this[clientPeer].PullClientChannel(cancellationToken).ConfigureAwait(false);
         return new RpcConnection(channel);

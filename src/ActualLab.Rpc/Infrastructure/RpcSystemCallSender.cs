@@ -61,7 +61,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext() {
-            StaticPeer = peer,
+            PreSelectedPeer = peer,
         };
         var call = context.PrepareCall(HandshakeMethodDef, ArgumentList.New(handshake))!;
         return call.SendNoWait(false, sender);
@@ -85,12 +85,12 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         var headerCount = headers?.Count ?? 0;
         try {
             var context = new RpcOutboundContext(headers) {
-                StaticPeer = peer,
+                PreSelectedPeer = peer,
                 RelatedId = callId,
             };
-            var call = peer.HasLocalConnection
-                ? context.PrepareCall(OkMethodDef, ArgumentList.New<object?>(result))
-                : context.PrepareCall(OkMethodDef, ArgumentList.New(result));
+            var call = peer.ConnectionKind == RpcPeerConnectionKind.Remote
+                ? context.PrepareCall(OkMethodDef, ArgumentList.New(result)) // Serialization-ready
+                : context.PrepareCall(OkMethodDef, ArgumentList.New<object?>(result)); // No serialization expected
             return call!.SendNoWait(allowPolymorphism);
         }
         catch (Exception error) {
@@ -109,7 +109,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Error(RpcPeer peer, long callId, Exception error, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
-            StaticPeer = peer,
+            PreSelectedPeer = peer,
             RelatedId = callId,
         };
         var call = context.PrepareCall(ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()))!;
@@ -120,7 +120,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Cancel(RpcPeer peer, long callId, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
-            StaticPeer = peer,
+            PreSelectedPeer = peer,
             RelatedId = callId,
         };
         var call = context.PrepareCall(CancelMethodDef, ArgumentList.Empty)!;
@@ -133,7 +133,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task KeepAlive(RpcPeer peer, long[] localIds, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
-            StaticPeer = peer,
+            PreSelectedPeer = peer,
         };
         var call = context.PrepareCall(KeepAliveMethodDef, ArgumentList.New(localIds))!;
         return call.SendNoWait(false);
@@ -143,7 +143,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Disconnect(RpcPeer peer, long[] localIds, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
-            StaticPeer = peer,
+            PreSelectedPeer = peer,
         };
         var call = context.PrepareCall(DisconnectMethodDef, ArgumentList.New(localIds))!;
         return call.SendNoWait(false);
@@ -155,7 +155,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Ack(RpcPeer peer, long localId, long nextIndex, Guid hostId, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
-            StaticPeer = peer,
+            PreSelectedPeer = peer,
             RelatedId = localId,
         };
         var call = context.PrepareCall(AckMethodDef, ArgumentList.New(nextIndex, hostId))!;
@@ -166,7 +166,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task AckEnd(RpcPeer peer, long localId, Guid hostId, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
-            StaticPeer = peer,
+            PreSelectedPeer = peer,
             RelatedId = localId,
         };
         var call = context.PrepareCall(AckEndMethodDef, ArgumentList.New(hostId))!;
@@ -177,7 +177,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Item<TItem>(RpcPeer peer, long localId, long index, TItem item, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
-            StaticPeer = peer,
+            PreSelectedPeer = peer,
             RelatedId = localId,
         };
         var call = context.PrepareCall(ItemMethodDef, ArgumentList.New(index, item))!;
@@ -188,7 +188,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Batch<TItem>(RpcPeer peer, long localId, long index, TItem[] items, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
-            StaticPeer = peer,
+            PreSelectedPeer = peer,
             RelatedId = localId,
         };
         var call = context.PrepareCall(BatchMethodDef, ArgumentList.New(index, items))!;
@@ -199,7 +199,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task End(RpcPeer peer, long localId, long index, Exception? error, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
-            StaticPeer = peer,
+            PreSelectedPeer = peer,
             RelatedId = localId,
         };
         // An optimized version of Client.Error(result):

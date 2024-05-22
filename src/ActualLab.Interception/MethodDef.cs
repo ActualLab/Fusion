@@ -5,7 +5,7 @@ namespace ActualLab.Interception;
 public abstract class MethodDef
 {
     private static readonly MethodInfo InvokeMethod =
-        typeof(MethodDef).GetMethod(nameof(Invoke), BindingFlags.Static | BindingFlags.NonPublic)!;
+        typeof(MethodDef).GetMethod(nameof(InvokeAsync), BindingFlags.Static | BindingFlags.NonPublic)!;
     private static readonly ConcurrentDictionary<Type, Func<MethodDef, object, ArgumentList, Task>> InvokerCache = new();
 
     private string? _fullName;
@@ -23,7 +23,7 @@ public abstract class MethodDef
     public readonly bool ReturnsTask;
     public readonly bool ReturnsValueTask;
     public readonly Type UnwrappedReturnType;
-    public Func<object, ArgumentList, Task> Invoker => _invoker ??= CreateInvoker();
+    public Func<object, ArgumentList, Task> AsyncInvoker => _invoker ??= CreateAsyncInvoker();
 
     public bool IsValid { get; init; } = true;
 
@@ -69,7 +69,7 @@ public abstract class MethodDef
 
     // Private methods
 
-    private Func<object, ArgumentList, Task> CreateInvoker()
+    private Func<object, ArgumentList, Task> CreateAsyncInvoker()
     {
         var staticInvoker = InvokerCache.GetOrAdd(UnwrappedReturnType,
             tResult => (Func<MethodDef, object, ArgumentList, Task>)InvokeMethod
@@ -78,7 +78,7 @@ public abstract class MethodDef
         return (service, arguments) => staticInvoker.Invoke(this, service, arguments);
     }
 
-    private static Task Invoke<TResult>(MethodDef methodDef, object service, ArgumentList arguments)
+    private static Task InvokeAsync<TResult>(MethodDef methodDef, object service, ArgumentList arguments)
     {
         var result = arguments.GetInvoker(methodDef.Method).Invoke(service, arguments);
         if (methodDef.ReturnsTask) {

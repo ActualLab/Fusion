@@ -24,7 +24,7 @@ public sealed class RpcComputeSystemCallSender(IServiceProvider services)
     public Task Invalidate(RpcPeer peer, long callId, List<RpcHeader>? headers = null)
     {
         var context = new RpcOutboundContext(headers) {
-            StaticPeer = peer,
+            PreSelectedPeer = peer,
             RelatedId = callId,
         };
         // An optimized version of Client.Error(result):

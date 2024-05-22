@@ -13,7 +13,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     protected override string DebugTypeName => "->";
 
     public readonly RpcOutboundContext Context = context;
-    public readonly RpcPeer Peer = context.Peer!; // Calls
+    public readonly RpcPeer Peer = context.Peer;
     public abstract Task UntypedResultTask { get; }
     public TimeSpan ConnectTimeout;
     public TimeSpan Timeout;
@@ -106,9 +106,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public virtual RpcMessage CreateMessage(long relatedId, bool allowPolymorphism)
     {
-        var argumentSerializer = Peer.HasLocalConnection;
         var arguments = Context.Arguments!;
-        if (Peer.HasLocalConnection) {
+        if (Peer.ConnectionKind != RpcPeerConnectionKind.Remote) {
             var ctIndex = MethodDef.CancellationTokenIndex;
             if (ctIndex >= 0) {
                 arguments = arguments with { }; // Clone

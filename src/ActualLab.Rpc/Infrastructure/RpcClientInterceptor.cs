@@ -28,25 +28,27 @@ public sealed class RpcClientInterceptor(
 #pragma warning disable IL2026
             var context = invocation.Context as RpcOutboundContext ?? new();
             var call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
-            if (call == null) {
-                // No call == no peer -> we invoke it locally
-                var server = rpcMethodDef.Service.Server;
-                return rpcMethodDef.Invoker.Invoke(server, invocation.Arguments);
-            }
-
-            var peer = call.Peer;
+            var peer = context.Peer;
             Task resultTask;
-            if (call.NoWait || context.CacheInfoCapture?.CaptureMode == RpcCacheInfoCaptureMode.KeyOnly) {
+            if (call == null) {
+                // No call -> we invoke it locally
+                resultTask = peer.Ref.CanBeGone
+                    ? GetResultTaskWithRerouting<T>(context, null, invocation.Arguments)
+                    : rpcMethodDef.AsyncInvoker.Invoke(rpcMethodDef.Service.Server, invocation.Arguments);
+            }
+            else if (call.NoWait || context.CacheInfoCapture?.CaptureMode == RpcCacheInfoCaptureMode.KeyOnly) {
                 // NoWait requires call to be sent no matter what is the connection state now;
                 // RpcCacheInfoCaptureMode.KeyOnly requires this method to complete synchronously
-                // and + send nothing.
+                // and send nothing.
                 _ = call.RegisterAndSend();
                 resultTask = call.UntypedResultTask;
             }
-            else if (peer.Ref.CanBecomeObsolete)
-                resultTask = GetResultTaskWithRerouting((RpcOutboundCall<T>)call);
-            else if (!peer.ConnectionState.Value.IsConnected())
+            else if (peer.Ref.CanBeGone) {
+                resultTask = GetResultTaskWithRerouting(context, (RpcOutboundCall<T>?)call, invocation.Arguments);
+            }
+            else if (!peer.ConnectionState.Value.IsConnected()) {
                 resultTask = GetResultTaskOnceConnected((RpcOutboundCall<T>)call);
+            }
             else {
                 _ = call.RegisterAndSend();
                 resultTask = call.UntypedResultTask;
@@ -70,27 +72,27 @@ public sealed class RpcClientInterceptor(
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    private static async Task<T> GetResultTaskWithRerouting<T>(RpcOutboundCall<T> call)
+    private static async Task<T> GetResultTaskWithRerouting<T>(
+        RpcOutboundContext context, RpcOutboundCall<T>? call, ArgumentList arguments)
     {
-        var context = call.Context;
         var cancellationToken = context.CancellationToken;
         while (true) {
-            await call.Peer.WhenConnected(call.ConnectTimeout, cancellationToken).ConfigureAwait(false);
-            _ = call.RegisterAndSend();
             try {
-                return await call.ResultTask.ConfigureAwait(false);
+                Task<T> resultTask;
+                if (call == null) {
+                    var methodDef = context.MethodDef;
+                    resultTask = (Task<T>)methodDef!.AsyncInvoker.Invoke(methodDef.Service.Server, arguments);
+                }
+                else {
+                    await context.Peer.WhenConnected(call.ConnectTimeout, cancellationToken).ConfigureAwait(false);
+                    _ = call.RegisterAndSend();
+                    resultTask = call.ResultTask;
+                }
+                return await resultTask.ConfigureAwait(false);
             }
             catch (RpcRerouteException) {
-                if (context.PrepareReroutedCall() is not RpcOutboundCall<T> reroutedCall)
-                    break;
-
-                call = reroutedCall;
+                call = (RpcOutboundCall<T>?)context.PrepareReroutedCall();
             }
         }
-
-        // If we're here, rerouting ended with null call -> we invoke it locally
-        var server = call.MethodDef.Service.Server;
-        var resultTask = (Task<T>)call.MethodDef.Invoker.Invoke(server, context.Arguments!);
-        return await resultTask.ConfigureAwait(false);
     }
 }

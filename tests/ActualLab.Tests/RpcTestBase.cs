@@ -18,6 +18,8 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
     protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.Default;
     protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.Default with { IsBackend = true };
+    protected static readonly RpcPeerRef LocalClientPeerRef = RpcPeerRef.Local;
+    protected static readonly RpcPeerRef LocalBackendClientPeerRef = RpcPeerRef.Local with { IsBackend = true };
 
     private IServiceProvider? _services;
     private IServiceProvider? _clientServices;
@@ -117,9 +119,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
 
         var rpc = services.AddRpc();
         rpc.AddWebSocketClient(_ => RpcWebSocketClient.Options.Default with {
-            HostUrlResolver = (_, _) => UseLocalConnection
-                ? "ws://go.localhost"
-                : WebHost.ServerUri.ToString(),
+            HostUrlResolver = (_, _) => WebHost.ServerUri.ToString(),
             WebSocketChannelFactory = (_, webSocketOwner, _) => {
                 var channelOptions = WebSocketChannel<RpcMessage>.Options.Default with {
                     WriteDelayFactory = WebSocketWriteDelayFactory,
@@ -131,7 +131,9 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
             RpcHub? rpcHub = null;
             return (method, arguments) => {
                 rpcHub ??= method.Hub;
-                var peerRef = method.IsBackend ? BackendClientPeerRef : ClientPeerRef;
+                var peerRef = UseLocalConnection
+                    ? method.IsBackend ? LocalBackendClientPeerRef : LocalClientPeerRef
+                    : method.IsBackend ? BackendClientPeerRef : ClientPeerRef;
                 return rpcHub.GetClientPeer(peerRef);
             };
         });
