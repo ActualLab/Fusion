@@ -56,7 +56,7 @@ public class ClientComputeMethodFunction<T>(
                 var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
                 var call = SendRpcCall(input, cacheInfoCapture, cancellationToken);
                 if (call == null) {
-                    // TODO: Properly handle routing to local service
+                    // RpcHybridInterceptor will reroute it in this case
                     throw new RpcRerouteException();
                 }
 
@@ -104,7 +104,7 @@ public class ClientComputeMethodFunction<T>(
         // This is a fake call that only captures the cache key.
         // No actual call happens at this point.
         SendRpcCall(input, cacheInfoCapture, cancellationToken);
-        if (cacheInfoCapture.Key is not { } cacheKey)
+        if (cacheInfoCapture.Key is not { IsValid: true } cacheKey)
             return await ComputeRpc(input, cache, null, cancellationToken).ConfigureAwait(false);
 
         var cacheResultOpt = await cache.Get<T>(input, cacheKey, cancellationToken).ConfigureAwait(false);
@@ -142,6 +142,8 @@ public class ClientComputeMethodFunction<T>(
         var cacheInfoCapture = new RpcCacheInfoCapture();
         var call = SendRpcCall(input, cacheInfoCapture, default);
         if (call == null) {
+            // That's the best we can do here: the call has to be rerouted,
+            // so we invalidate cached computed to update it eventually.
             cachedComputed.Invalidate(true);
             return;
         }
@@ -267,6 +269,10 @@ public class ClientComputeMethodFunction<T>(
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;
         var interceptor = proxy.Interceptor;
+        if (interceptor is RpcHybridInterceptor hybridInterceptor)
+            interceptor = hybridInterceptor.ClientInterceptor;
+
+        // Fixing invocation: set CancellationToken + Context
         var ctIndex = input.MethodDef.CancellationTokenIndex;
         if (ctIndex >= 0 && invocation.Arguments.GetCancellationToken(ctIndex) != cancellationToken) {
             var arguments = invocation.Arguments with { }; // Cloning
@@ -276,11 +282,6 @@ public class ClientComputeMethodFunction<T>(
         else
             invocation = invocation with { Context = context };
 
-        if (interceptor is RpcHybridInterceptor hybridInterceptor) {
-            // TODO: Handle the routing between the local service & client
-            // var rpcMethodDef = (RpcMethodDef)hybridInterceptor.GetMethodDef(invocation.Method, invocation.Proxy.GetType())!;
-            interceptor = hybridInterceptor.ClientInterceptor;
-        }
         var clientInterceptor = ((ClientComputeServiceInterceptor)interceptor).ClientInterceptor;
         clientInterceptor.ChainIntercept<T>(input.MethodDef, invocation);
         return (RpcOutboundComputeCall<T>?)context.Call;
