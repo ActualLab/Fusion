@@ -1,14 +1,10 @@
 namespace ActualLab.Rpc;
 
-public record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBackend = false)
+public partial record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBackend = false)
 {
-    public const string NoneConnectionKindPrefix = "none:";
-    public const string LocalConnectionKindPrefix = "none:";
-    public static RpcPeerRef Default { get; set; } = NewClient("default");
-    public static RpcPeerRef None { get; set; } = NewClient(NoneConnectionKindPrefix + "0");
-    public static RpcPeerRef Local { get; set; } = NewClient(LocalConnectionKindPrefix + "0");
+    private static readonly CancellationTokenSource DummyCts = new();
 
-    public virtual CancellationToken GoneToken => default;
+    public virtual CancellationToken GoneToken => DummyCts.Token;
     public bool IsGone => GoneToken.IsCancellationRequested;
     public bool CanBeGone => GoneToken.CanBeCanceled;
 
@@ -31,10 +27,10 @@ public record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBackend = fal
     public virtual RpcPeerConnectionKind GetConnectionKind()
     {
         var key = Key.Value;
-        return key.StartsWith(NoneConnectionKindPrefix, StringComparison.Ordinal)
-            ? RpcPeerConnectionKind.None
-            : key.StartsWith(LocalConnectionKindPrefix, StringComparison.Ordinal)
-                ? RpcPeerConnectionKind.Local
+        return key.StartsWith(LocalCallPrefix, StringComparison.Ordinal)
+            ? RpcPeerConnectionKind.LocalCall
+            : key.StartsWith(LocalChannelPrefix, StringComparison.Ordinal)
+                ? RpcPeerConnectionKind.LocalChannel
                 : RpcPeerConnectionKind.Remote;
     }
 

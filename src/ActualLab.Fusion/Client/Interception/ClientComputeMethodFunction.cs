@@ -279,7 +279,7 @@ public class ClientComputeMethodFunction<T>(
         if (interceptor is RpcHybridInterceptor hybridInterceptor) {
             // TODO: Handle the routing between the local service & client
             // var rpcMethodDef = (RpcMethodDef)hybridInterceptor.GetMethodDef(invocation.Method, invocation.Proxy.GetType())!;
-            interceptor = hybridInterceptor.ClientInterceptor!;
+            interceptor = hybridInterceptor.ClientInterceptor;
         }
         var clientInterceptor = ((ClientComputeServiceInterceptor)interceptor).ClientInterceptor;
         clientInterceptor.ChainIntercept<T>(input.MethodDef, invocation);
@@ -291,7 +291,7 @@ public class ClientComputeMethodFunction<T>(
         RpcCacheKey? key,
         TextOrBytes? data)
     {
-        if (ReferenceEquals(key, null))
+        if (key is not { IsValid: true })
             return null;
 
         if (!data.HasValue) {

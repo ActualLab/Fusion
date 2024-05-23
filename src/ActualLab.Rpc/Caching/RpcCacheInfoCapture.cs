@@ -21,7 +21,7 @@ public sealed class RpcCacheInfoCapture
 
     public bool HasKeyAndData(out RpcCacheKey key, out TaskCompletionSource<TextOrBytes> dataSource)
     {
-        if (ReferenceEquals(Key, null) || DataSource == null) {
+        if (Key is not { IsValid: true } || DataSource == null) {
             key = null!;
             dataSource = null!;
             return false;
@@ -30,14 +30,5 @@ public sealed class RpcCacheInfoCapture
         key = Key;
         dataSource = DataSource;
         return true;
-    }
-
-    public async ValueTask<(RpcCacheKey? Key, TextOrBytes? Data)> GetKeyAndData()
-    {
-        if (!HasKeyAndData(out var key, out var dataSource))
-            return (null, null);
-
-        var dataResult = await dataSource.Task.ResultAwait(false);
-        return (key, dataResult.IsValue(out var data) ? (TextOrBytes?)data : null);
     }
 }

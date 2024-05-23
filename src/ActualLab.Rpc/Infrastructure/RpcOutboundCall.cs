@@ -86,12 +86,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         try {
             using (Context.Activate())
                 message = CreateMessage(Id, MethodDef.AllowArgumentPolymorphism);
-            if (Context.CacheInfoCapture is { } cacheInfoCapture && message.Arguments == null) {
-                cacheInfoCapture.Key ??= new RpcCacheKey(MethodDef.Service.Name, MethodDef.Name, message.ArgumentData);
-                if (cacheInfoCapture.CaptureMode == RpcCacheInfoCaptureMode.KeyOnly) {
-                    SetResult(null, null);
-                    return Task.CompletedTask;
-                }
+            if (Context.MustCaptureCacheKey(message, out var keyOnly) && keyOnly) {
+                // "Key-only" capture -> skipping the actual execution
+                SetResult(null, null);
+                return Task.CompletedTask;
             }
         }
         catch (Exception error) {
@@ -155,7 +153,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     protected void NotifyCancelled()
     {
         if (Context.CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly })
-            return; // The call had never happened, so no need for cancellation notification
+            return; // The call was never sent, so no need for cancellation notification
 
         try {
             var systemCallSender = Peer.Hub.InternalServices.SystemCallSender;
@@ -230,8 +228,8 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
         }
         if (ResultSource.TrySetResult(typedResult)) {
             Unregister();
-            if (context != null && Context.CacheInfoCapture is { } cacheInfoCapture && context.Message.Arguments == null)
-                cacheInfoCapture.DataSource?.TrySetResult(context.Message.ArgumentData);
+            if (context != null && Context.MustCaptureCacheData(out var dataSource))
+                dataSource.TrySetResult(context.Message.ArgumentData);
         }
     }
 
@@ -247,11 +245,11 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
             return;
 
         Unregister(context == null && !assumeCancelled);
-        if (Context.CacheInfoCapture is { } cacheInfoCapture) {
+        if (Context.MustCaptureCacheData(out var dataSource)) {
             if (oce != null)
-                cacheInfoCapture.DataSource?.TrySetCanceled(cancellationToken);
+                dataSource.TrySetCanceled(cancellationToken);
             else
-                cacheInfoCapture.DataSource?.TrySetException(error);
+                dataSource.TrySetException(error);
         }
     }
 
@@ -261,8 +259,8 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
         var isCancelled = ResultSource.TrySetCanceled(cancellationToken);
         if (isCancelled) {
             Unregister(true);
-            if (Context.CacheInfoCapture is { } cacheInfoCapture)
-                cacheInfoCapture.DataSource?.TrySetCanceled(cancellationToken);
+            if (Context.MustCaptureCacheData(out var dataSource))
+                dataSource.TrySetCanceled(cancellationToken);
         }
         return isCancelled;
     }

@@ -16,20 +16,18 @@ namespace ActualLab.Tests;
 public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsyncLifetime
 {
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
-    protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.Default;
-    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.Default with { IsBackend = true };
-    protected static readonly RpcPeerRef LocalClientPeerRef = RpcPeerRef.Local;
-    protected static readonly RpcPeerRef LocalBackendClientPeerRef = RpcPeerRef.Local with { IsBackend = true };
+    protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.GetDefaultClientPeerRef();
+    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.GetDefaultClientPeerRef(true);
 
     private IServiceProvider? _services;
     private IServiceProvider? _clientServices;
     private RpcWebHost? _webHost;
     private ILogger? _log;
 
+    public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
     public Func<Task>? WebSocketWriteDelayFactory { get; set; } = () => Task.Delay(1);
     public bool UseLogging { get; init; } = true;
     public bool UseTestClock { get; init; }
-    public bool UseLocalConnection { get; init; } = false;
     public bool ExposeBackend { get; init; } = false;
     public bool IsLogEnabled { get; init; } = true;
 
@@ -131,9 +129,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
             RpcHub? rpcHub = null;
             return (method, arguments) => {
                 rpcHub ??= method.Hub;
-                var peerRef = UseLocalConnection
-                    ? method.IsBackend ? LocalBackendClientPeerRef : LocalClientPeerRef
-                    : method.IsBackend ? BackendClientPeerRef : ClientPeerRef;
+                var peerRef = RpcPeerRef.GetDefaultClientPeerRef(ConnectionKind, method.IsBackend);
                 return rpcHub.GetClientPeer(peerRef);
             };
         });

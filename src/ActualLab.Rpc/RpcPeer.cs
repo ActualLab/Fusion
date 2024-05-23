@@ -86,9 +86,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
+    public bool IsConnected()
+        => ConnectionState.Value.Connection != null;
+
     public Task WhenConnected(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        return ConnectionState.Value.IsConnected()
+        return IsConnected()
             ? Task.CompletedTask
             : timeout > TimeSpan.Zero && timeout != TimeSpan.MaxValue
                 ? WhenConnectedAsync(this, timeout, cancellationToken)
@@ -155,8 +158,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     protected override async Task OnRun(CancellationToken cancellationToken)
 #pragma warning restore IL2046
     {
-        if (ConnectionKind == RpcPeerConnectionKind.None) {
-            // It's a fake peer that exists solely be "available"
+        if (ConnectionKind == RpcPeerConnectionKind.LocalCall) {
+            // It's a fake RpcPeer that exists solely to be "available"
             await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
             return;
         }

@@ -16,6 +16,10 @@ public static class Errors
     public static Exception NoProxyTarget()
         => new InvalidOperationException("Invocation.ProxyTarget is null.");
 
+    public static Exception SyncMethodResultTaskMustBeCompleted()
+        => new InvalidOperationException(
+            "The intercepted method is synchronous, but the task wrapping its result isn't completed yet.");
+
     // Proxy exceptions
 
     public static Exception NoInterceptor()

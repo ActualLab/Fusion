@@ -25,46 +25,37 @@ public sealed class RpcClientInterceptor(
     {
         var rpcMethodDef = (RpcMethodDef)methodDef;
         return invocation => {
-#pragma warning disable IL2026
             var context = invocation.Context as RpcOutboundContext ?? new();
-            var call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
+            var call = (RpcOutboundCall<T>?)context.PrepareCall(rpcMethodDef, invocation.Arguments);
             var peer = context.Peer;
-            Task resultTask;
-            if (call == null) {
-                // No call -> we invoke it locally
-                resultTask = peer.Ref.CanBeGone
-                    ? GetResultTaskWithRerouting<T>(context, null, invocation.Arguments)
-                    : rpcMethodDef.AsyncInvoker.Invoke(rpcMethodDef.Service.Server, invocation.Arguments);
-            }
-            else if (call.NoWait || context.CacheInfoCapture?.CaptureMode == RpcCacheInfoCaptureMode.KeyOnly) {
+            Task<T> resultTask;
+            if (peer.Ref.CanBeGone)
+                // Requires rerouting
+                resultTask = InvokeWithRerouting(context, call, invocation);
+            else if (call == null)
+                // peer.ConnectionKind == RpcPeerConnectionKind.LocalCall
+                resultTask = (Task<T>)rpcMethodDef.AsyncInvoker.Invoke(rpcMethodDef.Service.Server, invocation.Arguments);
+            else if (call.NoWait || context.CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly }) {
                 // NoWait requires call to be sent no matter what is the connection state now;
                 // RpcCacheInfoCaptureMode.KeyOnly requires this method to complete synchronously
                 // and send nothing.
                 _ = call.RegisterAndSend();
-                resultTask = call.UntypedResultTask;
+                resultTask = call.ResultTask;
             }
-            else if (peer.Ref.CanBeGone) {
-                resultTask = GetResultTaskWithRerouting(context, (RpcOutboundCall<T>?)call, invocation.Arguments);
-            }
-            else if (!peer.ConnectionState.Value.IsConnected()) {
-                resultTask = GetResultTaskOnceConnected((RpcOutboundCall<T>)call);
-            }
-            else {
+            else if (peer.IsConnected()) {
+                // No rerouting required & connection is there
                 _ = call.RegisterAndSend();
-                resultTask = call.UntypedResultTask;
+                resultTask = call.ResultTask;
             }
-#pragma warning restore IL2026
+            else
+                resultTask = InvokeOnceConnected(call);
 
-            return rpcMethodDef.ReturnsTask
-                ? resultTask
-                : rpcMethodDef.IsAsyncVoidMethod
-                    ? resultTask.ToValueTask()
-                    : ((Task<T>)resultTask).ToValueTask();
+            return rpcMethodDef.UnwrapAsyncInvokerResult(resultTask);
         };
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    private static async Task<T> GetResultTaskOnceConnected<T>(RpcOutboundCall<T> call)
+    private static async Task<T> InvokeOnceConnected<T>(RpcOutboundCall<T> call)
     {
         await call.Peer.WhenConnected(call.ConnectTimeout, call.Context.CancellationToken).ConfigureAwait(false);
         _ = call.RegisterAndSend();
@@ -72,8 +63,8 @@ public sealed class RpcClientInterceptor(
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    private static async Task<T> GetResultTaskWithRerouting<T>(
-        RpcOutboundContext context, RpcOutboundCall<T>? call, ArgumentList arguments)
+    private static async Task<T> InvokeWithRerouting<T>(
+        RpcOutboundContext context, RpcOutboundCall<T>? call, Invocation invocation)
     {
         var cancellationToken = context.CancellationToken;
         while (true) {
@@ -81,10 +72,18 @@ public sealed class RpcClientInterceptor(
                 Task<T> resultTask;
                 if (call == null) {
                     var methodDef = context.MethodDef;
-                    resultTask = (Task<T>)methodDef!.AsyncInvoker.Invoke(methodDef.Service.Server, arguments);
+                    resultTask = (Task<T>)methodDef!.AsyncInvoker.Invoke(methodDef.Service.Server, invocation.Arguments);
+                }
+                else if (call.NoWait || context.CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly }) {
+                    // NoWait requires call to be sent no matter what is the connection state now;
+                    // RpcCacheInfoCaptureMode.KeyOnly requires this method to complete synchronously
+                    // and send nothing.
+                    _ = call.RegisterAndSend();
+                    resultTask = call.ResultTask;
                 }
                 else {
-                    await context.Peer.WhenConnected(call.ConnectTimeout, cancellationToken).ConfigureAwait(false);
+                    if (!context.Peer.ConnectionState.Value.IsConnected())
+                        await context.Peer.WhenConnected(call.ConnectTimeout, cancellationToken).ConfigureAwait(false);
                     _ = call.RegisterAndSend();
                     resultTask = call.ResultTask;
                 }

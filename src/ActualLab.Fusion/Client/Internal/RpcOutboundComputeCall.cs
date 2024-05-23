@@ -62,8 +62,8 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             }
 
             ResultVersion = resultVersion;
-            if (context != null && Context.CacheInfoCapture is { } cacheInfoCapture)
-                cacheInfoCapture.DataSource?.TrySetResult(context.Message.ArgumentData);
+            if (context != null && Context.MustCaptureCacheData(out var dataSource))
+                dataSource.TrySetResult(context.Message.ArgumentData);
         }
     }
 
@@ -87,11 +87,11 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
 
             // Result was just set
             ResultVersion = resultVersion;
-            if (Context.CacheInfoCapture is { } cacheInfoCapture)
+            if (Context.MustCaptureCacheData(out var dataSource))
                 if (oce != null)
-                    cacheInfoCapture.DataSource?.TrySetCanceled(cancellationToken);
+                    dataSource.TrySetCanceled(cancellationToken);
                 else
-                    cacheInfoCapture.DataSource?.TrySetException(error);
+                    dataSource.TrySetException(error);
             if (context == null) // Non-peer set
                 SetInvalidatedUnsafe(!assumeCancelled);
         }
@@ -103,8 +103,8 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
         // We always use Lock to update ResultSource in this type
         lock (Lock) {
             var isCancelled = ResultSource.TrySetCanceled(cancellationToken);
-            if (isCancelled && Context.CacheInfoCapture is { } cacheInfoCapture)
-                cacheInfoCapture.DataSource?.TrySetCanceled(cancellationToken);
+            if (isCancelled && Context.MustCaptureCacheData(out var dataSource))
+                dataSource.TrySetCanceled(cancellationToken);
             WhenInvalidatedSource.TrySetResult(default);
             Unregister(true);
             return isCancelled;
@@ -121,8 +121,8 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
     {
         lock (Lock) {
             if (SetInvalidatedUnsafe(notifyCancelled)) {
-                if (ResultSource.TrySetCanceled() && Context.CacheInfoCapture is { } cacheInfoCapture)
-                    cacheInfoCapture.DataSource?.TrySetCanceled();
+                if (ResultSource.TrySetCanceled() && Context.MustCaptureCacheData(out var dataSource))
+                    dataSource.TrySetCanceled();
             }
         }
     }

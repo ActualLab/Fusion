@@ -17,13 +17,6 @@ public sealed record RpcPeerConnectionState(
     public bool IsConnected()
         => Connection != null;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsConnected([NotNullWhen(true)] out RpcConnection? connection)
-    {
-        connection = Connection;
-        return connection != null;
-    }
-
 #pragma warning disable CA1822
     public RpcPeerConnectionState NextConnected(
 #pragma warning restore CA1822

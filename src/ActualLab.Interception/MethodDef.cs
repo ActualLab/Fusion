@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Interception.Internal;
 
 namespace ActualLab.Interception;
 
@@ -66,6 +67,21 @@ public abstract class MethodDef
 
     public override string ToString()
         => $"{GetType().Name}({FullName}){(IsValid ? "" : " - invalid")}";
+
+    public object? UnwrapAsyncInvokerResult<TResult>(Task<TResult> asyncInvokerResult)
+    {
+        if (IsAsyncMethod)
+            return ReturnsTask
+                ? asyncInvokerResult
+                : IsAsyncVoidMethod
+                    ? ((Task)asyncInvokerResult).ToValueTask()
+                    : asyncInvokerResult.ToValueTask();
+
+        var taskAwaiter = asyncInvokerResult.GetAwaiter();
+        return taskAwaiter.IsCompleted
+            ? taskAwaiter.GetResult()
+            : throw Errors.SyncMethodResultTaskMustBeCompleted();
+    }
 
     // Private methods
 

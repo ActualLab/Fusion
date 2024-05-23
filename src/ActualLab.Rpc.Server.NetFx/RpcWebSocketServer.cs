@@ -72,7 +72,7 @@ public class RpcWebSocketServer(
         try {
             var peerRef = PeerRefFactory.Invoke(this, context, isBackend);
             var peer = Hub.GetServerPeer(peerRef);
-            if (peer.ConnectionState.Value.IsConnected()) {
+            if (peer.IsConnected()) {
                 var delay = Settings.ChangeConnectionDelay;
                 Log.LogWarning("{Peer} is already connected, will change its connection in {Delay}...",
                     peer, delay.ToShortString());

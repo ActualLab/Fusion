@@ -51,7 +51,7 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
         // Peer
         var hub = MethodDef.Hub;
         Peer = PreSelectedPeer ?? hub.CallRouter.Invoke(methodDef, arguments);
-        if (Peer.ConnectionKind == RpcPeerConnectionKind.None) {
+        if (Peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
             Call = null;
             return null;
         }
@@ -74,7 +74,7 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
         // Peer
         var hub = MethodDef.Hub;
         Peer = hub.CallRouter.Invoke(MethodDef, Arguments);
-        if (Peer.ConnectionKind == RpcPeerConnectionKind.None) {
+        if (Peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
             Call = null;
             return null;
         }
@@ -88,6 +88,25 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
 
     public bool IsPeerChanged()
         => PreSelectedPeer == null && Peer != MethodDef!.Hub.CallRouter.Invoke(MethodDef, Arguments!);
+
+    public bool MustCaptureCacheKey(RpcMessage? message, out bool keyOnly)
+    {
+        keyOnly = false;
+        if (CacheInfoCapture is not { } cacheInfoCapture)
+            return false;
+
+        keyOnly = cacheInfoCapture.CaptureMode == RpcCacheInfoCaptureMode.KeyOnly;
+        cacheInfoCapture.Key ??= message is { Arguments: null }
+            ? new RpcCacheKey(MethodDef!.Service.Name, MethodDef.Name, message.ArgumentData)
+            : RpcCacheKey.Invalid;
+        return true;
+    }
+
+    public bool MustCaptureCacheData([NotNullWhen(true)] out TaskCompletionSource<TextOrBytes>? dataSource)
+    {
+        dataSource = CacheInfoCapture?.DataSource;
+        return dataSource != null;
+    }
 
     // Nested types
 

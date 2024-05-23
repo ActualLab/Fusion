@@ -36,8 +36,16 @@ public sealed class RpcHybridInterceptor : RpcInterceptorBase
         (Invocation initialInvocation, MethodDef methodDef)
     {
         var rpcMethodDef = (RpcMethodDef)methodDef;
-        var chainIntercept = ClientInterceptor.GetChainInterceptFunc<T>(methodDef);
-        return invocation => InvokeWithRerouting<T>(rpcMethodDef, invocation, chainIntercept);
+        var chainInterceptFunc = ClientInterceptor.GetChainInterceptAsyncFunc<T>(methodDef);
+        return invocation => {
+            var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
+            var resultTask = peer.Ref.CanBeGone
+                ? InvokeWithRerouting(rpcMethodDef, peer, chainInterceptFunc, invocation)
+                : peer.ConnectionKind == RpcPeerConnectionKind.LocalCall
+                    ? (Task<T>)methodDef.AsyncInvoker.Invoke(LocalService, invocation.Arguments)
+                    : chainInterceptFunc.Invoke(invocation);
+            return rpcMethodDef.UnwrapAsyncInvokerResult(resultTask);
+        };
     }
 
     // We don't need to decorate this method with any dynamic access attributes
@@ -47,18 +55,17 @@ public sealed class RpcHybridInterceptor : RpcInterceptorBase
     // Private methods
 
     private async Task<T> InvokeWithRerouting<T>(
-        RpcMethodDef methodDef, Invocation invocation, Func<Invocation, object?> chainIntercept)
+        RpcMethodDef methodDef, RpcPeer peer, Func<Invocation, Task<T>> chainInterceptFunc, Invocation invocation)
     {
         while (true) {
-            var peer = CallRouter.Invoke(methodDef, invocation.Arguments);
             try {
-                var resultTask = peer == null
+                var resultTask = peer.ConnectionKind == RpcPeerConnectionKind.LocalCall
                     ? (Task<T>)methodDef.AsyncInvoker.Invoke(LocalService, invocation.Arguments)
-                    : (Task<T>)chainIntercept.Invoke(invocation)!;
+                    : chainInterceptFunc.Invoke(invocation);
                 return await resultTask.ConfigureAwait(false);
             }
             catch (RpcRerouteException) {
-                // Restart to reroute
+                peer = CallRouter.Invoke(methodDef, invocation.Arguments);
             }
         }
     }

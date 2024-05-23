@@ -5,11 +5,18 @@ using ActualLab.Testing.Collections;
 namespace ActualLab.Tests.Rpc;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
-public class RpcLocalConnectionTest : RpcTestBase
+public class RpcLocalChannelConnectionTest(ITestOutputHelper @out)
+    : RpcLocalConnectionTestBase(RpcPeerConnectionKind.LocalChannel, @out);
+
+[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
+public class RpcLocalCallConnectionTest(ITestOutputHelper @out)
+    : RpcLocalConnectionTestBase(RpcPeerConnectionKind.LocalCall, @out);
+
+public abstract class RpcLocalConnectionTestBase : RpcTestBase
 {
-    public RpcLocalConnectionTest(ITestOutputHelper @out) : base(@out)
+    protected RpcLocalConnectionTestBase(RpcPeerConnectionKind connectionKind, ITestOutputHelper @out) : base(@out)
     {
-        UseLocalConnection = true;
+        ConnectionKind = connectionKind;
         ExposeBackend = true;
     }
 
