@@ -2,9 +2,8 @@ namespace ActualLab.Rpc;
 
 public partial record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBackend = false)
 {
-    private static readonly CancellationTokenSource DummyCts = new();
-
-    public virtual CancellationToken GoneToken => DummyCts.Token;
+    // private static readonly CancellationTokenSource FakeGoneCts = new();
+    public virtual CancellationToken GoneToken => default;
     public bool IsGone => GoneToken.IsCancellationRequested;
     public bool CanBeGone => GoneToken.CanBeCanceled;
 
