@@ -29,16 +29,21 @@ public partial record RetryDelaySeq(
 
     public virtual TimeSpan this[int failedTryCount] {
         get {
+            if (Min <= TimeSpan.Zero)
+                throw new InvalidOperationException(
+                    $"{nameof(RetryDelaySeq)}.{nameof(Min)} must be greater than zero.");
             if (failedTryCount <= 0)
                 return TimeSpan.Zero;
+            if (Multiplier <= 1d)
+                return Min;
 
-            var multiplier = Math.Pow(Multiplier, failedTryCount - 1);
-            var start = Math.Max(Min.TotalSeconds, Spread > 0 ? Spread : DefaultSpread);
-            var result = double.IsInfinity(multiplier)
-                ? Max.TotalSeconds
-                : (start * multiplier).Clamp(Min.TotalSeconds, Max.TotalSeconds);
-
-            return TimeSpan.FromSeconds(result).ToRandom(Spread).Next();
+            try {
+                var multiplier = Math.Pow(Multiplier, failedTryCount - 1);
+                return (multiplier * Min).ToRandom(Spread).Next().Clamp(Min, Max);
+            }
+            catch (OverflowException) {
+                return Max;
+            }
         }
     }
 

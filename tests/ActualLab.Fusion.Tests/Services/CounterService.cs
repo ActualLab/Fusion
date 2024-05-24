@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ActualLab.Generators;
 using ActualLab.Generators.Internal;
 
 namespace ActualLab.Fusion.Tests.Services;

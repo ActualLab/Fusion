@@ -41,7 +41,7 @@ public readonly partial record struct RandomTimeSpan(
         if (MaxDelta <= TimeSpan.Zero)
             return Origin;
 
-        var deltaSeconds = MaxDelta.TotalSeconds * 2 * (ConcurrentRandomDoubleGenerator.Default.Next() - 0.5);
-        return (Origin + TimeSpan.FromSeconds(deltaSeconds)).Positive();
+        var delta = 2 * (RandomShared.NextDouble() - 0.5) * MaxDelta;
+        return (Origin + delta).Positive();
     }
 }

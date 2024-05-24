@@ -1,4 +1,5 @@
 using ActualLab.Fusion.Tests.Services;
+using ActualLab.Generators;
 using ActualLab.Generators.Internal;
 using ActualLab.Rpc;
 using ActualLab.Testing.Collections;

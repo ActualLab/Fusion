@@ -1,34 +1,24 @@
-namespace ActualLab.Generators.Internal;
+namespace ActualLab.Generators;
 
 public static class RandomShared
 {
-#if !NET6_0_OR_GREATER
-    private static readonly Random Random = new Random();
-#endif
-
-#if NET6_0_OR_GREATER
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static int Next()
     {
 #if NET6_0_OR_GREATER
         return Random.Shared.Next();
 #else
-        lock (Random)
-            return Random.Next();
+        return ThreadRandom.Instance.Next();
 #endif
     }
 
-#if NET6_0_OR_GREATER
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static double NextDouble()
     {
 #if NET6_0_OR_GREATER
         return Random.Shared.NextDouble();
 #else
-        lock (Random)
-            return Random.NextDouble();
+        return ThreadRandom.Instance.NextDouble();
 #endif
     }
 }

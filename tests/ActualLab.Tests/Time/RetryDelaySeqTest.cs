@@ -1,4 +1,4 @@
-namespace ActualLab.Tests.Rpc;
+namespace ActualLab.Tests.Time;
 
 public class RetryDelaySeqTest(ITestOutputHelper @out) : TestBase(@out)
 {
@@ -17,10 +17,18 @@ public class RetryDelaySeqTest(ITestOutputHelper @out) : TestBase(@out)
         s[100].TotalSeconds.Should().BeApproximately(s.Max.TotalSeconds, s.Max.TotalSeconds * s.Spread * 2);
     }
 
+    [Fact]
+    public void WrongMinDelayTest()
+    {
+        var s = RetryDelaySeq.Exp(0, 1);
+        Assert.Throws<InvalidOperationException>(() => s[0]);
+        Assert.Throws<InvalidOperationException>(() => s[1]);
+    }
+
     [Theory]
-    [InlineData(0, 60)]
+    [InlineData(0.1, 60)]
     [InlineData(10, 60)]
-    public void RetryDelaySequenceCanBeUpTo1MLong(int minDelay, int maxDelay)
+    public void RetryDelaySequenceCanBeUpTo1MLong(double minDelay, double maxDelay)
     {
         var seq = RetryDelaySeq.Exp(minDelay, maxDelay, 0);
         var minDelaySpan = TimeSpan.FromSeconds(minDelay);
@@ -33,9 +41,9 @@ public class RetryDelaySeqTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Theory]
-    [InlineData(0, 60)]
+    [InlineData(0.1, 60)]
     [InlineData(10, 60)]
-    public void RetryDelaySequenceIntervalsMustGrowBetweenAttempts(int minDelay, int maxDelay)
+    public void RetryDelaySequenceIntervalsMustGrowBetweenAttempts(double minDelay, double maxDelay)
     {
         var seq = RetryDelaySeq.Exp(minDelay, maxDelay, 0);
         var maxDelaySpan = TimeSpan.FromSeconds(maxDelay);
