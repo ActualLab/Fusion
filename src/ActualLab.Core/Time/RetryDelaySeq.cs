@@ -33,7 +33,11 @@ public partial record RetryDelaySeq(
                 return TimeSpan.Zero;
 
             var multiplier = Math.Pow(Multiplier, failedTryCount - 1);
-            var result = (Min.TotalSeconds * multiplier).Clamp(Min.TotalSeconds, Max.TotalSeconds);
+            var start = Math.Max(Min.TotalSeconds, Spread > 0 ? Spread : DefaultSpread);
+            var result = double.IsInfinity(multiplier)
+                ? Max.TotalSeconds
+                : (start * multiplier).Clamp(Min.TotalSeconds, Max.TotalSeconds);
+
             return TimeSpan.FromSeconds(result).ToRandom(Spread).Next();
         }
     }
