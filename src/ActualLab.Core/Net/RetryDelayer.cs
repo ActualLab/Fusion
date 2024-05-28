@@ -9,7 +9,7 @@ public class RetryDelayer : IRetryDelayer
 
     public Func<IMomentClock> ClockProvider { get; init; } = static () => CpuClock.Instance;
     public IMomentClock Clock => _clock ??= ClockProvider.Invoke();
-    public RetryDelaySeq Delays { get; set; } = new();
+    public RetryDelaySeq Delays { get; set; } = RetryDelaySeq.Fixed(0.5);
     public int? Limit { get; set; }
 
     public CancellationToken CancelDelaysToken {
