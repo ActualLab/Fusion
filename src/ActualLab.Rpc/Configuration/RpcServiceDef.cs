@@ -25,8 +25,8 @@ public sealed class RpcServiceDef
     public Symbol Scope { get; init; }
     public LegacyNames LegacyNames { get; init; }
 
-    public RpcMethodDef this[MethodInfo method] => Get(method) ?? throw Errors.NoMethod(Type, method);
-    public RpcMethodDef this[Symbol methodName] => Get(methodName) ?? throw Errors.NoMethod(Type, methodName);
+    public RpcMethodDef this[MethodInfo method] => GetMethod(method) ?? throw Errors.NoMethod(Type, method);
+    public RpcMethodDef this[Symbol methodName] => GetMethod(methodName) ?? throw Errors.NoMethod(Type, methodName);
 
     public RpcServiceDef(RpcHub hub, RpcServiceBuilder service)
     {
@@ -93,6 +93,6 @@ public sealed class RpcServiceDef
         return _toStringCached = $"'{Name}'{kindInfo}: {Type.GetName()}{serverInfo}, {Methods.Count} method(s)";
     }
 
-    public RpcMethodDef? Get(MethodInfo method) => _methods.GetValueOrDefault(method);
-    public RpcMethodDef? Get(Symbol methodName) => _methodByName.GetValueOrDefault(methodName);
+    public RpcMethodDef? GetMethod(MethodInfo method) => _methods.GetValueOrDefault(method);
+    public RpcMethodDef? GetMethod(Symbol methodName) => _methodByName.GetValueOrDefault(methodName);
 }

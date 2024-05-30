@@ -12,8 +12,11 @@ public interface ITypeViewFactory
 
 public class TypeViewFactory(TypeViewInterceptor interceptor) : ITypeViewFactory
 {
-    public static ITypeViewFactory Default { get; set; } =
-        new TypeViewFactory(new TypeViewInterceptor(DependencyInjection.ServiceProviderExt.Empty));
+    private static readonly TypeViewInterceptor DefaultInterceptor = new(
+        TypeViewInterceptor.Options.Default,
+        DependencyInjection.ServiceProviderExt.Empty);
+
+    public static ITypeViewFactory Default { get; set; } = new TypeViewFactory(DefaultInterceptor);
 
     protected Interceptor Interceptor { get; } = interceptor;
 
@@ -26,7 +29,7 @@ public class TypeViewFactory(TypeViewInterceptor interceptor) : ITypeViewFactory
         if (!viewType.IsInterface)
             throw new ArgumentOutOfRangeException(nameof(viewType));
 
-        return Proxies.New(viewType, Interceptor, implementation);
+        return Proxies.CreateInstance(viewType, Interceptor, implementation, false);
     }
 
     public TypeViewFactory<TView> For<TView>()
@@ -34,13 +37,11 @@ public class TypeViewFactory(TypeViewInterceptor interceptor) : ITypeViewFactory
         => new(this);
 }
 
-public readonly struct TypeViewFactory<TView>
+public readonly struct TypeViewFactory<TView>(ITypeViewFactory factory)
     where TView : class
 {
-    public ITypeViewFactory Factory { get; }
-
-    public TypeViewFactory(ITypeViewFactory factory) => Factory = factory;
+    public ITypeViewFactory Factory { get; } = factory;
 
     public TView CreateView(object implementation)
-        => (TView) Factory.CreateView(implementation, typeof(TView));
+        => (TView)Factory.CreateView(implementation, typeof(TView));
 }

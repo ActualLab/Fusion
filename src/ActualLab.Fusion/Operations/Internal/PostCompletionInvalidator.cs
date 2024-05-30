@@ -119,7 +119,7 @@ public class PostCompletionInvalidator(
             return false;
 
         var clientInterceptor = clientComputeServiceInterceptor.ClientInterceptor;
-        if (clientInterceptor.GetMethodDef(finalHandler.Method, service.GetType()) is not RpcMethodDef rpcMethodDef)
+        if (clientInterceptor.GetMethodDef(service.GetType(), finalHandler.Method) is not RpcMethodDef rpcMethodDef)
             return false;
 
         var arguments = (ArgumentList)ArgumentListNewMethod

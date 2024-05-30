@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
 using ActualLab.Interception.Internal;
 
@@ -5,18 +6,17 @@ namespace ActualLab.Interception.Interceptors;
 
 public class TypeViewInterceptor : Interceptor
 {
-    private readonly Func<(MethodInfo, Type), Invocation, Func<Invocation, object?>> _createHandler;
-    private readonly ConcurrentDictionary<(MethodInfo, Type), Func<Invocation, object?>?> _handlerCache = new(1, 64);
+    public new record Options : Interceptor.Options
+    {
+        public static Options Default { get; set; } = new();
+    }
+
     private readonly MethodInfo _createConvertingHandlerMethod;
     private readonly MethodInfo _createTaskConvertingHandlerMethod;
     private readonly MethodInfo _createValueTaskConvertingHandlerMethod;
 
-    protected IServiceProvider Services { get; }
-
-    public TypeViewInterceptor(IServiceProvider services)
+    public TypeViewInterceptor(Options settings, IServiceProvider services) : base(settings, services)
     {
-        Services = services;
-        _createHandler = CreateHandler;
         _createConvertingHandlerMethod = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
             .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateConvertingHandler)));
@@ -28,26 +28,9 @@ public class TypeViewInterceptor : Interceptor
             .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateValueTaskConvertingHandler)));
     }
 
-    public override void Intercept(Invocation invocation)
-    {
-        var key = (invocation.Method, invocation.Proxy.GetType());
-        var handler = _handlerCache.GetOrAdd(key, _createHandler, invocation);
-        if (handler == null)
-            invocation.Intercepted();
-        else
-            handler.Invoke(invocation);
-    }
-
-    public override TResult Intercept<TResult>(Invocation invocation)
-    {
-        var key = (invocation.Method, invocation.Proxy.GetType());
-        var handler = _handlerCache.GetOrAdd(key, _createHandler, invocation);
-        return handler == null
-            ? invocation.Intercepted<TResult>()
-            : (TResult)handler.Invoke(invocation)!;
-    }
-
-    protected virtual Func<Invocation, object?> CreateHandler((MethodInfo, Type) key, Invocation initialInvocation)
+    protected override Func<Invocation, object?>? CreateHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
+        Invocation initialInvocation, MethodDef methodDef)
     {
         var tTarget = initialInvocation.ProxyTarget?.GetType() ?? throw Errors.NoProxyTarget();
         var mSource = initialInvocation.Method;

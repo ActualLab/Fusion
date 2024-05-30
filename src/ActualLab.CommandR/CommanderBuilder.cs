@@ -40,24 +40,24 @@ public readonly struct CommanderBuilder
         Handlers = services.AddInstance(new HashSet<CommandHandler>(), addInFront: true);
 
         // Core services
-        services.TryAddSingleton(_ => new HostId());
-        services.TryAddSingleton(_ => MomentClockSet.Default);
-        services.TryAddSingleton(c => c.GetRequiredService<MomentClockSet>().SystemClock);
-        services.TryAddSingleton<UuidGenerator>(_ => new UlidUuidGenerator());
-        services.TryAddSingleton<VersionGenerator<long>>(c => new ClockBasedVersionGenerator(c.Clocks().SystemClock));
-        services.TryAddSingleton(_ => ChaosMaker.Default);
+        services.AddSingleton(_ => new HostId());
+        services.AddSingleton(_ => MomentClockSet.Default);
+        services.AddSingleton(c => c.GetRequiredService<MomentClockSet>().SystemClock);
+        services.AddSingleton<UuidGenerator>(_ => new UlidUuidGenerator());
+        services.AddSingleton<VersionGenerator<long>>(c => new ClockBasedVersionGenerator(c.Clocks().SystemClock));
+        services.AddSingleton(_ => ChaosMaker.Default);
 
         // Commander, handlers, etc.
-        services.TryAddSingleton<ICommander>(c => new Commander(c));
-        services.TryAddSingleton(c => c.GetRequiredService<ICommander>().Hub);
-        services.TryAddSingleton(c => new CommandHandlerRegistry(c));
-        services.TryAddSingleton(_ => new CommandHandlerResolver.Options());
-        services.TryAddSingleton(c => new CommandHandlerResolver(
+        services.AddSingleton<ICommander>(c => new Commander(c));
+        services.AddSingleton(c => c.GetRequiredService<ICommander>().Hub);
+        services.AddSingleton(c => new CommandHandlerRegistry(c));
+        services.AddSingleton(_ => new CommandHandlerResolver.Options());
+        services.AddSingleton(c => new CommandHandlerResolver(
             c.GetRequiredService<CommandHandlerResolver.Options>(), c));
 
         // Command services & their dependencies
-        Services.TryAddSingleton(_ => new CommandServiceInterceptor.Options());
-        Services.TryAddSingleton(c => new CommandServiceInterceptor(
+        Services.AddSingleton(_ => CommandServiceInterceptor.Options.Default);
+        Services.AddSingleton(c => new CommandServiceInterceptor(
             c.GetRequiredService<CommandServiceInterceptor.Options>(), c));
 
         // Default handlers

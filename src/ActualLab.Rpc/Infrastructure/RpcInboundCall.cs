@@ -231,7 +231,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     {
         var methodDef = MethodDef;
         var server = methodDef.Service.Server;
-        return (Task<TResult>)methodDef.AsyncInvoker.Invoke(server, Arguments!);
+        return (Task<TResult>)methodDef.TargetAsyncInvoker.Invoke(server, Arguments!);
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]

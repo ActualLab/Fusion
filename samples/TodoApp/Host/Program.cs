@@ -34,7 +34,7 @@ using Templates.TodoApp.UI;
 
 // IComputeService validation should be off in release
 #if !DEBUG
-InterceptorBase.Options.Defaults.IsValidationEnabled = false;
+Interceptor.Options.Defaults.IsValidationEnabled = false;
 #endif
 
 var builder = WebApplication.CreateBuilder();

@@ -102,4 +102,12 @@ public static class Errors
 
     public static Exception UnsupportedWebSocketMessageKind()
         => new KeyNotFoundException("Unsupported WebSocket message kind.");
+
+    public static Exception NoLocalCallInvoker()
+        => new InvalidOperationException(
+            $"{nameof(RpcRoutingInterceptor)} is misconfigured: it can't route local calls.");
+
+    public static Exception NoRemoteCallInvoker()
+        => new InvalidOperationException(
+            $"{nameof(RpcRoutingInterceptor)} is misconfigured: it can't route remote calls.");
 }

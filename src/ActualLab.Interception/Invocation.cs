@@ -24,7 +24,7 @@ public readonly record struct Invocation(
     public string Format()
         => $"{Proxy.GetType().NonProxyType().GetName()}.{Method.Name}{Arguments}";
 
-    public void Intercepted()
+    public void InterceptedVoid()
     {
         if (InterceptedDelegate is Action<ArgumentList> action)
             action.Invoke(Arguments);
@@ -33,17 +33,15 @@ public readonly record struct Invocation(
     }
 
     public TResult Intercepted<TResult>()
-    {
-        return InterceptedDelegate is Func<ArgumentList, TResult> func
+        => InterceptedDelegate is Func<ArgumentList, TResult> func
             ? func.Invoke(Arguments)
             : throw Errors.InvalidInterceptedDelegate();
-    }
 
     public object? InterceptedUntyped()
         => InterceptedUntypedCache.GetOrAdd(Method.ReturnType,
             static returnType => returnType == typeof(void)
                 ? invocation => {
-                    invocation.Intercepted();
+                    invocation.InterceptedVoid();
                     return null;
                 }
                 : (Func<Invocation, object?>)InterceptedUntypedMethod

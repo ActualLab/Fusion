@@ -1,59 +1,41 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Interception;
 using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Client.Interception;
 
-public class ClientComputeServiceInterceptor(
-    ClientComputeServiceInterceptor.Options settings,
-    IServiceProvider services,
-    RpcClientInterceptor clientInterceptor
-    ) : ComputeServiceInterceptorBase(settings, services)
+public class ClientComputeServiceInterceptor : ComputeServiceInterceptor
 {
-    public new record Options : ComputeServiceInterceptorBase.Options
+    public new record Options : ComputeServiceInterceptor.Options
     {
-        public bool WarnOnRemoteInvalidation { get; init; }
+        public static new Options Default { get; set; } = new();
     }
 
-    public readonly Options Settings = settings;
-    public readonly RpcClientInterceptor ClientInterceptor = clientInterceptor;
-    public readonly IClientComputedCache? Cache = services.GetService<IClientComputedCache>();
+    public readonly RpcClientInterceptor ClientInterceptor;
 
-    public override void Intercept(Invocation invocation)
-    {
-        var handler = GetHandler(invocation) ?? ClientInterceptor.GetHandler(invocation);
-        if (handler == null)
-            invocation.Intercepted();
-        else
-            handler(invocation);
-    }
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public ClientComputeServiceInterceptor(
+        Options settings,
+        IServiceProvider services,
+        RpcClientInterceptor clientInterceptor
+        ) : base(settings, services)
+        => ClientInterceptor = clientInterceptor;
 
-    public override TResult Intercept<TResult>(Invocation invocation)
+    public override Func<Invocation, object?>? GetHandler(Invocation invocation)
     {
-        var handler = GetHandler(invocation);
-        if (handler == null) {
-            // If we're here, it's not a compute method, so we route the call to ClientInterceptor
-            handler = ClientInterceptor.GetHandler(invocation);
-            return handler == null
-                ? invocation.Intercepted<TResult>()
-                : (TResult)handler.Invoke(invocation)!;
-        }
+        var handler = GetOwnHandler(invocation);
+        if (handler == null) // Not a compute method
+            return Next?.GetOwnHandler(invocation);
 
         // If we're here, it's a compute method
-        if (!Invalidation.IsActive)
-            return (TResult)handler.Invoke(invocation)!;
-
-        // And we're inside Computed.Invalidate() block
-        if (Settings.WarnOnRemoteInvalidation)
-            Log.LogWarning("Remote invalidation suppressed: {Invocation}", invocation.Format());
-        var computeMethodDef = (ComputeMethodDef)GetMethodDef(invocation.Method, invocation.Proxy.GetType())!;
-        return (TResult)computeMethodDef.DefaultResult;
+        return Invalidation.IsActive
+            ? GetDefaultResultHandler(invocation) // Do nothing
+            : handler;
     }
 
     protected override ComputeFunctionBase<T> CreateFunction<T>(ComputeMethodDef method)
-        => new ClientComputeMethodFunction<T>(method, Cache, Services);
+        => new ClientComputeMethodFunction<T>(method, Hub.ClientComputedCache, Services);
 
     protected override void ValidateTypeInternal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)

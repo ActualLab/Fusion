@@ -11,35 +11,17 @@ public static class RpcProxies
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type? proxyType = null,
+        bool isHybrid,
         bool initialize = true)
     {
         var rpcHub = services.RpcHub();
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
         proxyType ??= serviceType;
 
-        var interceptor = new RpcClientInterceptor(
-            services.GetRequiredService<RpcClientInterceptor.Options>(), services, serviceDef);
-        var proxy = Proxies.New(proxyType, interceptor, initialize);
-        return proxy;
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public static IProxy NewHybridProxy(
-        IServiceProvider services,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        ServiceResolver localServiceResolver,
-        bool initialize = true)
-    {
-        var rpcHub = services.RpcHub();
-        var serviceDef = rpcHub.ServiceRegistry[serviceType];
-        var client = NewClientProxy(services, serviceType, initialize: false);
-
-        // Replacing client's interceptor with RpcHybridInterceptor
-        var localService = localServiceResolver.Resolve(services);
-        var interceptor = new RpcHybridInterceptor(
-            services.GetRequiredService<RpcHybridInterceptor.Options>(), services,
-            serviceDef, localService, client);
-        interceptor.BindTo(client, null, initialize);
-        return client;
+        var interceptorOptions = services.GetRequiredService<RpcClientInterceptor.Options>();
+        var interceptor = new RpcClientInterceptor(interceptorOptions, services, serviceDef) {
+            IsHybrid = isHybrid,
+        };
+        return services.ActivateProxy(proxyType, interceptor, null, initialize);
     }
 }

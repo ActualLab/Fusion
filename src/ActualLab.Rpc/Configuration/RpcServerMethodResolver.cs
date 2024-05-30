@@ -17,7 +17,7 @@ public sealed class RpcServerMethodResolver
             // Default flow
             var service = ServiceRegistry.Get(serviceName);
             return service is { HasServer: true }
-                ? service.Get(methodName)
+                ? service.GetMethod(methodName)
                 : null;
         }
     }

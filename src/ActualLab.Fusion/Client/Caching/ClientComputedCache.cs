@@ -64,7 +64,7 @@ public abstract class ClientComputedCache : RpcServiceBase, IClientComputedCache
     public async ValueTask<(T Value, TextOrBytes Data)?> Get<T>(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
     {
         var serviceDef = Hub.ServiceRegistry.Get(key.Service);
-        var methodDef = serviceDef?.Get(key.Method);
+        var methodDef = serviceDef?.GetMethod(key.Method);
         if (methodDef == null)
             return null;
 

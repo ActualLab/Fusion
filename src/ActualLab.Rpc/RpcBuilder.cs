@@ -26,7 +26,6 @@ public readonly struct RpcBuilder
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcMethodTracer))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcMethodActivityCounters))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcClientInterceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcHybridInterceptor))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundContext))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundContextFactory))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcOutboundContext))]
@@ -62,40 +61,40 @@ public readonly struct RpcBuilder
         services.AddSingleton(c => new RpcHub(c));
 
         // Common services
-        services.TryAddSingleton(c => new RpcServiceRegistry(c));
-        services.TryAddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.ServiceScopeResolver);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.InboundCallFilter);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.CallRouter);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.InboundContextFactory);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.PeerFactory);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.ClientConnectionFactory);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.ServerConnectionFactory);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.BackendServiceDetector);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.UnrecoverableErrorDetector);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.MethodTracerFactory);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.CallLoggerFactory);
-        services.TryAddSingleton(_ => RpcDefaultDelegates.CallLoggerFilter);
-        services.TryAddSingleton(_ => RpcArgumentSerializer.Default);
-        services.TryAddSingleton(c => new RpcInboundMiddlewares(c));
-        services.TryAddSingleton(c => new RpcOutboundMiddlewares(c));
-        services.TryAddTransient(_ => new RpcInboundCallTracker());
-        services.TryAddTransient(_ => new RpcOutboundCallTracker());
-        services.TryAddTransient(_ => new RpcRemoteObjectTracker());
-        services.TryAddTransient(_ => new RpcSharedObjectTracker());
-        services.TryAddSingleton(c => new RpcClientPeerReconnectDelayer(c));
-        services.TryAddSingleton(_ => RpcLimits.Default);
+        services.AddSingleton(c => new RpcServiceRegistry(c));
+        services.AddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
+        services.AddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);
+        services.AddSingleton(_ => RpcDefaultDelegates.ServiceScopeResolver);
+        services.AddSingleton(_ => RpcDefaultDelegates.InboundCallFilter);
+        services.AddSingleton(_ => RpcDefaultDelegates.CallRouter);
+        services.AddSingleton(_ => RpcDefaultDelegates.RerouteDelayer);
+        services.AddSingleton(_ => RpcDefaultDelegates.InboundContextFactory);
+        services.AddSingleton(_ => RpcDefaultDelegates.PeerFactory);
+        services.AddSingleton(_ => RpcDefaultDelegates.ClientConnectionFactory);
+        services.AddSingleton(_ => RpcDefaultDelegates.ServerConnectionFactory);
+        services.AddSingleton(_ => RpcDefaultDelegates.BackendServiceDetector);
+        services.AddSingleton(_ => RpcDefaultDelegates.UnrecoverableErrorDetector);
+        services.AddSingleton(_ => RpcDefaultDelegates.MethodTracerFactory);
+        services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFactory);
+        services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFilter);
+        services.AddSingleton(_ => RpcArgumentSerializer.Default);
+        services.AddSingleton(c => new RpcInboundMiddlewares(c));
+        services.AddSingleton(c => new RpcOutboundMiddlewares(c));
+        services.AddTransient(_ => new RpcInboundCallTracker());
+        services.AddTransient(_ => new RpcOutboundCallTracker());
+        services.AddTransient(_ => new RpcRemoteObjectTracker());
+        services.AddTransient(_ => new RpcSharedObjectTracker());
+        services.AddSingleton(c => new RpcClientPeerReconnectDelayer(c));
+        services.AddSingleton(_ => RpcLimits.Default);
 
         // Interceptor options (the instances are created by RpcProxies)
-        services.TryAddSingleton(_ => RpcClientInterceptor.Options.Default);
-        services.TryAddSingleton(_ => RpcHybridInterceptor.Options.Default);
+        services.AddSingleton(_ => RpcClientInterceptor.Options.Default);
 
         // System services
         if (!Configuration.Services.ContainsKey(typeof(IRpcSystemCalls))) {
             Service<IRpcSystemCalls>().HasServer<RpcSystemCalls>().HasName(RpcSystemCalls.Name);
-            services.TryAddSingleton(c => new RpcSystemCalls(c));
-            services.TryAddSingleton(c => new RpcSystemCallSender(c));
+            services.AddSingleton(c => new RpcSystemCalls(c));
+            services.AddSingleton(c => new RpcSystemCallSender(c));
         }
     }
 
@@ -166,13 +165,6 @@ public readonly struct RpcBuilder
         where TService : class
         => AddClient(typeof(TService), typeof(TService), name);
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddClient<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TClient>
-        (Symbol name = default)
-        where TService : class
-        => AddClient(typeof(TService), typeof(TClient), name);
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         Symbol name = default)
@@ -180,18 +172,18 @@ public readonly struct RpcBuilder
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type clientType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType,
         Symbol name = default)
     {
         if (!serviceType.IsInterface)
             throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IRpcService).IsAssignableFrom(serviceType))
             throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
-        if (!serviceType.IsAssignableFrom(clientType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo(clientType, serviceType, nameof(clientType));
+        if (!serviceType.IsAssignableFrom(proxyType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(proxyType, serviceType, nameof(proxyType));
 
         Service(serviceType).HasName(name);
-        Services.AddSingleton(clientType, c => RpcProxies.NewClientProxy(c, serviceType, clientType));
+        Services.AddSingleton(proxyType, c => RpcProxies.NewClientProxy(c, serviceType, proxyType, false));
         return this;
     }
 
@@ -242,21 +234,16 @@ public readonly struct RpcBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serverType,
         Symbol name = default)
-        => serviceType == serverType
-            ? throw new ArgumentOutOfRangeException(nameof(serverType))
-            : AddHybrid(serviceType, ServiceResolver.New(serverType), name);
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddHybrid(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        ServiceResolver serverResolver, Symbol name = default)
     {
         if (!serviceType.IsInterface)
             throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IRpcService).IsAssignableFrom(serviceType))
             throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
+        if (!serviceType.IsAssignableFrom(serverType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(serverType, serviceType, nameof(serverType));
 
         Service(serviceType).HasName(name);
-        Services.AddSingleton(serviceType, c => RpcProxies.NewHybridProxy(c, serviceType, serverResolver));
+        Services.AddSingleton(serviceType, c => RpcProxies.NewClientProxy(c, serviceType, serviceType, true));
         return this;
     }
 

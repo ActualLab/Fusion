@@ -283,7 +283,7 @@ public class ClientComputeMethodFunction<T>(
             invocation = invocation with { Context = context };
 
         var clientInterceptor = ((ClientComputeServiceInterceptor)interceptor).ClientInterceptor;
-        clientInterceptor.ChainIntercept<T>(input.MethodDef, invocation);
+        clientInterceptor.InterceptUnwrapped<T>(input.MethodDef, invocation);
         return (RpcOutboundComputeCall<T>?)context.Call;
     }
 

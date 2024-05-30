@@ -9,6 +9,7 @@ public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodIn
 public delegate bool RpcBackendServiceDetector(Type serviceType);
 public delegate Symbol RpcServiceScopeResolver(RpcServiceDef serviceDef);
 public delegate RpcPeer RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
+public delegate Task RpcRerouteDelayer(CancellationToken cancellationToken);
 public delegate void RpcPeerTracker(RpcPeer peer);
 public delegate RpcPeer RpcPeerFactory(RpcHub hub, RpcPeerRef peerRef);
 public delegate RpcInboundContext RpcInboundContextFactory(
@@ -43,6 +44,11 @@ public static class RpcDefaultDelegates
 
     public static RpcCallRouter CallRouter { get; set; } =
         static (method, arguments) => method.Hub.GetPeer(RpcPeerRef.Default);
+
+    public static RandomTimeSpan RerouteDelayerDelay { get; set; } = TimeSpan.FromMilliseconds(100).ToRandom(0.25);
+
+    public static RpcRerouteDelayer RerouteDelayer { get; set; } =
+        static cancellationToken => Task.Delay(RerouteDelayerDelay.Next(), cancellationToken);
 
     public static RpcPeerFactory PeerFactory { get; set; } =
         static (hub, peerRef) => peerRef.IsServer

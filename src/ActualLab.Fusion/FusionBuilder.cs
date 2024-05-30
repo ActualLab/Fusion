@@ -58,25 +58,27 @@ public readonly struct FusionBuilder
         // Common services
         services.AddOptions();
         services.AddConverters();
-        services.TryAddSingleton(c => new FusionInternalHub(c));
+        services.AddSingleton(c => new FusionInternalHub(c));
 
         // Compute services & their dependencies
-        services.TryAddSingleton(_ => new ComputedOptionsProvider());
-        services.TryAddSingleton(_ => TransiencyResolvers.PreferTransient.ForContext<IComputed>());
-        services.TryAddSingleton(_ => new ComputeServiceInterceptor.Options());
-        services.TryAddSingleton(c => new ComputeServiceInterceptor(
+        services.AddSingleton(_ => new ComputedOptionsProvider());
+        services.AddSingleton(_ => TransiencyResolvers.PreferTransient.ForContext<IComputed>());
+        services.AddSingleton(_ => ComputeServiceInterceptor.Options.Default);
+        services.AddSingleton(_ => ClientComputeServiceInterceptor.Options.Default);
+        services.AddSingleton(c => new ComputeServiceInterceptor(
             c.GetRequiredService<ComputeServiceInterceptor.Options>(), c));
 
+
         // StateFactory
-        services.TryAddSingleton(c => new MixedModeService<StateFactory>.Singleton(new StateFactory(c), c));
-        services.TryAddScoped(c => new MixedModeService<StateFactory>.Scoped(new StateFactory(c), c));
-        services.TryAddTransient(c => c.GetRequiredMixedModeService<StateFactory>());
+        services.AddSingleton(c => new MixedModeService<StateFactory>.Singleton(new StateFactory(c), c));
+        services.AddScoped(c => new MixedModeService<StateFactory>.Scoped(new StateFactory(c), c));
+        services.AddTransient(c => c.GetRequiredMixedModeService<StateFactory>());
 
         // Update delayer & UI action tracker
-        services.TryAddSingleton(_ => new UIActionTracker.Options());
-        services.TryAddScoped<UIActionTracker>(c => new UIActionTracker(
+        services.AddSingleton(_ => new UIActionTracker.Options());
+        services.AddScoped<UIActionTracker>(c => new UIActionTracker(
             c.GetRequiredService<UIActionTracker.Options>(), c));
-        services.TryAddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker()));
+        services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker()));
 
         // CommandR, command completion and invalidation
         var commander = Commander;
@@ -94,16 +96,16 @@ public readonly struct FusionBuilder
         }
 
         // Operation completion - notifier & producer
-        services.TryAddSingleton(_ => new OperationCompletionNotifier.Options());
-        services.TryAddSingleton<IOperationCompletionNotifier>(c => new OperationCompletionNotifier(
+        services.AddSingleton(_ => new OperationCompletionNotifier.Options());
+        services.AddSingleton<IOperationCompletionNotifier>(c => new OperationCompletionNotifier(
             c.GetRequiredService<OperationCompletionNotifier.Options>(), c));
-        services.TryAddSingleton(_ => new CompletionProducer.Options());
+        services.AddSingleton(_ => new CompletionProducer.Options());
         services.TryAddEnumerable(ServiceDescriptor.Singleton(
             typeof(IOperationCompletionListener),
             typeof(CompletionProducer)));
 
         // Command completion handler performing invalidations
-        services.TryAddSingleton(_ => new PostCompletionInvalidator.Options());
+        services.AddSingleton(_ => new PostCompletionInvalidator.Options());
         if (!services.HasService<PostCompletionInvalidator>()) {
             services.AddSingleton(c => new PostCompletionInvalidator(
                 c.GetRequiredService<PostCompletionInvalidator.Options>(), c));
@@ -117,8 +119,8 @@ public readonly struct FusionBuilder
         }
 
         // Core authentication services
-        services.TryAddScoped<ISessionResolver>(c => new SessionResolver(c));
-        services.TryAddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
+        services.AddScoped<ISessionResolver>(c => new SessionResolver(c));
+        services.AddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
 
         // RPC
 
@@ -129,9 +131,6 @@ public readonly struct FusionBuilder
             services.AddSingleton(c => new RpcComputeSystemCallSender(c));
             RpcComputeCallType.Register();
         }
-
-        // Interceptor options (the instances are created by FusionProxies)
-        services.TryAddSingleton(_ => new ClientComputeServiceInterceptor.Options());
 
         configure?.Invoke(this);
     }

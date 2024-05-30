@@ -37,6 +37,19 @@ public static partial class TaskExt
     public static ValueTask<T> ToValueTask<T>(this Task<T> source) => new(source);
     public static ValueTask ToValueTask(this Task source) => new(source);
 
+    // ToUnitTask
+
+    public static Task<Unit> ToUnitTask(this Task source)
+    {
+        return source.IsCompletedSuccessfully ? UnitTask : ConvertAsync(source);
+
+        static async Task<Unit> ConvertAsync(Task source)
+        {
+            await source.ConfigureAwait(false);
+            return default;
+        }
+    }
+
     // GetBaseException
 
     public static Exception GetBaseException(this Task task)

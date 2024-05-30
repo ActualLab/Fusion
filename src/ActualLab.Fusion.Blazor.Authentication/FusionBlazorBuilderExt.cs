@@ -17,11 +17,11 @@ public static class FusionBlazorBuilderExt
 
         services.AddAuthorizationCore(configure ?? (_ => {})); // .NET 5.0 doesn't allow to pass null here
         services.RemoveAll(typeof(AuthenticationStateProvider));
-        services.TryAddSingleton(_ => new AuthStateProvider.Options());
-        services.TryAddScoped<AuthenticationStateProvider>(c => new AuthStateProvider(
+        services.AddSingleton(_ => AuthStateProvider.Options.Default);
+        services.AddScoped<AuthenticationStateProvider>(c => new AuthStateProvider(
             c.GetRequiredService<AuthStateProvider.Options>(), c));
-        services.TryAddScoped(c => (AuthStateProvider)c.GetRequiredService<AuthenticationStateProvider>());
-        services.TryAddScoped(c => new ClientAuthHelper(c));
+        services.AddScoped(c => (AuthStateProvider)c.GetRequiredService<AuthenticationStateProvider>());
+        services.AddScoped(c => new ClientAuthHelper(c));
         return fusionBlazor;
     }
 
@@ -34,7 +34,7 @@ public static class FusionBlazorBuilderExt
         if (services.HasService<PresenceReporter>())
             return fusionBlazor;
 
-        services.TryAddScoped(c => new PresenceReporter(c.GetRequiredService<PresenceReporter.Options>(), c));
+        services.AddScoped(c => new PresenceReporter(c.GetRequiredService<PresenceReporter.Options>(), c));
         return fusionBlazor;
     }
 }

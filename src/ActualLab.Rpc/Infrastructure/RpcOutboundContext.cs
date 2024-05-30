@@ -20,7 +20,7 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
     public ArgumentList? Arguments;
     public CancellationToken CancellationToken;
     public RpcOutboundCall? Call;
-    public RpcPeer Peer = null!;
+    public RpcPeer? Peer;
     public long RelatedId;
     public RpcCacheInfoCapture? CacheInfoCapture;
 
@@ -39,28 +39,24 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcOutboundCall? PrepareCall(RpcMethodDef methodDef, ArgumentList arguments)
     {
-        if (MethodDef != null)
-            throw ActualLab.Internal.Errors.AlreadyInvoked(nameof(PrepareCall));
+        if (MethodDef != methodDef) {
+            if (MethodDef != null)
+                throw ActualLab.Internal.Errors.AlreadyInvoked(nameof(PrepareCall));
 
-        // MethodDef, Arguments, CancellationToken
-        MethodDef = methodDef;
-        Arguments = arguments;
-        var ctIndex = methodDef.CancellationTokenIndex;
-        CancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
-
-        // Peer
-        var hub = MethodDef.Hub;
-        Peer = PreSelectedPeer ?? hub.CallRouter.Invoke(methodDef, arguments);
-        if (Peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
-            Call = null;
-            return null;
+            // MethodDef, Arguments, CancellationToken
+            MethodDef = methodDef;
+            Arguments = arguments;
+            var ctIndex = methodDef.CancellationTokenIndex;
+            CancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
         }
 
-        // Call
-        Call = RpcOutboundCall.New(this);
-        if (!Call.NoWait)
+        // Peer & Call
+        var hub = MethodDef.Hub;
+        Peer ??= PreSelectedPeer ?? hub.CallRouter.Invoke(methodDef, arguments);
+        var call = Call = RpcOutboundCall.New(this);
+        if (call is { NoWait: false })
             hub.OutboundMiddlewares.NullIfEmpty()?.PrepareCall(this);
-        return Call;
+        return call;
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
@@ -69,21 +65,15 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
         if (MethodDef == null || Arguments == null)
             throw ActualLab.Internal.Errors.NotInvoked(nameof(PrepareCall));
         if (PreSelectedPeer != null)
-            throw ActualLab.Internal.Errors.InternalError("This call cannot be rerouted (StaticPeer != null).");
+            throw ActualLab.Internal.Errors.InternalError("This call cannot be rerouted (PreSelectedPeer != null).");
 
-        // Peer
+        // Peer & Call
         var hub = MethodDef.Hub;
         Peer = hub.CallRouter.Invoke(MethodDef, Arguments);
-        if (Peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
-            Call = null;
-            return null;
-        }
-
-        // Call
-        Call = RpcOutboundCall.New(this);
-        if (!Call.NoWait)
+        var call = Call = RpcOutboundCall.New(this);
+        if (call is { NoWait: false })
             hub.OutboundMiddlewares.NullIfEmpty()?.PrepareCall(this);
-        return Call;
+        return call;
     }
 
     public bool IsPeerChanged()

@@ -1,11 +1,10 @@
-Flow:
-- IFlowsBackend API
-- Sample/test
-
 Dynamic Routing:
-- Test - covering switch to local service
-- RpcRerouteException should inherit from OperationCancelledException
 - RpcRerouteException handling everywhere 
+- Test - covering switch to local service
+
+Edge cases:
+- Invalidation
+- Commands
 
 Near-term:
 - Robust routing tests

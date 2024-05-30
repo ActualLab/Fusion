@@ -37,7 +37,7 @@ public static class ServiceProviderExt
     public static T GetOrActivate<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
         this IServiceProvider services, params object[] arguments)
-        => (T) services.GetOrActivate(typeof(T));
+        => (T)services.GetOrActivate(typeof(T));
 
     public static object GetOrActivate(
         this IServiceProvider services,
