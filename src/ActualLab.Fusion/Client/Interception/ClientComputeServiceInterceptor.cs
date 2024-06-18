@@ -12,6 +12,7 @@ public class ClientComputeServiceInterceptor : ComputeServiceInterceptor
         public static new Options Default { get; set; } = new();
     }
 
+    public readonly ComputeServiceInterceptor ComputeServiceInterceptor;
     public readonly RpcClientInterceptor ClientInterceptor;
 
     // ReSharper disable once ConvertToPrimaryConstructor
@@ -20,17 +21,20 @@ public class ClientComputeServiceInterceptor : ComputeServiceInterceptor
         IServiceProvider services,
         RpcClientInterceptor clientInterceptor
         ) : base(settings, services)
-        => ClientInterceptor = clientInterceptor;
+    {
+        ComputeServiceInterceptor = Hub.ComputeServiceInterceptor;
+        ClientInterceptor = clientInterceptor;
+    }
 
     public override Func<Invocation, object?>? GetHandler(Invocation invocation)
     {
         var handler = GetOwnHandler(invocation);
         if (handler == null) // Not a compute method
-            return Next?.GetOwnHandler(invocation);
+            return CommandServiceInterceptor.GetOwnHandler(invocation);
 
         // If we're here, it's a compute method
         return Invalidation.IsActive
-            ? GetDefaultResultHandler(invocation) // Do nothing
+            ? GetSkippingHandler(invocation)
             : handler;
     }
 
@@ -39,5 +43,6 @@ public class ClientComputeServiceInterceptor : ComputeServiceInterceptor
 
     protected override void ValidateTypeInternal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
-        => Hub.ComputeServiceInterceptor.ValidateType(type);
+        // We redirect this call to ComputeServiceInterceptor to make sure its validation cache is reused here
+        => ComputeServiceInterceptor.ValidateType(type);
 }

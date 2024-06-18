@@ -5,14 +5,14 @@ public partial record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBacke
     // private static readonly CancellationTokenSource FakeGoneCts = new();
     public virtual CancellationToken GoneToken => default;
 
-    public bool IsGone {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => GoneToken.IsCancellationRequested;
-    }
-
     public bool CanBeGone {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => GoneToken.CanBeCanceled;
+    }
+
+    public bool IsGone {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => GoneToken.IsCancellationRequested;
     }
 
     public static RpcPeerRef NewServer(Symbol key, bool isBackend = false)

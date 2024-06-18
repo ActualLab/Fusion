@@ -49,7 +49,7 @@ public class RpcClientInterceptor : RpcInterceptor
             else
                 resultTask = InvokeOnceConnected(call);
 
-            return rpcMethodDef.ToResultAsync(resultTask);
+            return rpcMethodDef.WrapAsyncInvokerResult(resultTask);
         };
     }
 

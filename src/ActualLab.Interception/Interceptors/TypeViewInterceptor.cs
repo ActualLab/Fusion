@@ -15,8 +15,10 @@ public class TypeViewInterceptor : Interceptor
     private readonly MethodInfo _createTaskConvertingHandlerMethod;
     private readonly MethodInfo _createValueTaskConvertingHandlerMethod;
 
-    public TypeViewInterceptor(Options settings, IServiceProvider services) : base(settings, services)
+    public TypeViewInterceptor(Options settings, IServiceProvider services)
+        : base(settings, services)
     {
+        MustInterceptSyncCalls = true;
         _createConvertingHandlerMethod = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
             .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateConvertingHandler)));

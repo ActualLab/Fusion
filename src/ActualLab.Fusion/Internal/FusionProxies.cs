@@ -1,9 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Interception;
-using ActualLab.Fusion.Client.Interception;
 using ActualLab.Interception;
-using ActualLab.Rpc;
-using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Internal;
 
@@ -14,13 +11,9 @@ public static class FusionProxies
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         bool initialize = true)
     {
-        var interceptor = services.GetRequiredService<ComputeServiceInterceptor>();
-        // We should try to validate it here because if the type doesn't
-        // have any virtual methods (which might be a mistake), no calls
-        // will be intercepted, so no error will be thrown later.
-        interceptor.ValidateType(serviceType);
-        var proxy = services.ActivateProxy(serviceType, interceptor, null, initialize);
-        return proxy;
+        var computeServiceInterceptor = services.GetRequiredService<ComputeServiceInterceptor>();
+        computeServiceInterceptor.ValidateType(serviceType);
+        return services.ActivateProxy(serviceType, computeServiceInterceptor, null, initialize);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
@@ -29,41 +22,32 @@ public static class FusionProxies
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         bool initialize = true)
     {
-        var rpcHub = services.RpcHub();
+        var fusionHub = services.GetRequiredService<FusionInternalHub>();
+        var rpcHub = fusionHub.RpcHub;
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
 
-        // Creating ClientComputeServiceInterceptor
-        var clientInterceptor = new RpcClientInterceptor(
-            services.GetRequiredService<RpcClientInterceptor.Options>(), services, serviceDef);
-        var interceptor = new ClientComputeServiceInterceptor(
-            services.GetRequiredService<ClientComputeServiceInterceptor.Options>(), services, clientInterceptor);
-        // We should try to validate it here because if the type doesn't
-        // have any virtual methods (which might be a mistake), no calls
-        // will be intercepted, so no error will be thrown later.
-        interceptor.ValidateType(serviceType);
-
-        // Creating proxy
-        var proxy = Proxies.New(serviceType, interceptor, null, initialize);
-        return proxy;
+        var clientInterceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef);
+        var clientComputeServiceInterceptor = fusionHub.NewClientComputeServiceInterceptor(clientInterceptor);
+        clientComputeServiceInterceptor.ValidateType(serviceType);
+        return services.ActivateProxy(serviceType, clientComputeServiceInterceptor, null, initialize);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static IProxy NewHybridProxy(
         IServiceProvider services,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        ServiceResolver localServiceResolver,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         bool initialize = true)
     {
-        var rpcHub = services.RpcHub();
-        var serviceDef = rpcHub.ServiceRegistry[serviceType];
-        var client = NewClientProxy(services, serviceType);
+        var fusionHub = services.GetRequiredService<FusionInternalHub>();
+        var rpcHub = fusionHub.RpcHub;
+        var serviceDef = rpcHub.ServiceRegistry[implementationType];
 
-        // Replacing client's interceptor with RpcHybridInterceptor
-        var localService = localServiceResolver.Resolve(services);
-        var interceptor = new RpcHybridInterceptor(
-            services.GetRequiredService<RpcHybridInterceptor.Options>(), services,
-            serviceDef, localService, client);
-        interceptor.BindTo(client, null, initialize);
-        return client;
+        var computeServiceInterceptor = services.GetRequiredService<ComputeServiceInterceptor>();
+        var clientInterceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef);
+        var clientComputeServiceInterceptor = fusionHub.NewClientComputeServiceInterceptor(clientInterceptor);
+        clientComputeServiceInterceptor.ValidateType(implementationType);
+        var routingInterceptor = rpcHub.InternalServices.NewRoutingInterceptor(
+            serviceDef, computeServiceInterceptor, clientComputeServiceInterceptor);
+        return services.ActivateProxy(implementationType, routingInterceptor, null, initialize);
     }
 }

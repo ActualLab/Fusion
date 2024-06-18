@@ -14,14 +14,18 @@ public class RpcRoutingInterceptor : RpcInterceptor
         public static Options Default { get; set; } = new();
     }
 
-    public Options Settings { get;  }
+    public Options Settings { get; }
     public Interceptor? LocalInterceptor { get; init; }
     public Interceptor? RemoteInterceptor { get; init; }
+    public RpcCallRouter CallRouter { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public RpcRoutingInterceptor(Options settings, IServiceProvider services, RpcServiceDef serviceDef)
         : base(settings, services, serviceDef)
-        => Settings = settings;
+    {
+        Settings = settings;
+        CallRouter = Hub.CallRouter;
+    }
 
     public override Func<Invocation, object?>? GetHandler(Invocation invocation)
         => GetOwnHandler(invocation) ?? LocalInterceptor?.GetHandler(invocation);
@@ -38,19 +42,21 @@ public class RpcRoutingInterceptor : RpcInterceptor
         var remoteCallAsyncInvoker = methodDef.SelectAsyncInvoker<TUnwrapped>(proxy, RemoteInterceptor)
             ?? throw Errors.NoRemoteCallInvoker();
         return invocation => {
-            var peer = Hub.CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
+            var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
             Task<TUnwrapped> resultTask;
-            if (peer.Ref.CanBeGone)
+            if (peer.Ref.CanBeGone) {
                 resultTask = InvokeWithRerouting(rpcMethodDef, localCallAsyncInvoker, remoteCallAsyncInvoker, invocation, peer);
-            else if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall)
+            }
+            else if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
                 resultTask = localCallAsyncInvoker.Invoke(invocation);
+            }
             else {
                 var context = invocation.Context as RpcOutboundContext ?? new();
                 context.Peer = peer; // We already know the peer - this allows to skip its detection
                 invocation = invocation with { Context = context };
                 resultTask = remoteCallAsyncInvoker.Invoke(invocation);
             }
-            return rpcMethodDef.ToResultAsync(resultTask);
+            return rpcMethodDef.WrapAsyncInvokerResult(resultTask);
         };
     }
 

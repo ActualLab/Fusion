@@ -3,6 +3,7 @@ using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Interception;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Internal;
 
@@ -10,13 +11,17 @@ namespace ActualLab.Fusion.Internal;
 
 public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
 {
-    private LazySlim<IServiceProvider, IClientComputedCache?> _clientComputedCacheLazy
+    private readonly LazySlim<IServiceProvider, IClientComputedCache?> _clientComputedCacheLazy
         = new(services, c => c.GetService<IClientComputedCache>());
     private CommandServiceInterceptor? _commandServiceInterceptor;
     private ComputeServiceInterceptor? _computeServiceInterceptor;
-    private ClientComputeServiceInterceptor? _clientComputeServiceInterceptor;
+    private ClientComputeServiceInterceptor.Options? _clientComputeServiceInterceptorOptions;
+
+    private ClientComputeServiceInterceptor.Options ClientComputeServiceInterceptorOptions
+        => _clientComputeServiceInterceptorOptions ??= Services.GetRequiredService<ClientComputeServiceInterceptor.Options>();
 
     public IServiceProvider Services { get; } = services;
+    public RpcHub RpcHub { get; } = services.RpcHub();
     public MomentClockSet Clocks { get; } = services.Clocks();
     public IClientComputedCache? ClientComputedCache => _clientComputedCacheLazy.Value;
 
@@ -26,8 +31,7 @@ public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
         => _commandServiceInterceptor ??= Services.GetRequiredService<CommandServiceInterceptor>();
     public ComputeServiceInterceptor ComputeServiceInterceptor
         => _computeServiceInterceptor ??= Services.GetRequiredService<ComputeServiceInterceptor>();
-    public ClientComputeServiceInterceptor ClientComputeServiceInterceptor
-        => _clientComputeServiceInterceptor ??= Services.GetRequiredService<ClientComputeServiceInterceptor>();
 
-    public ConcurrentDictionary<Symbol, RpcPeer> Peers { get; } = new();
+    public ClientComputeServiceInterceptor NewClientComputeServiceInterceptor(RpcClientInterceptor clientInterceptor)
+        => new(ClientComputeServiceInterceptorOptions, Services, clientInterceptor);
 }

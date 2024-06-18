@@ -151,10 +151,13 @@ public readonly struct RpcBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serverType,
         RpcServiceMode mode, Symbol name = default)
         => mode switch {
-            RpcServiceMode.Local => Service(serverType).HasName(name).Rpc,
-            RpcServiceMode.Server => AddServer(serviceType, serverType, name),
-            RpcServiceMode.Hybrid => AddHybrid(serviceType, serverType, name),
-            RpcServiceMode.HybridServer => AddHybrid(serviceType, serverType).AddServer(serviceType, serverType, name),
+            RpcServiceMode.Local => this,
+            RpcServiceMode.Server // IServer -> TServer
+                => AddServer(serviceType, serverType, name),
+            RpcServiceMode.ServerAndRouter // IServer -> routing client proxy, TServer -> server instance
+                => AddServer(serviceType, serverType, name).AddClient(serviceType, serviceType, name),
+            RpcServiceMode.Hybrid // TServer -> routing client proxy extending TServer
+                => AddHybrid(serviceType, serverType, name),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
 
@@ -165,6 +168,14 @@ public readonly struct RpcBuilder
         where TService : class
         => AddClient(typeof(TService), typeof(TService), name);
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
+    public RpcBuilder AddClient<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TProxyBase>
+        (Symbol name = default)
+        where TService : class
+        where TProxyBase : class, TService
+        => AddClient(typeof(TService), typeof(TProxyBase), name);
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         Symbol name = default)
@@ -172,18 +183,18 @@ public readonly struct RpcBuilder
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,
         Symbol name = default)
     {
         if (!serviceType.IsInterface)
             throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IRpcService).IsAssignableFrom(serviceType))
             throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
-        if (!serviceType.IsAssignableFrom(proxyType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo(proxyType, serviceType, nameof(proxyType));
+        if (!serviceType.IsAssignableFrom(proxyBaseType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(proxyBaseType, serviceType, nameof(proxyBaseType));
 
         Service(serviceType).HasName(name);
-        Services.AddSingleton(proxyType, c => RpcProxies.NewClientProxy(c, serviceType, proxyType, false));
+        Services.AddSingleton(proxyBaseType, c => RpcProxies.NewClientProxy(c, serviceType));
         return this;
     }
 
@@ -218,13 +229,15 @@ public readonly struct RpcBuilder
         Service(serviceType).HasServer(serverType).HasName(name);
         if (!serverType.IsInterface)
             Services.AddSingleton(serverType);
+        if (serviceType != serverType)
+            Services.AddAlias(serviceType, serverType);
         return this;
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddHybrid<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TServer>
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TServer>
         (Symbol name = default)
         where TService : class
         where TServer : class, TService
@@ -239,11 +252,15 @@ public readonly struct RpcBuilder
             throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IRpcService).IsAssignableFrom(serviceType))
             throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
+        if (!serverType.IsClass)
+            throw ActualLab.Internal.Errors.MustBeClass(serverType, nameof(serverType));
         if (!serviceType.IsAssignableFrom(serverType))
             throw ActualLab.Internal.Errors.MustBeAssignableTo(serverType, serviceType, nameof(serverType));
 
-        Service(serviceType).HasName(name);
-        Services.AddSingleton(serviceType, c => RpcProxies.NewClientProxy(c, serviceType, serviceType, true));
+        Service(serviceType).HasServer(serverType).HasName(name);
+        Services.AddSingleton(serviceType, c => RpcProxies.NewHybridProxy(c, serviceType, serverType));
+        if (serviceType != serverType)
+            Services.AddAlias(serviceType, serverType);
         return this;
     }
 

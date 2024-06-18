@@ -18,6 +18,7 @@ public class MethodDef
     private Func<Interceptor, Invocation, Task>? _interceptorAsyncInvoker;
     private Func<Invocation, Task>? _interceptedAsyncInvoker;
     private readonly LazySlim<MethodDef, object?> _defaultResultLazy;
+    private readonly LazySlim<MethodDef, object?> _defaultUnwrappedResultLazy;
 
     public readonly Type Type;
     public readonly MethodInfo Method;
@@ -35,6 +36,7 @@ public class MethodDef
     public bool IsValid { get; init; } = true;
 
     public object? DefaultResult => _defaultResultLazy.Value;
+    public object? DefaultUnwrappedResult => _defaultUnwrappedResultLazy.Value;
     public Func<object, ArgumentList, Task> TargetAsyncInvoker
         => _targetAsyncInvoker ??= GetAsyncInvoker<Func<object, ArgumentList, Task>>(CreateTargetAsyncInvokerMethod);
     public Func<Interceptor, Invocation, Task> InterceptorAsyncInvoker
@@ -78,12 +80,13 @@ public class MethodDef
             ? IsAsyncVoidMethod ? typeof(Unit) : ReturnType.GetGenericArguments()[0]
             : ReturnType;
         _defaultResultLazy = new LazySlim<MethodDef, object?>(this, static self => self.GetDefaultResult());
+        _defaultUnwrappedResultLazy = new LazySlim<MethodDef, object?>(this, static self => self.GetDefaultUnwrappedResult());
     }
 
     public override string ToString()
         => $"{GetType().Name}({FullName}){(IsValid ? "" : " - invalid")}";
 
-    public object? ToResult<TUnwrapped>(TUnwrapped result)
+    public object? WrapResult<TUnwrapped>(TUnwrapped result)
     {
         if (!IsAsyncMethod)
             return result;
@@ -95,7 +98,7 @@ public class MethodDef
                 : ValueTask.FromResult(result);
     }
 
-    public object? ToResultAsync<TUnwrapped>(Task<TUnwrapped> resultTask)
+    public object? WrapAsyncInvokerResult<TUnwrapped>(Task<TUnwrapped> resultTask)
     {
         if (!IsAsyncMethod) {
             var taskAwaiter = resultTask.GetAwaiter();
@@ -140,12 +143,15 @@ public class MethodDef
 
     private object? GetDefaultResult()
         => !IsAsyncMethod
-            ? UnwrappedReturnType.IsClass
-                ? null!
-                : Activator.CreateInstance(UnwrappedReturnType)
+            ? DefaultUnwrappedResult
             : ReturnsValueTask
                 ? ValueTaskExt.FromDefaultResult(UnwrappedReturnType)
                 : TaskExt.FromDefaultResult(UnwrappedReturnType);
+
+    private object? GetDefaultUnwrappedResult()
+        => UnwrappedReturnType.IsClass
+            ? null!
+            : Activator.CreateInstance(UnwrappedReturnType);
 
     private TResult GetAsyncInvoker<TResult>(MethodInfo methodInfo)
         => (TResult)AsyncInvokerCache.GetOrAdd((methodInfo, UnwrappedReturnType),
@@ -177,7 +183,7 @@ public class MethodDef
         if (methodDef.ReturnsTask)
             return methodDef.IsAsyncVoidMethod
                 ? (interceptor, invocation) => interceptor.Intercept<Task>(invocation).ToUnitTask()
-                : (interceptor, invocation) => interceptor.Intercept<Task>(invocation);
+                : (interceptor, invocation) => interceptor.Intercept<Task<TUnwrapped>>(invocation);
 
         if (methodDef.ReturnsValueTask)
             return methodDef.IsAsyncVoidMethod
@@ -198,7 +204,7 @@ public class MethodDef
         if (methodDef.ReturnsTask)
             return methodDef.IsAsyncVoidMethod
                 ? invocation => invocation.Intercepted<Task>().ToUnitTask()
-                : invocation => invocation.Intercepted<Task>();
+                : invocation => invocation.Intercepted<Task<TUnwrapped>>();
 
         if (methodDef.ReturnsValueTask)
             return methodDef.IsAsyncVoidMethod

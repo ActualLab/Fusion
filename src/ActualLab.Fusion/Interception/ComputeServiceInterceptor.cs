@@ -13,14 +13,18 @@ public class ComputeServiceInterceptor : Interceptor
     }
 
     public readonly FusionInternalHub Hub;
+    public readonly CommandServiceInterceptor CommandServiceInterceptor;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public ComputeServiceInterceptor(Options settings, IServiceProvider services)
         : base(settings, services)
     {
         Hub = services.GetRequiredService<FusionInternalHub>();
-        Next = services.GetRequiredService<CommandServiceInterceptor>();
+        CommandServiceInterceptor = Hub.CommandServiceInterceptor;
     }
+
+    public override Func<Invocation, object?>? GetHandler(Invocation invocation)
+        => GetOwnHandler(invocation) ?? CommandServiceInterceptor.GetHandler(invocation);
 
     protected override Func<Invocation, object?>? CreateHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
@@ -71,7 +75,7 @@ public class ComputeServiceInterceptor : Interceptor
     protected override void ValidateTypeInternal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
     {
-        Hub.CommandServiceInterceptor.ValidateType(type);
+        CommandServiceInterceptor.ValidateType(type);
         var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
         var methods = (type.IsInterface
                 ? type.GetAllInterfaceMethods(bindingFlags)

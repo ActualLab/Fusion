@@ -113,9 +113,9 @@ public class PostCompletionInvalidator(
         if (interceptor is ComputeServiceInterceptor)
             return true; // Pure compute service
 
-        if (interceptor is not RpcHybridInterceptor hybridInterceptor)
+        if (interceptor is not RpcRoutingInterceptor routingInterceptor)
             return false;
-        if (hybridInterceptor.ClientInterceptor is not ClientComputeServiceInterceptor clientComputeServiceInterceptor)
+        if (routingInterceptor.RemoteInterceptor is not ClientComputeServiceInterceptor clientComputeServiceInterceptor)
             return false;
 
         var clientInterceptor = clientComputeServiceInterceptor.ClientInterceptor;
@@ -125,8 +125,8 @@ public class PostCompletionInvalidator(
         var arguments = (ArgumentList)ArgumentListNewMethod
             .MakeGenericMethod(finalHandler.ParameterTypes)
             .Invoke(null, [command, default(CancellationToken)])!;
-        var rpcPeer = hybridInterceptor.CallRouter.Invoke(rpcMethodDef, arguments);
-        return rpcPeer == null;
+        var rpcPeer = routingInterceptor.CallRouter.Invoke(rpcMethodDef, arguments);
+        return rpcPeer.ConnectionKind == RpcPeerConnectionKind.LocalCall;
     }
 
     protected virtual async ValueTask<int> TryInvalidate(

@@ -6,15 +6,15 @@ public static class ServiceProviderExt
 {
     // ActivateProxy
 
-    public static TType ActivateProxy<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TType>(
+    public static TBaseType ActivateProxy<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TBaseType>(
         this IServiceProvider services,
-        Interceptor interceptor, TType? proxyTarget = null, bool initialize = true)
-        where TType : class, IRequiresAsyncProxy
+        Interceptor interceptor, TBaseType? proxyTarget = null, bool initialize = true)
+        where TBaseType : class, IRequiresAsyncProxy
     {
-        var proxyType = Proxies.GetProxyType<TType>();
+        var proxyType = Proxies.GetProxyType<TBaseType>();
 #pragma warning disable IL2072
-        var proxy = (TType)services.Activate(proxyType);
+        var proxy = (TBaseType)services.Activate(proxyType);
 #pragma warning restore IL2072
         interceptor.BindTo(proxy, proxyTarget, initialize);
         return proxy;
@@ -22,10 +22,10 @@ public static class ServiceProviderExt
 
     public static IProxy ActivateProxy(
         this IServiceProvider services,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type baseType,
         Interceptor interceptor, object? proxyTarget = null, bool initialize = true)
     {
-        var proxyType = Proxies.GetProxyType(type);
+        var proxyType = Proxies.GetProxyType(baseType);
 #pragma warning disable IL2072
         var proxy = (IProxy)services.Activate(proxyType);
 #pragma warning restore IL2072

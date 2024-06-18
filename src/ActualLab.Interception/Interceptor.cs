@@ -22,10 +22,7 @@ public abstract class Interceptor
     private static readonly MethodInfo CreateTypedHandlerMethod = typeof(Interceptor)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
         .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateHandler)));
-    private static readonly MethodInfo CreateDefaultResultTypedHandlerMethod = typeof(Interceptor)
-        .GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
-        .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateDefaultResultHandler)));
-    private static readonly ConcurrentDictionary<MethodInfo, Func<Invocation, object?>> DefaultResultHandlerCache = new();
+    private static readonly ConcurrentDictionary<MethodInfo, Func<Invocation, object?>> SkippingHandlerCache = new();
 
     private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandlerUntyped;
     private readonly Func<MethodInfo, Type, MethodDef?> _createMethodDef;
@@ -62,7 +59,7 @@ public abstract class Interceptor
     public void BindTo(IRequiresAsyncProxy proxy, object? proxyTarget = null, bool initialize = true)
     {
         if (MustInterceptSyncCalls && proxy is not IRequiresFullProxy)
-            throw Errors.InvalidProxyType(proxy?.GetType(), typeof(IRequiresFullProxy));
+            throw Errors.InvalidProxyType(proxy.GetType(), typeof(IRequiresFullProxy));
 
         proxy.RequireProxy<IProxy>().Interceptor = this;
         if (proxyTarget != null)
@@ -132,8 +129,12 @@ public abstract class Interceptor
     // Helpers
 
     // Returns a handler that does nothing & returns default(T) / completed Task<T> or ValueTask<T> with default(T)
-    public static Func<Invocation, object?> GetDefaultResultHandler(Invocation invocation)
-        => DefaultResultHandlerCache.GetOrAdd(invocation.Method, CreateDefaultResultHandlerUntyped, invocation);
+    public Func<Invocation, object?> GetSkippingHandler(Invocation invocation)
+        => SkippingHandlerCache.GetOrAdd(invocation.Method, static (method, key) => {
+            var (self, invocation1) = key;
+            var methodDef = self.GetMethodDef(invocation1.Proxy.GetType(), method)!;
+            return _ => methodDef.DefaultResult;
+        }, (this, invocation));
 
     // Protected methods
 
@@ -167,21 +168,4 @@ public abstract class Interceptor
             .MakeGenericMethod(methodDef.UnwrappedReturnType)
             .Invoke(this, [initialInvocation, methodDef])!;
     }
-
-    private static Func<Invocation, object?> CreateDefaultResultHandlerUntyped(MethodInfo method, Invocation initialInvocation)
-    {
-        var methodDef = new MethodDef(initialInvocation.Proxy.GetType(), method);
-        return (Func<Invocation, object?>)CreateDefaultResultTypedHandlerMethod
-            .MakeGenericMethod(methodDef.UnwrappedReturnType)
-            .Invoke(null, [initialInvocation, methodDef])!;
-    }
-
-    private static Func<Invocation, object?> CreateDefaultResultHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
-        T>(Invocation _, MethodDef methodDef)
-        => _ => methodDef.IsAsyncMethod
-            ? methodDef.IsAsyncVoidMethod
-                ? TaskExt.UnitTask
-                : Task.FromResult(default(T))
-            : default(T);
 }

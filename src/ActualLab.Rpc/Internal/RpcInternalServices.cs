@@ -1,10 +1,20 @@
+using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc.Internal;
 
-public readonly record struct RpcInternalServices(RpcHub Hub)
+public sealed class RpcInternalServices(RpcHub hub)
 {
+    private RpcClientInterceptor.Options? _clientInterceptorOptions;
+    private RpcRoutingInterceptor.Options? _routingInterceptorOptions;
+
+    private RpcClientInterceptor.Options ClientInterceptorOptions
+        => _clientInterceptorOptions ??= Hub.Services.GetRequiredService<RpcClientInterceptor.Options>();
+    private RpcRoutingInterceptor.Options RoutingInterceptorOptions
+        => _routingInterceptorOptions ??= Hub.Services.GetRequiredService<RpcRoutingInterceptor.Options>();
+
+    public RpcHub Hub = hub;
     public RpcServiceDefBuilder ServiceDefBuilder => Hub.ServiceDefBuilder;
     public RpcMethodDefBuilder MethodDefBuilder => Hub.MethodDefBuilder;
     public RpcServiceScopeResolver ServiceScopeResolver => Hub.ServiceScopeResolver;
@@ -25,4 +35,14 @@ public readonly record struct RpcInternalServices(RpcHub Hub)
     public RpcClient Client => Hub.Client;
 
     public ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers => Hub.Peers;
+
+    public RpcClientInterceptor NewClientInterceptor(RpcServiceDef serviceDef)
+        => new(ClientInterceptorOptions, Hub.Services, serviceDef);
+
+    public RpcRoutingInterceptor NewRoutingInterceptor(
+        RpcServiceDef serviceDef, Interceptor? localInterceptor, Interceptor? remoteInterceptor)
+        => new(RoutingInterceptorOptions, Hub.Services, serviceDef) {
+            LocalInterceptor = localInterceptor,
+            RemoteInterceptor = remoteInterceptor,
+        };
 }

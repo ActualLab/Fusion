@@ -15,8 +15,8 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
         = new MustExistRequirement<User>().With("You must sign-in to perform this action.", m => new SecurityException(m));
     public static Requirement<User> MustBeAuthenticated { get; set; }
         = Requirement.New(
-            new("User is not authenticated.", m => new SecurityException(m)),
-            (User? u) => u?.IsAuthenticated() ?? false);
+            (User? u) => u?.IsAuthenticated() ?? false,
+            new("User is not authenticated.", m => new SecurityException(m)));
 
     private Lazy<ClaimsPrincipal>? _claimsPrincipalLazy;
 

@@ -56,7 +56,7 @@ public class ClientComputeMethodFunction<T>(
                 var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
                 var call = SendRpcCall(input, cacheInfoCapture, cancellationToken);
                 if (call == null) {
-                    // RpcHybridInterceptor will reroute it in this case
+                    // RpcRoutingInterceptor will reroute it in this case
                     throw new RpcRerouteException();
                 }
 
@@ -104,12 +104,18 @@ public class ClientComputeMethodFunction<T>(
         // This is a fake call that only captures the cache key.
         // No actual call happens at this point.
         SendRpcCall(input, cacheInfoCapture, cancellationToken);
-        if (cacheInfoCapture.Key is not { IsValid: true } cacheKey)
+        if (cacheInfoCapture.Key is not { IsValid: true } cacheKey) {
+            // cacheKey wasn't captured - a weird case that normally shouldn't happen.
+            // The best we can do here is to proceed assuming cache entry is missing,
+            // i.e. perform RPC call & update cache.
             return await ComputeRpc(input, cache, null, cancellationToken).ConfigureAwait(false);
+        }
 
         var cacheResultOpt = await cache.Get<T>(input, cacheKey, cancellationToken).ConfigureAwait(false);
-        if (cacheResultOpt is not { } cacheResult)
+        if (cacheResultOpt is not { } cacheResult) {
+            // No cacheResult wasn't captured -> perform RPC call & update cache
             return await ComputeRpc(input, cache, null, cancellationToken).ConfigureAwait(false);
+        }
 
         var cacheEntry = new RpcCacheEntry(cacheKey, cacheResult.Data);
         var cachedComputed = new ClientComputed<T>(
@@ -269,21 +275,24 @@ public class ClientComputeMethodFunction<T>(
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;
         var interceptor = proxy.Interceptor;
-        if (interceptor is RpcHybridInterceptor hybridInterceptor)
-            interceptor = hybridInterceptor.ClientInterceptor;
+        var clientComputeServiceInterceptor = interceptor is RpcRoutingInterceptor routingInterceptor
+            ? (ClientComputeServiceInterceptor)routingInterceptor.RemoteInterceptor!
+            : (ClientComputeServiceInterceptor)interceptor;
+        var clientInterceptor = clientComputeServiceInterceptor.ClientInterceptor;
 
-        // Fixing invocation: set CancellationToken + Context
         var ctIndex = input.MethodDef.CancellationTokenIndex;
         if (ctIndex >= 0 && invocation.Arguments.GetCancellationToken(ctIndex) != cancellationToken) {
+            // Fixing invocation: set CancellationToken + Context
             var arguments = invocation.Arguments with { }; // Cloning
             arguments.SetCancellationToken(ctIndex, cancellationToken);
             invocation = invocation with { Context = context, Arguments = arguments };
         }
-        else
+        else {
+            // Nothing to fix: it's the same cancellation token or there is no token
             invocation = invocation with { Context = context };
+        }
 
-        var clientInterceptor = ((ClientComputeServiceInterceptor)interceptor).ClientInterceptor;
-        clientInterceptor.InterceptUnwrapped<T>(input.MethodDef, invocation);
+        _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(clientInterceptor, invocation);
         return (RpcOutboundComputeCall<T>?)context.Call;
     }
 
