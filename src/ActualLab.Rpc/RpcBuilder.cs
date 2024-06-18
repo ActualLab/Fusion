@@ -194,7 +194,9 @@ public readonly struct RpcBuilder
             throw ActualLab.Internal.Errors.MustBeAssignableTo(proxyBaseType, serviceType, nameof(proxyBaseType));
 
         Service(serviceType).HasName(name);
-        Services.AddSingleton(proxyBaseType, c => RpcProxies.NewClientProxy(c, serviceType));
+        Services.AddSingleton(proxyBaseType, c => RpcProxies.NewClientProxy(c, serviceType, proxyBaseType));
+        if (serviceType != proxyBaseType)
+            Services.AddAlias(serviceType, proxyBaseType);
         return this;
     }
 
@@ -258,7 +260,7 @@ public readonly struct RpcBuilder
             throw ActualLab.Internal.Errors.MustBeAssignableTo(serverType, serviceType, nameof(serverType));
 
         Service(serviceType).HasServer(serverType).HasName(name);
-        Services.AddSingleton(serviceType, c => RpcProxies.NewHybridProxy(c, serviceType, serverType));
+        Services.AddSingleton(serverType, c => RpcProxies.NewHybridProxy(c, serviceType, serverType));
         if (serviceType != serverType)
             Services.AddAlias(serviceType, serverType);
         return this;

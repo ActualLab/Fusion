@@ -17,6 +17,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         commander.AddService<TestRpcBackend>();
 
         var rpc = services.AddRpc();
+        rpc.AddServer<ITestRpcService, TestRpcService>();
+        rpc.AddClient<ITestRpcService, ITestRpcServiceClient>();
         rpc.AddServer<ITestRpcBackend, TestRpcBackend>();
         rpc.AddClient<ITestRpcBackend, ITestRpcBackendClient>();
         services.AddSingleton<RpcPeerFactory>(_ => static (hub, peerRef) => {

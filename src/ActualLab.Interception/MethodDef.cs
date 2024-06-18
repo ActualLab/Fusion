@@ -157,7 +157,9 @@ public class MethodDef
         => (TResult)AsyncInvokerCache.GetOrAdd((methodInfo, UnwrappedReturnType),
             static key => {
                 var (methodInfo1, returnType) = key;
-                return (Func<MethodDef, object>)methodInfo1.MakeGenericMethod(returnType).CreateDelegate(null!);
+                return (Func<MethodDef, object>)methodInfo1
+                    .MakeGenericMethod(returnType)
+                    .CreateDelegate(typeof(Func<MethodDef, object>), null);
             }).Invoke(this);
 
     private static Func<object, ArgumentList, Task> CreateTargetAsyncInvoker<TUnwrapped>(MethodDef methodDef)
