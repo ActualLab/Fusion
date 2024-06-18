@@ -30,10 +30,12 @@ public class RpcClientInterceptor : RpcInterceptor
             var call = (RpcOutboundCall<TUnwrapped>?)context.PrepareCall(rpcMethodDef, invocation.Arguments);
             var peer = context.Peer!;
             Task<TUnwrapped> resultTask;
-            if (peer.Ref.CanBeGone)
+            if (peer.Ref.CanBeGone) {
                 resultTask = InvokeWithRerouting(context, call);
-            else if (call == null)
+            }
+            else if (call == null) {
                 throw RpcRerouteException.LocalCall(); // To be handled by RpcRoutingInterceptor
+            }
             else if (call.NoWait || context.CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly }) {
                 // NoWait requires call to be sent no matter what is the connection state now;
                 // RpcCacheInfoCaptureMode.KeyOnly requires this method to complete synchronously
@@ -46,8 +48,9 @@ public class RpcClientInterceptor : RpcInterceptor
                 _ = call.RegisterAndSend();
                 resultTask = call.ResultTask;
             }
-            else
+            else {
                 resultTask = InvokeOnceConnected(call);
+            }
 
             return rpcMethodDef.WrapAsyncInvokerResult(resultTask);
         };

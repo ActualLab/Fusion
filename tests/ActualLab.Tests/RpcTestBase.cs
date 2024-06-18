@@ -46,21 +46,23 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
 
     public override async Task DisposeAsync()
     {
-        if (ClientServices is IAsyncDisposable adcs)
+        if (_clientServices is IAsyncDisposable adcs)
             await adcs.DisposeAsync();
-        if (ClientServices is IDisposable dcs)
+        if (_clientServices is IDisposable dcs)
             dcs.Dispose();
 
         try {
-            await Services.HostedServices().Stop();
+            var hostedServices = _services?.HostedServices();
+            if (hostedServices != null)
+                await hostedServices.Stop();
         }
         catch {
             // Intended
         }
 
-        if (Services is IAsyncDisposable ads)
+        if (_services is IAsyncDisposable ads)
             await ads.DisposeAsync();
-        if (Services is IDisposable ds)
+        if (_services is IDisposable ds)
             ds.Dispose();
     }
 
