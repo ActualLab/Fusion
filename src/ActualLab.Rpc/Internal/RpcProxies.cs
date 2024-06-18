@@ -15,8 +15,9 @@ public static class RpcProxies
         proxyBaseType ??= serviceType;
         var rpcHub = services.RpcHub();
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
+        var localService = serviceDef.ServerResolver?.Resolve(services);
 
-        var interceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef);
+        var interceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef, localService);
         return services.ActivateProxy(proxyBaseType, interceptor, null, initialize);
     }
 
@@ -30,9 +31,10 @@ public static class RpcProxies
     {
         var rpcHub = services.RpcHub();
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
+        var localService = serviceDef.ServerResolver?.Resolve(services);
 
-        var clientInterceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef);
-        var routingInterceptor = rpcHub.InternalServices.NewRoutingInterceptor(serviceDef, null, clientInterceptor);
+        var clientInterceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef, null);
+        var routingInterceptor = rpcHub.InternalServices.NewRoutingInterceptor(serviceDef, localService, clientInterceptor);
         return services.ActivateProxy(implementationType, routingInterceptor, null, initialize);
     }
 }

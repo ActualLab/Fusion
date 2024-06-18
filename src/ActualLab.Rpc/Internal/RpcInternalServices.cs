@@ -36,13 +36,15 @@ public sealed class RpcInternalServices(RpcHub hub)
 
     public ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers => Hub.Peers;
 
-    public RpcClientInterceptor NewClientInterceptor(RpcServiceDef serviceDef)
-        => new(ClientInterceptorOptions, Hub.Services, serviceDef);
+    public RpcClientInterceptor NewClientInterceptor(RpcServiceDef serviceDef, object? localService)
+        => new(ClientInterceptorOptions, Hub.Services, serviceDef) {
+            LocalTarget = localService,
+        };
 
     public RpcRoutingInterceptor NewRoutingInterceptor(
-        RpcServiceDef serviceDef, Interceptor? localInterceptor, Interceptor? remoteInterceptor)
+        RpcServiceDef serviceDef, object? localTarget, object? remoteTarget)
         => new(RoutingInterceptorOptions, Hub.Services, serviceDef) {
-            LocalInterceptor = localInterceptor,
-            RemoteInterceptor = remoteInterceptor,
+            LocalTarget = localTarget,
+            RemoteTarget = remoteTarget,
         };
 }

@@ -15,8 +15,8 @@ public class RpcRoutingInterceptor : RpcInterceptor
     }
 
     public Options Settings { get; }
-    public Interceptor? LocalInterceptor { get; init; }
-    public Interceptor? RemoteInterceptor { get; init; }
+    public object? LocalTarget { get; init; }
+    public object? RemoteTarget { get; init; }
     public RpcCallRouter CallRouter { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
@@ -28,7 +28,7 @@ public class RpcRoutingInterceptor : RpcInterceptor
     }
 
     public override Func<Invocation, object?>? GetHandler(Invocation invocation)
-        => GetOwnHandler(invocation) ?? LocalInterceptor?.GetHandler(invocation);
+        => GetOwnHandler(invocation) ?? (LocalTarget as Interceptor)?.GetHandler(invocation);
 
     protected override Func<Invocation, object?>? CreateHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
@@ -36,10 +36,9 @@ public class RpcRoutingInterceptor : RpcInterceptor
     {
         var rpcMethodDef = (RpcMethodDef)methodDef;
         var proxy = initialInvocation.Proxy;
-        var service = ServiceDef.ServerResolver?.Resolve(Services);
-        var localCallAsyncInvoker = methodDef.SelectAsyncInvoker<TUnwrapped>(proxy, LocalInterceptor, service)
+        var localCallAsyncInvoker = methodDef.SelectAsyncInvoker<TUnwrapped>(proxy, LocalTarget)
             ?? throw Errors.NoLocalCallInvoker();
-        var remoteCallAsyncInvoker = methodDef.SelectAsyncInvoker<TUnwrapped>(proxy, RemoteInterceptor)
+        var remoteCallAsyncInvoker = methodDef.SelectAsyncInvoker<TUnwrapped>(proxy, RemoteTarget)
             ?? throw Errors.NoRemoteCallInvoker();
         return invocation => {
             var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);

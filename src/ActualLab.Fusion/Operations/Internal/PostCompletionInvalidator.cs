@@ -115,7 +115,7 @@ public class PostCompletionInvalidator(
 
         if (interceptor is not RpcRoutingInterceptor routingInterceptor)
             return false;
-        if (routingInterceptor.RemoteInterceptor is not ClientComputeServiceInterceptor clientComputeServiceInterceptor)
+        if (routingInterceptor.RemoteTarget is not ClientComputeServiceInterceptor clientComputeServiceInterceptor)
             return false;
 
         var clientInterceptor = clientComputeServiceInterceptor.ClientInterceptor;

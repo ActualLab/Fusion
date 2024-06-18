@@ -276,7 +276,7 @@ public class ClientComputeMethodFunction<T>(
         var proxy = (IProxy)invocation.Proxy;
         var interceptor = proxy.Interceptor;
         var clientComputeServiceInterceptor = interceptor is RpcRoutingInterceptor routingInterceptor
-            ? (ClientComputeServiceInterceptor)routingInterceptor.RemoteInterceptor!
+            ? (ClientComputeServiceInterceptor)routingInterceptor.RemoteTarget!
             : (ClientComputeServiceInterceptor)interceptor;
         var clientInterceptor = clientComputeServiceInterceptor.ClientInterceptor;
 

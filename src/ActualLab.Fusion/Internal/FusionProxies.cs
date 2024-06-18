@@ -26,7 +26,7 @@ public static class FusionProxies
         var rpcHub = fusionHub.RpcHub;
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
 
-        var clientInterceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef);
+        var clientInterceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef, null);
         var clientComputeServiceInterceptor = fusionHub.NewClientComputeServiceInterceptor(clientInterceptor);
         clientComputeServiceInterceptor.ValidateType(serviceType);
         return services.ActivateProxy(serviceType, clientComputeServiceInterceptor, null, initialize);
@@ -43,7 +43,7 @@ public static class FusionProxies
         var serviceDef = rpcHub.ServiceRegistry[implementationType];
 
         var computeServiceInterceptor = services.GetRequiredService<ComputeServiceInterceptor>();
-        var clientInterceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef);
+        var clientInterceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef, null);
         var clientComputeServiceInterceptor = fusionHub.NewClientComputeServiceInterceptor(clientInterceptor);
         clientComputeServiceInterceptor.ValidateType(implementationType);
         var routingInterceptor = rpcHub.InternalServices.NewRoutingInterceptor(

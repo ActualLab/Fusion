@@ -15,6 +15,8 @@ public class RpcClientInterceptor : RpcInterceptor
         public static Options Default { get; set; } = new();
     }
 
+    public object? LocalTarget { get; init; }
+
     // ReSharper disable once ConvertToPrimaryConstructor
     public RpcClientInterceptor(Options settings, IServiceProvider services, RpcServiceDef serviceDef)
         : base(settings, services, serviceDef)
@@ -25,16 +27,22 @@ public class RpcClientInterceptor : RpcInterceptor
         (Invocation initialInvocation, MethodDef methodDef)
     {
         var rpcMethodDef = (RpcMethodDef)methodDef;
+        var localCallAsyncInvoker = LocalTarget != null
+            ? methodDef.SelectAsyncInvoker<TUnwrapped>(initialInvocation.Proxy, LocalTarget)
+            : null;
         return invocation => {
             var context = invocation.Context as RpcOutboundContext ?? new();
             var call = (RpcOutboundCall<TUnwrapped>?)context.PrepareCall(rpcMethodDef, invocation.Arguments);
             var peer = context.Peer!;
             Task<TUnwrapped> resultTask;
             if (peer.Ref.CanBeGone) {
-                resultTask = InvokeWithRerouting(context, call);
+                resultTask = InvokeWithRerouting(invocation, context, call, localCallAsyncInvoker);
             }
             else if (call == null) {
-                throw RpcRerouteException.LocalCall(); // To be handled by RpcRoutingInterceptor
+                if (localCallAsyncInvoker != null)
+                    resultTask = localCallAsyncInvoker.Invoke(invocation);
+                else
+                    throw RpcRerouteException.LocalCall(); // To be handled by RpcRoutingInterceptor
             }
             else if (call.NoWait || context.CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly }) {
                 // NoWait requires call to be sent no matter what is the connection state now;
@@ -66,13 +74,19 @@ public class RpcClientInterceptor : RpcInterceptor
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     private async Task<T> InvokeWithRerouting<T>(
+        Invocation invocation,
         RpcOutboundContext context,
-        RpcOutboundCall<T>? call)
+        RpcOutboundCall<T>? call,
+        Func<Invocation, Task<T>>? localCallAsyncInvoker)
     {
         var cancellationToken = context.CancellationToken;
         while (true) {
-            if (call == null)
-                throw RpcRerouteException.LocalCall(); // To be handled by RpcRoutingInterceptor
+            if (call == null) {
+                return localCallAsyncInvoker != null
+                    ? await localCallAsyncInvoker.Invoke(invocation).ConfigureAwait(false)
+                    : throw RpcRerouteException.LocalCall();
+            }
+
             try {
                 Task<T> resultTask;
                 if (call.NoWait || context.CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly }) {
