@@ -4,7 +4,9 @@ Dynamic Routing:
 
 Edge cases:
 - Invalidation
-- Commands
+- Commands + invalidation
+- Capture with rerouting
 
 Near-term:
 - Robust routing tests
+- Propagate activity for nested commands (even w/ isolate)
