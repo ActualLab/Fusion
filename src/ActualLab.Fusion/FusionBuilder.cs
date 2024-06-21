@@ -379,7 +379,7 @@ public readonly struct FusionBuilder
             return this;
 
         services.AddSingleton<TCache>();
-        services.AddSingleton(c => new SharedClientComputedCache(c.GetRequiredService<TCache>()));
+        services.AddSingleton(c => new SharedClientComputedCache(c.GetRequiredService<TCache>));
         services.AddAlias<IClientComputedCache, SharedClientComputedCache>();
         return this;
     }
