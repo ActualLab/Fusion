@@ -1,6 +1,5 @@
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Generators;
-using ActualLab.Generators.Internal;
 using ActualLab.Rpc;
 using ActualLab.Testing.Collections;
 
@@ -13,7 +12,7 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddService<ICounterService, CounterService>(RpcServiceMode.Hybrid);
+        fusion.AddService<ICounterService, CounterService>(RpcServiceMode.ServerAndRouter);
     }
 
     [Fact]

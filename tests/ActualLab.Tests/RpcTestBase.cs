@@ -80,7 +80,8 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
     protected virtual void ConfigureServices(IServiceCollection services, bool isClient)
     {
         if (UseTestClock)
-            services.AddSingleton(new MomentClockSet(new TestClock()));
+            services.AddSingleton(_ => new MomentClockSet(new TestClock()));
+
         services.AddSingleton(Out);
 
         // Logging

@@ -12,8 +12,5 @@ public enum RpcServiceMode
 public static class RpcServiceModeExt
 {
     public static RpcServiceMode Or(this RpcServiceMode mode, RpcServiceMode defaultMode)
-        => mode == RpcServiceMode.Default ? defaultMode.OrNone() : mode;
-
-    public static RpcServiceMode OrNone(this RpcServiceMode mode)
-        => mode == RpcServiceMode.Default ? RpcServiceMode.Local : mode;
+        => mode == RpcServiceMode.Default ? defaultMode : mode;
 }

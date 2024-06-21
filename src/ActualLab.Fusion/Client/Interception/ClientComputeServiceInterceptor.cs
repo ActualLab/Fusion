@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.CommandR.Interception;
 using ActualLab.Fusion.Interception;
 using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
@@ -12,7 +13,6 @@ public class ClientComputeServiceInterceptor : ComputeServiceInterceptor
         public static new Options Default { get; set; } = new();
     }
 
-    public readonly ComputeServiceInterceptor ComputeServiceInterceptor;
     public readonly RpcClientInterceptor ClientInterceptor;
 
     // ReSharper disable once ConvertToPrimaryConstructor
@@ -22,15 +22,20 @@ public class ClientComputeServiceInterceptor : ComputeServiceInterceptor
         RpcClientInterceptor clientInterceptor
         ) : base(settings, services)
     {
-        ComputeServiceInterceptor = Hub.ComputeServiceInterceptor;
         ClientInterceptor = clientInterceptor;
+        CommandServiceInterceptor = new CommandServiceInterceptor(Hub.CommandServiceInterceptorOptions, services) {
+            Next = ClientInterceptor,
+        };
     }
 
     public override Func<Invocation, object?>? GetHandler(Invocation invocation)
     {
         var handler = GetOwnHandler(invocation);
-        if (handler == null) // Not a compute method
-            return CommandServiceInterceptor.GetOwnHandler(invocation);
+        if (handler == null) {
+            // Not a compute method
+            return CommandServiceInterceptor.GetOwnHandler(invocation)
+                ?? ClientInterceptor.GetOwnHandler(invocation);
+        }
 
         // If we're here, it's a compute method
         return Invalidation.IsActive
@@ -44,5 +49,5 @@ public class ClientComputeServiceInterceptor : ComputeServiceInterceptor
     protected override void ValidateTypeInternal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
         // We redirect this call to ComputeServiceInterceptor to make sure its validation cache is reused here
-        => ComputeServiceInterceptor.ValidateType(type);
+        => Hub.ComputeServiceInterceptor.ValidateType(type);
 }

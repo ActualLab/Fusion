@@ -3,7 +3,7 @@ using ActualLab.Interception.Internal;
 
 namespace ActualLab.Interception;
 
-public abstract class Interceptor
+public abstract class Interceptor : IHasServices
 {
     public abstract record Options
     {
@@ -40,6 +40,8 @@ public abstract class Interceptor
     public bool IsValidationEnabled { get; }
     public bool MustInterceptAsyncCalls { get; init; } = true;
     public bool MustInterceptSyncCalls { get; init; } = false;
+    public bool MustValidateProxyType { get; init; } = true;
+    public Interceptor? Next { get; init; }
 
     protected Interceptor(Options settings, IServiceProvider services)
     {
@@ -58,7 +60,7 @@ public abstract class Interceptor
 
     public void BindTo(IRequiresAsyncProxy proxy, object? proxyTarget = null, bool initialize = true)
     {
-        if (MustInterceptSyncCalls && proxy is not IRequiresFullProxy)
+        if (MustInterceptSyncCalls && proxy is not IRequiresFullProxy && MustValidateProxyType)
             throw Errors.InvalidProxyType(proxy.GetType(), typeof(IRequiresFullProxy));
 
         proxy.RequireProxy<IProxy>().Interceptor = this;
@@ -76,10 +78,18 @@ public abstract class Interceptor
     public void Intercept(Invocation invocation)
     {
         var handler = GetHandler(invocation);
-        if (handler == null)
-            invocation.InterceptedVoid();
-        else
+        if (handler != null)
             handler.Invoke(invocation);
+        else
+            Proceed(invocation);
+    }
+
+    public void Proceed(Invocation invocation)
+    {
+        if (Next is { } next)
+            next.Intercept(invocation);
+        else
+            invocation.InterceptedVoid();
     }
 
     /// <summary>
@@ -91,10 +101,15 @@ public abstract class Interceptor
     public TResult Intercept<TResult>(Invocation invocation)
     {
         var handler = GetHandler(invocation);
-        return handler == null
-            ? invocation.Intercepted<TResult>()
-            : (TResult)handler.Invoke(invocation)!;
+        return handler != null
+            ? (TResult)handler.Invoke(invocation)!
+            : Proceed<TResult>(invocation);
     }
+
+    public TResult Proceed<TResult>(Invocation invocation)
+        => Next is { } next
+            ? next.Intercept<TResult>(invocation)
+            : invocation.Intercepted<TResult>();
 
     public virtual Func<Invocation, object?>? GetHandler(Invocation invocation)
         => GetOwnHandler(invocation);

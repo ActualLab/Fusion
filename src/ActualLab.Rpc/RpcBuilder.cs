@@ -56,11 +56,11 @@ public readonly struct RpcBuilder
             return;
         }
 
-        // We want above GetConfiguration call to run in O(1), so...
         Configuration = services.AddInstance(new RpcConfiguration());
         services.AddSingleton(c => new RpcHub(c));
 
         // Common services
+        services.TryAddSingleton(c => c.Clocks().SystemClock);
         services.AddSingleton(c => new RpcServiceRegistry(c));
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
         services.AddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);
@@ -89,6 +89,7 @@ public readonly struct RpcBuilder
 
         // Interceptor options (the instances are created by RpcProxies)
         services.AddSingleton(_ => RpcClientInterceptor.Options.Default);
+        services.AddSingleton(_ => RpcRoutingInterceptor.Options.Default);
 
         // System services
         if (!Configuration.Services.ContainsKey(typeof(IRpcSystemCalls))) {

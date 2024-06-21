@@ -40,12 +40,11 @@ public readonly struct CommanderBuilder
         Handlers = services.AddInstance(new HashSet<CommandHandler>(), addInFront: true);
 
         // Core services
-        services.AddSingleton(_ => new HostId());
-        services.AddSingleton(_ => MomentClockSet.Default);
-        services.AddSingleton(c => c.GetRequiredService<MomentClockSet>().SystemClock);
-        services.AddSingleton<UuidGenerator>(_ => new UlidUuidGenerator());
-        services.AddSingleton<VersionGenerator<long>>(c => new ClockBasedVersionGenerator(c.Clocks().SystemClock));
-        services.AddSingleton(_ => ChaosMaker.Default);
+        services.TryAddSingleton(_ => new HostId());
+        services.TryAddSingleton(c => c.Clocks().SystemClock);
+        services.TryAddSingleton<UuidGenerator>(_ => new UlidUuidGenerator());
+        services.TryAddSingleton<VersionGenerator<long>>(c => new ClockBasedVersionGenerator(c.Clocks().SystemClock));
+        services.TryAddSingleton(_ => ChaosMaker.Default);
 
         // Commander, handlers, etc.
         services.AddSingleton<ICommander>(c => new Commander(c));

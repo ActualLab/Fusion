@@ -30,21 +30,6 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     public override IComputed? GetExistingComputed()
         => ComputedRegistry.Instance.Get(this);
 
-    public object InvokeOriginalFunction(CancellationToken cancellationToken)
-    {
-        // This method fixes up the arguments before the invocation so that
-        // CancellationToken is set to the correct one and CallOptions are reset.
-        // In addition, it processes CallOptions.Capture.
-        var ctIndex = MethodDef.CancellationTokenIndex;
-        if (ctIndex < 0)
-            return Invocation.InterceptedUntyped()!;
-
-        Arguments.SetCancellationToken(ctIndex, cancellationToken);
-        var result = Invocation.InterceptedUntyped()!;
-        Arguments.SetCancellationToken(ctIndex, default);
-        return result;
-    }
-
     // Equality
 
     public bool Equals(ComputeMethodInput? other)

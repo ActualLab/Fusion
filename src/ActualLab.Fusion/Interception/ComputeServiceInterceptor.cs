@@ -13,7 +13,7 @@ public class ComputeServiceInterceptor : Interceptor
     }
 
     public readonly FusionInternalHub Hub;
-    public readonly CommandServiceInterceptor CommandServiceInterceptor;
+    public CommandServiceInterceptor CommandServiceInterceptor { get; init; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public ComputeServiceInterceptor(Options settings, IServiceProvider services)

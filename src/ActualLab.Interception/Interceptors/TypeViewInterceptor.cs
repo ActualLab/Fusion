@@ -19,6 +19,8 @@ public class TypeViewInterceptor : Interceptor
         : base(settings, services)
     {
         MustInterceptSyncCalls = true;
+        MustValidateProxyType = false;
+
         _createConvertingHandlerMethod = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
             .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateConvertingHandler)));

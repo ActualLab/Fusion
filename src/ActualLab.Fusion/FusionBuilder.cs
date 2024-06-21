@@ -52,22 +52,24 @@ public readonly struct FusionBuilder
             return;
         }
 
-        ServiceMode = serviceMode.OrNone();
-        services.AddInstance(new FusionTag(setDefaultServiceMode ? ServiceMode : RpcServiceMode.Local), addInFront: true);
+        ServiceMode = serviceMode.Or(RpcServiceMode.Local);
+        var fusionTagServiceMode = setDefaultServiceMode
+            ? ServiceMode
+            : RpcServiceMode.Local;
+        services.AddInstance(new FusionTag(fusionTagServiceMode), addInFront: true);
 
         // Common services
         services.AddOptions();
         services.AddConverters();
+        services.TryAddSingleton(_ => TransiencyResolvers.PreferTransient.ForContext<IComputed>());
         services.AddSingleton(c => new FusionInternalHub(c));
-
-        // Compute services & their dependencies
         services.AddSingleton(_ => new ComputedOptionsProvider());
-        services.AddSingleton(_ => TransiencyResolvers.PreferTransient.ForContext<IComputed>());
+
+        // Interceptors
         services.AddSingleton(_ => ComputeServiceInterceptor.Options.Default);
         services.AddSingleton(_ => ClientComputeServiceInterceptor.Options.Default);
         services.AddSingleton(c => new ComputeServiceInterceptor(
             c.GetRequiredService<ComputeServiceInterceptor.Options>(), c));
-
 
         // StateFactory
         services.AddSingleton(c => new MixedModeService<StateFactory>.Singleton(new StateFactory(c), c));
@@ -221,18 +223,18 @@ public readonly struct FusionBuilder
         RpcServiceMode mode = RpcServiceMode.Default,
         bool addCommandHandlers = true)
     {
+        mode = mode.Or(ServiceMode);
         if (lifetime != ServiceLifetime.Singleton) {
-            if (!(mode is RpcServiceMode.Local or RpcServiceMode.Default))
+            if (mode is not RpcServiceMode.Local)
                 throw new ArgumentOutOfRangeException(nameof(mode));
 
             return AddComputeService(serviceType, implementationType, lifetime);
         }
 
-        mode = mode.Or(ServiceMode);
         return mode switch {
             RpcServiceMode.Local => AddComputeService(serviceType, implementationType, addCommandHandlers),
             RpcServiceMode.Server => AddServer(serviceType, implementationType, default, addCommandHandlers),
-            RpcServiceMode.ServerAndRouter => throw Errors.NotSupported("Compute services must use RpcServiceMode.Hybrid mode instead."),
+            RpcServiceMode.ServerAndRouter => AddServerAndRouter(serviceType, implementationType, default, addCommandHandlers),
             RpcServiceMode.Hybrid => AddHybrid(serviceType, implementationType, default, addCommandHandlers),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
@@ -261,8 +263,8 @@ public readonly struct FusionBuilder
     }
 
     public FusionBuilder AddServer<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
         (Symbol name = default, bool addCommandHandlers = true)
         => AddServer(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
     public FusionBuilder AddServer(
@@ -273,6 +275,25 @@ public readonly struct FusionBuilder
     {
         AddComputeService(serviceType, implementationType, addCommandHandlers);
         Rpc.Service(serviceType).HasServer(serviceType).HasName(name);
+        return this;
+    }
+
+    public FusionBuilder AddServerAndRouter<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+        (Symbol name = default, bool addCommandHandlers = true)
+        => AddServerAndRouter(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
+    public FusionBuilder AddServerAndRouter(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
+        Symbol name = default,
+        bool addCommandHandlers = true)
+    {
+        AddComputeService(implementationType, implementationType, false);
+        Services.AddSingleton(serviceType, c => FusionProxies.NewRoutingClientProxy(c, serviceType, implementationType));
+        if (addCommandHandlers)
+            Commander.AddHandlers(serviceType, implementationType);
+        Rpc.Service(serviceType).HasServer(implementationType).HasName(name);
         return this;
     }
 
@@ -298,7 +319,7 @@ public readonly struct FusionBuilder
         if (!typeof(IComputeService).IsAssignableFrom(implementationType))
             throw Errors.MustImplement<IComputeService>(implementationType, nameof(implementationType));
 
-        Services.AddSingleton(serviceType, c => FusionProxies.NewHybridProxy(c, implementationType));
+        Services.AddSingleton(serviceType, c => FusionProxies.NewHybridProxy(c, serviceType, implementationType));
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType, implementationType);
         Rpc.Service(serviceType).HasServer(serviceType).HasName(name);
@@ -421,7 +442,7 @@ public readonly struct FusionBuilder
 
         public RpcServiceMode ServiceMode {
             get => _serviceMode;
-            set => _serviceMode = value.OrNone();
+            set => _serviceMode = value.Or(RpcServiceMode.Local);
         }
 
         public FusionTag(RpcServiceMode serviceMode)

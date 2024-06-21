@@ -15,9 +15,12 @@ public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
         = new(services, c => c.GetService<IClientComputedCache>());
     private CommandServiceInterceptor? _commandServiceInterceptor;
     private ComputeServiceInterceptor? _computeServiceInterceptor;
+    private CommandServiceInterceptor.Options? _commandServiceInterceptorOptions;
     private ClientComputeServiceInterceptor.Options? _clientComputeServiceInterceptorOptions;
 
-    private ClientComputeServiceInterceptor.Options ClientComputeServiceInterceptorOptions
+    internal CommandServiceInterceptor.Options CommandServiceInterceptorOptions
+        => _commandServiceInterceptorOptions ??= Services.GetRequiredService<CommandServiceInterceptor.Options>();
+    internal ClientComputeServiceInterceptor.Options ClientComputeServiceInterceptorOptions
         => _clientComputeServiceInterceptorOptions ??= Services.GetRequiredService<ClientComputeServiceInterceptor.Options>();
 
     public IServiceProvider Services { get; } = services;

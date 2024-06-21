@@ -116,7 +116,7 @@ public abstract class FusionTestBase : RpcTestBase
         services.AddSingleton<UserService>();
         services.AddSingleton<ComputedState<ServerTimeModel1>, ServerTimeModel1State>();
         services.AddSingleton<ComputedState<KeyValueModel<string>>, StringKeyValueModelState>();
-        fusion.AddService<ISimplestProvider, SimplestProvider>(ServiceLifetime.Scoped);
+        fusion.AddService<ISimplestProvider, SimplestProvider>(ServiceLifetime.Scoped, RpcServiceMode.Local);
         fusion.AddService<NestedOperationLoggerTester>();
     }
 

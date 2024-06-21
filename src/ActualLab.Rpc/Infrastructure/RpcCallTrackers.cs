@@ -21,6 +21,7 @@ public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
     public int Count => Calls.Count;
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    // ReSharper disable once NotDisposedResourceIsReturned
     public IEnumerator<TRpcCall> GetEnumerator() => Calls.Values.GetEnumerator();
 
     public virtual void Initialize(RpcPeer peer)

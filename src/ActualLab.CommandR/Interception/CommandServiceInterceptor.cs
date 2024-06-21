@@ -8,7 +8,7 @@ namespace ActualLab.CommandR.Interception;
 #if !NET5_0
 [RequiresUnreferencedCode(UnreferencedCode.Commander)]
 #endif
-public class CommandServiceInterceptor(CommandServiceInterceptor.Options settings, IServiceProvider services)
+public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options settings, IServiceProvider services)
     : Interceptor(settings, services)
 {
     public new record Options : Interceptor.Options
@@ -64,7 +64,7 @@ public class CommandServiceInterceptor(CommandServiceInterceptor.Options setting
             }
 
             // We're already inside the ICommander pipeline created for exactly this command
-            return invocation.InterceptedUntyped();
+            return this.ProceedUntyped(invocation);
         };
     }
 
