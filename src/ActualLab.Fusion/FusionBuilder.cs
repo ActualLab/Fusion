@@ -223,14 +223,15 @@ public readonly struct FusionBuilder
         RpcServiceMode mode = RpcServiceMode.Default,
         bool addCommandHandlers = true)
     {
-        mode = mode.Or(ServiceMode);
         if (lifetime != ServiceLifetime.Singleton) {
-            if (mode is not RpcServiceMode.Local)
+            var scopedServiceMode = mode.Or(RpcServiceMode.Local);
+            if (scopedServiceMode is not RpcServiceMode.Local)
                 throw new ArgumentOutOfRangeException(nameof(mode));
 
             return AddComputeService(serviceType, implementationType, lifetime);
         }
 
+        mode = mode.Or(ServiceMode);
         return mode switch {
             RpcServiceMode.Local => AddComputeService(serviceType, implementationType, addCommandHandlers),
             RpcServiceMode.Server => AddServer(serviceType, implementationType, default, addCommandHandlers),
