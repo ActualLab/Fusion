@@ -1,21 +1,41 @@
 using ActualLab.Fusion.Blazor.Internal;
+using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
+#pragma warning disable CA2007
+
 public abstract class ComputedStateComponent<TState> : StatefulComponentBase<ComputedState<TState>>
 {
-    protected ComputedStateComponentOptions Options { get; init; } = ComputedStateComponent.DefaultOptions;
+    protected ComputedStateComponentOptions Options { get; set; } = ComputedStateComponent.DefaultOptions;
 
-    // State frequently depends on component parameters, so...
-    protected override Task OnParametersSetAsync()
+    public override Task SetParametersAsync(ParameterView parameters)
     {
-#pragma warning disable MA0040
-        if (IsFirstSetParametersCallCompleted && (Options & ComputedStateComponentOptions.RecomputeOnParametersSet) != 0)
-            _ = State.Recompute();
+        var parameterSetIndex = ParameterSetIndex;
+        var task = base.SetParametersAsync(parameters);
+        var mustRecompute =
+            (Options & ComputedStateComponentOptions.StateIsParameterDependent) != 0 // Requires recompute on parameter change
+            && parameterSetIndex != 0 // Not the very first call to SetParametersAsync
+            && ParameterSetIndex != parameterSetIndex; // And parameters were changed
+        if (!mustRecompute)
+            return task;
 
-        return Task.CompletedTask;
-#pragma warning restore MA0040
+        if (task.IsCompletedSuccessfully) {
+            _ = State.Recompute();
+            return task;
+        }
+
+        return CompleteAsync(task);
+
+        async Task CompleteAsync(Task dependency)
+        {
+            await dependency;
+            _ = State.Recompute();
+        }
     }
+
+    protected override bool ShouldRender()
+        => (Options & ComputedStateComponentOptions.StateIsPureRenderState) == 0 || IsPureRenderStateChanged(State);
 
     protected virtual ComputedState<TState>.Options GetStateOptions()
         => ComputedStateComponent.GetStateOptions<TState>(GetType());

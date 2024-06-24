@@ -5,17 +5,21 @@ using Microsoft.AspNetCore.Components.RenderTree;
 
 namespace ActualLab.Fusion.Blazor;
 
+#pragma warning disable BL0006
+
 public static class ComponentExt
 {
 #if USE_UNSAFE_ACCESSORS && NET8_0_OR_GREATER
+    // [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_renderFragment")]
+    // private static extern ref RenderFragment RenderFragmentGetter(ComponentBase @this);
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_renderHandle")]
     private static extern ref RenderHandle RenderHandleGetter(ComponentBase @this);
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_initialized")]
     private static extern ref bool IsInitializedGetter(ComponentBase @this);
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_renderer")]
-    private static extern ref Renderer? RendererGetter(RenderHandle @this);
+    private static extern ref Renderer? RendererGetter(ref RenderHandle @this);
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_componentId")]
-    private static extern ref int ComponentIdGetter(RenderHandle @this);
+    private static extern ref int ComponentIdGetter(ref RenderHandle @this);
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "StateHasChanged")]
     private static extern void StateHasChangedInvoker(ComponentBase @this);
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "GetOptionalComponentState")]
@@ -23,14 +27,16 @@ public static class ComponentExt
 
     private static ComponentState? GetOptionalComponentStateGetter(RenderHandle renderHandle)
     {
-        var renderer = RendererGetter(renderHandle);
+        var renderer = RendererGetter(ref renderHandle);
         if (renderer == null)
             return null;
 
-        var componentId = ComponentIdGetter(renderHandle);
+        var componentId = ComponentIdGetter(ref renderHandle);
         return GetOptionalComponentStateGetter(renderer, componentId);
     }
 #else
+    // private static readonly Func<ComponentBase, RenderFragment> RenderFragmentGetter;
+    // private static readonly Action<ComponentBase, RenderFragment> RenderFragmentSetter;
     private static readonly Func<ComponentBase, RenderHandle> RenderHandleGetter;
     private static readonly Func<ComponentBase, bool> IsInitializedGetter;
     private static readonly Action<ComponentBase> StateHasChangedInvoker;
@@ -44,6 +50,20 @@ public static class ComponentExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Dispatcher GetDispatcher(this ComponentBase component)
         => RenderHandleGetter(component).Dispatcher;
+
+/*
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static RenderFragment GetRenderFragment(ComponentBase component)
+        => RenderFragmentGetter(component);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SetRenderFragment(ComponentBase component, RenderFragment renderFragment)
+#if USE_UNSAFE_ACCESSORS && NET8_0_OR_GREATER
+        => RenderFragmentGetter(component) = renderFragment;
+#else
+        => RenderFragmentSetter(component, renderFragment);
+#endif
+*/
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsInitialized(this ComponentBase component)
@@ -76,12 +96,6 @@ public static class ComponentExt
         }
     }
 
-    public static bool ShouldSetParameters(this ComponentBase component, ParameterView parameterView)
-    {
-        var componentInfo = component.GetComponentInfo();
-        return componentInfo.ShouldSetParameters(component, parameterView) || !component.IsInitialized();
-    }
-
 #if !(USE_UNSAFE_ACCESSORS && NET8_0_OR_GREATER)
     static ComponentExt()
     {
@@ -90,6 +104,7 @@ public static class ComponentExt
         var tRenderHandle = typeof(RenderHandle);
         var tRenderer = typeof(Renderer);
         var fInitialized = tComponentBase.GetField("_initialized", bfInstanceNonPublic)!;
+        var fRenderFragment = tComponentBase.GetField("_renderFragment", bfInstanceNonPublic)!;
         var fRenderHandle = tComponentBase.GetField("_renderHandle", bfInstanceNonPublic)!;
         var mStateHasChanged = tComponentBase.GetMethod("StateHasChanged", bfInstanceNonPublic)!;
         var fComponentId = tRenderHandle.GetField("_componentId", bfInstanceNonPublic)!;
@@ -97,6 +112,8 @@ public static class ComponentExt
         var mGetOptionalComponentState = tRenderer.GetMethod("GetOptionalComponentState", bfInstanceNonPublic)!;
 
         IsInitializedGetter = fInitialized.GetGetter<ComponentBase, bool>();
+        // RenderFragmentGetter = fRenderFragment.GetGetter<ComponentBase, RenderFragment>();
+        // RenderFragmentSetter = fRenderFragment.GetSetter<ComponentBase, RenderFragment>();
         RenderHandleGetter = fRenderHandle.GetGetter<ComponentBase, RenderHandle>();
         StateHasChangedInvoker = (Action<ComponentBase>)mStateHasChanged.CreateDelegate(typeof(Action<ComponentBase>));
 

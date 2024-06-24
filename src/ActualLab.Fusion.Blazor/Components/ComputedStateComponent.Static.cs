@@ -1,5 +1,3 @@
-using ActualLab.OS;
-
 namespace ActualLab.Fusion.Blazor;
 
 public static class ComputedStateComponent
@@ -11,15 +9,9 @@ public static class ComputedStateComponent
     private static readonly ConcurrentDictionary<Type, Func<Type, IComputedState.IOptions>> CreateDefaultStateOptionsCache = new();
 
     public static ComputedStateComponentOptions DefaultOptions { get; set; }
+        = ComputedStateComponentOptions.SynchronizeComputeState
+        | ComputedStateComponentOptions.StateIsParameterDependent;
     public static Func<Type, IComputedState.IOptions> DefaultStateOptionsFactory { get; set; } = CreateDefaultStateOptions;
-
-    static ComputedStateComponent()
-    {
-        DefaultOptions = ComputedStateComponentOptions.SynchronizeComputeState
-                         | ComputedStateComponentOptions.RecomputeOnParametersSet;
-        if (HardwareInfo.IsSingleThreaded)
-            DefaultOptions = ComputedStateComponentOptions.RecomputeOnParametersSet;
-    }
 
     public static ComputedState<TState>.Options GetStateOptions<TState>(
         Type componentType, Func<Type, ComputedState<TState>.Options>? optionsFactory = null)

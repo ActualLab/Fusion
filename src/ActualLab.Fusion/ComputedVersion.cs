@@ -48,7 +48,7 @@ public static class ComputedVersion
         public ulong Next()
         {
             var result = Interlocked.Add(ref _version, LocalVersionCount);
-            if (result == 0)
+            while (result == 0)
                 result = Interlocked.Add(ref _version, LocalVersionCount);
             return (ulong)result;
         }

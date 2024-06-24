@@ -5,7 +5,6 @@ namespace ActualLab.Fusion.Blazor;
 
 public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposable, IHandleEvent
 {
-    private StateEventKind _stateHasChangedTriggers = StateEventKind.Updated;
     private StateFactory? _stateFactory;
 
     [Inject] protected IServiceProvider Services { get; init; } = null!;
@@ -13,20 +12,7 @@ public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposa
     protected StateFactory StateFactory => _stateFactory ??= Services.StateFactory();
     protected abstract IState UntypedState { get; }
     protected Action<IState, StateEventKind> StateChanged { get; set; }
-
-    protected StateEventKind StateHasChangedTriggers {
-        get => _stateHasChangedTriggers;
-        set {
-            var state = UntypedState;
-            if (state == null!) {
-                _stateHasChangedTriggers = value;
-                return;
-            }
-            state.RemoveEventHandler(_stateHasChangedTriggers, StateChanged);
-            _stateHasChangedTriggers = value;
-            state.AddEventHandler(_stateHasChangedTriggers, StateChanged);
-        }
-    }
+    protected long PureRenderStateUpdateCount { get; set; } = -1;
 
     // It's typically more natural for stateful components to recompute State
     // and trigger StateHasChanged only as a result state (re)computation or parameter changes.
@@ -45,6 +31,16 @@ public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposa
         if (UntypedState is IDisposable d)
             d.Dispose();
         return default;
+    }
+
+    protected bool IsPureRenderStateChanged(IState pureRenderState)
+    {
+        var pureRenderStateUpdateCount = pureRenderState.Snapshot.UpdateCount;
+        if (PureRenderStateUpdateCount == pureRenderStateUpdateCount)
+            return false;
+
+        PureRenderStateUpdateCount = pureRenderStateUpdateCount;
+        return true;
     }
 
     Task IHandleEvent.HandleEventAsync(EventCallbackWorkItem callback, object? arg)
@@ -91,31 +87,28 @@ public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposa
 public abstract class StatefulComponentBase<TState> : StatefulComponentBase
     where TState : class, IState
 {
-    private TState? _state;
-
+    protected TState State { get; private set; } = null!;
     protected override IState UntypedState => State;
-
-    protected internal TState State {
-        get => _state!;
-        set {
-            if (value == null!)
-                throw new ArgumentNullException(nameof(value));
-            if (_state != null)
-                throw Errors.AlreadyInitialized(nameof(State));
-            _state = value;
-        }
-    }
 
     protected override void OnInitialized()
     {
-        if (_state != null) {
-            _state.AddEventHandler(StateHasChangedTriggers, StateChanged);
+        if (!ReferenceEquals(State, null))
             return;
-        }
 
         var (state, stateOptions) = CreateState();
-        _state = state;
-        state.AddEventHandler(StateHasChangedTriggers, StateChanged);
+        SetState(state, stateOptions);
+    }
+
+    protected virtual void SetState(
+        TState state,
+        object? stateOptions = null,
+        StateEventKind stateChangedEventKind = StateEventKind.Updated)
+    {
+        if (!ReferenceEquals(State, null))
+            throw Errors.AlreadyInitialized(nameof(State));
+
+        State = state ?? throw new ArgumentNullException(nameof(state));
+        state.AddEventHandler(stateChangedEventKind, StateChanged);
         if (stateOptions != null && state is IHasInitialize hasInitialize)
             hasInitialize.Initialize(stateOptions);
     }

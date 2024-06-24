@@ -36,10 +36,7 @@
     [Parameter] public string CssClass { get; set; } = "";
 
     protected override void OnInitialized()
-    {
-        State = Monitor.State;
-        base.OnInitialized();
-    }
+        => SetState(Monitor.State);
 
     public override ValueTask DisposeAsync()
         => default; // State shouldn't be disposed

@@ -10,19 +10,17 @@ public class FusionComponentBase : ComponentBase
     private Action? _stateHasChangedInvoker;
 
     protected ComponentInfo ComponentInfo => _componentInfo ??= ComponentInfo.Get(GetType());
-    protected bool IsFirstSetParametersCallCompleted { get; private set; }
+    protected int ParameterSetIndex { get; set; }
 
     internal Action StateHasChangedInvoker => _stateHasChangedInvoker ??= StateHasChanged;
 
     public override Task SetParametersAsync(ParameterView parameters)
     {
-        if (!IsFirstSetParametersCallCompleted) {
-            var result = base.SetParametersAsync(parameters);
-            IsFirstSetParametersCallCompleted = true;
-            return result;
-        }
-        return ComponentInfo.ShouldSetParameters(this, parameters)
-            ? base.SetParametersAsync(parameters)
-            : Task.CompletedTask;
+        var parameterSetIndex = ParameterSetIndex;
+        if (parameterSetIndex != 0 && !ComponentInfo.ShouldSetParameters(this, parameters))
+            return Task.CompletedTask;
+
+        ParameterSetIndex = ++parameterSetIndex;
+        return base.SetParametersAsync(parameters);
     }
 }
