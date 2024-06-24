@@ -9,10 +9,12 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
     // State frequently depends on component parameters, so...
     protected override Task OnParametersSetAsync()
     {
-        if ((Options & ComputedStateComponentOptions.RecomputeOnParametersSet) == 0)
-            return Task.CompletedTask;
-        _ = State.Recompute();
+#pragma warning disable MA0040
+        if (IsFirstSetParametersCallCompleted && (Options & ComputedStateComponentOptions.RecomputeOnParametersSet) != 0)
+            _ = State.Recompute();
+
         return Task.CompletedTask;
+#pragma warning restore MA0040
     }
 
     protected virtual ComputedState<TState>.Options GetStateOptions()

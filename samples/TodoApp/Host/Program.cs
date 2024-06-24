@@ -135,7 +135,7 @@ void ConfigureServices()
             ? throw new NotSupportedException("No client peers are allowed on the server.")
             : new RpcServerPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
     );
-#if true
+#if false
     // Enable this to test how the client behaves w/ a delay
     fusion.Rpc.AddInboundMiddleware(c => new RpcRandomDelayMiddleware(c) {
         Delay = new(1, 0.1),

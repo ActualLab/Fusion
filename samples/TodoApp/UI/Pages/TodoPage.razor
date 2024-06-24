@@ -96,6 +96,7 @@
     protected override async Task<Todo[]> ComputeState(CancellationToken cancellationToken)
     {
         _ = State.ValueOrDefault; // To trigger NullReferenceException when State setup is off
+        Log.LogInformation("ComputeState: PageSize = {PageSize}", PageSize);
         var items = await TodoUI.List(PageSize + 1, cancellationToken);
         HasMore = items.Length > PageSize;
         if (HasMore)
