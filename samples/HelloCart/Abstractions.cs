@@ -44,23 +44,24 @@ public partial record LogMessageCommand(
 {
     private static long _nextIndex;
 
-    public static LogMessageCommand NewRandom()
+    public static LogMessageCommand New()
     {
         var now = SystemClock.Now;
         var delay = TimeSpan.FromSeconds((10*Random.Shared.NextDouble()) - 5).Positive();
         var index = Interlocked.Increment(ref _nextIndex);
-        var message = delay > TimeSpan.Zero
+        var message = delay > TimeSpan.FromMilliseconds(1)
             ? $"Message #{index}, triggered with {delay.ToShortString()} delay"
             : $"Message #{index}";
         return new(Ulid.NewUlid().ToString(), message, now + delay);
     }
 
+    // This is ILocalCommand, so Run is its own handler
     public async Task Run(CommandContext context, CancellationToken cancellationToken)
     {
         var hasDelayUntil = DelayUntil != default;
-        var color = hasDelayUntil ? ConsoleColor.DarkRed : ConsoleColor.DarkBlue;
-        Console.WriteLine($"[{Uuid}] {Message}".PastelBg(color));
-        if (char.IsDigit(Uuid.Value[^1])) {
+        var color = hasDelayUntil ? ConsoleColor.Green : ConsoleColor.Blue;
+        Console.WriteLine($"[{Uuid}] {Message}".Pastel(color));
+        if (AppSettings.EnableRandomLogMessageCommandFailures && char.IsDigit(Uuid.Value[^1])) {
             await Task.Delay(300, CancellationToken.None).ConfigureAwait(false);
             throw new TransactionException("Can't run this command!");
         }

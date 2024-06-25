@@ -1,3 +1,5 @@
+using ActualLab.Resilience;
+
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public static class Errors
@@ -32,4 +34,7 @@ public static class Errors
         => new InvalidOperationException("DbEntityResolver's BatchSize is too large.");
     public static Exception CannotCompileQuery()
         => new InvalidOperationException("DbEntityResolver is unable to produce compiled query.");
+
+    public static Exception FailedToProcessCommandEvent(Exception originalException)
+        => new TerminalException("Failed to process command event.", originalException); // Any terminal error is ok here
 }

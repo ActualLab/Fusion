@@ -29,10 +29,10 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
         }
 
         var operation = context.TryGetOperation();
-        MutablePropertyBag? oldOperationItems = null;
+        var operationItemsBackup = PropertyBag.Empty;
         if (operation != null) {
-            oldOperationItems = operation.Items;
-            operation.Items = new MutablePropertyBag();
+            operationItemsBackup = operation.Items.Snapshot;
+            operation.Items.Snapshot = PropertyBag.Empty;
         }
 
         try {
@@ -41,8 +41,9 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
         finally {
             if (operation != null) {
                 // There was an operation already
-                operation.NestedOperations = operation.NestedOperations.Add(new(command, operation.Items.Snapshot));
-                operation.Items = oldOperationItems!;
+                var operationItems = operation.Items;
+                operation.NestedOperations = operation.NestedOperations.Add(new(command, operationItems.Snapshot));
+                operationItems.Snapshot = operationItemsBackup;
             }
             else {
                 // There was no operation, but it could be requested inside one of nested commands
@@ -51,8 +52,9 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
                     // The operation is requested inside the nested command, so we have to make a couple fixes:
                     // - Add nested operation that corresponds to the current command
                     // - Replace its Items with an empty bag
-                    operation.NestedOperations = operation.NestedOperations.Add(new(command, operation.Items.Snapshot));
-                    operation.Items = new MutablePropertyBag();
+                    var operationItems = operation.Items;
+                    operation.NestedOperations = operation.NestedOperations.Add(new(command, operationItems.Snapshot));
+                    operationItems.Snapshot = PropertyBag.Empty;
                 }
             }
         }

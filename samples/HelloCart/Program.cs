@@ -10,12 +10,12 @@ using Samples.HelloCart.V4;
 using Samples.HelloCart.V5;
 using static System.Console;
 
-var dbChaosMaker = (
-    (0.5*ChaosMaker.Delay(0.75, 1)) |
-    (0.0*ChaosMaker.TransientError)
-    ).Filtered("OF types", o => o is DbOperationScope or IDbLogReader).Gated();
-WriteLine(dbChaosMaker);
-// ChaosMaker.Default = dbChaosMaker;
+if (AppSettings.Db.UseChaosMaker) {
+    var dbChaosMaker = AppSettings.Db.ChaosMaker;
+    WriteLine(dbChaosMaker);
+    ChaosMaker.Default = dbChaosMaker;
+}
+
 // Create services
 AppBase? app;
 while(true) {
@@ -53,7 +53,8 @@ WriteLine("Initial state:");
 using var cts = new CancellationTokenSource();
 _ = app.Watch(app.WatchedServices, cts.Token);
 await Task.Delay(700); // Just to make sure watch tasks print whatever they want before our prompt appears
-await AutoRunner.Run(app);
+if (AppSettings.UseAutoRunner)
+    await AutoRunner.Run(app); // This method call never ends
 
 var productService = app.ClientServices.GetRequiredService<IProductService>();
 var commander = app.ClientServices.Commander();

@@ -13,10 +13,14 @@ public class InMemoryProductService : IProductService
             throw new ArgumentOutOfRangeException(nameof(command));
 
         if (Invalidation.IsActive) {
+            // Invalidation logic
             _ = Get(productId, default);
             return Task.CompletedTask;
         }
 
+        // This call triggers Operations Framework use for this command,
+        // which is responsible for triggering invalidation pass.
+        // Compare the invalidation logic here and in InMemoryCartService.Edit.
         InMemoryOperationScope.Require();
         if (product == null)
             _products.Remove(productId, out _);

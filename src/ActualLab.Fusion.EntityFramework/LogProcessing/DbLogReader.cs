@@ -11,6 +11,8 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
     where TDbEntry : class, IDbLogEntry
     where TOptions : DbLogReaderOptions
 {
+    private RetryLogger? _processOneRetryLogger;
+
     protected Dictionary<(DbShard Shard, TDbKey Key), Task> ReprocessTasks { get; } = new();
 
     protected IDbLogWatcher<TDbContext, TDbEntry> LogWatcher { get; }
@@ -18,6 +20,7 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
     protected IMomentClock SystemClock { get; init; } = services.Clocks().SystemClock;
     protected ILogger? DefaultLog => Log.IfEnabled(Settings.LogLevel);
     protected ILogger? DebugLog => Log.IfEnabled(LogLevel.Debug);
+    protected RetryLogger ProcessOneRetryLogger => _processOneRetryLogger ??= new RetryLogger(Log, nameof(ProcessOne));
 
     public TOptions Settings { get; } = settings;
     public abstract DbLogKind LogKind { get; }
@@ -131,7 +134,7 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
             try {
                 await Task.Delay(Settings.ReprocessDelay.Next(), cancellationToken).ConfigureAwait(false);
                 var isProcessed = await Settings.ReprocessPolicy
-                    .Apply(ct => ProcessOne(shard, key, mustDiscard1, ct), cancellationToken)
+                    .Apply(ct => ProcessOne(shard, key, mustDiscard1, ct), ProcessOneRetryLogger, cancellationToken)
                     .ConfigureAwait(false);
                 if (isProcessed) {
                     var logLevel = mustDiscard1 ? LogLevel.Error : Settings.LogLevel;

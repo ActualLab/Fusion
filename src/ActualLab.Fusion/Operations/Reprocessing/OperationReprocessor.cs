@@ -75,7 +75,7 @@ public class OperationReprocessor : IOperationReprocessor
             throw new ArgumentOutOfRangeException(nameof(transiency));
 
         lock (KnownTransiencies)
-            KnownTransiencies.Add(error, transiency);
+            KnownTransiencies[error] = transiency;
     }
 
     public virtual Transiency GetTransiency(IReadOnlyList<Exception> allErrors)
