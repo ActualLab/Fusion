@@ -222,7 +222,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         // so we don't need a lock here.
         try {
             try {
-                StaticLog.For<IComputed>().LogWarning("Invalidating: {Computed}", this);
+                // StaticLog.For<IComputed>().LogWarning("Invalidating: {Computed}", this);
                 OnInvalidated();
                 _invalidated.Invoke(this);
                 _invalidated = default;
