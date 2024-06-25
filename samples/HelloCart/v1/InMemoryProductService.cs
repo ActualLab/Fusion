@@ -1,3 +1,5 @@
+using ActualLab.Fusion.Operations.Internal;
+
 namespace Samples.HelloCart.V1;
 
 public class InMemoryProductService : IProductService
@@ -9,11 +11,13 @@ public class InMemoryProductService : IProductService
         var (productId, product) = command;
         if (string.IsNullOrEmpty(productId))
             throw new ArgumentOutOfRangeException(nameof(command));
+
         if (Invalidation.IsActive) {
             _ = Get(productId, default);
             return Task.CompletedTask;
         }
 
+        InMemoryOperationScope.Require();
         if (product == null)
             _products.Remove(productId, out _);
         else

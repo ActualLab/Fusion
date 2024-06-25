@@ -97,6 +97,20 @@ public readonly struct DbOperationsBuilder<TDbContext>
         return this;
     }
 
+    public DbOperationsBuilder<TDbContext> ConfigureEventLogReader(
+        Func<IServiceProvider, DbEventLogReader<TDbContext>.Options> optionsFactory)
+    {
+        Services.AddSingleton(optionsFactory);
+        return this;
+    }
+
+    public DbOperationsBuilder<TDbContext> ConfigureEventLogTrimmer(
+        Func<IServiceProvider, DbEventLogTrimmer<TDbContext>.Options> optionsFactory)
+    {
+        Services.AddSingleton(optionsFactory);
+        return this;
+    }
+
     public DbOperationsBuilder<TDbContext> AddIsolationLevelSelector(
         DbIsolationLevelSelector<TDbContext> dbIsolationLevelSelector)
     {

@@ -1,14 +1,11 @@
 namespace ActualLab.Fusion.Operations.Internal;
 
 /// <summary>
-/// The outermost, "catch-all" operation provider for commands
-/// that don't use any other operation scopes. Such commands may still
-/// complete successfully & thus require an <see cref="ICompletion"/>-based
-/// notification.
-/// In addition, this scope actually "sends" this notification from
-/// any other (nested) scope.
+/// Provides Operation for commands relying on in-memory state
+/// to ensure they get <see cref="ICompletion"/>-based notifications.
+/// This provider also sends <see cref="ICompletion"/> for any other scope type.
 /// </summary>
-public class TransientOperationScopeProvider(IServiceProvider services) : ICommandHandler<ICommand>
+public class InMemoryOperationScopeProvider(IServiceProvider services) : ICommandHandler<ICommand>
 {
     private ILogger? _log;
     private IOperationCompletionNotifier? _operationCompletionNotifier;
@@ -18,7 +15,7 @@ public class TransientOperationScopeProvider(IServiceProvider services) : IComma
         => _operationCompletionNotifier ??= Services.GetRequiredService<IOperationCompletionNotifier>();
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
-    [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.TransientOperationScopeProvider)]
+    [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.InMemoryOperationScopeProvider)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
         var isRequired =
@@ -30,29 +27,30 @@ public class TransientOperationScopeProvider(IServiceProvider services) : IComma
             return;
         }
 
-        var scope = new TransientOperationScope(context);
         var error = (Exception?)null;
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
-            _ = scope.Commit(cancellationToken); // TransientOperationScope "commits" synchronously
         }
         catch (Exception e) {
             error = e;
             throw;
         }
         finally {
-            // ReSharper disable once MethodHasAsyncOverload
-            _ = scope.DisposeAsync();
+            var operation = context.TryGetOperation();
+            if (operation?.Scope is { IsUsed: true } scope) {
+                if (scope is InMemoryOperationScope) {
+                    if (error == null)
+                        _ = scope.Commit(cancellationToken); // TransientOperationScope is fully synchronous
+                    _ = scope.DisposeAsync(); // TransientOperationScope is fully synchronous
+                }
+                // If scope is of another type, it's already committed/disposed at this point
 
-            // The operation could be changed by one of nested operation scope providers
-            var operation = context.Operation;
-            if (operation.Scope is { IsUsed: true } operationScope) {
                 if (scope.IsCommitted == true) {
                     // Since this is the outermost scope handler, it's reasonable to
                     // call OperationCompletionNotifier.NotifyCompleted from it
                     await OperationCompletionNotifier.NotifyCompleted(operation, context).ConfigureAwait(false);
                 }
-                else if (operationScope == scope) {
+                else if (scope is InMemoryOperationScope) {
                     // No other operation scopes were used, so no reprocessing is possible
                     Log.LogError(error, "Transient operation failed: {Command}", command);
                 }

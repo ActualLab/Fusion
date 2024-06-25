@@ -1,4 +1,3 @@
-using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 

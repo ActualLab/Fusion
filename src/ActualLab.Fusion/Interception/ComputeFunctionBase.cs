@@ -1,6 +1,6 @@
 namespace ActualLab.Fusion.Interception;
 
-public interface IComputeFunction
+public interface IComputeFunction : IFunction
 {
     ComputeMethodDef MethodDef { get; }
     ComputedOptions ComputedOptions { get; }

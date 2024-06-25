@@ -29,14 +29,12 @@ public sealed partial record Chat_Post(
     [property: DataMember, MemoryPackOrder(1)] string Message
     ) : ICommand<Unit>;
 
-public class Chat : IChat
+public class Chat(ServerId serverId) : IChat
 {
     private readonly object _lock = new();
     private readonly Dictionary<Symbol, List<string>> _chats = new();
 
-    private ServerId ServerId { get; }
-
-    public Chat(ServerId serverId) => ServerId = serverId;
+    private ServerId ServerId { get; } = serverId;
 
     public virtual Task<List<string>> GetRecentMessages(Symbol chatId, CancellationToken cancellationToken = default)
     {
@@ -57,11 +55,6 @@ public class Chat : IChat
     public virtual Task Post(Chat_Post command, CancellationToken cancellationToken)
     {
         var chatId = command.ChatId;
-        if (Invalidation.IsActive) {
-            _ = GetRecentMessages(chatId, default); // No need to invalidate GetWordCount
-            return Task.CompletedTask;
-        }
-
         WriteLine($"{ServerId.Id}: got {command}");
         lock (_lock) {
             var posts = _chats.GetValueOrDefault(chatId) ?? new(); // We can't update the list itself (it's shared), but can re-create it
@@ -70,6 +63,8 @@ public class Chat : IChat
                 posts.RemoveAt(0);
             _chats[chatId] = posts;
         }
+        using var _1 = Invalidation.Begin();
+        _ = GetRecentMessages(chatId, default); // No need to invalidate GetWordCount
         return Task.CompletedTask;
     }
 }

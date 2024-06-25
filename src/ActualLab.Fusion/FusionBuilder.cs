@@ -86,9 +86,9 @@ public readonly struct FusionBuilder
         var commander = Commander;
 
         // Transient operation scope & its provider
-        if (!services.HasService<TransientOperationScopeProvider>()) {
-            services.AddSingleton(c => new TransientOperationScopeProvider(c));
-            commander.AddHandlers<TransientOperationScopeProvider>();
+        if (!services.HasService<InMemoryOperationScopeProvider>()) {
+            services.AddSingleton(c => new InMemoryOperationScopeProvider(c));
+            commander.AddHandlers<InMemoryOperationScopeProvider>();
         }
 
         // Nested command logger

@@ -1,4 +1,5 @@
 using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.Operations.Internal;
 
 namespace ActualLab.Fusion.Extensions.Services;
 
@@ -34,6 +35,7 @@ public class InMemoryKeyValueStore(
             return Task.CompletedTask;
         }
 
+        InMemoryOperationScope.Require();
         foreach (var item in items)
             AddOrUpdate(shard, item.Key, item.Value, item.ExpiresAt);
         return Task.CompletedTask;
@@ -50,6 +52,7 @@ public class InMemoryKeyValueStore(
             return Task.CompletedTask;
         }
 
+        InMemoryOperationScope.Require();
         foreach (var key in keys)
             Store.Remove((shard, key), out _);
         return Task.CompletedTask;

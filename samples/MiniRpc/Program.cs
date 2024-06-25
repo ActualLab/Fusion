@@ -99,7 +99,6 @@ public class Chat : IChat
     private readonly object _lock = new();
     private List<string> _posts = new();
 
-
     public virtual Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default)
         => Task.FromResult(_posts);
 
@@ -115,11 +114,6 @@ public class Chat : IChat
 
     public virtual Task Post(Chat_Post command, CancellationToken cancellationToken)
     {
-        if (Invalidation.IsActive) {
-            _ = GetRecentMessages(default); // No need to invalidate GetWordCount
-            return Task.CompletedTask;
-        }
-
         lock (_lock) {
             var posts = _posts.ToList(); // We can't update the list itself (it's shared), but can re-create it
             posts.Add(command.Message);
@@ -127,6 +121,9 @@ public class Chat : IChat
                 posts.RemoveAt(0);
             _posts = posts;
         }
+
+        using var _1 = Invalidation.Begin();
+        _ = GetRecentMessages(default); // No need to invalidate GetWordCount
         return Task.CompletedTask;
     }
 }

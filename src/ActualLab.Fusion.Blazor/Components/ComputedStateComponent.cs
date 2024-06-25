@@ -34,9 +34,6 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
         }
     }
 
-    protected override bool ShouldRender()
-        => (Options & ComputedStateComponentOptions.StateIsPureRenderState) == 0 || IsPureRenderStateChanged(State);
-
     protected virtual ComputedState<TState>.Options GetStateOptions()
         => ComputedStateComponent.GetStateOptions<TState>(GetType());
 

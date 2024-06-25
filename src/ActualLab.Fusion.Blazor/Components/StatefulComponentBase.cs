@@ -3,7 +3,7 @@ using ActualLab.Internal;
 
 namespace ActualLab.Fusion.Blazor;
 
-public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposable, IHandleEvent
+public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposable
 {
     private StateFactory? _stateFactory;
 
@@ -12,19 +12,18 @@ public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposa
     protected StateFactory StateFactory => _stateFactory ??= Services.StateFactory();
     protected abstract IState UntypedState { get; }
     protected Action<IState, StateEventKind> StateChanged { get; set; }
-    protected long PureRenderStateUpdateCount { get; set; } = -1;
-
-    // It's typically more natural for stateful components to recompute State
-    // and trigger StateHasChanged only as a result state (re)computation or parameter changes.
-    protected bool MustCallStateHasChangedAfterEvent { get; set; } = false;
+    protected long RenderStateUpdateCount { get; set; } = -1;
 
     protected StatefulComponentBase()
-        => StateChanged = (_, _) => {
+    {
+        MustRenderAfterEvent = false; // Typically these components render only after State change
+        StateChanged = (_, _) => {
             if (UntypedState is IHasIsDisposed { IsDisposed: true })
                 return;
 
             this.NotifyStateHasChanged();
         };
+    }
 
     public virtual ValueTask DisposeAsync()
     {
@@ -33,54 +32,14 @@ public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposa
         return default;
     }
 
-    protected bool IsPureRenderStateChanged(IState pureRenderState)
+    protected bool IsRenderStateChanged(IState renderState)
     {
-        var pureRenderStateUpdateCount = pureRenderState.Snapshot.UpdateCount;
-        if (PureRenderStateUpdateCount == pureRenderStateUpdateCount)
+        var renderStateUpdateCount = renderState.Snapshot.UpdateCount;
+        if (RenderStateUpdateCount == renderStateUpdateCount)
             return false;
 
-        PureRenderStateUpdateCount = pureRenderStateUpdateCount;
+        RenderStateUpdateCount = renderStateUpdateCount;
         return true;
-    }
-
-    Task IHandleEvent.HandleEventAsync(EventCallbackWorkItem callback, object? arg)
-    {
-        // This code provides support for EnableStateHasChangedCallAfterEvent option
-        // See https://github.com/dotnet/aspnetcore/issues/18919#issuecomment-803005864
-        var task = callback.InvokeAsync(arg);
-        var shouldAwaitTask =
-            task.Status != TaskStatus.RanToCompletion &&
-            task.Status != TaskStatus.Canceled;
-        if (shouldAwaitTask)
-            return CallStateHasChangedOnAsyncCompletion(task);
-
-#pragma warning disable VSTHRD103
-#pragma warning disable MA0042
-        if (MustCallStateHasChangedAfterEvent)
-            StateHasChanged();
-#pragma warning restore MA0042
-#pragma warning restore VSTHRD103
-        return Task.CompletedTask;
-    }
-
-    private async Task CallStateHasChangedOnAsyncCompletion(Task task)
-    {
-        try {
-            await task.ConfigureAwait(false);
-        }
-        catch {
-            // Avoiding exception filters for AOT runtime support.
-            // Ignore exceptions from task cancelletions, but don't bother issuing a state change.
-            if (task.IsCanceled)
-                return;
-            throw;
-        }
-#pragma warning disable VSTHRD103
-#pragma warning disable MA0042
-        if (MustCallStateHasChangedAfterEvent)
-            StateHasChanged();
-#pragma warning restore MA0042
-#pragma warning restore VSTHRD103
     }
 }
 

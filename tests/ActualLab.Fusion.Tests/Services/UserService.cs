@@ -19,6 +19,7 @@ public interface IUserService : IComputeService
     [ComputeMethod(MinCacheDuration = 60)]
     Task<long> Count(CancellationToken cancellationToken = default);
 
+    // Not a CommandHandler!
     Task UpdateDirectly(UserService_Update command, CancellationToken cancellationToken = default);
     Task Invalidate();
 }
@@ -56,6 +57,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         _userResolver = services.GetRequiredService<IDbEntityResolver<long, User>>();
     }
 
+    // [CommandHandler]
     public virtual async Task Create(UserService_Add command, CancellationToken cancellationToken = default)
     {
         var (user, orUpdate) = command;
@@ -85,6 +87,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    // [CommandHandler]
     public virtual async Task Update(UserService_Update command, CancellationToken cancellationToken = default)
     {
         var user = command.User;
@@ -100,6 +103,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    // Not a CommandHandler!
     public async Task UpdateDirectly(UserService_Update command, CancellationToken cancellationToken = default)
     {
         var user = command.User;

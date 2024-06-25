@@ -1,23 +1,16 @@
 namespace ActualLab.Fusion.UI;
 
-public abstract class UIAction
+public abstract class UIAction(ICommand command, Moment startedAt, CancellationToken cancellationToken)
 {
     private static long _nextActionId;
 
     public long ActionId { get; } = Interlocked.Increment(ref _nextActionId);
-    public ICommand Command { get; }
-    public Moment StartedAt { get; }
-    public CancellationToken CancellationToken { get; }
+    public ICommand Command { get; } = command;
+    public Moment StartedAt { get; } = startedAt;
+    public CancellationToken CancellationToken { get; } = cancellationToken;
 
     public abstract IUIActionResult? UntypedResult { get; }
     public abstract Task WhenCompleted();
-
-    protected UIAction(ICommand command, Moment startedAt, CancellationToken cancellationToken)
-    {
-        StartedAt = startedAt;
-        Command = command;
-        CancellationToken = cancellationToken;
-    }
 
     public override string ToString()
         => $"{GetType().GetName()}(#{ActionId}: {Command}, {UntypedResult?.ToString() ?? "still running"})";

@@ -31,7 +31,8 @@ public partial class SandboxedKeyValueStore<TContext>(
 
     public virtual async Task Set(SandboxedKeyValueStore_Set command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) return;
+        if (Invalidation.IsActive)
+            return;
 
         var keyChecker = await GetKeyChecker(command.Session, cancellationToken).ConfigureAwait(false);
         var items = command.Items;
@@ -49,7 +50,8 @@ public partial class SandboxedKeyValueStore<TContext>(
 
     public virtual async Task Remove(SandboxedKeyValueStore_Remove command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) return;
+        if (Invalidation.IsActive)
+            return;
 
         var keyChecker = await GetKeyChecker(command.Session, cancellationToken).ConfigureAwait(false);
         var keys = command.Keys;

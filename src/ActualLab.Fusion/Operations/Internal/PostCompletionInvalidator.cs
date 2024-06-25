@@ -19,10 +19,6 @@ public class PostCompletionInvalidator(
         public LogLevel LogLevel { get; init; } = LogLevel.Debug;
     }
 
-    private static readonly MethodInfo ArgumentListNewMethod = typeof(ArgumentList)
-        .GetMethods(BindingFlags.Static | BindingFlags.Public)
-        .SingleOrDefault(m => Equals(m.Name, nameof(ArgumentList.New)) && m.GetGenericArguments().Length == 2)!;
-
     private ActivitySource? _activitySource;
     private CommandHandlerResolver? _commandHandlerResolver;
     private ILogger? _log;
@@ -41,10 +37,8 @@ public class PostCompletionInvalidator(
     {
         var operation = completion.Operation;
         var command = operation.Command;
-        var mayRequireInvalidation =
-            MayRequireInvalidation(command)
-            && !Invalidation.IsActive;
-        if (!mayRequireInvalidation) {
+        if (Invalidation.IsActive || !IsUsedBy(command, out _)) {
+            // The handler is unused for the current completion
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
         }
@@ -65,7 +59,7 @@ public class PostCompletionInvalidator(
             // - If you invalidate a subset of nodes in { N, D... } set in
             //   any order (and with any delays between the invalidations),
             //   the last invalidated dependency causes N to invalidate no matter what -
-            //   assuming the current version of N still depends it.
+            //   assuming the current version of N still depends on it.
             var index = 1;
             foreach (var (nestedCommand, nestedOperationItems) in operation.NestedOperations) {
                 index = await TryInvalidate(context, operation, nestedCommand, nestedOperationItems.ToMutable(), index)
@@ -79,20 +73,7 @@ public class PostCompletionInvalidator(
         }
     }
 
-    public virtual bool MayRequireInvalidation(ICommand? command)
-    {
-        if (command is null or IApiCommand)
-            return false;
-
-        var finalHandler = CommandHandlerResolver.GetCommandHandlerChain(command).FinalHandler as IMethodCommandHandler;
-        if (finalHandler == null || finalHandler.ParameterTypes.Length != 2)
-            return false;
-
-        var service = Services.GetService(finalHandler.GetHandlerServiceType());
-        return service is IComputeService;
-    }
-
-    public virtual bool RequiresInvalidation(
+    public virtual bool IsUsedBy(
         ICommand? command,
         [MaybeNullWhen(false)] out IMethodCommandHandler finalHandler)
     {
@@ -106,27 +87,7 @@ public class PostCompletionInvalidator(
             return false;
 
         var service = Services.GetService(finalHandler.GetHandlerServiceType());
-        if (service is not IComputeService)
-            return false;
-
-        var interceptor = (service as IProxy)?.Interceptor;
-        if (interceptor is ComputeServiceInterceptor)
-            return true; // Pure compute service
-
-        if (interceptor is not RpcRoutingInterceptor routingInterceptor)
-            return false;
-        if (routingInterceptor.RemoteTarget is not ClientComputeServiceInterceptor clientComputeServiceInterceptor)
-            return false;
-
-        var clientInterceptor = clientComputeServiceInterceptor.ClientInterceptor;
-        if (clientInterceptor.GetMethodDef(service.GetType(), finalHandler.Method) is not RpcMethodDef rpcMethodDef)
-            return false;
-
-        var arguments = (ArgumentList)ArgumentListNewMethod
-            .MakeGenericMethod(finalHandler.ParameterTypes)
-            .Invoke(null, [command, default(CancellationToken)])!;
-        var rpcPeer = routingInterceptor.CallRouter.Invoke(rpcMethodDef, arguments);
-        return rpcPeer.ConnectionKind == RpcPeerConnectionKind.LocalCall;
+        return service is IComputeService;
     }
 
     protected virtual async ValueTask<int> TryInvalidate(
@@ -136,7 +97,7 @@ public class PostCompletionInvalidator(
         MutablePropertyBag operationItems,
         int index)
     {
-        if (!RequiresInvalidation(command, out var handler))
+        if (!IsUsedBy(command, out var handler))
             return index;
 
         operation.Items = operationItems;

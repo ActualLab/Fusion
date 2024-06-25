@@ -109,7 +109,7 @@ public class OperationReprocessor : IOperationReprocessor
             return false;
 
         var operation = CommandContext.TryGetOperation();
-        return operation is { Scope: not TransientOperationScope };
+        return operation is { Scope: not InMemoryOperationScope };
     }
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.OperationReprocessor)]
@@ -118,7 +118,8 @@ public class OperationReprocessor : IOperationReprocessor
         var isReprocessingAllowed =
             context.IsOutermost // Should be a top-level command
             && command is not ISystemCommand // No reprocessing for system commands
-            && !Invalidation.IsActive
+            && context.TryGetOperation() == null // Operation isn't started yet
+            && !Invalidation.IsActive // No invalidation is running
             && Settings.Filter.Invoke(command, context);
         if (!isReprocessingAllowed) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
@@ -141,11 +142,14 @@ public class OperationReprocessor : IOperationReprocessor
             }
             catch (Exception error) when (!error.IsCancellationOf(cancellationToken)) {
                 LastError = error;
+                if (context.TryGetOperation() == null)
+                    throw; // No Operation -> no retry
                 if (!this.WillRetry(error, out var transiency))
-                    throw;
+                    throw; // The error can't be reprocessed -> no retry
 
                 if (!transiency.IsSuperTransient())
                     TryIndex++;
+                context.ChangeOperation(null);
                 context.Items.Snapshot = itemsBackup;
                 context.ExecutionState = executionStateBackup;
                 var delay = Settings.RetryDelays[TryIndex];

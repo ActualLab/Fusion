@@ -106,6 +106,9 @@ void ConfigureServices()
                 // can be arbitrary long - all depends on the reliability of Notifier-Watcher chain.
                 CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
             });
+            operations.ConfigureEventLogReader(_ => new() {
+                CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
+            });
             operations.AddFileSystemOperationLogWatcher();
             // operations.AddRedisOperationLogWatcher();
         });

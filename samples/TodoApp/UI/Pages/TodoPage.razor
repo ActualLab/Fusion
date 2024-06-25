@@ -23,7 +23,7 @@
 <TextConnectionStatus />
 <StateOfStateBadge State="@State" />
 <Div Margin="Margin.Is1.OnY">
-    Updated: <b><MomentsAgoBadge Value="model.ComputedAt" /></b>
+    @* Updated: <b><MomentsAgoBadge Value="model.ComputedAt" /></b> *@
 </Div>
 <Div Margin="Margin.Is1.OnY">
     Current culture: <b>@(CultureInfo.CurrentUICulture.Name)</b> @@ @model.ComputedAt.ToString("D")
@@ -88,7 +88,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Options |= ComputedStateComponentOptions.StateIsPureRenderState;
         var objectId = await Todos.GetTestObjectId();
         Log.LogInformation("Test ObjectId: {ObjectId}", objectId);
         var stream = await Todos.GetTestStream();
@@ -97,9 +96,11 @@
         Log.LogInformation("Test stream: {Stream} = [{List}], sum = {Sum}", stream, list.ToDelimitedString(), sum);
     }
 
+    protected override bool ShouldRender()
+        => IsRenderStateChanged(State);
+
     protected override async Task<Model> ComputeState(CancellationToken cancellationToken)
     {
-        _ = State.ValueOrDefault; // To trigger NullReferenceException when State setup is off
         Log.LogInformation("ComputeState: LoadedItemCount = {LoadedItemCount}", LoadedItemCount);
         var items = await TodoUI.List(LoadedItemCount + 1, cancellationToken);
         var hasMore = items.Length > LoadedItemCount;

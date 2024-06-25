@@ -12,11 +12,8 @@
 <Badge Color="Color.Primary"><b>@summary.Count</b> total</Badge>
 
 @code {
-    protected override void OnInitialized()
-    {
-        Options |= ComputedStateComponentOptions.StateIsPureRenderState;
-        base.OnInitialized();
-    }
+    protected override bool ShouldRender()
+        => IsRenderStateChanged(State);
 
     protected override Task<TodoSummary> ComputeState(CancellationToken cancellationToken)
         => Todos.GetSummary(Session, cancellationToken);
