@@ -7,47 +7,53 @@ namespace ActualLab.Fusion.Operations.Internal;
 /// </summary>
 public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<ICommand>
 {
-    private PostCompletionInvalidator? _postCompletionInvalidator;
+    private ComputeServiceCommandCompletionInvalidator? _postCompletionInvalidator;
     private ILogger? _log;
 
     protected IServiceProvider Services { get; } = services;
 
-    protected PostCompletionInvalidator PostCompletionInvalidator
-        => _postCompletionInvalidator ??= Services.GetRequiredService<PostCompletionInvalidator>();
+    protected ComputeServiceCommandCompletionInvalidator ComputeServiceCommandCompletionInvalidator
+        => _postCompletionInvalidator ??= Services.GetRequiredService<ComputeServiceCommandCompletionInvalidator>();
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.NestedCommandLogger)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
-        var operation = context.TryGetOperation();
-        var mustBeLogged =
-            operation != null // Should have an operation
-            && context.OuterContext != null // Should be a nested context
-            && PostCompletionInvalidator.IsUsedBy(command, out _)
+        var mustBeUsed =
+            context.OuterContext != null // Should be a nested context
+            && ComputeServiceCommandCompletionInvalidator.IsRequired(command, out _)
             && !Invalidation.IsActive;
-        if (!mustBeLogged) {
+        if (!mustBeUsed) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
         }
 
-        var oldOperationItems = operation!.Items;
-        var operationItems = operation.Items = new MutablePropertyBag();
-        Exception? error = null;
+        var operation = context.TryGetOperation();
+        MutablePropertyBag? oldOperationItems = null;
+        if (operation != null) {
+            oldOperationItems = operation.Items;
+            operation.Items = new MutablePropertyBag();
+        }
+
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception? e) {
-            error = e;
-            throw;
-        }
         finally {
-            operation.Items = oldOperationItems;
-            if (error == null) {
-                // Downstream handler may change Operation to its own one,
-                // current command must be logged as part of that operation.
-                operation = context.Operation;
-                if (operation.Scope is { IsCommitted: null })
-                    operation.NestedOperations = operation.NestedOperations.Add(new(command, operationItems.Snapshot));
+            if (operation != null) {
+                // There was an operation already
+                operation.NestedOperations = operation.NestedOperations.Add(new(command, operation.Items.Snapshot));
+                operation.Items = oldOperationItems!;
+            }
+            else {
+                // There was no operation, but it could be requested inside one of nested commands
+                operation = context.TryGetOperation();
+                if (operation != null) {
+                    // The operation is requested inside the nested command, so we have to make a couple fixes:
+                    // - Add nested operation that corresponds to the current command
+                    // - Replace its Items with an empty bag
+                    operation.NestedOperations = operation.NestedOperations.Add(new(command, operation.Items.Snapshot));
+                    operation.Items = new MutablePropertyBag();
+                }
             }
         }
     }

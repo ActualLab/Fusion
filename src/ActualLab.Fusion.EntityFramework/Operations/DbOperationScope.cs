@@ -106,7 +106,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         AsyncLock = new AsyncLock();
         Operation = Operation.New(this);
         Operation.Command = outermostContext.UntypedCommand;
-        outermostContext.ChangeOperation(Operation, true);
+        outermostContext.ChangeOperation(Operation);
     }
 
     public override async ValueTask DisposeAsync()

@@ -62,6 +62,7 @@ builder.WebHost.UseDefaultServiceProvider((ctx, options) => {
 
 // Build & configure app
 var app = builder.Build();
+StaticLog.Factory = app.Services.LoggerFactory();
 ConfigureApp();
 
 // Ensure the DB is created

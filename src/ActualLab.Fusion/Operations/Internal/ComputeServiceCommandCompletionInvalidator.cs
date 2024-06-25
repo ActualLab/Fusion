@@ -1,16 +1,11 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
-using ActualLab.Fusion.Client.Interception;
-using ActualLab.Fusion.Interception;
-using ActualLab.Interception;
-using ActualLab.Rpc;
-using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
 
-public class PostCompletionInvalidator(
-        PostCompletionInvalidator.Options settings,
+public class ComputeServiceCommandCompletionInvalidator(
+        ComputeServiceCommandCompletionInvalidator.Options settings,
         IServiceProvider services
         ) : ICommandHandler<ICompletion>
 {
@@ -32,12 +27,12 @@ public class PostCompletionInvalidator(
     protected ILogger Log
         => _log ??= Services.LogFor(GetType());
 
-    [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.PostCompletionInvalidator)]
+    [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.ComputeServiceCommandCompletionInvalidator)]
     public async Task OnCommand(ICompletion completion, CommandContext context, CancellationToken cancellationToken)
     {
         var operation = completion.Operation;
         var command = operation.Command;
-        if (Invalidation.IsActive || !IsUsedBy(command, out _)) {
+        if (Invalidation.IsActive || !IsRequired(command, out _)) {
             // The handler is unused for the current completion
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
@@ -73,7 +68,7 @@ public class PostCompletionInvalidator(
         }
     }
 
-    public virtual bool IsUsedBy(
+    public virtual bool IsRequired(
         ICommand? command,
         [MaybeNullWhen(false)] out IMethodCommandHandler finalHandler)
     {
@@ -97,7 +92,7 @@ public class PostCompletionInvalidator(
         MutablePropertyBag operationItems,
         int index)
     {
-        if (!IsUsedBy(command, out var handler))
+        if (!IsRequired(command, out var handler))
             return index;
 
         operation.Items = operationItems;
