@@ -2,6 +2,7 @@
 using System.Runtime.Serialization;
 using ActualLab.CommandR;
 using ActualLab.CommandR.Configuration;
+using ActualLab.Concurrency;
 using ActualLab.Fusion;
 using ActualLab.Fusion.Server;
 using ActualLab.Rpc;
@@ -10,6 +11,9 @@ using MemoryPack;
 using static System.Console;
 
 #pragma warning disable ASP0000
+
+var useLogging = false;
+var logRpcCalls = false;
 
 var baseUrl = "http://localhost:22222/";
 await (args switch {
@@ -21,9 +25,16 @@ await (args switch {
 async Task RunServer()
 {
     var builder = WebApplication.CreateBuilder();
-    builder.Logging.ClearProviders().AddDebug();
+    if (useLogging)
+        builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
     builder.Services.AddFusion(RpcServiceMode.Server, fusion => {
         fusion.AddWebServer();
+        if (logRpcCalls)
+            fusion.Services.AddSingleton<RpcPeerFactory>(_ =>
+                static (hub, peerRef) => !peerRef.IsServer
+                    ? throw new NotSupportedException("No client peers are allowed on the server.")
+                    : new RpcServerPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
+            );
         fusion.AddService<IChat, Chat>();
     });
     var app = builder.Build();
@@ -41,8 +52,19 @@ async Task RunServer()
 async Task RunClient()
 {
     var services = new ServiceCollection()
+        .AddLogging(logging => {
+            logging.ClearProviders();
+            if (useLogging)
+                logging.SetMinimumLevel(LogLevel.Debug).AddConsole();
+        })
         .AddFusion(fusion => {
             fusion.Rpc.AddWebSocketClient(baseUrl);
+            if (logRpcCalls)
+                fusion.Services.AddSingleton<RpcPeerFactory>(_ =>
+                    static (hub, peerRef) => peerRef.IsServer
+                        ? throw new NotSupportedException("No server peers are allowed on the client.")
+                        : new RpcClientPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
+                );
             fusion.AddClient<IChat>();
         })
         .BuildServiceProvider();
@@ -51,15 +73,19 @@ async Task RunClient()
     var commander = services.Commander();
     _ = Task.Run(ObserveMessages);
     _ = Task.Run(ObserveWordCount);
-    while (true) {
-        var message = ReadLine() ?? "";
-        try {
-            await commander.Call(new Chat_Post(message));
+
+    var taskFactory = new TaskFactory(new SequentialScheduler());
+    await taskFactory.StartNew(async () => {
+        while (true) {
+            var message = ReadLine() ?? "";
+            try {
+                await commander.Call(new Chat_Post(message)).ConfigureAwait(true);
+            }
+            catch (Exception error) {
+                Error.WriteLine($"Error: {error.Message}");
+            }
         }
-        catch (Exception error) {
-            Error.WriteLine($"Error: {error.Message}");
-        }
-    }
+    });
 
     async Task ObserveMessages() {
         var cMessages = await Computed.Capture(() => chat.GetRecentMessages());

@@ -29,6 +29,7 @@ public abstract class RpcObjectTracker
 
 public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 {
+    // ReSharper disable once InconsistentNaming
     public static GCHandlePool GCHandlePool { get; set; } = new(new GCHandlePool.Options() {
         Capacity = HardwareInfo.GetProcessorCountPo2Factor(16),
     });

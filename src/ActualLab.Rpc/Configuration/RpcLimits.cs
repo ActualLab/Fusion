@@ -1,8 +1,15 @@
+using System.Diagnostics;
+
 namespace ActualLab.Rpc;
 
 public record RpcLimits
 {
-    public static RpcLimits Default { get; set; } = new();
+    public static RpcLimits Default { get; set; } = Debugger.IsAttached ? DebugDefaults : new();
+    public static RpcLimits DebugDefaults => new() {
+        HandshakeTimeout = TimeSpan.FromSeconds(60),
+        KeepAlivePeriod = TimeSpan.FromSeconds(300),
+        KeepAliveTimeout = TimeSpan.FromSeconds(1000),
+    };
 
     // Connect timeout; if connecting takes longer, reconnect starts
     public TimeSpan ConnectTimeout { get; init; } = TimeSpan.FromSeconds(15);

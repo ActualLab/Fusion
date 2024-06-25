@@ -149,14 +149,14 @@ public sealed class WebSocketChannel<T> : Channel<T>
             await foreach (var item in ReadAll(cancellationToken).ConfigureAwait(false)) {
                 while (!writer.TryWrite(item))
                     if (!await writer.WaitToWriteAsync(cancellationToken).ConfigureAwait(false)) {
-                        // This is a normal closure in most of cases,
+                        // This is a normal closure in most of the cases,
                         // so we don't want to report it as an error
                         return;
                     }
             }
         }
         catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) {
-            // This is a normal closure in most of cases,
+            // This is a normal closure in most of the cases,
             // so we don't want to report it as an error
         }
         catch (Exception e) {
@@ -176,7 +176,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             if (_defaultMessageType == WebSocketMessageType.Binary) {
                 // Binary -> we build frames
                 if (Settings.WriteDelayFactory is { } writeDelayFactory) {
-                    // There is write delay -> we use more complex write logic
+                    // There is a write delay -> we use more complex write logic
                     await RunWriterWithWriteDelay(reader, writeDelayFactory, cancellationToken).ConfigureAwait(false);
                     return;
                 }
