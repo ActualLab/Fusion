@@ -5,6 +5,7 @@ using ActualLab.CommandR.Configuration;
 using ActualLab.Concurrency;
 using ActualLab.Fusion;
 using ActualLab.Fusion.Server;
+using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using MemoryPack;
@@ -73,19 +74,15 @@ async Task RunClient()
     var commander = services.Commander();
     _ = Task.Run(ObserveMessages);
     _ = Task.Run(ObserveWordCount);
-
-    var taskFactory = new TaskFactory(new SequentialScheduler());
-    await taskFactory.StartNew(async () => {
-        while (true) {
-            var message = ReadLine() ?? "";
-            try {
-                await commander.Call(new Chat_Post(message)).ConfigureAwait(true);
-            }
-            catch (Exception error) {
-                Error.WriteLine($"Error: {error.Message}");
-            }
+    while (true) {
+        var message = await ConsoleExt.ReadLineAsync() ?? "";
+        try {
+            await commander.Call(new Chat_Post(message));
         }
-    });
+        catch (Exception error) {
+            Error.WriteLine($"Error: {error.Message}");
+        }
+    }
 
     async Task ObserveMessages() {
         var cMessages = await Computed.Capture(() => chat.GetRecentMessages());

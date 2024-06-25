@@ -3,6 +3,7 @@ using Samples.MultiServerRpc;
 using ActualLab.CommandR;
 using ActualLab.Fusion;
 using ActualLab.Fusion.Server;
+using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Server;
@@ -77,13 +78,13 @@ async Task RunClient()
         .BuildServiceProvider();
 
     Write("Enter chat ID: ");
-    var chatId = new Symbol((ReadLine() ?? "").Trim());
+    var chatId = new Symbol((await ConsoleExt.ReadLineAsync() ?? "").Trim());
     var chat = services.GetRequiredService<IChat>();
     var commander = services.Commander();
     _ = Task.Run(ObserveMessages);
     _ = Task.Run(ObserveWordCount);
     while (true) {
-        var message = ReadLine() ?? "";
+        var message = await ConsoleExt.ReadLineAsync() ?? "";
         try {
             await commander.Call(new Chat_Post(chatId, message));
         }

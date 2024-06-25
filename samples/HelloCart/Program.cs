@@ -1,5 +1,6 @@
 ﻿using ActualLab.Fusion.EntityFramework.LogProcessing;
 using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.IO;
 using ActualLab.Resilience;
 using Samples.HelloCart;
 using Samples.HelloCart.V1;
@@ -30,7 +31,7 @@ while(true) {
     if (input != null)
         WriteLine(input);
     else
-        input = ReadLine() ?? "";
+        input = await ConsoleExt.ReadLineAsync() ?? "";
     app = input.Trim() switch {
         "1" => new AppV1(),
         "2" => new AppV2(),
@@ -64,7 +65,7 @@ while (true) {
     WriteLine();
     Write("[productId]=[price]: ");
     try {
-        var input = (ReadLine() ?? "").Trim();
+        var input = (await ConsoleExt.ReadLineAsync() ?? "").Trim();
         if (input == "")
             break;
         var parts = input.Split("=");
