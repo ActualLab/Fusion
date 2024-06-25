@@ -2,7 +2,7 @@ namespace ActualLab.Fusion.Operations.Internal;
 
 /// <summary>
 /// This handler captures invocations of nested commands inside
-/// operations and logs them into context.Operation().NestedOperations
+/// operations and logs them into context.Operation.NestedOperations
 /// so that invalidation for them could be auto-replayed too.
 /// </summary>
 public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<ICommand>
