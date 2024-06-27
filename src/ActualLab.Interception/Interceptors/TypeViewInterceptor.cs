@@ -36,7 +36,7 @@ public class TypeViewInterceptor : Interceptor
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef)
     {
-        var tTarget = initialInvocation.ProxyTarget?.GetType() ?? throw Errors.NoProxyTarget();
+        var tTarget = initialInvocation.InterfaceProxyTarget?.GetType() ?? throw Errors.NoInterfaceProxyTarget();
         var mSource = initialInvocation.Method;
         var mArgTypes = mSource.GetParameters().Select(p => p.ParameterType).ToArray();
         var mTarget = tTarget.GetMethod(mSource.Name, mArgTypes);
@@ -96,7 +96,7 @@ public class TypeViewInterceptor : Interceptor
 
         return invocation => {
             // TODO: Get rid of reflection here (not critical)
-            var target = invocation.ProxyTarget;
+            var target = invocation.InterfaceProxyTarget;
             return mTarget.Invoke(target, invocation.Arguments.ToArray());
         };
     }
@@ -110,7 +110,7 @@ public class TypeViewInterceptor : Interceptor
             return null;
 
         return invocation => {
-            var target = invocation.ProxyTarget;
+            var target = invocation.InterfaceProxyTarget;
             var result = (TTarget) mTarget.Invoke(target, invocation.Arguments.ToArray())!;
             // ReSharper disable once HeapView.PossibleBoxingAllocation
             return converter.Convert(result);
@@ -126,7 +126,7 @@ public class TypeViewInterceptor : Interceptor
             return null;
 
         return invocation => {
-            var target = invocation.ProxyTarget;
+            var target = invocation.InterfaceProxyTarget;
             var untypedResult = mTarget.Invoke(target, invocation.Arguments.ToArray());
             var result = (Task<TTarget>) untypedResult!;
             return result.ContinueWith(
@@ -144,7 +144,7 @@ public class TypeViewInterceptor : Interceptor
             return null;
 
         return invocation => {
-            var target = invocation.ProxyTarget;
+            var target = invocation.InterfaceProxyTarget;
             var untypedResult = mTarget.Invoke(target, invocation.Arguments.ToArray());
             var result = (ValueTask<TTarget>) untypedResult!;
             // ReSharper disable once HeapView.BoxingAllocation

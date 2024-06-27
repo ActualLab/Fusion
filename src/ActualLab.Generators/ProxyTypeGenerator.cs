@@ -430,7 +430,7 @@ public class ProxyTypeGenerator
         var baseOrProxyTargetCall = IsInterfaceProxy
             ? (ExpressionSyntax)ParenthesizedExpression(
                 SuppressNullWarning(
-                    CastExpression(TypeDef.ToTypeRef(), ProxyTargetPropertyName)))
+                    CastExpression(TypeDef.ToTypeRef(), InterfaceProxyTargetPropertyName)))
             : BaseExpression();
         var baseInvocation = InvocationExpression(
             MemberAccessExpression(

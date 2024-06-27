@@ -32,7 +32,7 @@ public static class GenerationHelpers
     public static readonly GenericNameSyntax InterceptGenericMethodName = GenericName(InterceptMethodName.Identifier.Text);
     public static readonly IdentifierNameSyntax NoInterceptorMethodName = IdentifierName("NoInterceptor");
     // Properties, fields, locals
-    public static readonly IdentifierNameSyntax ProxyTargetPropertyName = IdentifierName("ProxyTarget");
+    public static readonly IdentifierNameSyntax InterfaceProxyTargetPropertyName = IdentifierName("InterfaceProxyTarget");
     public static readonly IdentifierNameSyntax InterceptorPropertyName = IdentifierName("Interceptor");
     public static readonly IdentifierNameSyntax InterceptorFieldName = IdentifierName("__interceptor");
     public static readonly IdentifierNameSyntax InterceptorParameterName = IdentifierName("interceptor");

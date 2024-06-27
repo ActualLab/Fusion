@@ -9,7 +9,7 @@ public readonly record struct Invocation(
     Delegate InterceptedDelegate,
     object? Context = null)
 {
-    public object? ProxyTarget => (Proxy as InterfaceProxy)?.ProxyTarget;
+    public object? InterfaceProxyTarget => (Proxy as InterfaceProxy)?.ProxyTarget;
 
     public override string ToString()
         => $"{nameof(Invocation)}({Proxy}, {Method.Name}, {Arguments})";
