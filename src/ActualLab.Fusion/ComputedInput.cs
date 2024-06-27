@@ -4,7 +4,7 @@ namespace ActualLab.Fusion;
 
 public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
 {
-    public IFunction Function { get; private set; } = null!;
+    public IComputeFunction Function { get; private set; } = null!;
 #pragma warning disable CA1721
     public int HashCode { get; private set; }
 #pragma warning restore CA1721
@@ -15,7 +15,7 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
     public virtual bool IsDisposed => false;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected void Initialize(IFunction function, int hashCode)
+    protected void Initialize(IComputeFunction function, int hashCode)
     {
         Function = function;
         HashCode = hashCode;

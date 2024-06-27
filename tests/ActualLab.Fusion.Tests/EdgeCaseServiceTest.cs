@@ -95,7 +95,7 @@ public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
 
     private async Task<Computed<T>> Update<T>(Computed<T> computed, CancellationToken cancellationToken = default)
     {
-        if (computed is IClientComputed clientComputed)
+        if (computed is IHybridComputed clientComputed)
             clientComputed.Invalidate();
         return await computed.Update(cancellationToken);
     }

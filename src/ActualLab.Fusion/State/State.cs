@@ -37,7 +37,7 @@ public interface IState<T> : IState, IResult<T>
 public abstract class State<T> : ComputedInput,
     IState<T>,
     IEquatable<State<T>>,
-    IFunction<T>
+    IComputeFunction<T>
 {
     public record Options : IState.IOptions
     {
@@ -240,7 +240,7 @@ public abstract class State<T> : ComputedInput,
 
     // IFunction<T>
 
-    ValueTask<Computed<T>> IFunction<T>.Invoke(
+    ValueTask<Computed<T>> IComputeFunction<T>.Invoke(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken)
@@ -273,7 +273,7 @@ public abstract class State<T> : ComputedInput,
         return computed;
     }
 
-    Task<T> IFunction<T>.InvokeAndStrip(
+    Task<T> IComputeFunction<T>.InvokeAndStrip(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken)

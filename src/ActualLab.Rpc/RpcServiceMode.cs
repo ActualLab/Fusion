@@ -5,7 +5,7 @@ public enum RpcServiceMode
     Default = 0,
     Local,
     Server,
-    ServerAndRouter,
+    ServerAndClient,
     Hybrid,
 }
 

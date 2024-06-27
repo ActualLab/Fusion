@@ -5,6 +5,7 @@ using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Interception;
+using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
 using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
@@ -13,17 +14,23 @@ namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD103
 
-public interface IClientComputeMethodFunction : IComputeMethodFunction;
+public interface IHybridComputeMethodFunction : IComputeMethodFunction
+{
+    RpcMethodDef RpcMethodDef { get; }
+}
 
-public class ClientComputeMethodFunction<T>(
+public class HybridComputeMethodFunction<T>(
     ComputeMethodDef methodDef,
+    RpcMethodDef rpcMethodDef,
     IClientComputedCache? cache,
     IServiceProvider services
-    ) : ComputeFunctionBase<T>(methodDef, services), IClientComputeMethodFunction
+    ) : ComputeMethodFunction<T>(methodDef, services), IHybridComputeMethodFunction
 {
     private string? _toString;
 
     protected readonly IClientComputedCache? Cache = cache;
+
+    public RpcMethodDef RpcMethodDef { get; } = rpcMethodDef;
 
     public override string ToString()
         => _toString ??= ZString.Concat('*', base.ToString());
@@ -40,13 +47,13 @@ public class ClientComputeMethodFunction<T>(
         // existing != null -> it's invalidated, so no matter what's cached, we ignore it
         return existing == null && cache != null
             ? ComputeCachedOrRpc(typedInput, cache, cancellationToken)
-            : ComputeRpc(typedInput, cache, (ClientComputed<T>)existing!, cancellationToken).ToValueTask();
+            : ComputeRpc(typedInput, cache, (HybridComputed<T>)existing!, cancellationToken).ToValueTask();
     }
 
     private async Task<Computed<T>> ComputeRpc(
         ComputeMethodInput input,
         IClientComputedCache? cache,
-        ClientComputed<T>? existing,
+        HybridComputed<T>? existing,
         CancellationToken cancellationToken)
     {
         var tryIndex = 0;
@@ -73,7 +80,7 @@ public class ClientComputeMethodFunction<T>(
                 }
 
                 var synchronizedSource = existing?.SynchronizedSource ?? AlwaysSynchronized.Source;
-                return new ClientComputed<T>(
+                return new HybridComputed<T>(
                     input.MethodDef.ComputedOptions,
                     input, result,
                     cacheEntry, call, synchronizedSource);
@@ -118,7 +125,7 @@ public class ClientComputeMethodFunction<T>(
         }
 
         var cacheEntry = new RpcCacheEntry(cacheKey, cacheResult.Data);
-        var cachedComputed = new ClientComputed<T>(
+        var cachedComputed = new HybridComputed<T>(
             input.MethodDef.ComputedOptions,
             input, cacheResult.Value,
             cacheEntry);
@@ -142,7 +149,7 @@ public class ClientComputeMethodFunction<T>(
     private async Task ApplyRpcUpdate(
         ComputeMethodInput input,
         IClientComputedCache cache,
-        ClientComputed<T> cachedComputed)
+        HybridComputed<T> cachedComputed)
     {
         // 1. Start the RPC call
         var cacheInfoCapture = new RpcCacheInfoCapture();
@@ -203,7 +210,7 @@ public class ClientComputeMethodFunction<T>(
         var cacheEntry = UpdateCache(cache, key, data);
 
         // 6. Create the new computed - it invalidates the cached one upon registering
-        var computed = new ClientComputed<T>(
+        var computed = new HybridComputed<T>(
             input.MethodDef.ComputedOptions,
             input, result,
             cacheEntry, call, synchronizedSource);
@@ -275,10 +282,10 @@ public class ClientComputeMethodFunction<T>(
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;
         var interceptor = proxy.Interceptor;
-        var clientComputeServiceInterceptor = interceptor is RpcRoutingInterceptor routingInterceptor
-            ? (ClientComputeServiceInterceptor)routingInterceptor.RemoteTarget!
-            : (ClientComputeServiceInterceptor)interceptor;
-        var clientInterceptor = clientComputeServiceInterceptor.ClientInterceptor;
+        var clientComputeServiceInterceptor = interceptor is SwitchInterceptor switchInterceptor
+            ? (HybridComputeServiceInterceptor)switchInterceptor.RemoteTarget!
+            : (HybridComputeServiceInterceptor)interceptor;
+        var clientInterceptor = clientComputeServiceInterceptor.RpcInterceptor;
 
         var ctIndex = input.MethodDef.CancellationTokenIndex;
         if (ctIndex >= 0 && invocation.Arguments.GetCancellationToken(ctIndex) != cancellationToken) {

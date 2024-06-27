@@ -2,13 +2,23 @@ using ActualLab.Interception;
 
 namespace ActualLab.Fusion.Interception;
 
-public interface IComputeMethodFunction : IComputeFunction;
+public interface IComputeMethodFunction : IComputeFunction
+{
+    ComputeMethodDef MethodDef { get; }
+    ComputedOptions ComputedOptions { get; }
+}
 
 public class ComputeMethodFunction<T>(
     ComputeMethodDef methodDef,
     IServiceProvider services
-    ) : ComputeFunctionBase<T>(methodDef, services), IComputeMethodFunction
+    ) : ComputeFunctionBase<T>(services), IComputeMethodFunction
 {
+    public ComputeMethodDef MethodDef { get; } = methodDef;
+    public ComputedOptions ComputedOptions { get; } = methodDef.ComputedOptions;
+
+    public override string ToString()
+        => MethodDef.FullName;
+
     protected override async ValueTask<Computed<T>> Compute(
         ComputedInput input, Computed<T>? existing,
         CancellationToken cancellationToken)

@@ -1,4 +1,3 @@
-using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
 
@@ -6,13 +5,13 @@ namespace ActualLab.Rpc.Internal;
 
 public sealed class RpcInternalServices(RpcHub hub)
 {
-    private RpcClientInterceptor.Options? _clientInterceptorOptions;
-    private RpcRoutingInterceptor.Options? _routingInterceptorOptions;
+    private RpcInterceptor.Options? _rpcInterceptorOptions;
+    private SwitchInterceptor.Options? _switchInterceptorOptions;
 
-    private RpcClientInterceptor.Options ClientInterceptorOptions
-        => _clientInterceptorOptions ??= Hub.Services.GetRequiredService<RpcClientInterceptor.Options>();
-    private RpcRoutingInterceptor.Options RoutingInterceptorOptions
-        => _routingInterceptorOptions ??= Hub.Services.GetRequiredService<RpcRoutingInterceptor.Options>();
+    private RpcInterceptor.Options RpcInterceptorOptions
+        => _rpcInterceptorOptions ??= Hub.Services.GetRequiredService<RpcInterceptor.Options>();
+    private SwitchInterceptor.Options SwitchInterceptorOptions
+        => _switchInterceptorOptions ??= Hub.Services.GetRequiredService<SwitchInterceptor.Options>();
 
     public RpcHub Hub = hub;
     public RpcServiceDefBuilder ServiceDefBuilder => Hub.ServiceDefBuilder;
@@ -36,14 +35,14 @@ public sealed class RpcInternalServices(RpcHub hub)
 
     public ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers => Hub.Peers;
 
-    public RpcClientInterceptor NewClientInterceptor(RpcServiceDef serviceDef, object? localService)
-        => new(ClientInterceptorOptions, Hub.Services, serviceDef) {
+    public RpcInterceptor NewInterceptor(RpcServiceDef serviceDef, object? localService)
+        => new(RpcInterceptorOptions, Hub.Services, serviceDef) {
             LocalTarget = localService,
         };
 
-    public RpcRoutingInterceptor NewRoutingInterceptor(
+    public SwitchInterceptor NewSwitchInterceptor(
         RpcServiceDef serviceDef, object? localTarget, object? remoteTarget)
-        => new(RoutingInterceptorOptions, Hub.Services, serviceDef) {
+        => new(SwitchInterceptorOptions, Hub.Services, serviceDef) {
             LocalTarget = localTarget,
             RemoteTarget = remoteTarget,
         };

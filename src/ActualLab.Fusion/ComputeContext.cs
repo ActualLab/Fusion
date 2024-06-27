@@ -8,7 +8,7 @@ public sealed class ComputeContext
     private volatile IComputed? _captured;
 
     public static readonly ComputeContext None = new(default(CallOptions));
-    public static readonly ComputeContext Invalidation = new(CallOptions.Invalidate);
+    public static readonly ComputeContext Invalidating = new(CallOptions.Invalidate);
 
     public static ComputeContext Current {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -22,16 +22,6 @@ public sealed class ComputeContext
 
     public readonly CallOptions CallOptions;
     public readonly IComputed? Computed;
-
-    public bool IsCapturing {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => (CallOptions & CallOptions.Capture) == CallOptions.Capture;
-    }
-
-    public bool IsInvalidating {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => (CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
-    }
 
     // Constructors
 

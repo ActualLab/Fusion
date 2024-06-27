@@ -3,9 +3,9 @@ using ActualLab.Locking;
 
 namespace ActualLab.Fusion;
 
-public interface IFunction : IHasServices;
+public interface IComputeFunction : IHasServices;
 
-public interface IFunction<T> : IFunction
+public interface IComputeFunction<T> : IComputeFunction
 {
     ValueTask<Computed<T>> Invoke(
         ComputedInput input,
@@ -17,7 +17,7 @@ public interface IFunction<T> : IFunction
         CancellationToken cancellationToken = default);
 }
 
-public abstract class FunctionBase<T>(IServiceProvider services) : IFunction<T>
+public abstract class ComputeFunctionBase<T>(IServiceProvider services) : IComputeFunction<T>
 {
     protected static AsyncLockSet<ComputedInput> InputLocks => ComputedRegistry.Instance.InputLocks;
 

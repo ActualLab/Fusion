@@ -12,7 +12,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     public ArgumentList Arguments => Invocation.Arguments;
     public override bool IsDisposed => MethodDef.IsDisposable && Service is IHasIsDisposed { IsDisposed: true };
 
-    public ComputeMethodInput(IFunction function, ComputeMethodDef methodDef, Invocation invocation)
+    public ComputeMethodInput(IComputeFunction function, ComputeMethodDef methodDef, Invocation invocation)
     {
         MethodDef = methodDef;
         Invocation = invocation;

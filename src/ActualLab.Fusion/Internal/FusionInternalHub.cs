@@ -16,12 +16,12 @@ public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
     private CommandServiceInterceptor? _commandServiceInterceptor;
     private ComputeServiceInterceptor? _computeServiceInterceptor;
     private CommandServiceInterceptor.Options? _commandServiceInterceptorOptions;
-    private ClientComputeServiceInterceptor.Options? _clientComputeServiceInterceptorOptions;
+    private HybridComputeServiceInterceptor.Options? _clientComputeServiceInterceptorOptions;
 
     internal CommandServiceInterceptor.Options CommandServiceInterceptorOptions
         => _commandServiceInterceptorOptions ??= Services.GetRequiredService<CommandServiceInterceptor.Options>();
-    internal ClientComputeServiceInterceptor.Options ClientComputeServiceInterceptorOptions
-        => _clientComputeServiceInterceptorOptions ??= Services.GetRequiredService<ClientComputeServiceInterceptor.Options>();
+    internal HybridComputeServiceInterceptor.Options ClientComputeServiceInterceptorOptions
+        => _clientComputeServiceInterceptorOptions ??= Services.GetRequiredService<HybridComputeServiceInterceptor.Options>();
 
     public IServiceProvider Services { get; } = services;
     public RpcHub RpcHub { get; } = services.RpcHub();
@@ -35,6 +35,6 @@ public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
     public ComputeServiceInterceptor ComputeServiceInterceptor
         => _computeServiceInterceptor ??= Services.GetRequiredService<ComputeServiceInterceptor>();
 
-    public ClientComputeServiceInterceptor NewClientComputeServiceInterceptor(RpcClientInterceptor clientInterceptor)
-        => new(ClientComputeServiceInterceptorOptions, Services, clientInterceptor);
+    public HybridComputeServiceInterceptor NewHybridComputeServiceInterceptor(RpcInterceptor rpcInterceptor)
+        => new(ClientComputeServiceInterceptorOptions, Services, rpcInterceptor);
 }

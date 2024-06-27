@@ -26,8 +26,8 @@ public static class FusionProxies
         var rpcHub = fusionHub.RpcHub;
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
 
-        var clientInterceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef, null);
-        var clientComputeServiceInterceptor = fusionHub.NewClientComputeServiceInterceptor(clientInterceptor);
+        var clientInterceptor = rpcHub.InternalServices.NewInterceptor(serviceDef, null);
+        var clientComputeServiceInterceptor = fusionHub.NewHybridComputeServiceInterceptor(clientInterceptor);
         clientComputeServiceInterceptor.ValidateType(serviceType);
         return services.ActivateProxy(serviceType, clientComputeServiceInterceptor, null, initialize);
     }
@@ -44,9 +44,9 @@ public static class FusionProxies
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
 
         var localService = services.GetRequiredService(implementationType);
-        var clientInterceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef, null);
-        var clientComputeServiceInterceptor = fusionHub.NewClientComputeServiceInterceptor(clientInterceptor);
-        var routingInterceptor = rpcHub.InternalServices.NewRoutingInterceptor(
+        var clientInterceptor = rpcHub.InternalServices.NewInterceptor(serviceDef, null);
+        var clientComputeServiceInterceptor = fusionHub.NewHybridComputeServiceInterceptor(clientInterceptor);
+        var routingInterceptor = rpcHub.InternalServices.NewSwitchInterceptor(
             serviceDef, localService, clientComputeServiceInterceptor);
         return services.ActivateProxy(serviceType, routingInterceptor, null, initialize);
     }
@@ -63,10 +63,10 @@ public static class FusionProxies
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
 
         var computeServiceInterceptor = services.GetRequiredService<ComputeServiceInterceptor>();
-        var clientInterceptor = rpcHub.InternalServices.NewClientInterceptor(serviceDef, null);
-        var clientComputeServiceInterceptor = fusionHub.NewClientComputeServiceInterceptor(clientInterceptor);
+        var clientInterceptor = rpcHub.InternalServices.NewInterceptor(serviceDef, null);
+        var clientComputeServiceInterceptor = fusionHub.NewHybridComputeServiceInterceptor(clientInterceptor);
         clientComputeServiceInterceptor.ValidateType(implementationType);
-        var routingInterceptor = rpcHub.InternalServices.NewRoutingInterceptor(
+        var routingInterceptor = rpcHub.InternalServices.NewSwitchInterceptor(
             serviceDef, computeServiceInterceptor, clientComputeServiceInterceptor);
         return services.ActivateProxy(implementationType, routingInterceptor, null, initialize);
     }

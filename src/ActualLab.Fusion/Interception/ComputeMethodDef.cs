@@ -30,6 +30,6 @@ public sealed class ComputeMethodDef : MethodDef
         ComputedOptions = computedOptions;
     }
 
-    public ComputeMethodInput CreateInput(IFunction function, Invocation invocation)
+    public ComputeMethodInput CreateInput(IComputeFunction function, Invocation invocation)
         => new(function, this, invocation);
 }

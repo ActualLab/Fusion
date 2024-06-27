@@ -63,7 +63,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         get => (ConsistencyState)_state;
     }
 
-    public IFunction<T> Function => (IFunction<T>)Input.Function;
+    public IComputeFunction<T> Function => (IComputeFunction<T>)Input.Function;
     public ulong Version { get; } = ComputedVersion.Next();
     public Type OutputType => typeof(T);
 
@@ -179,6 +179,9 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
     }
 
     // Invalidate
+
+    protected internal virtual void InvalidateFromCall()
+        => Invalidate();
 
     public void Invalidate(bool immediately = false)
     {

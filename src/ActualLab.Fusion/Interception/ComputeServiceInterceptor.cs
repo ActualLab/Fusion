@@ -23,19 +23,23 @@ public class ComputeServiceInterceptor : Interceptor
         CommandServiceInterceptor = Hub.CommandServiceInterceptor;
     }
 
-    public override Func<Invocation, object?>? GetHandler(Invocation invocation)
-        => GetOwnHandler(invocation) ?? CommandServiceInterceptor.GetHandler(invocation);
+    public override Func<Invocation, object?>? SelectHandler(Invocation invocation)
+        => GetHandler(invocation) ?? CommandServiceInterceptor.SelectHandler(invocation);
 
     protected override Func<Invocation, object?>? CreateHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
         (Invocation initialInvocation, MethodDef methodDef)
     {
-        var computeMethodDef = (ComputeMethodDef)methodDef;
-        var function = CreateFunction<TUnwrapped>(computeMethodDef);
-        return invocation => {
-            var input = computeMethodDef.CreateInput(function, invocation);
+        var function = new ComputeMethodFunction<TUnwrapped>((ComputeMethodDef)methodDef, Services);
+        return CreateHandler(function);
+    }
+
+    protected static Func<Invocation, object?> CreateHandler<TUnwrapped>(ComputeMethodFunction<TUnwrapped> function)
+        => invocation => {
+            var methodDef = function.MethodDef;
+            var input = methodDef.CreateInput(function, invocation);
             var arguments = input.Arguments;
-            var ctIndex = computeMethodDef.CancellationTokenIndex;
+            var ctIndex = methodDef.CancellationTokenIndex;
             var cancellationToken = ctIndex >= 0
                 ? arguments.GetCancellationToken(ctIndex)
                 : default;
@@ -45,7 +49,7 @@ public class ComputeServiceInterceptor : Interceptor
                 // of a task stripping the result of regular Invoke.
                 var task = function.InvokeAndStrip(input, ComputeContext.Current, cancellationToken);
                 // ReSharper disable once HeapView.BoxingAllocation
-                return computeMethodDef.ReturnsValueTask ? new ValueTask<TUnwrapped>(task) : task;
+                return methodDef.ReturnsValueTask ? new ValueTask<TUnwrapped>(task) : task;
             }
             finally {
                 if (cancellationToken != default)
@@ -53,10 +57,6 @@ public class ComputeServiceInterceptor : Interceptor
                     arguments.SetCancellationToken(ctIndex, default);
             }
         };
-    }
-
-    protected virtual ComputeFunctionBase<T> CreateFunction<T>(ComputeMethodDef method)
-        => new ComputeMethodFunction<T>(method, Services);
 
     // We don't need to decorate this method with any dynamic access attributes
     protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)

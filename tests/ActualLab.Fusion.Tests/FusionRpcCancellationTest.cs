@@ -12,7 +12,7 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddService<ICounterService, CounterService>(RpcServiceMode.ServerAndRouter);
+        fusion.AddService<ICounterService, CounterService>(RpcServiceMode.ServerAndClient);
     }
 
     [Fact]

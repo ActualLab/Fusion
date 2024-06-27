@@ -7,9 +7,9 @@ namespace ActualLab.Rpc.Infrastructure;
 #if !NET5_0
 [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
 #endif
-public class RpcRoutingInterceptor : RpcInterceptor
+public class SwitchInterceptor : RpcInterceptorBase
 {
-    public new record Options : RpcInterceptor.Options
+    public new record Options : RpcInterceptorBase.Options
     {
         public static Options Default { get; set; } = new();
     }
@@ -20,15 +20,15 @@ public class RpcRoutingInterceptor : RpcInterceptor
     public RpcCallRouter CallRouter { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public RpcRoutingInterceptor(Options settings, IServiceProvider services, RpcServiceDef serviceDef)
+    public SwitchInterceptor(Options settings, IServiceProvider services, RpcServiceDef serviceDef)
         : base(settings, services, serviceDef)
     {
         Settings = settings;
         CallRouter = Hub.CallRouter;
     }
 
-    public override Func<Invocation, object?>? GetHandler(Invocation invocation)
-        => GetOwnHandler(invocation) ?? (LocalTarget as Interceptor)?.GetHandler(invocation);
+    public override Func<Invocation, object?>? SelectHandler(Invocation invocation)
+        => GetHandler(invocation) ?? (LocalTarget as Interceptor)?.SelectHandler(invocation);
 
     protected override Func<Invocation, object?>? CreateHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>

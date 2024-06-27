@@ -43,6 +43,8 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
                             ? arguments.GetCancellationToken(1)
                             : default;
 
+                        // "isOutermost: true" also guarantees that RpcInboundContext.Current is null
+                        // when it enters the same interceptor once again
                         var resultTask = Commander.Call(command, isOutermost: true, cancellationToken);
                         return methodDef.ReturnsTask
                             ? resultTask

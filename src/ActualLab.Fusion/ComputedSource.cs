@@ -3,14 +3,14 @@ using ActualLab.Locking;
 
 namespace ActualLab.Fusion;
 
-public interface IComputedSource : IFunction
+public interface IComputedSource : IComputeFunction
 {
     ComputedOptions ComputedOptions { get; init; }
     IComputed Computed { get; }
 }
 
 public class ComputedSource<T> : ComputedInput,
-    IFunction<T>, IComputedSource,
+    IComputeFunction<T>, IComputedSource,
     IEquatable<ComputedSource<T>>
 {
     private volatile ComputedSourceComputed<T> _computed;
@@ -94,7 +94,7 @@ public class ComputedSource<T> : ComputedInput,
 
     // IFunction<T> & IFunction
 
-    ValueTask<Computed<T>> IFunction<T>.Invoke(
+    ValueTask<Computed<T>> IComputeFunction<T>.Invoke(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken)
@@ -126,7 +126,7 @@ public class ComputedSource<T> : ComputedInput,
         return computed;
     }
 
-    Task<T> IFunction<T>.InvokeAndStrip(
+    Task<T> IComputeFunction<T>.InvokeAndStrip(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken)

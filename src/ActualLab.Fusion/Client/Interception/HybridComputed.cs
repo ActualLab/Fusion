@@ -11,23 +11,23 @@ namespace ActualLab.Fusion.Client.Interception;
 #pragma warning disable VSTHRD104
 #pragma warning disable MA0055
 
-public interface IClientComputed : IComputed, IMaybeCachedValue, IDisposable
+public interface IHybridComputed : IComputed, IMaybeCachedValue, IDisposable
 {
     Task WhenCallBound { get; }
     RpcCacheEntry? CacheEntry { get; }
 }
 
-public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
+public class HybridComputed<T> : ComputeMethodComputed<T>, IHybridComputed
 {
     internal readonly TaskCompletionSource<RpcOutboundComputeCall<T>?> CallSource;
     internal readonly TaskCompletionSource<Unit> SynchronizedSource;
 
-    Task IClientComputed.WhenCallBound => CallSource.Task;
+    Task IHybridComputed.WhenCallBound => CallSource.Task;
     public Task<RpcOutboundComputeCall<T>?> WhenCallBound => CallSource.Task;
     public RpcCacheEntry? CacheEntry { get; }
     public Task WhenSynchronized => SynchronizedSource.Task;
 
-    public ClientComputed(
+    public HybridComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
@@ -42,7 +42,7 @@ public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
         StartAutoInvalidation();
     }
 
-    public ClientComputed(
+    public HybridComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
@@ -63,7 +63,7 @@ public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    ~ClientComputed()
+    ~HybridComputed()
         => Dispose();
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -117,6 +117,10 @@ public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
             _ => Invalidate(true),
             CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
+
+    protected internal override void InvalidateFromCall()
+        => base.InvalidateFromCall();
+
     protected override void OnInvalidated()
     {
         BindToCall(null);

@@ -31,7 +31,7 @@ public static class ComputedExt
             // CallOptions.Invalidate is:
             // - always paired with CallOptions.GetExisting
             // - never paired with CallOptions.Capture
-            existing.Invalidate();
+            existing.InvalidateFromCall();
             return true;
         }
 

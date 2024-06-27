@@ -105,9 +105,9 @@ public static class Errors
 
     public static Exception NoLocalCallInvoker()
         => new InvalidOperationException(
-            $"{nameof(RpcRoutingInterceptor)} is misconfigured: it can't route local calls.");
+            $"{nameof(SwitchInterceptor)} is misconfigured: it can't route local calls.");
 
     public static Exception NoRemoteCallInvoker()
         => new InvalidOperationException(
-            $"{nameof(RpcRoutingInterceptor)} is misconfigured: it can't route remote calls.");
+            $"{nameof(SwitchInterceptor)} is misconfigured: it can't route remote calls.");
 }

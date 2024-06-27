@@ -27,7 +27,7 @@ public abstract class Interceptor : IHasServices
     private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandlerUntyped;
     private readonly Func<MethodInfo, Type, MethodDef?> _createMethodDef;
     private readonly ConcurrentDictionary<MethodInfo, MethodDef?> _methodDefCache = new();
-    private readonly ConcurrentDictionary<MethodInfo, Func<Invocation, object?>?> _ownHandlerCache = new();
+    private readonly ConcurrentDictionary<MethodInfo, Func<Invocation, object?>?> _handlerCache = new();
     private readonly ConcurrentDictionary<Type, Unit> _validateTypeCache = new();
 
     protected readonly ILogger Log;
@@ -77,7 +77,7 @@ public abstract class Interceptor : IHasServices
     /// <param name="invocation">Invocation descriptor.</param>
     public void Intercept(Invocation invocation)
     {
-        var handler = GetHandler(invocation);
+        var handler = SelectHandler(invocation);
         if (handler != null)
             handler.Invoke(invocation);
         else
@@ -100,7 +100,7 @@ public abstract class Interceptor : IHasServices
     /// <returns>Method call result.</returns>
     public TResult Intercept<TResult>(Invocation invocation)
     {
-        var handler = GetHandler(invocation);
+        var handler = SelectHandler(invocation);
         return handler != null
             ? (TResult)handler.Invoke(invocation)!
             : Proceed<TResult>(invocation);
@@ -111,13 +111,13 @@ public abstract class Interceptor : IHasServices
             ? next.Intercept<TResult>(invocation)
             : invocation.Intercepted<TResult>();
 
-    public virtual Func<Invocation, object?>? GetHandler(Invocation invocation)
-        => GetOwnHandler(invocation);
+    public virtual Func<Invocation, object?>? SelectHandler(Invocation invocation)
+        => GetHandler(invocation);
 
-    public Func<Invocation, object?>? GetOwnHandler(Invocation invocation)
-        => _ownHandlerCache.GetOrAdd(invocation.Method, _createHandlerUntyped, invocation);
+    public Func<Invocation, object?>? GetHandler(Invocation invocation)
+        => _handlerCache.GetOrAdd(invocation.Method, _createHandlerUntyped, invocation);
 
-    public MethodDef? GetMethodDef(Type proxyType, MethodInfo method)
+    public MethodDef? GetMethodDef(MethodInfo method, Type proxyType)
         => _methodDefCache.GetOrAdd(method, _createMethodDef, proxyType);
 
     public void ValidateType(
@@ -144,10 +144,10 @@ public abstract class Interceptor : IHasServices
     // Helpers
 
     // Returns a handler that does nothing & returns default(T) / completed Task<T> or ValueTask<T> with default(T)
-    public Func<Invocation, object?> GetSkippingHandler(Invocation invocation)
+    public Func<Invocation, object?> GetNoopHandler(Invocation invocation)
         => SkippingHandlerCache.GetOrAdd(invocation.Method, static (method, key) => {
             var (self, invocation1) = key;
-            var methodDef = self.GetMethodDef(invocation1.Proxy.GetType(), method)!;
+            var methodDef = self.GetMethodDef(method, invocation1.Proxy.GetType())!;
             return _ => methodDef.DefaultResult;
         }, (this, invocation));
 
@@ -175,7 +175,7 @@ public abstract class Interceptor : IHasServices
 
     private Func<Invocation, object?>? CreateHandlerUntyped(MethodInfo method, Invocation initialInvocation)
     {
-        var methodDef = GetMethodDef(initialInvocation.Proxy.GetType(), method);
+        var methodDef = GetMethodDef(method, initialInvocation.Proxy.GetType());
         if (methodDef == null)
             return null;
 

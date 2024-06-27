@@ -30,8 +30,8 @@ public readonly struct FusionBuilder
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcComputeSystemCalls))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundComputeCall<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcOutboundComputeCall<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ClientComputeServiceInterceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ClientComputeMethodFunction<>))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(HybridComputeServiceInterceptor))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(HybridComputeMethodFunction<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(FuncComputedState<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComputedSource<>))]
     internal FusionBuilder(
@@ -67,7 +67,7 @@ public readonly struct FusionBuilder
 
         // Interceptors
         services.AddSingleton(_ => ComputeServiceInterceptor.Options.Default);
-        services.AddSingleton(_ => ClientComputeServiceInterceptor.Options.Default);
+        services.AddSingleton(_ => HybridComputeServiceInterceptor.Options.Default);
         services.AddSingleton(c => new ComputeServiceInterceptor(
             c.GetRequiredService<ComputeServiceInterceptor.Options>(), c));
 
@@ -235,7 +235,7 @@ public readonly struct FusionBuilder
         return mode switch {
             RpcServiceMode.Local => AddComputeService(serviceType, implementationType, addCommandHandlers),
             RpcServiceMode.Server => AddServer(serviceType, implementationType, default, addCommandHandlers),
-            RpcServiceMode.ServerAndRouter => AddServerAndRouter(serviceType, implementationType, default, addCommandHandlers),
+            RpcServiceMode.ServerAndClient => AddServerAndRouter(serviceType, implementationType, default, addCommandHandlers),
             RpcServiceMode.Hybrid => AddHybrid(serviceType, implementationType, default, addCommandHandlers),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };

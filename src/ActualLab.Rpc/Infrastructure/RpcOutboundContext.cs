@@ -15,7 +15,6 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
 
     public byte CallTypeId = callTypeId;
     public List<RpcHeader>? Headers = headers;
-    public RpcPeer? PreSelectedPeer;
     public RpcMethodDef? MethodDef;
     public ArgumentList? Arguments;
     public CancellationToken CancellationToken;
@@ -31,6 +30,19 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
     public RpcOutboundContext(List<RpcHeader>? headers = null)
         : this(0, headers)
     { }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RpcOutboundContext(RpcPeer peer, List<RpcHeader>? headers = null)
+        : this(0, headers)
+        => Peer = peer;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RpcOutboundContext(RpcPeer peer, long relatedId, List<RpcHeader>? headers = null)
+        : this(0, headers)
+    {
+        Peer = peer;
+        RelatedId = relatedId;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Scope Activate()
@@ -52,7 +64,7 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
 
         // Peer & Call
         var hub = MethodDef.Hub;
-        Peer ??= PreSelectedPeer ?? hub.CallRouter.Invoke(methodDef, arguments);
+        Peer ??= hub.CallRouter.Invoke(methodDef, arguments);
         var call = Call = RpcOutboundCall.New(this);
         if (call is { NoWait: false })
             hub.OutboundMiddlewares.NullIfEmpty()?.PrepareCall(this);
@@ -64,8 +76,6 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
     {
         if (MethodDef == null || Arguments == null)
             throw ActualLab.Internal.Errors.NotInvoked(nameof(PrepareCall));
-        if (PreSelectedPeer != null)
-            throw ActualLab.Internal.Errors.InternalError("This call cannot be rerouted (PreSelectedPeer != null).");
 
         // Peer & Call
         var hub = MethodDef.Hub;
@@ -77,7 +87,7 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
     }
 
     public bool IsPeerChanged()
-        => PreSelectedPeer == null && Peer != MethodDef!.Hub.CallRouter.Invoke(MethodDef, Arguments!);
+        => Peer != MethodDef!.Hub.CallRouter.Invoke(MethodDef, Arguments!);
 
     public bool MustCaptureCacheKey(RpcMessage? message, out bool keyOnly)
     {
