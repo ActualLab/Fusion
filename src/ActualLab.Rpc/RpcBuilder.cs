@@ -196,7 +196,7 @@ public readonly struct RpcBuilder
         if (!serviceType.IsAssignableFrom(proxyBaseType))
             throw ActualLab.Internal.Errors.MustBeAssignableTo(proxyBaseType, serviceType, nameof(proxyBaseType));
 
-        Services.AddSingleton(proxyBaseType, c => RpcProxies.NewProxy(c, proxyBaseType));
+        Services.AddSingleton(proxyBaseType, c => RpcProxies.NewProxy(c, serviceType, proxyBaseType));
         if (serviceType != proxyBaseType)
             Services.AddAlias(serviceType, proxyBaseType);
         Service(serviceType).HasName(name);
