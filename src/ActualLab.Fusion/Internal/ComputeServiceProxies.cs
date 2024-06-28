@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Interception;
 using ActualLab.Fusion.Interception;
 using ActualLab.Interception;
-using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Internal;
 

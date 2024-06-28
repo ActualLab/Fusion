@@ -187,7 +187,8 @@ public readonly struct RpcBuilder
         Symbol name = default)
     {
         // DI container:
-        // - TService is a singleton RPC client for TService
+        // - TProxyBaseType is a singleton RPC client for TService
+        // - IService as its alias, if TProxyBaseType != TService
         // RPC:
         // - TService configured as client
 
@@ -196,9 +197,12 @@ public readonly struct RpcBuilder
         if (!serviceType.IsAssignableFrom(proxyBaseType))
             throw ActualLab.Internal.Errors.MustBeAssignableTo(proxyBaseType, serviceType, nameof(proxyBaseType));
 
-        Services.AddSingleton(proxyBaseType, c => RpcProxies.New(c, serviceType, proxyBaseType));
-        if (serviceType != proxyBaseType)
+        if (serviceType == proxyBaseType)
+            Services.AddSingleton(serviceType, c => RpcProxies.New(c, serviceType, proxyBaseType));
+        else {
+            Services.AddSingleton(proxyBaseType, c => RpcProxies.New(c, serviceType, proxyBaseType));
             Services.AddAlias(serviceType, proxyBaseType);
+        }
         Service(serviceType).HasName(name);
         return this;
     }
@@ -219,7 +223,8 @@ public readonly struct RpcBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType)
     {
         // DI container:
-        // - TService is a singleton mapped to TImplementation
+        // - TImplementation is a singleton
+        // - IService as its alias, if IService != TImplementation
         // RPC:
         // - no configuration changes
 
@@ -230,7 +235,9 @@ public readonly struct RpcBuilder
         if (!implementationType.IsClass)
             throw ActualLab.Internal.Errors.MustBeClass(implementationType, nameof(implementationType));
 
-        Services.Add(new ServiceDescriptor(serviceType, implementationType, ServiceLifetime.Singleton));
+        Services.Add(new ServiceDescriptor(implementationType, implementationType, ServiceLifetime.Singleton));
+        if (serviceType != implementationType)
+            Services.AddAlias(serviceType, implementationType);
         return this;
     }
 
@@ -256,12 +263,13 @@ public readonly struct RpcBuilder
         Symbol name = default)
     {
         // DI container:
-        // - TService is a singleton mapped to TImplementation
+        // - TImplementation is a singleton
+        // - IService as its alias, if IService != TImplementation
         // RPC:
-        // - TService configured as server resolving to TService
+        // - TService configured as server resolving to TImplementation
 
         AddLocalService(serviceType, implementationType);
-        Service(serviceType).HasServer(serviceType).HasName(name);
+        Service(serviceType).HasServer(implementationType).HasName(name);
         return this;
     }
 
@@ -288,7 +296,7 @@ public readonly struct RpcBuilder
         // - TService configured as server resolving to TImplementation, so incoming calls won't be routed
 
         AddLocalService(implementationType);
-        Services.AddSingleton(serviceType, c => RpcProxies.NewSwitch(c, serviceType));
+        Services.AddSingleton(serviceType, c => RpcProxies.NewSwitch(c, serviceType, implementationType));
         Service(serviceType).HasServer(implementationType).HasName(name);
         return this;
     }

@@ -27,9 +27,7 @@ public class RpcInterceptor : RpcInterceptorBase
         (Invocation initialInvocation, MethodDef methodDef)
     {
         var rpcMethodDef = (RpcMethodDef)methodDef;
-        var localCallAsyncInvoker = LocalTarget != null
-            ? methodDef.SelectAsyncInvoker<TUnwrapped>(initialInvocation.Proxy, LocalTarget)
-            : null;
+        var localCallAsyncInvoker = methodDef.SelectAsyncInvoker<TUnwrapped>(initialInvocation.Proxy, LocalTarget);
         return invocation => {
             var context = invocation.Context as RpcOutboundContext ?? new();
             var call = (RpcOutboundCall<TUnwrapped>?)context.PrepareCall(rpcMethodDef, invocation.Arguments);

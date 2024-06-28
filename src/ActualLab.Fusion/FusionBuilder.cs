@@ -350,7 +350,7 @@ public readonly struct FusionBuilder
         // ~ RpcBuilder.AddServerAndClient, but for Compute Service
 
         AddComputeService(implementationType, false);
-        Services.AddSingleton(serviceType, c => RpcProxies.NewSwitch(c, serviceType));
+        Services.AddSingleton(serviceType, c => RpcProxies.NewSwitch(c, serviceType, implementationType));
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType, implementationType);
         Rpc.Service(serviceType).HasServer(implementationType).HasName(name);

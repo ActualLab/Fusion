@@ -62,13 +62,13 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
     private IMomentClock SystemClock { get; } = services.Clocks().SystemClock;
     private ILogger Log { get; } = services.LogFor<TestRpcService>();
 
-    public Task<int?> Div(int? a, int b)
+    public virtual Task<int?> Div(int? a, int b)
         => Task.FromResult(a / b);
 
-    public Task<int?> Add(int? a, int b)
+    public virtual Task<int?> Add(int? a, int b)
         => Task.FromResult(a + b);
 
-    public async Task<TimeSpan> Delay(TimeSpan duration, CancellationToken cancellationToken = default)
+    public virtual async Task<TimeSpan> Delay(TimeSpan duration, CancellationToken cancellationToken = default)
     {
         try {
             await Task.Delay(duration, cancellationToken);
@@ -80,19 +80,19 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
         }
     }
 
-    public Task<int> GetCancellationCount()
+    public virtual Task<int> GetCancellationCount()
         => Task.FromResult(_cancellationCount);
 
-    public Task<string> GetVersion()
+    public virtual Task<string> GetVersion()
         => Task.FromResult("1.0");
 
-    public Task<int> PolymorphArg(ITuple argument, CancellationToken cancellationToken = default)
+    public virtual Task<int> PolymorphArg(ITuple argument, CancellationToken cancellationToken = default)
         => Task.FromResult(argument.Length);
 
-    public Task<ITuple> PolymorphResult(int argument, CancellationToken cancellationToken = default)
+    public virtual Task<ITuple> PolymorphResult(int argument, CancellationToken cancellationToken = default)
         => Task.FromResult((ITuple)Tuple.Create(argument));
 
-    public ValueTask<RpcNoWait> MaybeSet(string key, string? value)
+    public virtual ValueTask<RpcNoWait> MaybeSet(string key, string? value)
     {
         if (value == null)
             _values.Remove(key, out _);
@@ -101,26 +101,26 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
         return default;
     }
 
-    public ValueTask<string?> Get(string key)
+    public virtual ValueTask<string?> Get(string key)
         => new(_values.GetValueOrDefault(key));
 
-    public Task<RpcStream<int>> StreamInt32(int count, int failAt = -1, RandomTimeSpan delay = default)
+    public virtual Task<RpcStream<int>> StreamInt32(int count, int failAt = -1, RandomTimeSpan delay = default)
     {
         var seq = Enumerate(count, failAt, delay);
         return Task.FromResult(RpcStream.New(seq));
     }
 
-    public Task<RpcStream<ITuple>> StreamTuples(int count, int failAt = -1, RandomTimeSpan delay = default)
+    public virtual Task<RpcStream<ITuple>> StreamTuples(int count, int failAt = -1, RandomTimeSpan delay = default)
     {
         var seq = Enumerate(count, failAt, delay)
             .Select(x => (x & 2) == 0 ? (ITuple)new Tuple<int>(x) : new Tuple<long>(x));
         return Task.FromResult(RpcStream.New(seq));
     }
 
-    public Task<int> Count(RpcStream<int> items, CancellationToken cancellationToken = default)
+    public virtual Task<int> Count(RpcStream<int> items, CancellationToken cancellationToken = default)
         => items.CountAsync(cancellationToken).AsTask();
 
-    public async Task CheckLag(RpcStream<Moment> items, int expectedCount, CancellationToken cancellationToken = default)
+    public virtual async Task CheckLag(RpcStream<Moment> items, int expectedCount, CancellationToken cancellationToken = default)
     {
         var count = 0;
         var deltas = new List<TimeSpan>();

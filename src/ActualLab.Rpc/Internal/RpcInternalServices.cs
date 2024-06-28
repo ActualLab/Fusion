@@ -36,9 +36,9 @@ public sealed class RpcInternalServices(RpcHub hub)
 
     public ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers => Hub.Peers;
 
-    public RpcInterceptor NewInterceptor(RpcServiceDef serviceDef, object? localService)
+    public RpcInterceptor NewInterceptor(RpcServiceDef serviceDef, object? localTarget = null)
         => new(InterceptorOptions, Hub.Services, serviceDef) {
-            LocalTarget = localService,
+            LocalTarget = localTarget,
         };
 
     public RpcSwitchInterceptor NewSwitchInterceptor(
