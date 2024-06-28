@@ -13,7 +13,7 @@ public class ComputeServiceInterceptor : Interceptor
     }
 
     public readonly FusionInternalHub Hub;
-    public CommandServiceInterceptor CommandServiceInterceptor { get; init; }
+    public readonly CommandServiceInterceptor CommandServiceInterceptor;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public ComputeServiceInterceptor(Options settings, IServiceProvider services)
@@ -37,7 +37,7 @@ public class ComputeServiceInterceptor : Interceptor
     protected static Func<Invocation, object?> CreateHandler<TUnwrapped>(ComputeMethodFunction<TUnwrapped> function)
         => invocation => {
             var methodDef = function.MethodDef;
-            var input = methodDef.CreateInput(function, invocation);
+            var input = new ComputeMethodInput(function, methodDef, invocation);
             var arguments = input.Arguments;
             var ctIndex = methodDef.CancellationTokenIndex;
             var cancellationToken = ctIndex >= 0

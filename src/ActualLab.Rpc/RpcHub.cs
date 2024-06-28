@@ -15,7 +15,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcServiceDefBuilder ServiceDefBuilder;
     internal readonly RpcMethodDefBuilder MethodDefBuilder;
     internal readonly RpcServiceScopeResolver ServiceScopeResolver;
-    internal readonly RpcCallRouter CallRouter;
+    internal readonly RpcSafeCallRouter CallRouter;
     internal readonly RpcRerouteDelayer RerouteDelayer;
     internal readonly RpcArgumentSerializer ArgumentSerializer;
     internal readonly RpcInboundCallFilter InboundCallFilter;
@@ -54,7 +54,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
         MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
         ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();
-        CallRouter = services.GetRequiredService<RpcCallRouter>();
+        CallRouter = services.GetRequiredService<RpcSafeCallRouter>();
         RerouteDelayer = services.GetRequiredService<RpcRerouteDelayer>();
         ArgumentSerializer = services.GetRequiredService<RpcArgumentSerializer>();
         InboundCallFilter = services.GetRequiredService<RpcInboundCallFilter>();
@@ -91,10 +91,14 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
                 return peer;
             if (WhenDisposed != null)
                 throw Errors.AlreadyDisposed(GetType());
+            if (peerRef.IsGone)
+                throw RpcRerouteException.MustReroute(peerRef);
 
             peer = PeerFactory.Invoke(this, peerRef);
             Peers[peerRef] = peer;
             peer.Start();
+            if (peerRef.CanBeGone)
+                _ = peerRef.WhenGone().ContinueWith(_ => peer.Dispose(), TaskScheduler.Default);
             return peer;
         }
     }

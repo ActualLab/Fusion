@@ -1,7 +1,10 @@
+using System.Runtime.ExceptionServices;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 
 namespace ActualLab.Fusion;
+
+#pragma warning disable CA1721
 
 public interface IComputedSource : IComputeFunction
 {
@@ -78,6 +81,9 @@ public class ComputedSource<T> : ComputedInput,
 
     // ComputedInput
 
+    public override ComputedOptions GetComputedOptions()
+        => ComputedOptions;
+
     public override IComputed? GetExistingComputed()
         => Computed;
 
@@ -111,18 +117,18 @@ public class ComputedSource<T> : ComputedInput,
         CancellationToken cancellationToken)
     {
         var computed = Computed;
-        if (computed.TryUseExisting(context))
+        if (ComputedHelpers.TryUseExisting(computed, context))
             return computed!;
 
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
         computed = Computed;
-        if (computed.TryUseExistingFromLock(context))
+        if (ComputedHelpers.TryUseExistingFromLock(computed, context))
             return computed!;
 
         releaser.MarkLockedLocally();
         computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context);
+        ComputedHelpers.UseNew(computed, context);
         return computed;
     }
 
@@ -143,8 +149,8 @@ public class ComputedSource<T> : ComputedInput,
         CancellationToken cancellationToken)
     {
         var result = Computed;
-        return result.TryUseExisting(context)
-            ? result.StripToTask(context)
+        return ComputedHelpers.TryUseExisting(result, context)
+            ? ComputedHelpers.StripToTask(result, context)
             : TryRecompute(context, cancellationToken);
     }
 
@@ -157,12 +163,12 @@ public class ComputedSource<T> : ComputedInput,
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
         var computed = Computed;
-        if (computed.TryUseExistingFromLock(context))
-            return computed.Strip(context);
+        if (ComputedHelpers.TryUseExistingFromLock(computed, context))
+            return ComputedHelpers.Strip(computed, context);
 
         releaser.MarkLockedLocally();
         computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context);
+        ComputedHelpers.UseNew(computed, context);
         return computed.Value;
     }
 
@@ -173,37 +179,20 @@ public class ComputedSource<T> : ComputedInput,
         var startedAt = CpuTimestamp.Now;
         while (true) {
             Computed = computed = new ComputedSourceComputed<T>(ComputedOptions, this);
-            using var _ = Fusion.Computed.BeginCompute(computed);
             try {
+                using var _ = Fusion.Computed.BeginCompute(computed);
                 var value = await Computer.Invoke(this, cancellationToken).ConfigureAwait(false);
                 computed.TrySetOutput(Result.New(value));
                 break;
             }
             catch (Exception e) {
-                if (cancellationToken.IsCancellationRequested) {
-                    computed.Invalidate(true); // Instant invalidation on cancellation
-                    computed.TrySetOutput(Result.Error<T>(e));
-                    if (e is OperationCanceledException)
-                        throw;
-
-                    cancellationToken.ThrowIfCancellationRequested(); // Always throws here
-                }
-
-                var cancellationReprocessingOptions = ComputedOptions.CancellationReprocessing;
-                if (e is not OperationCanceledException
-                    || ++tryIndex > cancellationReprocessingOptions.MaxTryCount
-                    || startedAt.Elapsed > cancellationReprocessingOptions.MaxDuration) {
-                    computed.TrySetOutput(Result.Error<T>(e));
-                    break;
-                }
-
-                computed.Invalidate(true); // Instant invalidation on cancellation
-                computed.TrySetOutput(Result.Error<T>(e));
-                var delay = cancellationReprocessingOptions.RetryDelays[tryIndex];
-                Log.LogWarning(e,
-                    "GetComputed #{TryIndex} for {Category} was cancelled internally, retry in {Delay}",
-                    tryIndex, Category, delay.ToShortString());
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                var delayTask = ComputedHelpers.TryReprocess(
+                    nameof(GetComputed), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
+                if (delayTask == SpecialTasks.MustThrow)
+                    throw;
+                if (delayTask == SpecialTasks.MustReturn)
+                    return computed;
+                await delayTask.ConfigureAwait(false);
             }
         }
         return computed;

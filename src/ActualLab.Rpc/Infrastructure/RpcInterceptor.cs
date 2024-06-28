@@ -42,7 +42,7 @@ public class RpcInterceptor : RpcInterceptorBase
                 if (localCallAsyncInvoker != null)
                     resultTask = localCallAsyncInvoker.Invoke(invocation);
                 else
-                    throw RpcRerouteException.LocalCall(); // To be handled by RpcRoutingInterceptor
+                    throw RpcRerouteException.LocalCall();
             }
             else if (call.NoWait || context.CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly }) {
                 // NoWait requires call to be sent no matter what is the connection state now;
@@ -105,6 +105,7 @@ public class RpcInterceptor : RpcInterceptorBase
                 return await resultTask.ConfigureAwait(false);
             }
             catch (RpcRerouteException) {
+                Log.LogWarning("Rerouting: {Invocation}", invocation);
                 await Hub.RerouteDelayer.Invoke(cancellationToken).ConfigureAwait(false);
                 call = (RpcOutboundCall<T>?)context.PrepareReroutedCall();
             }

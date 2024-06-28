@@ -99,9 +99,9 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
         await state.When(x => x == "a c").WaitAsync(TimeSpan.FromSeconds(1));
     }
 
-    private static async Task<HybridComputed<string>> GetComputed(IKeyValueService<string> kv, string key)
+    private static async Task<ClientComputed<string>> GetComputed(IKeyValueService<string> kv, string key)
     {
         var c = await Computed.Capture(() => kv.Get(key));
-        return (HybridComputed<string>)c;
+        return (ClientComputed<string>)c;
     }
 }

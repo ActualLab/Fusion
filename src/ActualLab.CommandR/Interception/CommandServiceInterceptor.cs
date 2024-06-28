@@ -66,7 +66,7 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
             }
 
             // We're already inside the ICommander pipeline created for exactly this command
-            return this.ProceedUntyped(invocation);
+            return invocation.InterceptedUntyped();
         };
     }
 

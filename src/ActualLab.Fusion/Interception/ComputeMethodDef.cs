@@ -5,8 +5,7 @@ namespace ActualLab.Fusion.Interception;
 
 public sealed class ComputeMethodDef : MethodDef
 {
-    public ComputedOptions ComputedOptions { get; init; } = ComputedOptions.Default;
-
+    public ComputedOptions ComputedOptions { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = ComputedOptions.Default;
     public readonly bool IsDisposable;
 
     public ComputeMethodDef(
@@ -29,7 +28,4 @@ public sealed class ComputeMethodDef : MethodDef
         IsDisposable = typeof(IHasIsDisposed).IsAssignableFrom(type);
         ComputedOptions = computedOptions;
     }
-
-    public ComputeMethodInput CreateInput(IComputeFunction function, Invocation invocation)
-        => new(function, this, invocation);
 }

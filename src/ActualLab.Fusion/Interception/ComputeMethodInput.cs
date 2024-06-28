@@ -7,10 +7,20 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
 {
     public readonly ComputeMethodDef MethodDef;
     public readonly Invocation Invocation;
+
     // Shortcuts
-    public object Service => Invocation.Proxy;
-    public ArgumentList Arguments => Invocation.Arguments;
-    public override bool IsDisposed => MethodDef.IsDisposable && Service is IHasIsDisposed { IsDisposed: true };
+    public object Service {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => Invocation.Proxy;
+    }
+
+    public ArgumentList Arguments {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => Invocation.Arguments;
+    }
+
+    public override bool IsDisposed
+        => MethodDef.IsDisposable && Service is IHasIsDisposed { IsDisposed: true };
 
     public ComputeMethodInput(IComputeFunction function, ComputeMethodDef methodDef, Invocation invocation)
     {
@@ -26,6 +36,9 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
 
     public override string ToString()
         => ZString.Concat(Category, Arguments, "-Hash=", HashCode);
+
+    public override ComputedOptions GetComputedOptions()
+        => MethodDef.ComputedOptions;
 
     public override IComputed? GetExistingComputed()
         => ComputedRegistry.Instance.Get(this);

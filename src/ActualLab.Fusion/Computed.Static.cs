@@ -15,25 +15,33 @@ public static class Computed
         get => ComputeContext.Current.Computed;
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static IComputed GetCurrent()
         => Current ?? throw Errors.CurrentComputedIsNull();
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static Computed<T> GetCurrent<T>()
         => (Computed<T>)(Current ?? throw Errors.CurrentComputedIsNull());
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComputeContextScope BeginCompute(IComputed computed)
-        => new(new(computed));
+        => new(new ComputeContext(computed));
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComputeContextScope BeginIsolation()
         => new(ComputeContext.None);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComputeContextScope BeginCapture()
         => new(new ComputeContext(CallOptions.Capture));
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComputeContextScope BeginCaptureExisting()
         => new(new ComputeContext(CallOptions.Capture | CallOptions.GetExisting));
 
     // TryCapture
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<Option<IComputed>> TryCapture(
         Func<Task> producer,
         CancellationToken cancellationToken = default)
@@ -51,6 +59,7 @@ public static class Computed
         }
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<Option<Computed<T>>> TryCapture<T>(
         Func<Task<T>> producer,
         CancellationToken cancellationToken = default)
@@ -68,6 +77,7 @@ public static class Computed
         }
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<Option<IComputed>> TryCapture(
         Func<ValueTask> producer,
         CancellationToken cancellationToken = default)
@@ -85,6 +95,7 @@ public static class Computed
         }
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<Option<Computed<T>>> TryCapture<T>(
         Func<ValueTask<T>> producer,
         CancellationToken cancellationToken = default)
@@ -104,6 +115,7 @@ public static class Computed
 
     // Capture
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<IComputed> Capture(
         Func<Task> producer,
         CancellationToken cancellationToken = default)
@@ -121,6 +133,7 @@ public static class Computed
         }
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<Computed<T>> Capture<T>(
         Func<Task<T>> producer,
         CancellationToken cancellationToken = default)
@@ -138,6 +151,7 @@ public static class Computed
         }
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<IComputed> Capture(
         Func<ValueTask> producer,
         CancellationToken cancellationToken = default)
@@ -155,6 +169,7 @@ public static class Computed
         }
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static async ValueTask<Computed<T>> Capture<T>(
         Func<ValueTask<T>> producer,
         CancellationToken cancellationToken = default)
@@ -174,6 +189,7 @@ public static class Computed
 
     // GetExisting
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static Computed<T>? GetExisting<T>(Func<Task<T>> producer)
     {
         using var ccs = BeginCaptureExisting();
@@ -182,6 +198,7 @@ public static class Computed
         return ccs.Context.TryGetCaptured<T>().ValueOrDefault;
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static Computed<T>? GetExisting<T>(Func<ValueTask<T>> producer)
     {
         using var ccs = BeginCaptureExisting();

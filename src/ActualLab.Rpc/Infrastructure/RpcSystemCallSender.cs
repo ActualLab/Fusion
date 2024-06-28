@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Internal;
+using ActualLab.Resilience;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -103,6 +104,21 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Error(RpcPeer peer, long callId, Exception error, List<RpcHeader>? headers = null)
     {
+        if (error is RpcRerouteException) {
+            Log.LogError("Error(...) got RpcRerouteException, which should never happen");
+            error = new TaskCanceledException();
+        }
+        if (peer.StopToken.IsCancellationRequested) {
+            // The peer is stopping, we may omit sending call result here
+            var stopMode = RpcPeerStopModeExt.ComputeFor(peer);
+            if (stopMode == RpcPeerStopMode.KeepInboundCallsIncomplete) {
+                // We must keep all inbound calls incomplete - assuming they're getting aborted with
+                // either OperationCanceledException or ObjectDisposedException.
+                if (error is OperationCanceledException || error.IsServiceProviderDisposedException())
+                    return Task.CompletedTask;
+            }
+        }
+
         var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCall(ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()))!;
         return call.SendNoWait(false);

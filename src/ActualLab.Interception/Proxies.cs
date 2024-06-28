@@ -11,7 +11,7 @@ public static class Proxies
 {
     private static readonly ConcurrentDictionary<Type, Type?> Cache = new();
 
-    public static IProxy CreateInstance(
+    public static IProxy New(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type baseType,
         Interceptor interceptor, object? proxyTarget = null, bool initialize = true)
     {

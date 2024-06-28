@@ -42,8 +42,9 @@ public static class RpcDefaultDelegates
             ? RpcDefaults.BackendScope
             : RpcDefaults.ApiScope;
 
+    // See also: RpcSafeCallRouter
     public static RpcCallRouter CallRouter { get; set; } =
-        static (method, arguments) => method.Hub.GetPeer(RpcPeerRef.Default);
+        static (method, arguments) => method.Hub.GetPeer(RpcPeerRef.Default); // May throw RpcRerouteException!
 
     public static RandomTimeSpan RerouteDelayerDelay { get; set; } = TimeSpan.FromMilliseconds(100).ToRandom(0.25);
 

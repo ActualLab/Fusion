@@ -1,3 +1,5 @@
+using System.Runtime.ExceptionServices;
+using ActualLab.Fusion.Internal;
 using ActualLab.Interception;
 
 namespace ActualLab.Fusion.Interception;
@@ -13,8 +15,8 @@ public class ComputeMethodFunction<T>(
     IServiceProvider services
     ) : ComputeFunctionBase<T>(services), IComputeMethodFunction
 {
-    public ComputeMethodDef MethodDef { get; } = methodDef;
-    public ComputedOptions ComputedOptions { get; } = methodDef.ComputedOptions;
+    public ComputeMethodDef MethodDef { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; } = methodDef;
+    public ComputedOptions ComputedOptions { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; } = methodDef.ComputedOptions;
 
     public override string ToString()
         => MethodDef.FullName;
@@ -42,34 +44,18 @@ public class ComputeMethodFunction<T>(
                 return computed;
             }
             catch (Exception e) {
-                if (cancellationToken.IsCancellationRequested) {
-                    computed.Invalidate(true); // Instant invalidation on cancellation
-                    computed.TrySetOutput(Result.Error<T>(e));
-                    if (e is OperationCanceledException)
-                        throw;
-
-                    cancellationToken.ThrowIfCancellationRequested(); // Always throws here
-                }
-
-                var cancellationReprocessingOptions = typedInput.MethodDef.ComputedOptions.CancellationReprocessing;
-                if (e is not OperationCanceledException
-                    || ++tryIndex > cancellationReprocessingOptions.MaxTryCount
-                    || startedAt.Elapsed > cancellationReprocessingOptions.MaxDuration) {
-                    computed.TrySetOutput(Result.Error<T>(e));
+                var delayTask = ComputedHelpers.TryReprocess(
+                    nameof(Compute), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
+                if (delayTask == SpecialTasks.MustThrow)
+                    throw;
+                if (delayTask == SpecialTasks.MustReturn)
                     return computed;
-                }
-
-                computed.Invalidate(true); // Instant invalidation on cancellation
-                computed.TrySetOutput(Result.Error<T>(e));
-                var delay = cancellationReprocessingOptions.RetryDelays[tryIndex];
-                Log.LogWarning(e,
-                    "Compute #{TryIndex} for {Category} was cancelled internally, retry in {Delay}",
-                    tryIndex, typedInput.Category, delay.ToShortString());
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                await delayTask.ConfigureAwait(false);
             }
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected static object InvokeImplementation(ComputeMethodInput input, CancellationToken cancellationToken)
     {
         var ctIndex = input.MethodDef.CancellationTokenIndex;

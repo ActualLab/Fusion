@@ -26,7 +26,7 @@ public class MethodDef
     public readonly ParameterInfo[] Parameters;
     public readonly Type[] ParameterTypes;
     public readonly Type ReturnType;
-    public int CancellationTokenIndex { get; init; } = -1;
+    public int CancellationTokenIndex { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = -1;
 
     public string FullName => _fullName ??= $"{Type.GetName()}.{Method.Name}";
     public readonly bool IsAsyncMethod;
@@ -236,7 +236,7 @@ public class MethodDef
 
         if (methodDef.ReturnType == typeof(void))
             return invocation => {
-                invocation.InterceptedVoid();
+                invocation.Intercepted();
                 return TaskExt.UnitTask as Task<TUnwrapped> ?? throw new InvalidCastException();
             };
 

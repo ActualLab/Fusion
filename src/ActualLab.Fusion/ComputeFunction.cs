@@ -19,7 +19,10 @@ public interface IComputeFunction<T> : IComputeFunction
 
 public abstract class ComputeFunctionBase<T>(IServiceProvider services) : IComputeFunction<T>
 {
-    protected static AsyncLockSet<ComputedInput> InputLocks => ComputedRegistry.Instance.InputLocks;
+    protected static AsyncLockSet<ComputedInput> InputLocks {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => ComputedRegistry.Instance.InputLocks;
+    }
 
     private ILogger? _log;
     private LazySlim<ILogger?>? _debugLog;
@@ -27,7 +30,7 @@ public abstract class ComputeFunctionBase<T>(IServiceProvider services) : ICompu
     protected ILogger Log => _log ??= Services.LogFor(GetType());
     protected ILogger? DebugLog => (_debugLog ??= LazySlim.New(Log.IfEnabled(LogLevel.Debug))).Value;
 
-    public IServiceProvider Services { get; } = services;
+    public IServiceProvider Services { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; } = services;
 
     public virtual async ValueTask<Computed<T>> Invoke(
         ComputedInput input,
@@ -35,14 +38,14 @@ public abstract class ComputeFunctionBase<T>(IServiceProvider services) : ICompu
         CancellationToken cancellationToken = default)
     {
         // Double-check locking
-        var computed = GetExisting(input);
-        if (computed.TryUseExisting(context))
+        var computed = input.GetExistingComputed() as Computed<T>;
+        if (ComputedHelpers.TryUseExisting(computed, context))
             return computed!;
 
         var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
         try {
-            computed = GetExisting(input);
-            if (computed.TryUseExistingFromLock(context))
+            computed = input.GetExistingComputed() as Computed<T>;
+            if (ComputedHelpers.TryUseExistingFromLock(computed, context))
                 return computed!;
 
             if (input.IsDisposed) {
@@ -58,7 +61,7 @@ public abstract class ComputeFunctionBase<T>(IServiceProvider services) : ICompu
 
             releaser.MarkLockedLocally();
             computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
-            computed.UseNew(context);
+            ComputedHelpers.UseNew(computed, context);
             return computed;
         }
         finally {
@@ -71,9 +74,9 @@ public abstract class ComputeFunctionBase<T>(IServiceProvider services) : ICompu
         ComputeContext context,
         CancellationToken cancellationToken = default)
     {
-        var computed = GetExisting(input);
-        return computed.TryUseExisting(context)
-            ? computed.StripToTask(context)
+        var computed = input.GetExistingComputed() as Computed<T>;
+        return ComputedHelpers.TryUseExisting(computed, context)
+            ? ComputedHelpers.StripToTask(computed, context)
             : TryRecompute(input, context, cancellationToken);
     }
 
@@ -84,9 +87,9 @@ public abstract class ComputeFunctionBase<T>(IServiceProvider services) : ICompu
     {
         var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
         try {
-            var computed = GetExisting(input);
-            if (computed.TryUseExistingFromLock(context))
-                return computed.Strip(context);
+            var computed = input.GetExistingComputed() as Computed<T>;
+            if (ComputedHelpers.TryUseExistingFromLock(computed, context))
+                return ComputedHelpers.Strip(computed, context);
 
             if (input.IsDisposed) {
                 // We're going to await for indefinitely long task here, and there is a chance
@@ -101,17 +104,13 @@ public abstract class ComputeFunctionBase<T>(IServiceProvider services) : ICompu
 
             releaser.MarkLockedLocally();
             computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
-            computed.UseNew(context);
+            ComputedHelpers.UseNew(computed, context);
             return computed.Value;
         }
         finally {
             releaser.Dispose();
         }
-
     }
-
-    protected Computed<T>? GetExisting(ComputedInput input)
-        => input.GetExistingComputed() as Computed<T>;
 
     // Protected & private
 

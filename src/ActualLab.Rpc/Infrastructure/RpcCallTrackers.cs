@@ -72,7 +72,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void TryReroute()
     {
-        var error = new RpcRerouteException();
+        var error = RpcRerouteException.MustReroute();
         foreach (var call in this) {
             if (call.Context.IsPeerChanged())
                 call.SetError(error, context: null, assumeCancelled: true);

@@ -8,26 +8,25 @@ using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Fusion.Client.Interception;
 
-#pragma warning disable VSTHRD104
-#pragma warning disable MA0055
+#pragma warning disable VSTHRD104, MA0055
 
-public interface IHybridComputed : IComputed, IMaybeCachedValue, IDisposable
+public interface IClientComputed : IComputed, IMaybeCachedValue, IDisposable
 {
     Task WhenCallBound { get; }
     RpcCacheEntry? CacheEntry { get; }
 }
 
-public class HybridComputed<T> : ComputeMethodComputed<T>, IHybridComputed
+public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
 {
     internal readonly TaskCompletionSource<RpcOutboundComputeCall<T>?> CallSource;
     internal readonly TaskCompletionSource<Unit> SynchronizedSource;
 
-    Task IHybridComputed.WhenCallBound => CallSource.Task;
+    Task IClientComputed.WhenCallBound => CallSource.Task;
     public Task<RpcOutboundComputeCall<T>?> WhenCallBound => CallSource.Task;
     public RpcCacheEntry? CacheEntry { get; }
     public Task WhenSynchronized => SynchronizedSource.Task;
 
-    public HybridComputed(
+    public ClientComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
@@ -42,7 +41,7 @@ public class HybridComputed<T> : ComputeMethodComputed<T>, IHybridComputed
         StartAutoInvalidation();
     }
 
-    public HybridComputed(
+    public ClientComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
@@ -63,7 +62,7 @@ public class HybridComputed<T> : ComputeMethodComputed<T>, IHybridComputed
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    ~HybridComputed()
+    ~ClientComputed()
         => Dispose();
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

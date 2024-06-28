@@ -41,7 +41,6 @@ public abstract class Interceptor : IHasServices
     public bool MustInterceptAsyncCalls { get; init; } = true;
     public bool MustInterceptSyncCalls { get; init; } = false;
     public bool MustValidateProxyType { get; init; } = true;
-    public Interceptor? Next { get; init; }
 
     protected Interceptor(Options settings, IServiceProvider services)
     {
@@ -81,15 +80,7 @@ public abstract class Interceptor : IHasServices
         if (handler != null)
             handler.Invoke(invocation);
         else
-            Proceed(invocation);
-    }
-
-    public void Proceed(Invocation invocation)
-    {
-        if (Next is { } next)
-            next.Intercept(invocation);
-        else
-            invocation.InterceptedVoid();
+            invocation.Intercepted();
     }
 
     /// <summary>
@@ -103,13 +94,8 @@ public abstract class Interceptor : IHasServices
         var handler = SelectHandler(invocation);
         return handler != null
             ? (TResult)handler.Invoke(invocation)!
-            : Proceed<TResult>(invocation);
-    }
-
-    public TResult Proceed<TResult>(Invocation invocation)
-        => Next is { } next
-            ? next.Intercept<TResult>(invocation)
             : invocation.Intercepted<TResult>();
+    }
 
     public virtual Func<Invocation, object?>? SelectHandler(Invocation invocation)
         => GetHandler(invocation);

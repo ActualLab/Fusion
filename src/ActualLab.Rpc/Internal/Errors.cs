@@ -7,12 +7,6 @@ public static class Errors
     public static Exception UnknownCallType(byte callTypeId)
         => new KeyNotFoundException($"Unknown CallTypeId: {callTypeId}.");
 
-    public static Exception ServiceAlreadyExists(Type type)
-        => new InvalidOperationException($"Service of type '{type}' is already added.");
-    public static Exception ServiceTypeCannotBeChanged(Type originalType, Type type)
-        => new InvalidOperationException(
-            $"RpcServiceConfiguration.Type is changed from the original '{originalType}' to '{type}'.");
-
     public static Exception ServiceTypeConflict(Type serviceType)
         => new InvalidOperationException($"Service '{serviceType.GetName()}' is already registered.");
     public static Exception ServiceNameConflict(Type serviceType1, Type serviceType2, Symbol serviceName)
@@ -105,9 +99,9 @@ public static class Errors
 
     public static Exception NoLocalCallInvoker()
         => new InvalidOperationException(
-            $"{nameof(SwitchInterceptor)} is misconfigured: it can't route local calls.");
+            $"{nameof(RpcSwitchInterceptor)} is misconfigured: it can't route local calls.");
 
     public static Exception NoRemoteCallInvoker()
         => new InvalidOperationException(
-            $"{nameof(SwitchInterceptor)} is misconfigured: it can't route remote calls.");
+            $"{nameof(RpcSwitchInterceptor)} is misconfigured: it can't route remote calls.");
 }

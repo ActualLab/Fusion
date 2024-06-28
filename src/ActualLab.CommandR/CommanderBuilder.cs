@@ -187,7 +187,7 @@ public readonly struct CommanderBuilder
         if (!typeof(ICommandService).IsAssignableFrom(implementationType))
             throw ActualLab.Internal.Errors.MustImplement<ICommandService>(implementationType, nameof(implementationType));
 
-        var descriptor = new ServiceDescriptor(serviceType, c => CommanderProxies.NewProxy(c, implementationType), lifetime);
+        var descriptor = new ServiceDescriptor(serviceType, c => CommandServiceProxies.New(c, implementationType), lifetime);
         Services.TryAdd(descriptor);
         AddHandlers(serviceType, implementationType, priorityOverride);
         return this;

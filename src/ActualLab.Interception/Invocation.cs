@@ -17,7 +17,7 @@ public readonly record struct Invocation(
     public string Format()
         => $"{Proxy.GetType().NonProxyType().GetName()}.{Method.Name}{Arguments}";
 
-    public void InterceptedVoid()
+    public void Intercepted()
     {
         if (InterceptedDelegate is Action<ArgumentList> action)
             action.Invoke(Arguments);

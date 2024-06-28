@@ -26,15 +26,11 @@ public class HybridComputeServiceInterceptor : ComputeServiceInterceptor
     {
         RpcInterceptor = rpcInterceptor;
         RpcHub = rpcInterceptor.Hub;
-        CommandServiceInterceptor = new CommandServiceInterceptor(Hub.CommandServiceInterceptorOptions, services) {
-            Next = RpcInterceptor,
-        };
     }
 
     public override Func<Invocation, object?>? SelectHandler(Invocation invocation)
-        => GetHandler(invocation) // Compute method
-            ?? CommandServiceInterceptor.GetHandler(invocation) // Command method
-            ?? RpcInterceptor.GetHandler(invocation); // Regular method
+        => GetHandler(invocation) // Compute service method
+            ?? RpcInterceptor.GetHandler(invocation); // Regular or command service method
 
     protected override Func<Invocation, object?>? CreateHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>

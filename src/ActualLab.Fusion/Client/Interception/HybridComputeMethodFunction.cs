@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.ExceptionServices;
 using Cysharp.Text;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Internal;
@@ -29,6 +30,7 @@ public class HybridComputeMethodFunction<T>(
     private string? _toString;
 
     protected readonly IClientComputedCache? Cache = cache;
+    protected readonly RpcSafeCallRouter CallRouter = rpcMethodDef.Hub.InternalServices.CallRouter;
 
     public RpcMethodDef RpcMethodDef { get; } = rpcMethodDef;
 
@@ -36,67 +38,118 @@ public class HybridComputeMethodFunction<T>(
         => _toString ??= ZString.Concat('*', base.ToString());
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2046
-    protected override ValueTask<Computed<T>> Compute(
-#pragma warning restore IL2046
+    protected override async ValueTask<Computed<T>> Compute(
         ComputedInput input, Computed<T>? existing,
         CancellationToken cancellationToken)
     {
         var typedInput = (ComputeMethodInput)input;
-        var cache = GetCache(typedInput);
-        // existing != null -> it's invalidated, so no matter what's cached, we ignore it
-        return existing == null && cache != null
-            ? ComputeCachedOrRpc(typedInput, cache, cancellationToken)
-            : ComputeRpc(typedInput, cache, (HybridComputed<T>)existing!, cancellationToken).ToValueTask();
+        var tryIndex = 0;
+        var startedAt = CpuTimestamp.Now;
+        while (true) {
+            try {
+                var peer = CallRouter.UnsafeCallRouter.Invoke(RpcMethodDef, typedInput.Arguments);
+                if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
+                    // Compute local
+                    var computed = new ComputeMethodComputed<T>(ComputedOptions, typedInput);
+                    try {
+                        using var _ = Computed.BeginCompute(computed);
+                        var result = InvokeImplementation(typedInput, cancellationToken);
+                        if (typedInput.MethodDef.ReturnsValueTask) {
+                            var output = await ((ValueTask<T>)result).ConfigureAwait(false);
+                            computed.TrySetOutput(output);
+                        }
+                        else {
+                            var output = await ((Task<T>)result).ConfigureAwait(false);
+                            computed.TrySetOutput(output);
+                        }
+
+                        return computed;
+                    }
+                    catch (Exception e) {
+                        var delayTask = ComputedHelpers.TryReprocess(
+                            nameof(Compute), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
+                        if (delayTask == SpecialTasks.MustThrow)
+                            throw;
+                        if (delayTask == SpecialTasks.MustReturn)
+                            return computed;
+
+                        await delayTask.ConfigureAwait(false);
+                        continue;
+                    }
+                }
+
+                // Compute remote
+                try {
+                    var cache = GetCache(typedInput);
+                    // existing != null -> it's invalidated, so no matter what's cached, we ignore it
+                    return existing == null && cache != null
+                        ? await ComputeCachedOrRpc(typedInput, cache, cancellationToken).ConfigureAwait(false)
+                        : await ComputeRpc(typedInput, cache, (ClientComputed<T>)existing!, cancellationToken)
+                            .ConfigureAwait(false);
+                }
+                catch (Exception e) {
+                    var delayTask = TryReprocessServerSideCancellation(typedInput, e, startedAt, ref tryIndex, cancellationToken);
+                    if (delayTask == SpecialTasks.MustThrow)
+                        throw;
+
+                    await delayTask.ConfigureAwait(false);
+                }
+            }
+            catch (RpcRerouteException) {
+                Log.LogWarning("Rerouting: {Input}", typedInput);
+                await RpcMethodDef.Hub.InternalServices.RerouteDelayer.Invoke(cancellationToken).ConfigureAwait(false);
+            }
+        }
     }
 
-    private async Task<Computed<T>> ComputeRpc(
+    private static async Task<Computed<T>> ComputeRpc(
         ComputeMethodInput input,
         IClientComputedCache? cache,
-        HybridComputed<T>? existing,
+        ClientComputed<T>? existing,
+        CancellationToken cancellationToken)
+    {
+        var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
+        var call = SendRpcCall(input, cacheInfoCapture, cancellationToken);
+        if (call == null)
+            throw RpcRerouteException.LocalCall();
+
+        var result = await call.ResultTask.ResultAwait(false);
+        if (result.Error is OperationCanceledException e)
+            throw e; // We treat server-side cancellations the same way as client-side cancellations
+
+        RpcCacheEntry? cacheEntry = null;
+        if (cacheInfoCapture != null && cacheInfoCapture.HasKeyAndData(out var key, out var dataSource)) {
+            // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
+            var dataResult = await dataSource.Task.ResultAwait(false);
+            var data = dataResult.IsValue(out var vData) ? (TextOrBytes?)vData : null;
+            cacheEntry = UpdateCache(cache!, key, data);
+        }
+
+        var synchronizedSource = existing?.SynchronizedSource ?? AlwaysSynchronized.Source;
+        return new ClientComputed<T>(
+            input.MethodDef.ComputedOptions,
+            input, result,
+            cacheEntry, call, synchronizedSource);
+    }
+
+    private async Task<Computed<T>> ComputeRpcWithReprocessing(
+        ComputeMethodInput input,
+        IClientComputedCache? cache,
+        ClientComputed<T>? existing,
         CancellationToken cancellationToken)
     {
         var tryIndex = 0;
         var startedAt = CpuTimestamp.Now;
         while (true) {
             try {
-                var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
-                var call = SendRpcCall(input, cacheInfoCapture, cancellationToken);
-                if (call == null) {
-                    // RpcRoutingInterceptor will reroute it in this case
-                    throw new RpcRerouteException();
-                }
-
-                var result = await call.ResultTask.ResultAwait(false);
-                if (result.Error is OperationCanceledException e)
-                    throw e; // We treat server-side cancellations the same way as client-side cancellations
-
-                RpcCacheEntry? cacheEntry = null;
-                if (cacheInfoCapture != null && cacheInfoCapture.HasKeyAndData(out var key, out var dataSource)) {
-                    // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
-                    var dataResult = await dataSource.Task.ResultAwait(false);
-                    var data = dataResult.IsValue(out var vData) ? (TextOrBytes?)vData : null;
-                    cacheEntry = UpdateCache(cache!, key, data);
-                }
-
-                var synchronizedSource = existing?.SynchronizedSource ?? AlwaysSynchronized.Source;
-                return new HybridComputed<T>(
-                    input.MethodDef.ComputedOptions,
-                    input, result,
-                    cacheEntry, call, synchronizedSource);
+                await ComputeRpc(input, cache, existing, cancellationToken).ConfigureAwait(false);
             }
-            catch (OperationCanceledException e) when (!cancellationToken.IsCancellationRequested) {
-                var cancellationReprocessingOptions = input.MethodDef.ComputedOptions.CancellationReprocessing;
-                if (++tryIndex > cancellationReprocessingOptions.MaxTryCount)
-                    throw;
-                if (startedAt.Elapsed > cancellationReprocessingOptions.MaxDuration)
+            catch (Exception e) {
+                var delayTask = TryReprocessServerSideCancellation(input, e, startedAt, ref tryIndex, cancellationToken);
+                if (delayTask == SpecialTasks.MustThrow)
                     throw;
 
-                var delay = cancellationReprocessingOptions.RetryDelays[tryIndex];
-                Log.LogWarning(e,
-                    "ComputeRpc #{TryIndex} was cancelled on the server side for {Category}, will retry in {Delay}",
-                    tryIndex, input.Category, delay.ToShortString());
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                await delayTask.ConfigureAwait(false);
             }
         }
     }
@@ -125,7 +178,7 @@ public class HybridComputeMethodFunction<T>(
         }
 
         var cacheEntry = new RpcCacheEntry(cacheKey, cacheResult.Data);
-        var cachedComputed = new HybridComputed<T>(
+        var cachedComputed = new ClientComputed<T>(
             input.MethodDef.ComputedOptions,
             input, cacheResult.Value,
             cacheEntry);
@@ -149,7 +202,7 @@ public class HybridComputeMethodFunction<T>(
     private async Task ApplyRpcUpdate(
         ComputeMethodInput input,
         IClientComputedCache cache,
-        HybridComputed<T> cachedComputed)
+        ClientComputed<T> cachedComputed)
     {
         // 1. Start the RPC call
         var cacheInfoCapture = new RpcCacheInfoCapture();
@@ -210,7 +263,7 @@ public class HybridComputeMethodFunction<T>(
         var cacheEntry = UpdateCache(cache, key, data);
 
         // 6. Create the new computed - it invalidates the cached one upon registering
-        var computed = new HybridComputed<T>(
+        var computed = new ClientComputed<T>(
             input.MethodDef.ComputedOptions,
             input, result,
             cacheEntry, call, synchronizedSource);
@@ -223,19 +276,19 @@ public class HybridComputeMethodFunction<T>(
         CancellationToken cancellationToken = default)
     {
         // Double-check locking
-        var computed = GetExisting(input);
-        if (computed.TryUseExisting(context))
+        var computed = input.GetExistingComputed() as Computed<T>;
+        if (ComputedHelpers.TryUseExisting(computed, context))
             return computed!;
 
         using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
 
-        computed = GetExisting(input);
-        if (computed.TryUseExistingFromLock(context))
+        computed = input.GetExistingComputed() as Computed<T>;
+        if (ComputedHelpers.TryUseExistingFromLock(computed, context))
             return computed!;
 
         releaser.MarkLockedLocally();
         computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context);
+        ComputedHelpers.UseNew(computed, context);
         return computed;
     }
 
@@ -244,9 +297,9 @@ public class HybridComputeMethodFunction<T>(
         ComputeContext context,
         CancellationToken cancellationToken = default)
     {
-        var computed = GetExisting(input);
-        return computed.TryUseExisting(context)
-            ? computed.StripToTask(context)
+        var computed = input.GetExistingComputed() as Computed<T>;
+        return ComputedHelpers.TryUseExisting(computed, context)
+            ? ComputedHelpers.StripToTask(computed, context)
             : TryRecompute(input, context, cancellationToken);
     }
 
@@ -259,13 +312,13 @@ public class HybridComputeMethodFunction<T>(
     {
         using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
 
-        var existing = GetExisting(input);
-        if (existing.TryUseExistingFromLock(context))
-            return existing.Strip(context);
+        var existing = input.GetExistingComputed() as Computed<T>;
+        if (ComputedHelpers.TryUseExistingFromLock(existing, context))
+            return ComputedHelpers.Strip(existing, context);
 
         releaser.MarkLockedLocally();
         var computed = await Compute(input, existing, cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context);
+        ComputedHelpers.UseNew(computed, context);
         return computed.Value;
     }
 
@@ -282,7 +335,7 @@ public class HybridComputeMethodFunction<T>(
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;
         var interceptor = proxy.Interceptor;
-        var clientComputeServiceInterceptor = interceptor is SwitchInterceptor switchInterceptor
+        var clientComputeServiceInterceptor = interceptor is RpcSwitchInterceptor switchInterceptor
             ? (HybridComputeServiceInterceptor)switchInterceptor.RemoteTarget!
             : (HybridComputeServiceInterceptor)interceptor;
         var clientInterceptor = clientComputeServiceInterceptor.RpcInterceptor;
@@ -326,4 +379,32 @@ public class HybridComputeMethodFunction<T>(
             input.MethodDef.ComputedOptions.ClientCacheMode != ClientCacheMode.Cache
                 ? null
                 : Cache;
+
+    private Task TryReprocessServerSideCancellation(ComputeMethodInput input,
+        Exception error,
+        CpuTimestamp startedAt,
+        ref int tryIndex,
+        CancellationToken cancellationToken)
+    {
+        if (error is not OperationCanceledException)
+            return SpecialTasks.MustThrow;
+        if (error is RpcRerouteException)
+            return SpecialTasks.MustThrow;
+        if (cancellationToken.IsCancellationRequested)
+            return SpecialTasks.MustThrow;
+
+        // If we're here, the cancellation is triggered on the server side / due to connectivity issue
+
+        var cancellationReprocessingOptions = input.MethodDef.ComputedOptions.CancellationReprocessing;
+        if (++tryIndex > cancellationReprocessingOptions.MaxTryCount)
+            return SpecialTasks.MustThrow;
+        if (startedAt.Elapsed > cancellationReprocessingOptions.MaxDuration)
+            return SpecialTasks.MustThrow;
+
+        var delay = cancellationReprocessingOptions.RetryDelays[tryIndex];
+        Log.LogWarning(error,
+            "{Method} #{TryIndex} was cancelled on the server side for {Category}, will retry in {Delay}",
+            nameof(ComputeRpc), tryIndex, input.Category, delay.ToShortString());
+        return Task.Delay(delay, cancellationToken);
+    }
 }

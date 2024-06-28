@@ -157,6 +157,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
 
     // TrySetOutput
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public bool TrySetOutput(Result<T> output)
     {
         ComputedFlags flags;
@@ -180,9 +181,11 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
 
     // Invalidate
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected internal virtual void InvalidateFromCall()
         => Invalidate();
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public void Invalidate(bool immediately = false)
     {
         if (ConsistencyState == ConsistencyState.Invalidated)
@@ -257,6 +260,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
     protected virtual void OnInvalidated()
         => CancelTimeouts();
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     protected void StartAutoInvalidation()
     {
         if (!this.IsConsistent())
@@ -310,7 +314,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         // Slightly faster version of this.TryUseExistingFromLock(context)
         if (this.IsConsistent()) {
             // It can become inconsistent here, but we don't care, since...
-            this.UseNew(context);
+            ComputedHelpers.UseNew(this, context);
             // it can also become inconsistent here & later, and UseNew handles this.
             // So overall, Use(...) guarantees the dependency chain will be there even
             // if computed is invalidated right after above "if".

@@ -15,8 +15,8 @@ public class ProxyTest(ITestOutputHelper @out) : TestBase(@out)
         var interceptor = new TestInterceptor(new(), ServiceProviderExt.Empty);
         var noProxy = new ClassProxy();
         var altProxy = new AltClassProxy(interceptor);
-        var classProxy = (ClassProxy)Proxies.CreateInstance(typeof(ClassProxy), interceptor);
-        var interfaceProxy = (IInterfaceProxy)Proxies.CreateInstance(typeof(IInterfaceProxy), interceptor, noProxy);
+        var classProxy = (ClassProxy)Proxies.New(typeof(ClassProxy), interceptor);
+        var interfaceProxy = (IInterfaceProxy)Proxies.New(typeof(IInterfaceProxy), interceptor, noProxy);
 
         classProxy.GetType().NonProxyType().Should().Be(typeof(ClassProxy));
         classProxy.IsInitialized.Should().BeTrue();

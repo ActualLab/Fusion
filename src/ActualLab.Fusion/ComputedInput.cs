@@ -2,16 +2,18 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
+#pragma warning disable CA1721
+
 public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
 {
-    public IComputeFunction Function { get; private set; } = null!;
-#pragma warning disable CA1721
-    public int HashCode { get; private set; }
-#pragma warning restore CA1721
+    public IComputeFunction Function { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; private set; } = null!;
+    public int HashCode { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; private set; }
+
     public virtual string Category {
         get => Function.ToString() ?? "";
         init => throw Errors.ComputedInputCategoryCannotBeSet();
     }
+
     public virtual bool IsDisposed => false;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -24,6 +26,7 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
     public override string ToString()
         => $"{Category}-Hash={HashCode}";
 
+    public abstract ComputedOptions GetComputedOptions();
     public abstract IComputed? GetExistingComputed();
 
     // Equality

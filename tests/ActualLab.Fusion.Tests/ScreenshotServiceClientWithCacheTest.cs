@@ -95,15 +95,15 @@ public class ScreenshotServiceClientWithCacheTest : FusionTestBase
         Out.WriteLine($"Invalidated in: {sw.ElapsedMilliseconds}ms");
 
         sw.Restart();
-        c2 = (HybridComputed<Screenshot>)await c2.Update().ConfigureAwait(false);
+        c2 = (ClientComputed<Screenshot>)await c2.Update().ConfigureAwait(false);
         Out.WriteLine($"Updated in: {sw.ElapsedMilliseconds}ms");
         c2.Output.Value.Should().NotBeNull();
         c2.WhenSynchronized().IsCompleted.Should().BeTrue();
     }
 
-    private static async Task<HybridComputed<Screenshot>> GetScreenshotComputed(IScreenshotService service)
-        => (HybridComputed<Screenshot>)await Computed.Capture(() => service.GetScreenshot(100));
+    private static async Task<ClientComputed<Screenshot>> GetScreenshotComputed(IScreenshotService service)
+        => (ClientComputed<Screenshot>)await Computed.Capture(() => service.GetScreenshot(100));
 
-    private static async Task<HybridComputed<Screenshot>> GetScreenshotAltComputed(IScreenshotService service)
-        => (HybridComputed<Screenshot>)await Computed.Capture(() => service.GetScreenshotAlt(100));
+    private static async Task<ClientComputed<Screenshot>> GetScreenshotAltComputed(IScreenshotService service)
+        => (ClientComputed<Screenshot>)await Computed.Capture(() => service.GetScreenshotAlt(100));
 }

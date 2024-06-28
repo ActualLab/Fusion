@@ -14,7 +14,7 @@ public static class InvocationExt
         => InterceptedUntypedCache.GetOrAdd(invocation.Method.ReturnType,
             static returnType => returnType == typeof(void)
                 ? invocation => {
-                    invocation.InterceptedVoid();
+                    invocation.Intercepted();
                     return null;
                 }
                 : (Func<Invocation, object?>)InterceptedUntypedMethod
@@ -24,7 +24,7 @@ public static class InvocationExt
 
     // Private methods
 
-    private static object? InterceptedUntypedImpl<TResult>(Invocation invocation)
+    private static object? InterceptedUntypedImpl<TResult>(in Invocation invocation)
         // ReSharper disable once HeapView.PossibleBoxingAllocation
         => invocation.InterceptedDelegate is Func<ArgumentList, TResult> func
             ? func.Invoke(invocation.Arguments)

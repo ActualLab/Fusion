@@ -4,9 +4,9 @@ using ActualLab.Interception;
 
 namespace ActualLab.CommandR.Internal;
 
-public static class CommanderProxies
+public static class CommandServiceProxies
 {
-    public static object NewProxy(
+    public static object New(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         bool initialize = true)

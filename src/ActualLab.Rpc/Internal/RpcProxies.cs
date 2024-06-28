@@ -6,14 +6,14 @@ namespace ActualLab.Rpc.Internal;
 public static class RpcProxies
 {
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public static IProxy NewProxy(
+    public static IProxy New(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         bool initialize = true)
-        => NewProxy(services, serviceType, serviceType, initialize);
+        => New(services, serviceType, serviceType, initialize);
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public static IProxy NewProxy(
+    public static IProxy New(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,
@@ -28,7 +28,7 @@ public static class RpcProxies
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public static IProxy NewHybridProxy(
+    public static IProxy NewHybrid(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
@@ -43,18 +43,30 @@ public static class RpcProxies
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public static IProxy NewSwitchProxy(
+    public static IProxy NewSwitch(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        Func<object>? localTargetResolver,
         bool initialize = true)
     {
         var rpcHub = services.RpcHub();
         var serviceDef = rpcHub.ServiceRegistry[serviceType];
-        var localTarget = localTargetResolver != null
-            ? localTargetResolver.Invoke()
-            : serviceDef.ServerResolver.Resolve(services);
-        localTarget.Require();
+        var localTarget = serviceDef.ServerResolver.Resolve(services).Require();
+
+        var interceptor = rpcHub.InternalServices.NewInterceptor(serviceDef, null);
+        var switchInterceptor = rpcHub.InternalServices.NewSwitchInterceptor(serviceDef, localTarget, interceptor);
+        return services.ActivateProxy(serviceType, switchInterceptor, null, initialize);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
+    public static IProxy NewSwitch(
+        IServiceProvider services,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
+        Func<object> localTargetResolver,
+        bool initialize = true)
+    {
+        var rpcHub = services.RpcHub();
+        var serviceDef = rpcHub.ServiceRegistry[serviceType];
+        var localTarget = localTargetResolver.Invoke().Require();
 
         var interceptor = rpcHub.InternalServices.NewInterceptor(serviceDef, null);
         var switchInterceptor = rpcHub.InternalServices.NewSwitchInterceptor(serviceDef, localTarget, interceptor);

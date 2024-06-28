@@ -7,7 +7,7 @@ namespace ActualLab.Rpc.Infrastructure;
 #if !NET5_0
 [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
 #endif
-public class SwitchInterceptor : RpcInterceptorBase
+public class RpcSwitchInterceptor : RpcInterceptorBase
 {
     public new record Options : RpcInterceptorBase.Options
     {
@@ -17,10 +17,10 @@ public class SwitchInterceptor : RpcInterceptorBase
     public Options Settings { get; }
     public object? LocalTarget { get; init; }
     public object? RemoteTarget { get; init; }
-    public RpcCallRouter CallRouter { get; }
+    public RpcSafeCallRouter CallRouter { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public SwitchInterceptor(Options settings, IServiceProvider services, RpcServiceDef serviceDef)
+    public RpcSwitchInterceptor(Options settings, IServiceProvider services, RpcServiceDef serviceDef)
         : base(settings, services, serviceDef)
     {
         Settings = settings;
@@ -65,10 +65,11 @@ public class SwitchInterceptor : RpcInterceptorBase
         Func<Invocation, Task<T>> localCallAsyncInvoker,
         Func<Invocation, Task<T>> remoteCallAsyncInvoker,
         Invocation invocation,
-        RpcPeer peer)
+        RpcPeer? peer)
     {
         var context = invocation.Context as RpcOutboundContext ?? new();
         while (true) {
+            peer ??= CallRouter.Invoke(methodDef, invocation.Arguments);
             try {
                 Task<T> resultTask;
                 if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
@@ -86,7 +87,9 @@ public class SwitchInterceptor : RpcInterceptorBase
                 var cancellationToken = ctIndex >= 0
                     ? invocation.Arguments.GetCancellationToken(ctIndex)
                     : default;
+                Log.LogWarning("Rerouting: {Invocation}", invocation);
                 await Hub.RerouteDelayer.Invoke(cancellationToken).ConfigureAwait(false);
+                peer = null;
             }
         }
     }

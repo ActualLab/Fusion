@@ -2,6 +2,7 @@ using ActualLab.Internal;
 
 namespace ActualLab.Locking;
 
+[method: MethodImpl(MethodImplOptions.NoInlining)]
 public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unchecked)
     : IAsyncLock<AsyncLock.Releaser>
 {
@@ -42,17 +43,20 @@ public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unch
     {
         public static readonly LockedTag Instance = new();
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private LockedTag() { }
     }
 
     public readonly struct Releaser(AsyncLock? asyncLock) : IAsyncLockReleaser
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static ValueTask<Releaser> NewWhenCompleted(Task task, AsyncLock asyncLock)
         {
             return task.IsCompletedSuccessfully()
                 ? ValueTaskExt.FromResult(new Releaser(asyncLock))
                 : CompleteAsynchronously(task, asyncLock);
 
+            [MethodImpl(MethodImplOptions.NoInlining)]
             static async ValueTask<Releaser> CompleteAsynchronously(Task task1, AsyncLock asyncLock1)
             {
                 await task1.ConfigureAwait(false);
@@ -60,6 +64,7 @@ public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unch
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void MarkLockedLocally()
         {
             if (asyncLock == null)
@@ -68,6 +73,7 @@ public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unch
             asyncLock.IsLockedLocally = true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
         {
             if (asyncLock == null)

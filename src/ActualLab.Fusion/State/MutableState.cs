@@ -120,18 +120,18 @@ public class MutableState<T> : State<T>, IMutableState<T>
         CancellationToken cancellationToken)
     {
         var computed = Computed;
-        if (computed.TryUseExisting(context))
+        if (ComputedHelpers.TryUseExisting(computed, context))
             return ValueTaskExt.FromResult(computed);
 
         // Double-check locking
         lock (Lock) {
             computed = Computed;
-            if (computed.TryUseExistingFromLock(context))
+            if (ComputedHelpers.TryUseExistingFromLock(computed, context))
                 return ValueTaskExt.FromResult(computed);
 
             OnUpdating(computed);
             computed = CreateComputed();
-            computed.UseNew(context);
+            ComputedHelpers.UseNew(computed, context);
             return ValueTaskExt.FromResult(computed);
         }
     }
@@ -141,19 +141,19 @@ public class MutableState<T> : State<T>, IMutableState<T>
         CancellationToken cancellationToken)
     {
         var computed = Computed;
-        if (computed.TryUseExisting(context))
-            return computed.StripToTask(context);
+        if (ComputedHelpers.TryUseExisting(computed, context))
+            return ComputedHelpers.StripToTask(computed, context);
 
         // Double-check locking
         lock (Lock) {
             computed = Computed;
-            if (computed.TryUseExistingFromLock(context))
-                return computed.StripToTask(context);
+            if (ComputedHelpers.TryUseExistingFromLock(computed, context))
+                return ComputedHelpers.StripToTask(computed, context);
 
             OnUpdating(computed);
             computed = CreateComputed();
-            computed.UseNew(context);
-            return computed.StripToTask(context);
+            ComputedHelpers.UseNew(computed, context);
+            return ComputedHelpers.StripToTask(computed, context);
         }
     }
 

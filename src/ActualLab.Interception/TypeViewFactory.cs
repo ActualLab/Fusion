@@ -29,7 +29,7 @@ public class TypeViewFactory(TypeViewInterceptor interceptor) : ITypeViewFactory
         if (!viewType.IsInterface)
             throw new ArgumentOutOfRangeException(nameof(viewType));
 
-        return Proxies.CreateInstance(viewType, Interceptor, implementation, false);
+        return Proxies.New(viewType, Interceptor, implementation, false);
     }
 
     public TypeViewFactory<TView> For<TView>()
