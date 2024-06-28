@@ -253,8 +253,6 @@ public readonly struct FusionBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         Symbol name = default, bool addCommandHandlers = true)
     {
-        if (!serviceType.IsInterface)
-            throw Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IComputeService).IsAssignableFrom(serviceType))
             throw Errors.MustImplement<IComputeService>(serviceType, nameof(serviceType));
 
@@ -333,9 +331,6 @@ public readonly struct FusionBuilder
     {
         // ~ RpcBuilder.AddServer, but for Compute Service
 
-        if (!serviceType.IsInterface)
-            throw Errors.MustBeInterface(serviceType, nameof(serviceType));
-
         AddComputeService(serviceType, implementationType, addCommandHandlers);
         Rpc.Service(serviceType).HasServer(serviceType).HasName(name);
         return this;
@@ -377,8 +372,6 @@ public readonly struct FusionBuilder
     {
         // ~ RpcBuilder.AddHybrid, but for Compute Service
 
-        if (!serviceType.IsInterface)
-            throw Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IComputeService).IsAssignableFrom(serviceType))
             throw Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
         if (!serviceType.IsAssignableFrom(implementationType))

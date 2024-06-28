@@ -191,8 +191,6 @@ public readonly struct RpcBuilder
         // RPC:
         // - TService configured as client
 
-        if (!serviceType.IsInterface)
-            throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IRpcService).IsAssignableFrom(serviceType))
             throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
         if (!serviceType.IsAssignableFrom(proxyBaseType))
@@ -262,9 +260,6 @@ public readonly struct RpcBuilder
         // RPC:
         // - TService configured as server resolving to TService
 
-        if (!serviceType.IsInterface)
-            throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
-
         AddLocalService(serviceType, implementationType);
         Service(serviceType).HasServer(serviceType).HasName(name);
         return this;
@@ -291,9 +286,6 @@ public readonly struct RpcBuilder
         //   - or its internal TService client.
         // RPC:
         // - TService configured as server resolving to TImplementation, so incoming calls won't be routed
-
-        if (!serviceType.IsInterface)
-            throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
 
         AddLocalService(implementationType);
         Services.AddSingleton(serviceType, c => RpcProxies.NewSwitch(c, serviceType));
@@ -323,8 +315,6 @@ public readonly struct RpcBuilder
         // RPC:
         // - TService is configured as server resolving to TService, i.e. it routes incoming calls
 
-        if (!serviceType.IsInterface)
-            throw ActualLab.Internal.Errors.MustBeInterface(serviceType, nameof(serviceType));
         if (!typeof(IRpcService).IsAssignableFrom(serviceType))
             throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
         if (!serviceType.IsAssignableFrom(implementationType))

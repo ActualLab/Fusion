@@ -9,53 +9,55 @@ public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
     public async Task BasicTest()
     {
         var p = Services.GetRequiredService<ISimplestProvider>();
-        p.SetValue("");
-        var (gv, gcc) = (p.GetValueCallCount, p.GetCharCountCallCount);
+        var pImpl = (ISimpleProviderImpl)p;
+        pImpl.SetValue("");
+        var (gv, gcc) = (pImpl.GetValueCallCount, pImpl.GetCharCountCallCount);
 
         (await p.GetValue()).Should().Be("");
         (await p.GetCharCount()).Should().Be(0);
-        p.GetValueCallCount.Should().Be(++gv);
-        p.GetCharCountCallCount.Should().Be(++gcc);
+        pImpl.GetValueCallCount.Should().Be(++gv);
+        pImpl.GetCharCountCallCount.Should().Be(++gcc);
 
-        p.SetValue("1");
+        pImpl.SetValue("1");
         (await p.GetValue()).Should().Be("1");
         (await p.GetCharCount()).Should().Be(1);
-        p.GetValueCallCount.Should().Be(++gv);
-        p.GetCharCountCallCount.Should().Be(++gcc);
+        pImpl.GetValueCallCount.Should().Be(++gv);
+        pImpl.GetCharCountCallCount.Should().Be(++gcc);
 
         // Retrying the same - call counts shouldn't change
         (await p.GetValue()).Should().Be("1");
         (await p.GetCharCount()).Should().Be(1);
-        p.GetValueCallCount.Should().Be(gv);
-        p.GetCharCountCallCount.Should().Be(gcc);
+        pImpl.GetValueCallCount.Should().Be(gv);
+        pImpl.GetCharCountCallCount.Should().Be(gcc);
     }
 
     [Fact]
     public async Task ScopedTest()
     {
         var p = Services.GetRequiredService<ISimplestProvider>();
-        p.SetValue("");
-        var (gv, gcc) = (p.GetValueCallCount, p.GetCharCountCallCount);
+        var pImpl = (ISimpleProviderImpl)p;
+        pImpl.SetValue("");
+        var (gv, gcc) = (pImpl.GetValueCallCount, pImpl.GetCharCountCallCount);
         (await p.GetValue()).Should().Be("");
         (await p.GetCharCount()).Should().Be(0);
-        p.GetValueCallCount.Should().Be(++gv);
-        p.GetCharCountCallCount.Should().Be(++gcc);
+        pImpl.GetValueCallCount.Should().Be(++gv);
+        pImpl.GetCharCountCallCount.Should().Be(++gcc);
 
         using (var s1 = Services.CreateScope()) {
             p = s1.ServiceProvider.GetRequiredService<ISimplestProvider>();
-            (gv, gcc) = (p.GetValueCallCount, p.GetCharCountCallCount);
+            (gv, gcc) = (pImpl.GetValueCallCount, pImpl.GetCharCountCallCount);
             (await p.GetValue()).Should().Be("");
             (await p.GetCharCount()).Should().Be(0);
-            p.GetValueCallCount.Should().Be(++gv);
-            p.GetCharCountCallCount.Should().Be(++gcc);
+            pImpl.GetValueCallCount.Should().Be(++gv);
+            pImpl.GetCharCountCallCount.Should().Be(++gcc);
         }
         using (var s2 = Services.CreateScope()) {
             p = s2.ServiceProvider.GetRequiredService<ISimplestProvider>();
-            (gv, gcc) = (p.GetValueCallCount, p.GetCharCountCallCount);
+            (gv, gcc) = (pImpl.GetValueCallCount, pImpl.GetCharCountCallCount);
             (await p.GetValue()).Should().Be("");
             (await p.GetCharCount()).Should().Be(0);
-            p.GetValueCallCount.Should().Be(++gv);
-            p.GetCharCountCallCount.Should().Be(++gcc);
+            pImpl.GetValueCallCount.Should().Be(++gv);
+            pImpl.GetCharCountCallCount.Should().Be(++gcc);
         }
     }
 
@@ -63,35 +65,37 @@ public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
     public async Task ExceptionCachingTest()
     {
         var p = Services.GetRequiredService<ISimplestProvider>();
-        p.SetValue("");
-        var (gv, gcc) = (p.GetValueCallCount, p.GetCharCountCallCount);
+        var pImpl = (ISimpleProviderImpl)p;
+        pImpl.SetValue("");
+        var (gv, gcc) = (pImpl.GetValueCallCount, pImpl.GetCharCountCallCount);
 
-        p.SetValue(null!); // Will cause an exception in GetCharCount
+        pImpl.SetValue(null!); // Will cause an exception in GetCharCount
         (await p.GetValue()).Should().Be(null);
-        p.GetValueCallCount.Should().Be(++gv);
-        p.GetCharCountCallCount.Should().Be(gcc);
+        pImpl.GetValueCallCount.Should().Be(++gv);
+        pImpl.GetCharCountCallCount.Should().Be(gcc);
 
         await Assert.ThrowsAsync<TransientException>(() => p.GetCharCount());
-        p.GetValueCallCount.Should().Be(gv);
-        p.GetCharCountCallCount.Should().Be(++gcc);
+        pImpl.GetValueCallCount.Should().Be(gv);
+        pImpl.GetCharCountCallCount.Should().Be(++gcc);
 
         // Exceptions are also cached, so counts shouldn't change here
         await Assert.ThrowsAsync<TransientException>(() => p.GetCharCount());
-        p.GetValueCallCount.Should().Be(gv);
-        p.GetCharCountCallCount.Should().Be(gcc);
+        pImpl.GetValueCallCount.Should().Be(gv);
+        pImpl.GetCharCountCallCount.Should().Be(gcc);
 
         // But if we wait for 0.3s+, it should recompute again
         await Task.Delay(1100);
         await Assert.ThrowsAsync<TransientException>(() => p.GetCharCount());
-        p.GetValueCallCount.Should().Be(gv);
-        p.GetCharCountCallCount.Should().Be(++gcc);
+        pImpl.GetValueCallCount.Should().Be(gv);
+        pImpl.GetCharCountCallCount.Should().Be(++gcc);
     }
 
     [Fact]
     public async Task ExceptionCaptureTest()
     {
         var p = Services.GetRequiredService<ISimplestProvider>();
-        p.SetValue(null!); // Will cause an exception in GetCharCount
+        var pImpl = (ISimpleProviderImpl)p;
+        pImpl.SetValue(null!); // Will cause an exception in GetCharCount
         var c1Opt = await Computed.TryCapture(() => p.GetCharCount());
         var c2 = await Computed.Capture(() => p.GetCharCount());
         c1Opt.Value.Error!.GetType().Should().Be(typeof(TransientException));
@@ -103,7 +107,8 @@ public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
     {
         var d = ComputedOptions.Default;
         var p = Services.GetRequiredService<ISimplestProvider>();
-        p.SetValue("");
+        var pImpl = (ISimpleProviderImpl)p;
+        pImpl.SetValue("");
 
         var c1 = await Computed.Capture(() => p.GetValue());
         c1.Options.MinCacheDuration.Should().Be(TimeSpan.FromSeconds(10));
@@ -121,7 +126,8 @@ public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
     {
         var d = ComputedOptions.Default;
         var p = Services.GetRequiredService<ISimplestProvider>();
-        p.SetValue("");
+        var pImpl = (ISimpleProviderImpl)p;
+        pImpl.SetValue("");
 
         var c1 = await Computed.Capture(() => p.Fail(typeof(TransientException)));
         c1.Error.Should().BeOfType<TransientException>();
@@ -138,7 +144,9 @@ public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
     public async Task CommandTest()
     {
         var p = Services.GetRequiredService<ISimplestProvider>();
-        p.SetValue("");
+        var pImpl = (ISimpleProviderImpl)p;
+        pImpl.SetValue("");
+
         (await p.GetValue()).Should().Be("");
         await Services.Commander().Run(new SetValueCommand() { Value = "1" });
         (await p.GetValue()).Should().Be("");
