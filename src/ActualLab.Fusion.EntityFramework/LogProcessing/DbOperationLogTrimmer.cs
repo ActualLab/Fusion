@@ -21,7 +21,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
             .RetryForever(Settings.RetryDelays, SystemClock, Log)
             .CycleForever()
             .Log(Log)
-            .PrependDelay(Settings.CheckPeriod.Next().Multiply(0.1), SystemClock)
+            .PrependDelay(Settings.CheckPeriod.Next().MultiplyBy(0.1), SystemClock)
             .Start(cancellationToken);
         var statisticsTask = new AsyncChain($"{nameof(LogStatistics)}[{shard}]", ct => LogStatistics(shard, ct))
             .Silence()

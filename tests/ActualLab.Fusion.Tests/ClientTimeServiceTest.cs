@@ -43,7 +43,7 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
     {
         var epsilon = GetEpsilon();
         if (TestRunnerInfo.IsBuildAgent())
-            epsilon = epsilon.Multiply(2);
+            epsilon = epsilon.MultiplyBy(2);
 
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<ITimeService>();

@@ -95,8 +95,8 @@ public class MethodDef
         return ReturnsTask
             ? Task.FromResult(result)
             : IsAsyncVoidMethod
-                ? ValueTask.CompletedTask
-                : ValueTask.FromResult(result);
+                ? ValueTaskExt.CompletedTask
+                : ValueTaskExt.FromResult(result);
     }
 
     public object? WrapAsyncInvokerResult<TUnwrapped>(Task<TUnwrapped> resultTask)

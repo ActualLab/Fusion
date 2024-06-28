@@ -4,26 +4,28 @@ namespace ActualLab.Interception;
 
 public static class InterceptorExt
 {
+    private delegate object? InterceptUntypedFunc(Interceptor interceptor, in Invocation invocation);
+
     private static readonly MethodInfo InterceptUntypedMethod = typeof(InterceptorExt)
         .GetMethod(nameof(InterceptUntypedImpl), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly ConcurrentDictionary<Type, Func<Interceptor, Invocation, object?>> InterceptUntypedCache
+    private static readonly ConcurrentDictionary<Type, InterceptUntypedFunc> InterceptUntypedCache
         = new(HardwareInfo.GetProcessorCountPo2Factor(4), 256);
 
-    public static object? InterceptUntyped(this Interceptor interceptor, Invocation invocation)
+    public static object? InterceptUntyped(this Interceptor interceptor, in Invocation invocation)
         => InterceptUntypedCache.GetOrAdd(invocation.Method.ReturnType,
             static returnType => returnType == typeof(void)
-                ? (interceptor, invocation) => {
+                ? (Interceptor interceptor, in Invocation invocation) => {
                     interceptor.Intercept(invocation);
                     return null;
                 }
-                : (Func<Interceptor, Invocation, object?>)InterceptUntypedMethod
+                : (InterceptUntypedFunc)InterceptUntypedMethod
                     .MakeGenericMethod(returnType)
-                    .CreateDelegate(typeof(Func<Interceptor, Invocation, object?>))
+                    .CreateDelegate(typeof(InterceptUntypedFunc))
         ).Invoke(interceptor, invocation);
 
     // Private methods
 
-    private static object? InterceptUntypedImpl<TResult>(Interceptor interceptor, Invocation invocation)
+    private static object? InterceptUntypedImpl<TResult>(Interceptor interceptor, in Invocation invocation)
         // ReSharper disable once HeapView.PossibleBoxingAllocation
         => interceptor.Intercept<TResult>(invocation);
 }

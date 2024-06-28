@@ -43,9 +43,9 @@ public partial record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBacke
 
     public async Task WhenGone(CancellationToken cancellationToken = default)
     {
-        var tcs = new TaskCompletionSource();
-        var r1 = cancellationToken.Register(static x => ((TaskCompletionSource)x!).TrySetResult(), tcs);
-        var r2 = GoneToken.Register(static x => ((TaskCompletionSource)x!).TrySetResult(), tcs);
+        var tcs = new TaskCompletionSource<Unit>();
+        var r1 = cancellationToken.Register(static x => ((TaskCompletionSource<Unit>)x!).TrySetResult(default), tcs);
+        var r2 = GoneToken.Register(static x => ((TaskCompletionSource<Unit>)x!).TrySetResult(default), tcs);
         try {
             await tcs.Task.ConfigureAwait(false);
         }

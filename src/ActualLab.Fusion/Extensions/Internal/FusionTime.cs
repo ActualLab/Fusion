@@ -49,7 +49,7 @@ public class FusionTime : IFusionTime
         }
 
         // Invalidate the result when it's supposed to change
-        var delay = TrimInvalidationDelay(unit.Multiply(unitCount + 1) - delta + TimeSpan.FromMilliseconds(100));
+        var delay = TrimInvalidationDelay(unit.MultiplyBy(unitCount + 1) - delta + TimeSpan.FromMilliseconds(100));
         Computed.GetCurrent().Invalidate(delay, false);
         return Task.FromResult(result);
     }

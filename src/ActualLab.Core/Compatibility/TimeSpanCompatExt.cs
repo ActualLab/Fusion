@@ -1,28 +1,34 @@
-#if NETSTANDARD2_0
-
 // ReSharper disable once CheckNamespace
 namespace System;
 
 public static class TimeSpanCompatExt
 {
-    public static TimeSpan Multiply(this TimeSpan timeSpan, double factor)
-        => IntervalFromDoubleTicks(Math.Round(timeSpan.Ticks * factor));
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TimeSpan MultiplyBy(this TimeSpan value, double multiplier)
+#if NETSTANDARD2_0
+        => IntervalFromDoubleTicks(Math.Round(value.Ticks * multiplier));
+#else
+        => multiplier * value;
+#endif
 
-    public static TimeSpan Divide(this TimeSpan timeSpan, double divisor)
-        => IntervalFromDoubleTicks(Math.Round(timeSpan.Ticks / divisor));
-
-    public static double Divide(this TimeSpan dividend, TimeSpan divisor)
-        => dividend.Ticks / (double) divisor.Ticks;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TimeSpan DivideBy(this TimeSpan value, double divisor)
+#if NETSTANDARD2_0
+        => IntervalFromDoubleTicks(Math.Round(value.Ticks / divisor));
+#else
+        => value / divisor;
+#endif
 
     // Private methods
 
+#if NETSTANDARD2_0
+    [MethodImpl(MethodImplOptions.NoInlining)]
     private static TimeSpan IntervalFromDoubleTicks(double ticks)
     {
         if (ticks > long.MaxValue || ticks < long.MinValue || double.IsNaN(ticks))
-            throw new OverflowException("TimeSpan is too long.");
+            throw new OverflowException("Provided tick value falls outside of TimeSpan range.");
         // ReSharper disable once CompareOfFloatsByEqualityOperator
         return ticks == long.MaxValue ? TimeSpan.MaxValue : new TimeSpan((long) ticks);
     }
-}
-
 #endif
+}

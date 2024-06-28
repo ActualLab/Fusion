@@ -5,21 +5,23 @@ namespace ActualLab.Interception;
 
 public static class InvocationExt
 {
+    private delegate object? InterceptedUntypedFunc(in Invocation invocation);
+
     private static readonly MethodInfo InterceptedUntypedMethod = typeof(InvocationExt)
         .GetMethod(nameof(InterceptedUntypedImpl), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly ConcurrentDictionary<Type, Func<Invocation, object?>> InterceptedUntypedCache
+    private static readonly ConcurrentDictionary<Type, InterceptedUntypedFunc> InterceptedUntypedCache
         = new(HardwareInfo.GetProcessorCountPo2Factor(4), 256);
 
     public static object? InterceptedUntyped(in this Invocation invocation)
         => InterceptedUntypedCache.GetOrAdd(invocation.Method.ReturnType,
             static returnType => returnType == typeof(void)
-                ? invocation => {
+                ? (in Invocation invocation) => {
                     invocation.Intercepted();
                     return null;
                 }
-                : (Func<Invocation, object?>)InterceptedUntypedMethod
+                : (InterceptedUntypedFunc)InterceptedUntypedMethod
                     .MakeGenericMethod(returnType)
-                    .CreateDelegate(typeof(Func<Invocation, object?>))
+                    .CreateDelegate(typeof(InterceptedUntypedFunc))
         ).Invoke(invocation);
 
     // Private methods

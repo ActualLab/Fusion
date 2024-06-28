@@ -43,7 +43,7 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
             .RetryForever(Settings.RetryDelays, SystemClock, Log)
             .CycleForever()
             .Log(Log)
-            .PrependDelay(Settings.CheckPeriod.Next().Multiply(0.1), SystemClock)
+            .PrependDelay(Settings.CheckPeriod.Next().MultiplyBy(0.1), SystemClock)
             .Start(cancellationToken);
 
     protected virtual async Task Trim(DbShard shard, CancellationToken cancellationToken)

@@ -14,7 +14,7 @@ public static class Timeouts
     {
         Clock = MomentClockSet.Default.CpuClock;
         TickSource = new TickSource(KeepAliveQuanta);
-        StartedAt = Clock.Now - KeepAliveQuanta.Multiply(2); // In past to make timer priorities strictly positive
+        StartedAt = Clock.Now - KeepAliveQuanta.MultiplyBy(2); // In past to make timer priorities strictly positive
         KeepAlive = new ConcurrentTimerSet<object>(
             new() {
                 Clock = Clock,

@@ -14,7 +14,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
             return; // By some reason the measurements are off by a lot on GitHub actions
 
         var epsilon = TimeSpan.FromSeconds(TestRunnerInfo.IsBuildAgent() ? 5 : 1);
-        var epsilon10 = epsilon.Multiply(10);
+        var epsilon10 = epsilon.MultiplyBy(10);
         using var clock = new TestClock().SpeedupBy(10).OffsetBy(1000);
         var realStart = SystemClock.Now;
         var clockStart = clock.Now;
@@ -42,7 +42,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
     public async Task TimerTest1()
     {
         var epsilon = TimeSpan.FromSeconds(0.9);
-        var epsilon10 = epsilon.Multiply(10);
+        var epsilon10 = epsilon.MultiplyBy(10);
         using var clock = new TestClock().SpeedupBy(10).OffsetBy(1000);
         var realStart = SystemClock.Now;
         var clockStart = clock.Now;
@@ -57,7 +57,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
     public async Task TimerTest2()
     {
         var epsilon = TimeSpan.FromSeconds(0.9);
-        var epsilon10 = epsilon.Multiply(10);
+        var epsilon10 = epsilon.MultiplyBy(10);
         using var clock = new TestClock().SpeedupBy(10).OffsetBy(1000);
         var realStart = SystemClock.Now;
         var clockStart = clock.Now;
