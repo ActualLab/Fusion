@@ -63,7 +63,7 @@ public readonly struct FusionBuilder
         // Common services
         services.AddOptions();
         services.AddConverters();
-        services.TryAddSingleton(_ => TransiencyResolvers.PreferTransient.ForContext<IComputed>());
+        services.TryAddSingleton(_ => TransiencyResolvers.PreferTransient.ForContext<ComputedBase>());
         services.AddSingleton(c => new FusionInternalHub(c));
         services.AddSingleton(_ => new ComputedOptionsProvider());
 

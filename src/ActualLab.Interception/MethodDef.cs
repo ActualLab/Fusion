@@ -26,7 +26,7 @@ public class MethodDef
     public readonly ParameterInfo[] Parameters;
     public readonly Type[] ParameterTypes;
     public readonly Type ReturnType;
-    public int CancellationTokenIndex { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = -1;
+    public readonly int CancellationTokenIndex;
 
     public string FullName => _fullName ??= $"{Type.GetName()}.{Method.Name}";
     public readonly bool IsAsyncMethod;
@@ -50,11 +50,16 @@ public class MethodDef
         MethodInfo method)
     {
         var parameters = method.GetParameters();
-        for (var i = 0; i < parameters.Length; i++) {
+        var ctIndex = -1;
+        for (var i = parameters.Length - 1; i >= 0; i--) {
             var p = parameters[i];
-            if (typeof(CancellationToken).IsAssignableFrom(p.ParameterType))
-                CancellationTokenIndex = i;
+            if (typeof(CancellationToken).IsAssignableFrom(p.ParameterType)) {
+                ctIndex = i;
+                break;
+            }
         }
+        CancellationTokenIndex = ctIndex;
+
         var parameterTypes = new Type[parameters.Length];
         for (var i = 0; i < parameters.Length; i++)
             parameterTypes[i] = parameters[i].ParameterType;

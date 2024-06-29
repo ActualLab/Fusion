@@ -1,6 +1,6 @@
 namespace ActualLab.Fusion;
 
-public interface IStateBoundComputed : IComputed
+public interface IStateBoundComputed : ComputedBase
 {
     public IState State { get; }
 }

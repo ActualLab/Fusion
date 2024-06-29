@@ -39,6 +39,7 @@ public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFu
     public readonly FusionInternalHub Hub = hub;
     public readonly IServiceProvider Services = hub.Services;
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual async ValueTask<Computed<T>> Invoke(
         ComputedInput input,
         ComputeContext context,
@@ -76,6 +77,7 @@ public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFu
         }
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual Task<T> InvokeAndStrip(
         ComputedInput input,
         ComputeContext context,

@@ -22,6 +22,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     public override bool IsDisposed
         => MethodDef.IsDisposable && Service is IHasIsDisposed { IsDisposed: true };
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public ComputeMethodInput(IComputeFunction function, ComputeMethodDef methodDef, Invocation invocation)
     {
         MethodDef = methodDef;
@@ -40,7 +41,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     public override ComputedOptions GetComputedOptions()
         => MethodDef.ComputedOptions;
 
-    public override IComputed? GetExistingComputed()
+    public override ComputedBase? GetExistingComputed()
         => ComputedRegistry.Instance.Get(this);
 
     // Equality

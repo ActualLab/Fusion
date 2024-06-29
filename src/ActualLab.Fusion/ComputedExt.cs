@@ -7,7 +7,7 @@ public static partial class ComputedExt
 {
     // Invalidate
 
-    public static void Invalidate(this IComputed computed, TimeSpan delay, bool? usePreciseTimer = null)
+    public static void Invalidate(this ComputedBase computed, TimeSpan delay, bool? usePreciseTimer = null)
     {
         if (delay == TimeSpan.MaxValue) // No invalidation
             return;
@@ -100,7 +100,7 @@ public static partial class ComputedExt
 
     // WhenInvalidated
 
-    public static Task WhenInvalidated(this IComputed computed, CancellationToken cancellationToken = default)
+    public static Task WhenInvalidated(this ComputedBase computed, CancellationToken cancellationToken = default)
     {
         if (computed.ConsistencyState == ConsistencyState.Invalidated)
             return Task.CompletedTask;
@@ -245,7 +245,7 @@ public static partial class ComputedExt
     // WhenSynchronized & Synchronize
 
     public static Task WhenSynchronized(
-        this IComputed computed,
+        this ComputedBase computed,
         CancellationToken cancellationToken = default)
     {
         if (computed is IMaybeCachedValue mcv)

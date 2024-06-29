@@ -38,7 +38,7 @@ public class ComputeServiceInterceptor : Interceptor
         => invocation => {
             var methodDef = function.MethodDef;
             var input = new ComputeMethodInput(function, methodDef, invocation);
-            var arguments = input.Arguments;
+            var arguments = input.Invocation.Arguments;
             var ctIndex = methodDef.CancellationTokenIndex;
             var cancellationToken = ctIndex >= 0
                 ? arguments.GetCancellationToken(ctIndex)

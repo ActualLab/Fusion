@@ -3,7 +3,7 @@ using ActualLab.Fusion.Internal;
 namespace ActualLab.Fusion.Interception;
 
 // Just a tagging interface
-public interface IComputedMethodComputed : IComputed;
+public interface IComputedMethodComputed : ComputedBase;
 
 public class ComputeMethodComputed<T> : Computed<T>, IComputedMethodComputed
 {

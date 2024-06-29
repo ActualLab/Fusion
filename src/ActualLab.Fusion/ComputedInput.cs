@@ -27,7 +27,7 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
         => $"{Category}-Hash={HashCode}";
 
     public abstract ComputedOptions GetComputedOptions();
-    public abstract IComputed? GetExistingComputed();
+    public abstract ComputedBase? GetExistingComputed();
 
     // Equality
 

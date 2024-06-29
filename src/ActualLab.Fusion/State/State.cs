@@ -18,7 +18,7 @@ public interface IState : IResult, IHasServices
     }
 
     IStateSnapshot Snapshot { get; }
-    IComputed Computed { get; }
+    ComputedBase Computed { get; }
     object? LastNonErrorValue { get; }
 
     event Action<IState, StateEventKind>? Invalidated;
@@ -103,7 +103,7 @@ public abstract class State<T> : ComputedInput,
 
     IStateSnapshot IState.Snapshot => Snapshot;
     Computed<T> IState<T>.Computed => Computed;
-    IComputed IState.Computed => Computed;
+    ComputedBase IState.Computed => Computed;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
     object? IState.LastNonErrorValue => LastNonErrorValue;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
@@ -239,7 +239,7 @@ public abstract class State<T> : ComputedInput,
     public override ComputedOptions GetComputedOptions()
         => ComputedOptions;
 
-    public override IComputed? GetExistingComputed()
+    public override ComputedBase? GetExistingComputed()
         => _snapshot?.Computed;
 
     // IFunction<T>

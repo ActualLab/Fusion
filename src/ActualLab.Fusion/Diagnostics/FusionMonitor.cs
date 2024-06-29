@@ -7,9 +7,9 @@ namespace ActualLab.Fusion.Diagnostics;
 public sealed class FusionMonitor : WorkerBase
 {
     // Cached delegates
-    private readonly Action<IComputed, bool> _onAccess;
-    private readonly Action<IComputed> _onRegister;
-    private readonly Action<IComputed> _onUnregister;
+    private readonly Action<ComputedBase, bool> _onAccess;
+    private readonly Action<ComputedBase> _onRegister;
+    private readonly Action<ComputedBase> _onUnregister;
     private readonly object _lock = new();
 
     // Stats
@@ -24,7 +24,7 @@ public sealed class FusionMonitor : WorkerBase
     public RandomTimeSpan SleepPeriod { get; init; } = TimeSpan.Zero;
     public TimeSpan CollectPeriod { get; init; } = TimeSpan.FromMinutes(1);
     public Sampler AccessSampler { get; init; } = Sampler.EveryNth(8);
-    public Func<IComputed, bool> AccessFilter { get; init; } = static _ => true;
+    public Func<ComputedBase, bool> AccessFilter { get; init; } = static _ => true;
     public Sampler RegistrationSampler { get; init; } = Sampler.EveryNth(8);
     public Sampler RegistrationLogSampler { get; init; } = Sampler.Never; // Applied after RegistrationSampler!
     public Action<Dictionary<string, (int, int)>>? AccessStatisticsPreprocessor { get; init; }
@@ -142,7 +142,7 @@ public sealed class FusionMonitor : WorkerBase
 
     // Event handlers
 
-    private void OnAccess(IComputed computed, bool isNew)
+    private void OnAccess(ComputedBase computed, bool isNew)
     {
         if (AccessSampler.Next())
             return;
@@ -161,7 +161,7 @@ public sealed class FusionMonitor : WorkerBase
         }
     }
 
-    private void OnRegistration(IComputed computed, bool isRegistration)
+    private void OnRegistration(ComputedBase computed, bool isRegistration)
     {
         if (RegistrationSampler.Next())
             return;

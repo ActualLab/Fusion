@@ -14,27 +14,26 @@ public interface IComputed : IResult, IHasVersion<ulong>
     ComputedOptions Options { get; }
     ComputedInput Input { get; }
     ConsistencyState ConsistencyState { get; }
-    Type OutputType { get; }
     IResult Output { get; }
+    Type OutputType { get; }
     Task OutputAsTask { get; }
-    event Action<IComputed> Invalidated;
+    event Action<ComputedBase> Invalidated;
 
     void Invalidate(bool immediately = false);
-    TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg);
 
-    ValueTask<IComputed> Update(CancellationToken cancellationToken = default);
-    ValueTask<object> Use(CancellationToken cancellationToken = default);
+    ValueTask<ComputedBase> UpdateUntyped(CancellationToken cancellationToken = default);
+    ValueTask UseUntyped(CancellationToken cancellationToken = default);
+
+    TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg);
 }
 
-public abstract class Computed<T> : IComputedImpl, IResult<T>
+[method: MethodImpl(MethodImplOptions.AggressiveInlining)]
+public abstract partial class ComputedBase(ComputedOptions options, ComputedInput input) : IComputed, IGenericTimeoutHandler
 {
-    private readonly ComputedOptions _options;
     private volatile int _state;
     private volatile ComputedFlags _flags;
     private long _lastKeepAliveSlot;
-    private Result<T> _output;
-    private Task<T>? _outputAsTask;
-    private RefHashSetSlim3<IComputedImpl> _used;
+    private RefHashSetSlim3<ComputedBase> _used;
     private HashSetSlim3<(ComputedInput Input, ulong Version)> _usedBy;
     // ReSharper disable once InconsistentNaming
     private InvalidatedHandlerSet _invalidated;
@@ -47,64 +46,41 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
     protected ComputedFlags Flags {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _flags;
-    }
-
-    // IComputed properties
-
-    public ComputedOptions Options {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _options;
+        set => _flags = value;
     }
 
-    public ComputedInput Input { get; }
+    public readonly ComputedOptions Options = options;
+    public readonly ComputedInput Input = input;
+    public readonly ulong Version = ComputedVersion.Next();
 
     public ConsistencyState ConsistencyState {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => (ConsistencyState)_state;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal set => _state = (int)value;
     }
 
-    public IComputeFunction<T> Function => (IComputeFunction<T>)Input.Function;
-    public ulong Version { get; } = ComputedVersion.Next();
-    public Type OutputType => typeof(T);
+    public IResult Output => this;
+    public abstract Type OutputType { get; }
+    public abstract Task OutputAsTask { get; }
 
-    public virtual Result<T> Output {
-        get {
-            this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
-            return _output;
-        }
-    }
-
-    public Task<T> OutputAsTask {
-        get {
-            if (_outputAsTask != null)
-                return _outputAsTask;
-
-            lock (Lock) {
-                this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
-                return _outputAsTask ??= _output.AsTask();
-            }
-        }
-    }
-
-    // IResult<T> properties
-    public T? ValueOrDefault => Output.ValueOrDefault;
-    public T Value => Output.Value;
-    public Exception? Error => Output.Error;
-    public bool HasValue => Output.HasValue;
-    public bool HasError => Output.HasError;
-
-    // "Untyped" versions of properties
+    // IComputed implementation
+    ComputedOptions IComputed.Options => Options;
     ComputedInput IComputed.Input => Input;
-    // ReSharper disable once HeapView.BoxingAllocation
-    IResult IComputed.Output => Output;
-    // ReSharper disable once HeapView.BoxingAllocation
-    object? IResult.UntypedValue => Output.Value;
-    Task IComputed.OutputAsTask => OutputAsTask;
+    ulong IHasVersion<ulong>.Version => Version;
 
-    public event Action<IComputed> Invalidated {
+    // IResult implementation
+    public abstract bool HasValue { get; }
+    public abstract object? UntypedValue { get; }
+    public abstract bool HasError { get; }
+    public abstract Exception? Error { get; }
+    public abstract Result<TOther> Cast<TOther>();
+
+    public event Action<ComputedBase> Invalidated {
         add {
             if (ConsistencyState == ConsistencyState.Invalidated) {
-                value(this);
+                value.Invoke(this);
                 return;
             }
             lock (Lock) {
@@ -124,66 +100,10 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         }
     }
 
-    protected Computed(ComputedOptions options, ComputedInput input)
-    {
-        _options = options;
-        Input = input;
-    }
+    // Invalidation
 
-    protected Computed(ComputedOptions options, ComputedInput input, Result<T> output, bool isConsistent)
-    {
-        _options = options;
-        Input = input;
-        _state = (int)(isConsistent ? ConsistencyState.Consistent : ConsistencyState.Invalidated);
-        _output = output;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Deconstruct(out T value, out Exception? error)
-        => Output.Deconstruct(out value, out error);
-
-    public void Deconstruct(out T value, out Exception? error, out ulong version)
-    {
-        Output.Deconstruct(out value, out error);
-        version = Version;
-    }
-
-    public override string ToString()
-        => $"{GetType().GetName()}({Input} v.{Version.FormatVersion()}, State: {ConsistencyState})";
-
-    // GetHashCode
-
-    public override int GetHashCode() => (int)Version;
-
-    // TrySetOutput
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public bool TrySetOutput(Result<T> output)
-    {
-        ComputedFlags flags;
-        lock (Lock) {
-            if (ConsistencyState != ConsistencyState.Computing)
-                return false;
-
-            SetStateUnsafe(ConsistencyState.Consistent);
-            _output = output;
-            flags = _flags;
-        }
-
-        if ((flags & ComputedFlags.InvalidateOnSetOutput) != 0) {
-            Invalidate((flags & ComputedFlags.InvalidateOnSetOutputImmediately) != 0);
-            return true;
-        }
-
-        StartAutoInvalidation();
-        return true;
-    }
-
-    // Invalidate
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected internal virtual void InvalidateFromCall()
-        => Invalidate();
+    void IGenericTimeoutHandler.OnTimeout()
+        => Invalidate(true);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void Invalidate(bool immediately = false)
@@ -206,7 +126,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
             default: // == ConsistencyState.Computed
                 immediately |= Options.InvalidationDelay <= TimeSpan.Zero;
                 if (immediately) {
-                    SetStateUnsafe(ConsistencyState.Invalidated);
+                    ConsistencyState = ConsistencyState.Invalidated;
                     break;
                 }
 
@@ -260,16 +180,31 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
     protected virtual void OnInvalidated()
         => CancelTimeouts();
 
+    // Update & Use
+
+    public abstract ValueTask<ComputedBase> UpdateUntyped(CancellationToken cancellationToken = default);
+    public abstract ValueTask UseUntyped(CancellationToken cancellationToken = default);
+
+    // Handy helper: Apply
+
+    public abstract TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg);
+
+    // Protected internal methods - you can call them via ComputedImpl
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected internal virtual void InvalidateFromCall()
+        => Invalidate();
+
     [MethodImpl(MethodImplOptions.NoInlining)]
-    protected void StartAutoInvalidation()
+    protected internal void StartAutoInvalidation()
     {
         if (!this.IsConsistent())
             return;
 
         TimeSpan timeout;
-        var error = _output.Error;
+        var error = Error;
         if (error == null) {
-            timeout = _options.AutoInvalidationDelay;
+            timeout = Options.AutoInvalidationDelay;
             if (timeout != TimeSpan.MaxValue)
                 this.Invalidate(timeout);
             return;
@@ -282,96 +217,56 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         }
 
         timeout = IsTransientError(error)
-            ? _options.TransientErrorInvalidationDelay
-            : _options.AutoInvalidationDelay;
+            ? Options.TransientErrorInvalidationDelay
+            : Options.AutoInvalidationDelay;
         if (timeout != TimeSpan.MaxValue)
             this.Invalidate(timeout);
     }
 
-    // Update
-
-    async ValueTask<IComputed> IComputed.Update(CancellationToken cancellationToken)
-        => await Update(cancellationToken).ConfigureAwait(false);
-    public async ValueTask<Computed<T>> Update(CancellationToken cancellationToken = default)
+    protected internal ComputedBase[] GetUsed()
     {
-        if (this.IsConsistent())
-            return this;
-
-        using var scope = Computed.BeginIsolation();
-        return await Function.Invoke(Input, scope.Context, cancellationToken).ConfigureAwait(false);
+        var result = new ComputedBase[_used.Count];
+        lock (Lock) {
+            _used.CopyTo(result);
+            return result;
+        }
     }
 
-    // Use
-
-    async ValueTask<object> IComputed.Use(CancellationToken cancellationToken)
-        => (await Use(cancellationToken).ConfigureAwait(false))!;
-    public virtual async ValueTask<T> Use(CancellationToken cancellationToken = default)
+    protected internal (ComputedInput Input, ulong Version)[] GetUsedBy()
     {
-        var context = ComputeContext.Current;
-        if ((context.CallOptions & CallOptions.GetExisting) != 0) // Both GetExisting & Invalidate
-            throw Errors.InvalidContextCallOptions(context.CallOptions);
-
-        // Slightly faster version of this.TryUseExistingFromLock(context)
-        if (this.IsConsistent()) {
-            // It can become inconsistent here, but we don't care, since...
-            ComputedHelpers.UseNew(this, context);
-            // it can also become inconsistent here & later, and UseNew handles this.
-            // So overall, Use(...) guarantees the dependency chain will be there even
-            // if computed is invalidated right after above "if".
-            return Value;
-        }
-
-        var computed = await Function.Invoke(Input, context, cancellationToken).ConfigureAwait(false);
-        return computed.Value;
-    }
-
-    // Apply
-
-    public TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg)
-        => handler.Apply(this, arg);
-
-    // IResult<T> methods
-
-    public bool IsValue([MaybeNullWhen(false)] out T value)
-        => Output.IsValue(out value);
-    public bool IsValue([MaybeNullWhen(false)] out T value, [MaybeNullWhen(true)] out Exception error)
-        => Output.IsValue(out value, out error!);
-    public Result<T> AsResult()
-        => Output.AsResult();
-    public Result<TOther> Cast<TOther>()
-        => Output.Cast<TOther>();
-    T IConvertibleTo<T>.Convert() => Value;
-    Result<T> IConvertibleTo<Result<T>>.Convert() => AsResult();
-
-    // IComputedImpl methods
-
-    void IGenericTimeoutHandler.OnTimeout()
-        => Invalidate(true);
-
-    IComputedImpl[] IComputedImpl.Used => Used;
-    protected internal IComputedImpl[] Used {
-        get {
-            var result = new IComputedImpl[_used.Count];
-            lock (Lock) {
-                _used.CopyTo(result);
-                return result;
-            }
+        var result = new (ComputedInput Input, ulong Version)[_usedBy.Count];
+        lock (Lock) {
+            _usedBy.CopyTo(result);
+            return result;
         }
     }
 
-    (ComputedInput Input, ulong Version)[] IComputedImpl.UsedBy => UsedBy;
-    protected internal (ComputedInput Input, ulong Version)[] UsedBy {
-        get {
-            var result = new (ComputedInput Input, ulong Version)[_usedBy.Count];
-            lock (Lock) {
-                _usedBy.CopyTo(result);
-                return result;
-            }
+    protected internal void RenewTimeouts(bool isNew)
+    {
+        if (ConsistencyState == ConsistencyState.Invalidated)
+            return; // We shouldn't register miss here, since it's going to be counted later anyway
+
+        var minCacheDuration = Options.MinCacheDuration;
+        if (minCacheDuration != default) {
+            var keepAliveSlot = Timeouts.GetKeepAliveSlot(Timeouts.Clock.Now + minCacheDuration);
+            var lastKeepAliveSlot = Interlocked.Exchange(ref _lastKeepAliveSlot, keepAliveSlot);
+            if (lastKeepAliveSlot != keepAliveSlot)
+                Timeouts.KeepAlive.AddOrUpdateToLater(this, keepAliveSlot);
+        }
+
+        ComputedRegistry.Instance.ReportAccess(this, isNew);
+    }
+
+    protected internal void CancelTimeouts()
+    {
+        var options = Options;
+        if (options.MinCacheDuration != default) {
+            Interlocked.Exchange(ref _lastKeepAliveSlot, 0);
+            Timeouts.KeepAlive.Remove(this);
         }
     }
 
-    void IComputedImpl.AddUsed(IComputedImpl used) => AddUsed(used);
-    protected internal void AddUsed(IComputedImpl used)
+    protected internal void AddUsed(ComputedBase used)
     {
         // Debug.WriteLine($"{nameof(AddUsed)}: {this} <- {used}");
         lock (Lock) {
@@ -394,8 +289,8 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         }
     }
 
-    bool IComputedImpl.AddUsedBy(IComputedImpl usedBy) => AddUsedBy(usedBy);
-    protected internal bool AddUsedBy(IComputedImpl usedBy)
+    // Should be called only from AddUsed
+    private bool AddUsedBy(ComputedBase usedBy)
     {
         lock (Lock) {
             switch (ConsistencyState) {
@@ -412,8 +307,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         }
     }
 
-    void IComputedImpl.RemoveUsedBy(IComputedImpl usedBy) => RemoveUsedBy(usedBy);
-    protected internal void RemoveUsedBy(IComputedImpl usedBy)
+    protected internal void RemoveUsedBy(ComputedBase usedBy)
     {
         lock (Lock) {
             if (ConsistencyState == ConsistencyState.Invalidated)
@@ -426,7 +320,6 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         }
     }
 
-    (int OldCount, int NewCount) IComputedImpl.PruneUsedBy() => PruneUsedBy();
     protected internal (int OldCount, int NewCount) PruneUsedBy()
     {
         lock (Lock) {
@@ -448,8 +341,7 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         }
     }
 
-    void IComputedImpl.CopyUsedTo(ref ArrayBuffer<IComputedImpl> buffer) => CopyUsedTo(ref buffer);
-    protected internal void CopyUsedTo(ref ArrayBuffer<IComputedImpl> buffer)
+    protected internal void CopyUsedTo(ref ArrayBuffer<ComputedBase> buffer)
     {
         lock (Lock) {
             var count = buffer.Count;
@@ -458,54 +350,171 @@ public abstract class Computed<T> : IComputedImpl, IResult<T>
         }
     }
 
-    void IComputedImpl.RenewTimeouts(bool isNew) => RenewTimeouts(isNew);
-    protected internal void RenewTimeouts(bool isNew)
-    {
-        if (ConsistencyState == ConsistencyState.Invalidated)
-            return; // We shouldn't register miss here, since it's going to be counted later anyway
-
-        var minCacheDuration = Options.MinCacheDuration;
-        if (minCacheDuration != default) {
-            var keepAliveSlot = Timeouts.GetKeepAliveSlot(Timeouts.Clock.Now + minCacheDuration);
-            var lastKeepAliveSlot = Interlocked.Exchange(ref _lastKeepAliveSlot, keepAliveSlot);
-            if (lastKeepAliveSlot != keepAliveSlot)
-                Timeouts.KeepAlive.AddOrUpdateToLater(this, keepAliveSlot);
-        }
-
-        ComputedRegistry.Instance.ReportAccess(this, isNew);
-    }
-
-    void IComputedImpl.CancelTimeouts() => CancelTimeouts();
-    protected internal void CancelTimeouts()
-    {
-        var options = Options;
-        if (options.MinCacheDuration != default) {
-            Interlocked.Exchange(ref _lastKeepAliveSlot, 0);
-            Timeouts.KeepAlive.Remove(this);
-        }
-    }
-
-    // Protected & private methods
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void SetStateUnsafe(ConsistencyState newState)
-        => _state = (int)newState;
-
-    bool IComputedImpl.IsTransientError(Exception error) => IsTransientError(error);
     protected internal bool IsTransientError(Exception error)
     {
         if (error is OperationCanceledException)
             return true; // Must be transient under any circumstances in IComputed
 
-        TransiencyResolver<IComputed>? transiencyResolver = null;
+        TransiencyResolver<ComputedBase>? transiencyResolver = null;
         try {
             var services = Input.Function.Services;
-            transiencyResolver = services.GetService<TransiencyResolver<IComputed>>();
+            transiencyResolver = services.GetService<TransiencyResolver<ComputedBase>>();
         }
         catch (ObjectDisposedException) {
             // We want to handle IServiceProvider disposal gracefully
         }
         return transiencyResolver?.Invoke(error).IsTransient()
             ?? TransiencyResolvers.PreferTransient.Invoke(error).IsTransient();
+    }
+}
+
+public abstract class Computed<T> : ComputedBase, IResult<T>
+{
+    private Result<T> _output;
+    private Task<T>? _outputAsTask;
+
+    // IComputed properties
+
+    public IComputeFunction<T> Function => (IComputeFunction<T>)Input.Function;
+
+    public sealed override Type OutputType {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => typeof(T);
+    }
+
+    public new Result<T> Output {
+        get {
+            this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
+            return _output;
+        }
+    }
+
+    public sealed override Task<T> OutputAsTask {
+        get {
+            if (_outputAsTask != null)
+                return _outputAsTask;
+
+            lock (Lock) {
+                this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
+                return _outputAsTask ??= _output.AsTask();
+            }
+        }
+    }
+
+    // IResult<T> properties
+    public T? ValueOrDefault => Output.ValueOrDefault;
+    public T Value => Output.Value;
+    public sealed override Exception? Error => Output.Error;
+    public sealed override bool HasValue => Output.HasValue;
+    public sealed override bool HasError => Output.HasError;
+    public sealed override object? UntypedValue => Output.Value;
+    public sealed override Result<TOther> Cast<TOther>()
+        => Output.Cast<TOther>();
+
+    // IResult<T> methods
+
+    public bool IsValue([MaybeNullWhen(false)] out T value)
+        => Output.IsValue(out value);
+    public bool IsValue([MaybeNullWhen(false)] out T value, [MaybeNullWhen(true)] out Exception error)
+        => Output.IsValue(out value, out error!);
+    public Result<T> AsResult()
+        => Output.AsResult();
+    T IConvertibleTo<T>.Convert() => Value;
+    Result<T> IConvertibleTo<Result<T>>.Convert() => AsResult();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected Computed(ComputedOptions options, ComputedInput input)
+        : base(options, input)
+    { }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected Computed(ComputedOptions options, ComputedInput input, Result<T> output, bool isConsistent)
+        : base(options, input)
+    {
+        ConsistencyState = isConsistent ? ConsistencyState.Consistent : ConsistencyState.Invalidated;
+        _output = output;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Deconstruct(out T value, out Exception? error)
+        => Output.Deconstruct(out value, out error);
+
+    public void Deconstruct(out T value, out Exception? error, out ulong version)
+    {
+        Output.Deconstruct(out value, out error);
+        version = Version;
+    }
+
+    public override string ToString()
+        => $"{GetType().GetName()}({Input} v.{Version.FormatVersion()}, State: {ConsistencyState})";
+
+    // GetHashCode
+
+    public override int GetHashCode() => (int)Version;
+
+    // Update & use
+
+    public sealed override async ValueTask<ComputedBase> UpdateUntyped(CancellationToken cancellationToken = default)
+        => await Update(cancellationToken).ConfigureAwait(false);
+
+    public async ValueTask<Computed<T>> Update(CancellationToken cancellationToken = default)
+    {
+        if (this.IsConsistent())
+            return this;
+
+        using var scope = Computed.BeginIsolation();
+        return await Function.Invoke(Input, scope.Context, cancellationToken).ConfigureAwait(false);
+    }
+
+    public sealed override async ValueTask UseUntyped(CancellationToken cancellationToken = default)
+        => await Use(cancellationToken).ConfigureAwait(false);
+
+    public async ValueTask<T> Use(CancellationToken cancellationToken = default)
+    {
+        var context = ComputeContext.Current;
+        if ((context.CallOptions & CallOptions.GetExisting) != 0) // Both GetExisting & Invalidate
+            throw Errors.InvalidContextCallOptions(context.CallOptions);
+
+        // Slightly faster version of this.TryUseExistingFromLock(context)
+        if (this.IsConsistent()) {
+            // It can become inconsistent here, but we don't care, since...
+            ComputedHelpers.UseNew(this, context);
+            // it can also become inconsistent here & later, and UseNew handles this.
+            // So overall, Use(...) guarantees the dependency chain will be there even
+            // if computed is invalidated right after above "if".
+            return Value;
+        }
+
+        var computed = await Function.Invoke(Input, context, cancellationToken).ConfigureAwait(false);
+        return computed.Value;
+    }
+
+    // Apply
+
+    public override TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg)
+        => handler.Apply(this, arg);
+
+    // Protected internal methods - you can call them via ComputedImpl
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    protected internal bool TrySetOutput(Result<T> output)
+    {
+        ComputedFlags flags;
+        lock (Lock) {
+            if (ConsistencyState != ConsistencyState.Computing)
+                return false;
+
+            ConsistencyState = ConsistencyState.Consistent;
+            _output = output;
+            flags = Flags;
+        }
+
+        if ((flags & ComputedFlags.InvalidateOnSetOutput) != 0) {
+            Invalidate((flags & ComputedFlags.InvalidateOnSetOutputImmediately) != 0);
+            return true;
+        }
+
+        StartAutoInvalidation();
+        return true;
     }
 }

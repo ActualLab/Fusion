@@ -16,7 +16,7 @@ public static class Errors
     public static Exception CurrentComputedIsNull()
         => new InvalidOperationException("Computed.Current == null.");
     public static Exception NoComputedCaptured()
-        => new InvalidOperationException($"No {nameof(IComputed)} was captured.");
+        => new InvalidOperationException($"No {nameof(ComputedBase)} was captured.");
 
     public static Exception ComputedInputCategoryCannotBeSet()
         => new NotSupportedException(

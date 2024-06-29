@@ -6,16 +6,16 @@ public struct InvalidatedHandlerSet
 
     private object? _storage;
 
-    public InvalidatedHandlerSet(Action<IComputed> item)
+    public InvalidatedHandlerSet(Action<ComputedBase> item)
         => _storage = item;
 
-    public InvalidatedHandlerSet(IEnumerable<Action<IComputed>> items)
+    public InvalidatedHandlerSet(IEnumerable<Action<ComputedBase>> items)
     {
         foreach (var item in items)
             Add(item);
     }
 
-    public void Add(Action<IComputed> item)
+    public void Add(Action<ComputedBase> item)
     {
         if (ReferenceEquals(item, null))
             return;
@@ -25,17 +25,17 @@ public struct InvalidatedHandlerSet
                 _storage = item;
                 return;
 
-            case Action<IComputed> anotherItem:
+            case Action<ComputedBase> anotherItem:
                 if (anotherItem == item)
                     return;
 
-                var newList = new Action<IComputed>[ListSize];
+                var newList = new Action<ComputedBase>[ListSize];
                 newList[0] = anotherItem;
                 newList[1] = item;
                 _storage = newList;
                 return;
 
-            case Action<IComputed>[] list:
+            case Action<ComputedBase>[] list:
                 for (var i = 0; i < list.Length; i++) {
                     var listItem = list[i];
                     if (ReferenceEquals(listItem, null)) {
@@ -45,10 +45,10 @@ public struct InvalidatedHandlerSet
                     if (listItem == item)
                         return;
                 }
-                _storage = new HashSet<Action<IComputed>>(list) { item };
+                _storage = new HashSet<Action<ComputedBase>>(list) { item };
                 return;
 
-            case HashSet<Action<IComputed>> set:
+            case HashSet<Action<ComputedBase>> set:
                 set.Add(item);
                 return;
 
@@ -57,7 +57,7 @@ public struct InvalidatedHandlerSet
         }
     }
 
-    public void Remove(Action<IComputed> item)
+    public void Remove(Action<ComputedBase> item)
     {
         if (ReferenceEquals(item, null))
             return;
@@ -66,12 +66,12 @@ public struct InvalidatedHandlerSet
             case null:
                 return;
 
-            case Action<IComputed> anotherItem:
+            case Action<ComputedBase> anotherItem:
                 if (anotherItem == item)
                     _storage = null;
                 return;
 
-            case Action<IComputed>[] list:
+            case Action<ComputedBase>[] list:
                 for (var i = 0; i < list.Length; i++) {
                     var listItem = list[i];
                     if (ReferenceEquals(listItem, null))
@@ -85,7 +85,7 @@ public struct InvalidatedHandlerSet
                 }
                 return;
 
-            case HashSet<Action<IComputed>> set:
+            case HashSet<Action<ComputedBase>> set:
                 set.Remove(item);
                 return;
 
@@ -97,17 +97,17 @@ public struct InvalidatedHandlerSet
     public void Clear()
         => _storage = null;
 
-    public readonly void Invoke(IComputed computed)
+    public readonly void Invoke(ComputedBase computed)
     {
         switch (_storage) {
             case null:
                 return;
 
-            case Action<IComputed> item:
+            case Action<ComputedBase> item:
                 item.Invoke(computed);
                 return;
 
-            case Action<IComputed>[] list:
+            case Action<ComputedBase>[] list:
                 foreach (var item in list) {
                     if (ReferenceEquals(item, null))
                         return;
@@ -116,7 +116,7 @@ public struct InvalidatedHandlerSet
                 }
                 return;
 
-            case HashSet<Action<IComputed>> set:
+            case HashSet<Action<ComputedBase>> set:
                 foreach (var item in set)
                     item.Invoke(computed);
                 return;

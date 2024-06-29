@@ -270,6 +270,7 @@ public class RpcComputeMethodFunction<T>(
         computed.RenewTimeouts(true);
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public override async ValueTask<Computed<T>> Invoke(
         ComputedInput input,
         ComputeContext context,
@@ -292,6 +293,7 @@ public class RpcComputeMethodFunction<T>(
         return computed;
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public override Task<T> InvokeAndStrip(
         ComputedInput input,
         ComputeContext context,

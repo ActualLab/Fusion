@@ -10,7 +10,7 @@ namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD104, MA0055
 
-public interface IRemoteComputed : IComputed, IMaybeCachedValue, IDisposable
+public interface IRemoteComputed : IResult, IMaybeCachedValue, IDisposable
 {
     Task WhenCallBound { get; }
     RpcCacheEntry? CacheEntry { get; }

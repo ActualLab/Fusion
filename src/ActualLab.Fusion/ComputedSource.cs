@@ -9,7 +9,7 @@ namespace ActualLab.Fusion;
 public interface IComputedSource : IComputeFunction
 {
     ComputedOptions ComputedOptions { get; init; }
-    IComputed Computed { get; }
+    ComputedBase Computed { get; }
 }
 
 public class ComputedSource<T> : ComputedInput,
@@ -38,7 +38,7 @@ public class ComputedSource<T> : ComputedInput,
     public event Action<ComputedSourceComputed<T>>? Invalidated;
     public event Action<ComputedSourceComputed<T>>? Updated;
 
-    IComputed IComputedSource.Computed => Computed;
+    ComputedBase IComputedSource.Computed => Computed;
     public ComputedSourceComputed<T> Computed {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _computed;
@@ -84,7 +84,7 @@ public class ComputedSource<T> : ComputedInput,
     public override ComputedOptions GetComputedOptions()
         => ComputedOptions;
 
-    public override IComputed? GetExistingComputed()
+    public override ComputedBase? GetExistingComputed()
         => Computed;
 
     // Equality

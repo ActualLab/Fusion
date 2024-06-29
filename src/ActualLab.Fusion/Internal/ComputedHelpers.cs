@@ -4,18 +4,7 @@ namespace ActualLab.Fusion.Internal;
 
 public static class ComputedHelpers
 {
-    public static void CopyAllUsedTo(IComputedImpl computed, ref ArrayBuffer<IComputedImpl> buffer)
-    {
-        var startCount = buffer.Count;
-        computed.CopyUsedTo(ref buffer);
-        var endCount = buffer.Count;
-        for (var i = startCount; i < endCount; i++) {
-            var c = buffer[i];
-            c.CopyUsedTo(ref buffer);
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryUseExisting<T>(Computed<T>? existing, ComputeContext context)
     {
         if (context.CallOptions != 0) // Way less frequent path
@@ -26,7 +15,7 @@ public static class ComputedHelpers
             return false;
 
         // Inlined existing.UseNew(context, usedBy)
-        if (context.Computed is IComputedImpl usedBy)
+        if (context.Computed is { } usedBy)
             usedBy.AddUsed(existing);
         existing.RenewTimeouts(false);
         return true;
@@ -50,7 +39,7 @@ public static class ComputedHelpers
             // CallOptions.GetExisting | CallOptions.Capture can be intact from here
             if (mustGetExisting) {
                 context.TryCapture(existing);
-                ((IComputedImpl)existing).RenewTimeouts(false);
+                existing.RenewTimeouts(false);
                 return true;
             }
 
@@ -83,7 +72,7 @@ public static class ComputedHelpers
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void UseNew<T>(Computed<T> computed, ComputeContext context)
     {
-        if (context.Computed is IComputedImpl usedBy)
+        if (context.Computed is { } usedBy)
             usedBy.AddUsed(computed);
         computed.RenewTimeouts(true);
         context.TryCapture(computed);

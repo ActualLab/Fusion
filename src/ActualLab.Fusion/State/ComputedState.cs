@@ -143,7 +143,7 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
         }
     }
 
-    public override IComputed? GetExistingComputed()
+    public override ComputedBase? GetExistingComputed()
     {
         lock (Lock)
             return _computingComputed ?? base.GetExistingComputed();

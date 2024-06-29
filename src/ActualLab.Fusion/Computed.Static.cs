@@ -4,19 +4,19 @@ namespace ActualLab.Fusion;
 
 #pragma warning disable CA1721
 
-public static class Computed
+public partial class Computed
 {
     public static TimeSpan PreciseInvalidationDelayThreshold { get; set; } = TimeSpan.FromSeconds(1);
 
     // Current & GetCurrent
 
-    public static IComputed? Current {
+    public static ComputedBase? Current {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => ComputeContext.Current.Computed;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static IComputed GetCurrent()
+    public static ComputedBase GetCurrent()
         => Current ?? throw Errors.CurrentComputedIsNull();
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -24,7 +24,7 @@ public static class Computed
         => (Computed<T>)(Current ?? throw Errors.CurrentComputedIsNull());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ComputeContextScope BeginCompute(IComputed computed)
+    public static ComputeContextScope BeginCompute(ComputedBase computed)
         => new(new ComputeContext(computed));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -42,7 +42,7 @@ public static class Computed
     // TryCapture
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<Option<IComputed>> TryCapture(
+    public static async ValueTask<Option<ComputedBase>> TryCapture(
         Func<Task> producer,
         CancellationToken cancellationToken = default)
     {
@@ -78,7 +78,7 @@ public static class Computed
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<Option<IComputed>> TryCapture(
+    public static async ValueTask<Option<ComputedBase>> TryCapture(
         Func<ValueTask> producer,
         CancellationToken cancellationToken = default)
     {
@@ -116,7 +116,7 @@ public static class Computed
     // Capture
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<IComputed> Capture(
+    public static async ValueTask<ComputedBase> Capture(
         Func<Task> producer,
         CancellationToken cancellationToken = default)
     {
@@ -152,7 +152,7 @@ public static class Computed
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<IComputed> Capture(
+    public static async ValueTask<ComputedBase> Capture(
         Func<ValueTask> producer,
         CancellationToken cancellationToken = default)
     {
