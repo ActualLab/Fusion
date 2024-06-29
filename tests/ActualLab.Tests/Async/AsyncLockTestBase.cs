@@ -140,10 +140,10 @@ public abstract class AsyncLockTestBase(ITestOutputHelper @out) : TestBase(@out)
         var expectedRuntime = TimeSpan.FromMilliseconds(
             1000 + taskCount * (maxDelayMs + 2 * (maxDurationMs + 20)));
         Out.WriteLine($"Expected runtime: {expectedRuntime.Seconds:f1}s");
-        var start = CpuClock.Now;
+        var startedAt = CpuTimestamp.Now;
         await Task.WhenAll(tasks).AsAsyncFunc()
             .Should().CompleteWithinAsync(expectedRuntime);
-        var runtime = CpuClock.Now - start;
+        var runtime = startedAt.Elapsed;
         Out.WriteLine($"Actual runtime:   {runtime.Seconds:f1}s");
 
         tasks.All(t => t.IsCompletedSuccessfully()).Should().BeTrue();

@@ -27,7 +27,7 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
         => $"{Category}-Hash={HashCode}";
 
     public abstract ComputedOptions GetComputedOptions();
-    public abstract ComputedBase? GetExistingComputed();
+    public abstract Computed? GetExistingComputed();
 
     // Equality
 
@@ -37,7 +37,8 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
 
     // ReSharper disable once NonReadonlyMemberInGetHashCode
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override int GetHashCode() => HashCode;
+    public sealed override int GetHashCode()
+        => HashCode;
 
     public static bool operator ==(ComputedInput? left, ComputedInput? right)
         => Equals(left, right);

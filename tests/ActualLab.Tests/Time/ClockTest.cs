@@ -16,7 +16,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
         var epsilon = TimeSpan.FromSeconds(TestRunnerInfo.IsBuildAgent() ? 5 : 1);
         var epsilon10 = epsilon.MultiplyBy(10);
         using var clock = new TestClock().SpeedupBy(10).OffsetBy(1000);
-        var realStart = SystemClock.Now;
+        var realStart = Moment.Now;
         var clockStart = clock.Now;
 
         ShouldEqual(realStart, DateTime.Now.ToMoment(), epsilon);
@@ -25,7 +25,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
         ShouldEqual(clockStart, realStart + TimeSpan.FromSeconds(1), epsilon);
 
         await clock.Delay(TimeSpan.FromSeconds(5));
-        ShouldEqual(realStart + TimeSpan.FromSeconds(0.5), SystemClock.Now, epsilon);
+        ShouldEqual(realStart + TimeSpan.FromSeconds(0.5), Moment.Now, epsilon);
         ShouldEqual(clockStart + TimeSpan.FromSeconds(5), clock.Now, epsilon10);
         Out.WriteLine(clock.Now.ToString());
 
@@ -34,7 +34,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
 
         clock.SpeedupBy(0.1);
         await clock.Delay(TimeSpan.FromSeconds(0.5));
-        ShouldEqual(realStart + TimeSpan.FromSeconds(1), SystemClock.Now, epsilon);
+        ShouldEqual(realStart + TimeSpan.FromSeconds(1), Moment.Now, epsilon);
         ShouldEqual(clockStart + TimeSpan.FromSeconds(6.5), clock.Now, epsilon10);
     }
 
@@ -44,7 +44,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
         var epsilon = TimeSpan.FromSeconds(0.9);
         var epsilon10 = epsilon.MultiplyBy(10);
         using var clock = new TestClock().SpeedupBy(10).OffsetBy(1000);
-        var realStart = SystemClock.Now;
+        var realStart = Moment.Now;
         var clockStart = clock.Now;
 
         var firedAt = clock.Timer(1000).Select(i => clock.Now).ToEnumerable().Single();
@@ -59,7 +59,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
         var epsilon = TimeSpan.FromSeconds(0.9);
         var epsilon10 = epsilon.MultiplyBy(10);
         using var clock = new TestClock().SpeedupBy(10).OffsetBy(1000);
-        var realStart = SystemClock.Now;
+        var realStart = Moment.Now;
         var clockStart = clock.Now;
 
         var m = 100.0;
@@ -69,7 +69,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
             clock.SpeedupBy(m);
         });
 
-        var firedAt = clock.Timer(1000).Select(i => SystemClock.Now).ToEnumerable().Single();
+        var firedAt = clock.Timer(1000).Select(i => Moment.Now).ToEnumerable().Single();
         // O.2 = 0.1s in Task.Delay + 0.1s to wait for the remainder of the timer,
         // b/c the end time was set when the clock was ticking 10x slower than normal
         ShouldEqual(firedAt, realStart + TimeSpan.FromSeconds(0.2), epsilon);
@@ -82,7 +82,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var epsilon = TimeSpan.FromSeconds(1);
         using var clock = new TestClock();
-        var realStart = SystemClock.Now;
+        var realStart = Moment.Now;
         var clockStart = clock.Now;
 
         var m = 10.0;
@@ -93,7 +93,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
         });
 
         var timings = clock.Interval(10)
-            .Select(i => SystemClock.Now - realStart)
+            .Select(i => Moment.Now - realStart)
             .Take(10)
             .ToEnumerable().ToArray();
         var deltas = timings.Zip(timings.Skip(1), (a, b) => b - a).ToArray();
@@ -114,7 +114,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
         if (TestRunnerInfo.IsBuildAgent())
             return; // By some reason the measurements are off by a lot on GitHub actions
 
-        async Task Test(IMomentClock clock1)
+        async Task Test(MomentClock clock1)
         {
             // Negative value (but not infinity)
             await ((Func<Task>) (async () => {

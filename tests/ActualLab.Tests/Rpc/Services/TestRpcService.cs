@@ -59,7 +59,7 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
     private volatile int _cancellationCount;
     private readonly ConcurrentDictionary<string, string> _values = new();
 
-    private IMomentClock SystemClock { get; } = services.Clocks().SystemClock;
+    private MomentClock SystemClock { get; } = services.Clocks().SystemClock;
     private ILogger Log { get; } = services.LogFor<TestRpcService>();
 
     public virtual Task<int?> Div(int? a, int b)

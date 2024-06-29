@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.ExceptionServices;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
@@ -7,6 +6,7 @@ using ActualLab.Locking;
 namespace ActualLab.Fusion;
 
 #pragma warning disable CA1721
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
 
 public interface IState : IResult, IHasServices
 {
@@ -18,7 +18,7 @@ public interface IState : IResult, IHasServices
     }
 
     IStateSnapshot Snapshot { get; }
-    ComputedBase Computed { get; }
+    Computed Computed { get; }
     object? LastNonErrorValue { get; }
 
     event Action<IState, StateEventKind>? Invalidated;
@@ -103,7 +103,7 @@ public abstract class State<T> : ComputedInput,
 
     IStateSnapshot IState.Snapshot => Snapshot;
     Computed<T> IState<T>.Computed => Computed;
-    ComputedBase IState.Computed => Computed;
+    Computed IState.Computed => Computed;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
     object? IState.LastNonErrorValue => LastNonErrorValue;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
@@ -165,8 +165,6 @@ public abstract class State<T> : ComputedInput,
         => ReferenceEquals(this, other);
     public override bool Equals(object? obj)
         => ReferenceEquals(this, obj);
-    public override int GetHashCode()
-        => base.GetHashCode();
 
     // Protected methods
 
@@ -239,7 +237,7 @@ public abstract class State<T> : ComputedInput,
     public override ComputedOptions GetComputedOptions()
         => ComputedOptions;
 
-    public override ComputedBase? GetExistingComputed()
+    public override Computed? GetExistingComputed()
         => _snapshot?.Computed;
 
     // IFunction<T>
@@ -263,19 +261,19 @@ public abstract class State<T> : ComputedInput,
         CancellationToken cancellationToken)
     {
         var computed = Computed;
-        if (ComputedHelpers.TryUseExisting(computed, context))
+        if (ComputedImpl.TryUseExisting(computed, context))
             return computed;
 
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
         computed = Computed;
-        if (ComputedHelpers.TryUseExistingFromLock(computed, context))
+        if (ComputedImpl.TryUseExistingFromLock(computed, context))
             return computed;
 
         releaser.MarkLockedLocally();
         OnUpdating(computed);
         computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        ComputedHelpers.UseNew(computed, context);
+        ComputedImpl.UseNew(computed, context);
         return computed;
     }
 
@@ -296,8 +294,8 @@ public abstract class State<T> : ComputedInput,
         CancellationToken cancellationToken)
     {
         var result = Computed;
-        return ComputedHelpers.TryUseExisting(result, context)
-            ? ComputedHelpers.StripToTask(result, context)
+        return ComputedImpl.TryUseExisting(result, context)
+            ? ComputedImpl.StripToTask(result, context)
             : TryRecompute(context, cancellationToken);
     }
 
@@ -308,13 +306,13 @@ public abstract class State<T> : ComputedInput,
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
         var computed = Computed;
-        if (ComputedHelpers.TryUseExistingFromLock(computed, context))
-            return ComputedHelpers.Strip(computed, context);
+        if (ComputedImpl.TryUseExistingFromLock(computed, context))
+            return ComputedImpl.Strip(computed, context);
 
         releaser.MarkLockedLocally();
         OnUpdating(computed);
         computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        ComputedHelpers.UseNew(computed, context);
+        ComputedImpl.UseNew(computed, context);
         return computed.Value;
     }
 
@@ -332,7 +330,7 @@ public abstract class State<T> : ComputedInput,
                 break;
             }
             catch (Exception e) {
-                var delayTask = ComputedHelpers.TryReprocessInternalCancellation(
+                var delayTask = ComputedImpl.FinalizeAndTryReprocessInternalCancellation(
                     nameof(GetComputed), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
                 if (delayTask == SpecialTasks.MustThrow)
                     throw;

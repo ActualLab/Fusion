@@ -5,7 +5,7 @@ namespace ActualLab.Fusion;
 public sealed class ComputeContext
 {
     private static readonly AsyncLocal<ComputeContext?> CurrentLocal = new();
-    private volatile ComputedBase? _captured;
+    private volatile Computed? _captured;
 
     public static readonly ComputeContext None = new(default(CallOptions));
     public static readonly ComputeContext Invalidating = new(CallOptions.Invalidate);
@@ -21,7 +21,7 @@ public sealed class ComputeContext
     }
 
     public readonly CallOptions CallOptions;
-    public readonly ComputedBase? Computed;
+    public readonly Computed? Computed;
 
     // Constructors
 
@@ -30,7 +30,7 @@ public sealed class ComputeContext
         => CallOptions = callOptions;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ComputeContext(ComputedBase computed)
+    public ComputeContext(Computed computed)
         => Computed = computed;
 
     // Conversion
@@ -45,7 +45,7 @@ public sealed class ComputeContext
     // (Try)GetCaptured
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ComputedBase GetCaptured()
+    public Computed GetCaptured()
         => _captured ?? throw Errors.NoComputedCaptured();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -53,7 +53,7 @@ public sealed class ComputeContext
         => (Computed<T>)(_captured ?? throw Errors.NoComputedCaptured());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Option<ComputedBase> TryGetCaptured()
+    public Option<Computed> TryGetCaptured()
         => _captured is { } result ? Option.Some(result) : default;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -61,7 +61,7 @@ public sealed class ComputeContext
         => _captured is Computed<T> result ? Option.Some(result) : default;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void TryCapture(ComputedBase computed)
+    public void TryCapture(Computed computed)
     {
         if ((CallOptions & CallOptions.Capture) == 0)
             return;

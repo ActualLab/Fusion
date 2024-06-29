@@ -24,11 +24,11 @@ public class UIAction<TResult> : UIAction
     public override IUIActionResult? UntypedResult => Result;
     public UIActionResult<TResult>? Result => ResultTask.IsCompleted ? ResultTask.Result : null;
 
-    protected UIAction(ICommand<TResult> command, IMomentClock clock, CancellationToken cancellationToken)
+    protected UIAction(ICommand<TResult> command, MomentClock clock, CancellationToken cancellationToken)
         : base(command, clock.Now, cancellationToken)
         => ResultTask = null!;
 
-    public UIAction(ICommand<TResult> command, IMomentClock clock, Task<TResult> resultTask, CancellationToken cancellationToken)
+    public UIAction(ICommand<TResult> command, MomentClock clock, Task<TResult> resultTask, CancellationToken cancellationToken)
         : base(command, clock.Now, cancellationToken)
     {
         ResultTask = resultTask.ContinueWith(

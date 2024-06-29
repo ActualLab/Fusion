@@ -1,6 +1,6 @@
 namespace ActualLab.Fusion.Internal;
 
-public interface IComputedSourceComputed: ComputedBase
+public interface IComputedSourceComputed: IComputed
 {
     public IComputedSource Source { get; }
 }

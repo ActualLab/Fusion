@@ -9,11 +9,11 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
         public static new Options Default { get; set; } = new();
 
         public TimeSpan FlushDelay { get; init; } = TimeSpan.FromSeconds(0.25);
-        public IMomentClock? Clock { get; init; }
+        public MomentClock? Clock { get; init; }
     }
 
     protected readonly object Lock = new();
-    protected readonly IMomentClock Clock;
+    protected readonly MomentClock Clock;
     protected Dictionary<RpcCacheKey, TextOrBytes?> FlushQueue = new();
     protected Dictionary<RpcCacheKey, TextOrBytes?> FlushingQueue = new();
     protected Task? FlushTask;

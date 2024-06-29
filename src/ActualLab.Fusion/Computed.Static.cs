@@ -10,13 +10,13 @@ public partial class Computed
 
     // Current & GetCurrent
 
-    public static ComputedBase? Current {
+    public static Computed? Current {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => ComputeContext.Current.Computed;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static ComputedBase GetCurrent()
+    public static Computed GetCurrent()
         => Current ?? throw Errors.CurrentComputedIsNull();
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -24,7 +24,7 @@ public partial class Computed
         => (Computed<T>)(Current ?? throw Errors.CurrentComputedIsNull());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ComputeContextScope BeginCompute(ComputedBase computed)
+    public static ComputeContextScope BeginCompute(Computed computed)
         => new(new ComputeContext(computed));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -42,7 +42,7 @@ public partial class Computed
     // TryCapture
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<Option<ComputedBase>> TryCapture(
+    public static async ValueTask<Option<Computed>> TryCapture(
         Func<Task> producer,
         CancellationToken cancellationToken = default)
     {
@@ -78,7 +78,7 @@ public partial class Computed
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<Option<ComputedBase>> TryCapture(
+    public static async ValueTask<Option<Computed>> TryCapture(
         Func<ValueTask> producer,
         CancellationToken cancellationToken = default)
     {
@@ -116,7 +116,7 @@ public partial class Computed
     // Capture
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<ComputedBase> Capture(
+    public static async ValueTask<Computed> Capture(
         Func<Task> producer,
         CancellationToken cancellationToken = default)
     {
@@ -152,7 +152,7 @@ public partial class Computed
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<ComputedBase> Capture(
+    public static async ValueTask<Computed> Capture(
         Func<ValueTask> producer,
         CancellationToken cancellationToken = default)
     {

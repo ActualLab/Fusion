@@ -50,7 +50,7 @@ public static class CoarseClockHelper
 
     static CoarseClockHelper()
     {
-        var start = _systemNow = SystemClock.Now;
+        var start = _systemNow = Moment.Now;
         Start = start;
         StartEpochOffsetTicks = start.EpochOffset.Ticks;
         Stopwatch = Stopwatch.StartNew();
@@ -71,6 +71,6 @@ public static class CoarseClockHelper
         _randomInt32 = unchecked((int) rnd);
 
         // Update _systemNow
-        _systemNow = SystemClock.Now;
+        _systemNow = Moment.Now;
     }
 }

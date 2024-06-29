@@ -47,13 +47,13 @@ public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFu
     {
         // Double-check locking
         var computed = input.GetExistingComputed() as Computed<T>;
-        if (ComputedHelpers.TryUseExisting(computed, context))
+        if (ComputedImpl.TryUseExisting(computed, context))
             return computed!;
 
         var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
         try {
             computed = input.GetExistingComputed() as Computed<T>;
-            if (ComputedHelpers.TryUseExistingFromLock(computed, context))
+            if (ComputedImpl.TryUseExistingFromLock(computed, context))
                 return computed!;
 
             if (input.IsDisposed) {
@@ -69,7 +69,7 @@ public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFu
 
             releaser.MarkLockedLocally();
             computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
-            ComputedHelpers.UseNew(computed, context);
+            ComputedImpl.UseNew(computed, context);
             return computed;
         }
         finally {
@@ -77,15 +77,14 @@ public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFu
         }
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual Task<T> InvokeAndStrip(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken = default)
     {
         var computed = input.GetExistingComputed() as Computed<T>;
-        return ComputedHelpers.TryUseExisting(computed, context)
-            ? ComputedHelpers.StripToTask(computed, context)
+        return ComputedImpl.TryUseExisting(computed, context)
+            ? ComputedImpl.StripToTask(computed, context)
             : TryRecompute(input, context, cancellationToken);
     }
 
@@ -97,8 +96,8 @@ public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFu
         var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
         try {
             var computed = input.GetExistingComputed() as Computed<T>;
-            if (ComputedHelpers.TryUseExistingFromLock(computed, context))
-                return ComputedHelpers.Strip(computed, context);
+            if (ComputedImpl.TryUseExistingFromLock(computed, context))
+                return ComputedImpl.Strip(computed, context);
 
             if (input.IsDisposed) {
                 // We're going to await for indefinitely long task here, and there is a chance
@@ -113,7 +112,7 @@ public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFu
 
             releaser.MarkLockedLocally();
             computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
-            ComputedHelpers.UseNew(computed, context);
+            ComputedImpl.UseNew(computed, context);
             return computed.Value;
         }
         finally {

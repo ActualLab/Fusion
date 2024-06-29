@@ -13,6 +13,7 @@ public class MethodDef
         typeof(MethodDef).GetMethod(nameof(CreateInterceptorAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
     private static readonly MethodInfo CreateInterceptedAsyncInvokerMethod =
         typeof(MethodDef).GetMethod(nameof(CreateInterceptedAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
+    private static int _lastId = 1;
 
     private string? _fullName;
     private Func<object, ArgumentList, Task>? _targetAsyncInvoker;
@@ -27,6 +28,7 @@ public class MethodDef
     public readonly Type[] ParameterTypes;
     public readonly Type ReturnType;
     public readonly int CancellationTokenIndex;
+    public readonly int Id;
 
     public string FullName => _fullName ??= $"{Type.GetName()}.{Method.Name}";
     public readonly bool IsAsyncMethod;
@@ -49,6 +51,8 @@ public class MethodDef
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
         MethodInfo method)
     {
+        Id = Interlocked.Increment(ref _lastId);
+
         var parameters = method.GetParameters();
         var ctIndex = -1;
         for (var i = parameters.Length - 1; i >= 0; i--) {
@@ -91,6 +95,9 @@ public class MethodDef
 
     public override string ToString()
         => $"{GetType().Name}({FullName}){(IsValid ? "" : " - invalid")}";
+
+    public sealed override int GetHashCode()
+        => Id;
 
     public object? WrapResult<TUnwrapped>(TUnwrapped result)
     {

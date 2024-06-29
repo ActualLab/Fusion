@@ -120,18 +120,18 @@ public class MutableState<T> : State<T>, IMutableState<T>
         CancellationToken cancellationToken)
     {
         var computed = Computed;
-        if (ComputedHelpers.TryUseExisting(computed, context))
+        if (ComputedImpl.TryUseExisting(computed, context))
             return ValueTaskExt.FromResult(computed);
 
         // Double-check locking
         lock (Lock) {
             computed = Computed;
-            if (ComputedHelpers.TryUseExistingFromLock(computed, context))
+            if (ComputedImpl.TryUseExistingFromLock(computed, context))
                 return ValueTaskExt.FromResult(computed);
 
             OnUpdating(computed);
             computed = CreateComputed();
-            ComputedHelpers.UseNew(computed, context);
+            ComputedImpl.UseNew(computed, context);
             return ValueTaskExt.FromResult(computed);
         }
     }
@@ -141,19 +141,19 @@ public class MutableState<T> : State<T>, IMutableState<T>
         CancellationToken cancellationToken)
     {
         var computed = Computed;
-        if (ComputedHelpers.TryUseExisting(computed, context))
-            return ComputedHelpers.StripToTask(computed, context);
+        if (ComputedImpl.TryUseExisting(computed, context))
+            return ComputedImpl.StripToTask(computed, context);
 
         // Double-check locking
         lock (Lock) {
             computed = Computed;
-            if (ComputedHelpers.TryUseExistingFromLock(computed, context))
-                return ComputedHelpers.StripToTask(computed, context);
+            if (ComputedImpl.TryUseExistingFromLock(computed, context))
+                return ComputedImpl.StripToTask(computed, context);
 
             OnUpdating(computed);
             computed = CreateComputed();
-            ComputedHelpers.UseNew(computed, context);
-            return ComputedHelpers.StripToTask(computed, context);
+            ComputedImpl.UseNew(computed, context);
+            return ComputedImpl.StripToTask(computed, context);
         }
     }
 

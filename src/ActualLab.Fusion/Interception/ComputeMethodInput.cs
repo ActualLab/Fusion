@@ -3,6 +3,8 @@ using ActualLab.Interception;
 
 namespace ActualLab.Fusion.Interception;
 
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
+
 public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethodInput>
 {
     public readonly ComputeMethodDef MethodDef;
@@ -29,7 +31,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
         Invocation = invocation;
 
         var arguments = invocation.Arguments;
-        var hashCode = methodDef.GetHashCode()
+        var hashCode = methodDef.Id
             ^ invocation.Proxy.GetHashCode()
             ^ arguments.GetHashCode(methodDef.CancellationTokenIndex);
         Initialize(function, hashCode);
@@ -41,7 +43,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     public override ComputedOptions GetComputedOptions()
         => MethodDef.ComputedOptions;
 
-    public override ComputedBase? GetExistingComputed()
+    public override Computed? GetExistingComputed()
         => ComputedRegistry.Instance.Get(this);
 
     // Equality
@@ -57,6 +59,4 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
         => obj is ComputeMethodInput other && Equals(other);
     public override bool Equals(object? obj)
         => obj is ComputeMethodInput other && Equals(other);
-    public override int GetHashCode()
-        => HashCode;
 }

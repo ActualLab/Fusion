@@ -10,7 +10,7 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
     where TOptions : DbLogTrimmerOptions
 {
     protected TOptions Settings { get; } = settings;
-    protected IMomentClock SystemClock => Clocks.SystemClock;
+    protected MomentClock SystemClock => Clocks.SystemClock;
     protected ILogger? DefaultLog => Log.IfEnabled(Settings.LogLevel);
 
     public abstract DbLogKind LogKind { get; }

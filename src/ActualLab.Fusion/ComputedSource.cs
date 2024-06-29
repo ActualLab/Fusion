@@ -1,4 +1,3 @@
-using System.Runtime.ExceptionServices;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 
@@ -6,10 +5,12 @@ namespace ActualLab.Fusion;
 
 #pragma warning disable CA1721
 
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
+
 public interface IComputedSource : IComputeFunction
 {
-    ComputedOptions ComputedOptions { get; init; }
-    ComputedBase Computed { get; }
+    ComputedOptions ComputedOptions { get; }
+    Computed Computed { get; }
 }
 
 public class ComputedSource<T> : ComputedInput,
@@ -38,7 +39,7 @@ public class ComputedSource<T> : ComputedInput,
     public event Action<ComputedSourceComputed<T>>? Invalidated;
     public event Action<ComputedSourceComputed<T>>? Updated;
 
-    ComputedBase IComputedSource.Computed => Computed;
+    Computed IComputedSource.Computed => Computed;
     public ComputedSourceComputed<T> Computed {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _computed;
@@ -84,7 +85,7 @@ public class ComputedSource<T> : ComputedInput,
     public override ComputedOptions GetComputedOptions()
         => ComputedOptions;
 
-    public override ComputedBase? GetExistingComputed()
+    public override Computed? GetExistingComputed()
         => Computed;
 
     // Equality
@@ -95,8 +96,6 @@ public class ComputedSource<T> : ComputedInput,
         => ReferenceEquals(this, other);
     public override bool Equals(object? other)
         => ReferenceEquals(this, other);
-    public override int GetHashCode()
-        => HashCode;
 
     // IFunction<T> & IFunction
 
@@ -119,18 +118,18 @@ public class ComputedSource<T> : ComputedInput,
         CancellationToken cancellationToken)
     {
         var computed = Computed;
-        if (ComputedHelpers.TryUseExisting(computed, context))
+        if (ComputedImpl.TryUseExisting(computed, context))
             return computed!;
 
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
         computed = Computed;
-        if (ComputedHelpers.TryUseExistingFromLock(computed, context))
+        if (ComputedImpl.TryUseExistingFromLock(computed, context))
             return computed!;
 
         releaser.MarkLockedLocally();
         computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        ComputedHelpers.UseNew(computed, context);
+        ComputedImpl.UseNew(computed, context);
         return computed;
     }
 
@@ -151,8 +150,8 @@ public class ComputedSource<T> : ComputedInput,
         CancellationToken cancellationToken)
     {
         var result = Computed;
-        return ComputedHelpers.TryUseExisting(result, context)
-            ? ComputedHelpers.StripToTask(result, context)
+        return ComputedImpl.TryUseExisting(result, context)
+            ? ComputedImpl.StripToTask(result, context)
             : TryRecompute(context, cancellationToken);
     }
 
@@ -165,12 +164,12 @@ public class ComputedSource<T> : ComputedInput,
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
         var computed = Computed;
-        if (ComputedHelpers.TryUseExistingFromLock(computed, context))
-            return ComputedHelpers.Strip(computed, context);
+        if (ComputedImpl.TryUseExistingFromLock(computed, context))
+            return ComputedImpl.Strip(computed, context);
 
         releaser.MarkLockedLocally();
         computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        ComputedHelpers.UseNew(computed, context);
+        ComputedImpl.UseNew(computed, context);
         return computed.Value;
     }
 
@@ -188,7 +187,7 @@ public class ComputedSource<T> : ComputedInput,
                 break;
             }
             catch (Exception e) {
-                var delayTask = ComputedHelpers.TryReprocessInternalCancellation(
+                var delayTask = ComputedImpl.FinalizeAndTryReprocessInternalCancellation(
                     nameof(GetComputed), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
                 if (delayTask == SpecialTasks.MustThrow)
                     throw;

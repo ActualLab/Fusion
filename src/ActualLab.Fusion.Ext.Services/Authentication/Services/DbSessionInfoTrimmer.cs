@@ -36,7 +36,7 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
 {
     protected IDbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId> Sessions { get; }
         = services.GetRequiredService<IDbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>>();
-    protected IMomentClock SystemClock => Clocks.SystemClock;
+    protected MomentClock SystemClock => Clocks.SystemClock;
 
     protected override Task OnRun(DbShard shard, CancellationToken cancellationToken)
         => new AsyncChain($"Trim({shard})", ct => Trim(shard, ct))

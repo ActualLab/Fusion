@@ -8,7 +8,7 @@ public sealed class TestClockSettings : IDisposable
     public TimeSpan RealOffset { get; }
     public double Multiplier { get; }
 
-    public Moment Now => ToLocalTime(CpuClock.Now);
+    public Moment Now => ToLocalTime(Moment.CpuNow);
     public CancellationToken ChangedToken { get; }
     public bool IsUsable => !(_changedTokenSource?.IsCancellationRequested ?? true);
 

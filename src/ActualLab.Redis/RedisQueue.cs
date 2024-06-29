@@ -9,7 +9,7 @@ public sealed class RedisQueue : IAsyncDisposable
         public string EnqueuePubKeySuffix { get; init; } = "-updates";
         public TimeSpan EnqueueCheckPeriod { get; init; } = TimeSpan.FromSeconds(1);
         public TimeSpan? EnqueueSubscribeTimeout { get; init; } = TimeSpan.FromSeconds(5);
-        public IMomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
+        public MomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
     }
 
     private RedisPub EnqueuePub { get; }
@@ -76,7 +76,7 @@ public sealed class RedisQueue<T> : IAsyncDisposable
         public TimeSpan EnqueueCheckPeriod { get; init; } = TimeSpan.FromSeconds(1);
         public TimeSpan? EnqueueSubscribeTimeout { get; init; } = TimeSpan.FromSeconds(5);
         public IByteSerializer<T> Serializer { get; init; } = ByteSerializer<T>.Default;
-        public IMomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
+        public MomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
     }
 
     private RedisPub EnqueuePub { get; }

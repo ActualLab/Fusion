@@ -15,7 +15,7 @@ public static class StateExt
         this TState state, CancellationToken cancellationToken = default)
         where TState : class, IState
     {
-        await state.Computed.Update(cancellationToken).ConfigureAwait(false);
+        await state.Computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
         return state;
     }
 
@@ -26,7 +26,7 @@ public static class StateExt
         var snapshot = state.Snapshot;
         var computed = snapshot.Computed;
         computed.Invalidate();
-        await computed.Update(cancellationToken).ConfigureAwait(false);
+        await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
         return state;
     }
 

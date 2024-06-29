@@ -13,11 +13,11 @@ public class InMemoryKeyValueStore(
         public static Options Default { get; set; } = new();
 
         public RandomTimeSpan CleanupPeriod { get; init; } = TimeSpan.FromMinutes(1).ToRandom(0.05);
-        public IMomentClock? Clock { get; init; } = null;
+        public MomentClock? Clock { get; init; } = null;
     }
 
     protected Options Settings { get; } = settings;
-    protected IMomentClock Clock { get; }
+    protected MomentClock Clock { get; }
         = settings.Clock ?? services.Clocks().SystemClock;
     protected ConcurrentDictionary<(DbShard Shard, Symbol Key), (string Value, Moment? ExpiresAt)> Store { get; }
         = new();

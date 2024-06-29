@@ -29,7 +29,7 @@ public class InvalidatedHandlerSetTest(ITestOutputHelper @out) : TestBase(@out)
         var sampler = Sampler.RandomShared(removalProbability);
         var removedIndexes = new HashSet<int>(
             indexes.Where(_ => sampler.Next()));
-        var removedActions = new HashSet<Action<ComputedBase>>(
+        var removedActions = new HashSet<Action<Computed>>(
             actions.Where((_, i) => removedIndexes.Contains(i)));
         actions = actions.Where(a => !removedActions.Contains(a)).ToList();
         foreach (var action in removedActions)
@@ -41,7 +41,7 @@ public class InvalidatedHandlerSetTest(ITestOutputHelper @out) : TestBase(@out)
         if (usedIndexes.Count != 0)
             usedIndexes.Should().AllSatisfy(i => removedIndexes.Contains(i).Should().BeFalse());
 
-        Action<ComputedBase> CreateAction(int index)
+        Action<Computed> CreateAction(int index)
             => _ => usedIndexes.Add(index).Should().BeTrue();
     }
 }

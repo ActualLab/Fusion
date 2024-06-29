@@ -17,7 +17,7 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
 
     protected IDbLogWatcher<TDbContext, TDbEntry> LogWatcher { get; }
         = services.GetRequiredService<IDbLogWatcher<TDbContext, TDbEntry>>();
-    protected IMomentClock SystemClock { get; init; } = services.Clocks().SystemClock;
+    protected MomentClock SystemClock { get; init; } = services.Clocks().SystemClock;
     protected ILogger? DefaultLog => Log.IfEnabled(Settings.LogLevel);
     protected ILogger? DebugLog => Log.IfEnabled(LogLevel.Debug);
     protected RetryLogger ProcessOneRetryLogger => _processOneRetryLogger ??= new RetryLogger(Log, nameof(ProcessOne));

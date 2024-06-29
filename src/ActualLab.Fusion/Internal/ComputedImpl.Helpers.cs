@@ -2,8 +2,19 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Internal;
 
-public static class ComputedHelpers
+public static partial class ComputedImpl
 {
+    public static void CopyAllDependenciesTo(Computed computed, ref ArrayBuffer<Computed> buffer)
+    {
+        var startCount = buffer.Count;
+        computed.CopyDependenciesTo(ref buffer);
+        var endCount = buffer.Count;
+        for (var i = startCount; i < endCount; i++) {
+            var c = buffer[i];
+            c.CopyDependenciesTo(ref buffer);
+        }
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryUseExisting<T>(Computed<T>? existing, ComputeContext context)
     {
@@ -15,8 +26,7 @@ public static class ComputedHelpers
             return false;
 
         // Inlined existing.UseNew(context, usedBy)
-        if (context.Computed is { } usedBy)
-            usedBy.AddUsed(existing);
+        context.Computed?.AddDependency(existing);
         existing.RenewTimeouts(false);
         return true;
 
@@ -72,8 +82,7 @@ public static class ComputedHelpers
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void UseNew<T>(Computed<T> computed, ComputeContext context)
     {
-        if (context.Computed is { } usedBy)
-            usedBy.AddUsed(computed);
+        context.Computed?.AddDependency(computed);
         computed.RenewTimeouts(true);
         context.TryCapture(computed);
     }
@@ -101,7 +110,7 @@ public static class ComputedHelpers
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static Task TryReprocessInternalCancellation<T>(
+    public static Task FinalizeAndTryReprocessInternalCancellation<T>(
         string methodName,
         Computed<T> computed,
         Exception error,
@@ -147,7 +156,7 @@ public static class ComputedHelpers
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static bool MustThrow<T>(
+    public static bool FinalizeAndTryReturnComputed<T>(
         Computed<T> computed,
         Exception error,
         CancellationToken cancellationToken)
@@ -155,13 +164,13 @@ public static class ComputedHelpers
         if (error is not OperationCanceledException) {
             // Not a cancellation
             computed.TrySetOutput(Result.Error<T>(error));
-            return false;
+            return true;
         }
 
         // Cancellation
         computed.Invalidate(true); // Instant invalidation on cancellation
         computed.TrySetOutput(Result.Error<T>(error));
-        return cancellationToken.IsCancellationRequested || error is RpcRerouteException;
+        return !(cancellationToken.IsCancellationRequested || error is RpcRerouteException);
     }
 
     // Nested types

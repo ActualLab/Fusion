@@ -35,28 +35,37 @@ public class ComputeServiceInterceptor : Interceptor
     }
 
     protected static Func<Invocation, object?> CreateHandler<TUnwrapped>(ComputeMethodFunction<TUnwrapped> function)
-        => invocation => {
-            var methodDef = function.MethodDef;
+    {
+        var methodDef = function.MethodDef;
+        var ctIndex = methodDef.CancellationTokenIndex;
+        var invokeAndStripCached = function.InvokeAndStrip; // Delegate call is faster than VT call
+        if (ctIndex < 0) {
+            // No CancellationToken -> faster path
+            return invocation => {
+                var input = new ComputeMethodInput(function, methodDef, invocation);
+                var task = invokeAndStripCached.Invoke(input, ComputeContext.Current, default);
+                // ReSharper disable once HeapView.BoxingAllocation
+                return methodDef.ReturnsValueTask ? new ValueTask<TUnwrapped>(task) : task;
+            };
+        }
+
+        // There is CancellationToken -> slower path
+        return invocation => {
             var input = new ComputeMethodInput(function, methodDef, invocation);
             var arguments = input.Invocation.Arguments;
-            var ctIndex = methodDef.CancellationTokenIndex;
-            var cancellationToken = ctIndex >= 0
-                ? arguments.GetCancellationToken(ctIndex)
-                : default;
-
+            var cancellationToken = arguments.GetCancellationToken(ctIndex);
             try {
-                // InvokeAndStrip allows to get rid of one extra allocation
-                // of a task stripping the result of regular Invoke.
-                var task = function.InvokeAndStrip(input, ComputeContext.Current, cancellationToken);
+                var task = invokeAndStripCached.Invoke(input, ComputeContext.Current, cancellationToken);
                 // ReSharper disable once HeapView.BoxingAllocation
                 return methodDef.ReturnsValueTask ? new ValueTask<TUnwrapped>(task) : task;
             }
             finally {
-                if (cancellationToken != default)
+                if (cancellationToken.CanBeCanceled)
                     // We don't want memory leaks + unexpected cancellation later
                     arguments.SetCancellationToken(ctIndex, default);
             }
         };
+    }
 
     // We don't need to decorate this method with any dynamic access attributes
     protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)

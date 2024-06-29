@@ -46,7 +46,7 @@ public partial record LogMessageCommand(
 
     public static LogMessageCommand New()
     {
-        var now = SystemClock.Now;
+        var now = Moment.Now;
         var delay = TimeSpan.FromSeconds((10*Random.Shared.NextDouble()) - 5).Positive();
         var index = Interlocked.Increment(ref _nextIndex);
         var message = delay > TimeSpan.FromMilliseconds(1)

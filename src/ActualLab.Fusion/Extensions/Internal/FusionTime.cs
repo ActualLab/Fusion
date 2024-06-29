@@ -8,11 +8,11 @@ public class FusionTime : IFusionTime
 
         public TimeSpan DefaultUpdatePeriod { get; init; } = TimeSpan.FromSeconds(1);
         public TimeSpan MaxInvalidationDelay { get; init; } = TimeSpan.FromMinutes(10);
-        public IMomentClock? Clock { get; init; }
+        public MomentClock? Clock { get; init; }
     }
 
     public Options Settings { get; }
-    public IMomentClock Clock { get; }
+    public MomentClock Clock { get; }
 
     public FusionTime(Options settings, IServiceProvider services)
     {

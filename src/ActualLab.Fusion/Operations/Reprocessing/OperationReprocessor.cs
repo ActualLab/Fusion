@@ -27,7 +27,7 @@ public class OperationReprocessor : IOperationReprocessor
 
         public int MaxRetryCount { get; init; } = 3;
         public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(0.50, 3, 0.33);
-        public IMomentClock? DelayClock { get; init; }
+        public MomentClock? DelayClock { get; init; }
         public Func<ICommand, CommandContext, bool> Filter { get; init; } = DefaultFilter;
 
         public static bool DefaultFilter(ICommand command, CommandContext context)
@@ -46,7 +46,7 @@ public class OperationReprocessor : IOperationReprocessor
     }
 
     private TransiencyResolver<IOperationReprocessor>? _transiencyResolver;
-    private IMomentClock? _delayClock;
+    private MomentClock? _delayClock;
     private ILogger? _log;
 
     protected Dictionary<Exception, Transiency> KnownTransiencies { get; } = new();
@@ -57,7 +57,7 @@ public class OperationReprocessor : IOperationReprocessor
     protected IServiceProvider Services { get; }
     protected TransiencyResolver<IOperationReprocessor> TransiencyResolver
         => _transiencyResolver ??= Services.TransiencyResolver<IOperationReprocessor>();
-    public IMomentClock DelayClock => _delayClock ??= Settings.DelayClock ?? Services.Clocks().CpuClock;
+    public MomentClock DelayClock => _delayClock ??= Settings.DelayClock ?? Services.Clocks().CpuClock;
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     public Options Settings { get; }

@@ -12,6 +12,7 @@ using ActualLab.Fusion.EntityFramework.Redis;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Server;
 using ActualLab.Fusion.Server.Middlewares;
+using ActualLab.Interception;
 using ActualLab.Interception.Interceptors;
 using ActualLab.IO;
 using ActualLab.OS;

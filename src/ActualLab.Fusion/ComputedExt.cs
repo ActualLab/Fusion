@@ -7,7 +7,7 @@ public static partial class ComputedExt
 {
     // Invalidate
 
-    public static void Invalidate(this ComputedBase computed, TimeSpan delay, bool? usePreciseTimer = null)
+    public static void Invalidate(this Computed computed, TimeSpan delay, bool? usePreciseTimer = null)
     {
         if (delay == TimeSpan.MaxValue) // No invalidation
             return;
@@ -100,7 +100,7 @@ public static partial class ComputedExt
 
     // WhenInvalidated
 
-    public static Task WhenInvalidated(this ComputedBase computed, CancellationToken cancellationToken = default)
+    public static Task WhenInvalidated(this Computed computed, CancellationToken cancellationToken = default)
     {
         if (computed.ConsistencyState == ConsistencyState.Invalidated)
             return Task.CompletedTask;
@@ -245,7 +245,7 @@ public static partial class ComputedExt
     // WhenSynchronized & Synchronize
 
     public static Task WhenSynchronized(
-        this ComputedBase computed,
+        this Computed computed,
         CancellationToken cancellationToken = default)
     {
         if (computed is IMaybeCachedValue mcv)
@@ -267,11 +267,10 @@ public static partial class ComputedExt
         }
 
         // Computed is a regular computed instance
-        var computedImpl = (IComputedImpl)computed;
-        var usedBuffer = ArrayBuffer<IComputedImpl>.Lease(false);
+        var usedBuffer = ArrayBuffer<Computed>.Lease(false);
         var taskBuffer = ArrayBuffer<Task>.Lease(false);
         try {
-            computedImpl.CopyUsedTo(ref usedBuffer);
+            computed.CopyDependenciesTo(ref usedBuffer);
             var usedArray = usedBuffer.Buffer;
             for (var i = 0; i < usedBuffer.Count; i++) {
                 var used = usedArray[i];

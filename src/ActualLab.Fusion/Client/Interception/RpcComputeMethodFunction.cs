@@ -61,7 +61,7 @@ public class RpcComputeMethodFunction<T>(
                         try {
                             await MethodDef.TargetAsyncInvoker.Invoke(LocalTarget!, typedInput.Arguments)
                                 .ConfigureAwait(false);
-                            var dependencies = computed.Used;
+                            var dependencies = computed.GetDependencies();
                             if (dependencies.Length != 1)
                                 throw ActualLab.Internal.Errors.InternalError("A single dependency is expected here");
 
@@ -69,7 +69,7 @@ public class RpcComputeMethodFunction<T>(
                             computed.TrySetOutput(dependency.Output);
                             return computed;
                         }
-                        catch (Exception e) when (!ComputedHelpers.MustThrow(computed, e, cancellationToken)) {
+                        catch (Exception e) when (ComputedImpl.FinalizeAndTryReturnComputed(computed, e, cancellationToken)) {
                             return computed;
                         }
                     }
@@ -88,7 +88,7 @@ public class RpcComputeMethodFunction<T>(
                         return computed;
                     }
                     catch (Exception e) {
-                        var delayTask = ComputedHelpers.TryReprocessInternalCancellation(
+                        var delayTask = ComputedImpl.FinalizeAndTryReprocessInternalCancellation(
                             nameof(Compute), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
                         if (delayTask == SpecialTasks.MustThrow)
                             throw;
@@ -278,30 +278,29 @@ public class RpcComputeMethodFunction<T>(
     {
         // Double-check locking
         var computed = input.GetExistingComputed() as Computed<T>;
-        if (ComputedHelpers.TryUseExisting(computed, context))
+        if (ComputedImpl.TryUseExisting(computed, context))
             return computed!;
 
         using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
 
         computed = input.GetExistingComputed() as Computed<T>;
-        if (ComputedHelpers.TryUseExistingFromLock(computed, context))
+        if (ComputedImpl.TryUseExistingFromLock(computed, context))
             return computed!;
 
         releaser.MarkLockedLocally();
         computed = await Compute(input, computed, cancellationToken).ConfigureAwait(false);
-        ComputedHelpers.UseNew(computed, context);
+        ComputedImpl.UseNew(computed, context);
         return computed;
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public override Task<T> InvokeAndStrip(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken = default)
     {
         var computed = input.GetExistingComputed() as Computed<T>;
-        return ComputedHelpers.TryUseExisting(computed, context)
-            ? ComputedHelpers.StripToTask(computed, context)
+        return ComputedImpl.TryUseExisting(computed, context)
+            ? ComputedImpl.StripToTask(computed, context)
             : TryRecompute(input, context, cancellationToken);
     }
 
@@ -321,12 +320,12 @@ public class RpcComputeMethodFunction<T>(
         using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
 
         var existing = input.GetExistingComputed() as Computed<T>;
-        if (ComputedHelpers.TryUseExistingFromLock(existing, context))
-            return ComputedHelpers.Strip(existing, context);
+        if (ComputedImpl.TryUseExistingFromLock(existing, context))
+            return ComputedImpl.Strip(existing, context);
 
         releaser.MarkLockedLocally();
         var computed = await Compute(input, existing, cancellationToken).ConfigureAwait(false);
-        ComputedHelpers.UseNew(computed, context);
+        ComputedImpl.UseNew(computed, context);
         return computed.Value;
     }
 

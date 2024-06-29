@@ -148,7 +148,7 @@ public class RpcPeerStateMonitor : WorkerBase
         reconnectDelayer.CancelDelaysToken.Register(static c => {
             // It makes sense to wait a bit after the cancellation to let RpcPeer do some work
             _ = Task.Delay(50, CancellationToken.None).ContinueWith(
-                _ => (c as ComputedBase)?.Invalidate(),
+                _ => (c as Computed)?.Invalidate(),
                 TaskScheduler.Default);
         }, computed);
         return Task.FromResult(Now);

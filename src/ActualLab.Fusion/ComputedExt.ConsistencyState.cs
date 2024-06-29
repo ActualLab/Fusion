@@ -7,30 +7,30 @@ public static partial class ComputedExt
     // IComputed overloads
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsInvalidated(this ComputedBase computed)
+    public static bool IsInvalidated(this Computed computed)
         => computed.ConsistencyState == ConsistencyState.Invalidated;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsConsistent(this ComputedBase computed)
+    public static bool IsConsistent(this Computed computed)
         => computed.ConsistencyState == ConsistencyState.Consistent;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsComputing(this ComputedBase computed)
+    public static bool IsComputing(this Computed computed)
         => computed.ConsistencyState == ConsistencyState.Computing;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsConsistentOrComputing(this ComputedBase computed)
+    public static bool IsConsistentOrComputing(this Computed computed)
         => computed.ConsistencyState != ConsistencyState.Invalidated;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void RequireConsistencyState(this ComputedBase computed, ConsistencyState expectedState)
+    public static void RequireConsistencyState(this Computed computed, ConsistencyState expectedState)
     {
         if (computed.ConsistencyState != expectedState)
             throw Errors.WrongComputedState(expectedState, computed.ConsistencyState);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void AssertConsistencyStateIsNot(this ComputedBase computed, ConsistencyState unexpectedState)
+    public static void AssertConsistencyStateIsNot(this Computed computed, ConsistencyState unexpectedState)
     {
         if (computed.ConsistencyState == unexpectedState)
             throw Errors.WrongComputedState(computed.ConsistencyState);

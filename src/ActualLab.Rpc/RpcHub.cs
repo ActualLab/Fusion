@@ -42,7 +42,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public RpcServiceRegistry ServiceRegistry => _serviceRegistry ??= Services.GetRequiredService<RpcServiceRegistry>();
     public RpcInternalServices InternalServices => new(this);
     public RpcLimits Limits { get; }
-    public IMomentClock Clock { get; }
+    public MomentClock Clock { get; }
 
     public RpcHub(IServiceProvider services)
     {

@@ -32,9 +32,9 @@ public sealed class ComputedRegistry : IDisposable
     public AsyncLockSet<ComputedInput> InputLocks { get; }
     public ComputedGraphPruner GraphPruner => _graphPruner;
 
-    public event Action<ComputedBase>? OnRegister;
-    public event Action<ComputedBase>? OnUnregister;
-    public event Action<ComputedBase, bool>? OnAccess;
+    public event Action<Computed>? OnRegister;
+    public event Action<Computed>? OnUnregister;
+    public event Action<Computed, bool>? OnAccess;
 
     public ComputedRegistry() : this(new()) { }
     public ComputedRegistry(Options settings)
@@ -56,12 +56,12 @@ public sealed class ComputedRegistry : IDisposable
     public void Dispose()
         => _gcHandlePool.Dispose();
 
-    public ComputedBase? Get(ComputedInput key)
+    public Computed? Get(ComputedInput key)
     {
         var random = Randomize(key.HashCode);
         OnOperation(random);
         if (_storage.TryGetValue(key, out var handle)) {
-            var value = (ComputedBase?)handle.Target;
+            var value = (Computed?)handle.Target;
             if (value != null)
                 return value;
 
@@ -71,7 +71,7 @@ public sealed class ComputedRegistry : IDisposable
         return null;
     }
 
-    public void Register(ComputedBase computed)
+    public void Register(Computed computed)
     {
         // Debug.WriteLine($"{nameof(Register)}: {computed}");
 
@@ -84,7 +84,7 @@ public sealed class ComputedRegistry : IDisposable
         GCHandle? newHandle = null;
         while (computed.ConsistencyState != ConsistencyState.Invalidated) {
             if (_storage.TryGetValue(key, out var handle)) {
-                var target = (ComputedBase?) handle.Target;
+                var target = (Computed?) handle.Target;
                 if (target == computed) {
                     if (newHandle.HasValue)
                         _gcHandlePool.Release(newHandle.Value, random);
@@ -106,7 +106,7 @@ public sealed class ComputedRegistry : IDisposable
         }
     }
 
-    public void Unregister(ComputedBase computed)
+    public void Unregister(Computed computed)
     {
         // We can't remove what still could be invalidated,
         // since "usedBy" links are resolved via this registry
@@ -134,11 +134,11 @@ public sealed class ComputedRegistry : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void PseudoRegister(ComputedBase computed)
+    public void PseudoRegister(Computed computed)
         => OnRegister?.Invoke(computed);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void PseudoUnregister(ComputedBase computed)
+    public void PseudoUnregister(Computed computed)
         => OnUnregister?.Invoke(computed);
 
     public void InvalidateEverything()
@@ -171,7 +171,7 @@ public sealed class ComputedRegistry : IDisposable
         return graphPruner;
     }
 
-    public void ReportAccess(ComputedBase computed, bool isNew)
+    public void ReportAccess(Computed computed, bool isNew)
     {
         if (OnAccess != null && computed.Input.Function is IComputeMethodFunction)
             OnAccess.Invoke(computed, isNew);

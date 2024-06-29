@@ -16,7 +16,7 @@ public sealed class ConcurrentTimerSet<TTimer> : SafeAsyncDisposableBase
     private readonly int _concurrencyLevelMask;
     private readonly Moment _start;
 
-    public IMomentClock Clock { get; }
+    public MomentClock Clock { get; }
     public TickSource TickSource { get; }
     public TimeSpan Quanta { get; }
     public int ConcurrencyLevel { get; }

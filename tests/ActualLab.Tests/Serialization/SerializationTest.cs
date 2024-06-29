@@ -52,7 +52,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     {
         default(Moment).AssertPassesThroughAllSerializers(Out);
         Moment.EpochStart.AssertPassesThroughAllSerializers(Out);
-        SystemClock.Now.AssertPassesThroughAllSerializers(Out);
+        Moment.Now.AssertPassesThroughAllSerializers(Out);
         new Moment(DateTime.MinValue.ToUniversalTime()).AssertPassesThroughAllSerializers(Out);
         new Moment(DateTime.MaxValue.ToUniversalTime()).AssertPassesThroughAllSerializers(Out);
     }

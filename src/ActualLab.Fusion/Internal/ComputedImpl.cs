@@ -1,6 +1,6 @@
 namespace ActualLab.Fusion.Internal;
 
-public static class ComputedImpl
+public static partial class ComputedImpl
 {
     // TrySetOutput
 
@@ -11,63 +11,52 @@ public static class ComputedImpl
     // Invalidation
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void InvalidateFromCall(ComputedBase computed)
+    public static void InvalidateFromCall(Computed computed)
         => computed.InvalidateFromCall();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void StartAutoInvalidation(ComputedBase computed)
+    public static void StartAutoInvalidation(Computed computed)
         => computed.StartAutoInvalidation();
 
     // Keep-alive timeouts
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void RenewTimeouts(ComputedBase computed, bool isNew)
+    public static void RenewTimeouts(Computed computed, bool isNew)
         => computed.RenewTimeouts(isNew);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void CancelTimeouts(ComputedBase computed)
+    public static void CancelTimeouts(Computed computed)
         => computed.CancelTimeouts();
 
     // Dependency tracking
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ComputedBase[] GetUsed(ComputedBase computed)
-        => computed.GetUsed();
+    public static Computed[] GetDependencies(Computed computed)
+        => computed.GetDependencies();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static (ComputedInput Input, ulong Version)[] GetUsedBy(ComputedBase computed)
-        => computed.GetUsedBy();
+    public static (ComputedInput Input, ulong Version)[] GetDependants(Computed computed)
+        => computed.GetDependants();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void AddUsed(ComputedBase computed, ComputedBase used)
-        => computed.AddUsed(used);
+    public static void AddDependency(Computed computed, Computed dependency)
+        => computed.AddDependency(dependency);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void RemoveUsedBy(ComputedBase computed, ComputedBase usedBy)
-        => computed.RemoveUsedBy(usedBy);
+    public static void RemoveDependant(Computed computed, Computed dependant)
+        => computed.RemoveDependant(dependant);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static (int OldCount, int NewCount) PruneUsedBy(ComputedBase computed)
-        => computed.PruneUsedBy();
+    public static (int OldCount, int NewCount) PruneDependants(Computed computed)
+        => computed.PruneDependants();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void CopyUsedTo(ComputedBase computed, ref ArrayBuffer<ComputedBase> buffer)
-        => computed.CopyUsedTo(ref buffer);
-
-    public static void CopyAllUsedTo(ComputedBase computed, ref ArrayBuffer<ComputedBase> buffer)
-    {
-        var startCount = buffer.Count;
-        computed.CopyUsedTo(ref buffer);
-        var endCount = buffer.Count;
-        for (var i = startCount; i < endCount; i++) {
-            var c = buffer[i];
-            c.CopyUsedTo(ref buffer);
-        }
-    }
+    public static void CopyDependenciesTo(Computed computed, ref ArrayBuffer<Computed> buffer)
+        => computed.CopyDependenciesTo(ref buffer);
 
     // Error handling
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsTransientError(ComputedBase computed, Exception error)
+    public static bool IsTransientError(Computed computed, Exception error)
         => computed.IsTransientError(error);
 }

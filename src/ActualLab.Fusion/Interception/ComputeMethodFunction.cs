@@ -46,7 +46,7 @@ public class ComputeMethodFunction<T>(
                 return computed;
             }
             catch (Exception e) {
-                var delayTask = ComputedHelpers.TryReprocessInternalCancellation(
+                var delayTask = ComputedImpl.FinalizeAndTryReprocessInternalCancellation(
                     nameof(Compute), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
                 if (delayTask == SpecialTasks.MustThrow)
                     throw;

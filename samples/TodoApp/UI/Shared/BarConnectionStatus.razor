@@ -31,7 +31,7 @@
 
 @code {
     [Inject] private RpcPeerStateMonitor Monitor { get; init; } = null!;
-    [Inject] private IMomentClock Clock { get; init; } = null!;
+    [Inject] private MomentClock Clock { get; init; } = null!;
 
     [Parameter] public string CssClass { get; set; } = "";
 

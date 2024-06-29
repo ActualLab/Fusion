@@ -1,19 +1,10 @@
-using System.Reactive.PlatformServices;
-
 namespace ActualLab.Time;
 
-public interface IServerClock : IMomentClock
-{
-    IMomentClock BaseClock { get; }
-    TimeSpan Offset { get; set; }
-    Task WhenReady { get; }
-}
-
-public class ServerClock : IServerClock
+public class ServerClock(MomentClock? baseClock = null) : MomentClock
 {
     private volatile TaskCompletionSource<TimeSpan> _offsetSource = TaskCompletionSourceExt.New<TimeSpan>();
 
-    public IMomentClock BaseClock { get; }
+    public MomentClock BaseClock { get; } = baseClock ?? MomentClockSet.Default.CpuClock;
 
     public TimeSpan Offset {
         get {
@@ -28,25 +19,10 @@ public class ServerClock : IServerClock
         }
     }
 
-    public Moment Now {
+    public Task WhenReady => _offsetSource.Task;
+
+    public sealed override Moment Now {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => BaseClock.Now + Offset;
     }
-
-    Moment IMomentClock.Now => Now;
-    DateTimeOffset ISystemClock.UtcNow => Now;
-    public Task WhenReady => _offsetSource.Task;
-
-    public ServerClock(IMomentClock? baseClock = null)
-        => BaseClock = baseClock ?? MomentClockSet.Default.CpuClock;
-
-    public override string ToString() => $"{GetType().Name}()";
-    public Moment ToRealTime(Moment localTime) => localTime;
-    public Moment ToLocalTime(Moment realTime) => realTime;
-    public TimeSpan ToRealDuration(TimeSpan localDuration) => localDuration;
-    public TimeSpan ToLocalDuration(TimeSpan realDuration) => realDuration;
-
-    public Task Delay(TimeSpan dueIn, CancellationToken cancellationToken = default)
-        // TODO: Make it work properly, i.e. taking into account time changes, sleep/resume, etc.
-        => Task.Delay(dueIn, cancellationToken);
 }

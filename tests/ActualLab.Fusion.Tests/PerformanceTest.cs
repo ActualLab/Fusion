@@ -57,8 +57,8 @@ public abstract class PerformanceTestBase : FusionTestBase
         await Task.WhenAll(tasks);
     }
 
-    [Fact]
-    // [Fact(Skip = "Performance")]
+    // [Fact]
+    [Fact(Skip = "Performance")]
     public async Task ComputedPerformanceTest()
     {
         if (TestRunnerInfo.IsBuildAgent())
@@ -139,10 +139,10 @@ public abstract class PerformanceTestBase : FusionTestBase
                 .Range(0, threadCount)
                 .Select(i => Task.Run(() => Reader($"R{i}", iterationCount, whenReadySource.Task), CancellationToken.None))
                 .ToArray();
-            var startTime = CpuClock.Now;
+            var startedAt = CpuTimestamp.Now;
             whenReadySource.SetResult(default);
             var results = await Task.WhenAll(tasks);
-            var elapsed = CpuClock.Now - startTime;
+            var elapsed = startedAt.Elapsed;
 
             // ReSharper disable once MethodHasAsyncOverload
             stopCts.Cancel();

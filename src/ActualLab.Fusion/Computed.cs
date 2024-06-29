@@ -1,6 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Collections.Slim;
-using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Resilience;
@@ -17,24 +15,24 @@ public interface IComputed : IResult, IHasVersion<ulong>
     IResult Output { get; }
     Type OutputType { get; }
     Task OutputAsTask { get; }
-    event Action<ComputedBase> Invalidated;
+    event Action<Computed> Invalidated;
 
     void Invalidate(bool immediately = false);
 
-    ValueTask<ComputedBase> UpdateUntyped(CancellationToken cancellationToken = default);
+    ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
     ValueTask UseUntyped(CancellationToken cancellationToken = default);
 
     TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg);
 }
 
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-public abstract partial class ComputedBase(ComputedOptions options, ComputedInput input) : IComputed, IGenericTimeoutHandler
+public abstract partial class Computed(ComputedOptions options, ComputedInput input) : IComputed, IGenericTimeoutHandler
 {
     private volatile int _state;
     private volatile ComputedFlags _flags;
     private long _lastKeepAliveSlot;
-    private RefHashSetSlim3<ComputedBase> _used;
-    private HashSetSlim3<(ComputedInput Input, ulong Version)> _usedBy;
+    private RefHashSetSlim3<Computed> _dependencies;
+    private HashSetSlim3<(ComputedInput Input, ulong Version)> _dependants;
     // ReSharper disable once InconsistentNaming
     private InvalidatedHandlerSet _invalidated;
 
@@ -77,7 +75,7 @@ public abstract partial class ComputedBase(ComputedOptions options, ComputedInpu
     public abstract Exception? Error { get; }
     public abstract Result<TOther> Cast<TOther>();
 
-    public event Action<ComputedBase> Invalidated {
+    public event Action<Computed> Invalidated {
         add {
             if (ConsistencyState == ConsistencyState.Invalidated) {
                 value.Invoke(this);
@@ -155,14 +153,14 @@ public abstract partial class ComputedBase(ComputedOptions options, ComputedInpu
             }
             finally {
                 // Any code called here may not throw
-                _used.Apply(this, (self, c) => c.RemoveUsedBy(self));
-                _used.Clear();
-                _usedBy.Apply(default(Unit), static (_, usedByEntry) => {
+                _dependencies.Apply(this, (self, c) => c.RemoveDependant(self));
+                _dependencies.Clear();
+                _dependants.Apply(default(Unit), static (_, usedByEntry) => {
                     var c = usedByEntry.Input.GetExistingComputed();
                     if (c != null && c.Version == usedByEntry.Version)
                         c.Invalidate(); // Invalidate doesn't throw - ever
                 });
-                _usedBy.Clear();
+                _dependants.Clear();
             }
         }
         catch (Exception e) {
@@ -182,7 +180,7 @@ public abstract partial class ComputedBase(ComputedOptions options, ComputedInpu
 
     // Update & Use
 
-    public abstract ValueTask<ComputedBase> UpdateUntyped(CancellationToken cancellationToken = default);
+    public abstract ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
     public abstract ValueTask UseUntyped(CancellationToken cancellationToken = default);
 
     // Handy helper: Apply
@@ -223,20 +221,20 @@ public abstract partial class ComputedBase(ComputedOptions options, ComputedInpu
             this.Invalidate(timeout);
     }
 
-    protected internal ComputedBase[] GetUsed()
+    protected internal Computed[] GetDependencies()
     {
-        var result = new ComputedBase[_used.Count];
+        var result = new Computed[_dependencies.Count];
         lock (Lock) {
-            _used.CopyTo(result);
+            _dependencies.CopyTo(result);
             return result;
         }
     }
 
-    protected internal (ComputedInput Input, ulong Version)[] GetUsedBy()
+    protected internal (ComputedInput Input, ulong Version)[] GetDependants()
     {
-        var result = new (ComputedInput Input, ulong Version)[_usedBy.Count];
+        var result = new (ComputedInput Input, ulong Version)[_dependants.Count];
         lock (Lock) {
-            _usedBy.CopyTo(result);
+            _dependants.CopyTo(result);
             return result;
         }
     }
@@ -266,7 +264,7 @@ public abstract partial class ComputedBase(ComputedOptions options, ComputedInpu
         }
     }
 
-    protected internal void AddUsed(ComputedBase used)
+    protected internal void AddDependency(Computed dependency)
     {
         // Debug.WriteLine($"{nameof(AddUsed)}: {this} <- {used}");
         lock (Lock) {
@@ -284,30 +282,30 @@ public abstract partial class ComputedBase(ComputedOptions options, ComputedInpu
                 //   later point.
                 return;
             }
-            if (used.AddUsedBy(this))
-                _used.Add(used);
+            if (dependency.AddDependant(this))
+                _dependencies.Add(dependency);
         }
     }
 
     // Should be called only from AddUsed
-    private bool AddUsedBy(ComputedBase usedBy)
+    private bool AddDependant(Computed dependant)
     {
         lock (Lock) {
             switch (ConsistencyState) {
             case ConsistencyState.Computing:
                 throw Errors.WrongComputedState(ConsistencyState);
             case ConsistencyState.Invalidated:
-                usedBy.Invalidate();
+                dependant.Invalidate();
                 return false;
             }
 
-            var usedByRef = (usedBy.Input, usedBy.Version);
-            _usedBy.Add(usedByRef);
+            var usedByRef = (dependant.Input, dependant.Version);
+            _dependants.Add(usedByRef);
             return true;
         }
     }
 
-    protected internal void RemoveUsedBy(ComputedBase usedBy)
+    protected internal void RemoveDependant(Computed usedBy)
     {
         lock (Lock) {
             if (ConsistencyState == ConsistencyState.Invalidated)
@@ -316,11 +314,11 @@ public abstract partial class ComputedBase(ComputedOptions options, ComputedInpu
                 // _used/_usedBy once invalidation flag is set
                 return;
 
-            _usedBy.Remove((usedBy.Input, usedBy.Version));
+            _dependants.Remove((usedBy.Input, usedBy.Version));
         }
     }
 
-    protected internal (int OldCount, int NewCount) PruneUsedBy()
+    protected internal (int OldCount, int NewCount) PruneDependants()
     {
         lock (Lock) {
             if (ConsistencyState != ConsistencyState.Consistent)
@@ -330,23 +328,23 @@ public abstract partial class ComputedBase(ComputedOptions options, ComputedInpu
                 return (0, 0);
 
             var replacement = new HashSetSlim3<(ComputedInput Input, ulong Version)>();
-            var oldCount = _usedBy.Count;
-            foreach (var entry in _usedBy.Items) {
+            var oldCount = _dependants.Count;
+            foreach (var entry in _dependants.Items) {
                 var c = entry.Input.GetExistingComputed();
                 if (c != null && c.Version == entry.Version)
                     replacement.Add(entry);
             }
-            _usedBy = replacement;
-            return (oldCount, _usedBy.Count);
+            _dependants = replacement;
+            return (oldCount, _dependants.Count);
         }
     }
 
-    protected internal void CopyUsedTo(ref ArrayBuffer<ComputedBase> buffer)
+    protected internal void CopyDependenciesTo(ref ArrayBuffer<Computed> buffer)
     {
         lock (Lock) {
             var count = buffer.Count;
-            buffer.EnsureCapacity(count + _used.Count);
-            _used.CopyTo(buffer.Buffer.AsSpan(count));
+            buffer.EnsureCapacity(count + _dependencies.Count);
+            _dependencies.CopyTo(buffer.Buffer.AsSpan(count));
         }
     }
 
@@ -355,166 +353,15 @@ public abstract partial class ComputedBase(ComputedOptions options, ComputedInpu
         if (error is OperationCanceledException)
             return true; // Must be transient under any circumstances in IComputed
 
-        TransiencyResolver<ComputedBase>? transiencyResolver = null;
+        TransiencyResolver<Computed>? transiencyResolver = null;
         try {
             var services = Input.Function.Services;
-            transiencyResolver = services.GetService<TransiencyResolver<ComputedBase>>();
+            transiencyResolver = services.GetService<TransiencyResolver<Computed>>();
         }
         catch (ObjectDisposedException) {
             // We want to handle IServiceProvider disposal gracefully
         }
         return transiencyResolver?.Invoke(error).IsTransient()
             ?? TransiencyResolvers.PreferTransient.Invoke(error).IsTransient();
-    }
-}
-
-public abstract class Computed<T> : ComputedBase, IResult<T>
-{
-    private Result<T> _output;
-    private Task<T>? _outputAsTask;
-
-    // IComputed properties
-
-    public IComputeFunction<T> Function => (IComputeFunction<T>)Input.Function;
-
-    public sealed override Type OutputType {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => typeof(T);
-    }
-
-    public new Result<T> Output {
-        get {
-            this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
-            return _output;
-        }
-    }
-
-    public sealed override Task<T> OutputAsTask {
-        get {
-            if (_outputAsTask != null)
-                return _outputAsTask;
-
-            lock (Lock) {
-                this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
-                return _outputAsTask ??= _output.AsTask();
-            }
-        }
-    }
-
-    // IResult<T> properties
-    public T? ValueOrDefault => Output.ValueOrDefault;
-    public T Value => Output.Value;
-    public sealed override Exception? Error => Output.Error;
-    public sealed override bool HasValue => Output.HasValue;
-    public sealed override bool HasError => Output.HasError;
-    public sealed override object? UntypedValue => Output.Value;
-    public sealed override Result<TOther> Cast<TOther>()
-        => Output.Cast<TOther>();
-
-    // IResult<T> methods
-
-    public bool IsValue([MaybeNullWhen(false)] out T value)
-        => Output.IsValue(out value);
-    public bool IsValue([MaybeNullWhen(false)] out T value, [MaybeNullWhen(true)] out Exception error)
-        => Output.IsValue(out value, out error!);
-    public Result<T> AsResult()
-        => Output.AsResult();
-    T IConvertibleTo<T>.Convert() => Value;
-    Result<T> IConvertibleTo<Result<T>>.Convert() => AsResult();
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected Computed(ComputedOptions options, ComputedInput input)
-        : base(options, input)
-    { }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected Computed(ComputedOptions options, ComputedInput input, Result<T> output, bool isConsistent)
-        : base(options, input)
-    {
-        ConsistencyState = isConsistent ? ConsistencyState.Consistent : ConsistencyState.Invalidated;
-        _output = output;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Deconstruct(out T value, out Exception? error)
-        => Output.Deconstruct(out value, out error);
-
-    public void Deconstruct(out T value, out Exception? error, out ulong version)
-    {
-        Output.Deconstruct(out value, out error);
-        version = Version;
-    }
-
-    public override string ToString()
-        => $"{GetType().GetName()}({Input} v.{Version.FormatVersion()}, State: {ConsistencyState})";
-
-    // GetHashCode
-
-    public override int GetHashCode() => (int)Version;
-
-    // Update & use
-
-    public sealed override async ValueTask<ComputedBase> UpdateUntyped(CancellationToken cancellationToken = default)
-        => await Update(cancellationToken).ConfigureAwait(false);
-
-    public async ValueTask<Computed<T>> Update(CancellationToken cancellationToken = default)
-    {
-        if (this.IsConsistent())
-            return this;
-
-        using var scope = Computed.BeginIsolation();
-        return await Function.Invoke(Input, scope.Context, cancellationToken).ConfigureAwait(false);
-    }
-
-    public sealed override async ValueTask UseUntyped(CancellationToken cancellationToken = default)
-        => await Use(cancellationToken).ConfigureAwait(false);
-
-    public async ValueTask<T> Use(CancellationToken cancellationToken = default)
-    {
-        var context = ComputeContext.Current;
-        if ((context.CallOptions & CallOptions.GetExisting) != 0) // Both GetExisting & Invalidate
-            throw Errors.InvalidContextCallOptions(context.CallOptions);
-
-        // Slightly faster version of this.TryUseExistingFromLock(context)
-        if (this.IsConsistent()) {
-            // It can become inconsistent here, but we don't care, since...
-            ComputedHelpers.UseNew(this, context);
-            // it can also become inconsistent here & later, and UseNew handles this.
-            // So overall, Use(...) guarantees the dependency chain will be there even
-            // if computed is invalidated right after above "if".
-            return Value;
-        }
-
-        var computed = await Function.Invoke(Input, context, cancellationToken).ConfigureAwait(false);
-        return computed.Value;
-    }
-
-    // Apply
-
-    public override TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg)
-        => handler.Apply(this, arg);
-
-    // Protected internal methods - you can call them via ComputedImpl
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    protected internal bool TrySetOutput(Result<T> output)
-    {
-        ComputedFlags flags;
-        lock (Lock) {
-            if (ConsistencyState != ConsistencyState.Computing)
-                return false;
-
-            ConsistencyState = ConsistencyState.Consistent;
-            _output = output;
-            flags = Flags;
-        }
-
-        if ((flags & ComputedFlags.InvalidateOnSetOutput) != 0) {
-            Invalidate((flags & ComputedFlags.InvalidateOnSetOutputImmediately) != 0);
-            return true;
-        }
-
-        StartAutoInvalidation();
-        return true;
     }
 }

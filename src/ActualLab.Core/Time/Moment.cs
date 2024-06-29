@@ -16,11 +16,24 @@ public readonly partial struct Moment(long epochOffsetTicks)
     public static readonly Moment MaxValue = new(long.MaxValue);
     public static readonly Moment EpochStart = default; // AKA Unix Epoch
 
+    public static Moment Now {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(DateTime.UtcNow);
+    }
+
+    public static Moment CpuNow {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(CpuClock.Zero + CpuClock.Stopwatch.Elapsed);
+    }
+
     // AKA Unix Time
     [DataMember(Order = 0)]
-    public long EpochOffsetTicks { get; } = epochOffsetTicks;
+    public readonly long EpochOffsetTicks = epochOffsetTicks;
 
-    public TimeSpan EpochOffset => new(EpochOffsetTicks);
+    public TimeSpan EpochOffset {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(EpochOffsetTicks);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Moment(TimeSpan epochOffset) : this(epochOffset.Ticks) { }
@@ -28,6 +41,7 @@ public readonly partial struct Moment(long epochOffsetTicks)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Moment(DateTime value)
         : this(value.ToUniversalTime() - DateTimeExt.UnixEpoch) { }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Moment(DateTimeOffset value)
         : this(value.ToUniversalTime() - DateTimeOffsetExt.UnixEpoch) { }
