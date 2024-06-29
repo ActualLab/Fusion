@@ -9,7 +9,6 @@ public struct StochasticCounter
     public const int MaxPrecision = 2048;
     public static int DefaultPrecision => HardwareInfo.ProcessorCountPo2;
 
-    private readonly int _mask;
     private volatile int _value;
 
     public int Value {
@@ -19,18 +18,17 @@ public struct StochasticCounter
         set => Interlocked.Exchange(ref _value, value);
     }
 
-    public int Precision {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _mask + 1;
-    }
+    public readonly int Mask;
+    public readonly int Precision;
 
-    public StochasticCounter(int precision)
+    public StochasticCounter(int precisionHint)
     {
-        if (precision < 1)
-            throw new ArgumentOutOfRangeException(nameof(precision));
+        if (precisionHint < 1)
+            throw new ArgumentOutOfRangeException(nameof(precisionHint));
 
-        precision = Math.Min(MaxPrecision, precision);
-        _mask = (int)Bits.GreaterOrEqualPowerOf2((ulong)precision) - 1;
+        precisionHint = Math.Min(MaxPrecision, precisionHint);
+        Mask = (int)Bits.GreaterOrEqualPowerOf2((ulong)precisionHint) - 1;
+        Precision = Mask + 1;
     }
 
     // Overloads w/o random
@@ -59,7 +57,7 @@ public struct StochasticCounter
             return false;
 
         if (Increment(random) is { } value && value > max) {
-            Interlocked.Add(ref _value, -(_mask + 1)); // Revert increment
+            Interlocked.Add(ref _value, -Precision); // Revert increment
             return false;
         }
 
@@ -72,7 +70,7 @@ public struct StochasticCounter
             return false;
 
         if (Decrement(random) is { } value && value < min) {
-            Interlocked.Add(ref _value, _mask + 1); // Revert decrement
+            Interlocked.Add(ref _value, Precision); // Revert decrement
             return false;
         }
 
@@ -81,13 +79,13 @@ public struct StochasticCounter
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int? Increment(int random)
-        => (random & _mask) == 0
-            ? Interlocked.Add(ref _value, _mask + 1)
+        => (random & Mask) == 0
+            ? Interlocked.Add(ref _value, Precision)
             : null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int? Decrement(int random)
-        => (random & _mask) == 0
-            ? Interlocked.Add(ref _value, -(_mask + 1))
+        => (random & Mask) == 0
+            ? Interlocked.Add(ref _value, -Precision)
             : null;
 }

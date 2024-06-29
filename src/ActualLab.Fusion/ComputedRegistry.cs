@@ -17,6 +17,7 @@ public sealed class ComputedRegistry : IDisposable
         public int InitialCapacity { get; init; } = FusionDefaults.ComputedRegistryCapacity;
         public int ConcurrencyLevel { get; init; } = FusionDefaults.ComputedRegistryConcurrencyLevel;
         public Func<AsyncLockSet<ComputedInput>>? LocksFactory { get; init; } = null;
+        // ReSharper disable once InconsistentNaming
         public GCHandlePool? GCHandlePool { get; init; } = null;
     }
 
@@ -48,10 +49,12 @@ public sealed class ComputedRegistry : IDisposable
             throw new ArgumentOutOfRangeException(
                 $"{nameof(settings)}.{nameof(settings.GCHandlePool)}.{nameof(_gcHandlePool.HandleType)}");
 
-        _opCounter = new StochasticCounter(HardwareInfo.GetProcessorCountPo2Factor(2));
+        _opCounter = new StochasticCounter(HardwareInfo.GetProcessorCountPo2Factor(4));
         InputLocks = settings.LocksFactory?.Invoke() ?? new AsyncLockSet<ComputedInput>(
             LockReentryMode.CheckedFail,
-            settings.ConcurrencyLevel, settings.InitialCapacity);
+            settings.ConcurrencyLevel,
+            settings.InitialCapacity,
+            ComputedInput.EqualityComparer);
         ChangeGraphPruner(new ComputedGraphPruner(new()), null!);
         UpdatePruneCounterThreshold();
     }
@@ -59,7 +62,6 @@ public sealed class ComputedRegistry : IDisposable
     public void Dispose()
         => _gcHandlePool.Dispose();
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public Computed? Get(ComputedInput key)
     {
         var random = key.HashCode + Environment.CurrentManagedThreadId;

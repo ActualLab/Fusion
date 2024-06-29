@@ -6,14 +6,20 @@ namespace ActualLab.Locking;
 
 #pragma warning disable CA2002
 
-public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLevel, int capacity)
-    where TKey : notnull
+public class AsyncLockSet<TKey>(
+    LockReentryMode reentryMode,
+    int concurrencyLevel,
+    int capacity,
+    IEqualityComparer<TKey>? equalityComparer = null
+    ) where TKey : notnull
 {
     public static int DefaultConcurrencyLevel => HardwareInfo.GetProcessorCountFactor();
     public static int DefaultCapacity => 31;
 
-    private readonly ConcurrentDictionary<TKey, Entry> _entries = new(concurrencyLevel, capacity);
-    private readonly ConcurrentPool<AsyncLock> _lockPool = new(() => new AsyncLock(reentryMode));
+    private readonly ConcurrentDictionary<TKey, Entry> _entries
+        = new(concurrencyLevel, capacity, equalityComparer ?? EqualityComparer<TKey>.Default);
+    private readonly ConcurrentPool<AsyncLock> _lockPool
+        = new(() => new AsyncLock(reentryMode));
 
     public LockReentryMode ReentryMode { get; } = reentryMode;
     public int Count => _entries.Count;

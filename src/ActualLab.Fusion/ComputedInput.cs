@@ -53,7 +53,7 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(ComputedInput? x, ComputedInput? y)
-            => !ReferenceEquals(x, null) && x.Equals(y);
+            => x?.Equals(y) ?? ReferenceEquals(y, null);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(ComputedInput obj)
