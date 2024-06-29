@@ -97,10 +97,10 @@ public abstract class Interceptor : IHasServices
             : invocation.Intercepted<TResult>();
     }
 
-    public virtual Func<Invocation, object?>? SelectHandler(Invocation invocation)
+    public virtual Func<Invocation, object?>? SelectHandler(in Invocation invocation)
         => GetHandler(invocation);
 
-    public Func<Invocation, object?>? GetHandler(Invocation invocation)
+    public Func<Invocation, object?>? GetHandler(in Invocation invocation)
         => _handlerCache.GetOrAdd(invocation.Method, _createHandlerUntyped, invocation);
 
     public MethodDef? GetMethodDef(MethodInfo method, Type proxyType)

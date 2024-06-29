@@ -70,7 +70,7 @@ public abstract class PerformanceTestBase : FusionTestBase
         plainUsers.UseEntityResolver = UseEntityResolver;
 
         var fusionOpCountPerCore = 16_000_000;
-        var fusionReadersPerCore = 5;
+        var fusionReadersPerCore = 20;
         var fusionIterationCount = fusionOpCountPerCore / fusionReadersPerCore;
         var fusionReaderCount = HardwareInfo.GetProcessorCountFactor(fusionReadersPerCore);
 

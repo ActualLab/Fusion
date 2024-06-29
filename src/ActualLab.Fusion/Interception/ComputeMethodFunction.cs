@@ -65,7 +65,7 @@ public class ComputeMethodFunction<T>(
         if (ctIndex < 0)
             return invocation.InterceptedUntyped()!;
 
-        var arguments = input.Arguments;
+        var arguments = invocation.Arguments;
         arguments.SetCancellationToken(ctIndex, cancellationToken);
         try {
             return invocation.InterceptedUntyped()!;

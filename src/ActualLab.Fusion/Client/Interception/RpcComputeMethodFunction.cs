@@ -51,7 +51,7 @@ public class RpcComputeMethodFunction<T>(
         var startedAt = CpuTimestamp.Now;
         while (true) {
             try {
-                var peer = RpcCallRouter.Invoke(RpcMethodDef, typedInput.Arguments);
+                var peer = RpcCallRouter.Invoke(RpcMethodDef, typedInput.Invocation.Arguments);
                 if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
                     // Compute local
                     var computed = new ComputeMethodComputed<T>(ComputedOptions, typedInput);
@@ -59,7 +59,7 @@ public class RpcComputeMethodFunction<T>(
                     if (LocalTarget != null) {
                         // With local target
                         try {
-                            await MethodDef.TargetAsyncInvoker.Invoke(LocalTarget!, typedInput.Arguments)
+                            await MethodDef.TargetAsyncInvoker.Invoke(LocalTarget!, typedInput.Invocation.Arguments)
                                 .ConfigureAwait(false);
                             var dependencies = computed.GetDependencies();
                             if (dependencies.Length != 1)
@@ -277,13 +277,13 @@ public class RpcComputeMethodFunction<T>(
         CancellationToken cancellationToken = default)
     {
         // Double-check locking
-        var computed = input.GetExistingComputed() as Computed<T>;
+        var computed = ComputedRegistry.Instance.Get(input) as Computed<T>; // = input.GetExistingComputed()
         if (ComputedImpl.TryUseExisting(computed, context))
             return computed!;
 
         using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
 
-        computed = input.GetExistingComputed() as Computed<T>;
+        computed = ComputedRegistry.Instance.Get(input) as Computed<T>; // = input.GetExistingComputed()
         if (ComputedImpl.TryUseExistingFromLock(computed, context))
             return computed!;
 
@@ -293,20 +293,9 @@ public class RpcComputeMethodFunction<T>(
         return computed;
     }
 
-    public override Task<T> InvokeAndStrip(
-        ComputedInput input,
-        ComputeContext context,
-        CancellationToken cancellationToken = default)
-    {
-        var computed = input.GetExistingComputed() as Computed<T>;
-        return ComputedImpl.TryUseExisting(computed, context)
-            ? ComputedImpl.StripToTask(computed, context)
-            : TryRecompute(input, context, cancellationToken);
-    }
-
     // Protected methods
 
-    protected new async Task<T> TryRecompute(
+    protected internal override async Task<T> TryRecompute(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken = default)
@@ -319,7 +308,7 @@ public class RpcComputeMethodFunction<T>(
 
         using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
 
-        var existing = input.GetExistingComputed() as Computed<T>;
+        var existing = ComputedRegistry.Instance.Get(input) as Computed<T>; // = input.GetExistingComputed()
         if (ComputedImpl.TryUseExistingFromLock(existing, context))
             return ComputedImpl.Strip(existing, context);
 
@@ -327,21 +316,6 @@ public class RpcComputeMethodFunction<T>(
         var computed = await Compute(input, existing, cancellationToken).ConfigureAwait(false);
         ComputedImpl.UseNew(computed, context);
         return computed.Value;
-    }
-
-    protected async Task<Computed<T>> InvokeLocalTarget(ComputeMethodInput input, CancellationToken cancellationToken)
-    {
-        using var ccs = Computed.BeginCapture();
-        try {
-            await MethodDef.TargetAsyncInvoker.Invoke(LocalTarget!, input.Arguments).ConfigureAwait(false);
-            return ccs.Context.GetCaptured<T>();
-        }
-        catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            var computedOpt = ccs.Context.TryGetCaptured<T>();
-            if (computedOpt.IsSome(out var computed) && computed.HasError)
-                return computed; // Return the original error, if possible
-            throw;
-        }
     }
 
     protected static RpcOutboundComputeCall<T>? SendRpcCall(
@@ -362,11 +336,11 @@ public class RpcComputeMethodFunction<T>(
             // Fixing invocation: set CancellationToken + Context
             var arguments = invocation.Arguments with { }; // Cloning
             arguments.SetCancellationToken(ctIndex, cancellationToken);
-            invocation = invocation with { Context = context, Arguments = arguments };
+            invocation = invocation.With(arguments, context);
         }
         else {
             // Nothing to fix: it's the same cancellation token or there is no token
-            invocation = invocation with { Context = context };
+            invocation = invocation.With(context);
         }
 
         _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(rpcInterceptor, invocation);

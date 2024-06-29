@@ -121,7 +121,6 @@ public class AsyncLockSet<TKey>(
 
     // Nested types
 
-    [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly struct Releaser(object entry, AsyncLock.Releaser releaser) : IAsyncLockReleaser
     {
         private readonly Entry? _entry = (Entry)entry;

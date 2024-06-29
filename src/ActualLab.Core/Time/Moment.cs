@@ -8,7 +8,6 @@ namespace ActualLab.Time;
 [JsonConverter(typeof(MomentJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(MomentNewtonsoftJsonConverter))]
 [TypeConverter(typeof(MomentTypeConverter))]
-[method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public readonly partial struct Moment(long epochOffsetTicks)
     : IEquatable<Moment>, IComparable<Moment>
 {

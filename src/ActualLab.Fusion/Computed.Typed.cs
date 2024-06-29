@@ -22,6 +22,7 @@ public abstract class Computed<T> : Computed, IResult<T>
     }
 
     public new Result<T> Output {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
             return _output;
@@ -29,6 +30,7 @@ public abstract class Computed<T> : Computed, IResult<T>
     }
 
     public Task<T> OutputAsTask {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             if (_outputAsTask != null)
                 return _outputAsTask;

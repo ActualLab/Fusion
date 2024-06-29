@@ -27,7 +27,7 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
         CallRouter = Hub.CallRouter;
     }
 
-    public override Func<Invocation, object?>? SelectHandler(Invocation invocation)
+    public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
         => GetHandler(invocation) ?? (LocalTarget as Interceptor)?.SelectHandler(invocation);
 
     protected override Func<Invocation, object?>? CreateHandler<
@@ -52,7 +52,7 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
             else {
                 var context = invocation.Context as RpcOutboundContext ?? new();
                 context.Peer = peer; // We already know the peer - this allows to skip its detection
-                invocation = invocation with { Context = context };
+                invocation = invocation.With(context);
                 resultTask = remoteCallAsyncInvoker.Invoke(invocation);
             }
             return rpcMethodDef.WrapAsyncInvokerResult(resultTask);
@@ -77,7 +77,7 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
                 }
                 else {
                     context.Peer = peer;
-                    invocation = invocation with { Context = context };
+                    invocation = invocation.With(context);
                     resultTask = remoteCallAsyncInvoker.Invoke(invocation);
                 }
                 return await resultTask.ConfigureAwait(false);

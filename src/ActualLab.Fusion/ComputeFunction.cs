@@ -46,13 +46,13 @@ public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFu
         CancellationToken cancellationToken = default)
     {
         // Double-check locking
-        var computed = input.GetExistingComputed() as Computed<T>;
+        var computed = ComputedRegistry.Instance.Get(input) as Computed<T>; // = input.GetExistingComputed()
         if (ComputedImpl.TryUseExisting(computed, context))
             return computed!;
 
         var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
         try {
-            computed = input.GetExistingComputed() as Computed<T>;
+            computed = ComputedRegistry.Instance.Get(input) as Computed<T>; // = input.GetExistingComputed()
             if (ComputedImpl.TryUseExistingFromLock(computed, context))
                 return computed!;
 
@@ -77,25 +77,25 @@ public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFu
         }
     }
 
-    public virtual Task<T> InvokeAndStrip(
+    public Task<T> InvokeAndStrip(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken = default)
     {
-        var computed = input.GetExistingComputed() as Computed<T>;
+        var computed = ComputedRegistry.Instance.Get(input) as Computed<T>; // = input.GetExistingComputed()
         return ComputedImpl.TryUseExisting(computed, context)
             ? ComputedImpl.StripToTask(computed, context)
             : TryRecompute(input, context, cancellationToken);
     }
 
-    protected async Task<T> TryRecompute(
+    protected internal virtual async Task<T> TryRecompute(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken = default)
     {
         var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
         try {
-            var computed = input.GetExistingComputed() as Computed<T>;
+            var computed = ComputedRegistry.Instance.Get(input) as Computed<T>; // = input.GetExistingComputed()
             if (ComputedImpl.TryUseExistingFromLock(computed, context))
                 return ComputedImpl.Strip(computed, context);
 

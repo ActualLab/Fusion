@@ -24,8 +24,8 @@ public interface IComputed : IResult, IHasVersion<ulong>
     TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg);
 }
 
-[method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-public abstract partial class Computed(ComputedOptions options, ComputedInput input) : IComputed, IGenericTimeoutHandler
+public abstract partial class Computed(ComputedOptions options, ComputedInput input)
+    : IComputed, IGenericTimeoutHandler
 {
     private volatile int _state;
     private volatile ComputedFlags _flags;
@@ -58,7 +58,11 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         internal set => _state = (int)value;
     }
 
-    public IResult Output => this;
+    public IResult Output {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this;
+    }
+
     public abstract Type OutputType { get; }
 
     // IComputed implementation

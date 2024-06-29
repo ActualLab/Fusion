@@ -31,7 +31,7 @@ public class RpcComputeServiceInterceptor : ComputeServiceInterceptor
         LocalTarget = localTarget;
     }
 
-    public override Func<Invocation, object?>? SelectHandler(Invocation invocation)
+    public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
         => GetHandler(invocation) // Compute service method
             ?? RpcInterceptor.SelectHandler(invocation); // Regular or command service method
 

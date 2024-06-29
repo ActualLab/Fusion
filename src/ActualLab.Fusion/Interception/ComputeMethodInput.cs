@@ -10,19 +10,8 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     public readonly ComputeMethodDef MethodDef;
     public readonly Invocation Invocation;
 
-    // Shortcuts
-    public object Service {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Invocation.Proxy;
-    }
-
-    public ArgumentList Arguments {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Invocation.Arguments;
-    }
-
     public override bool IsDisposed
-        => MethodDef.IsDisposable && Service is IHasIsDisposed { IsDisposed: true };
+        => MethodDef.IsDisposable && Invocation.Proxy is IHasIsDisposed { IsDisposed: true };
 
     public ComputeMethodInput(IComputeFunction function, ComputeMethodDef methodDef, Invocation invocation)
     {
@@ -31,28 +20,34 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
 
         var arguments = invocation.Arguments;
         var hashCode = methodDef.Id
-            ^ invocation.Proxy.GetHashCode()
-            ^ arguments.GetHashCode(methodDef.CancellationTokenIndex);
+            + invocation.Proxy.GetHashCode()
+            + arguments.GetHashCode(methodDef.CancellationTokenIndex);
         Initialize(function, hashCode);
     }
 
     public override string ToString()
-        => ZString.Concat(Category, Arguments, "-Hash=", HashCode);
+        => ZString.Concat(Category, Invocation.Arguments, "-Hash=", HashCode);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override ComputedOptions GetComputedOptions()
         => MethodDef.ComputedOptions;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override Computed? GetExistingComputed()
         => ComputedRegistry.Instance.Get(this);
 
     // Equality
 
     public bool Equals(ComputeMethodInput? other)
-        => other != null
-        && HashCode == other.HashCode
-        && ReferenceEquals(MethodDef, other.MethodDef)
-        && ReferenceEquals(Service, other.Service)
-        && Arguments.Equals(other.Arguments, MethodDef.CancellationTokenIndex);
+    {
+        if (other == null || HashCode != other.HashCode || !ReferenceEquals(MethodDef, other.MethodDef))
+            return false;
+
+        var invocation = Invocation;
+        var otherInvocation = other.Invocation;
+        return ReferenceEquals(invocation.Proxy, otherInvocation.Proxy)
+            && invocation.Arguments.Equals(otherInvocation.Arguments, MethodDef.CancellationTokenIndex);
+    }
 
     public override bool Equals(ComputedInput? obj)
         => obj is ComputeMethodInput other && Equals(other);

@@ -132,8 +132,8 @@ public abstract class State<T> : ComputedInput,
 
     protected State(Options settings, IServiceProvider services, bool initialize = true)
     {
-        Initialize(this, RuntimeHelpers.GetHashCode(this));
         Services = services;
+        Initialize(this, RuntimeHelpers.GetHashCode(this));
 
         // ReSharper disable once VirtualMemberCallInConstructor
         if (initialize)

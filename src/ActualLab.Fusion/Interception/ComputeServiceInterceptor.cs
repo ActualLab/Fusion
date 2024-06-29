@@ -23,7 +23,7 @@ public class ComputeServiceInterceptor : Interceptor
         CommandServiceInterceptor = Hub.CommandServiceInterceptor;
     }
 
-    public override Func<Invocation, object?>? SelectHandler(Invocation invocation)
+    public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
         => GetHandler(invocation) ?? CommandServiceInterceptor.SelectHandler(invocation);
 
     protected override Func<Invocation, object?>? CreateHandler<
@@ -38,24 +38,35 @@ public class ComputeServiceInterceptor : Interceptor
     {
         var methodDef = function.MethodDef;
         var ctIndex = methodDef.CancellationTokenIndex;
-        var invokeAndStripCached = function.InvokeAndStrip; // Delegate call is faster than VT call
-        if (ctIndex < 0) {
-            // No CancellationToken -> faster path
-            return invocation => {
-                var input = new ComputeMethodInput(function, methodDef, invocation);
-                var task = invokeAndStripCached.Invoke(input, ComputeContext.Current, default);
-                // ReSharper disable once HeapView.BoxingAllocation
-                return methodDef.ReturnsValueTask ? new ValueTask<TUnwrapped>(task) : task;
-            };
+        return ctIndex >= 0
+            ? RegularHandler
+            : NoCancellationTokenHandler;
+
+        object? NoCancellationTokenHandler(Invocation invocation) {
+            var input = new ComputeMethodInput(function, methodDef, invocation);
+            // Inlined:
+            // var task = function.InvokeAndStrip(input, ComputeContext.Current, default);
+            var context = ComputeContext.Current;
+            var computed = ComputedRegistry.Instance.Get(input) as Computed<TUnwrapped>; // = input.GetExistingComputed()
+            var task = ComputedImpl.TryUseExisting(computed, context)
+                ? ComputedImpl.StripToTask(computed, context)
+                : function.TryRecompute(input, context, default);
+            // ReSharper disable once HeapView.BoxingAllocation
+            return methodDef.ReturnsValueTask ? new ValueTask<TUnwrapped>(task) : task;
         }
 
-        // There is CancellationToken -> slower path
-        return invocation => {
+        object? RegularHandler(Invocation invocation) {
             var input = new ComputeMethodInput(function, methodDef, invocation);
-            var arguments = input.Invocation.Arguments;
+            var arguments = invocation.Arguments;
             var cancellationToken = arguments.GetCancellationToken(ctIndex);
             try {
-                var task = invokeAndStripCached.Invoke(input, ComputeContext.Current, cancellationToken);
+                // Inlined:
+                // var task = function.InvokeAndStrip(input, ComputeContext.Current, cancellationToken);
+                var context = ComputeContext.Current;
+                var computed = ComputedRegistry.Instance.Get(input) as Computed<TUnwrapped>; // = input.GetExistingComputed()
+                var task = ComputedImpl.TryUseExisting(computed, context)
+                    ? ComputedImpl.StripToTask(computed, context)
+                    : function.TryRecompute(input, context, cancellationToken);
                 // ReSharper disable once HeapView.BoxingAllocation
                 return methodDef.ReturnsValueTask ? new ValueTask<TUnwrapped>(task) : task;
             }
@@ -64,7 +75,7 @@ public class ComputeServiceInterceptor : Interceptor
                     // We don't want memory leaks + unexpected cancellation later
                     arguments.SetCancellationToken(ctIndex, default);
             }
-        };
+        }
     }
 
     // We don't need to decorate this method with any dynamic access attributes

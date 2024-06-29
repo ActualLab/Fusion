@@ -2,7 +2,6 @@ using ActualLab.Internal;
 
 namespace ActualLab.Locking;
 
-[method: MethodImpl(MethodImplOptions.NoInlining)]
 public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unchecked)
     : IAsyncLock<AsyncLock.Releaser>
 {

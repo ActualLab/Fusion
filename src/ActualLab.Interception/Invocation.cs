@@ -2,14 +2,18 @@ using ActualLab.Interception.Internal;
 
 namespace ActualLab.Interception;
 
-[method: MethodImpl(MethodImplOptions.NoInlining)]
-public readonly record struct Invocation(
-    object Proxy,
-    MethodInfo Method,
-    ArgumentList Arguments,
-    Delegate InterceptedDelegate,
-    object? Context = null)
+public readonly struct Invocation(
+    object proxy,
+    MethodInfo method,
+    ArgumentList arguments,
+    Delegate interceptedDelegate,
+    object? context = null)
 {
+    public readonly object Proxy = proxy;
+    public readonly MethodInfo Method = method;
+    public readonly ArgumentList Arguments = arguments;
+    public readonly Delegate InterceptedDelegate = interceptedDelegate;
+    public readonly object? Context = context;
     public object? InterfaceProxyTarget => (Proxy as InterfaceProxy)?.ProxyTarget;
 
     public override string ToString()
@@ -32,4 +36,17 @@ public readonly record struct Invocation(
         => InterceptedDelegate is Func<ArgumentList, TResult> func
             ? func.Invoke(Arguments)
             : throw Errors.InvalidInterceptedDelegate();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Invocation With(ArgumentList arguments)
+        => new(Proxy, Method, arguments, interceptedDelegate, Context);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Invocation With(object? context)
+        => new(Proxy, Method, Arguments, InterceptedDelegate, context);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Invocation With(ArgumentList arguments, object? context)
+        => new(Proxy, Method, arguments, InterceptedDelegate, context);
+
 };
