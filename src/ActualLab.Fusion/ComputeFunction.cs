@@ -3,7 +3,10 @@ using ActualLab.Locking;
 
 namespace ActualLab.Fusion;
 
-public interface IComputeFunction : IHasServices;
+public interface IComputeFunction : IHasServices
+{
+    FusionInternalHub Hub { get; }
+}
 
 public interface IComputeFunction<T> : IComputeFunction
 {
@@ -17,7 +20,7 @@ public interface IComputeFunction<T> : IComputeFunction
         CancellationToken cancellationToken = default);
 }
 
-public abstract class ComputeFunctionBase<T>(IServiceProvider services) : IComputeFunction<T>
+public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFunction<T>
 {
     protected static AsyncLockSet<ComputedInput> InputLocks {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -30,7 +33,11 @@ public abstract class ComputeFunctionBase<T>(IServiceProvider services) : ICompu
     protected ILogger Log => _log ??= Services.LogFor(GetType());
     protected ILogger? DebugLog => (_debugLog ??= LazySlim.New(Log.IfEnabled(LogLevel.Debug))).Value;
 
-    public IServiceProvider Services { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; } = services;
+    IServiceProvider IHasServices.Services => Services;
+    FusionInternalHub IComputeFunction.Hub => Hub;
+
+    public readonly FusionInternalHub Hub = hub;
+    public readonly IServiceProvider Services = hub.Services;
 
     public virtual async ValueTask<Computed<T>> Invoke(
         ComputedInput input,

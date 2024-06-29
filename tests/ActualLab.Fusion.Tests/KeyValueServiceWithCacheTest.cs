@@ -7,14 +7,14 @@ namespace ActualLab.Fusion.Tests;
 public class KeyValueServiceWithCacheTest : FusionTestBase
 {
     public KeyValueServiceWithCacheTest(ITestOutputHelper @out) : base(@out)
-        => UseClientComputedCache = true;
+        => UseRemoteComputedCache = true;
 
     [Fact]
     public async Task BasicTest()
     {
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
-        var cache = ClientServices.GetRequiredService<IClientComputedCache>();
+        var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
         await cache.WhenInitialized;
 
         var clientServices2 = CreateServices(true);
@@ -53,7 +53,7 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
     {
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
-        var cache = ClientServices.GetRequiredService<IClientComputedCache>();
+        var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
         await cache.WhenInitialized;
 
         var clientServices2 = CreateServices(true);
@@ -99,9 +99,9 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
         await state.When(x => x == "a c").WaitAsync(TimeSpan.FromSeconds(1));
     }
 
-    private static async Task<ClientComputed<string>> GetComputed(IKeyValueService<string> kv, string key)
+    private static async Task<RemoteComputed<string>> GetComputed(IKeyValueService<string> kv, string key)
     {
         var c = await Computed.Capture(() => kv.Get(key));
-        return (ClientComputed<string>)c;
+        return (RemoteComputed<string>)c;
     }
 }

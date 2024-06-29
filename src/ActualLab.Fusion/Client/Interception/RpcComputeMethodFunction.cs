@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.ExceptionServices;
 using Cysharp.Text;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Internal;
@@ -15,24 +14,29 @@ namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD103
 
-public interface IHybridComputeMethodFunction : IComputeMethodFunction
+public interface IRpcComputeMethodFunction : IComputeMethodFunction
 {
     RpcMethodDef RpcMethodDef { get; }
+    object? LocalTarget { get; }
 }
 
-public class HybridComputeMethodFunction<T>(
+public class RpcComputeMethodFunction<T>(
     ComputeMethodDef methodDef,
     RpcMethodDef rpcMethodDef,
-    IClientComputedCache? cache,
-    IServiceProvider services
-    ) : ComputeMethodFunction<T>(methodDef, services), IHybridComputeMethodFunction
+    object? localTarget,
+    FusionInternalHub hub
+    ) : ComputeMethodFunction<T>(methodDef, hub), IRpcComputeMethodFunction
 {
     private string? _toString;
 
-    protected readonly IClientComputedCache? Cache = cache;
-    protected readonly RpcSafeCallRouter CallRouter = rpcMethodDef.Hub.InternalServices.CallRouter;
+    RpcMethodDef IRpcComputeMethodFunction.RpcMethodDef => RpcMethodDef;
+    object? IRpcComputeMethodFunction.LocalTarget => LocalTarget;
 
-    public RpcMethodDef RpcMethodDef { get; } = rpcMethodDef;
+    public readonly RpcMethodDef RpcMethodDef = rpcMethodDef;
+    public readonly RpcSafeCallRouter RpcCallRouter = rpcMethodDef.Hub.InternalServices.CallRouter;
+    public readonly RpcComputeCallOptions RpcCallOptions = hub.RpcComputeCallOptions;
+    public readonly IRemoteComputedCache? RemoteComputedCache = hub.RemoteComputedCache;
+    public readonly object? LocalTarget = localTarget;
 
     public override string ToString()
         => _toString ??= ZString.Concat('*', base.ToString());
@@ -47,12 +51,31 @@ public class HybridComputeMethodFunction<T>(
         var startedAt = CpuTimestamp.Now;
         while (true) {
             try {
-                var peer = CallRouter.UnsafeCallRouter.Invoke(RpcMethodDef, typedInput.Arguments);
+                var peer = RpcCallRouter.Invoke(RpcMethodDef, typedInput.Arguments);
                 if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
                     // Compute local
                     var computed = new ComputeMethodComputed<T>(ComputedOptions, typedInput);
+                    using var _ = Computed.BeginCompute(computed);
+                    if (LocalTarget != null) {
+                        // With local target
+                        try {
+                            await MethodDef.TargetAsyncInvoker.Invoke(LocalTarget!, typedInput.Arguments)
+                                .ConfigureAwait(false);
+                            var dependencies = computed.Used;
+                            if (dependencies.Length != 1)
+                                throw ActualLab.Internal.Errors.InternalError("A single dependency is expected here");
+
+                            var dependency = (Computed<T>)dependencies[0];
+                            computed.TrySetOutput(dependency.Output);
+                            return computed;
+                        }
+                        catch (Exception e) when (!ComputedHelpers.MustThrow(computed, e, cancellationToken)) {
+                            return computed;
+                        }
+                    }
+
+                    // Without local target (i.e. by invoking base class method)
                     try {
-                        using var _ = Computed.BeginCompute(computed);
                         var result = InvokeImplementation(typedInput, cancellationToken);
                         if (typedInput.MethodDef.ReturnsValueTask) {
                             var output = await ((ValueTask<T>)result).ConfigureAwait(false);
@@ -62,11 +85,10 @@ public class HybridComputeMethodFunction<T>(
                             var output = await ((Task<T>)result).ConfigureAwait(false);
                             computed.TrySetOutput(output);
                         }
-
                         return computed;
                     }
                     catch (Exception e) {
-                        var delayTask = ComputedHelpers.TryReprocess(
+                        var delayTask = ComputedHelpers.TryReprocessInternalCancellation(
                             nameof(Compute), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
                         if (delayTask == SpecialTasks.MustThrow)
                             throw;
@@ -84,7 +106,7 @@ public class HybridComputeMethodFunction<T>(
                     // existing != null -> it's invalidated, so no matter what's cached, we ignore it
                     return existing == null && cache != null
                         ? await ComputeCachedOrRpc(typedInput, cache, cancellationToken).ConfigureAwait(false)
-                        : await ComputeRpc(typedInput, cache, (ClientComputed<T>)existing!, cancellationToken)
+                        : await ComputeRpc(typedInput, cache, (RemoteComputed<T>)existing!, cancellationToken)
                             .ConfigureAwait(false);
                 }
                 catch (Exception e) {
@@ -102,10 +124,10 @@ public class HybridComputeMethodFunction<T>(
         }
     }
 
-    private static async Task<Computed<T>> ComputeRpc(
+    public static async Task<Computed<T>> ComputeRpc(
         ComputeMethodInput input,
-        IClientComputedCache? cache,
-        ClientComputed<T>? existing,
+        IRemoteComputedCache? cache,
+        RemoteComputed<T>? existing,
         CancellationToken cancellationToken)
     {
         var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
@@ -126,38 +148,16 @@ public class HybridComputeMethodFunction<T>(
         }
 
         var synchronizedSource = existing?.SynchronizedSource ?? AlwaysSynchronized.Source;
-        return new ClientComputed<T>(
+        return new RemoteComputed<T>(
             input.MethodDef.ComputedOptions,
             input, result,
             cacheEntry, call, synchronizedSource);
     }
 
-    private async Task<Computed<T>> ComputeRpcWithReprocessing(
-        ComputeMethodInput input,
-        IClientComputedCache? cache,
-        ClientComputed<T>? existing,
-        CancellationToken cancellationToken)
-    {
-        var tryIndex = 0;
-        var startedAt = CpuTimestamp.Now;
-        while (true) {
-            try {
-                await ComputeRpc(input, cache, existing, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception e) {
-                var delayTask = TryReprocessServerSideCancellation(input, e, startedAt, ref tryIndex, cancellationToken);
-                if (delayTask == SpecialTasks.MustThrow)
-                    throw;
-
-                await delayTask.ConfigureAwait(false);
-            }
-        }
-    }
-
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    private async ValueTask<Computed<T>> ComputeCachedOrRpc(
+    public async ValueTask<Computed<T>> ComputeCachedOrRpc(
         ComputeMethodInput input,
-        IClientComputedCache cache,
+        IRemoteComputedCache cache,
         CancellationToken cancellationToken)
     {
         var cacheInfoCapture = new RpcCacheInfoCapture(RpcCacheInfoCaptureMode.KeyOnly);
@@ -178,7 +178,7 @@ public class HybridComputeMethodFunction<T>(
         }
 
         var cacheEntry = new RpcCacheEntry(cacheKey, cacheResult.Data);
-        var cachedComputed = new ClientComputed<T>(
+        var cachedComputed = new RemoteComputed<T>(
             input.MethodDef.ComputedOptions,
             input, cacheResult.Value,
             cacheEntry);
@@ -199,10 +199,10 @@ public class HybridComputeMethodFunction<T>(
         return cachedComputed;
     }
 
-    private async Task ApplyRpcUpdate(
+    public async Task ApplyRpcUpdate(
         ComputeMethodInput input,
-        IClientComputedCache cache,
-        ClientComputed<T> cachedComputed)
+        IRemoteComputedCache cache,
+        RemoteComputed<T> cachedComputed)
     {
         // 1. Start the RPC call
         var cacheInfoCapture = new RpcCacheInfoCapture();
@@ -263,7 +263,7 @@ public class HybridComputeMethodFunction<T>(
         var cacheEntry = UpdateCache(cache, key, data);
 
         // 6. Create the new computed - it invalidates the cached one upon registering
-        var computed = new ClientComputed<T>(
+        var computed = new RemoteComputed<T>(
             input.MethodDef.ComputedOptions,
             input, result,
             cacheEntry, call, synchronizedSource);
@@ -310,6 +310,12 @@ public class HybridComputeMethodFunction<T>(
         ComputeContext context,
         CancellationToken cancellationToken = default)
     {
+        if (RpcCallOptions.ValidateRpcCallOrigin && RpcInboundContext.Current is { Peer: { } peer }) {
+            var handshake = peer.ConnectionState.Value.Handshake;
+            if (handshake != null && handshake.RemoteHubId == RpcMethodDef.Hub.Id)
+                throw Errors.RpcComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref);
+        }
+
         using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
 
         var existing = input.GetExistingComputed() as Computed<T>;
@@ -322,9 +328,22 @@ public class HybridComputeMethodFunction<T>(
         return computed.Value;
     }
 
-    // Private methods
+    protected async Task<Computed<T>> InvokeLocalTarget(ComputeMethodInput input, CancellationToken cancellationToken)
+    {
+        using var ccs = Computed.BeginCapture();
+        try {
+            await MethodDef.TargetAsyncInvoker.Invoke(LocalTarget!, input.Arguments).ConfigureAwait(false);
+            return ccs.Context.GetCaptured<T>();
+        }
+        catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+            var computedOpt = ccs.Context.TryGetCaptured<T>();
+            if (computedOpt.IsSome(out var computed) && computed.HasError)
+                return computed; // Return the original error, if possible
+            throw;
+        }
+    }
 
-    private static RpcOutboundComputeCall<T>? SendRpcCall(
+    protected static RpcOutboundComputeCall<T>? SendRpcCall(
         ComputeMethodInput input,
         RpcCacheInfoCapture? cacheInfoCapture,
         CancellationToken cancellationToken)
@@ -334,11 +353,8 @@ public class HybridComputeMethodFunction<T>(
         };
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;
-        var interceptor = proxy.Interceptor;
-        var clientComputeServiceInterceptor = interceptor is RpcSwitchInterceptor switchInterceptor
-            ? (HybridComputeServiceInterceptor)switchInterceptor.RemoteTarget!
-            : (HybridComputeServiceInterceptor)interceptor;
-        var clientInterceptor = clientComputeServiceInterceptor.RpcInterceptor;
+        var hybridComputeServiceInterceptor = (RpcComputeServiceInterceptor)proxy.Interceptor;
+        var rpcInterceptor = hybridComputeServiceInterceptor.RpcInterceptor;
 
         var ctIndex = input.MethodDef.CancellationTokenIndex;
         if (ctIndex >= 0 && invocation.Arguments.GetCancellationToken(ctIndex) != cancellationToken) {
@@ -352,12 +368,12 @@ public class HybridComputeMethodFunction<T>(
             invocation = invocation with { Context = context };
         }
 
-        _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(clientInterceptor, invocation);
+        _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(rpcInterceptor, invocation);
         return (RpcOutboundComputeCall<T>?)context.Call;
     }
 
-    private static RpcCacheEntry? UpdateCache(
-        IClientComputedCache cache,
+    protected static RpcCacheEntry? UpdateCache(
+        IRemoteComputedCache cache,
         RpcCacheKey? key,
         TextOrBytes? data)
     {
@@ -373,14 +389,14 @@ public class HybridComputeMethodFunction<T>(
         return new RpcCacheEntry(key, data.GetValueOrDefault());
     }
 
-    private IClientComputedCache? GetCache(ComputeMethodInput input)
-        => Cache == null
+    protected IRemoteComputedCache? GetCache(ComputeMethodInput input)
+        => RemoteComputedCache == null
             ? null :
             input.MethodDef.ComputedOptions.ClientCacheMode != ClientCacheMode.Cache
                 ? null
-                : Cache;
+                : RemoteComputedCache;
 
-    private Task TryReprocessServerSideCancellation(ComputeMethodInput input,
+    protected Task TryReprocessServerSideCancellation(ComputeMethodInput input,
         Exception error,
         CpuTimestamp startedAt,
         ref int tryIndex,

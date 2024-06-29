@@ -60,14 +60,19 @@ public sealed class ComputeContext
     public Option<Computed<T>> TryGetCaptured<T>()
         => _captured is Computed<T> result ? Option.Some(result) : default;
 
-    // Internal methods
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void TryCapture(IComputed computed)
+    public void TryCapture(IComputed computed)
     {
         if ((CallOptions & CallOptions.Capture) == 0)
             return;
 
+        // The logic below always "overwrites" captured computed - we assume that:
+        // - ComputedHelpers.TryUseExisting & UseNew are the only methods capturing the computed,
+        //   and they're called at the end of computation, i.e. when we effectively know the
+        //   exact IComputed we want to capture. They're never called for temporary computed instances.
+        // - Computed.BeginCompute(computed) wraps any Computed computation, and it is responsible
+        //   for creating a new ComputeContext, so dependencies cannot be captured by subsequent calls
+        //   of TryCompute happening in chains like "ComputeX -> ComputeDependencyOfX".
         _captured = computed;
     }
 }

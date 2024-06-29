@@ -32,8 +32,8 @@ public readonly struct FusionBuilder
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcComputeSystemCalls))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundComputeCall<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcOutboundComputeCall<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(HybridComputeServiceInterceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(HybridComputeMethodFunction<>))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcComputeServiceInterceptor))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcComputeMethodFunction<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(FuncComputedState<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComputedSource<>))]
     internal FusionBuilder(
@@ -69,9 +69,11 @@ public readonly struct FusionBuilder
 
         // Interceptors
         services.AddSingleton(_ => ComputeServiceInterceptor.Options.Default);
-        services.AddSingleton(_ => HybridComputeServiceInterceptor.Options.Default);
+        services.AddSingleton(_ => RpcComputeServiceInterceptor.Options.Default);
         services.AddSingleton(c => new ComputeServiceInterceptor(
-            c.GetRequiredService<ComputeServiceInterceptor.Options>(), c));
+            c.GetRequiredService<ComputeServiceInterceptor.Options>(),
+            c.GetRequiredService<FusionInternalHub>()));
+        services.AddSingleton(_ => RpcComputeCallOptions.Default);
 
         // StateFactory
         services.AddSingleton(c => new MixedModeService<StateFactory>.Singleton(new StateFactory(c), c));
@@ -350,7 +352,7 @@ public readonly struct FusionBuilder
         // ~ RpcBuilder.AddServerAndClient, but for Compute Service
 
         AddComputeService(implementationType, false);
-        Services.AddSingleton(serviceType, c => RpcProxies.NewSwitch(c, serviceType, implementationType));
+        Services.AddSingleton(serviceType, c => ComputeServiceProxies.NewClient(c, serviceType, implementationType));
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType, implementationType);
         Rpc.Service(serviceType).HasServer(implementationType).HasName(name);
@@ -411,10 +413,10 @@ public readonly struct FusionBuilder
 
     // AddClientComputeCache
 
-    public FusionBuilder AddClientComputedCache<
+    public FusionBuilder AddRemoteComputedCache<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TCache, TOptions>(
         Func<IServiceProvider, TOptions> optionsFactory)
-        where TCache : class, IClientComputedCache
+        where TCache : class, IRemoteComputedCache
         where TOptions : class
     {
         var services = Services;
@@ -423,14 +425,14 @@ public readonly struct FusionBuilder
             return this;
 
         services.AddSingleton<TCache>();
-        services.AddAlias<IClientComputedCache, TCache>();
+        services.AddAlias<IRemoteComputedCache, TCache>();
         return this;
     }
 
-    public FusionBuilder AddSharedClientComputedCache<
+    public FusionBuilder AddSharedRemoteComputedCache<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TCache, TOptions>(
         Func<IServiceProvider, TOptions> optionsFactory)
-        where TCache : ClientComputedCache
+        where TCache : RemoteComputedCache
         where TOptions : class
     {
         var services = Services;
@@ -439,15 +441,15 @@ public readonly struct FusionBuilder
             return this;
 
         services.AddSingleton<TCache>();
-        services.AddSingleton(c => new SharedClientComputedCache(c.GetRequiredService<TCache>));
-        services.AddAlias<IClientComputedCache, SharedClientComputedCache>();
+        services.AddSingleton(c => new SharedRemoteComputedCache(c.GetRequiredService<TCache>));
+        services.AddAlias<IRemoteComputedCache, SharedRemoteComputedCache>();
         return this;
     }
 
-    public FusionBuilder AddInMemoryClientComputedCache(
-        Func<IServiceProvider, InMemoryClientComputedCache.Options>? optionsFactory = null)
-        => AddClientComputedCache<InMemoryClientComputedCache, InMemoryClientComputedCache.Options>(
-            optionsFactory ?? (_ => InMemoryClientComputedCache.Options.Default));
+    public FusionBuilder AddInMemoryRemoteComputedCache(
+        Func<IServiceProvider, InMemoryRemoteComputedCache.Options>? optionsFactory = null)
+        => AddRemoteComputedCache<InMemoryRemoteComputedCache, InMemoryRemoteComputedCache.Options>(
+            optionsFactory ?? (_ => InMemoryRemoteComputedCache.Options.Default));
 
     // AddComputedGraphPruner
 

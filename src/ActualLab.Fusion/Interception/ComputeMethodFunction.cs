@@ -1,4 +1,3 @@
-using System.Runtime.ExceptionServices;
 using ActualLab.Fusion.Internal;
 using ActualLab.Interception;
 
@@ -12,11 +11,14 @@ public interface IComputeMethodFunction : IComputeFunction
 
 public class ComputeMethodFunction<T>(
     ComputeMethodDef methodDef,
-    IServiceProvider services
-    ) : ComputeFunctionBase<T>(services), IComputeMethodFunction
+    FusionInternalHub hub
+    ) : ComputeFunctionBase<T>(hub), IComputeMethodFunction
 {
-    public ComputeMethodDef MethodDef { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; } = methodDef;
-    public ComputedOptions ComputedOptions { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; } = methodDef.ComputedOptions;
+    ComputeMethodDef IComputeMethodFunction.MethodDef => MethodDef;
+    ComputedOptions IComputeMethodFunction.ComputedOptions => ComputedOptions;
+
+    public readonly ComputeMethodDef MethodDef = methodDef;
+    public readonly ComputedOptions ComputedOptions = methodDef.ComputedOptions;
 
     public override string ToString()
         => MethodDef.FullName;
@@ -44,7 +46,7 @@ public class ComputeMethodFunction<T>(
                 return computed;
             }
             catch (Exception e) {
-                var delayTask = ComputedHelpers.TryReprocess(
+                var delayTask = ComputedHelpers.TryReprocessInternalCancellation(
                     nameof(Compute), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
                 if (delayTask == SpecialTasks.MustThrow)
                     throw;

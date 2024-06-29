@@ -10,23 +10,23 @@ namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD104, MA0055
 
-public interface IClientComputed : IComputed, IMaybeCachedValue, IDisposable
+public interface IRemoteComputed : IComputed, IMaybeCachedValue, IDisposable
 {
     Task WhenCallBound { get; }
     RpcCacheEntry? CacheEntry { get; }
 }
 
-public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
+public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
 {
     internal readonly TaskCompletionSource<RpcOutboundComputeCall<T>?> CallSource;
     internal readonly TaskCompletionSource<Unit> SynchronizedSource;
 
-    Task IClientComputed.WhenCallBound => CallSource.Task;
+    Task IRemoteComputed.WhenCallBound => CallSource.Task;
     public Task<RpcOutboundComputeCall<T>?> WhenCallBound => CallSource.Task;
     public RpcCacheEntry? CacheEntry { get; }
     public Task WhenSynchronized => SynchronizedSource.Task;
 
-    public ClientComputed(
+    public RemoteComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
@@ -41,7 +41,7 @@ public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
         StartAutoInvalidation();
     }
 
-    public ClientComputed(
+    public RemoteComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
@@ -62,7 +62,7 @@ public class ClientComputed<T> : ComputeMethodComputed<T>, IClientComputed
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    ~ClientComputed()
+    ~RemoteComputed()
         => Dispose();
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

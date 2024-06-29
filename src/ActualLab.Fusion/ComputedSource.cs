@@ -100,6 +100,8 @@ public class ComputedSource<T> : ComputedInput,
 
     // IFunction<T> & IFunction
 
+    FusionInternalHub IComputeFunction.Hub => Services.GetRequiredService<FusionInternalHub>();
+
     ValueTask<Computed<T>> IComputeFunction<T>.Invoke(
         ComputedInput input,
         ComputeContext context,
@@ -186,7 +188,7 @@ public class ComputedSource<T> : ComputedInput,
                 break;
             }
             catch (Exception e) {
-                var delayTask = ComputedHelpers.TryReprocess(
+                var delayTask = ComputedHelpers.TryReprocessInternalCancellation(
                     nameof(GetComputed), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
                 if (delayTask == SpecialTasks.MustThrow)
                     throw;

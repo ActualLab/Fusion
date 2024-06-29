@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.CommandR.Interception;
 using ActualLab.Fusion.Interception;
 using ActualLab.Interception;
 
@@ -22,26 +21,29 @@ public static class ComputeServiceProxies
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         bool initialize = true)
-    {
-        var hub = services.GetRequiredService<FusionInternalHub>();
-        var serviceDef = hub.RpcHub.ServiceRegistry[serviceType];
+        => NewHybrid(services, serviceType, serviceType, null, initialize);
 
-        var hybridComputeServiceInterceptor = hub.NewHybridComputeServiceInterceptor(serviceDef);
-        hybridComputeServiceInterceptor.ValidateType(serviceType);
-        return services.ActivateProxy(serviceType, hybridComputeServiceInterceptor, null, initialize);
-    }
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
+    public static IProxy NewClient(
+        IServiceProvider services,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
+        ServiceResolver? localTargetResolver,
+        bool initialize = true)
+        => NewHybrid(services, serviceType, serviceType, localTargetResolver, initialize);
 
     [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static IProxy NewHybrid(
         IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
+        ServiceResolver? localTargetResolver = null,
         bool initialize = true)
     {
         var hub = services.GetRequiredService<FusionInternalHub>();
         var serviceDef = hub.RpcHub.ServiceRegistry[serviceType];
+        var localTarget = localTargetResolver?.Resolve(services);
 
-        var hybridComputeServiceInterceptor = hub.NewHybridComputeServiceInterceptor(serviceDef);
+        var hybridComputeServiceInterceptor = hub.NewHybridComputeServiceInterceptor(serviceDef, localTarget);
         hybridComputeServiceInterceptor.ValidateType(serviceType);
         return services.ActivateProxy(implementationType, hybridComputeServiceInterceptor, null, initialize);
     }

@@ -8,7 +8,7 @@ public delegate RpcServiceDef RpcServiceDefBuilder(RpcHub hub, RpcServiceBuilder
 public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodInfo method);
 public delegate bool RpcBackendServiceDetector(Type serviceType);
 public delegate Symbol RpcServiceScopeResolver(RpcServiceDef serviceDef);
-public delegate RpcPeer RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
+public delegate RpcPeerRef RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
 public delegate Task RpcRerouteDelayer(CancellationToken cancellationToken);
 public delegate void RpcPeerTracker(RpcPeer peer);
 public delegate RpcPeer RpcPeerFactory(RpcHub hub, RpcPeerRef peerRef);
@@ -44,7 +44,7 @@ public static class RpcDefaultDelegates
 
     // See also: RpcSafeCallRouter
     public static RpcCallRouter CallRouter { get; set; } =
-        static (method, arguments) => method.Hub.GetPeer(RpcPeerRef.Default); // May throw RpcRerouteException!
+        static (method, arguments) => RpcPeerRef.Default;
 
     public static RandomTimeSpan RerouteDelayerDelay { get; set; } = TimeSpan.FromMilliseconds(100).ToRandom(0.25);
 

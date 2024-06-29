@@ -2,9 +2,9 @@ using ActualLab.Rpc.Caching;
 
 namespace ActualLab.Fusion.Client.Caching;
 
-public abstract class FlushingClientComputedCache : ClientComputedCache
+public abstract class FlushingRemoteComputedCache : RemoteComputedCache
 {
-    public new record Options(string Version = "") : ClientComputedCache.Options(Version)
+    public new record Options(string Version = "") : RemoteComputedCache.Options(Version)
     {
         public static new Options Default { get; set; } = new();
 
@@ -22,7 +22,7 @@ public abstract class FlushingClientComputedCache : ClientComputedCache
 
     public new Options Settings { get; }
 
-    protected FlushingClientComputedCache(Options settings, IServiceProvider services, bool initialize = true)
+    protected FlushingRemoteComputedCache(Options settings, IServiceProvider services, bool initialize = true)
         : base(settings, services, false)
     {
         Settings = settings;

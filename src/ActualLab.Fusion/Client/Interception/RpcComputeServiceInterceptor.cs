@@ -1,13 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.CommandR.Interception;
 using ActualLab.Fusion.Interception;
+using ActualLab.Fusion.Internal;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Client.Interception;
 
-public class HybridComputeServiceInterceptor : ComputeServiceInterceptor
+public class RpcComputeServiceInterceptor : ComputeServiceInterceptor
 {
     public new record Options : ComputeServiceInterceptor.Options
     {
@@ -16,21 +16,24 @@ public class HybridComputeServiceInterceptor : ComputeServiceInterceptor
 
     public readonly RpcInterceptor RpcInterceptor;
     public readonly RpcHub RpcHub;
+    public readonly object? LocalTarget;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public HybridComputeServiceInterceptor(
+    public RpcComputeServiceInterceptor(
         Options settings,
-        IServiceProvider services,
-        RpcInterceptor rpcInterceptor
-        ) : base(settings, services)
+        RpcInterceptor rpcInterceptor,
+        object? localTarget,
+        FusionInternalHub hub
+        ) : base(settings, hub)
     {
         RpcInterceptor = rpcInterceptor;
         RpcHub = rpcInterceptor.Hub;
+        LocalTarget = localTarget;
     }
 
     public override Func<Invocation, object?>? SelectHandler(Invocation invocation)
         => GetHandler(invocation) // Compute service method
-            ?? RpcInterceptor.GetHandler(invocation); // Regular or command service method
+            ?? RpcInterceptor.SelectHandler(invocation); // Regular or command service method
 
     protected override Func<Invocation, object?>? CreateHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
@@ -39,8 +42,8 @@ public class HybridComputeServiceInterceptor : ComputeServiceInterceptor
         var computeMethodDef = (ComputeMethodDef)methodDef;
         var rpcMethodDef = (RpcMethodDef?)RpcInterceptor.GetMethodDef(initialInvocation.Method, initialInvocation.Proxy.GetType());
         var function = rpcMethodDef == null
-            ? new ComputeMethodFunction<TUnwrapped>(computeMethodDef, Services) // It's always a local call
-            : new HybridComputeMethodFunction<TUnwrapped>(computeMethodDef, rpcMethodDef, Hub.ClientComputedCache, Services);
+            ? new ComputeMethodFunction<TUnwrapped>(computeMethodDef, Hub) // No RpcMethodDef -> it's a local call
+            : new RpcComputeMethodFunction<TUnwrapped>(computeMethodDef, rpcMethodDef, LocalTarget, Hub);
         return CreateHandler(function);
     }
 

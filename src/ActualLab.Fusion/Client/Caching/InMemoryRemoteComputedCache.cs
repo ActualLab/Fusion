@@ -2,12 +2,12 @@ using ActualLab.Rpc.Caching;
 
 namespace ActualLab.Fusion.Client.Caching;
 
-public sealed class InMemoryClientComputedCache(
-    InMemoryClientComputedCache.Options settings,
+public sealed class InMemoryRemoteComputedCache(
+    InMemoryRemoteComputedCache.Options settings,
     IServiceProvider services
-    ) : FlushingClientComputedCache(settings, services)
+    ) : FlushingRemoteComputedCache(settings, services)
 {
-    public new sealed record Options : FlushingClientComputedCache.Options
+    public new sealed record Options : FlushingRemoteComputedCache.Options
     {
         public static new Options Default { get; set; } = new();
     }

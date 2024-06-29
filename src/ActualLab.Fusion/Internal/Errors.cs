@@ -1,5 +1,5 @@
-using System.Net.WebSockets;
 using System.Security;
+using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Internal;
 
@@ -36,15 +36,22 @@ public static class Errors
         => new InvalidOperationException(
             $"{nameof(ComputeContext)} with {nameof(CallOptions)} = {callOptions} cannot be used here.");
 
+    // Rpc related
+
+    public static Exception RpcComputeMethodCallFromTheSameService(RpcMethodDef methodDef, RpcPeerRef peerRef)
+        => new InvalidOperationException(
+            $"Incoming RPC compute service call to {methodDef} via '{peerRef}' " +
+            "is originating from the same compute service instance. " +
+            "Such calls cannot be completed, because 'local' and 'remote' calls are effectively the same " +
+            "(same service instance, same arguments, so the same ComputedInput). " +
+            "You must fix RpcCallRouter logic to make sure it never returns an RpcPeer connected to localhost for such calls.");
+
     // Session-related
 
     public static Exception InvalidSessionId(string parameterName)
         => new ArgumentOutOfRangeException(parameterName, "Provided Session.Id is invalid.");
     public static Exception SessionResolverSessionCannotBeSetForRootInstance()
         => new InvalidOperationException("ISessionResolver.Session can't be set for root (non-scoped) ISessionResolver.");
-
     public static Exception SessionUnavailable()
         => new SecurityException("The Session is unavailable.");
-    public static Exception SignInRequired()
-        => new SecurityException("You must sign in to perform this action.");
 }

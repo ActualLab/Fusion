@@ -36,11 +36,11 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 
     internal ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers { get; } = new();
 
+    public Guid Id { get; init; } = Guid.NewGuid();
     public IServiceProvider Services { get; }
     public RpcConfiguration Configuration { get; }
     public RpcServiceRegistry ServiceRegistry => _serviceRegistry ??= Services.GetRequiredService<RpcServiceRegistry>();
     public RpcInternalServices InternalServices => new(this);
-    public Guid Id { get; init; } = Guid.NewGuid();
     public RpcLimits Limits { get; }
     public IMomentClock Clock { get; }
 

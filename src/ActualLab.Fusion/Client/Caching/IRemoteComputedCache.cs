@@ -5,7 +5,7 @@ using ActualLab.Rpc.Caching;
 
 namespace ActualLab.Fusion.Client.Caching;
 
-public interface IClientComputedCache
+public interface IRemoteComputedCache
 {
     Task WhenInitialized { get; }
 

@@ -25,13 +25,13 @@ public static class StartupHelper
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.Logging.AddFilter(typeof(App).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(Computed).Namespace, LogLevel.Information);
-        builder.Logging.AddFilter(typeof(InMemoryClientComputedCache).Namespace, LogLevel.Information);
+        builder.Logging.AddFilter(typeof(InMemoryRemoteComputedCache).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(RpcHub).Namespace, LogLevel.Debug);
         builder.Logging.AddFilter(typeof(CommandHandlerResolver).Namespace, LogLevel.Debug);
 
         // Fusion services
         var fusion = services.AddFusion();
-        fusion.AddInMemoryClientComputedCache(_ => new() { LogLevel = LogLevel.Information });
+        fusion.AddInMemoryRemoteComputedCache(_ => new() { LogLevel = LogLevel.Information });
         fusion.AddAuthClient();
         fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
 
@@ -90,8 +90,8 @@ public static class StartupHelper
                     : TimeSpan.FromMinutes(1).ToRandom(0.25),
                 CollectPeriod = TimeSpan.FromSeconds(isWasm ? 3 : 60),
                 AccessFilter = isWasm
-                    ? static computed => computed.Input.Function is IHybridComputeMethodFunction
-                    : static computed => true,
+                    ? static computed => computed.Input.Function is IRpcComputeMethodFunction
+                    : static _ => true,
                 AccessStatisticsPreprocessor = StatisticsPreprocessor,
                 RegistrationStatisticsPreprocessor = StatisticsPreprocessor,
             };

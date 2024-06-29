@@ -8,7 +8,7 @@ using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Fusion.Client.Caching;
 
-public abstract class ClientComputedCache : RpcServiceBase, IClientComputedCache
+public abstract class RemoteComputedCache : RpcServiceBase, IRemoteComputedCache
 {
     public static RpcCacheKey VersionKey { get; set; } = new("", "Version", TextOrBytes.EmptyBytes);
 
@@ -25,7 +25,7 @@ public abstract class ClientComputedCache : RpcServiceBase, IClientComputedCache
     public Options Settings { get; }
     public Task WhenInitialized { get; protected set; } = Task.CompletedTask;
 
-    protected ClientComputedCache(Options settings, IServiceProvider services, bool initialize = true)
+    protected RemoteComputedCache(Options settings, IServiceProvider services, bool initialize = true)
         : base(services)
     {
         Settings = settings;

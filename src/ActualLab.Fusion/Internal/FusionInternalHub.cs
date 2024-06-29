@@ -11,22 +11,25 @@ namespace ActualLab.Fusion.Internal;
 
 public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
 {
-    private readonly LazySlim<IServiceProvider, IClientComputedCache?> _clientComputedCacheLazy
-        = new(services, c => c.GetService<IClientComputedCache>());
+    private readonly LazySlim<IServiceProvider, IRemoteComputedCache?> _remoteComputedCacheLazy
+        = new(services, c => c.GetService<IRemoteComputedCache>());
     private CommandServiceInterceptor? _commandServiceInterceptor;
     private ComputeServiceInterceptor? _computeServiceInterceptor;
     private CommandServiceInterceptor.Options? _commandServiceInterceptorOptions;
-    private HybridComputeServiceInterceptor.Options? _clientComputeServiceInterceptorOptions;
+    private RpcComputeServiceInterceptor.Options? _clientComputeServiceInterceptorOptions;
+    private RpcComputeCallOptions? _rpcComputeCallOptions;
 
     internal CommandServiceInterceptor.Options CommandServiceInterceptorOptions
         => _commandServiceInterceptorOptions ??= Services.GetRequiredService<CommandServiceInterceptor.Options>();
-    internal HybridComputeServiceInterceptor.Options ClientComputeServiceInterceptorOptions
-        => _clientComputeServiceInterceptorOptions ??= Services.GetRequiredService<HybridComputeServiceInterceptor.Options>();
+    internal RpcComputeServiceInterceptor.Options ClientComputeServiceInterceptorOptions
+        => _clientComputeServiceInterceptorOptions ??= Services.GetRequiredService<RpcComputeServiceInterceptor.Options>();
+    internal RpcComputeCallOptions RpcComputeCallOptions
+        => _rpcComputeCallOptions ??= Services.GetRequiredService<RpcComputeCallOptions>();
 
     public IServiceProvider Services { get; } = services;
     public RpcHub RpcHub { get; } = services.RpcHub();
     public MomentClockSet Clocks { get; } = services.Clocks();
-    public IClientComputedCache? ClientComputedCache => _clientComputedCacheLazy.Value;
+    public IRemoteComputedCache? RemoteComputedCache => _remoteComputedCacheLazy.Value;
 
     public ComputedOptionsProvider ComputedOptionsProvider { get; }
         = services.GetRequiredService<ComputedOptionsProvider>();
@@ -37,6 +40,6 @@ public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
 
     public RpcInterceptor NewRpcInterceptor(RpcServiceDef serviceDef)
         => RpcHub.InternalServices.NewInterceptor(serviceDef, CommandServiceInterceptor);
-    public HybridComputeServiceInterceptor NewHybridComputeServiceInterceptor(RpcServiceDef serviceDef)
-        => new(ClientComputeServiceInterceptorOptions, Services, NewRpcInterceptor(serviceDef));
+    public RpcComputeServiceInterceptor NewHybridComputeServiceInterceptor(RpcServiceDef serviceDef, object? localTarget)
+        => new(ClientComputeServiceInterceptorOptions, NewRpcInterceptor(serviceDef), localTarget, this);
 }

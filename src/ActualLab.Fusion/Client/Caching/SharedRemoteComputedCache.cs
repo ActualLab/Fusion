@@ -3,13 +3,13 @@ using ActualLab.Rpc.Caching;
 
 namespace ActualLab.Fusion.Client.Caching;
 
-public class SharedClientComputedCache : IClientComputedCache
+public class SharedRemoteComputedCache : IRemoteComputedCache
 {
-    public static ClientComputedCache Instance { get; set; } = null!;
+    public static RemoteComputedCache Instance { get; set; } = null!;
 
     public Task WhenInitialized => Instance.WhenInitialized;
 
-    public SharedClientComputedCache(Func<ClientComputedCache> instanceFactory)
+    public SharedRemoteComputedCache(Func<RemoteComputedCache> instanceFactory)
         => Instance ??= instanceFactory.Invoke();
 
     public ValueTask<(T Value, TextOrBytes Data)?> Get<T>(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)

@@ -129,12 +129,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
             }
         });
         services.AddSingleton<RpcCallRouter>(_ => {
-            RpcHub? rpcHub = null;
-            return (method, arguments) => {
-                rpcHub ??= method.Hub;
-                var peerRef = RpcPeerRef.GetDefaultClientPeerRef(ConnectionKind, method.IsBackend);
-                return rpcHub.GetClientPeer(peerRef);
-            };
+            return (method, arguments) => RpcPeerRef.GetDefaultClientPeerRef(ConnectionKind, method.IsBackend);
         });
         if (!isClient) {
             services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly) {

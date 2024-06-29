@@ -91,7 +91,7 @@ public sealed class ComputedRegistry : IDisposable
                     return;
                 }
                 if (target is { ConsistencyState: not ConsistencyState.Invalidated }) {
-                    // This typically triggers Unregister - except for ClientComputed
+                    // This typically triggers Unregister - except for RemoteComputed
                     target.Invalidate();
                 }
                 if (_storage.TryRemove(key, handle))

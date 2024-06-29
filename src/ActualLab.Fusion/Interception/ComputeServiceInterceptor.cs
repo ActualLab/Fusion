@@ -16,10 +16,10 @@ public class ComputeServiceInterceptor : Interceptor
     public readonly CommandServiceInterceptor CommandServiceInterceptor;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public ComputeServiceInterceptor(Options settings, IServiceProvider services)
-        : base(settings, services)
+    public ComputeServiceInterceptor(Options settings, FusionInternalHub hub)
+        : base(settings, hub.Services)
     {
-        Hub = services.GetRequiredService<FusionInternalHub>();
+        Hub = hub;
         CommandServiceInterceptor = Hub.CommandServiceInterceptor;
     }
 
@@ -30,7 +30,7 @@ public class ComputeServiceInterceptor : Interceptor
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
         (Invocation initialInvocation, MethodDef methodDef)
     {
-        var function = new ComputeMethodFunction<TUnwrapped>((ComputeMethodDef)methodDef, Services);
+        var function = new ComputeMethodFunction<TUnwrapped>((ComputeMethodDef)methodDef, Hub);
         return CreateHandler(function);
     }
 

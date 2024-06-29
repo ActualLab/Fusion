@@ -57,9 +57,7 @@ async Task RunClient()
             fusion.AddClient<IChat>();
         })
         .AddSingleton<RpcCallRouter>(c => {
-            RpcHub? rpcHub = null;
             return (methodDef, args) => {
-                rpcHub ??= c.RpcHub(); // We can't resolve it earlier, coz otherwise it will trigger recursion
                 if (methodDef.Service.Type == typeof(IChat)) {
                     var arg0Type = args.GetType(0);
                     int hash;
@@ -70,9 +68,9 @@ async Task RunClient()
                         hash = args.Get<Chat_Post>(0).ChatId.Value.GetDjb2HashCode();
                     else
                         throw new NotSupportedException("Can't route this call.");
-                    return rpcHub.GetClientPeer(clientPeerRefs[hash % serverCount]);
+                    return clientPeerRefs[hash % serverCount];
                 }
-                return rpcHub.GetClientPeer(RpcPeerRef.Default);
+                return RpcPeerRef.Default;
             };
         })
         .BuildServiceProvider();

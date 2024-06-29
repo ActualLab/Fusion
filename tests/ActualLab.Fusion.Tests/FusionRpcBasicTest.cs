@@ -9,15 +9,17 @@ namespace ActualLab.Fusion.Tests;
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
 {
+    protected RpcServiceMode ServiceMode { get; set; } = RpcServiceMode.ServerAndClient;
+
     protected override void ConfigureServices(ServiceCollection services)
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddService<ICounterService, CounterService>(RpcServiceMode.Hybrid);
+        fusion.AddService<ICounterService, CounterService>(ServiceMode);
     }
 
     [Fact]
-    public async Task BasicTest()
+    public async Task ServerAndClientTest()
     {
         var services = CreateServices();
         var counters = services.GetRequiredService<ICounterService>();
@@ -37,6 +39,24 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
 
         c1 = Computed.GetExisting(() => counters.Get("a"));
         c1.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task HybridTest()
+    {
+        ServiceMode = RpcServiceMode.Hybrid;
+        var services = CreateServices();
+        var counters = services.GetRequiredService<ICounterService>();
+
+        var c = Computed.GetExisting(() => counters.Get("a"));
+        c.Should().BeNull();
+
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+            await counters.Get("a");
+        });
+
+        c = await Computed.Capture(() => counters.Get("a"));
+        c.Error.Should().BeOfType<InvalidOperationException>();
     }
 
     [Fact]

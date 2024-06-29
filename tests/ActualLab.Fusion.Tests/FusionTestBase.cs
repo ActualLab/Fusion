@@ -34,7 +34,7 @@ public abstract class FusionTestBase : RpcTestBase
     public bool UseRedisOperationLogChangeTracking { get; set; } = !TestRunnerInfo.IsBuildAgent();
     public bool UseInMemoryKeyValueStore { get; set; }
     public bool UseInMemoryAuthService { get; set; }
-    public bool UseClientComputedCache { get; set; }
+    public bool UseRemoteComputedCache { get; set; }
     public LogLevel RpcCallLogLevel { get; set; } = LogLevel.None;
 
     public FilePath SqliteDbPath { get; protected set; }
@@ -104,9 +104,9 @@ public abstract class FusionTestBase : RpcTestBase
                 => peerRef.IsServer
                     ? new RpcServerPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
                     : new RpcClientPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel });
-            if (UseClientComputedCache)
-                fusion.AddSharedClientComputedCache<InMemoryClientComputedCache, InMemoryClientComputedCache.Options>(
-                    _ => InMemoryClientComputedCache.Options.Default);
+            if (UseRemoteComputedCache)
+                fusion.AddSharedRemoteComputedCache<InMemoryRemoteComputedCache, InMemoryRemoteComputedCache.Options>(
+                    _ => InMemoryRemoteComputedCache.Options.Default);
             fusion.AddClient<ITimeService>();
             fusion.AddClient<IUserService>();
             fusion.AddClient<IScreenshotService>();

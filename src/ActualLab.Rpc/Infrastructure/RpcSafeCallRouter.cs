@@ -2,18 +2,21 @@ using ActualLab.Interception;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public sealed class RpcSafeCallRouter(IServiceProvider services)
+public sealed class RpcSafeCallRouter(IServiceProvider services) : RpcServiceBase(services)
 {
-    private ILogger<RpcSafeCallRouter>? _log;
-    private ILogger Log => _log ??= services.GetRequiredService<ILogger<RpcSafeCallRouter>>();
+    private RpcCallRouter? _callRouter;
 
-    public readonly RpcCallRouter UnsafeCallRouter = services.GetRequiredService<RpcCallRouter>();
+    public RpcCallRouter CallRouter {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _callRouter ??= Services.GetRequiredService<RpcCallRouter>();
+    }
 
     public RpcPeer Invoke(RpcMethodDef methodDef, ArgumentList arguments)
     {
         while (true) {
             try {
-                return UnsafeCallRouter.Invoke(methodDef, arguments);
+                var peerRef = CallRouter.Invoke(methodDef, arguments);
+                return Hub.GetPeer(peerRef); // May throw RpcRerouteException!
             }
             catch (RpcRerouteException e) {
                 Log.LogWarning(e, "Rerouting is requested during call routing: {Method}{Arguments}",

@@ -112,7 +112,7 @@ public static class ComputedHelpers
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static Task TryReprocess<T>(
+    public static Task TryReprocessInternalCancellation<T>(
         string methodName,
         Computed<T> computed,
         Exception error,
@@ -155,6 +155,24 @@ public static class ComputedHelpers
         return delay <= TimeSpan.Zero
             ? Task.CompletedTask
             : Task.Delay(delay, cancellationToken);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static bool MustThrow<T>(
+        Computed<T> computed,
+        Exception error,
+        CancellationToken cancellationToken)
+    {
+        if (error is not OperationCanceledException) {
+            // Not a cancellation
+            computed.TrySetOutput(Result.Error<T>(error));
+            return false;
+        }
+
+        // Cancellation
+        computed.Invalidate(true); // Instant invalidation on cancellation
+        computed.TrySetOutput(Result.Error<T>(error));
+        return cancellationToken.IsCancellationRequested || error is RpcRerouteException;
     }
 
     // Nested types
