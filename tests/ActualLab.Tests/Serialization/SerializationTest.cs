@@ -130,8 +130,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void RpcHandshakeSerialization()
     {
-        Test(new RpcHandshake(default, default, null));
-        Test(new RpcHandshake(new Guid(), new Guid(), new VersionSet(("Test", "1.0"))));
+        Test(new RpcHandshake(default, null, default));
+        Test(new RpcHandshake(new Guid(), new VersionSet(("Test", "1.0")), new Guid()));
 
         void Test(RpcHandshake h) {
             var hs = h.PassThroughAllSerializers();

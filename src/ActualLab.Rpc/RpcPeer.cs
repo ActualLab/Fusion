@@ -225,7 +225,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         handshake = await Task
                             .Run(async () => {
                                 await Hub.SystemCallSender
-                                    .Handshake(this, sender, new RpcHandshake(Hub.Id, Id, Versions))
+                                    .Handshake(this, sender, new RpcHandshake(Id, Versions, Hub.Id))
                                     .ConfigureAwait(false);
                                 var message = await reader.ReadAsync(handshakeToken).ConfigureAwait(false);
                                 var handshakeContext = await ProcessMessage(message, handshakeToken).ConfigureAwait(false);

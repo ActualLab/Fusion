@@ -45,6 +45,7 @@ public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
 
         using (var s1 = Services.CreateScope()) {
             p = s1.ServiceProvider.GetRequiredService<ISimplestProvider>();
+            pImpl = (ISimpleProviderImpl)p;
             (gv, gcc) = (pImpl.GetValueCallCount, pImpl.GetCharCountCallCount);
             (await p.GetValue()).Should().Be("");
             (await p.GetCharCount()).Should().Be(0);
@@ -53,6 +54,7 @@ public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         }
         using (var s2 = Services.CreateScope()) {
             p = s2.ServiceProvider.GetRequiredService<ISimplestProvider>();
+            pImpl = (ISimpleProviderImpl)p;
             (gv, gcc) = (pImpl.GetValueCallCount, pImpl.GetCharCountCallCount);
             (await p.GetValue()).Should().Be("");
             (await p.GetCharCount()).Should().Be(0);
