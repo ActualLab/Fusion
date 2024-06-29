@@ -1,7 +1,6 @@
 @echo off
+rem Disables use of ReadToRun images / enables more aggressive optimization
 rem set DOTNET_ReadyToRun=0
-rem set DOTNET_TieredPGO=1
-rem set DOTNET_TC_QuickJitForLoops=1
 
 set runtime=%1
 if "%runtime%"=="" (
