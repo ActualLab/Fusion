@@ -39,7 +39,10 @@ public sealed class ComputedRegistry : IDisposable
     public ComputedRegistry() : this(new()) { }
     public ComputedRegistry(Options settings)
     {
-        _storage = new ConcurrentDictionary<ComputedInput, GCHandle>(settings.ConcurrencyLevel, settings.InitialCapacity);
+        _storage = new ConcurrentDictionary<ComputedInput, GCHandle>(
+            settings.ConcurrencyLevel,
+            settings.InitialCapacity,
+            ComputedInput.EqualityComparer);
         _gcHandlePool = settings.GCHandlePool ?? new GCHandlePool(GCHandleType.Weak);
         if (_gcHandlePool.HandleType != GCHandleType.Weak)
             throw new ArgumentOutOfRangeException(
@@ -56,9 +59,10 @@ public sealed class ComputedRegistry : IDisposable
     public void Dispose()
         => _gcHandlePool.Dispose();
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public Computed? Get(ComputedInput key)
     {
-        var random = Randomize(key.HashCode);
+        var random = key.HashCode + Environment.CurrentManagedThreadId;
         OnOperation(random);
         if (_storage.TryGetValue(key, out var handle)) {
             var value = (Computed?)handle.Target;
@@ -71,12 +75,13 @@ public sealed class ComputedRegistry : IDisposable
         return null;
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public void Register(Computed computed)
     {
         // Debug.WriteLine($"{nameof(Register)}: {computed}");
 
         var key = computed.Input;
-        var random = Randomize(key.HashCode);
+        var random = key.HashCode + Environment.CurrentManagedThreadId;
         OnRegister?.Invoke(computed);
         OnOperation(random);
 
@@ -106,6 +111,7 @@ public sealed class ComputedRegistry : IDisposable
         }
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public void Unregister(Computed computed)
     {
         // We can't remove what still could be invalidated,
@@ -114,7 +120,7 @@ public sealed class ComputedRegistry : IDisposable
             throw Errors.WrongComputedState(computed.ConsistencyState);
 
         var key = computed.Input;
-        var random = Randomize(key.HashCode);
+        var random = key.HashCode + Environment.CurrentManagedThreadId;
         OnUnregister?.Invoke(computed);
         OnOperation(random);
 
@@ -179,12 +185,6 @@ public sealed class ComputedRegistry : IDisposable
 
     // Private methods
 
-    private void OnOperation()
-    {
-        if (_opCounter.Increment() is { } c && c > _pruneOpCounterThreshold)
-            TryPrune();
-    }
-
     private void OnOperation(int random)
     {
         if (_opCounter.Increment(random) is { } c && c > _pruneOpCounterThreshold)
@@ -207,7 +207,7 @@ public sealed class ComputedRegistry : IDisposable
         using var activity = type.GetActivitySource().StartActivity(type, nameof(Prune));
 
         // Debug.WriteLine(nameof(PruneInternal));
-        var randomOffset = Randomize(Environment.CurrentManagedThreadId);
+        var randomOffset = Environment.CurrentManagedThreadId + CoarseClockHelper.RandomInt32;
         foreach (var (key, handle) in _storage) {
             if (handle.Target == null && _storage.TryRemove(key, handle))
                 _gcHandlePool.Release(handle, key.HashCode + randomOffset);
@@ -228,8 +228,4 @@ public sealed class ComputedRegistry : IDisposable
             _pruneOpCounterThreshold = nextThreshold;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int Randomize(int random)
-        => random + CoarseClockHelper.RandomInt32;
 }

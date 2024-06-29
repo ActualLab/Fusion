@@ -28,7 +28,7 @@ public abstract class Computed<T> : Computed, IResult<T>
         }
     }
 
-    public sealed override Task<T> OutputAsTask {
+    public Task<T> OutputAsTask {
         get {
             if (_outputAsTask != null)
                 return _outputAsTask;

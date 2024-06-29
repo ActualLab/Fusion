@@ -160,7 +160,7 @@ public abstract class PerformanceTestBase : FusionTestBase
 
             while (true) {
                 cancellationToken.ThrowIfCancellationRequested();
-                var userId = (long) rnd.Next(UserCount);
+                var userId = (long)rnd.Next(UserCount);
                 // Log.LogDebug($"{name}: R {userId}");
                 var user = await users.Get(userId, cancellationToken).ConfigureAwait(false);
                 user = user! with { Email = $"{++count}@counter.org" };
@@ -179,7 +179,7 @@ public abstract class PerformanceTestBase : FusionTestBase
 
             await whenReady.ConfigureAwait(false);
             for (; iterationCount1 > 0; iterationCount1--) {
-                var userId = (long) rnd.Next(UserCount);
+                var userId = (long)rnd.Next(UserCount);
                 // Log.LogDebug($"{name}: R {userId}");
                 var user = await users.Get(userId).ConfigureAwait(false);
                 // Log.LogDebug($"{name}: R {userId} done");

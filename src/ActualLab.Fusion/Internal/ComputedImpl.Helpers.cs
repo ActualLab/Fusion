@@ -15,57 +15,55 @@ public static partial class ComputedImpl
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryUseExisting<T>(Computed<T>? existing, ComputeContext context)
+    public static bool TryUseExisting(Computed? existing, ComputeContext context)
     {
         if (context.CallOptions != 0) // Way less frequent path
             return TryUseExistingWithCallOptions(existing, context);
 
         // The most frequent path
-        if (existing == null || !existing.IsConsistent())
+        if (existing == null || existing.ConsistencyState != ConsistencyState.Consistent)
             return false;
 
         // Inlined existing.UseNew(context, usedBy)
         context.Computed?.AddDependency(existing);
         existing.RenewTimeouts(false);
         return true;
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        static bool TryUseExistingWithCallOptions(Computed<T>? existing, ComputeContext context) {
-            var callOptions = context.CallOptions;
-            var mustGetExisting = (callOptions & CallOptions.GetExisting) != 0;
-            if (existing == null)
-                return mustGetExisting;
-
-            var mustInvalidate = (callOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
-            if (mustInvalidate) {
-                // CallOptions.Invalidate is:
-                // - always paired with CallOptions.GetExisting
-                // - never paired with CallOptions.Capture
-                existing.InvalidateFromCall();
-                return true;
-            }
-
-            // CallOptions.GetExisting | CallOptions.Capture can be intact from here
-            if (mustGetExisting) {
-                context.TryCapture(existing);
-                existing.RenewTimeouts(false);
-                return true;
-            }
-
-            // Only CallOptions.Capture can be intact from here
-
-            // The remaining part of this method matches exactly to TryUseExistingFromLock
-            if (!existing.IsConsistent())
-                return false;
-
-            UseNew(existing, context);
-            return true;
-        }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryUseExistingFromLock<T>(Computed<T>? existing, ComputeContext context)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool TryUseExistingWithCallOptions(Computed? existing, ComputeContext context) {
+        var callOptions = context.CallOptions;
+        var mustGetExisting = (callOptions & CallOptions.GetExisting) != 0;
+        if (existing == null)
+            return mustGetExisting;
+
+        var mustInvalidate = (callOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
+        if (mustInvalidate) {
+            // CallOptions.Invalidate is:
+            // - always paired with CallOptions.GetExisting
+            // - never paired with CallOptions.Capture
+            existing.InvalidateFromCall();
+            return true;
+        }
+
+        // CallOptions.GetExisting | CallOptions.Capture can be intact from here
+        if (mustGetExisting) {
+            context.TryCapture(existing);
+            existing.RenewTimeouts(false);
+            return true;
+        }
+
+        // Only CallOptions.Capture can be intact from here
+
+        // The remaining part of this method matches exactly to TryUseExistingFromLock
+        if (!existing.IsConsistent())
+            return false;
+
+        UseNew(existing, context);
+        return true;
+    }
+
+    public static bool TryUseExistingFromLock(Computed? existing, ComputeContext context)
     {
         // We know that:
         // - CallOptions.GetExisting is unused here - it always leads to true in TryUseExisting,
@@ -79,15 +77,13 @@ public static partial class ComputedImpl
         return true;
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public static void UseNew<T>(Computed<T> computed, ComputeContext context)
+    public static void UseNew(Computed computed, ComputeContext context)
     {
         context.Computed?.AddDependency(computed);
         computed.RenewTimeouts(true);
         context.TryCapture(computed);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T Strip<T>(Computed<T>? computed, ComputeContext context)
     {
         if (computed == null)
@@ -98,7 +94,6 @@ public static partial class ComputedImpl
         return computed.Value;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task<T> StripToTask<T>(Computed<T>? computed, ComputeContext context)
     {
         if (computed == null)

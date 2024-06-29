@@ -98,7 +98,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
             .ToEnumerable().ToArray();
         var deltas = timings.Zip(timings.Skip(1), (a, b) => b - a).ToArray();
 
-        Out.WriteLine(deltas.Select(d => (long) d.TotalMilliseconds).ToDelimitedString());
+        Out.WriteLine(deltas.Select(d => (long)d.TotalMilliseconds).ToDelimitedString());
 
         foreach (var d in deltas.Take(2))
             ShouldEqual(TimeSpan.FromMilliseconds(100), d, epsilon);

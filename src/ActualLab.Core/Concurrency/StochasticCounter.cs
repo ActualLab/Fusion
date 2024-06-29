@@ -1,3 +1,4 @@
+using ActualLab.Generators;
 using ActualLab.OS;
 
 namespace ActualLab.Concurrency;
@@ -36,19 +37,19 @@ public struct StochasticCounter
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryIncrement(int max)
-        => TryIncrement(NextRandom(), max);
+        => TryIncrement(ThreadRandom.Next(), max);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryDecrement(int min)
-        => TryDecrement(NextRandom(), min);
+        => TryDecrement(ThreadRandom.Next(), min);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int? Increment()
-        => Increment(NextRandom());
+        => Increment(ThreadRandom.Next());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int? Decrement()
-        => Decrement(NextRandom());
+        => Decrement(ThreadRandom.Next());
 
     // Overloads with random
 
@@ -89,17 +90,4 @@ public struct StochasticCounter
         => (random & _mask) == 0
             ? Interlocked.Add(ref _value, -(_mask + 1))
             : null;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int NextRandom()
-    {
-        if (_mask == 0)
-            return 0; // Doesn't make any sense to randomize in this case
-
-#if NET7_0_OR_GREATER
-        return Random.Shared.Next();
-#else
-        return ConcurrentRandom.Next();
-#endif
-    }
 }

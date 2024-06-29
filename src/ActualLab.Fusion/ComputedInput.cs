@@ -6,6 +6,8 @@ namespace ActualLab.Fusion;
 
 public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
 {
+    public static IEqualityComparer<ComputedInput> EqualityComparer { get; } = new EqualityComparerImpl();
+
     public IComputeFunction Function { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; private set; } = null!;
     public int HashCode { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; private set; }
 
@@ -44,4 +46,18 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
         => Equals(left, right);
     public static bool operator !=(ComputedInput? left, ComputedInput? right)
         => !Equals(left, right);
+
+    // Equality comparer
+
+    private sealed class EqualityComparerImpl : IEqualityComparer<ComputedInput>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(ComputedInput? x, ComputedInput? y)
+            => !ReferenceEquals(x, null) && x.Equals(y);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(ComputedInput obj)
+            => obj.HashCode;
+    }
+
 }

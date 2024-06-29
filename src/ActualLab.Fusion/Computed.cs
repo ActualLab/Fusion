@@ -14,7 +14,6 @@ public interface IComputed : IResult, IHasVersion<ulong>
     ConsistencyState ConsistencyState { get; }
     IResult Output { get; }
     Type OutputType { get; }
-    Task OutputAsTask { get; }
     event Action<Computed> Invalidated;
 
     void Invalidate(bool immediately = false);
@@ -61,7 +60,6 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     public IResult Output => this;
     public abstract Type OutputType { get; }
-    public abstract Task OutputAsTask { get; }
 
     // IComputed implementation
     ComputedOptions IComputed.Options => Options;

@@ -1,4 +1,5 @@
 using ActualLab.Concurrency;
+using ActualLab.Generators;
 using ActualLab.OS;
 using ActualLab.Testing.Collections;
 
@@ -13,7 +14,7 @@ public class StochasticCounterTest(ITestOutputHelper @out) : TestBase(@out)
         var c = new StochasticCounter();
         c.Precision.Should().Be(1);
         c.Value.Should().Be(0);
-        c.NextRandom().Should().Be(0);
+        ThreadRandom.Next().Should().Be(0);
 
         c.TryIncrement(1).Should().BeTrue();
         c.Value.Should().Be(1);

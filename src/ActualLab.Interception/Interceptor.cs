@@ -74,7 +74,6 @@ public abstract class Interceptor : IHasServices
     /// Invoked for intercepted calls returning <see cref="Void"/> type.
     /// </summary>
     /// <param name="invocation">Invocation descriptor.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Intercept(Invocation invocation)
     {
         var handler = SelectHandler(invocation);
@@ -90,7 +89,6 @@ public abstract class Interceptor : IHasServices
     /// <param name="invocation"></param>
     /// <typeparam name="TResult">The type of method call result.</typeparam>
     /// <returns>Method call result.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TResult Intercept<TResult>(Invocation invocation)
     {
         var handler = SelectHandler(invocation);

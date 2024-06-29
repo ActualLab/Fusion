@@ -11,7 +11,10 @@ public static class ThreadRandom
                 return _instance;
 
             lock (SharedInstance)
-                return _instance ??= new Random(SharedInstance.Next());
+                return _instance ??= new Random(SharedInstance.Next() + Environment.CurrentManagedThreadId);
         }
     }
+
+    public static int Next() => Instance.Next();
+    public static double NextDouble() => Instance.NextDouble();
 }
