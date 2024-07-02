@@ -37,12 +37,6 @@ public static class StartupHelper
 
         var rpc = fusion.Rpc;
         rpc.AddWebSocketClient(builder.HostEnvironment.BaseAddress);
-        // You may comment this out - the call below just enables RPC call logging
-        services.AddSingleton<RpcPeerFactory>(_ =>
-            static (hub, peerRef) => peerRef.IsServer
-                ? throw new NotSupportedException("No server peers are allowed on the client.")
-                : new RpcClientPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
-            );
 
         // Option 1: Client-side SimpleTodoService (no RPC)
         // fusion.AddService<ITodoService, SimpleTodoService>();
@@ -59,12 +53,14 @@ public static class StartupHelper
         // Option 4: Remote TodoService, SandboxedKeyValueStore, and DbKeyValueStore
         fusion.AddClient<ITodos>();
 
-        ConfigureSharedServices(services);
+        ConfigureSharedServices(services, false);
     }
 
-    public static void ConfigureSharedServices(IServiceCollection services)
+    public static void ConfigureSharedServices(IServiceCollection services, bool isServer)
     {
         ComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
+        if (!isServer)
+            RpcPeer.DefaultCallLogLevel = LogLevel.Debug;
 
         // Blazorise
         services.AddBlazorise(options => options.Immediate = true)

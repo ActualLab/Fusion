@@ -91,13 +91,13 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
                 return peer;
             if (WhenDisposed != null)
                 throw Errors.AlreadyDisposed(GetType());
-            if (peerRef.IsGone)
+            if (peerRef.IsRerouted)
                 throw RpcRerouteException.MustReroute(peerRef);
 
             peer = PeerFactory.Invoke(this, peerRef);
             Peers[peerRef] = peer;
             peer.Start();
-            if (peerRef.CanBeGone)
+            if (peerRef.CanBeRerouted)
                 _ = peerRef.WhenGone().ContinueWith(_ => peer.Dispose(), TaskScheduler.Default);
             return peer;
         }

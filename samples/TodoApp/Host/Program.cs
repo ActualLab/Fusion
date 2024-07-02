@@ -134,12 +134,6 @@ void ConfigureServices()
     // Fusion services
     var fusion = services.AddFusion(RpcServiceMode.Server, true);
     var fusionServer = fusion.AddWebServer();
-    // You may comment this out - the call below just enables RPC call logging
-    services.AddSingleton<RpcPeerFactory>(_ =>
-        static (hub, peerRef) => !peerRef.IsServer
-            ? throw new NotSupportedException("No client peers are allowed on the server.")
-            : new RpcServerPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
-    );
 #if false
     // Enable this to test how the client behaves w/ a delay
     fusion.Rpc.AddInboundMiddleware(c => new RpcRandomDelayMiddleware(c) {
@@ -181,7 +175,7 @@ void ConfigureServices()
     fusion.AddService<ITodos, Todos>();
 
     // Shared services
-    StartupHelper.ConfigureSharedServices(services);
+    StartupHelper.ConfigureSharedServices(services, true);
 
     // ASP.NET Core authentication providers
     services.AddAuthentication(options => {

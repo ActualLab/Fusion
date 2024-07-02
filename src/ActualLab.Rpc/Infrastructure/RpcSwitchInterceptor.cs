@@ -43,7 +43,7 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
         return invocation => {
             var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
             Task<TUnwrapped> resultTask;
-            if (peer.Ref.CanBeGone) {
+            if (peer.Ref.CanBeRerouted) {
                 resultTask = InvokeWithRerouting(rpcMethodDef, localCallAsyncInvoker, remoteCallAsyncInvoker, invocation, peer);
             }
             else if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {

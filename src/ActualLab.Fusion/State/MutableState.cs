@@ -69,7 +69,7 @@ public class MutableState<T> : State<T>, IMutableState<T>
         }
     }
 
-    public void Set(Func<Result<T>, Result<T>> updater)
+    public void Set(Func<Result<T>, Result<T>> updater, bool throwOnError = false)
     {
         lock (Lock) {
             var snapshot = Snapshot;
@@ -78,6 +78,9 @@ public class MutableState<T> : State<T>, IMutableState<T>
                 result = updater.Invoke(snapshot.Computed.Output);
             }
             catch (Exception e) {
+                if (throwOnError)
+                    throw;
+
                 result = Result.Error<T>(e);
             }
             NextOutput = result;
@@ -85,7 +88,7 @@ public class MutableState<T> : State<T>, IMutableState<T>
         }
     }
 
-    public void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater)
+    public void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater, bool throwOnError = false)
     {
         lock (Lock) {
             var snapshot = Snapshot;
@@ -94,6 +97,9 @@ public class MutableState<T> : State<T>, IMutableState<T>
                 result = updater.Invoke(state, snapshot.Computed.Output);
             }
             catch (Exception e) {
+                if (throwOnError)
+                    throw;
+
                 result = Result.Error<T>(e);
             }
             NextOutput = result;

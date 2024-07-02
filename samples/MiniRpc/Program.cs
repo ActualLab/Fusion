@@ -14,7 +14,7 @@ using static System.Console;
 #pragma warning disable ASP0000
 
 var useLogging = false;
-var logRpcCalls = false;
+RpcPeer.DefaultCallLogLevel = LogLevel.Debug;
 
 var baseUrl = "http://localhost:22222/";
 await (args switch {
@@ -30,12 +30,6 @@ async Task RunServer()
         builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
     builder.Services.AddFusion(RpcServiceMode.Server, fusion => {
         fusion.AddWebServer();
-        if (logRpcCalls)
-            fusion.Services.AddSingleton<RpcPeerFactory>(_ =>
-                static (hub, peerRef) => !peerRef.IsServer
-                    ? throw new NotSupportedException("No client peers are allowed on the server.")
-                    : new RpcServerPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
-            );
         fusion.AddService<IChat, Chat>();
     });
     var app = builder.Build();
@@ -60,12 +54,6 @@ async Task RunClient()
         })
         .AddFusion(fusion => {
             fusion.Rpc.AddWebSocketClient(baseUrl);
-            if (logRpcCalls)
-                fusion.Services.AddSingleton<RpcPeerFactory>(_ =>
-                    static (hub, peerRef) => peerRef.IsServer
-                        ? throw new NotSupportedException("No server peers are allowed on the client.")
-                        : new RpcClientPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
-                );
             fusion.AddClient<IChat>();
         })
         .BuildServiceProvider();

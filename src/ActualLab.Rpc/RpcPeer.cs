@@ -9,6 +9,8 @@ namespace ActualLab.Rpc;
 
 public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 {
+    public static LogLevel DefaultCallLogLevel { get; set; } = LogLevel.None;
+
     private AsyncState<RpcPeerConnectionState> _connectionState = new(RpcPeerConnectionState.Disconnected, true);
     private ChannelWriter<RpcMessage>? _sender;
     private bool _resetTryIndex;
@@ -36,7 +38,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public RpcOutboundCallTracker OutboundCalls { get; init; }
     public RpcRemoteObjectTracker RemoteObjects { get; init; }
     public RpcSharedObjectTracker SharedObjects { get; init; }
-    public LogLevel CallLogLevel { get; init; } = LogLevel.None;
+    public LogLevel CallLogLevel { get; init; } = DefaultCallLogLevel;
     public AsyncState<RpcPeerConnectionState> ConnectionState => _connectionState;
     public RpcPeerInternalServices InternalServices => new(this);
 
@@ -56,7 +58,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         var services = hub.Services;
         Hub = hub;
         Ref = @ref;
-        ConnectionKind = @ref.GetConnectionKind();
+        ConnectionKind = @ref.GetConnectionKind(hub);
         Versions = versions ?? @ref.GetVersions();
         ServerMethodResolver = Hub.ServiceRegistry.DefaultServerMethodResolver;
 
@@ -253,7 +255,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         await Reset(Errors.PeerChanged()).ConfigureAwait(false);
                     }
 
-                    var readerAbortSource = cancellationToken.LinkWith(Ref.GoneToken);
+                    var readerAbortSource = cancellationToken.LinkWith(Ref.RerouteToken);
                     readerAbortToken = readerAbortSource.Token;
                     connectionState = SetConnectionState(
                         connectionState.Value.NextConnected(connection, handshake, readerAbortSource),
@@ -300,7 +302,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 // Inbound calls are auto-aborted via peerChangedToken from OnRun,
                 // which becomes RpcInboundCallContext.CancellationToken.
                 InboundCalls.Clear();
-                if (Ref.IsGone) {
+                if (Ref.IsRerouted) {
                     error = Errors.ConnectionUnrecoverable();
                     connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
                     OutboundCalls.TryReroute();

@@ -33,7 +33,7 @@ public class RpcInterceptor : RpcInterceptorBase
             var call = (RpcOutboundCall<TUnwrapped>?)context.PrepareCall(rpcMethodDef, invocation.Arguments);
             var peer = context.Peer!;
             Task<TUnwrapped> resultTask;
-            if (peer.Ref.CanBeGone) {
+            if (peer.Ref.CanBeRerouted) {
                 resultTask = InvokeWithRerouting(invocation, context, call, localCallAsyncInvoker);
             }
             else if (call == null) {
