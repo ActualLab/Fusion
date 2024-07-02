@@ -2,10 +2,8 @@ using ActualLab.Async;
 using ActualLab.Fusion;
 using ActualLab.Fusion.Server;
 using ActualLab.Generators;
-using ActualLab.Mathematics;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
-using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Server;
 using ActualLab.Text;
 using ActualLab.Time;
@@ -32,7 +30,7 @@ public sealed class Host : WorkerBase
 
     public Host(int portOffset)
     {
-        var serviceMode = RandomShared.NextDouble() < 1 ? RpcServiceMode.Hybrid : RpcServiceMode.Server;
+        var serviceMode = RandomShared.NextDouble() < 0.0 ? RpcServiceMode.Hybrid : RpcServiceMode.Server;
         Id = $"{serviceMode:G}-{Interlocked.Increment(ref _lastId)}:{portOffset}";
         Ref = new HostRef(Id);
         Hash = Random.Shared.Next();

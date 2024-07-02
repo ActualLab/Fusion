@@ -25,7 +25,7 @@ public class Tester(IServiceProvider services) : WorkerBase
         var hostId = _ownHost.Id;
         var actionPeriod = TimeSpan.FromSeconds(0.1).ToRandom(0.5);
         var rnd = new Random();
-        var useFusion = rnd.NextDouble() < 0.5;
+        var useFusion = rnd.NextDouble() < 0.0;
         var serviceName = (Symbol)(useFusion ? nameof(IFusionCounter) : nameof(ICounter));
         while (true) {
             var shardRef = ShardRef.New(rnd.Next());
