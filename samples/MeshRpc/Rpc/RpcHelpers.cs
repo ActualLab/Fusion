@@ -2,6 +2,7 @@ using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
 namespace Samples.MeshRpc;
 
@@ -31,6 +32,6 @@ public sealed class RpcHelpers(Host ownHost)
     {
         var hostId = peer.Ref.Key.Value;
         var host = MeshState.State.Value.HostById.GetValueOrDefault(hostId);
-        return host?.Url ?? throw new RpcRerouteException($"Host '{hostId}' is already gone.");
+        return host?.Url ?? throw Errors.ConnectionUnrecoverable();
     }
 }

@@ -27,8 +27,8 @@ public sealed class MeshState
         HashRing = new HashRing<Host>(hosts, h => h.Hash);
     }
 
-    public Host GetShardHost(ShardRef shardRef)
-        => HashRing.FindNode(shardRef.Key * 1_299_709);
+    public Host? GetShardHost(ShardRef shardRef)
+        => HashRing.IsEmpty ? null : HashRing.FindNode(shardRef.Key * 1_299_709);
 
     public MeshState WithHost(Host host)
     {

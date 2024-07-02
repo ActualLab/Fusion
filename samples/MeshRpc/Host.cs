@@ -32,7 +32,7 @@ public sealed class Host : WorkerBase
 
     public Host(int portOffset)
     {
-        var serviceMode = RandomShared.NextDouble() < 0.5 ? RpcServiceMode.Hybrid : RpcServiceMode.Server;
+        var serviceMode = RandomShared.NextDouble() < 1 ? RpcServiceMode.Hybrid : RpcServiceMode.Server;
         Id = $"{serviceMode:G}-{Interlocked.Increment(ref _lastId)}:{portOffset}";
         Ref = new HostRef(Id);
         Hash = Random.Shared.Next();
@@ -43,9 +43,11 @@ public sealed class Host : WorkerBase
         builder.Logging.ClearProviders().AddDebug();
 
         var services = builder.Services;
-        services.AddSingleton(_ => this);
+
+        // Fusion & RPC setup
         var fusion = services.AddFusion();
         fusion.AddWebServer();
+        services.AddSingleton<RpcHelpers>();
         fusion.Rpc.AddWebSocketClient(c => {
             var rpcHelpers = c.GetRequiredService<RpcHelpers>();
             return new RpcWebSocketClient.Options() {
@@ -53,7 +55,11 @@ public sealed class Host : WorkerBase
             };
         });
         services.AddSingleton<RpcCallRouter>(c => c.GetRequiredService<RpcHelpers>().RouteCall);
+
+        // Actual services
+        services.AddSingleton(_ => this);
         fusion.Rpc.AddService<ICounter, Counter>(serviceMode);
+        fusion.Commander.AddHandlers<ICounter>();
         fusion.AddService<IFusionCounter, FusionCounter>(serviceMode);
         services.AddHostedService<Tester>();
         services.AddHostedService<HostKiller>();

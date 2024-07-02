@@ -4,7 +4,6 @@ using MemoryPack;
 using ActualLab.CommandR;
 using ActualLab.CommandR.Configuration;
 using ActualLab.Fusion;
-using ActualLab.Text;
 
 namespace Samples.MeshRpc.Services;
 

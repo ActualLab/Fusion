@@ -26,14 +26,17 @@ public sealed record RpcShardPeerRef : RpcPeerRef
     }
 
     public RpcShardPeerRef(ShardRef shardRef)
-        : base($"{shardRef} -> {MeshState.State.Value.GetShardHost(shardRef).Id.Value}")
+        : base($"{shardRef} -> {MeshState.State.Value.GetShardHost(shardRef)?.Id.Value ?? "null"}")
     {
         ShardKey = shardRef.Key;
         HostId = Key.Value.Split(" -> ")[1];
         var rerouteTokenSource = new CancellationTokenSource();
         RerouteToken = rerouteTokenSource.Token;
         _ = Task.Run(async () => {
-            await MeshState.State.When(x => !x.HostById.ContainsKey(HostId)).ConfigureAwait(false);
+            if (HostId == "null")
+                await MeshState.State.When(x => x.Hosts.Count > 0).ConfigureAwait(false);
+            else
+                await MeshState.State.When(x => !x.HostById.ContainsKey(HostId)).ConfigureAwait(false);
             rerouteTokenSource.Cancel();
         });
     }
