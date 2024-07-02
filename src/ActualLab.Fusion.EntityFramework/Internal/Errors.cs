@@ -1,18 +1,12 @@
-using Microsoft.EntityFrameworkCore;
+using ActualLab.Resilience;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public static class Errors
 {
-    public static Exception CreateCommandDbContextIsCalledFromInvalidationCode()
-        => new InvalidOperationException(
-            $"{nameof(DbHub<DbContext>.CreateCommandDbContext)} is called from the invalidation code. " +
-            $"If you want to read the data there, use {nameof(DbHub<DbContext>.CreateDbContext)} instead.");
     public static Exception DbContextIsReadOnly()
         => new InvalidOperationException("This DbContext is read-only.");
 
-    public static Exception WrongDbOperationScopeType(Type expectedScopeType, Type actualScopeType)
-        => new InvalidOperationException($"{expectedScopeType} is requested, but {actualScopeType.GetName()} is already used.");
     public static Exception WrongDbOperationScopeShard(Type scopeType, DbShard shard, DbShard requestedShard)
         => new InvalidOperationException($"{scopeType} is already bound to shard '{shard}', which differs from '{requestedShard}'.");
     public static Exception DbOperationIndexWasNotAssigned()
@@ -40,4 +34,7 @@ public static class Errors
         => new InvalidOperationException("DbEntityResolver's BatchSize is too large.");
     public static Exception CannotCompileQuery()
         => new InvalidOperationException("DbEntityResolver is unable to produce compiled query.");
+
+    public static Exception FailedToProcessCommandEvent(Exception originalException)
+        => new TerminalException("Failed to process command event.", originalException); // Any terminal error is ok here
 }

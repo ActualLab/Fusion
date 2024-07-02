@@ -1,30 +1,40 @@
-using ActualLab.Internal;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Interception.Interceptors;
 
-public class TypedFactoryInterceptor(IServiceProvider services) : Interceptor
+#pragma warning disable IL2072
+
+public class TypedFactoryInterceptor : Interceptor
 {
-    private static readonly Func<MethodInfo, ObjectFactory> CreateFactoryMethod = CreateFactory;
-    private static readonly ConcurrentDictionary<MethodInfo, ObjectFactory> ObjectFactoryCache = new();
-
-    public override void Intercept(Invocation invocation)
-        => throw Errors.NotSupported($"{nameof(TypedFactoryInterceptor)} doesn't support void methods.");
-
-    public override TResult Intercept<TResult>(Invocation invocation)
+    public new record Options : Interceptor.Options
     {
-        // ObjectFactory is `object ObjectFactory(IServiceProvider, object[] args)`.
-        var factory = ObjectFactoryCache.GetOrAdd(invocation.Method, CreateFactoryMethod);
-        return (TResult)factory(services, invocation.Arguments.ToArray());
+        public static Options Default { get; set; } = new();
     }
 
-    private static ObjectFactory CreateFactory(MethodInfo method)
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public TypedFactoryInterceptor(Options settings, IServiceProvider services) : base(settings, services)
     {
-        var parameters = method.GetParameters();
+        MustInterceptAsyncCalls = false;
+        MustInterceptSyncCalls = true;
+    }
+
+    protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
+    {
+        var methodDef = base.CreateMethodDef(method, proxyType);
+        if (methodDef?.UnwrappedReturnType == typeof(void))
+            methodDef = null;
+        return methodDef;
+    }
+
+    protected override Func<Invocation, object?>? CreateHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
+        Invocation initialInvocation, MethodDef methodDef)
+    {
+        var parameters = methodDef.Parameters;
         var parameterTypes = new Type[parameters.Length];
         for (int i = 0; i < parameters.Length; i++)
             parameterTypes[i] = parameters[i].ParameterType;
-#pragma warning disable IL2072
-        return ActivatorUtilities.CreateFactory(method.ReturnType, parameterTypes);
-#pragma warning restore IL2072
+        var factory = ActivatorUtilities.CreateFactory(methodDef.UnwrappedReturnType, parameterTypes);
+        return invocation => factory.Invoke(Services, invocation.Arguments.ToArray());
     }
 }

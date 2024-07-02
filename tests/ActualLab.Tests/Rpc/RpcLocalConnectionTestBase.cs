@@ -26,15 +26,20 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         var rpc = services.AddRpc();
         var commander = services.AddCommander();
         if (isClient)
-            return;
+            throw new InvalidOperationException("Client shouldn't be used in this test.");
 
         rpc.AddServer<ITestRpcService, TestRpcService>();
-        commander.AddService<TestRpcService>();
-        rpc.AddClient<ITestRpcService>();
-
         rpc.AddServer<ITestRpcBackend, TestRpcBackend>();
-        commander.AddService<TestRpcBackend>();
-        rpc.AddClient<ITestRpcBackend>();
+        if (ConnectionKind == RpcPeerConnectionKind.LocalCall) {
+            rpc.AddClient<ITestRpcService, TestRpcService>();
+            rpc.AddClient<ITestRpcBackend, TestRpcBackend>();
+        }
+        else {
+            rpc.AddClient<ITestRpcService>();
+            rpc.AddClient<ITestRpcBackend>();
+        }
+        commander.AddHandlers<TestRpcService>();
+        commander.AddHandlers<TestRpcBackend>();
     }
 
     [Fact]

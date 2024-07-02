@@ -11,11 +11,11 @@ public static class ComputedSourceExt
     public static void Invalidate(this IComputedSource source, bool immediately = false)
         => source.Computed.Invalidate(immediately);
 
-    public static async ValueTask<TAnonymousComputedSource> Update<TAnonymousComputedSource>(
-        this TAnonymousComputedSource source, CancellationToken cancellationToken = default)
-        where TAnonymousComputedSource : class, IComputedSource
+    public static async ValueTask<TComputedSource> Update<TComputedSource>(
+        this TComputedSource source, CancellationToken cancellationToken = default)
+        where TComputedSource : class, IComputedSource
     {
-        await source.Computed.Update(cancellationToken).ConfigureAwait(false);
+        await source.Computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
         return source;
     }
 

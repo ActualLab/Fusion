@@ -12,7 +12,7 @@ public class RedisConnector
     public RetryDelaySeq ReconnectDelays { get; init; } = RetryDelaySeq.Exp(0.5, 3, 0.33);
     public RandomTimeSpan WatchdogTestPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.1);
     public TimeSpan WatchdogReconnectDelay { get; init; } = TimeSpan.FromSeconds(11);
-    public IMomentClock Clock { get; init; } = CpuClock.Instance;
+    public MomentClock Clock { get; init; } = CpuClock.Instance;
     public ILogger? Log { get; init; }
 
     public RedisConnector(string configuration, bool mustStart = true)

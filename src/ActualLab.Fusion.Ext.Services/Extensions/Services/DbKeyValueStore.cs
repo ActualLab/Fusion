@@ -81,6 +81,7 @@ public class DbKeyValueStore<TDbContext, TDbKeyValue>(IServiceProvider services)
     public virtual async Task<string?> Get(DbShard shard, string key, CancellationToken cancellationToken = default)
     {
         _ = PseudoGet(shard, key);
+
         var dbKeyValue = await KeyValueResolver.Get(shard, key, cancellationToken).ConfigureAwait(false);
         if (dbKeyValue == null)
             return null;
@@ -91,8 +92,7 @@ public class DbKeyValueStore<TDbContext, TDbKeyValue>(IServiceProvider services)
         return dbKeyValue?.Value;
     }
 
-    public virtual async Task<int> Count(
-        DbShard shard, string prefix, CancellationToken cancellationToken = default)
+    public virtual async Task<int> Count(DbShard shard, string prefix, CancellationToken cancellationToken = default)
     {
         _ = PseudoGet(shard, prefix);
 

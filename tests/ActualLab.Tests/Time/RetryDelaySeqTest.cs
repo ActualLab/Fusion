@@ -60,8 +60,8 @@ public class RetryDelaySeqTest(ITestOutputHelper @out) : TestBase(@out)
     public void RetryDelaySequenceCanBeUpTo1MLong(double minDelay, double maxDelay)
     {
         var seq = RetryDelaySeq.Exp(minDelay, maxDelay, 0);
-        var minDelaySpan = TimeSpan.FromSeconds(minDelay) * (0.99 - seq.Spread);
-        var maxDelaySpan = TimeSpan.FromSeconds(maxDelay) * (1.01 + seq.Spread);
+        var minDelaySpan = TimeSpan.FromSeconds(minDelay).MultiplyBy(0.99 - seq.Spread);
+        var maxDelaySpan = TimeSpan.FromSeconds(maxDelay).MultiplyBy(1.01 + seq.Spread);
         foreach (var delay in seq.Delays(1, 1_000_000)) {
             Assert.True(delay >= minDelaySpan, $"Delay can't be less than specified min = {minDelay} sec.");
             Assert.True(delay <= maxDelaySpan, $"Delay can't be greater than specified max = {maxDelay} sec.");

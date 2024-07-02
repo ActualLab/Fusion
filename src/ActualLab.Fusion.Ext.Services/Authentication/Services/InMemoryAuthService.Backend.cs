@@ -1,7 +1,8 @@
 using System.Globalization;
 using ActualLab.Fusion.EntityFramework;
-using ActualLab.Fusion.Internal;
+using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Versioning;
+using Errors = ActualLab.Fusion.Internal.Errors;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
@@ -28,6 +29,7 @@ public partial class InMemoryAuthService
             return Task.CompletedTask;
         }
 
+        InMemoryOperationScope.Require();
         if (!user.Identities.ContainsKey(authenticatedIdentity))
 #pragma warning disable MA0015
             throw new ArgumentOutOfRangeException(
@@ -100,6 +102,7 @@ public partial class InMemoryAuthService
             return Task.FromResult<SessionInfo>(null!);
         }
 
+        InMemoryOperationScope.Require();
         var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
         context.Operation.Items.Set(sessionInfo == null); // invIsNew
         sessionInfo ??= new SessionInfo(session, Clocks.SystemClock.Now);
@@ -125,6 +128,7 @@ public partial class InMemoryAuthService
             return Task.CompletedTask;
         }
 
+        InMemoryOperationScope.Require();
         var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
         if (sessionInfo == null || sessionInfo.IsSignOutForced)
             throw new KeyNotFoundException();

@@ -68,9 +68,8 @@ public class CounterServiceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         sw.Start();
         var c = await Computed.Capture(() => counters.GetFirstNonZero("x", "y wait"));
         sw.ElapsedMilliseconds.Should().BeLessThan(250);
-        var cImpl = (IComputedImpl)c;
         c.Value.Should().Be(1);
-        cImpl.Used.Length.Should().Be(1);
+        ComputedImpl.GetDependencies(c).Length.Should().Be(1);
 
         // Case 2: both keys are used
         await counters.Set("x", 0);
@@ -79,9 +78,8 @@ public class CounterServiceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         sw.Start();
         c = await Computed.Capture(() => counters.GetFirstNonZero("x", "y wait"));
         sw.ElapsedMilliseconds.Should().BeGreaterThan(250);
-        cImpl = c;
         c.Value.Should().Be(2);
-        cImpl.Used.Length.Should().Be(2);
+        ComputedImpl.GetDependencies(c).Length.Should().Be(2);
 
         // Case 3: first key throws an error
         await counters.Set("x fail", 0);
@@ -90,9 +88,8 @@ public class CounterServiceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         sw.Start();
         c = await Computed.Capture(() => counters.GetFirstNonZero("x fail", "y wait"));
         sw.ElapsedMilliseconds.Should().BeLessThan(250);
-        cImpl = c;
         c.Error!.GetType().Should().Be(typeof(ArgumentOutOfRangeException));
-        cImpl.Used.Length.Should().Be(1);
+        ComputedImpl.GetDependencies(c).Length.Should().Be(1);
     }
 
     protected override void ConfigureServices(ServiceCollection services)

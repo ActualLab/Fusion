@@ -23,11 +23,7 @@ public sealed class RpcComputeSystemCallSender(IServiceProvider services)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Invalidate(RpcPeer peer, long callId, List<RpcHeader>? headers = null)
     {
-        var context = new RpcOutboundContext(headers) {
-            PreSelectedPeer = peer,
-            RelatedId = callId,
-        };
-        // An optimized version of Client.Error(result):
+        var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCall(InvalidateMethodDef, ArgumentList.Empty)!;
         return call.SendNoWait(false);
     }

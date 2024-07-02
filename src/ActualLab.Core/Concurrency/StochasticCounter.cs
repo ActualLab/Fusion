@@ -1,3 +1,4 @@
+using ActualLab.Generators;
 using ActualLab.OS;
 
 namespace ActualLab.Concurrency;
@@ -8,7 +9,6 @@ public struct StochasticCounter
     public const int MaxPrecision = 2048;
     public static int DefaultPrecision => HardwareInfo.ProcessorCountPo2;
 
-    private readonly int _mask;
     private volatile int _value;
 
     public int Value {
@@ -18,37 +18,36 @@ public struct StochasticCounter
         set => Interlocked.Exchange(ref _value, value);
     }
 
-    public int Precision {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _mask + 1;
-    }
+    public readonly int Mask;
+    public readonly int Precision;
 
-    public StochasticCounter(int precision)
+    public StochasticCounter(int precisionHint)
     {
-        if (precision < 1)
-            throw new ArgumentOutOfRangeException(nameof(precision));
+        if (precisionHint < 1)
+            throw new ArgumentOutOfRangeException(nameof(precisionHint));
 
-        precision = Math.Min(MaxPrecision, precision);
-        _mask = (int)Bits.GreaterOrEqualPowerOf2((ulong)precision) - 1;
+        precisionHint = Math.Min(MaxPrecision, precisionHint);
+        Mask = (int)Bits.GreaterOrEqualPowerOf2((ulong)precisionHint) - 1;
+        Precision = Mask + 1;
     }
 
     // Overloads w/o random
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryIncrement(int max)
-        => TryIncrement(NextRandom(), max);
+        => TryIncrement(ThreadRandom.Next(), max);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryDecrement(int min)
-        => TryDecrement(NextRandom(), min);
+        => TryDecrement(ThreadRandom.Next(), min);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int? Increment()
-        => Increment(NextRandom());
+        => Increment(ThreadRandom.Next());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int? Decrement()
-        => Decrement(NextRandom());
+        => Decrement(ThreadRandom.Next());
 
     // Overloads with random
 
@@ -58,7 +57,7 @@ public struct StochasticCounter
             return false;
 
         if (Increment(random) is { } value && value > max) {
-            Interlocked.Add(ref _value, -(_mask + 1)); // Revert increment
+            Interlocked.Add(ref _value, -Precision); // Revert increment
             return false;
         }
 
@@ -71,7 +70,7 @@ public struct StochasticCounter
             return false;
 
         if (Decrement(random) is { } value && value < min) {
-            Interlocked.Add(ref _value, _mask + 1); // Revert decrement
+            Interlocked.Add(ref _value, Precision); // Revert decrement
             return false;
         }
 
@@ -80,26 +79,13 @@ public struct StochasticCounter
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int? Increment(int random)
-        => (random & _mask) == 0
-            ? Interlocked.Add(ref _value, _mask + 1)
+        => (random & Mask) == 0
+            ? Interlocked.Add(ref _value, Precision)
             : null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int? Decrement(int random)
-        => (random & _mask) == 0
-            ? Interlocked.Add(ref _value, -(_mask + 1))
+        => (random & Mask) == 0
+            ? Interlocked.Add(ref _value, -Precision)
             : null;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int NextRandom()
-    {
-        if (_mask == 0)
-            return 0; // Doesn't make any sense to randomize in this case
-
-#if NET7_0_OR_GREATER
-        return Random.Shared.Next();
-#else
-        return ConcurrentRandom.Next();
-#endif
-    }
 }

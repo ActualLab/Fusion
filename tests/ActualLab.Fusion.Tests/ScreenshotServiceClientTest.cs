@@ -21,11 +21,11 @@ public class ScreenshotServiceClientTest(ITestOutputHelper @out) : FusionTestBas
 
         var initialScreenshotCount = service.ScreenshotCount;
         for (var i = 0; i < 50; i++) {
-            var startedAt = SystemClock.Now;
+            var startedAt = Moment.Now;
             var c = await Computed.Capture(() => clientService.GetScreenshot(100));
             var screenshot = c.Value;
             screenshot.Should().NotBeNull();
-            var endedAt = SystemClock.Now;
+            var endedAt = Moment.Now;
 
             var callDuration = endedAt - startedAt;
             var delay = endedAt - screenshot.CapturedAt;

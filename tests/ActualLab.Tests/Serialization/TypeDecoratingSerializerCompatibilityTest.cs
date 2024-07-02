@@ -41,7 +41,7 @@ public class TypeDecoratingSerializerCompatibilityTest(ITestOutputHelper @out) :
 
     public record Circle(double R) : Shape
     {
-        public override double Area => double.Pi * R * R;
+        public override double Area => Math.PI * R * R;
     }
 
     public record Square(double L) : Shape

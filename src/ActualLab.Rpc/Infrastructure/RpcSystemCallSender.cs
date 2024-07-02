@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Internal;
+using ActualLab.Resilience;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -60,9 +61,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         RpcHandshake handshake,
         List<RpcHeader>? headers = null)
     {
-        var context = new RpcOutboundContext() {
-            PreSelectedPeer = peer,
-        };
+        var context = new RpcOutboundContext(peer);
         var call = context.PrepareCall(HandshakeMethodDef, ArgumentList.New(handshake))!;
         return call.SendNoWait(false, sender);
     }
@@ -84,10 +83,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     {
         var headerCount = headers?.Count ?? 0;
         try {
-            var context = new RpcOutboundContext(headers) {
-                PreSelectedPeer = peer,
-                RelatedId = callId,
-            };
+            var context = new RpcOutboundContext(peer, callId, headers);
             var call = peer.ConnectionKind == RpcPeerConnectionKind.Remote
                 ? context.PrepareCall(OkMethodDef, ArgumentList.New(result)) // Serialization-ready
                 : context.PrepareCall(OkMethodDef, ArgumentList.New<object?>(result)); // No serialization expected
@@ -108,10 +104,22 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Error(RpcPeer peer, long callId, Exception error, List<RpcHeader>? headers = null)
     {
-        var context = new RpcOutboundContext(headers) {
-            PreSelectedPeer = peer,
-            RelatedId = callId,
-        };
+        if (error is RpcRerouteException) {
+            Log.LogError("Error(...) got RpcRerouteException, which should never happen");
+            error = new TaskCanceledException();
+        }
+        if (peer.StopToken.IsCancellationRequested) {
+            // The peer is stopping, we may omit sending call result here
+            var stopMode = RpcPeerStopModeExt.ComputeFor(peer);
+            if (stopMode == RpcPeerStopMode.KeepInboundCallsIncomplete) {
+                // We must keep all inbound calls incomplete - assuming they're getting aborted with
+                // either OperationCanceledException or ObjectDisposedException.
+                if (error is OperationCanceledException || error.IsServiceProviderDisposedException())
+                    return Task.CompletedTask;
+            }
+        }
+
+        var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCall(ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()))!;
         return call.SendNoWait(false);
     }
@@ -119,10 +127,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Cancel(RpcPeer peer, long callId, List<RpcHeader>? headers = null)
     {
-        var context = new RpcOutboundContext(headers) {
-            PreSelectedPeer = peer,
-            RelatedId = callId,
-        };
+        var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCall(CancelMethodDef, ArgumentList.Empty)!;
         return call.SendNoWait(false);
     }
@@ -132,9 +137,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task KeepAlive(RpcPeer peer, long[] localIds, List<RpcHeader>? headers = null)
     {
-        var context = new RpcOutboundContext(headers) {
-            PreSelectedPeer = peer,
-        };
+        var context = new RpcOutboundContext(peer, headers);
         var call = context.PrepareCall(KeepAliveMethodDef, ArgumentList.New(localIds))!;
         return call.SendNoWait(false);
     }
@@ -142,9 +145,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Disconnect(RpcPeer peer, long[] localIds, List<RpcHeader>? headers = null)
     {
-        var context = new RpcOutboundContext(headers) {
-            PreSelectedPeer = peer,
-        };
+        var context = new RpcOutboundContext(peer, headers);
         var call = context.PrepareCall(DisconnectMethodDef, ArgumentList.New(localIds))!;
         return call.SendNoWait(false);
     }
@@ -154,10 +155,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Ack(RpcPeer peer, long localId, long nextIndex, Guid hostId, List<RpcHeader>? headers = null)
     {
-        var context = new RpcOutboundContext(headers) {
-            PreSelectedPeer = peer,
-            RelatedId = localId,
-        };
+        var context = new RpcOutboundContext(peer, localId, headers);
         var call = context.PrepareCall(AckMethodDef, ArgumentList.New(nextIndex, hostId))!;
         return call.SendNoWait(false);
     }
@@ -165,10 +163,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task AckEnd(RpcPeer peer, long localId, Guid hostId, List<RpcHeader>? headers = null)
     {
-        var context = new RpcOutboundContext(headers) {
-            PreSelectedPeer = peer,
-            RelatedId = localId,
-        };
+        var context = new RpcOutboundContext(peer, localId, headers);
         var call = context.PrepareCall(AckEndMethodDef, ArgumentList.New(hostId))!;
         return call.SendNoWait(false);
     }
@@ -176,10 +171,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Item<TItem>(RpcPeer peer, long localId, long index, TItem item, List<RpcHeader>? headers = null)
     {
-        var context = new RpcOutboundContext(headers) {
-            PreSelectedPeer = peer,
-            RelatedId = localId,
-        };
+        var context = new RpcOutboundContext(peer, localId, headers);
         var call = context.PrepareCall(ItemMethodDef, ArgumentList.New(index, item))!;
         return call.SendNoWait(true);
     }
@@ -187,10 +179,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Batch<TItem>(RpcPeer peer, long localId, long index, TItem[] items, List<RpcHeader>? headers = null)
     {
-        var context = new RpcOutboundContext(headers) {
-            PreSelectedPeer = peer,
-            RelatedId = localId,
-        };
+        var context = new RpcOutboundContext(peer, localId, headers);
         var call = context.PrepareCall(BatchMethodDef, ArgumentList.New(index, items))!;
         return call.SendNoWait(true);
     }
@@ -198,11 +187,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task End(RpcPeer peer, long localId, long index, Exception? error, List<RpcHeader>? headers = null)
     {
-        var context = new RpcOutboundContext(headers) {
-            PreSelectedPeer = peer,
-            RelatedId = localId,
-        };
-        // An optimized version of Client.Error(result):
+        var context = new RpcOutboundContext(peer, localId, headers);
         var call = context.PrepareCall(EndMethodDef, ArgumentList.New(index, error.ToExceptionInfo()))!;
         return call.SendNoWait(false);
     }

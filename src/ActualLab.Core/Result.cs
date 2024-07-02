@@ -111,13 +111,17 @@ public interface IMutableResult<T> : IResult<T>, IMutableResult
     /// Atomically sets mutable result's value and error by invoking the provided <paramref name="updater"/>.
     /// </summary>
     /// <param name="updater">The update function.</param>
-    void Set(Func<Result<T>, Result<T>> updater);
+    /// <param name="throwOnError"><c>true</c> if exception in <paramref name="updater"/> must be rethrown
+    /// without settings the <see cref="Value"/>; otherwise, <c>false</c>.</param>
+    void Set(Func<Result<T>, Result<T>> updater, bool throwOnError = false);
     /// <summary>
     /// Atomically sets mutable result's value and error by invoking the provided <paramref name="updater"/>.
     /// </summary>
     /// <param name="state">State argument to pass to the updater.</param>
     /// <param name="updater">The update function.</param>
-    void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater);
+    /// <param name="throwOnError"><c>true</c> if exception in <paramref name="updater"/> must be rethrown
+    /// without settings the <see cref="Value"/>; otherwise, <c>false</c>.</param>
+    void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater, bool throwOnError = false);
 }
 
 /// <summary>

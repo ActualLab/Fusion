@@ -6,7 +6,7 @@ public record TimerSetOptions
     public static readonly TimerSetOptions Default = new();
     public static readonly TimeSpan MinQuanta = TimeSpan.FromMilliseconds(10);
 
-    public IMomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
+    public MomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
     public TickSource TickSource { get; init; } = DefaultTickSource;
     public TimeSpan Quanta => TickSource.Period;
 }
@@ -20,7 +20,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
     private readonly object _lock = new();
     private int _minPriority = 0;
 
-    public IMomentClock Clock { get; }
+    public MomentClock Clock { get; }
     public TickSource TickSource { get; }
     public TimeSpan Quanta { get; }
     public int Count {

@@ -4,6 +4,8 @@ using ActualLab.Text.Internal;
 
 namespace ActualLab.Text;
 
+#pragma warning disable CA1721
+
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [JsonConverter(typeof(SymbolJsonConverter))]
@@ -23,12 +25,11 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
     }
 
     [IgnoreDataMember, MemoryPackIgnore]
-#pragma warning disable CA1721
     public int HashCode {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _hashCode;
     }
-#pragma warning restore CA1721
+
     [IgnoreDataMember, MemoryPackIgnore]
     public bool IsEmpty {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

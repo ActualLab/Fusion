@@ -16,7 +16,6 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
     protected Options Settings { get; } = settings;
     protected ICommander Commander { get; } = commander;
     protected IServiceProvider Services => Commander.Services;
-    protected HostId HostId => Commander.Hub.HostId;
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     public virtual Task OnOperationCompleted(Operation operation, CommandContext? commandContext)
@@ -28,7 +27,7 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
             var isLocal = commandContext != null;
             var operationType = isLocal ? "Local" : "External";
             try {
-                await Commander.Call(Completion.New(operation), true).ConfigureAwait(false);
+                await Commander.Call(CompleteAsync.New(operation), true).ConfigureAwait(false);
                 if (command is not INotLogged || Settings.IgnoreNotLogged)
                     Log.IfEnabled(Settings.LogLevel)?.Log(Settings.LogLevel,
                         "{OperationType} operation completion succeeded. Host: {HostId}, Command: {Command}",

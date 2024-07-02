@@ -6,7 +6,7 @@ public partial class SandboxedKeyValueStore<TContext>
 {
     public record KeyChecker
     {
-        public IMomentClock Clock { get; init; } = null!;
+        public MomentClock Clock { get; init; } = null!;
         public string Prefix { get; init; } = "";
         public string? SecondaryPrefix { get; init; }
         public TimeSpan? ExpirationTime { get; init; }

@@ -9,11 +9,14 @@ namespace ActualLab.Rpc;
 
 public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 {
-    private ILogger? _log;
-    private RpcCallLogger? _callLogger;
+    public static LogLevel DefaultCallLogLevel { get; set; } = LogLevel.None;
+
     private AsyncState<RpcPeerConnectionState> _connectionState = new(RpcPeerConnectionState.Disconnected, true);
-    private bool _resetTryIndex;
     private ChannelWriter<RpcMessage>? _sender;
+    private bool _resetTryIndex;
+    private volatile RpcPeerStopMode _stopMode;
+    private RpcCallLogger? _callLogger;
+    private ILogger? _log;
 
     protected IServiceProvider Services => Hub.Services;
     protected internal ILogger Log => _log ??= Services.LogFor(GetType());
@@ -23,6 +26,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     public RpcHub Hub { get; }
     public RpcPeerRef Ref { get; }
+    public Guid Id { get; } = Guid.NewGuid();
     public RpcPeerConnectionKind ConnectionKind { get; }
     public VersionSet Versions { get; init; }
     public RpcServerMethodResolver ServerMethodResolver { get; protected set; }
@@ -34,10 +38,17 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public RpcOutboundCallTracker OutboundCalls { get; init; }
     public RpcRemoteObjectTracker RemoteObjects { get; init; }
     public RpcSharedObjectTracker SharedObjects { get; init; }
-    public LogLevel CallLogLevel { get; init; } = LogLevel.None;
+    public LogLevel CallLogLevel { get; init; } = DefaultCallLogLevel;
     public AsyncState<RpcPeerConnectionState> ConnectionState => _connectionState;
     public RpcPeerInternalServices InternalServices => new(this);
-    public Guid Id { get; } = Guid.NewGuid();
+
+    public RpcPeerStopMode StopMode {
+        get => _stopMode;
+        set {
+            lock (Lock)
+                _stopMode = value;
+        }
+    }
 
     protected RpcPeer(RpcHub hub, RpcPeerRef @ref, VersionSet? versions)
     {
@@ -47,7 +58,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         var services = hub.Services;
         Hub = hub;
         Ref = @ref;
-        ConnectionKind = @ref.GetConnectionKind();
+        ConnectionKind = @ref.GetConnectionKind(hub);
         Versions = versions ?? @ref.GetVersions();
         ServerMethodResolver = Hub.ServiceRegistry.DefaultServerMethodResolver;
 
@@ -75,14 +86,30 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
         sender ??= Sender;
         try {
-            if (sender == null || sender.TryWrite(message))
-                return Task.CompletedTask;
-
-            return CompleteSend(sender, message);
+            return sender == null || sender.TryWrite(message)
+                ? Task.CompletedTask
+                : CompleteAsync();
         }
         catch (Exception e) {
             Log.LogError(e, "Send failed");
             return Task.CompletedTask;
+        }
+
+        async Task CompleteAsync() {
+            // !!! This method should never fail
+            try {
+                // If we're here, WaitToWriteAsync call is required to continue
+                while (await sender.WaitToWriteAsync(StopToken).ConfigureAwait(false))
+                    if (sender.TryWrite(message))
+                        return;
+
+                throw new ChannelClosedException();
+            }
+#pragma warning disable RCS1075
+            catch (Exception e) when (!e.IsCancellationOf(StopToken)) {
+                Log.LogError(e, "Send failed");
+            }
+#pragma warning restore RCS1075
         }
     }
 
@@ -200,7 +227,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         handshake = await Task
                             .Run(async () => {
                                 await Hub.SystemCallSender
-                                    .Handshake(this, sender, new RpcHandshake(Id, Versions))
+                                    .Handshake(this, sender, new RpcHandshake(Id, Versions, Hub.Id))
                                     .ConfigureAwait(false);
                                 var message = await reader.ReadAsync(handshakeToken).ConfigureAwait(false);
                                 var handshakeContext = await ProcessMessage(message, handshakeToken).ConfigureAwait(false);
@@ -228,7 +255,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         await Reset(Errors.PeerChanged()).ConfigureAwait(false);
                     }
 
-                    var readerAbortSource = cancellationToken.LinkWith(Ref.GoneToken);
+                    var readerAbortSource = cancellationToken.LinkWith(Ref.RerouteToken);
                     readerAbortToken = readerAbortSource.Token;
                     connectionState = SetConnectionState(
                         connectionState.Value.NextConnected(connection, handshake, readerAbortSource),
@@ -275,7 +302,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 // Inbound calls are auto-aborted via peerChangedToken from OnRun,
                 // which becomes RpcInboundCallContext.CancellationToken.
                 InboundCalls.Clear();
-                if (Ref.IsGone) {
+                if (Ref.IsRerouted) {
                     error = Errors.ConnectionUnrecoverable();
                     connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
                     OutboundCalls.TryReroute();
@@ -376,8 +403,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
-    // Private methods
-
     protected AsyncState<RpcPeerConnectionState> SetConnectionState(
         RpcPeerConnectionState newState,
         AsyncState<RpcPeerConnectionState>? expectedState = null)
@@ -440,21 +465,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
-    private async Task CompleteSend(ChannelWriter<RpcMessage> sender, RpcMessage message)
-    {
-        // !!! This method should never fail
-        try {
-            // If we're here, WaitToWriteAsync call is required to continue
-            while (await sender.WaitToWriteAsync(StopToken).ConfigureAwait(false))
-                if (sender.TryWrite(message))
-                    return;
-
-            throw new ChannelClosedException();
-        }
-#pragma warning disable RCS1075
-        catch (Exception e) when (!e.IsCancellationOf(StopToken)) {
-            Log.LogError(e, "Send failed");
-        }
-#pragma warning restore RCS1075
-    }
+    protected internal virtual RpcPeerStopMode ComputeAutoStopMode()
+        => Ref.IsServer
+            ? RpcPeerStopMode.KeepInboundCallsIncomplete // The client will likely reconnect or pick another server
+            : RpcPeerStopMode.CancelInboundCalls; // When the client dies, server-to-client calls must be cancelled
 }

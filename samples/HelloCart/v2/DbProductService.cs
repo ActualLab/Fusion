@@ -37,7 +37,7 @@ public class DbProductService(IServiceProvider services)
             : $"Product updated: {productId} with Price = {product.Price}";
         var logEvent = new LogMessageCommand(Ulid.NewUlid().ToString(), message);
         context.Operation.AddEvent(logEvent, logEvent.Uuid);
-        var randomEvent = LogMessageCommand.NewRandom();
+        var randomEvent = LogMessageCommand.New();
         context.Operation.AddEvent(randomEvent, randomEvent.Uuid);
     }
 

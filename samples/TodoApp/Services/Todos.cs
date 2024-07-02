@@ -56,11 +56,11 @@ public class Todos(ISandboxedKeyValueStore store, IAuth auth) : ITodos
 
     public virtual async Task Remove(Todos_Remove command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) return;
+        if (Invalidation.IsActive)
+            return;
+
         var (session, id) = command;
-
         var user = await auth.GetUser(session, cancellationToken).Require();
-
         var key = GetTodoKey(user, id);
         var doneKey = GetDoneKey(user, id);
         await store.Remove(session, key, cancellationToken);

@@ -21,6 +21,7 @@ public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
     public int Count => Calls.Count;
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    // ReSharper disable once NotDisposedResourceIsReturned
     public IEnumerator<TRpcCall> GetEnumerator() => Calls.Values.GetEnumerator();
 
     public virtual void Initialize(RpcPeer peer)
@@ -71,7 +72,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void TryReroute()
     {
-        var error = new RpcRerouteException();
+        var error = RpcRerouteException.MustReroute();
         foreach (var call in this) {
             if (call.Context.IsPeerChanged())
                 call.SetError(error, context: null, assumeCancelled: true);

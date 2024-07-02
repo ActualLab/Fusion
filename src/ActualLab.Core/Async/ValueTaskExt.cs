@@ -51,6 +51,19 @@ public static partial class ValueTaskExt
         }
     }
 
+    // ToUnitTask
+
+    public static Task<Unit> ToUnitTask(this ValueTask source)
+    {
+        return source.IsCompletedSuccessfully ? TaskExt.UnitTask : ConvertAsync(source);
+
+        static async Task<Unit> ConvertAsync(ValueTask source)
+        {
+            await source.ConfigureAwait(false);
+            return default;
+        }
+    }
+
     // AssertXxx
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

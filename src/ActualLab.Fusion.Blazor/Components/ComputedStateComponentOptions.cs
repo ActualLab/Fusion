@@ -4,5 +4,5 @@ namespace ActualLab.Fusion.Blazor;
 public enum ComputedStateComponentOptions
 {
     SynchronizeComputeState = 0x1,
-    RecomputeOnParametersSet = 0x2,
+    StateIsParameterDependent = 0x2,
 }

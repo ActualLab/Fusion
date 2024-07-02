@@ -8,6 +8,8 @@ public class AuthStateProvider : AuthenticationStateProvider, IDisposable
 {
     public record Options
     {
+        public static Options Default { get; set; } = new();
+
         public IUpdateDelayer UpdateDelayer { get; init; }
 
         public Options()

@@ -46,21 +46,23 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
 
     public override async Task DisposeAsync()
     {
-        if (ClientServices is IAsyncDisposable adcs)
+        if (_clientServices is IAsyncDisposable adcs)
             await adcs.DisposeAsync();
-        if (ClientServices is IDisposable dcs)
+        if (_clientServices is IDisposable dcs)
             dcs.Dispose();
 
         try {
-            await Services.HostedServices().Stop();
+            var hostedServices = _services?.HostedServices();
+            if (hostedServices != null)
+                await hostedServices.Stop();
         }
         catch {
             // Intended
         }
 
-        if (Services is IAsyncDisposable ads)
+        if (_services is IAsyncDisposable ads)
             await ads.DisposeAsync();
-        if (Services is IDisposable ds)
+        if (_services is IDisposable ds)
             ds.Dispose();
     }
 
@@ -78,7 +80,8 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
     protected virtual void ConfigureServices(IServiceCollection services, bool isClient)
     {
         if (UseTestClock)
-            services.AddSingleton(new MomentClockSet(new TestClock()));
+            services.AddSingleton(_ => new MomentClockSet(new TestClock()));
+
         services.AddSingleton(Out);
 
         // Logging
@@ -126,12 +129,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
             }
         });
         services.AddSingleton<RpcCallRouter>(_ => {
-            RpcHub? rpcHub = null;
-            return (method, arguments) => {
-                rpcHub ??= method.Hub;
-                var peerRef = RpcPeerRef.GetDefaultClientPeerRef(ConnectionKind, method.IsBackend);
-                return rpcHub.GetClientPeer(peerRef);
-            };
+            return (method, arguments) => RpcPeerRef.GetDefaultClientPeerRef(ConnectionKind, method.IsBackend);
         });
         if (!isClient) {
             services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly) {

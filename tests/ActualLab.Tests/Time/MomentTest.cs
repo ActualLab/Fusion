@@ -8,8 +8,8 @@ public class MomentTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void BasicTest()
     {
-        var m = SystemClock.Now;
-        var m1 = (Moment) m.ToDateTimeOffset();
+        var m = Moment.Now;
+        var m1 = (Moment)m.ToDateTimeOffset();
         m1.Should().Be(m);
         m1 = m.ToDateTime();
         m1.Should().Be(m);

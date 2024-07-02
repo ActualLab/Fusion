@@ -92,7 +92,7 @@ public abstract class KeyValueStoreTestBase : FusionTestBase
     public async Task ExpirationTest()
     {
         var kvs = Services.GetRequiredService<IKeyValueStore>();
-        var clock = (TestClock) Services.GetRequiredService<IMomentClock>();
+        var clock = (TestClock)Services.Clocks().SystemClock;
         var shard = DbShard.None;
 
         await kvs.Set(shard, "1", "1v", clock.Now + TimeSpan.FromSeconds(5));

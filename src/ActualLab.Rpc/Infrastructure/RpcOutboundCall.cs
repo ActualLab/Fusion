@@ -13,20 +13,28 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     protected override string DebugTypeName => "->";
 
     public readonly RpcOutboundContext Context = context;
-    public readonly RpcPeer Peer = context.Peer;
+    public readonly RpcPeer Peer = context.Peer!;
     public abstract Task UntypedResultTask { get; }
     public TimeSpan ConnectTimeout;
     public TimeSpan Timeout;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public static RpcOutboundCall New(RpcOutboundContext context)
-        => FactoryCache.GetOrAdd((context.CallTypeId, context.MethodDef!.UnwrappedReturnType), static key => {
+    public static RpcOutboundCall? New(RpcOutboundContext context)
+    {
+        var peer = context.Peer;
+        if (peer == null)
+            throw ActualLab.Internal.Errors.InternalError("context.Peer == null.");
+        if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall)
+            return null;
+
+        return FactoryCache.GetOrAdd((context.CallTypeId, context.MethodDef!.UnwrappedReturnType), static key => {
             var (callTypeId, tResult) = key;
             var type = RpcCallTypeRegistry.Resolve(callTypeId)
                 .OutboundCallType
                 .MakeGenericType(tResult);
             return (Func<RpcOutboundContext, RpcOutboundCall>)type.GetConstructorDelegate(typeof(RpcOutboundContext))!;
         }).Invoke(context);
+    }
 
     public override string ToString()
     {

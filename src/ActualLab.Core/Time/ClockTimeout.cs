@@ -1,7 +1,7 @@
 namespace ActualLab.Time;
 
 public readonly record struct ClockTimeout(
-    IMomentClock Clock,
+    MomentClock Clock,
     TimeSpan Duration)
 {
     public override string ToString()

@@ -69,7 +69,7 @@ public class ScreenshotService : IScreenshotService
         return new Screenshot {
             Width = ow,
             Height = oh,
-            CapturedAt = SystemClock.Now,
+            CapturedAt = Moment.Now,
             Image = stream.ToArray(),
         };
     }

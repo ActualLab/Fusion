@@ -6,7 +6,7 @@ public static class CancellationTokenExt
 {
     public static string Format(this CancellationToken cancellationToken)
         => cancellationToken.CanBeCanceled
-            ? $"ct-#{(uint)cancellationToken.GetHashCode():x}"
+            ? $"ct-{(uint)cancellationToken.GetHashCode():x}"
             : "ct-none";
 
     // LinkWith

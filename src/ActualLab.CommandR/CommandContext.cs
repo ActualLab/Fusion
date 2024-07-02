@@ -103,15 +103,11 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
     public Operation? TryGetOperation()
         => OutermostContext._operation;
 
-    public void ChangeOperation(Operation? operation, bool moveItems = false)
+    public void ChangeOperation(Operation? operation)
     {
-        var oldOperation = TryGetOperation();
-        if (oldOperation == operation)
-            return;
-
-        OutermostContext._operation = operation;
-        if (moveItems && operation != null && oldOperation != null)
-            operation.Items = oldOperation.Items;
+        var outermostContext = OutermostContext;
+        if (!ReferenceEquals(outermostContext._operation, operation))
+            outermostContext._operation = operation;
     }
 
     public abstract Task InvokeRemainingHandlers(CancellationToken cancellationToken = default);

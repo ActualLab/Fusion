@@ -34,7 +34,7 @@ public partial record RetryDelaySeq(
 
             try {
                 var multiplier = Math.Pow(Multiplier, failedTryCount - 1);
-                return TimeSpanExt.Min(Max, multiplier * Min).ToRandom(Spread).Next().Positive();
+                return TimeSpanExt.Min(Max, Min.MultiplyBy(multiplier)).ToRandom(Spread).Next().Positive();
             }
             catch (OverflowException) {
                 return Max;

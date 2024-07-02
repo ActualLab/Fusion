@@ -1,28 +1,15 @@
-using System.Reactive.PlatformServices;
 using ActualLab.Time.Internal;
 
 namespace ActualLab.Time;
 
-public sealed class CoarseCpuClock : IMomentClock
+public sealed class CoarseCpuClock : MomentClock
 {
-    public static readonly IMomentClock Instance = new CoarseCpuClock();
+    public static readonly CoarseCpuClock Instance = new();
 
-    public static Moment Now {
+    public override Moment Now {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => CoarseClockHelper.Now;
     }
 
-    Moment IMomentClock.Now => Now;
-    DateTimeOffset ISystemClock.UtcNow => Now;
-
     private CoarseCpuClock() { }
-
-    public override string ToString() => $"{GetType().Name}()";
-    public Moment ToRealTime(Moment localTime) => localTime;
-    public Moment ToLocalTime(Moment realTime) => realTime;
-    public TimeSpan ToRealDuration(TimeSpan localDuration) => localDuration;
-    public TimeSpan ToLocalDuration(TimeSpan realDuration) => realDuration;
-
-    public Task Delay(TimeSpan dueIn, CancellationToken cancellationToken = default)
-        => Task.Delay(dueIn, cancellationToken);
 }

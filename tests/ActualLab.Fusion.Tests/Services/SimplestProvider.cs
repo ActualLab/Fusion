@@ -11,13 +11,17 @@ public partial record SetValueCommand : ICommand<Unit>
     public string Value { get; init; } = "";
 }
 
-public interface ISimplestProvider
+public interface ISimpleProviderImpl
 {
     // These two properties are here solely for testing purposes
     int GetValueCallCount { get; }
     int GetCharCountCallCount { get; }
 
     void SetValue(string? value);
+}
+
+public interface ISimplestProvider : IComputeService
+{
     [ComputeMethod(MinCacheDuration = 10)]
     Task<string?> GetValue();
     [ComputeMethod(MinCacheDuration = 0.5, TransientErrorInvalidationDelay = 0.5)]
@@ -29,7 +33,7 @@ public interface ISimplestProvider
     Task SetValue(SetValueCommand command, CancellationToken cancellationToken = default);
 }
 
-public class SimplestProvider : ISimplestProvider, IHasId<Type>, IComputeService, IHasIsDisposed
+public class SimplestProvider : ISimplestProvider, ISimpleProviderImpl, IHasId<Type>, IHasIsDisposed
 {
     private static volatile string? _value;
     private readonly bool _isCaching;

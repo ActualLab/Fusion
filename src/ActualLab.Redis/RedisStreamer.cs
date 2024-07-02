@@ -14,7 +14,7 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
         public TimeSpan? ExpirationPeriod { get; set; } = TimeSpan.FromHours(1);
         public IByteSerializer<T> Serializer { get; init; } = ByteSerializer<T>.Default;
         public ITextSerializer<ExceptionInfo> ErrorSerializer { get; init; } = TextSerializer<ExceptionInfo>.Default;
-        public IMomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
+        public MomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
 
         // You normally don't need to modify these
         public string ItemKey { get; init; } = "i";

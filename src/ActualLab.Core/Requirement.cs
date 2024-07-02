@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Internal;
 using ActualLab.Requirements;
 
 namespace ActualLab;
@@ -10,8 +11,8 @@ public abstract record Requirement
 
     public static FuncRequirement<T> New<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (ExceptionBuilder exceptionBuilder, Func<T?, bool> validator)
-        => new(exceptionBuilder, validator);
+        (Func<T?, bool> validator, ExceptionBuilder exceptionBuilder)
+        => new(validator, exceptionBuilder);
     public static FuncRequirement<T> New<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
         (Func<T?, bool> validator)
@@ -45,6 +46,8 @@ public abstract record Requirement<
                         .GetProperty(MustExistFieldOrPropertyName, BindingFlags.Public | BindingFlags.Static)
                         ?.GetValue(null) as Requirement<T>;
                     result ??= MustExistRequirement<T>.Default;
+                    if (result is not IMustExistRequirement)
+                        throw Errors.InternalError("MustExist property or field must return MustExistRequirement.");
                 }
                 else
                     result = MustExistRequirement<T>.Default;
@@ -74,11 +77,6 @@ public abstract record Requirement<
         => With(new ExceptionBuilder(messageTemplate, targetName, exceptionFactory));
     public Requirement<T> With(Func<Exception> exceptionFactory)
         => With(new ExceptionBuilder(exceptionFactory));
-
-    public static implicit operator Requirement<T>((ExceptionBuilder ExceptionBuilder, Func<T?, bool> Validator) args)
-        => New(args.ExceptionBuilder, args.Validator);
-    public static implicit operator Requirement<T>(Func<T?, bool> validator)
-        => New(validator);
 
     public static Requirement<T> operator &(Requirement<T> primary, Requirement<T> secondary)
         => primary.And(secondary);

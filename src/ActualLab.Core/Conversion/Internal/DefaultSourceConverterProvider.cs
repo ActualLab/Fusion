@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
-using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Conversion.Internal;
 

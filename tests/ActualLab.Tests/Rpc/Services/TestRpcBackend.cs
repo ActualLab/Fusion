@@ -11,6 +11,6 @@ public interface ITestRpcBackendClient : ITestRpcBackend;
 
 public class TestRpcBackend : ITestRpcBackend
 {
-    public Task<ITuple> Polymorph(ITuple argument, CancellationToken cancellationToken = default)
+    public virtual Task<ITuple> Polymorph(ITuple argument, CancellationToken cancellationToken = default)
         => Task.FromResult(argument);
 }

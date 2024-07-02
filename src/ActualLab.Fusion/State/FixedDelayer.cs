@@ -38,7 +38,7 @@ public abstract record FixedDelayer(RetryDelaySeq RetryDelays) : IUpdateDelayer
         // Windows timer period is 15.6ms, so 32ms = 2...3 timer ticks
         private static TimeSpan _minDelay = TimeSpan.FromMilliseconds(32); // ~= 1/30 sec.
         private static RetryDelaySeq _retryDelays = new(TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(1));
-        private static IMomentClock _clock = MomentClockSet.Default.CpuClock;
+        private static MomentClock _clock = MomentClockSet.Default.CpuClock;
 
         // ReSharper disable once MemberHidesStaticFromOuterClass
         public static TimeSpan MinDelay {
@@ -62,7 +62,7 @@ public abstract record FixedDelayer(RetryDelaySeq RetryDelays) : IUpdateDelayer
             }
         }
 
-        public static IMomentClock Clock {
+        public static MomentClock Clock {
             get => _clock;
             set {
                 _clock = value;

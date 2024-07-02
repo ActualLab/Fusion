@@ -1,9 +1,8 @@
-using System.Reactive.PlatformServices;
 using ActualLab.Internal;
 
 namespace ActualLab.Time.Testing;
 
-public sealed class TestClock : ITestClock, IDisposable
+public sealed class TestClock : MomentClock, IDisposable
 {
     private volatile TestClockSettings _settings;
 
@@ -18,6 +17,9 @@ public sealed class TestClock : ITestClock, IDisposable
         }
     }
 
+    public override Moment Now
+        => ToLocalTime(SystemClock.Instance.Now);
+
     [JsonConstructor, Newtonsoft.Json.JsonConstructor]
     public TestClock(TestClockSettings settings)
         => _settings = settings;
@@ -30,15 +32,12 @@ public sealed class TestClock : ITestClock, IDisposable
 
     // Operations
 
-    public Moment Now => ToLocalTime(SystemClock.Now);
-    DateTimeOffset ISystemClock.UtcNow => Now;
+    public override Moment ToRealTime(Moment localTime) => Settings.ToRealTime(localTime);
+    public override Moment ToLocalTime(Moment realTime) => Settings.ToLocalTime(realTime);
+    public override TimeSpan ToRealDuration(TimeSpan localDuration) => Settings.ToLocalDuration(localDuration);
+    public override TimeSpan ToLocalDuration(TimeSpan realDuration) => Settings.ToRealDuration(realDuration);
 
-    public Moment ToRealTime(Moment localTime) => Settings.ToRealTime(localTime);
-    public Moment ToLocalTime(Moment realTime) => Settings.ToLocalTime(realTime);
-    public TimeSpan ToRealDuration(TimeSpan localDuration) => Settings.ToLocalDuration(localDuration);
-    public TimeSpan ToLocalDuration(TimeSpan realDuration) => Settings.ToRealDuration(realDuration);
-
-    public async Task Delay(TimeSpan dueIn, CancellationToken cancellationToken = default)
+    public override async Task Delay(TimeSpan dueIn, CancellationToken cancellationToken = default)
     {
         if (dueIn == Timeout.InfiniteTimeSpan) {
             await Task.Delay(dueIn, cancellationToken).ConfigureAwait(false);
@@ -52,7 +51,7 @@ public sealed class TestClock : ITestClock, IDisposable
         while (true) {
             settings ??= Settings;
             var settingsChangedToken = settings.ChangedToken;
-            var delta = (settings.ToRealTime(dueAt) - CpuClock.Now).Positive();
+            var delta = (settings.ToRealTime(dueAt) - Moment.CpuNow).Positive();
             try {
                 if (!cancellationToken.CanBeCanceled) {
                     await Task.Delay(delta, settingsChangedToken).ConfigureAwait(false);
@@ -69,5 +68,35 @@ public sealed class TestClock : ITestClock, IDisposable
             }
             settings = null;
         }
+    }
+
+    // Helpers
+
+    public TestClock SetTo(Moment now)
+    {
+        var s = Settings;
+        var realNow = Moment.Now;
+        var delta = now - s.ToLocalTime(realNow);
+        Settings = (s.LocalOffset + delta, s.RealOffset, s.Multiplier);
+        return this;
+    }
+
+    public TestClock OffsetBy(long offsetInMilliseconds)
+        => OffsetBy(TimeSpan.FromMilliseconds(offsetInMilliseconds));
+
+    public TestClock OffsetBy(TimeSpan offset)
+    {
+        var s = Settings;
+        Settings = (offset + s.LocalOffset, s.RealOffset, s.Multiplier);
+        return this;
+    }
+
+    public TestClock SpeedupBy(double multiplier)
+    {
+        var s = Settings;
+        var realNow = Moment.Now;
+        var localNow = s.ToLocalTime(realNow);
+        Settings = (localNow.EpochOffset, -realNow.EpochOffset, multiplier * s.Multiplier);
+        return this;
     }
 }

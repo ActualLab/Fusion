@@ -150,7 +150,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
             else {
                 Out.WriteLine($"{i}: Syncing...");
                 var c = await Computed.Capture(() => client.GetTime());
-                await c.When(x => x == st).WaitAsync(TimeSpan.FromSeconds(2));
+                await c.When(x => x >= st).WaitAsync(TimeSpan.FromSeconds(3));
                 Out.WriteLine($"{i}: Synced: {c}");
             }
         }

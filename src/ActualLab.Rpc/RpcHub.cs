@@ -15,7 +15,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcServiceDefBuilder ServiceDefBuilder;
     internal readonly RpcMethodDefBuilder MethodDefBuilder;
     internal readonly RpcServiceScopeResolver ServiceScopeResolver;
-    internal readonly RpcCallRouter CallRouter;
+    internal readonly RpcSafeCallRouter CallRouter;
+    internal readonly RpcRerouteDelayer RerouteDelayer;
     internal readonly RpcArgumentSerializer ArgumentSerializer;
     internal readonly RpcInboundCallFilter InboundCallFilter;
     internal readonly RpcInboundContextFactory InboundContextFactory;
@@ -35,13 +36,13 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 
     internal ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers { get; } = new();
 
+    public Guid Id { get; init; } = Guid.NewGuid();
     public IServiceProvider Services { get; }
     public RpcConfiguration Configuration { get; }
     public RpcServiceRegistry ServiceRegistry => _serviceRegistry ??= Services.GetRequiredService<RpcServiceRegistry>();
     public RpcInternalServices InternalServices => new(this);
-    public Guid Id { get; init; } = Guid.NewGuid();
     public RpcLimits Limits { get; }
-    public IMomentClock Clock { get; }
+    public MomentClock Clock { get; }
 
     public RpcHub(IServiceProvider services)
     {
@@ -53,7 +54,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
         MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
         ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();
-        CallRouter = services.GetRequiredService<RpcCallRouter>();
+        CallRouter = services.GetRequiredService<RpcSafeCallRouter>();
+        RerouteDelayer = services.GetRequiredService<RpcRerouteDelayer>();
         ArgumentSerializer = services.GetRequiredService<RpcArgumentSerializer>();
         InboundCallFilter = services.GetRequiredService<RpcInboundCallFilter>();
         InboundContextFactory = services.GetRequiredService<RpcInboundContextFactory>();
@@ -89,10 +91,14 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
                 return peer;
             if (WhenDisposed != null)
                 throw Errors.AlreadyDisposed(GetType());
+            if (peerRef.IsRerouted)
+                throw RpcRerouteException.MustReroute(peerRef);
 
             peer = PeerFactory.Invoke(this, peerRef);
             Peers[peerRef] = peer;
             peer.Start();
+            if (peerRef.CanBeRerouted)
+                _ = peerRef.WhenGone().ContinueWith(_ => peer.Dispose(), TaskScheduler.Default);
             return peer;
         }
     }

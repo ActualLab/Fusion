@@ -22,7 +22,7 @@ public class ReconnectTester : IReconnectTester
     }
 
     public virtual Task<Moment> GetTime(CancellationToken cancellationToken = default)
-        => Task.FromResult(SystemClock.Now);
+        => Task.FromResult(Moment.Now);
 
     public void InvalidateGetTime()
     {

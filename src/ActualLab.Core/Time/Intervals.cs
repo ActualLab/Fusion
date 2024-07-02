@@ -14,7 +14,7 @@ public static class Intervals
             if (maxDelay.HasValue && delay > maxDelay.GetValueOrDefault())
                 delay = maxDelay.GetValueOrDefault();
             yield return delay;
-            delay = delay.Multiply(factor);
+            delay = delay.MultiplyBy(factor);
         }
     }
 }

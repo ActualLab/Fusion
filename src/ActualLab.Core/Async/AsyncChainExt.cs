@@ -126,9 +126,9 @@ public static class AsyncChainExt
             }
         }, asyncChain.TransiencyResolver);
 
-    public static AsyncChain AppendDelay(this AsyncChain asyncChain, Func<RandomTimeSpan> delayFactory, IMomentClock? clock = null)
+    public static AsyncChain AppendDelay(this AsyncChain asyncChain, Func<RandomTimeSpan> delayFactory, MomentClock? clock = null)
         => asyncChain.AppendDelay(() => delayFactory.Invoke().Next());
-    public static AsyncChain AppendDelay(this AsyncChain asyncChain, Func<TimeSpan> delayFactory, IMomentClock? clock = null)
+    public static AsyncChain AppendDelay(this AsyncChain asyncChain, Func<TimeSpan> delayFactory, MomentClock? clock = null)
     {
         clock ??= MomentClockSet.Default.CpuClock;
         return new($"{asyncChain.Name}.AppendDelay(?)", async cancellationToken => {
@@ -136,7 +136,7 @@ public static class AsyncChainExt
             await clock.Delay(delayFactory.Invoke(), cancellationToken).ConfigureAwait(false);
         }, asyncChain.TransiencyResolver);
     }
-    public static AsyncChain AppendDelay(this AsyncChain asyncChain, RandomTimeSpan delay, IMomentClock? clock = null)
+    public static AsyncChain AppendDelay(this AsyncChain asyncChain, RandomTimeSpan delay, MomentClock? clock = null)
     {
         clock ??= MomentClockSet.Default.CpuClock;
         return new($"{asyncChain.Name}.AppendDelay({delay})", async cancellationToken => {
@@ -145,9 +145,9 @@ public static class AsyncChainExt
         }, asyncChain.TransiencyResolver);
     }
 
-    public static AsyncChain PrependDelay(this AsyncChain asyncChain, Func<RandomTimeSpan> delayFactory, IMomentClock? clock = null)
+    public static AsyncChain PrependDelay(this AsyncChain asyncChain, Func<RandomTimeSpan> delayFactory, MomentClock? clock = null)
         => asyncChain.PrependDelay(() => delayFactory.Invoke().Next());
-    public static AsyncChain PrependDelay(this AsyncChain asyncChain, Func<TimeSpan> delayFactory, IMomentClock? clock = null)
+    public static AsyncChain PrependDelay(this AsyncChain asyncChain, Func<TimeSpan> delayFactory, MomentClock? clock = null)
     {
         clock ??= MomentClockSet.Default.CpuClock;
         return new($"{asyncChain.Name}.PrependDelay(?)", async cancellationToken => {
@@ -155,7 +155,7 @@ public static class AsyncChainExt
             await asyncChain.Start(cancellationToken).ConfigureAwait(false);
         }, asyncChain.TransiencyResolver);
     }
-    public static AsyncChain PrependDelay(this AsyncChain asyncChain, RandomTimeSpan delay, IMomentClock? clock = null)
+    public static AsyncChain PrependDelay(this AsyncChain asyncChain, RandomTimeSpan delay, MomentClock? clock = null)
     {
         clock ??= MomentClockSet.Default.CpuClock;
         return new($"{asyncChain.Name}.PrependDelay({delay})", async cancellationToken => {
@@ -166,7 +166,7 @@ public static class AsyncChainExt
 
     public static AsyncChain RetryForever(this AsyncChain asyncChain, RetryDelaySeq retryDelays, ILogger? log = null)
         => asyncChain.RetryForever(retryDelays, null, log);
-    public static AsyncChain RetryForever(this AsyncChain asyncChain, RetryDelaySeq retryDelays, IMomentClock? clock, ILogger? log = null)
+    public static AsyncChain RetryForever(this AsyncChain asyncChain, RetryDelaySeq retryDelays, MomentClock? clock, ILogger? log = null)
         => new($"{asyncChain.Name}.RetryForever({retryDelays}", async cancellationToken => {
             clock ??= MomentClockSet.Default.CpuClock;
             var tryIndex = 0;
@@ -194,7 +194,7 @@ public static class AsyncChainExt
 
     public static AsyncChain Retry(this AsyncChain asyncChain, RetryDelaySeq retryDelays, int? tryCount, ILogger? log = null)
         => asyncChain.Retry(retryDelays, tryCount, null, log);
-    public static AsyncChain Retry(this AsyncChain asyncChain, RetryDelaySeq retryDelays, int? tryCount, IMomentClock? clock, ILogger? log = null)
+    public static AsyncChain Retry(this AsyncChain asyncChain, RetryDelaySeq retryDelays, int? tryCount, MomentClock? clock, ILogger? log = null)
     {
         if (tryCount is not { } vTryCount)
             return asyncChain.RetryForever(retryDelays, log);

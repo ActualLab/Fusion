@@ -18,20 +18,21 @@ public partial class SandboxedKeyValueStore<TContext>(
         public TimeSpan? SessionKeyExpirationTime { get; set; } = TimeSpan.FromDays(30);
         public string UserKeyPrefixFormat { get; set; } = "@user/{0}";
         public TimeSpan? UserKeyExpirationTime { get; set; } = null;
-        public IMomentClock? Clock { get; set; } = null;
+        public MomentClock? Clock { get; set; } = null;
     }
 
     protected Options Settings { get; } = settings;
     protected IKeyValueStore Store { get; } = services.GetRequiredService<IKeyValueStore>();
     protected IAuth Auth { get; } = services.GetRequiredService<IAuth>();
     protected IDbShardResolver<TContext> ShardResolver { get; } = services.GetRequiredService<IDbShardResolver<TContext>>();
-    protected IMomentClock Clock { get; } = settings.Clock ?? services.Clocks().SystemClock;
+    protected MomentClock Clock { get; } = settings.Clock ?? services.Clocks().SystemClock;
 
     // Commands
 
     public virtual async Task Set(SandboxedKeyValueStore_Set command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) return;
+        if (Invalidation.IsActive)
+            return;
 
         var keyChecker = await GetKeyChecker(command.Session, cancellationToken).ConfigureAwait(false);
         var items = command.Items;
@@ -49,7 +50,8 @@ public partial class SandboxedKeyValueStore<TContext>(
 
     public virtual async Task Remove(SandboxedKeyValueStore_Remove command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) return;
+        if (Invalidation.IsActive)
+            return;
 
         var keyChecker = await GetKeyChecker(command.Session, cancellationToken).ConfigureAwait(false);
         var keys = command.Keys;

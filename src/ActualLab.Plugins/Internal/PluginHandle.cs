@@ -3,20 +3,18 @@ using ActualLab.Plugins.Metadata;
 
 namespace ActualLab.Plugins.Internal;
 
+#pragma warning disable CA1721
+
 public interface IPluginHandle
 {
-#pragma warning disable CA1721
     IEnumerable<object> Instances { get; }
-#pragma warning restore CA1721
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     IEnumerable<object> GetInstances(Func<PluginInfo, bool> predicate);
 }
 
 public interface IPluginHandle<out TPlugin> : IPluginHandle
 {
-#pragma warning disable CA1721
     new IEnumerable<TPlugin> Instances { get; }
-#pragma warning restore CA1721
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     new IEnumerable<TPlugin> GetInstances(Func<PluginInfo, bool> predicate);
 }
@@ -29,9 +27,7 @@ public class PluginHandle<TPlugin> : IPluginHandle<TPlugin>
     protected IEnumerable<IPluginFilter> PluginFilters { get; }
 
     IEnumerable<object> IPluginHandle.Instances => Instances.Cast<object>();
-#pragma warning disable CA1721
     public IEnumerable<TPlugin> Instances => _lazyInstances.Value;
-#pragma warning restore CA1721
 
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     public PluginHandle(PluginSetInfo plugins,

@@ -52,7 +52,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     {
         default(Moment).AssertPassesThroughAllSerializers(Out);
         Moment.EpochStart.AssertPassesThroughAllSerializers(Out);
-        SystemClock.Now.AssertPassesThroughAllSerializers(Out);
+        Moment.Now.AssertPassesThroughAllSerializers(Out);
         new Moment(DateTime.MinValue.ToUniversalTime()).AssertPassesThroughAllSerializers(Out);
         new Moment(DateTime.MaxValue.ToUniversalTime()).AssertPassesThroughAllSerializers(Out);
     }
@@ -130,8 +130,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void RpcHandshakeSerialization()
     {
-        Test(new RpcHandshake(default, null));
-        Test(new RpcHandshake(new Guid(), new VersionSet(("Test", "1.0"))));
+        Test(new RpcHandshake(default, null, default));
+        Test(new RpcHandshake(new Guid(), new VersionSet(("Test", "1.0")), new Guid()));
 
         void Test(RpcHandshake h) {
             var hs = h.PassThroughAllSerializers();

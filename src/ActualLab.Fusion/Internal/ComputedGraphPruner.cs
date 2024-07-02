@@ -18,7 +18,7 @@ public sealed class ComputedGraphPruner : WorkerBase
     private readonly TaskCompletionSource<Unit> _whenActivatedSource;
 
     public Options Settings { get; init; }
-    public IMomentClock Clock { get; init; }
+    public MomentClock Clock { get; init; }
     public ILogger Log { get; init; }
 
     public Task<Unit> WhenActivated => _whenActivatedSource.Task;
@@ -155,7 +155,7 @@ public sealed class ComputedGraphPruner : WorkerBase
             computedCount++;
             if (registry.Get(computedInput) is { } c && c.IsConsistent()) {
                 consistentCount++;
-                var (oldEdgeCount, newEdgeCount) = ((IComputedImpl)c).PruneUsedBy();
+                var (oldEdgeCount, newEdgeCount) = c.PruneDependants();
                 edgeCount += oldEdgeCount;
                 removedEdgeCount += oldEdgeCount - newEdgeCount;
             }
@@ -166,7 +166,7 @@ public sealed class ComputedGraphPruner : WorkerBase
 
         Log.LogInformation(
             "Processed {ConsistentCount}/{ComputedCount} instances, " +
-            "removed {RemovedEdgeCount}/{EdgeCount} \"used by\" edges, " +
+            "removed {RemovedEdgeCount}/{EdgeCount} dependency-to-dependant edges, " +
             "in {BatchCount} batches (x {BatchSize})",
             consistentCount, computedCount, removedEdgeCount, edgeCount, batchCount + 1, Settings.BatchSize);
     }

@@ -2,7 +2,7 @@ namespace ActualLab.Fusion.Internal;
 
 public static class Timeouts
 {
-    public static readonly IMomentClock Clock;
+    public static readonly CpuClock Clock;
     public static readonly TickSource TickSource;
     public static readonly ConcurrentTimerSet<object> KeepAlive;
     public static readonly ConcurrentTimerSet<IGenericTimeoutHandler> Generic;
@@ -12,9 +12,9 @@ public static class Timeouts
 
     static Timeouts()
     {
-        Clock = MomentClockSet.Default.CpuClock;
+        Clock = CpuClock.Instance;
         TickSource = new TickSource(KeepAliveQuanta);
-        StartedAt = Clock.Now - KeepAliveQuanta.Multiply(2); // In past to make timer priorities strictly positive
+        StartedAt = Clock.Now - KeepAliveQuanta.MultiplyBy(2); // In past to make timer priorities strictly positive
         KeepAlive = new ConcurrentTimerSet<object>(
             new() {
                 Clock = Clock,

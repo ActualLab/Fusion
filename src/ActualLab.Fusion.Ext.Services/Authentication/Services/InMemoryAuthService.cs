@@ -1,4 +1,5 @@
 using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Authentication.Services;
@@ -44,6 +45,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             return;
         }
 
+        InMemoryOperationScope.Require();
         // Let's handle special kinds of sign-out first, which only trigger "primary" sign-out version
         if (isKickCommand) {
             var user = await GetUser(session, cancellationToken).ConfigureAwait(false);
@@ -89,6 +91,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             return;
         }
 
+        InMemoryOperationScope.Require();
         var sessionInfo = await GetSessionInfo(session, cancellationToken)
             .Require(SessionInfo.MustBeAuthenticated)
             .ConfigureAwait(false);

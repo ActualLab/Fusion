@@ -2,15 +2,13 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
-#pragma warning disable VSTHRD104
+#pragma warning disable CA1721, VSTHRD104
 
 public interface ISessionResolver : IHasServices
 {
     public Task<Session> SessionTask { get; }
     public bool HasSession { get; }
-#pragma warning disable CA1721
     public Session Session { get; set; }
-#pragma warning restore CA1721
 
     public Task<Session> GetSession(CancellationToken cancellationToken = default);
 }
@@ -23,9 +21,7 @@ public class SessionResolver(IServiceProvider services) : ISessionResolver
     public Task<Session> SessionTask => SessionSource.Task;
     public bool HasSession => SessionTask.IsCompleted;
 
-#pragma warning disable CA1721
     public Session Session {
-#pragma warning restore CA1721
         get => HasSession ? SessionTask.Result : throw ActualLab.Internal.Errors.NotInitialized(nameof(Session));
         set {
             if (!Services.IsScoped())

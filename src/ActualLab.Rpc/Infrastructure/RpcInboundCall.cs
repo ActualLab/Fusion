@@ -231,7 +231,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     {
         var methodDef = MethodDef;
         var server = methodDef.Service.Server;
-        return (Task<TResult>)methodDef.AsyncInvoker.Invoke(server, Arguments!);
+        return (Task<TResult>)methodDef.TargetAsyncInvoker.Invoke(server, Arguments!);
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
@@ -266,6 +266,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     {
         var resultTask = ResultTask;
         Result<TResult> result;
+        var peer = Context.Peer;
         if (!resultTask.IsCompleted)
             result = InvocationIsStillInProgressErrorResult();
         else if (resultTask.Exception is { } error) {
@@ -281,7 +282,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             result = resultTask.Result;
 
         var systemCallSender = Hub.SystemCallSender;
-        return systemCallSender.Complete(Context.Peer, Id, result, MethodDef.AllowResultPolymorphism, ResultHeaders);
+        return systemCallSender.Complete(peer, Id, result, MethodDef.AllowResultPolymorphism, ResultHeaders);
     }
 
     // Private methods

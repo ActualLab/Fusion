@@ -13,6 +13,7 @@ public partial record RpcPeerRef
     public const string LocalCallPrefix = "call:";
 
     public static RpcPeerRef Default { get; set; } = GetDefaultClientPeerRef();
+    public static RpcPeerRef LocalCall { get; set; } = GetDefaultClientPeerRef(RpcPeerConnectionKind.LocalCall);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static RpcPeerRef GetDefaultClientPeerRef(bool isBackend = false)

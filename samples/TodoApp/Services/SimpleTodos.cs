@@ -24,9 +24,6 @@ public class SimpleTodos : ITodos
 
     public virtual async Task<Todo> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive)
-            return null!;
-
         var (session, todo) = command;
         if (string.IsNullOrEmpty(todo.Id))
             todo = todo with { Id = Ulid.NewUlid().ToString() };
@@ -40,9 +37,6 @@ public class SimpleTodos : ITodos
 
     public virtual async Task Remove(Todos_Remove command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive)
-            return;
-
         var (session, todoId) = command;
         _store = _store.RemoveAll(i => i.Id == todoId);
 

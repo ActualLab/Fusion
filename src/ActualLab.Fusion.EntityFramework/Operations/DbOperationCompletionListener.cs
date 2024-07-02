@@ -48,7 +48,7 @@ public class DbOperationCompletionListener<TDbContext>
         var shard = operationScope.Shard;
         _ = Settings.NotifyRetryPolicy.RunIsolated(
             ct => Notify(shard, operation, operationScope, ct),
-            new RetryLogger(Log, $"Notify[{shard}]"));
+            new RetryLogger(Log, $"{nameof(Notify)}[{shard}]"));
         return Task.CompletedTask;
     }
 

@@ -36,14 +36,14 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
 {
     protected IDbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId> Sessions { get; }
         = services.GetRequiredService<IDbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>>();
-    protected IMomentClock SystemClock => Clocks.SystemClock;
+    protected MomentClock SystemClock => Clocks.SystemClock;
 
     protected override Task OnRun(DbShard shard, CancellationToken cancellationToken)
         => new AsyncChain($"Trim({shard})", ct => Trim(shard, ct))
             .RetryForever(Settings.RetryDelays, SystemClock, Log)
             .CycleForever()
             .Log(Log)
-            .PrependDelay(Settings.CheckPeriod.Next().Multiply(0.1), SystemClock)
+            .PrependDelay(Settings.CheckPeriod.Next().MultiplyBy(0.1), SystemClock)
             .Start(cancellationToken);
 
     protected virtual async Task Trim(DbShard shard, CancellationToken cancellationToken)
