@@ -70,6 +70,9 @@ public static class Errors
     public static Exception TaskIsFaultedButNoExceptionAvailable()
         => new InvalidOperationException("Task hasn't completed successfully but has no Exception.");
 
+    public static Exception AsyncStateIsFinal()
+        => new InvalidOperationException("AsyncState is expected to be non-final at this point, but it's final.");
+
     public static Exception PathIsRelative(string? paramName)
         => new ArgumentException("Path is relative.", paramName);
 

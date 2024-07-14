@@ -19,7 +19,7 @@ public class RpcWebSocketClient(
 
         public Func<RpcWebSocketClient, RpcClientPeer, string> HostUrlResolver { get; init; }
             = DefaultHostUrlResolver;
-        public Func<RpcWebSocketClient, RpcClientPeer, Uri> ConnectionUriResolver { get; init; }
+        public Func<RpcWebSocketClient, RpcClientPeer, Uri?> ConnectionUriResolver { get; init; }
             = DefaultConnectionUriResolver;
         public Func<RpcWebSocketClient, RpcClientPeer, WebSocketOwner> WebSocketOwnerFactory { get; init; }
             = DefaultWebSocketOwnerFactory;
@@ -38,10 +38,13 @@ public class RpcWebSocketClient(
         public static bool DefaultLocalUriDetector(RpcWebSocketClient client, Uri uri)
             => uri.IsDefaultPort && uri.Host.EndsWith(".localhost", StringComparison.Ordinal);
 
-        public static Uri DefaultConnectionUriResolver(RpcWebSocketClient client, RpcClientPeer peer)
+        public static Uri? DefaultConnectionUriResolver(RpcWebSocketClient client, RpcClientPeer peer)
         {
             var settings = client.Settings;
             var url = settings.HostUrlResolver.Invoke(client, peer).TrimSuffix("/");
+            if (url.IsNullOrEmpty())
+                return null;
+
             var isWebSocketUrl = url.StartsWith("ws://", StringComparison.Ordinal)
                 || url.StartsWith("wss://", StringComparison.Ordinal);
             if (!isWebSocketUrl) {
@@ -86,8 +89,11 @@ public class RpcWebSocketClient(
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public virtual async Task<RpcConnection> ConnectRemote(
-        RpcClientPeer clientPeer, Uri uri, CancellationToken cancellationToken)
+        RpcClientPeer clientPeer, Uri? uri, CancellationToken cancellationToken)
     {
+        if (uri == null) // The expected behavior for null URI
+            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+
         var hub = clientPeer.Hub;
         var connectCts = new CancellationTokenSource();
         var connectToken = connectCts.Token;

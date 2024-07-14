@@ -109,9 +109,9 @@ public readonly struct RpcBuilder
     public RpcBuilder AddWebSocketClient(string hostUrl)
         => AddWebSocketClient(_ => hostUrl);
 
-    public RpcBuilder AddWebSocketClient(Func<IServiceProvider, string> hostUrlFactory)
+    public RpcBuilder AddWebSocketClient(Func<IServiceProvider, string> hostUrlResolver)
         => AddWebSocketClient(c => RpcWebSocketClient.Options.Default with {
-            HostUrlResolver = (_, _) => hostUrlFactory.Invoke(c),
+            HostUrlResolver = (_, _) => hostUrlResolver.Invoke(c),
         });
 
     public RpcBuilder AddWebSocketClient(Func<IServiceProvider, RpcWebSocketClient.Options>? optionsFactory = null)
@@ -155,8 +155,9 @@ public readonly struct RpcBuilder
         RpcServiceMode mode, Symbol name = default)
         => mode switch {
             RpcServiceMode.Local => AddLocalService(serviceType, implementationType),
+            RpcServiceMode.Client => AddClient(serviceType, name),
             RpcServiceMode.Server => AddServer(serviceType, implementationType, name),
-            RpcServiceMode.ServerAndClient => AddServerAndRouter(serviceType, implementationType, name),
+            RpcServiceMode.ServerAndClient => AddServerAndClient(serviceType, implementationType, name),
             RpcServiceMode.Hybrid => AddHybrid(serviceType, implementationType, name),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
@@ -280,9 +281,9 @@ public readonly struct RpcBuilder
         (Symbol name = default)
         where TService : class
         where TImplementation : class, TService
-        => AddServerAndRouter(typeof(TService), typeof(TImplementation), name);
+        => AddServerAndClient(typeof(TService), typeof(TImplementation), name);
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddServerAndRouter(
+    public RpcBuilder AddServerAndClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         Symbol name = default)

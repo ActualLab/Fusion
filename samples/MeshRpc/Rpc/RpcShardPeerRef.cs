@@ -3,6 +3,7 @@ using ActualLab.Collections;
 using ActualLab.Fusion;
 using ActualLab.Rpc;
 using ActualLab.Text;
+using Pastel;
 
 namespace Samples.MeshRpc;
 
@@ -32,11 +33,13 @@ public sealed record RpcShardPeerRef : RpcPeerRef
         HostId = Key.Value.Split(" -> ")[1];
         var rerouteTokenSource = new CancellationTokenSource();
         RerouteToken = rerouteTokenSource.Token;
+        Console.WriteLine($"{Key}: created.".Pastel(ConsoleColor.Green));
         _ = Task.Run(async () => {
             if (HostId == "null")
                 await MeshState.State.When(x => x.Hosts.Count > 0).ConfigureAwait(false);
             else
                 await MeshState.State.When(x => !x.HostById.ContainsKey(HostId)).ConfigureAwait(false);
+            Console.WriteLine($"{Key}: rerouted.".Pastel(ConsoleColor.Yellow));
             rerouteTokenSource.Cancel();
         });
     }
@@ -44,6 +47,8 @@ public sealed record RpcShardPeerRef : RpcPeerRef
     public override RpcPeerConnectionKind GetConnectionKind(RpcHub hub)
     {
         var ownHost = hub.Services.GetRequiredService<Host>();
-        return HostId == ownHost.Id ? RpcPeerConnectionKind.LocalCall : RpcPeerConnectionKind.Remote;
+        return HostId == ownHost.Id
+            ? RpcPeerConnectionKind.LocalCall
+            : RpcPeerConnectionKind.Remote;
     }
 }

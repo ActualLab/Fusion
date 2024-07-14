@@ -4,6 +4,7 @@ using MemoryPack;
 using ActualLab.CommandR;
 using ActualLab.CommandR.Configuration;
 using ActualLab.Rpc;
+using static Samples.MeshRpc.HostFactorySettings;
 
 namespace Samples.MeshRpc.Services;
 
@@ -27,7 +28,7 @@ public class Counter(Host host) : ICounter
 
     public virtual async Task<CounterState> Get(ShardRef shardRef, CancellationToken cancellationToken = default)
     {
-        var delay = host.Delay.Next();
+        var delay = CounterGetDelay.Next();
         if (delay > TimeSpan.Zero)
             await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
 
@@ -35,10 +36,13 @@ public class Counter(Host host) : ICounter
             return new CounterState(host.Id, _value);
     }
 
-    public virtual Task Increment(Counter_Increment command, CancellationToken cancellationToken)
+    public virtual async Task Increment(Counter_Increment command, CancellationToken cancellationToken)
     {
+        var delay = CounterIncrementDelay.Next();
+        if (delay > TimeSpan.Zero)
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+
         lock (_lock)
             _value++;
-        return Task.CompletedTask;
     }
 }

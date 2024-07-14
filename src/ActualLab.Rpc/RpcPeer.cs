@@ -207,7 +207,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         return;
 
                     if (connectionState.Value.IsConnected())
-                        connectionState = SetConnectionState(connectionState.Value.NextDisconnected(), connectionState);
+                        connectionState = SetConnectionState(connectionState.Value.NextDisconnected(), connectionState).RequireNonFinal();
                     var connection = await GetConnection(connectionState.Value, cancellationToken).ConfigureAwait(false);
                     if (connection == null)
                         throw Errors.ConnectionUnrecoverable();
@@ -257,9 +257,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
                     var readerAbortSource = cancellationToken.LinkWith(Ref.RerouteToken);
                     readerAbortToken = readerAbortSource.Token;
-                    connectionState = SetConnectionState(
-                        connectionState.Value.NextConnected(connection, handshake, readerAbortSource),
-                        connectionState);
+                    var nextConnectionState = connectionState.Value.NextConnected(connection, handshake, readerAbortSource);
+                    connectionState = SetConnectionState(nextConnectionState, connectionState).RequireNonFinal();
+                        // ReSharper disable once MethodSupportsCancellation
                     if (connectionState.Value.Connection != connection)
                         continue;
 
@@ -305,10 +305,13 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 if (Ref.IsRerouted) {
                     error = Errors.ConnectionUnrecoverable();
                     connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
-                    OutboundCalls.TryReroute();
+                    if (connectionState.IsFinal)
+                        OutboundCalls.TryReroute();
                 }
-                else
+                else {
                     connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
+                }
+                connectionState.RequireNonFinal();
             }
         }
         finally {
@@ -420,7 +423,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 _resetTryIndex = false;
                 newState = newState with { TryIndex = 0 };
             }
-            _connectionState = connectionState = connectionState.SetNext(newState);
+            var nextConnectionState = connectionState.TrySetNext(newState);
+            if (ReferenceEquals(nextConnectionState, connectionState)) {
+                Monitor.Exit(Lock);
+                return connectionState;
+            }
+            _connectionState = connectionState = nextConnectionState;
             try {
                 ServerMethodResolver =
                     Hub.ServiceRegistry.GetServerMethodResolver(newState.Handshake?.RemoteApiVersionSet);
@@ -434,7 +442,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     ? newState.Error
                     : Errors.ConnectionUnrecoverable(newState.Error);
                 connectionState.TrySetFinal(terminalError);
-                throw terminalError;
             }
             return connectionState;
         }

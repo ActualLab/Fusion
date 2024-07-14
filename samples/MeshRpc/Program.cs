@@ -2,16 +2,15 @@
 using ActualLab.Fusion;
 using ActualLab.Generators;
 using ActualLab.Mathematics;
-using ActualLab.Time;
+using Pastel;
 using Samples.MeshRpc;
+using static Samples.MeshRpc.HostFactorySettings;
 using Host = Samples.MeshRpc.Host;
-
-const int maxHostCount = 20;
 
 var stopTokenSource = new CancellationTokenSource();
 var stopToken = stopTokenSource.Token;
 Console.CancelKeyPress += (_, e) => {
-    Console.WriteLine("Got Ctrl-C, stopping...");
+    Console.WriteLine("Got Ctrl-C, stopping...".Pastel(ConsoleColor.Yellow));
     stopTokenSource.Cancel();
     e.Cancel = true;
 };
@@ -20,21 +19,25 @@ await AddHosts(stopToken).ConfigureAwait(false);
 
 async Task AddHosts(CancellationToken cancellationToken = default)
 {
-    var actionPeriod = TimeSpan.FromSeconds(1).ToRandom(0.5);
+    var clientHost = new Host(-1);
+    clientHost.Start();
+
     var meshState = MeshState.State;
+    var maxAddProbability = (MaxHostCount - MinHostCount) / MaxHostCount;
     try {
         while (true) {
             var hostCount = meshState.Value.Hosts.Count;
-            var addProbability = (maxHostCount - hostCount) / (double)maxHostCount;
-            if (addProbability > 0.7)
+            var addProbability = (MaxHostCount - hostCount) / MaxHostCount;
+            if (addProbability > maxAddProbability)
                 addProbability = 1;
-            if (Random.Shared.NextDouble() < addProbability)
+            if (Random.Shared.NextDouble() <= addProbability)
                 AddHost();
 
-            await Task.Delay(actionPeriod.Next(), cancellationToken).ConfigureAwait(false);
+            await Task.Delay(HostTryAddPeriod.Next(), cancellationToken).ConfigureAwait(false);
         }
     }
     finally {
+        await clientHost.DisposeAsync().ConfigureAwait(false);
         while (true) {
             var hostCount = meshState.Value.Hosts.Count;
             if (hostCount == 0)
@@ -46,19 +49,17 @@ async Task AddHosts(CancellationToken cancellationToken = default)
             await meshState.When(x => !x.HostById.ContainsKey(host.Id)).ConfigureAwait(false);
         }
     }
-
 }
 
 static Host? AddHost()
 {
     var hosts = MeshState.State.Value.Hosts;
-    var freePortOffsets = Enumerable.Range(0, maxHostCount).Except(hosts.Select(h => h.PortOffset)).ToList();
-    if (freePortOffsets.Count < 0)
+    var freePortSlots = Enumerable.Range(0, (int)MaxHostCount).Except(hosts.Select(h => h.PortSlot)).ToList();
+    if (freePortSlots.Count <= 0)
         return null;
 
-    var freePortOffset = freePortOffsets[ThreadRandom.Next().PositiveModulo(freePortOffsets.Count)];
-    var host = new Host(freePortOffset);
-    Console.WriteLine($"Starting host: '{host.Id}'");
+    var freePortSlot = freePortSlots[ThreadRandom.Next().PositiveModulo(freePortSlots.Count)];
+    var host = new Host(freePortSlot);
     host.Start();
     return host;
 }

@@ -9,5 +9,5 @@ public sealed partial record CounterState(
     [property: MemoryPackOrder(1)] int Value)
 {
     public override string ToString()
-        => $"{Value} from {HostId}";
+        => $"{Value} @ {HostId}";
 }
