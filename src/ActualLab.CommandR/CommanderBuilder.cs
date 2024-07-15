@@ -17,6 +17,7 @@ public readonly struct CommanderBuilder
 {
     public IServiceCollection Services { get; }
     public HashSet<CommandHandler> Handlers { get; }
+    public RpcBuilder Rpc { get; }
 
     [RequiresUnreferencedCode(UnreferencedCode.Commander)]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Proxies))]
@@ -33,15 +34,15 @@ public readonly struct CommanderBuilder
         if (services.FindInstance<HashSet<CommandHandler>>() is { } handlers) {
             // Already configured
             Handlers = handlers;
+            Rpc = services.AddRpc();
             configure?.Invoke(this);
             return;
         }
 
         Handlers = services.AddInstance(new HashSet<CommandHandler>(), addInFront: true);
+        Rpc = services.AddRpc();
 
         // Core services
-        services.TryAddSingleton(_ => new HostId());
-        services.TryAddSingleton(c => c.Clocks().SystemClock);
         services.TryAddSingleton<UuidGenerator>(_ => new UlidUuidGenerator());
         services.TryAddSingleton<VersionGenerator<long>>(c => new ClockBasedVersionGenerator(c.Clocks().SystemClock));
         services.TryAddSingleton(_ => ChaosMaker.Default);
@@ -67,9 +68,8 @@ public readonly struct CommanderBuilder
         services.AddSingleton(_ => new LocalCommandRunner());
         AddHandlers<LocalCommandRunner>();
 
-        // Rpc
-        var rpc = services.AddRpc();
-        rpc.AddOutboundMiddleware<RpcOutboundCommandCallMiddleware>();
+        // RPC outbound call middleware for command handler calls
+        Rpc.AddOutboundMiddleware<RpcOutboundCommandCallMiddleware>();
 
         configure?.Invoke(this);
     }

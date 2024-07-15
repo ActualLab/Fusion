@@ -25,13 +25,14 @@ public sealed partial record FusionCounter_Increment(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] ShardRef ShardRef
     ) : ICommand<Unit>, IHasShardRef;
 
-public class FusionCounter(Host ownHost) : IFusionCounter
+public class FusionCounter(Host ownHost, MomentClockSet clocks) : IFusionCounter
 {
     private readonly object _lock = new();
     private int _value;
 
     public static readonly ConcurrentDictionary<Symbol, CpuTimestamp> IncrementedAt = new();
 
+    // [ComputeMethod]
     public virtual async Task<CounterState> Get(ShardRef shardRef, CancellationToken cancellationToken = default)
     {
         var delay = CounterGetDelay.Next();
@@ -40,9 +41,10 @@ public class FusionCounter(Host ownHost) : IFusionCounter
 
 
         lock (_lock)
-            return new CounterState(ownHost.Id, _value);
+            return new CounterState(ownHost.Id, clocks.CpuClock.Now, _value);
     }
 
+    // [CommandHandler]
     public virtual async Task Increment(FusionCounter_Increment command, CancellationToken cancellationToken)
     {
         var delay = CounterIncrementDelay.Next();

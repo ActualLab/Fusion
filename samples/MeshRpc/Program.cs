@@ -51,15 +51,14 @@ async Task AddHosts(CancellationToken cancellationToken = default)
     }
 }
 
-static Host? AddHost()
+static void AddHost()
 {
     var hosts = MeshState.State.Value.Hosts;
     var freePortSlots = Enumerable.Range(0, (int)MaxHostCount).Except(hosts.Select(h => h.PortSlot)).ToList();
     if (freePortSlots.Count <= 0)
-        return null;
+        return;
 
     var freePortSlot = freePortSlots[ThreadRandom.Next().PositiveModulo(freePortSlots.Count)];
     var host = new Host(freePortSlot);
     host.Start();
-    return host;
 }

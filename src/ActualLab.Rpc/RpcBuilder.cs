@@ -58,10 +58,14 @@ public readonly struct RpcBuilder
         }
 
         Configuration = services.AddInstance(new RpcConfiguration());
-        services.AddSingleton(c => new RpcHub(c));
 
-        // Common services
-        services.TryAddSingleton(c => c.Clocks().SystemClock);
+        // HostId & clocks
+        services.AddSingleton(_ => new HostId());
+        services.TryAddSingleton(_ => MomentClockSet.Default);
+        services.AddSingleton(c => c.GetRequiredService<MomentClockSet>().SystemClock);
+
+        // Core services
+        services.AddSingleton(c => new RpcHub(c));
         services.AddSingleton(c => new RpcServiceRegistry(c));
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
         services.AddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);

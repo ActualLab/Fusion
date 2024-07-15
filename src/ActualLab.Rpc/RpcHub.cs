@@ -7,6 +7,7 @@ namespace ActualLab.Rpc;
 
 public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 {
+    private HostId? _hostId;
     private RpcServiceRegistry? _serviceRegistry;
     private IEnumerable<RpcPeerTracker>? _peerTrackers;
     private RpcSystemCallSender? _systemCallSender;
@@ -37,6 +38,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers { get; } = new();
 
     public Guid Id { get; init; } = Guid.NewGuid();
+    public HostId HostId => _hostId ??= Services.GetRequiredService<HostId>();
     public IServiceProvider Services { get; }
     public RpcConfiguration Configuration { get; }
     public RpcServiceRegistry ServiceRegistry => _serviceRegistry ??= Services.GetRequiredService<RpcServiceRegistry>();

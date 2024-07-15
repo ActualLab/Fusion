@@ -3,6 +3,7 @@ using ActualLab.Async;
 using ActualLab.CommandR;
 using ActualLab.Rpc;
 using ActualLab.Text;
+using ActualLab.Time;
 using Pastel;
 using static Samples.MeshRpc.TestSettings;
 
@@ -10,7 +11,7 @@ namespace Samples.MeshRpc.Services;
 
 public class Tester(IServiceProvider services) : WorkerBase
 {
-    private readonly Dictionary<(Symbol HostId, Symbol ServiceName), int> _knownValues = new();
+    private readonly Dictionary<(Symbol HostId, Symbol ServiceName), CounterState> _lastStates = new();
 
     private Host OwnHost { get; } = services.GetRequiredService<Host>();
     private ICounter Counter { get; } = services.GetRequiredService<ICounter>();
@@ -64,20 +65,20 @@ public class Tester(IServiceProvider services) : WorkerBase
                 var state = useFusion
                     ? await FusionCounter.Get(shardRef, cancellationToken).ConfigureAwait(false)
                     : await Counter.Get(shardRef, cancellationToken).ConfigureAwait(false);
-                var isFailed = false;
-                lock (_knownValues) {
+                var message = $"{prefix} -> {state}";
+                lock (_lastStates) {
                     var key = (state.HostId, serviceName);
-                    if (!_knownValues.TryGetValue(key, out var lastValue))
-                        _knownValues[key] = state.Value;
+                    if (!_lastStates.TryGetValue(key, out var lastState))
+                        _lastStates[key] = state;
                     else {
-                        _knownValues[key] = state.Value;
-                        if (state.Value < lastValue)
-                            isFailed = true;
+                        _lastStates[key] = state;
+                        if (state.Value < lastState.Value) {
+                            var timeDelta = (state.CreatedAt - lastState.CreatedAt);
+                            message = $"{message} - {state.Value} < {lastState.Value}, {timeDelta.ToShortString()}"
+                                .PastelBg(ConsoleColor.DarkRed);
+                        }
                     }
                 }
-                var message = $"{prefix} -> {state}";
-                if (isFailed)
-                    message = message.PastelBg(ConsoleColor.DarkRed);
                 Console.WriteLine(message);
             }
             await Task.Delay(CallPeriod.Next(), cancellationToken).ConfigureAwait(false);
