@@ -100,12 +100,16 @@ public class RpcInterceptor : RpcInterceptorBase
                     _ = call.RegisterAndSend();
                     resultTask = call.ResultTask;
                 }
+
                 return await resultTask.ConfigureAwait(false);
             }
             catch (RpcRerouteException) {
                 Log.LogWarning("Rerouting: {Invocation}", invocation);
                 await Hub.RerouteDelayer.Invoke(cancellationToken).ConfigureAwait(false);
                 call = (RpcOutboundCall<T>?)context.PrepareReroutedCall();
+            }
+            catch (Exception e) {
+                Log.LogWarning(e, "Exception");
             }
         }
     }

@@ -18,7 +18,7 @@ public class ConnectorTest(ITestOutputHelper @out) : TestBase(@out)
         var c = new Connector<Connection>(async ct => {
             // ReSharper disable once AccessToModifiedClosure
             if (clock.Now <= disconnectedUntil)
-                throw Errors.Disconnected();
+                throw RpcDisconnectedException.New("server");
             await Task.Delay(connectionDelay, ct).ConfigureAwait(false);
             return new Connection();
         }) {
@@ -36,9 +36,9 @@ public class ConnectorTest(ITestOutputHelper @out) : TestBase(@out)
             .When(x => x.ValueOrDefault, CancellationToken.None)
             .WaitAsync(TimeSpan.FromSeconds(0.2), CancellationToken.None);
 
-        c.DropConnection(c1, new DisconnectedException());
+        c.DropConnection(c1, new RpcDisconnectedException());
         await c.IsConnected
-            .When(x => x.Error is DisconnectedException, CancellationToken.None)
+            .When(x => x.Error is RpcDisconnectedException, CancellationToken.None)
             .WaitAsync(TimeSpan.FromSeconds(0.1), CancellationToken.None);
         await c.IsConnected
             .When(x => x.ValueOrDefault, CancellationToken.None)
@@ -47,9 +47,9 @@ public class ConnectorTest(ITestOutputHelper @out) : TestBase(@out)
         c2.Should().NotBeSameAs(c1);
 
         disconnectedUntil = clock.Now + TimeSpan.FromSeconds(0.4); // 2 retry delays
-        c.DropConnection(c2, new DisconnectedException());
+        c.DropConnection(c2, new RpcDisconnectedException());
         await c.IsConnected
-            .When(x => x.Error is DisconnectedException, CancellationToken.None)
+            .When(x => x.Error is RpcDisconnectedException, CancellationToken.None)
             .WaitAsync(TimeSpan.FromSeconds(0.1), CancellationToken.None);
         await c.IsConnected
             .When(x => x.ValueOrDefault, CancellationToken.None)
@@ -57,9 +57,9 @@ public class ConnectorTest(ITestOutputHelper @out) : TestBase(@out)
         var c3 = await c.GetConnection(CancellationToken.None);
         c3.Should().NotBeSameAs(c2);
 
-        c.DropConnection(c3, new DisconnectedException());
+        c.DropConnection(c3, new RpcDisconnectedException());
         await c.IsConnected
-            .When(x => x.Error is DisconnectedException, CancellationToken.None)
+            .When(x => x.Error is RpcDisconnectedException, CancellationToken.None)
             .WaitAsync(TimeSpan.FromSeconds(0.1), CancellationToken.None);
         await c.IsConnected
             .When(x => x.ValueOrDefault, CancellationToken.None)

@@ -74,7 +74,7 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.ClientConnectionFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.ServerConnectionFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.BackendServiceDetector);
-        services.AddSingleton(_ => RpcDefaultDelegates.UnrecoverableErrorDetector);
+        services.AddSingleton(_ => RpcDefaultDelegates.PeerTerminalErrorDetector);
         services.AddSingleton(_ => RpcDefaultDelegates.MethodTracerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFilter);

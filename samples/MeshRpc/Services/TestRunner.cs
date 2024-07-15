@@ -19,7 +19,9 @@ public class Tester(IServiceProvider services) : WorkerBase
 
     protected override Task OnRun(CancellationToken cancellationToken)
     {
-        if (OwnHost.ServiceMode != RpcServiceMode.Client)
+        var isClient = OwnHost.ServiceMode == RpcServiceMode.Client;
+        var mustRun = isClient ? MustRunOnClientHost : MustRunOnServerHost;
+        if (!mustRun)
             return Task.CompletedTask;
 
         using var stopTokenSource = cancellationToken.CreateDelayedTokenSource(TestStopDelay);

@@ -1,4 +1,4 @@
-namespace ActualLab.Rpc.Infrastructure;
+namespace ActualLab.Rpc;
 
 #pragma warning disable SYSLIB0051
 

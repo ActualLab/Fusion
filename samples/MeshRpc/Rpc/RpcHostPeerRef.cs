@@ -4,7 +4,7 @@ using ActualLab.Text;
 
 namespace Samples.MeshRpc;
 
-public sealed record RpcHostPeerRef : RpcPeerRef
+public sealed record RpcHostPeerRef : RpcPeerRef, IMeshPeerRef
 {
     private static readonly ConcurrentDictionary<HostRef, RpcHostPeerRef> Cache = new();
 

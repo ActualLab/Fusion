@@ -26,7 +26,7 @@ public sealed class RpcInternalServices(RpcHub hub)
     public RpcPeerFactory PeerFactory => Hub.PeerFactory;
     public RpcClientConnectionFactory ClientConnectionFactory => Hub.ClientConnectionFactory;
     public RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer => Hub.ClientPeerReconnectDelayer;
-    public RpcUnrecoverableErrorDetector UnrecoverableErrorDetector => Hub.UnrecoverableErrorDetector;
+    public RpcPeerTerminalErrorDetector PeerTerminalErrorDetector => Hub.PeerTerminalErrorDetector;
     public RpcMethodTracerFactory MethodTracerFactory => Hub.MethodTracerFactory;
     public RpcCallLoggerFactory CallLoggerFactory => Hub.CallLoggerFactory;
     public RpcCallLoggerFilter CallLoggerFilter => Hub.CallLoggerFilter;

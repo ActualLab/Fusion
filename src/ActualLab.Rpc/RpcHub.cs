@@ -25,8 +25,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcPeerFactory PeerFactory;
     internal readonly RpcClientConnectionFactory ClientConnectionFactory;
     internal readonly RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer;
+    internal readonly RpcPeerTerminalErrorDetector PeerTerminalErrorDetector;
     internal readonly RpcBackendServiceDetector BackendServiceDetector;
-    internal readonly RpcUnrecoverableErrorDetector UnrecoverableErrorDetector;
     internal readonly RpcMethodTracerFactory MethodTracerFactory;
     internal readonly RpcCallLoggerFactory CallLoggerFactory;
     internal readonly RpcCallLoggerFilter CallLoggerFilter;
@@ -64,8 +64,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         PeerFactory = services.GetRequiredService<RpcPeerFactory>();
         ClientConnectionFactory = services.GetRequiredService<RpcClientConnectionFactory>();
         ClientPeerReconnectDelayer = services.GetRequiredService<RpcClientPeerReconnectDelayer>();
+        PeerTerminalErrorDetector = services.GetRequiredService<RpcPeerTerminalErrorDetector>();
         BackendServiceDetector = services.GetRequiredService<RpcBackendServiceDetector>();
-        UnrecoverableErrorDetector = services.GetRequiredService<RpcUnrecoverableErrorDetector>();
         MethodTracerFactory = services.GetRequiredService<RpcMethodTracerFactory>();
         CallLoggerFactory = services.GetRequiredService<RpcCallLoggerFactory>();
         CallLoggerFilter = services.GetRequiredService<RpcCallLoggerFilter>();

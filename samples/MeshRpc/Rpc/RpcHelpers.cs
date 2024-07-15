@@ -1,3 +1,4 @@
+using ActualLab;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
@@ -28,8 +29,10 @@ public sealed class RpcHelpers(Host ownHost)
 
     public string GetHostUrl(RpcWebSocketClient client, RpcClientPeer peer)
     {
-        var hostId = peer.Ref.Key.Value;
-        var host = MeshState.State.Value.HostById.GetValueOrDefault(hostId);
+        if (peer.Ref is not IMeshPeerRef meshPeerRef)
+            return "";
+
+        var host = MeshState.State.Value.HostById.GetValueOrDefault(meshPeerRef.HostId);
         return host?.Url ?? "";
     }
 }

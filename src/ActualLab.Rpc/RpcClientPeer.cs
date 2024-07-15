@@ -29,7 +29,7 @@ public class RpcClientPeer : RpcPeer
     {
         var delay = ReconnectDelayer.GetDelay(this, connectionState.TryIndex, connectionState.Error, cancellationToken);
         if (delay.IsLimitExceeded)
-            throw Errors.ConnectionUnrecoverable();
+            throw new RpcReconnectFailedException();
 
         SetReconnectsAt(delay.EndsAt);
         try {

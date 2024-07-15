@@ -31,9 +31,6 @@ public static class Errors
     public static Exception EndpointNotFound(string serviceName, string methodName)
         => new RpcException($"Endpoint not found: '{serviceName}.{methodName}'.");
 
-    public static Exception ConnectionUnrecoverable(Exception? innerException = null)
-        => new ConnectionUnrecoverableException(innerException);
-
     public static Exception NoCurrentRpcInboundContext()
         => new InvalidOperationException($"{nameof(RpcInboundContext)}.{nameof(RpcInboundContext.Current)} is unavailable.");
     public static Exception NoCurrentRpcOutboundContext()
@@ -68,11 +65,6 @@ public static class Errors
         => new TimeoutException("Timeout on handshake.");
     public static Exception KeepAliveTimeout()
         => new TimeoutException("Timeout while waiting for \"keep-alive\" message.");
-
-    public static Exception Disconnected(RpcPeer peer)
-        => Disconnected(peer.Ref.IsServer ? "client" : "server");
-    public static Exception Disconnected(string partyName = "server")
-        => new DisconnectedException($"The remote {partyName} is disconnected.");
 
     public static Exception ClientRpcPeerRefExpected(string argumentName)
         => new ArgumentOutOfRangeException(argumentName, "Client RpcPeerRef is expected.");

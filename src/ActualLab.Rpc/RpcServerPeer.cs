@@ -47,8 +47,8 @@ public class RpcServerPeer(RpcHub hub, RpcPeerRef @ref, VersionSet? versions = n
                     .WaitAsync(CloseTimeout, cancellationToken)
                     .ConfigureAwait(false);
             }
-            catch (TimeoutException e) {
-                throw Errors.ConnectionUnrecoverable(e);
+            catch (TimeoutException) {
+                throw RpcReconnectFailedException.ClientIsGone();
             }
         }
     }

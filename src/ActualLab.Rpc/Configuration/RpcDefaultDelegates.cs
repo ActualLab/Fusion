@@ -19,7 +19,7 @@ public delegate Task<RpcConnection> RpcClientConnectionFactory(
     RpcClientPeer peer, CancellationToken cancellationToken);
 public delegate Task<RpcConnection> RpcServerConnectionFactory(
     RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties, CancellationToken cancellationToken);
-public delegate bool RpcUnrecoverableErrorDetector(Exception error, CancellationToken cancellationToken);
+public delegate bool RpcPeerTerminalErrorDetector(Exception error);
 public delegate RpcMethodTracer? RpcMethodTracerFactory(RpcMethodDef method);
 public delegate RpcCallLogger RpcCallLoggerFactory(RpcPeer peer, RpcCallLoggerFilter filter, ILogger log, LogLevel logLevel);
 public delegate bool RpcCallLoggerFilter(RpcPeer peer, RpcCall call);
@@ -70,10 +70,8 @@ public static class RpcDefaultDelegates
     public static RpcServerConnectionFactory ServerConnectionFactory { get; set; } =
         static (peer, channel, options, cancellationToken) => Task.FromResult(new RpcConnection(channel, options));
 
-    public static RpcUnrecoverableErrorDetector UnrecoverableErrorDetector { get; set; } =
-        static (error, cancellationToken)
-            => cancellationToken.IsCancellationRequested
-            || error is ConnectionUnrecoverableException;
+    public static RpcPeerTerminalErrorDetector PeerTerminalErrorDetector { get; set; } =
+        static error => error is RpcReconnectFailedException or RpcRerouteException;
 
     public static RpcMethodTracerFactory MethodTracerFactory { get; set; } =
         static method => null;

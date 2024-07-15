@@ -7,7 +7,7 @@ using Pastel;
 
 namespace Samples.MeshRpc;
 
-public sealed record RpcShardPeerRef : RpcPeerRef
+public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
 {
     private static readonly ConcurrentDictionary<ShardRef, RpcShardPeerRef> Cache = new();
 

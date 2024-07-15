@@ -1,3 +1,4 @@
+using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Internal;
