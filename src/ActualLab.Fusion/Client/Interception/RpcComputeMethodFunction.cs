@@ -136,7 +136,7 @@ public class RpcComputeMethodFunction<T>(
             throw RpcRerouteException.LocalCall();
 
         var result = await call.ResultTask.ResultAwait(false);
-        if (result.Error is OperationCanceledException e)
+        if (result.Error is OperationCanceledException e) // Also handles RpcRerouteException
             throw e; // We treat server-side cancellations the same way as client-side cancellations
 
         RpcCacheEntry? cacheEntry = null;

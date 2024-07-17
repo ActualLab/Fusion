@@ -7,6 +7,7 @@ namespace ActualLab.Rpc;
 public delegate RpcServiceDef RpcServiceDefBuilder(RpcHub hub, RpcServiceBuilder service);
 public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodInfo method);
 public delegate bool RpcBackendServiceDetector(Type serviceType);
+public delegate bool RpcCommandTypeDetector(Type type);
 public delegate Symbol RpcServiceScopeResolver(RpcServiceDef serviceDef);
 public delegate RpcPeerRef RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
 public delegate Task RpcRerouteDelayer(CancellationToken cancellationToken);
@@ -26,6 +27,10 @@ public delegate bool RpcCallLoggerFilter(RpcPeer peer, RpcCall call);
 
 public static class RpcDefaultDelegates
 {
+    private static readonly ConcurrentDictionary<Type, bool> IsCommandTypeCache = new();
+
+    public static string CommandInterfaceFullName { get; set; } = "ActualLab.CommandR.ICommand";
+
     public static RpcServiceDefBuilder ServiceDefBuilder { get; set; } =
         static (hub, service) => new RpcServiceDef(hub, service);
 
@@ -36,6 +41,10 @@ public static class RpcDefaultDelegates
         static serviceType =>
             typeof(IBackendService).IsAssignableFrom(serviceType)
             || serviceType.Name.EndsWith("Backend", StringComparison.Ordinal);
+
+    public static RpcCommandTypeDetector CommandTypeDetector { get; set; } =
+        static type => IsCommandTypeCache.GetOrAdd(type,
+            static t => t.GetInterfaces().Any(x => CommandInterfaceFullName.Equals(x.FullName, StringComparison.Ordinal)));
 
     public static RpcServiceScopeResolver ServiceScopeResolver { get; set; } =
         static service => service.IsBackend

@@ -11,7 +11,6 @@ using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.UI;
 using ActualLab.Resilience;
 using ActualLab.Rpc;
-using ActualLab.Rpc.Internal;
 using Errors = ActualLab.Internal.Errors;
 using UnreferencedCode = ActualLab.Fusion.Internal.UnreferencedCode;
 
@@ -334,7 +333,9 @@ public readonly struct FusionBuilder
     {
         // ~ RpcBuilder.AddServer, but for Compute Service
 
-        AddComputeService(serviceType, implementationType, addCommandHandlers);
+        AddComputeService(serviceType, implementationType, false);
+        if (addCommandHandlers)
+            Commander.AddHandlers(serviceType);
         Rpc.Service(serviceType).HasServer(serviceType).HasName(name);
         return this;
     }
@@ -355,7 +356,7 @@ public readonly struct FusionBuilder
         AddComputeService(implementationType, false);
         Services.AddSingleton(serviceType, c => ComputeServiceProxies.NewClient(c, serviceType, implementationType));
         if (addCommandHandlers)
-            Commander.AddHandlers(serviceType, implementationType);
+            Commander.AddHandlers(serviceType);
         Rpc.Service(serviceType).HasServer(implementationType).HasName(name);
         return this;
     }
@@ -384,7 +385,7 @@ public readonly struct FusionBuilder
 
         Services.AddSingleton(serviceType, c => ComputeServiceProxies.NewHybrid(c, serviceType, implementationType));
         if (addCommandHandlers)
-            Commander.AddHandlers(serviceType, implementationType);
+            Commander.AddHandlers(serviceType);
         Rpc.Service(serviceType).HasServer(serviceType).HasName(name);
         return this;
     }

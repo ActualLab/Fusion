@@ -11,7 +11,7 @@ public static class HostFactorySettings
     public static readonly RandomTimeSpan HostTryAddPeriod = TimeSpan.FromSeconds(1).ToRandom(0.5);
     public static readonly RandomTimeSpan HostLifespan = TimeSpan.FromSeconds(5).ToRandom(0.75);
     public static readonly RandomTimeSpan CounterGetDelay = TimeSpan.FromSeconds(1).ToRandom(0.5);
-    public static readonly RandomTimeSpan CounterIncrementDelay = TimeSpan.FromSeconds(0.1).ToRandom(0.5);
+    public static readonly RandomTimeSpan CounterIncrementDelay = TimeSpan.FromSeconds(1).ToRandom(0.5);
 }
 
 public static class TestSettings

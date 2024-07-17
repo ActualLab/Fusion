@@ -15,6 +15,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 
     internal readonly RpcServiceDefBuilder ServiceDefBuilder;
     internal readonly RpcMethodDefBuilder MethodDefBuilder;
+    internal readonly RpcBackendServiceDetector BackendServiceDetector;
+    internal readonly RpcCommandTypeDetector CommandTypeDetector;
     internal readonly RpcServiceScopeResolver ServiceScopeResolver;
     internal readonly RpcSafeCallRouter CallRouter;
     internal readonly RpcRerouteDelayer RerouteDelayer;
@@ -27,7 +29,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcClientConnectionFactory ClientConnectionFactory;
     internal readonly RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer;
     internal readonly RpcPeerTerminalErrorDetector PeerTerminalErrorDetector;
-    internal readonly RpcBackendServiceDetector BackendServiceDetector;
     internal readonly RpcMethodTracerFactory MethodTracerFactory;
     internal readonly RpcCallLoggerFactory CallLoggerFactory;
     internal readonly RpcCallLoggerFilter CallLoggerFilter;
@@ -55,6 +56,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         // Delegates
         ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
         MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
+        BackendServiceDetector = services.GetRequiredService<RpcBackendServiceDetector>();
+        CommandTypeDetector = services.GetRequiredService<RpcCommandTypeDetector>();
         ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();
         CallRouter = services.GetRequiredService<RpcSafeCallRouter>();
         RerouteDelayer = services.GetRequiredService<RpcRerouteDelayer>();
@@ -67,7 +70,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         ClientConnectionFactory = services.GetRequiredService<RpcClientConnectionFactory>();
         ClientPeerReconnectDelayer = services.GetRequiredService<RpcClientPeerReconnectDelayer>();
         PeerTerminalErrorDetector = services.GetRequiredService<RpcPeerTerminalErrorDetector>();
-        BackendServiceDetector = services.GetRequiredService<RpcBackendServiceDetector>();
         MethodTracerFactory = services.GetRequiredService<RpcMethodTracerFactory>();
         CallLoggerFactory = services.GetRequiredService<RpcCallLoggerFactory>();
         CallLoggerFilter = services.GetRequiredService<RpcCallLoggerFilter>();

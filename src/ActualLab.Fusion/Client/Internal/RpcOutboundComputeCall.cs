@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
+using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Client.Internal;
@@ -72,6 +73,8 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
     {
         var resultVersion = context.GetResultVersion();
         var oce = error as OperationCanceledException;
+        if (error is RpcRerouteException)
+            oce = null; // RpcRerouteException is OperationCanceledException, but must be exposed as-is here
         var cancellationToken = oce?.CancellationToken ?? default;
         // We always use Lock to update ResultSource in this type
         lock (Lock) {

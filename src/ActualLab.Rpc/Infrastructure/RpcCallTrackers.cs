@@ -7,6 +7,7 @@ public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
     where TRpcCall : RpcCall
 {
     private RpcPeer _peer = null!;
+    protected RpcLimits Limits { get; private set; } = null!;
     protected readonly ConcurrentDictionary<long, TRpcCall> Calls = new();
 
     public RpcPeer Peer {
@@ -14,7 +15,9 @@ public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
         protected set {
             if (_peer != null)
                 throw Errors.AlreadyInitialized(nameof(Peer));
+
             _peer = value;
+            Limits = _peer.Hub.Limits;
         }
     }
 
@@ -53,8 +56,6 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
 
 public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 {
-    public static TimeSpan AbortCheckPeriod { get; set; } = TimeSpan.FromSeconds(1);
-
     private long _lastId;
 
     public void Register(RpcOutboundCall call)
@@ -80,6 +81,12 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
+    {
+
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Abort(Exception error)
     {
         var abortedCallIds = new HashSet<long>();
@@ -92,7 +99,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
             if (i >= 2 && abortedCallCountBefore == abortedCallIds.Count)
                 break;
 
-            await Task.Delay(AbortCheckPeriod).ConfigureAwait(false);
+            await Task.Delay(Limits.CallAbortCyclePeriod).ConfigureAwait(false);
         }
     }
 }

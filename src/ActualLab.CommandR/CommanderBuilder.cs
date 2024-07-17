@@ -3,11 +3,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.CommandR.Diagnostics;
 using ActualLab.CommandR.Interception;
 using ActualLab.CommandR.Internal;
-using ActualLab.CommandR.Rpc;
 using ActualLab.Generators;
 using ActualLab.Interception;
 using ActualLab.Resilience;
-using ActualLab.Rpc;
 using ActualLab.Versioning;
 using ActualLab.Versioning.Providers;
 
@@ -17,7 +15,6 @@ public readonly struct CommanderBuilder
 {
     public IServiceCollection Services { get; }
     public HashSet<CommandHandler> Handlers { get; }
-    public RpcBuilder Rpc { get; }
 
     [RequiresUnreferencedCode(UnreferencedCode.Commander)]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Proxies))]
@@ -34,13 +31,11 @@ public readonly struct CommanderBuilder
         if (services.FindInstance<HashSet<CommandHandler>>() is { } handlers) {
             // Already configured
             Handlers = handlers;
-            Rpc = services.AddRpc();
             configure?.Invoke(this);
             return;
         }
 
         Handlers = services.AddInstance(new HashSet<CommandHandler>(), addInFront: true);
-        Rpc = services.AddRpc();
 
         // Core services
         services.TryAddSingleton<UuidGenerator>(_ => new UlidUuidGenerator());
@@ -67,9 +62,6 @@ public readonly struct CommanderBuilder
         AddHandlers<CommandTracer>();
         services.AddSingleton(_ => new LocalCommandRunner());
         AddHandlers<LocalCommandRunner>();
-
-        // RPC outbound call middleware for command handler calls
-        Rpc.AddOutboundMiddleware<RpcOutboundCommandCallMiddleware>();
 
         configure?.Invoke(this);
     }

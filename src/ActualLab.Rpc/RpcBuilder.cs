@@ -69,6 +69,8 @@ public readonly struct RpcBuilder
         services.AddSingleton(c => new RpcServiceRegistry(c));
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
         services.AddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);
+        services.AddSingleton(_ => RpcDefaultDelegates.BackendServiceDetector);
+        services.AddSingleton(_ => RpcDefaultDelegates.CommandTypeDetector);
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceScopeResolver);
         services.AddSingleton(_ => RpcDefaultDelegates.InboundCallFilter);
         services.AddSingleton(_ => RpcDefaultDelegates.CallRouter);
@@ -77,7 +79,6 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.PeerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.ClientConnectionFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.ServerConnectionFactory);
-        services.AddSingleton(_ => RpcDefaultDelegates.BackendServiceDetector);
         services.AddSingleton(_ => RpcDefaultDelegates.PeerTerminalErrorDetector);
         services.AddSingleton(_ => RpcDefaultDelegates.MethodTracerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFactory);
@@ -158,7 +159,7 @@ public readonly struct RpcBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         RpcServiceMode mode, Symbol name = default)
         => mode switch {
-            RpcServiceMode.Local => AddLocalService(serviceType, implementationType),
+            RpcServiceMode.Local => AddLocal(serviceType, implementationType),
             RpcServiceMode.Client => AddClient(serviceType, name),
             RpcServiceMode.Server => AddServer(serviceType, implementationType, name),
             RpcServiceMode.ServerAndClient => AddServerAndClient(serviceType, implementationType, name),
@@ -212,18 +213,18 @@ public readonly struct RpcBuilder
         return this;
     }
 
-    public RpcBuilder AddLocalService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>()
+    public RpcBuilder AddLocal<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>()
         where TService : class
-        => AddLocalService(typeof(TService));
-    public RpcBuilder AddLocalService<
+        => AddLocal(typeof(TService));
+    public RpcBuilder AddLocal<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>()
         where TService : class
         where TImplementation : class, TService
-        => AddLocalService(typeof(TService), typeof(TImplementation));
-    public RpcBuilder AddLocalService([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType)
-        => AddLocalService(serviceType, serviceType);
-    public RpcBuilder AddLocalService(
+        => AddLocal(typeof(TService), typeof(TImplementation));
+    public RpcBuilder AddLocal([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType)
+        => AddLocal(serviceType, serviceType);
+    public RpcBuilder AddLocal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType)
     {
@@ -273,7 +274,7 @@ public readonly struct RpcBuilder
         // RPC:
         // - TService configured as server resolving to TImplementation
 
-        AddLocalService(serviceType, implementationType);
+        AddLocal(serviceType, implementationType);
         Service(serviceType).HasServer(implementationType).HasName(name);
         return this;
     }
@@ -300,7 +301,7 @@ public readonly struct RpcBuilder
         // RPC:
         // - TService configured as server resolving to TImplementation, so incoming calls won't be routed
 
-        AddLocalService(implementationType);
+        AddLocal(implementationType);
         Services.AddSingleton(serviceType, c => RpcProxies.NewSwitch(c, serviceType, implementationType));
         Service(serviceType).HasServer(implementationType).HasName(name);
         return this;

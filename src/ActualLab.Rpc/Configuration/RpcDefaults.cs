@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using ActualLab.OS;
 
 namespace ActualLab.Rpc;
@@ -9,8 +8,6 @@ public static class RpcDefaults
     private static VersionSet? _apiPeerVersions;
     private static VersionSet? _backendPeerVersions;
     private static RpcMode _mode;
-
-    public static bool DebugMode { get; set; } = Debugger.IsAttached;
 
     public static RpcMode Mode {
         get => _mode;

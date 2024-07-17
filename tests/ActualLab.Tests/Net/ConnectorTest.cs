@@ -1,6 +1,5 @@
 using ActualLab.Net;
 using ActualLab.Rpc;
-using ActualLab.Rpc.Internal;
 using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Net;

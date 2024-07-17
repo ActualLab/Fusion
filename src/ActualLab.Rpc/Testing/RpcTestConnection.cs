@@ -1,6 +1,5 @@
 using ActualLab.Channels;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Testing;
 

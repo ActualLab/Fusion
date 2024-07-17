@@ -65,7 +65,9 @@ public class RpcInterceptor : RpcInterceptorBase
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     private static async Task<T> InvokeOnceConnected<T>(RpcOutboundCall<T> call)
     {
-        await call.Peer.WhenConnected(call.ConnectTimeout, call.Context.CancellationToken).ConfigureAwait(false);
+        await call.Peer
+            .WhenConnected(call.MethodDef.Timeouts.ConnectTimeout, call.Context.CancellationToken)
+            .ConfigureAwait(false);
         _ = call.RegisterAndSend();
         return await call.ResultTask.ConfigureAwait(false);
     }
@@ -96,15 +98,17 @@ public class RpcInterceptor : RpcInterceptorBase
                 }
                 else {
                     if (!context.Peer!.ConnectionState.Value.IsConnected())
-                        await context.Peer.WhenConnected(call.ConnectTimeout, cancellationToken).ConfigureAwait(false);
+                        await context.Peer
+                            .WhenConnected(call.MethodDef.Timeouts.ConnectTimeout, cancellationToken)
+                            .ConfigureAwait(false);
                     _ = call.RegisterAndSend();
                     resultTask = call.ResultTask;
                 }
 
                 return await resultTask.ConfigureAwait(false);
             }
-            catch (RpcRerouteException) {
-                Log.LogWarning("Rerouting: {Invocation}", invocation);
+            catch (RpcRerouteException e) {
+                Log.LogWarning(e, "Rerouting: {Invocation}", invocation);
                 await Hub.RerouteDelayer.Invoke(cancellationToken).ConfigureAwait(false);
                 call = (RpcOutboundCall<T>?)context.PrepareReroutedCall();
             }

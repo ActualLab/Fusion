@@ -123,7 +123,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     {
         return IsConnected()
             ? Task.CompletedTask
-            : timeout > TimeSpan.Zero && timeout != TimeSpan.MaxValue
+            : timeout != TimeSpan.MaxValue
                 ? WhenConnectedAsync(this, timeout, cancellationToken)
                 : ConnectionState.WhenConnected(cancellationToken);
 
@@ -194,6 +194,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             return;
         }
 
+        Log.LogInformation("'{PeerRef}': Started", Ref);
+        foreach (var peerTracker in Hub.PeerTrackers)
+            peerTracker.Invoke(this);
+
         var semaphore = InboundCallConcurrencyLevel > 0
             ? new SemaphoreSlim(InboundCallConcurrencyLevel, InboundCallConcurrencyLevel)
             : null;
@@ -261,10 +265,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         continue; // Somehow disconnected
 
                     // Recovery: re-send keep-alive object set & all outbound calls
-                    var connectionStateValue = connectionState.Value;
                     _ = Task.Run(async () => {
-                        _ = SharedObjects.Maintain(connectionStateValue, readerToken);
-                        _ = RemoteObjects.Maintain(connectionStateValue, readerToken);
+                        _ = OutboundCalls.Maintain(handshake, readerToken);
+                        _ = SharedObjects.Maintain(handshake, readerToken);
+                        _ = RemoteObjects.Maintain(handshake, readerToken);
                         foreach (var outboundCall in OutboundCalls) {
                             readerToken.ThrowIfCancellationRequested();
                             await outboundCall.Reconnect(isRemotePeerChanged, readerToken).ConfigureAwait(false);
@@ -316,45 +320,27 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             }
         }
         finally {
-            // Just in case: terminate reader
-            readerTokenSource.CancelAndDisposeSilently();
-            // Terminate all running ProcessMessage calls
-            inboundCallTokenSource.CancelAndDisposeSilently();
-        }
-    }
-
-    protected override Task OnStart(CancellationToken cancellationToken)
-    {
-        Log.LogInformation("'{PeerRef}': Started", Ref);
-        foreach (var peerTracker in Hub.PeerTrackers)
-            peerTracker.Invoke(this);
-        return Task.CompletedTask;
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    protected override Task OnStop()
-    {
-        Hub.Peers.TryRemove(Ref, this);
-
-        // We want to make sure the sequence of ConnectionStates terminates for sure
-        Exception? error;
-        lock (Lock) {
-            var connectionState = _connectionState;
-            error = connectionState.Value.Error;
-            if (!connectionState.IsFinal) {
-                var isTerminal = error != null && Hub.PeerTerminalErrorDetector.Invoke(error);
-                if (!isTerminal)
-                    error = new RpcReconnectFailedException(error);
-                SetConnectionState(connectionState.Value.NextDisconnected(error));
-            }
-            else {
-                if (error == null) {
+            Log.LogInformation("'{PeerRef}': Stopping", Ref);
+            Hub.Peers.TryRemove(Ref, this);
+            inboundCallTokenSource.CancelAndDisposeSilently(); // Terminates all running ProcessMessage calls
+            // Make sure the sequence of ConnectionStates terminates
+            Exception? error;
+            lock (Lock) {
+                connectionState = _connectionState;
+                error = connectionState.Value.Error;
+                if (!connectionState.IsFinal) {
+                    var isTerminal = error != null && Hub.PeerTerminalErrorDetector.Invoke(error);
+                    if (!isTerminal)
+                        error = new RpcReconnectFailedException(error);
+                    SetConnectionState(connectionState.Value.NextDisconnected(error));
+                }
+                else if (error == null) {
                     Log.LogError("The final connection state must have a non-null Error");
                     error = new RpcReconnectFailedException();
                 }
             }
+            await Reset(error!, true).ConfigureAwait(false);
         }
-        return Reset(error, true);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]

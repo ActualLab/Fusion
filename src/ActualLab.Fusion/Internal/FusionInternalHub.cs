@@ -15,13 +15,10 @@ public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
         = new(services, c => c.GetService<IRemoteComputedCache>());
     private CommandServiceInterceptor? _commandServiceInterceptor;
     private ComputeServiceInterceptor? _computeServiceInterceptor;
-    private CommandServiceInterceptor.Options? _commandServiceInterceptorOptions;
     private RpcComputeServiceInterceptor.Options? _clientComputeServiceInterceptorOptions;
     private RpcComputeCallOptions? _rpcComputeCallOptions;
 
-    internal CommandServiceInterceptor.Options CommandServiceInterceptorOptions
-        => _commandServiceInterceptorOptions ??= Services.GetRequiredService<CommandServiceInterceptor.Options>();
-    internal RpcComputeServiceInterceptor.Options ClientComputeServiceInterceptorOptions
+    internal RpcComputeServiceInterceptor.Options RpcComputeServiceInterceptorOptions
         => _clientComputeServiceInterceptorOptions ??= Services.GetRequiredService<RpcComputeServiceInterceptor.Options>();
     internal RpcComputeCallOptions RpcComputeCallOptions
         => _rpcComputeCallOptions ??= Services.GetRequiredService<RpcComputeCallOptions>();
@@ -40,6 +37,6 @@ public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
 
     public RpcInterceptor NewRpcInterceptor(RpcServiceDef serviceDef)
         => RpcHub.InternalServices.NewInterceptor(serviceDef, CommandServiceInterceptor);
-    public RpcComputeServiceInterceptor NewHybridComputeServiceInterceptor(RpcServiceDef serviceDef, object? localTarget)
-        => new(ClientComputeServiceInterceptorOptions, NewRpcInterceptor(serviceDef), localTarget, this);
+    public RpcComputeServiceInterceptor NewRpcComputeServiceInterceptor(RpcServiceDef serviceDef, object? localTarget)
+        => new(RpcComputeServiceInterceptorOptions, NewRpcInterceptor(serviceDef), localTarget, this);
 }

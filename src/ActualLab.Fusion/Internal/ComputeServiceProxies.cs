@@ -43,8 +43,8 @@ public static class ComputeServiceProxies
         var serviceDef = hub.RpcHub.ServiceRegistry[serviceType];
         var localTarget = localTargetResolver?.Resolve(services);
 
-        var hybridComputeServiceInterceptor = hub.NewHybridComputeServiceInterceptor(serviceDef, localTarget);
+        var hybridComputeServiceInterceptor = hub.NewRpcComputeServiceInterceptor(serviceDef, localTarget);
         hybridComputeServiceInterceptor.ValidateType(serviceType);
-        return services.ActivateProxy(implementationType, hybridComputeServiceInterceptor, null, initialize);
+        return services.ActivateProxy(implementationType, hybridComputeServiceInterceptor, localTarget, initialize);
     }
 }

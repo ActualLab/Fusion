@@ -77,7 +77,14 @@ public sealed class Host : WorkerBase
         => Id.Value;
 
     public void RequestStop()
-        => Services.GetRequiredService<IHostApplicationLifetime>().StopApplication();
+    {
+        try {
+            Services.GetRequiredService<IHostApplicationLifetime>().StopApplication();
+        }
+        catch (ObjectDisposedException) {
+            // Already stopping
+        }
+    }
 
     protected override async Task OnRun(CancellationToken cancellationToken)
     {

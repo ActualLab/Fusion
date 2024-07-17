@@ -15,8 +15,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public readonly RpcOutboundContext Context = context;
     public readonly RpcPeer Peer = context.Peer!;
     public abstract Task UntypedResultTask { get; }
-    public TimeSpan ConnectTimeout;
-    public TimeSpan Timeout;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public static RpcOutboundCall? New(RpcOutboundContext context)
@@ -183,8 +181,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var cancellationToken = Context.CancellationToken;
         CancellationTokenSource? timeoutCts = null;
         CancellationTokenSource? linkedCts = null;
-        if (Timeout > TimeSpan.Zero) {
-            timeoutCts = new CancellationTokenSource(Timeout);
+        var timeout = MethodDef.Timeouts.Timeout;
+        if (timeout != TimeSpan.MaxValue) {
+            timeoutCts = new CancellationTokenSource(timeout);
             linkedCts = timeoutCts.Token.LinkWith(cancellationToken);
             cancellationToken = linkedCts.Token;
         }
@@ -245,6 +244,8 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
     public override void SetError(Exception error, RpcInboundContext? context, bool assumeCancelled = false)
     {
         var oce = error as OperationCanceledException;
+        if (error is RpcRerouteException)
+            oce = null; // RpcRerouteException is OperationCanceledException, but must be exposed as-is here
         var cancellationToken = oce?.CancellationToken ?? default;
         var isResultSet = oce != null
             ? ResultSource.TrySetCanceled(cancellationToken)

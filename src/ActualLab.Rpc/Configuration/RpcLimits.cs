@@ -28,4 +28,7 @@ public record RpcLimits
     public int ObjectAbortCycleCount { get; init; } = 3;
     // A single "object abort" cycle duration
     public TimeSpan ObjectAbortCyclePeriod { get; init; } = TimeSpan.FromSeconds(1);
+    // A single "call abort" cycle period
+    public TimeSpan CallAbortCyclePeriod { get; set; } = TimeSpan.FromSeconds(1);
+
 }
