@@ -205,8 +205,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         var lastHandshake = (RpcHandshake?)null;
         var inboundCallTokenSource = cancellationToken.CreateDelayedTokenSource(InboundCallCancellationOnStopDelay);
         var inboundCallToken = inboundCallTokenSource.Token;
-        var readerTokenSource = cancellationToken.CreateLinkedTokenSource();
-        var readerToken = readerTokenSource.Token;
+        var lastReaderToken = CancellationToken.None;
         try {
             while (true) {
                 var error = (Exception?)null;
@@ -223,7 +222,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     var reader = channel.Reader;
 
                     // Sending Handshake call
-                    using var handshakeCts = readerToken.CreateLinkedTokenSource(Hub.Limits.HandshakeTimeout);
+                    using var handshakeCts = cancellationToken.CreateLinkedTokenSource(Hub.Limits.HandshakeTimeout);
                     var handshakeToken = handshakeCts.Token;
                     RpcHandshake handshake;
                     try {
@@ -243,7 +242,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                             handshake = handshake with { RemoteApiVersionSet = new() };
                     }
                     catch (OperationCanceledException) {
-                        if (!readerToken.IsCancellationRequested && handshakeToken.IsCancellationRequested)
+                        if (!cancellationToken.IsCancellationRequested && handshakeToken.IsCancellationRequested)
                             throw Errors.HandshakeTimeout();
                         throw;
                     }
@@ -259,6 +258,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     }
 
                     // Only at this point: expose the new connection state
+                    var readerTokenSource = cancellationToken.CreateLinkedTokenSource();
+                    var readerToken = lastReaderToken = readerTokenSource.Token;
                     var nextConnectionState = connectionState.Value.NextConnected(connection, handshake, readerTokenSource);
                     connectionState = SetConnectionState(nextConnectionState, connectionState).RequireNonFinal();
                     if (connectionState.Value.Connection != connection)
@@ -295,7 +296,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         }
                 }
                 catch (Exception e) {
-                    var isReaderAbort = readerToken.IsCancellationRequested
+                    var isReaderAbort = lastReaderToken.IsCancellationRequested
                         && !cancellationToken.IsCancellationRequested;
                     error = isReaderAbort ? null : e;
                 }

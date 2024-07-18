@@ -32,5 +32,5 @@ public record RpcLimits
     // A single "call abort" cycle period
     public TimeSpan CallAbortCyclePeriod { get; set; } = TimeSpan.FromSeconds(1);
     // Call timeout check period
-    public RandomTimeSpan CallTimeoutCheckPeriod { get; init; } = TimeSpan.FromSeconds(10).ToRandom(0.2);
+    public RandomTimeSpan CallTimeoutCheckPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.2);
 }
