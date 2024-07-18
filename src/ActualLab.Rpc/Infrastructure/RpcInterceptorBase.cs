@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Interception.Internal;
 using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -23,34 +22,9 @@ public abstract class RpcInterceptorBase : Interceptor
         ServiceDef = serviceDef;
     }
 
-    // We don't need to decorate this method with any dynamic access attributes
+    public override MethodDef? GetMethodDef(MethodInfo method, Type proxyType)
+        => ServiceDef.GetOrFindMethod(method);
+
     protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
-    {
-        var methodDef = ServiceDef.GetMethod(method);
-        if (methodDef != null)
-            return methodDef;
-        if (!method.IsPublic || typeof(InterfaceProxy).IsAssignableFrom(proxyType))
-            return null;
-
-        // It's a class proxy, let's try to map the method to interface
-        var parameters = method.GetParameters();
-        foreach (var m in ServiceDef.Methods) {
-            if (!m.Method.Name.Equals(method.Name, StringComparison.Ordinal))
-                continue;
-
-            if (m.Parameters.Length != parameters.Length)
-                continue;
-
-            var isMatch = true;
-            for (var i = 0; i < parameters.Length; i++) {
-                isMatch &= m.Parameters[i].ParameterType == parameters[i].ParameterType;
-                if (!isMatch)
-                    break;
-            }
-            if (isMatch)
-                return m;
-        }
-
-        return null;
-    }
+        => ServiceDef.GetOrFindMethod(method);
 }

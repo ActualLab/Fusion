@@ -103,7 +103,7 @@ public abstract class Interceptor : IHasServices
     public Func<Invocation, object?>? GetHandler(in Invocation invocation)
         => _handlerCache.GetOrAdd(invocation.Method, _createHandlerUntyped, invocation);
 
-    public MethodDef? GetMethodDef(MethodInfo method, Type proxyType)
+    public virtual MethodDef? GetMethodDef(MethodInfo method, Type proxyType)
         => _methodDefCache.GetOrAdd(method, _createMethodDef, proxyType);
 
     public void ValidateType(

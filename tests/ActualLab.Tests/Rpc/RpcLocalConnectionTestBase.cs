@@ -5,8 +5,8 @@ using ActualLab.Testing.Collections;
 namespace ActualLab.Tests.Rpc;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
-public class RpcLocalChannelConnectionTest(ITestOutputHelper @out)
-    : RpcLocalConnectionTestBase(RpcPeerConnectionKind.LocalChannel, @out);
+public class RpcLoopbackConnectionTest(ITestOutputHelper @out)
+    : RpcLocalConnectionTestBase(RpcPeerConnectionKind.Loopback, @out);
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcLocalCallConnectionTest(ITestOutputHelper @out)

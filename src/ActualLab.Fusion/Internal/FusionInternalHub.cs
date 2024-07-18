@@ -35,8 +35,10 @@ public sealed class FusionInternalHub(IServiceProvider services) : IHasServices
     public ComputeServiceInterceptor ComputeServiceInterceptor
         => _computeServiceInterceptor ??= Services.GetRequiredService<ComputeServiceInterceptor>();
 
-    public RpcInterceptor NewRpcInterceptor(RpcServiceDef serviceDef)
-        => RpcHub.InternalServices.NewInterceptor(serviceDef, CommandServiceInterceptor);
     public RpcComputeServiceInterceptor NewRpcComputeServiceInterceptor(RpcServiceDef serviceDef, object? localTarget)
-        => new(RpcComputeServiceInterceptorOptions, NewRpcInterceptor(serviceDef), localTarget, this);
+    {
+        var regularCallRpcInterceptor = RpcHub.InternalServices.NewInterceptor(serviceDef, CommandServiceInterceptor);
+        var computeCallRpcInterceptor = RpcHub.InternalServices.NewInterceptor(serviceDef); // Shouldn't have localTarget!
+        return new(RpcComputeServiceInterceptorOptions, regularCallRpcInterceptor, computeCallRpcInterceptor, localTarget, this);
+    }
 }

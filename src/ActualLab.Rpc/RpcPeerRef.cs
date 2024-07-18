@@ -36,24 +36,24 @@ public partial record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBacke
         var key = Key.Value;
         return key.StartsWith(LocalCallPrefix, StringComparison.Ordinal)
             ? RpcPeerConnectionKind.LocalCall
-            : key.StartsWith(LocalChannelPrefix, StringComparison.Ordinal)
-                ? RpcPeerConnectionKind.LocalChannel
+            : key.StartsWith(LoopbackPrefix, StringComparison.Ordinal)
+                ? RpcPeerConnectionKind.Loopback
                 : RpcPeerConnectionKind.Remote;
     }
 
-    public async Task WhenGone(CancellationToken cancellationToken = default)
+    public async Task WhenRerouted()
+        => await TaskExt.NewNeverEndingUnreferenced().WaitAsync(RerouteToken).SilentAwait(false);
+
+    public Task WhenRerouted(CancellationToken cancellationToken)
     {
-        var tcs = new TaskCompletionSource<Unit>();
-        var r1 = cancellationToken.Register(static x => ((TaskCompletionSource<Unit>)x!).TrySetResult(default), tcs);
-        var r2 = RerouteToken.Register(static x => ((TaskCompletionSource<Unit>)x!).TrySetResult(default), tcs);
-        try {
-            await tcs.Task.ConfigureAwait(false);
-        }
-        finally {
-            // ReSharper disable once MethodHasAsyncOverload
-            r2.Dispose();
-            // ReSharper disable once MethodHasAsyncOverload
-            r1.Dispose();
+        return cancellationToken.CanBeCanceled
+            ? WhenReroutedWithCancellationToken(cancellationToken)
+            : WhenRerouted();
+
+        async Task WhenReroutedWithCancellationToken(CancellationToken cancellationToken1) {
+            using var tcs = RerouteToken.LinkWith(cancellationToken1);
+            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(tcs.Token).SilentAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
         }
     }
 }

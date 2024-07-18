@@ -12,6 +12,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     private IEnumerable<RpcPeerTracker>? _peerTrackers;
     private RpcSystemCallSender? _systemCallSender;
     private RpcClient? _client;
+    private RpcClientPeer? _loopbackPeer;
 
     internal readonly RpcServiceDefBuilder ServiceDefBuilder;
     internal readonly RpcMethodDefBuilder MethodDefBuilder;
@@ -46,6 +47,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public RpcInternalServices InternalServices => new(this);
     public RpcLimits Limits { get; }
     public MomentClock Clock { get; }
+    public RpcClientPeer LoopbackPeer => _loopbackPeer ??= (RpcClientPeer)GetPeer(RpcPeerRef.Loopback);
 
     public RpcHub(IServiceProvider services)
     {
@@ -102,7 +104,10 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
             Peers[peerRef] = peer;
             peer.Start();
             if (peerRef.CanBeRerouted)
-                _ = peerRef.WhenGone().ContinueWith(_ => peer.Dispose(), TaskScheduler.Default);
+                _ = peerRef.WhenRerouted().ContinueWith(_ => {
+                    peer.Log.LogWarning("'{PeerRef}': Ref is rerouted, disposing the peer {Peer}...", peer.Ref, peer);
+                    peer.Dispose();
+                }, TaskScheduler.Default);
             return peer;
         }
     }

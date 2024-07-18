@@ -1,3 +1,5 @@
+using ActualLab.Rpc.Infrastructure;
+
 namespace ActualLab.Rpc.Caching;
 
 public enum RpcCacheInfoCaptureMode
@@ -21,7 +23,7 @@ public sealed class RpcCacheInfoCapture
 
     public bool HasKeyAndData(out RpcCacheKey key, out TaskCompletionSource<TextOrBytes> dataSource)
     {
-        if (Key is not { IsValid: true } || DataSource == null) {
+        if (ReferenceEquals(Key, null) || DataSource == null) {
             key = null!;
             dataSource = null!;
             return false;
@@ -30,5 +32,27 @@ public sealed class RpcCacheInfoCapture
         key = Key;
         dataSource = DataSource;
         return true;
+    }
+
+    public void CaptureKey(RpcOutboundContext context, RpcMessage? message)
+        => Key ??= message is { Arguments: null }
+            ? new RpcCacheKey(context.MethodDef!.Service.Name, context.MethodDef.Name, message.ArgumentData)
+            : null;
+
+    public void CaptureData(RpcMessage message)
+        => DataSource?.TrySetResult(message.ArgumentData);
+
+    public void CaptureData(Exception error)
+        => DataSource?.TrySetException(error);
+
+    public void CaptureData(CancellationToken cancellationToken)
+        => DataSource?.TrySetCanceled(cancellationToken);
+
+    public void CaptureData(bool isCancelled, Exception error, CancellationToken cancellationToken)
+    {
+        if (isCancelled)
+            DataSource?.TrySetCanceled(cancellationToken);
+        else
+            DataSource?.TrySetException(error);
     }
 }

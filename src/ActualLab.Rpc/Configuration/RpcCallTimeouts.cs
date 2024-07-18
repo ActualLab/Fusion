@@ -20,7 +20,7 @@ public sealed record RpcCallTimeouts
 
     public static class Defaults
     {
-        public static RpcCallTimeouts Debug { get; set; } = new(null, 15) { TimeoutAction = RpcCallTimeoutAction.Log };
+        public static RpcCallTimeouts Debug { get; set; } = new(null, 3) { TimeoutAction = RpcCallTimeoutAction.Log };
         public static RpcCallTimeouts Query { get; set; } = Default;
         public static RpcCallTimeouts Command { get; set; } = new(1.5, 10);
         public static RpcCallTimeouts BackendQuery { get; set; } = Default;

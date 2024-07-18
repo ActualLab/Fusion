@@ -105,7 +105,8 @@ public class RpcComputeMethodFunction<T>(
                     var cache = GetCache(typedInput);
                     // existing != null -> it's invalidated, so no matter what's cached, we ignore it
                     return existing == null && cache != null
-                        ? await ComputeCachedOrRpc(typedInput, cache, cancellationToken).ConfigureAwait(false)
+                        ? await ComputeCachedOrRpc(typedInput, cache, cancellationToken)
+                            .ConfigureAwait(false)
                         : await ComputeRpc(typedInput, cache, (RemoteComputed<T>)existing!, cancellationToken)
                             .ConfigureAwait(false);
                 }
@@ -131,11 +132,11 @@ public class RpcComputeMethodFunction<T>(
         CancellationToken cancellationToken)
     {
         var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
-        var call = SendRpcCall(input, cacheInfoCapture, cancellationToken);
+        var call = await SendRpcCall(input, cacheInfoCapture, cancellationToken).ConfigureAwait(false);
         if (call == null)
             throw RpcRerouteException.LocalCall();
 
-        var result = await call.ResultTask.ResultAwait(false);
+        var result = call.ResultTask.ToResultSynchronously();
         if (result.Error is OperationCanceledException e) // Also handles RpcRerouteException
             throw e; // We treat server-side cancellations the same way as client-side cancellations
 
@@ -163,8 +164,8 @@ public class RpcComputeMethodFunction<T>(
         var cacheInfoCapture = new RpcCacheInfoCapture(RpcCacheInfoCaptureMode.KeyOnly);
         // This is a fake call that only captures the cache key.
         // No actual call happens at this point.
-        SendRpcCall(input, cacheInfoCapture, cancellationToken);
-        if (cacheInfoCapture.Key is not { IsValid: true } cacheKey) {
+        await SendRpcCall(input, cacheInfoCapture, cancellationToken).ConfigureAwait(false);
+        if (cacheInfoCapture.Key is not { } cacheKey) {
             // cacheKey wasn't captured - a weird case that normally shouldn't happen.
             // The best we can do here is to proceed assuming cache entry is missing,
             // i.e. perform RPC call & update cache.
@@ -206,7 +207,7 @@ public class RpcComputeMethodFunction<T>(
     {
         // 1. Start the RPC call
         var cacheInfoCapture = new RpcCacheInfoCapture();
-        var call = SendRpcCall(input, cacheInfoCapture, default);
+        var call = await SendRpcCall(input, cacheInfoCapture, default).ConfigureAwait(false);
         if (call == null) {
             // That's the best we can do here: the call has to be rerouted,
             // so we invalidate cached computed to update it eventually.
@@ -223,7 +224,7 @@ public class RpcComputeMethodFunction<T>(
         }
 
         // 3. Await for its completion
-        var result = await call.ResultTask.ResultAwait(false);
+        var result = call.ResultTask.ToResultSynchronously();
         if (result.Error is OperationCanceledException e) {
             // The call was cancelled on the server side - e.g. due to peer termination.
             // Retrying is the best we can do here; and since this call is already bound to `cachedComputed`,
@@ -318,7 +319,7 @@ public class RpcComputeMethodFunction<T>(
         return computed.Value;
     }
 
-    protected static RpcOutboundComputeCall<T>? SendRpcCall(
+    protected static async Task<RpcOutboundComputeCall<T>?> SendRpcCall(
         ComputeMethodInput input,
         RpcCacheInfoCapture? cacheInfoCapture,
         CancellationToken cancellationToken)
@@ -328,8 +329,8 @@ public class RpcComputeMethodFunction<T>(
         };
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;
-        var hybridComputeServiceInterceptor = (RpcComputeServiceInterceptor)proxy.Interceptor;
-        var rpcInterceptor = hybridComputeServiceInterceptor.RpcInterceptor;
+        var rpcComputeServiceInterceptor = (RpcComputeServiceInterceptor)proxy.Interceptor;
+        var computeCallRpcInterceptor = rpcComputeServiceInterceptor.ComputeCallRpcInterceptor;
 
         var ctIndex = input.MethodDef.CancellationTokenIndex;
         if (ctIndex >= 0 && invocation.Arguments.GetCancellationToken(ctIndex) != cancellationToken) {
@@ -342,8 +343,7 @@ public class RpcComputeMethodFunction<T>(
             // Nothing to fix: it's the same cancellation token or there is no token
             invocation = invocation.With(context);
         }
-
-        _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(rpcInterceptor, invocation);
+        await input.MethodDef.InterceptorAsyncInvoker.Invoke(computeCallRpcInterceptor, invocation).SilentAwait();
         return (RpcOutboundComputeCall<T>?)context.Call;
     }
 
@@ -352,7 +352,7 @@ public class RpcComputeMethodFunction<T>(
         RpcCacheKey? key,
         TextOrBytes? data)
     {
-        if (key is not { IsValid: true })
+        if (key == null)
             return null;
 
         if (!data.HasValue) {
@@ -377,11 +377,7 @@ public class RpcComputeMethodFunction<T>(
         ref int tryIndex,
         CancellationToken cancellationToken)
     {
-        if (error is not OperationCanceledException)
-            return SpecialTasks.MustThrow;
-        if (error is RpcRerouteException)
-            return SpecialTasks.MustThrow;
-        if (cancellationToken.IsCancellationRequested)
+        if (cancellationToken.IsCancellationRequested || error is not OperationCanceledException || error is RpcRerouteException)
             return SpecialTasks.MustThrow;
 
         // If we're here, the cancellation is triggered on the server side / due to connectivity issue

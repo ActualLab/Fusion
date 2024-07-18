@@ -64,11 +64,17 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
 
         // Peer & Call
         var hub = MethodDef.Hub;
+        if (CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly }) {
+            Peer = hub.LoopbackPeer;
+            Call = RpcOutboundCall.New(this);
+            return Call ?? throw ActualLab.Internal.Errors.InternalError("Call == null, which isn't expected here.");
+        }
+
         Peer ??= hub.CallRouter.Invoke(methodDef, arguments);
-        var call = Call = RpcOutboundCall.New(this);
-        if (call is { NoWait: false })
+        Call = RpcOutboundCall.New(this);
+        if (Call != null)
             hub.OutboundMiddlewares.NullIfEmpty()?.PrepareCall(this);
-        return call;
+        return Call;
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
@@ -81,35 +87,16 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
         var hub = MethodDef.Hub;
         var oldPeer = Peer;
         Peer = hub.CallRouter.Invoke(MethodDef, Arguments);
-        var call = Call = RpcOutboundCall.New(this);
-        if (call is { NoWait: false })
+        Call = RpcOutboundCall.New(this);
+        if (Call != null)
             hub.OutboundMiddlewares.NullIfEmpty()?.PrepareCall(this);
         if (ReferenceEquals(oldPeer, Peer))
-            oldPeer.Log.LogWarning("The call {Call} is rerouted to the same peer {Peer}", call, Peer);
-        return call;
+            oldPeer.Log.LogWarning("The call {Call} is rerouted to the same peer {Peer}", Call, Peer);
+        return Call;
     }
 
     public bool IsPeerChanged()
         => Peer != MethodDef!.Hub.CallRouter.Invoke(MethodDef, Arguments!);
-
-    public bool MustCaptureCacheKey(RpcMessage? message, out bool keyOnly)
-    {
-        keyOnly = false;
-        if (CacheInfoCapture is not { } cacheInfoCapture)
-            return false;
-
-        keyOnly = cacheInfoCapture.CaptureMode == RpcCacheInfoCaptureMode.KeyOnly;
-        cacheInfoCapture.Key ??= message is { Arguments: null }
-            ? new RpcCacheKey(MethodDef!.Service.Name, MethodDef.Name, message.ArgumentData)
-            : RpcCacheKey.Invalid;
-        return true;
-    }
-
-    public bool MustCaptureCacheData([NotNullWhen(true)] out TaskCompletionSource<TextOrBytes>? dataSource)
-    {
-        dataSource = CacheInfoCapture?.DataSource;
-        return dataSource != null;
-    }
 
     // Nested types
 
