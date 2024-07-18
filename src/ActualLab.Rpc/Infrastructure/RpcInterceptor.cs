@@ -113,7 +113,8 @@ public class RpcInterceptor : RpcInterceptorBase
                 call = (RpcOutboundCall<T>?)context.PrepareReroutedCall();
             }
             catch (Exception e) {
-                Log.LogWarning(e, "Exception");
+                Log.LogWarning(e, "[Debug] Exception!");
+                throw;
             }
         }
     }
