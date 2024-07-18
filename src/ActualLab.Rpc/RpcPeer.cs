@@ -266,13 +266,13 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
                     // Recovery: re-send keep-alive object set & all outbound calls
                     _ = Task.Run(async () => {
-                        _ = OutboundCalls.Maintain(handshake, readerToken);
                         _ = SharedObjects.Maintain(handshake, readerToken);
                         _ = RemoteObjects.Maintain(handshake, readerToken);
                         foreach (var outboundCall in OutboundCalls) {
                             readerToken.ThrowIfCancellationRequested();
                             await outboundCall.Reconnect(isRemotePeerChanged, readerToken).ConfigureAwait(false);
                         }
+                        _ = OutboundCalls.Maintain(handshake, readerToken); // Must go after Reconnect
                     }, readerToken);
 
                     RpcMessage? message;

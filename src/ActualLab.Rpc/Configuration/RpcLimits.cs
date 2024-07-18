@@ -9,6 +9,7 @@ public record RpcLimits
         HandshakeTimeout = TimeSpan.FromSeconds(60),
         KeepAlivePeriod = TimeSpan.FromSeconds(300),
         KeepAliveTimeout = TimeSpan.FromSeconds(1000),
+        CallTimeoutCheckPeriod = TimeSpan.FromSeconds(1),
     };
 
     // Connect timeout; if connecting takes longer, reconnect starts
@@ -30,5 +31,6 @@ public record RpcLimits
     public TimeSpan ObjectAbortCyclePeriod { get; init; } = TimeSpan.FromSeconds(1);
     // A single "call abort" cycle period
     public TimeSpan CallAbortCyclePeriod { get; set; } = TimeSpan.FromSeconds(1);
-
+    // Call timeout check period
+    public RandomTimeSpan CallTimeoutCheckPeriod { get; init; } = TimeSpan.FromSeconds(10).ToRandom(0.2);
 }

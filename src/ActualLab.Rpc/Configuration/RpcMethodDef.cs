@@ -85,7 +85,7 @@ public sealed class RpcMethodDef : MethodDef
         IsCommand = ParameterTypes.Length == 2
             && ParameterTypes[1] == typeof(CancellationToken)
             && Hub.CommandTypeDetector(ParameterTypes[0]);
-        Timeouts = RpcCallTimeouts.DefaultProvider.Invoke(this);
+        Timeouts = RpcCallTimeouts.DefaultProvider.Invoke(this).Normalize();
     }
 
     public override string ToString()

@@ -16,45 +16,63 @@ public sealed record RpcCallTimeouts
         };
 
     public static readonly RpcCallTimeouts None = new();
+    private static readonly RpcCallTimeouts Default = new(null, 30) { TimeoutAction = RpcCallTimeoutAction.Log };
 
     public static class Defaults
     {
-        public static RpcCallTimeouts Debug { get; set; } = None;
-        public static RpcCallTimeouts Query { get; set; } = None;
-        public static RpcCallTimeouts Command { get; set; } = new(10, 1.5);
-        public static RpcCallTimeouts BackendQuery { get; set; } = None;
+        public static RpcCallTimeouts Debug { get; set; } = new(null, 15) { TimeoutAction = RpcCallTimeoutAction.Log };
+        public static RpcCallTimeouts Query { get; set; } = Default;
+        public static RpcCallTimeouts Command { get; set; } = new(1.5, 10);
+        public static RpcCallTimeouts BackendQuery { get; set; } = Default;
         public static RpcCallTimeouts BackendCommand { get; set; } = new(300, 300);
     }
 
-    public TimeSpan Timeout { get; init; }
     public TimeSpan ConnectTimeout { get; init; }
+    public TimeSpan Timeout { get; init; }
+    public RpcCallTimeoutAction TimeoutAction { get; init; }
 
-    public RpcCallTimeouts(TimeSpan timeout, TimeSpan connectTimeout, AssumeValid _)
+    public RpcCallTimeouts(TimeSpan connectTimeout, TimeSpan timeout, AssumeValid _)
     {
-        Timeout = timeout;
         ConnectTimeout = connectTimeout;
+        Timeout = timeout;
+        TimeoutAction = timeout > TimeSpan.Zero && timeout != TimeSpan.MaxValue
+            ? RpcCallTimeoutAction.LogAndThrow
+            : RpcCallTimeoutAction.None;
     }
 
     public RpcCallTimeouts()
-        : this(TimeSpan.MaxValue, TimeSpan.MaxValue, AssumeValid.Option) { }
+        : this(TimeSpan.MaxValue, TimeSpan.MaxValue, AssumeValid.Option)
+    { }
 
     // TimeSpan overloads
     public RpcCallTimeouts(TimeSpan timeout)
-        : this(ToTimeout(timeout), TimeSpan.MaxValue, AssumeValid.Option) { }
-    public RpcCallTimeouts(TimeSpan timeout, TimeSpan? connectTimeout)
-        : this(ToTimeout(timeout), ToTimeout(connectTimeout), AssumeValid.Option) { }
+        : this(TimeSpan.MaxValue, ToTimeout(timeout), AssumeValid.Option) { }
+    public RpcCallTimeouts(TimeSpan connectTimeout, TimeSpan timeout)
+        : this(ToTimeout(connectTimeout), ToTimeout(timeout), AssumeValid.Option) { }
 
     // TimeSpan? overloads
     public RpcCallTimeouts(TimeSpan? timeout)
-        : this(ToTimeout(timeout), TimeSpan.MaxValue, AssumeValid.Option) { }
-    public RpcCallTimeouts(TimeSpan? timeout, TimeSpan? connectTimeout)
-        : this(ToTimeout(timeout), ToTimeout(connectTimeout), AssumeValid.Option) { }
+        : this(TimeSpan.MaxValue, ToTimeout(timeout), AssumeValid.Option) { }
+    public RpcCallTimeouts(TimeSpan? connectTimeout, TimeSpan? timeout)
+        : this(ToTimeout(connectTimeout), ToTimeout(timeout), AssumeValid.Option) { }
 
     // double? overloads
     public RpcCallTimeouts(double? timeout)
-        : this(ToTimeout(timeout), TimeSpan.MaxValue, AssumeValid.Option) { }
-    public RpcCallTimeouts(double? timeout, double? connectTimeout)
-        : this(ToTimeout(timeout), ToTimeout(connectTimeout), AssumeValid.Option) { }
+        : this(TimeSpan.MaxValue, ToTimeout(timeout), AssumeValid.Option) { }
+    public RpcCallTimeouts(double? connectTimeout, double? timeout)
+        : this(ToTimeout(connectTimeout), ToTimeout(timeout), AssumeValid.Option) { }
+
+    public RpcCallTimeouts Normalize()
+    {
+        var timeoutAction = Timeout > TimeSpan.Zero && Timeout != TimeSpan.MaxValue
+            ? TimeoutAction
+            : RpcCallTimeoutAction.None;
+        return TimeoutAction == timeoutAction
+            ? this
+            : this with { TimeoutAction = timeoutAction };
+    }
+
+    // Private methods
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static TimeSpan ToTimeout(TimeSpan timeout)

@@ -62,6 +62,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
                 return;
             }
 
+            Peer.OutboundCalls.Complete(this);
             ResultVersion = resultVersion;
             if (context != null && Context.MustCaptureCacheData(out var dataSource))
                 dataSource.TrySetResult(context.Message.ArgumentData);
@@ -89,6 +90,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             }
 
             // Result was just set
+            Peer.OutboundCalls.Complete(this);
             ResultVersion = resultVersion;
             if (Context.MustCaptureCacheData(out var dataSource))
                 if (oce != null)
@@ -109,7 +111,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             if (isCancelled && Context.MustCaptureCacheData(out var dataSource))
                 dataSource.TrySetCanceled(cancellationToken);
             WhenInvalidatedSource.TrySetResult(default);
-            Unregister(true);
+            CompleteAndUnregister(notifyCancelled: true);
             return isCancelled;
         }
     }
@@ -138,7 +140,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
         if (!WhenInvalidatedSource.TrySetResult(default))
             return false;
 
-        Unregister(notifyCancelled);
+        CompleteAndUnregister(notifyCancelled);
         return true;
     }
 }

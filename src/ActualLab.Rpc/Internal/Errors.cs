@@ -54,10 +54,13 @@ public static class Errors
         => new SerializationException($"Cannot deserialize polymorphic argument type: " +
             $"expected '{expectedType.GetName()}' or its descendant, got '{actualType.GetName()}'.");
 
-    public static Exception CallTimeout(RpcPeer peer)
+    public static Exception CallTimeout(RpcPeer peer, TimeSpan? timeout = null)
         => CallTimeout(peer.Ref.IsServer ? "client" : "server");
-    public static Exception CallTimeout(string partyName = "server")
-        => new TimeoutException($"The {partyName} didn't respond in time.");
+    public static Exception CallTimeout(string partyName = "server", TimeSpan? timeout = null)
+        => new TimeoutException(
+            timeout is { } t
+                ? $"The {partyName} didn't respond in time ({t.ToShortString()})."
+                : $"The {partyName} didn't respond in time.");
 
     public static Exception ConnectTimeout()
         => new TimeoutException("Timeout on connecting to server.");

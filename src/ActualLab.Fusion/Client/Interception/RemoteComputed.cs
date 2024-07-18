@@ -74,7 +74,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
             return;
 
         var call = WhenCallBound.Result;
-        call?.Unregister(!this.IsInvalidated());
+        call?.CompleteAndUnregister(notifyCancelled: !this.IsInvalidated());
     }
 
     // Internal methods

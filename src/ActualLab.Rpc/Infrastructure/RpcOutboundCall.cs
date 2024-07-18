@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Internal;
 using Cysharp.Text;
+using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -15,6 +16,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public readonly RpcOutboundContext Context = context;
     public readonly RpcPeer Peer = context.Peer!;
     public abstract Task UntypedResultTask { get; }
+    public CancellationTokenRegistration CancellationHandler;
+    public CpuTimestamp StartedAt;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public static RpcOutboundCall? New(RpcOutboundContext context)
@@ -61,16 +64,18 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     {
         if (NoWait)
             return SendNoWait(MethodDef.AllowArgumentPolymorphism);
+        if (Id != 0)
+            throw Errors.InternalError("This method should never be called repeatedly for the same call.");
 
         Peer.OutboundCalls.Register(this);
         var sendTask = SendRegistered();
 
-        // RegisterCancellationHandler must follow SendRegistered,
-        // coz it's possible that ResultTask is already completed
-        // at this point (e.g. due to an error), and thus
-        // cancellation handler isn't necessary.
-        if (!UntypedResultTask.IsCompleted)
-            RegisterCancellationHandler();
+        if (!UntypedResultTask.IsCompleted && CancellationHandler == default)
+            CancellationHandler = Context.CancellationToken.Register(static state => {
+                var call = (RpcOutboundCall)state!;
+                call.Cancel(call.Context.CancellationToken);
+            }, this, useSynchronizationContext: false);
+
         return sendTask;
     }
 
@@ -141,14 +146,27 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public virtual Task Reconnect(bool isPeerChanged, CancellationToken cancellationToken)
-        => SendRegistered(false);
+    {
+        if (isPeerChanged)
+            StartedAt = CpuTimestamp.Now;
+        return SendRegistered(false);
+    }
+
+    public void Complete()
+    {
+        if (Peer.OutboundCalls.Complete(this))
+            CancellationHandler.Dispose();
+    }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public void Unregister(bool notifyCancelled = false)
+    public void CompleteAndUnregister(bool notifyCancelled)
     {
+        if (NoWait)
+            throw Errors.InternalError("This method should never be called for NoWait calls.");
         if (!Peer.OutboundCalls.Unregister(this))
             return; // Already unregistered
 
+        Complete();
         if (notifyCancelled)
             NotifyCancelled();
     }
@@ -173,37 +191,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             // be gone as well after that, so every call there
             // will be cancelled anyway.
         }
-    }
-
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    protected void RegisterCancellationHandler()
-    {
-        var cancellationToken = Context.CancellationToken;
-        CancellationTokenSource? timeoutCts = null;
-        CancellationTokenSource? linkedCts = null;
-        var timeout = MethodDef.Timeouts.Timeout;
-        if (timeout != TimeSpan.MaxValue) {
-            timeoutCts = new CancellationTokenSource(timeout);
-            linkedCts = timeoutCts.Token.LinkWith(cancellationToken);
-            cancellationToken = linkedCts.Token;
-        }
-        var ctr = cancellationToken.Register(static state => {
-            var call = (RpcOutboundCall)state!;
-            var cancellationToken = call.Context.CancellationToken;
-            if (cancellationToken.IsCancellationRequested)
-                call.Cancel(cancellationToken);
-            else {
-                // timeoutCts is timed out
-                var error = Errors.CallTimeout(call.Peer);
-                call.SetError(error, context: null);
-            }
-        }, this, useSynchronizationContext: false);
-        _ = UntypedResultTask.ContinueWith(_ => {
-                ctr.Dispose();
-                linkedCts?.Dispose();
-                timeoutCts?.Dispose();
-            },
-            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 }
 
@@ -234,7 +221,7 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
             // Intended
         }
         if (ResultSource.TrySetResult(typedResult)) {
-            Unregister();
+            CompleteAndUnregister(notifyCancelled: false);
             if (context != null && Context.MustCaptureCacheData(out var dataSource))
                 dataSource.TrySetResult(context.Message.ArgumentData);
         }
@@ -253,7 +240,7 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
         if (!isResultSet)
             return;
 
-        Unregister(context == null && !assumeCancelled);
+        CompleteAndUnregister(notifyCancelled: context == null && !assumeCancelled);
         if (Context.MustCaptureCacheData(out var dataSource)) {
             if (oce != null)
                 dataSource.TrySetCanceled(cancellationToken);
@@ -267,7 +254,7 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
     {
         var isCancelled = ResultSource.TrySetCanceled(cancellationToken);
         if (isCancelled) {
-            Unregister(true);
+            CompleteAndUnregister(notifyCancelled: true);
             if (Context.MustCaptureCacheData(out var dataSource))
                 dataSource.TrySetCanceled(cancellationToken);
         }

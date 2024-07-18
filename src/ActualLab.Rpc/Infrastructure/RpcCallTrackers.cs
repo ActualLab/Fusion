@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
+using ActualLab.OS;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -8,7 +9,8 @@ public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
 {
     private RpcPeer _peer = null!;
     protected RpcLimits Limits { get; private set; } = null!;
-    protected readonly ConcurrentDictionary<long, TRpcCall> Calls = new();
+    protected readonly ConcurrentDictionary<long, TRpcCall> Calls
+        = new(HardwareInfo.GetProcessorCountFraction(2), 127);
 
     public RpcPeer Peer {
         get => _peer;
@@ -32,10 +34,6 @@ public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
 
     public TRpcCall? Get(long callId)
         => Calls.GetValueOrDefault(callId);
-
-    public bool Unregister(TRpcCall call)
-        // NoWait should always return true here!
-        => call.NoWait || Calls.TryRemove(call.Id, call);
 }
 
 public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
@@ -50,25 +48,42 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
         return Calls.GetOrAdd(call.Id, static (_, call1) => call1, call);
     }
 
+    public bool Unregister(RpcInboundCall call)
+        // NoWait should always return true here!
+        => call.NoWait || Calls.TryRemove(call.Id, call);
+
     public void Clear()
         => Calls.Clear();
 }
 
 public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 {
+    private readonly ConcurrentDictionary<long, RpcOutboundCall> _inProgressCalls
+        = new(HardwareInfo.GetProcessorCountFraction(2), 127);
     private long _lastId;
+
+    public int InProgressCallCount => _inProgressCalls.Count;
+    public IEnumerable<RpcOutboundCall> InProgressCalls => _inProgressCalls.Values;
 
     public void Register(RpcOutboundCall call)
     {
-        if (call.NoWait || call.Id != 0)
-            return;
-
         while (true) {
             call.Id = Interlocked.Increment(ref _lastId);
-            if (Calls.TryAdd(call.Id, call))
+            if (Calls.TryAdd(call.Id, call)) {
+                // Also register an in-progress call
+                call.StartedAt = CpuTimestamp.Now;
+                _inProgressCalls.TryAdd(call.Id, call);
                 return;
+            }
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Complete(RpcOutboundCall call)
+        => _inProgressCalls.TryRemove(call.Id, call);
+
+    public bool Unregister(RpcOutboundCall call)
+        => Calls.TryRemove(call.Id, call);
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void TryReroute()
@@ -83,7 +98,28 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
     {
+        while (!cancellationToken.IsCancellationRequested) {
+            foreach (var call in this) {
+                if (call.UntypedResultTask.IsCompleted)
+                    continue;
 
+                var timeouts = call.MethodDef.Timeouts;
+                var startedAt = call.StartedAt;
+                if (startedAt == default)
+                    continue; // Something is off: call.StartedAt wasn't set
+                if (startedAt.Elapsed <= timeouts.Timeout)
+                    continue;
+
+                var error = Internal.Errors.CallTimeout(Peer, timeouts.Timeout);
+                // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
+                if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Log) != 0)
+                    Peer.Log.LogError(error, "{PeerRef}': {Message}", Peer.Ref, error.Message);
+                // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
+                if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Throw) != 0)
+                    call.SetError(error, context: null, assumeCancelled: false);
+            }
+            await Task.Delay(Limits.CallTimeoutCheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
+        }
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
