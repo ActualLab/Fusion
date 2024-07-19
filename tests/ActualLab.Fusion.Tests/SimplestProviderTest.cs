@@ -100,7 +100,7 @@ public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         pImpl.SetValue(null!); // Will cause an exception in GetCharCount
         var c1Opt = await Computed.TryCapture(() => p.GetCharCount());
         var c2 = await Computed.Capture(() => p.GetCharCount());
-        c1Opt.Value.Error!.GetType().Should().Be(typeof(TransientException));
+        c1Opt!.Error!.GetType().Should().Be(typeof(TransientException));
         c2.Should().BeSameAs(c1Opt.Value);
     }
 
