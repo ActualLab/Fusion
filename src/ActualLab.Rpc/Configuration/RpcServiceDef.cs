@@ -109,9 +109,10 @@ public sealed class RpcServiceDef
                 return null;
 
             // It's a class proxy, let's try to map the method to interface
+            var methodName = methodInfo.Name;
             var parameters = methodInfo.GetParameters();
             foreach (var m in self.Methods) {
-                if (!m.Method.Name.Equals(m.Name, StringComparison.Ordinal))
+                if (!m.Method.Name.Equals(methodName, StringComparison.Ordinal))
                     continue;
 
                 if (m.Parameters.Length != parameters.Length)

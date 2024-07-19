@@ -188,7 +188,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     protected override async Task OnRun(CancellationToken cancellationToken)
 #pragma warning restore IL2046
     {
-        if (ConnectionKind == RpcPeerConnectionKind.LocalCall) {
+        if (ConnectionKind == RpcPeerConnectionKind.Local) {
             // It's a fake RpcPeer that exists solely to be "available"
             await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
             return;

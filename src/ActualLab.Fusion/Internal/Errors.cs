@@ -44,7 +44,8 @@ public static class Errors
             "is originating from the same compute service instance. " +
             "Such calls cannot be completed, because 'local' and 'remote' calls are effectively the same " +
             "(same service instance, same arguments, so the same ComputedInput). " +
-            "You must fix RpcCallRouter logic to make sure it never returns an RpcPeer connected to localhost for such calls.");
+            "You must fix RpcCallRouter logic to make sure it never returns " +
+            "an RpcPeerRef resolving to the localhost for such calls.");
 
     // Session-related
 

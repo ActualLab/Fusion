@@ -42,7 +42,7 @@ public partial class Computed
     // TryCapture
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<Option<Computed>> TryCapture(
+    public static async ValueTask<Computed?> TryCapture(
         Func<Task> producer,
         CancellationToken cancellationToken = default)
     {
@@ -52,15 +52,15 @@ public partial class Computed
             return ccs.Context.TryGetCaptured();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            var result = ccs.Context.TryGetCaptured();
-            if (result.IsSome(out var computed) && computed.HasError)
-                return result; // Return the original error, if possible
+            var computed = ccs.Context.TryGetCaptured();
+            if (computed is { HasError: true })
+                return computed; // Return the original error, if possible
             throw;
         }
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<Option<Computed<T>>> TryCapture<T>(
+    public static async ValueTask<Computed<T>?> TryCapture<T>(
         Func<Task<T>> producer,
         CancellationToken cancellationToken = default)
     {
@@ -70,15 +70,15 @@ public partial class Computed
             return ccs.Context.TryGetCaptured<T>();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            var result = ccs.Context.TryGetCaptured<T>();
-            if (result.IsSome(out var computed) && computed.HasError)
-                return result; // Return the original error, if possible
+            var computed = ccs.Context.TryGetCaptured<T>();
+            if (computed is { HasError: true })
+                return computed; // Return the original error, if possible
             throw;
         }
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<Option<Computed>> TryCapture(
+    public static async ValueTask<Computed?> TryCapture(
         Func<ValueTask> producer,
         CancellationToken cancellationToken = default)
     {
@@ -88,15 +88,15 @@ public partial class Computed
             return ccs.Context.TryGetCaptured();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            var result = ccs.Context.TryGetCaptured();
-            if (result.IsSome(out var computed) && computed.HasError)
-                return result; // Return the original error, if possible
+            var computed = ccs.Context.TryGetCaptured();
+            if (computed is { HasError: true })
+                return computed; // Return the original error, if possible
             throw;
         }
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async ValueTask<Option<Computed<T>>> TryCapture<T>(
+    public static async ValueTask<Computed<T>?> TryCapture<T>(
         Func<ValueTask<T>> producer,
         CancellationToken cancellationToken = default)
     {
@@ -106,9 +106,9 @@ public partial class Computed
             return ccs.Context.TryGetCaptured<T>();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            var result = ccs.Context.TryGetCaptured<T>();
-            if (result.IsSome(out var computed) && computed.HasError)
-                return result; // Return the original error, if possible
+            var computed = ccs.Context.TryGetCaptured<T>();
+            if (computed is { HasError: true })
+                return computed; // Return the original error, if possible
             throw;
         }
     }
@@ -126,8 +126,8 @@ public partial class Computed
             return ccs.Context.GetCaptured();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            var result = ccs.Context.TryGetCaptured();
-            if (result.IsSome(out var computed) && computed.HasError)
+            var computed = ccs.Context.TryGetCaptured();
+            if (computed is { HasError: true })
                 return computed; // Return the original error, if possible
             throw;
         }
@@ -144,8 +144,8 @@ public partial class Computed
             return ccs.Context.GetCaptured<T>();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            var result = ccs.Context.TryGetCaptured<T>();
-            if (result.IsSome(out var computed) && computed.HasError)
+            var computed = ccs.Context.TryGetCaptured<T>();
+            if (computed is { HasError: true })
                 return computed; // Return the original error, if possible
             throw;
         }
@@ -162,8 +162,8 @@ public partial class Computed
             return ccs.Context.GetCaptured();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            var result = ccs.Context.TryGetCaptured();
-            if (result.IsSome(out var computed) && computed.HasError)
+            var computed = ccs.Context.TryGetCaptured();
+            if (computed is { HasError: true })
                 return computed; // Return the original error, if possible
             throw;
         }
@@ -180,8 +180,8 @@ public partial class Computed
             return ccs.Context.GetCaptured<T>();
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            var result = ccs.Context.TryGetCaptured<T>();
-            if (result.IsSome(out var computed) && computed.HasError)
+            var computed = ccs.Context.TryGetCaptured<T>();
+            if (computed is { HasError: true })
                 return computed; // Return the original error, if possible
             throw;
         }
@@ -195,7 +195,7 @@ public partial class Computed
         using var ccs = BeginCaptureExisting();
         var task = producer.Invoke();
         _ = task.AssertCompleted(); // The must be always synchronous in this case
-        return ccs.Context.TryGetCaptured<T>().ValueOrDefault;
+        return ccs.Context.TryGetCaptured<T>();
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -204,6 +204,6 @@ public partial class Computed
         using var ccs = BeginCaptureExisting();
         var task = producer.Invoke();
         _ = task.AssertCompleted(); // The must be always synchronous in this case
-        return ccs.Context.TryGetCaptured<T>().ValueOrDefault;
+        return ccs.Context.TryGetCaptured<T>();
     }
 }

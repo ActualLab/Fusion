@@ -48,7 +48,7 @@ public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
     {
         var ownHost = hub.Services.GetRequiredService<Host>();
         return HostId == ownHost.Id
-            ? RpcPeerConnectionKind.LocalCall
+            ? RpcPeerConnectionKind.Local
             : RpcPeerConnectionKind.Remote;
     }
 }

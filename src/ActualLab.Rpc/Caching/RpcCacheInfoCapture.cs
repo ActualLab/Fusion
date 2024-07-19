@@ -4,8 +4,9 @@ namespace ActualLab.Rpc.Caching;
 
 public enum RpcCacheInfoCaptureMode
 {
-    KeyAndData = 0,
-    KeyOnly,
+    None = 0,
+    KeyOnly = 1,
+    KeyAndData = 3,
 }
 
 public sealed class RpcCacheInfoCapture
@@ -14,8 +15,11 @@ public sealed class RpcCacheInfoCapture
     public RpcCacheKey? Key;
     public TaskCompletionSource<TextOrBytes>? DataSource; // Non-error IFF RpcOutboundCall.ResultTask is non-error
 
-    public RpcCacheInfoCapture(RpcCacheInfoCaptureMode captureMode = default)
+    public RpcCacheInfoCapture(RpcCacheInfoCaptureMode captureMode = RpcCacheInfoCaptureMode.KeyAndData)
     {
+        if (captureMode == RpcCacheInfoCaptureMode.None)
+            throw new ArgumentOutOfRangeException(nameof(captureMode));
+
         CaptureMode = captureMode;
         if (captureMode == RpcCacheInfoCaptureMode.KeyAndData)
             DataSource = new();
@@ -35,7 +39,7 @@ public sealed class RpcCacheInfoCapture
     }
 
     public void CaptureKey(RpcOutboundContext context, RpcMessage? message)
-        => Key ??= message is { Arguments: null }
+        => Key ??= message is { Arguments: null } // This indicates ArgumentData is there
             ? new RpcCacheKey(context.MethodDef!.Service.Name, context.MethodDef.Name, message.ArgumentData)
             : null;
 

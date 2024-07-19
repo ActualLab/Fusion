@@ -5,10 +5,10 @@ namespace ActualLab.Rpc;
 [Serializable]
 public class RpcRerouteException : OperationCanceledException
 {
-    private const string DefaultMessage = "Call must be re-routed to another peer.";
-    private const string LocalCallMessage = "Local call must be re-routed to local service.";
+    private const string DefaultMessage = "Call must be re-routed to another RPC peer.";
+    private const string RerouteToLocalMessage = "Call must be re-routed to local service.";
 
-    public static RpcRerouteException LocalCall() => new(LocalCallMessage);
+    public static RpcRerouteException MustRerouteToLocal() => new(RerouteToLocalMessage);
     public static RpcRerouteException MustReroute() => new(DefaultMessage);
     public static RpcRerouteException MustReroute(RpcPeerRef peerRef)
         => new($"'{peerRef}' is already gone. {DefaultMessage}");

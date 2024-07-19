@@ -1,6 +1,7 @@
 using ActualLab;
 using ActualLab.Async;
 using ActualLab.CommandR;
+using ActualLab.Fusion;
 using ActualLab.Rpc;
 using ActualLab.Text;
 using ActualLab.Time;
@@ -62,26 +63,56 @@ public class Tester(IServiceProvider services) : WorkerBase
             else {
                 prefix += $".Get({shardRef})";
                 Console.WriteLine($"{prefix}...".Pastel(ConsoleColor.Gray));
+
+                var useFusionCopy = useFusion;
+                var shardRefCopy = shardRef;
+                var computed = await Computed.TryCapture(
+                    () => useFusionCopy
+                        ? FusionCounter.Get(shardRefCopy, cancellationToken)
+                        : Counter.Get(shardRefCopy, cancellationToken)
+                    , cancellationToken).ConfigureAwait(false);
+
                 var state = useFusion
                     ? await FusionCounter.Get(shardRef, cancellationToken).ConfigureAwait(false)
                     : await Counter.Get(shardRef, cancellationToken).ConfigureAwait(false);
-                var message = $"{prefix} -> {state}";
-                lock (_lastStates) {
-                    var key = (state.HostId, serviceName);
-                    if (!_lastStates.TryGetValue(key, out var lastState))
-                        _lastStates[key] = state;
-                    else {
-                        _lastStates[key] = state;
-                        if (state.Value < lastState.Value) {
-                            var timeDelta = (state.CreatedAt - lastState.CreatedAt);
-                            message = $"{message} - {state.Value} < {lastState.Value}, {timeDelta.ToShortString()}"
-                                .PastelBg(ConsoleColor.DarkRed);
-                        }
+
+                var lastState = UpdateLastState(state, serviceName);
+                var isFailed = false;
+                if (lastState != null && state.Value < lastState.Value) {
+                    if (computed != null) {
+                        await computed.WhenSynchronized(cancellationToken).ConfigureAwait(false);
+                        computed = await computed.Update(cancellationToken).ConfigureAwait(false);
+                        state = computed.Value;
+                        lastState = UpdateLastState(state, serviceName);
+                        if (lastState != null && state.Value < lastState.Value)
+                            isFailed = true;
                     }
+                    else
+                        isFailed = true;
+                }
+
+                var message = $"{prefix} -> {state}";
+                if (isFailed) {
+                    var timeDelta = state.CreatedAt - lastState!.CreatedAt;
+                    message = $"{message} - {state.Value} < {lastState.Value}, {timeDelta.ToShortString()}"
+                        .PastelBg(ConsoleColor.DarkRed);
                 }
                 Console.WriteLine(message);
             }
             await Task.Delay(CallPeriod.Next(), cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private CounterState? UpdateLastState(CounterState state, Symbol serviceName)
+    {
+        lock (_lastStates) {
+            var key = (state.HostId, serviceName);
+            var lastState = _lastStates.GetValueOrDefault(key);
+            if (lastState == null)
+                _lastStates[key] = state;
+            else
+                _lastStates[key] = state;
+            return lastState;
         }
     }
 }

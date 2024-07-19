@@ -34,9 +34,9 @@ public partial record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBacke
     public virtual RpcPeerConnectionKind GetConnectionKind(RpcHub hub)
     {
         var key = Key.Value;
-        return key.StartsWith(LocalCallPrefix, StringComparison.Ordinal)
-            ? RpcPeerConnectionKind.LocalCall
-            : key.StartsWith(LoopbackPrefix, StringComparison.Ordinal)
+        return key.StartsWith(LocalKeyPrefix, StringComparison.Ordinal)
+            ? RpcPeerConnectionKind.Local
+            : key.StartsWith(LoopbackKeyPrefix, StringComparison.Ordinal)
                 ? RpcPeerConnectionKind.Loopback
                 : RpcPeerConnectionKind.Remote;
     }

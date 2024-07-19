@@ -9,8 +9,8 @@ public class RpcLoopbackConnectionTest(ITestOutputHelper @out)
     : RpcLocalConnectionTestBase(RpcPeerConnectionKind.Loopback, @out);
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
-public class RpcLocalCallConnectionTest(ITestOutputHelper @out)
-    : RpcLocalConnectionTestBase(RpcPeerConnectionKind.LocalCall, @out);
+public class RpcLocalConnectionTest(ITestOutputHelper @out)
+    : RpcLocalConnectionTestBase(RpcPeerConnectionKind.Local, @out);
 
 public abstract class RpcLocalConnectionTestBase : RpcTestBase
 {
@@ -30,7 +30,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
 
         rpc.AddServer<ITestRpcService, TestRpcService>();
         rpc.AddServer<ITestRpcBackend, TestRpcBackend>();
-        if (ConnectionKind == RpcPeerConnectionKind.LocalCall) {
+        if (ConnectionKind == RpcPeerConnectionKind.Local) {
             rpc.AddClient<ITestRpcService, TestRpcService>();
             rpc.AddClient<ITestRpcBackend, TestRpcBackend>();
         }

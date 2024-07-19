@@ -28,7 +28,7 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
     public virtual Task<RpcConnection> ConnectLoopback(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
         var serverPeerRef = RpcPeerRef.NewServer(
-            RpcPeerRef.LoopbackPrefix + clientPeer.ClientId,
+            RpcPeerRef.LoopbackKeyPrefix + clientPeer.ClientId,
             clientPeer.Ref.IsBackend);
         var serverPeer = Hub.GetServerPeer(serverPeerRef);
         var channelPair = ChannelPair.CreateTwisted<RpcMessage>(LocalChannelOptions);

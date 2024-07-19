@@ -129,9 +129,7 @@ public static class Errors
         => new InvalidOperationException("This batch item wasn't processed.");
 
     public static Exception InternalError(string message)
-#pragma warning disable CA2201
-        => new SystemException(message);
-#pragma warning restore CA2201
+        => new InternalError(message);
 
     public static Exception Constraint(string message)
         => new InvalidOperationException(message);

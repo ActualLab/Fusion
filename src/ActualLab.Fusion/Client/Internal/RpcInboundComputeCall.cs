@@ -32,8 +32,8 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
             return await base.InvokeTarget().ConfigureAwait(false);
         }
         finally {
-            var computedOpt = ccs.Context.TryGetCaptured<TResult>();
-            if (computedOpt.IsSome(out var computed)) {
+            var computed = ccs.Context.TryGetCaptured<TResult>();
+            if (computed != null) {
                 lock (Lock)
                     Computed ??= computed;
             }

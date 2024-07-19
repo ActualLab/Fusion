@@ -13,6 +13,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     private RpcSystemCallSender? _systemCallSender;
     private RpcClient? _client;
     private RpcClientPeer? _loopbackPeer;
+    private RpcClientPeer? _localPeer;
 
     internal readonly RpcServiceDefBuilder ServiceDefBuilder;
     internal readonly RpcMethodDefBuilder MethodDefBuilder;
@@ -48,6 +49,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public RpcLimits Limits { get; }
     public MomentClock Clock { get; }
     public RpcClientPeer LoopbackPeer => _loopbackPeer ??= (RpcClientPeer)GetPeer(RpcPeerRef.Loopback);
+    public RpcClientPeer LocalPeer => _localPeer ??= (RpcClientPeer)GetPeer(RpcPeerRef.Local);
 
     public RpcHub(IServiceProvider services)
     {

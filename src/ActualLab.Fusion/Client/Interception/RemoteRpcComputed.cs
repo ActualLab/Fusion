@@ -10,23 +10,23 @@ namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD104, MA0055
 
-public interface IRemoteComputed : IComputed, IMaybeCachedValue, IDisposable
+public interface IRemoteRpcComputed : IComputed, IMaybeCachedValue, IDisposable
 {
     Task WhenCallBound { get; }
     RpcCacheEntry? CacheEntry { get; }
 }
 
-public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
+public class RemoteRpcComputed<T> : ComputeMethodComputed<T>, IRemoteRpcComputed
 {
     internal readonly TaskCompletionSource<RpcOutboundComputeCall<T>?> CallSource;
     internal readonly TaskCompletionSource<Unit> SynchronizedSource;
 
-    Task IRemoteComputed.WhenCallBound => CallSource.Task;
+    Task IRemoteRpcComputed.WhenCallBound => CallSource.Task;
     public Task<RpcOutboundComputeCall<T>?> WhenCallBound => CallSource.Task;
     public RpcCacheEntry? CacheEntry { get; }
     public Task WhenSynchronized => SynchronizedSource.Task;
 
-    public RemoteComputed(
+    public RemoteRpcComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
@@ -41,7 +41,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         StartAutoInvalidation();
     }
 
-    public RemoteComputed(
+    public RemoteRpcComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
@@ -62,7 +62,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    ~RemoteComputed()
+    ~RemoteRpcComputed()
         => Dispose();
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -77,9 +77,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         call?.CompleteAndUnregister(notifyCancelled: !this.IsInvalidated());
     }
 
-    // Internal methods
-
-    internal bool BindToCall(RpcOutboundComputeCall<T>? call)
+    public bool BindToCall(RpcOutboundComputeCall<T>? call)
     {
 #pragma warning disable IL2026
         if (!CallSource.TrySetResult(call)) {
@@ -102,7 +100,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         return true;
     }
 
-    protected void BindWhenInvalidatedToCall(RpcOutboundComputeCall<T> call)
+    public void BindWhenInvalidatedToCall(RpcOutboundComputeCall<T> call)
     {
         var whenInvalidated = call.WhenInvalidated;
         if (whenInvalidated.IsCompleted) {
@@ -117,20 +115,27 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
             CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 
+    // Protected methods
+
     protected internal override void InvalidateFromCall()
-        => base.InvalidateFromCall();
+    {
+        // If such a computed is invalidated from Invalidation.Begin() block,
+        // more likely than not it's a mistake - i.e. they're just replicas of
+        // computed instances living on another host, so their original instances
+        // have to be invalidated rather than the replicas.
+        //
+        // That's why the best we can do here is to just ignore the call.
+    }
 
     protected override void OnInvalidated()
     {
         BindToCall(null);
-        // PseudoUnregister is used here just to trigger the
-        // Unregistered event in ComputedRegistry.
-        // We want to keep this computed unless SynchronizedSource is
-        // AlwaysSynchronized.Source, which means it doesn't use cache.
-        // Otherwise (i.e. when SynchronizedSource is actually used)
-        // the next computed won't reuse the existing SynchronizedSource,
-        // which may render it as indefinitely incomplete.
-        if (ReferenceEquals(SynchronizedSource, AlwaysSynchronized.Source))
+        // PseudoUnregister triggers the Unregistered event in ComputedRegistry w/o actual unregistration.
+        // We have to keep this computed in the registry even after the invalidation,
+        // if its SynchronizedSource is incomplete,
+        // otherwise this SynchronizedSource won't be reused in the next computed,
+        // and thus it may stay incomplete indefinitely.
+        if (SynchronizedSource.Task.IsCompleted)
             ComputedRegistry.Instance.Unregister(this);
         else
             ComputedRegistry.Instance.PseudoUnregister(this);

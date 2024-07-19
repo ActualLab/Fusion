@@ -53,12 +53,12 @@ public sealed class ComputeContext
         => (Computed<T>)(_captured ?? throw Errors.NoComputedCaptured());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Option<Computed> TryGetCaptured()
-        => _captured is { } result ? Option.Some(result) : default;
+    public Computed? TryGetCaptured()
+        => _captured;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Option<Computed<T>> TryGetCaptured<T>()
-        => _captured is Computed<T> result ? Option.Some(result) : default;
+    public Computed<T>? TryGetCaptured<T>()
+        => _captured as Computed<T> ?? default;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void TryCapture(Computed computed)

@@ -34,20 +34,20 @@ public class RpcInterceptor : RpcInterceptorBase
             var peer = context.Peer!;
             Task<TUnwrapped> resultTask;
             if (call == null) {
-                // Direct call
+                // Local call
                 if (peer.Ref.CanBeRerouted)
                     resultTask = InvokeWithRerouting(invocation, context, call, localCallAsyncInvoker);
                 else if (localCallAsyncInvoker != null)
                     resultTask = localCallAsyncInvoker.Invoke(invocation);
                 else
-                    throw RpcRerouteException.LocalCall();
+                    throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
             }
             else if (call.NoWait) {
                 // NoWait requires call to be sent no matter what is the connection state now;
                 _ = call.SendNoWait(rpcMethodDef.AllowArgumentPolymorphism);
                 resultTask = call.ResultTask;
             }
-            else if (call.IsCacheKeyCaptureOnlyCall) {
+            else if (call.CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly) {
                 call.RegisterCacheKeyOnly();
                 resultTask = call.ResultTask;
             }
@@ -87,7 +87,7 @@ public class RpcInterceptor : RpcInterceptorBase
             if (call == null)
                 return localCallAsyncInvoker != null
                     ? await localCallAsyncInvoker.Invoke(invocation).ConfigureAwait(false)
-                    : throw RpcRerouteException.LocalCall();
+                    : throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
             try {
                 Task<T> resultTask;
@@ -96,7 +96,7 @@ public class RpcInterceptor : RpcInterceptorBase
                     _ = call.RegisterAndSend();
                     resultTask = call.ResultTask;
                 }
-                // Impossible here: if (call.IsCacheKeyCaptureOnlyCall) { }
+                // Impossible here: call.CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly
                 else {
                     var peer = context.Peer!;
                     if (!peer.ConnectionState.Value.IsConnected())

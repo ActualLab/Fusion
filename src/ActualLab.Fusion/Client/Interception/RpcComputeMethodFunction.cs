@@ -52,21 +52,17 @@ public class RpcComputeMethodFunction<T>(
         while (true) {
             try {
                 var peer = RpcCallRouter.Invoke(RpcMethodDef, typedInput.Invocation.Arguments);
-                if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
+                if (peer.ConnectionKind == RpcPeerConnectionKind.Local) {
                     // Compute local
-                    var computed = new ComputeMethodComputed<T>(ComputedOptions, typedInput);
+                    var computed = new LocalRpcComputed<T>(ComputedOptions, typedInput);
                     using var _ = Computed.BeginCompute(computed);
                     if (LocalTarget != null) {
-                        // With local target
+                        // With local target - it's a ClientAndServer case & the Service.Method is invoked
                         try {
-                            await MethodDef.TargetAsyncInvoker.Invoke(LocalTarget!, typedInput.Invocation.Arguments)
+                            await MethodDef.TargetAsyncInvoker
+                                .Invoke(LocalTarget!, typedInput.Invocation.Arguments)
                                 .ConfigureAwait(false);
-                            var dependencies = computed.GetDependencies();
-                            if (dependencies.Length != 1)
-                                throw ActualLab.Internal.Errors.InternalError("A single dependency is expected here");
-
-                            var dependency = (Computed<T>)dependencies[0];
-                            computed.TrySetOutput(dependency.Output);
+                            computed.CaptureOriginal();
                             return computed;
                         }
                         catch (Exception e) when (ComputedImpl.FinalizeAndTryReturnComputed(computed, e, cancellationToken)) {
@@ -74,7 +70,7 @@ public class RpcComputeMethodFunction<T>(
                         }
                     }
 
-                    // Without local target (i.e. by invoking base class method)
+                    // Without local target - it's a Hybrid case & the base.Method is invoked
                     try {
                         var result = InvokeImplementation(typedInput, cancellationToken);
                         if (typedInput.MethodDef.ReturnsValueTask) {
@@ -105,9 +101,9 @@ public class RpcComputeMethodFunction<T>(
                     var cache = GetCache(typedInput);
                     // existing != null -> it's invalidated, so no matter what's cached, we ignore it
                     return existing == null && cache != null
-                        ? await ComputeCachedOrRpc(typedInput, cache, cancellationToken)
+                        ? await ComputeCachedOrRpc(typedInput, cache, peer, cancellationToken)
                             .ConfigureAwait(false)
-                        : await ComputeRpc(typedInput, cache, (RemoteComputed<T>)existing!, cancellationToken)
+                        : await ComputeRpc(typedInput, cache, (RemoteRpcComputed<T>)existing!, peer, cancellationToken)
                             .ConfigureAwait(false);
                 }
                 catch (Exception e) {
@@ -128,13 +124,18 @@ public class RpcComputeMethodFunction<T>(
     public static async Task<Computed<T>> ComputeRpc(
         ComputeMethodInput input,
         IRemoteComputedCache? cache,
-        RemoteComputed<T>? existing,
+        RemoteRpcComputed<T>? existing,
+        RpcPeer peer,
         CancellationToken cancellationToken)
     {
         var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
-        var call = await SendRpcCall(input, cacheInfoCapture, cancellationToken).ConfigureAwait(false);
-        if (call == null)
-            throw RpcRerouteException.LocalCall();
+        var call = await SendRpcCall(input, cacheInfoCapture, peer, cancellationToken).ConfigureAwait(false);
+        if (call == null) {
+            // A totally possible case: even though we provide the peer,
+            // the interceptor may end up rerouting the call to a local peer
+            // because the initial one becomes marked as requiring rerouting.
+            throw RpcRerouteException.MustRerouteToLocal();
+        }
 
         var result = call.ResultTask.ToResultSynchronously();
         if (result.Error is OperationCanceledException e) // Also handles RpcRerouteException
@@ -149,7 +150,7 @@ public class RpcComputeMethodFunction<T>(
         }
 
         var synchronizedSource = existing?.SynchronizedSource ?? AlwaysSynchronized.Source;
-        return new RemoteComputed<T>(
+        return new RemoteRpcComputed<T>(
             input.MethodDef.ComputedOptions,
             input, result,
             cacheEntry, call, synchronizedSource);
@@ -159,27 +160,31 @@ public class RpcComputeMethodFunction<T>(
     public async ValueTask<Computed<T>> ComputeCachedOrRpc(
         ComputeMethodInput input,
         IRemoteComputedCache cache,
+        RpcPeer peer,
         CancellationToken cancellationToken)
     {
         var cacheInfoCapture = new RpcCacheInfoCapture(RpcCacheInfoCaptureMode.KeyOnly);
         // This is a fake call that only captures the cache key.
-        // No actual call happens at this point.
-        await SendRpcCall(input, cacheInfoCapture, cancellationToken).ConfigureAwait(false);
+        // No actual RPC call happens here, and SendRpcCall must complete synchronously.
+        var sendTask = SendRpcCall(input, cacheInfoCapture, peer, cancellationToken);
+        if (!sendTask.IsCompleted)
+            throw ActualLab.Internal.Errors.InternalError("SendRpcCall must complete synchronously here.");
+
         if (cacheInfoCapture.Key is not { } cacheKey) {
             // cacheKey wasn't captured - a weird case that normally shouldn't happen.
             // The best we can do here is to proceed assuming cache entry is missing,
             // i.e. perform RPC call & update cache.
-            return await ComputeRpc(input, cache, null, cancellationToken).ConfigureAwait(false);
+            return await ComputeRpc(input, cache, null, peer, cancellationToken).ConfigureAwait(false);
         }
 
         var cacheResultOpt = await cache.Get<T>(input, cacheKey, cancellationToken).ConfigureAwait(false);
         if (cacheResultOpt is not { } cacheResult) {
             // No cacheResult wasn't captured -> perform RPC call & update cache
-            return await ComputeRpc(input, cache, null, cancellationToken).ConfigureAwait(false);
+            return await ComputeRpc(input, cache, null, peer, cancellationToken).ConfigureAwait(false);
         }
 
         var cacheEntry = new RpcCacheEntry(cacheKey, cacheResult.Data);
-        var cachedComputed = new RemoteComputed<T>(
+        var cachedComputed = new RemoteRpcComputed<T>(
             input.MethodDef.ComputedOptions,
             input, cacheResult.Value,
             cacheEntry);
@@ -196,27 +201,29 @@ public class RpcComputeMethodFunction<T>(
         //   and thus the result may end up being stale forever.
         _ = ExecutionContextExt.Start(
             ExecutionContextExt.Default,
-            () => ApplyRpcUpdate(input, cache, cachedComputed));
+            () => ApplyRpcUpdate(input, cache, cachedComputed, peer));
         return cachedComputed;
     }
 
     public async Task ApplyRpcUpdate(
         ComputeMethodInput input,
         IRemoteComputedCache cache,
-        RemoteComputed<T> cachedComputed)
+        RemoteRpcComputed<T> cachedRpcComputed,
+        RpcPeer peer)
     {
         // 1. Start the RPC call
         var cacheInfoCapture = new RpcCacheInfoCapture();
-        var call = await SendRpcCall(input, cacheInfoCapture, default).ConfigureAwait(false);
+        var call = await SendRpcCall(input, cacheInfoCapture, peer, default).ConfigureAwait(false);
         if (call == null) {
-            // That's the best we can do here: the call has to be rerouted,
-            // so we invalidate cached computed to update it eventually.
-            cachedComputed.Invalidate(true);
+            // The call has been rerouted to a local peer.
+            // The best we can do is to invalidate cached computed to trigger its update.
+            cachedRpcComputed.Invalidate(true);
             return;
         }
+        // peer = call.Peer; // The call could be routed to another peer
 
         // 2. Bind the call to cachedComputed
-        if (!cachedComputed.BindToCall(call)) {
+        if (!cachedRpcComputed.BindToCall(call)) {
             // Ok, this is a weird case: existing was invalidated manually while we were getting here.
             // This means the call is already aborted (see BindToCall logic), and since we're
             // operating in background to update cached value, we can just exit.
@@ -229,7 +236,7 @@ public class RpcComputeMethodFunction<T>(
             // The call was cancelled on the server side - e.g. due to peer termination.
             // Retrying is the best we can do here; and since this call is already bound to `cachedComputed`,
             // we should invalidate the `call` rather than `cachedComputed`.
-            var cancellationReprocessingOptions = cachedComputed.Options.CancellationReprocessing;
+            var cancellationReprocessingOptions = cachedRpcComputed.Options.CancellationReprocessing;
             var delay = cancellationReprocessingOptions.RetryDelays[1];
             Log.LogWarning(e,
                 "ApplyRpcUpdate was cancelled on the server side for {Category}, will invalidate IComputed in {Delay}",
@@ -249,12 +256,12 @@ public class RpcComputeMethodFunction<T>(
 
         // 5. Re-entering the lock & check if cachedComputed is still consistent
         using var releaser = await InputLocks.Lock(input).ConfigureAwait(false);
-        if (!cachedComputed.IsConsistent())
+        if (!cachedRpcComputed.IsConsistent())
             return; // Since the call was bound to cachedComputed, it's properly cancelled already
 
         releaser.MarkLockedLocally();
-        var synchronizedSource = cachedComputed.SynchronizedSource;
-        if (cachedComputed.CacheEntry is { } oldEntry && data?.DataEquals(oldEntry.Data) == true) {
+        var synchronizedSource = cachedRpcComputed.SynchronizedSource;
+        if (cachedRpcComputed.CacheEntry is { } oldEntry && data?.DataEquals(oldEntry.Data) == true) {
             // Existing cached entry is still intact
             synchronizedSource.TrySetResult(default);
             return;
@@ -264,7 +271,7 @@ public class RpcComputeMethodFunction<T>(
         var cacheEntry = UpdateCache(cache, key, data);
 
         // 6. Create the new computed - it invalidates the cached one upon registering
-        var computed = new RemoteComputed<T>(
+        var computed = new RemoteRpcComputed<T>(
             input.MethodDef.ComputedOptions,
             input, result,
             cacheEntry, call, synchronizedSource);
@@ -319,13 +326,15 @@ public class RpcComputeMethodFunction<T>(
         return computed.Value;
     }
 
-    protected static async Task<RpcOutboundComputeCall<T>?> SendRpcCall(
+    protected static async ValueTask<RpcOutboundComputeCall<T>?> SendRpcCall(
         ComputeMethodInput input,
         RpcCacheInfoCapture? cacheInfoCapture,
+        RpcPeer? peer,
         CancellationToken cancellationToken)
     {
         var context = new RpcOutboundContext(RpcComputeCallType.Id) {
-            CacheInfoCapture = cacheInfoCapture
+            CacheInfoCapture = cacheInfoCapture,
+            Peer = peer,
         };
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;

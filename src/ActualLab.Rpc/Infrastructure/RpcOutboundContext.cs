@@ -5,13 +5,13 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+#pragma warning disable CA1721
+
 public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers = null)
 {
     [ThreadStatic] private static RpcOutboundContext? _current;
 
-#pragma warning disable CA1721
     public static RpcOutboundContext? Current => _current;
-#pragma warning restore CA1721
 
     public byte CallTypeId = callTypeId;
     public List<RpcHeader>? Headers = headers;
@@ -65,7 +65,7 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
         // Peer & Call
         var hub = MethodDef.Hub;
         if (CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly }) {
-            Peer = hub.LoopbackPeer;
+            Peer ??= hub.LoopbackPeer; // Peer must be set, but invoking the router makes no sense here
             Call = RpcOutboundCall.New(this);
             return Call ?? throw ActualLab.Internal.Errors.InternalError("Call == null, which isn't expected here.");
         }

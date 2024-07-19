@@ -9,7 +9,7 @@ public sealed class RpcHelpers(Host ownHost)
     public RpcPeerRef RouteCall(RpcMethodDef method, ArgumentList arguments)
     {
         if (arguments.Length == 0)
-            return RpcPeerRef.LocalCall;
+            return RpcPeerRef.Local;
 
         var arg0Type = arguments.GetType(0);
         if (arg0Type == typeof(HostRef))

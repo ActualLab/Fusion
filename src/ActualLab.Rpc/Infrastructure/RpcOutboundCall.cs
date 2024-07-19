@@ -15,10 +15,15 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public readonly RpcOutboundContext Context = context;
     public readonly RpcPeer Peer = context.Peer!;
-    public readonly bool IsCacheKeyCaptureOnlyCall = context.CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly };
+    public readonly RpcCacheInfoCaptureMode CacheInfoCaptureMode = context.CacheInfoCapture?.CaptureMode ?? default;
     public abstract Task UntypedResultTask { get; }
     public CancellationTokenRegistration CancellationHandler;
     public CpuTimestamp StartedAt;
+
+    public bool MustSerializeArguments {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => CacheInfoCaptureMode != RpcCacheInfoCaptureMode.None || Peer.ConnectionKind == RpcPeerConnectionKind.Remote;
+    }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public static RpcOutboundCall? New(RpcOutboundContext context)
@@ -26,7 +31,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var peer = context.Peer;
         if (peer == null)
             throw Errors.InternalError("context.Peer == null.");
-        if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall)
+
+        if (peer.ConnectionKind == RpcPeerConnectionKind.Local)
             return null;
 
         return FactoryCache.GetOrAdd((context.CallTypeId, context.MethodDef!.UnwrappedReturnType), static key => {
@@ -124,25 +130,26 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public virtual RpcMessage CreateMessage(long relatedId, bool allowPolymorphism)
     {
         var arguments = Context.Arguments!;
-        if (Peer.ConnectionKind != RpcPeerConnectionKind.Remote) {
-            var ctIndex = MethodDef.CancellationTokenIndex;
-            if (ctIndex >= 0) {
-                arguments = arguments with { }; // Clone
-                arguments.SetCancellationToken(ctIndex, default);
-            }
+        if (MustSerializeArguments) {
+            var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism);
             return new RpcMessage(
                 Context.CallTypeId, relatedId,
                 MethodDef.Service.Name, MethodDef.Name,
-                default, Context.Headers) {
-                Arguments = arguments,
-            };
+                argumentData, Context.Headers);
         }
 
-        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism);
+        // Skip argument serialization
+        var ctIndex = MethodDef.CancellationTokenIndex;
+        if (ctIndex >= 0) {
+            arguments = arguments with { }; // Clone
+            arguments.SetCancellationToken(ctIndex, default);
+        }
         return new RpcMessage(
             Context.CallTypeId, relatedId,
             MethodDef.Service.Name, MethodDef.Name,
-            argumentData, Context.Headers);
+            default, Context.Headers) {
+            Arguments = arguments,
+        };
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
@@ -214,7 +221,7 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
 
     public RpcOutboundCall(RpcOutboundContext context) : base(context)
     {
-        ResultSource = NoWait || IsCacheKeyCaptureOnlyCall
+        ResultSource = NoWait || CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly
             ? CompletedDefaultResultSource
             : new TaskCompletionSource<TResult>();
     }

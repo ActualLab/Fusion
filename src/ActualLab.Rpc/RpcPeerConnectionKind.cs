@@ -4,5 +4,5 @@ public enum RpcPeerConnectionKind
 {
     Remote = 0,
     Loopback,
-    LocalCall,
+    Local,
 }

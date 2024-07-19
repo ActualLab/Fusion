@@ -46,7 +46,7 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
             if (peer.Ref.CanBeRerouted) {
                 resultTask = InvokeWithRerouting(rpcMethodDef, localCallAsyncInvoker, remoteCallAsyncInvoker, invocation, peer);
             }
-            else if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
+            else if (peer.ConnectionKind == RpcPeerConnectionKind.Local) {
                 resultTask = localCallAsyncInvoker.Invoke(invocation);
             }
             else {
@@ -72,7 +72,7 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
             peer ??= CallRouter.Invoke(methodDef, invocation.Arguments);
             try {
                 Task<T> resultTask;
-                if (peer.ConnectionKind == RpcPeerConnectionKind.LocalCall) {
+                if (peer.ConnectionKind == RpcPeerConnectionKind.Local) {
                     resultTask = localCallAsyncInvoker.Invoke(invocation);
                 }
                 else {
