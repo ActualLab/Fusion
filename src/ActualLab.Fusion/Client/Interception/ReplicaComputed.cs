@@ -3,13 +3,13 @@ using ActualLab.Internal;
 
 namespace ActualLab.Fusion.Client.Interception;
 
-public interface ILocalRpcComputed
+public interface IReplicaComputed
 {
     Computed? Original { get; }
 }
 
-public class LocalRpcComputed<T>(ComputedOptions options, ComputeMethodInput input)
-    : ComputeMethodComputed<T>(options, input), ILocalRpcComputed
+public class ReplicaComputed<T>(ComputedOptions options, ComputeMethodInput input)
+    : ComputeMethodComputed<T>(options, input), IReplicaComputed
 {
     private volatile Computed? _original;
 

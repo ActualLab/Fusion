@@ -10,24 +10,24 @@ namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD104, MA0055
 
-public interface IRemoteRpcComputed : IComputed, IMaybeCachedValue, IDisposable
+public interface IRemoteComputed : IComputed, IMaybeCachedValue, IDisposable
 {
     Task WhenCallBound { get; }
     RpcCacheEntry? CacheEntry { get; }
 }
 
-public class RemoteRpcComputed<T> : ComputeMethodComputed<T>, IRemoteRpcComputed
+public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
 {
     internal readonly TaskCompletionSource<RpcOutboundComputeCall<T>?> CallSource;
     internal readonly TaskCompletionSource<Unit> SynchronizedSource;
 
-    Task IRemoteRpcComputed.WhenCallBound => CallSource.Task;
+    Task IRemoteComputed.WhenCallBound => CallSource.Task;
     public Task<RpcOutboundComputeCall<T>?> WhenCallBound => CallSource.Task;
     public RpcCacheEntry? CacheEntry { get; }
     public Task WhenSynchronized => SynchronizedSource.Task;
 
     // Called when computed is populated from cache
-    public RemoteRpcComputed(
+    public RemoteComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
@@ -42,7 +42,7 @@ public class RemoteRpcComputed<T> : ComputeMethodComputed<T>, IRemoteRpcComputed
     }
 
     // Called when computed is populated after RPC call
-    public RemoteRpcComputed(
+    public RemoteComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
@@ -61,7 +61,7 @@ public class RemoteRpcComputed<T> : ComputeMethodComputed<T>, IRemoteRpcComputed
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    ~RemoteRpcComputed()
+    ~RemoteComputed()
         => Dispose();
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -130,6 +130,7 @@ public class RemoteRpcComputed<T> : ComputeMethodComputed<T>, IRemoteRpcComputed
     protected override void OnInvalidated()
     {
         BindToCall(null);
+
         // PseudoUnregister triggers the Unregistered event in ComputedRegistry w/o actual unregistration.
         // We have to keep this computed in the registry even after the invalidation,
         // coz otherwise:
@@ -139,13 +140,10 @@ public class RemoteRpcComputed<T> : ComputeMethodComputed<T>, IRemoteRpcComputed
         //   & produce another unsynchronized computed shortly after.
         //   And we want to avoid an extra cache lookup - even if it's at cost of some extra
         //   RAM consumption.
-        ComputedRegistry.Instance.PseudoUnregister(this);
-#if false // The code below reduces RAM consumption at cost of cache lookup rate
-        if (SynchronizedSource.Task.IsCompleted)
-            ComputedRegistry.Instance.Unregister(this);
-        else
+        if (Options.RemoteComputedCacheMode == RemoteComputedCacheMode.Cache) // && !SynchronizedSource.Task.IsCompleted)
             ComputedRegistry.Instance.PseudoUnregister(this);
-#endif
+        else
+            ComputedRegistry.Instance.Unregister(this);
         CancelTimeouts();
     }
 }

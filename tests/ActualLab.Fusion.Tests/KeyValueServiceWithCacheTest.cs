@@ -99,9 +99,9 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
         await state.When(x => x == "a c").WaitAsync(TimeSpan.FromSeconds(1));
     }
 
-    private static async Task<RemoteRpcComputed<string>> GetComputed(IKeyValueService<string> kv, string key)
+    private static async Task<RemoteComputed<string>> GetComputed(IKeyValueService<string> kv, string key)
     {
         var c = await Computed.Capture(() => kv.Get(key));
-        return (RemoteRpcComputed<string>)c;
+        return (RemoteComputed<string>)c;
     }
 }

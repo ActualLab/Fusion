@@ -95,15 +95,15 @@ public class ScreenshotServiceClientWithCacheTest : FusionTestBase
         Out.WriteLine($"Invalidated in: {sw.ElapsedMilliseconds}ms");
 
         sw.Restart();
-        c2 = (RemoteRpcComputed<Screenshot>)await c2.Update().ConfigureAwait(false);
+        c2 = (RemoteComputed<Screenshot>)await c2.Update().ConfigureAwait(false);
         Out.WriteLine($"Updated in: {sw.ElapsedMilliseconds}ms");
         c2.Output.Value.Should().NotBeNull();
         c2.WhenSynchronized().IsCompleted.Should().BeTrue();
     }
 
-    private static async Task<RemoteRpcComputed<Screenshot>> GetScreenshotComputed(IScreenshotService service)
-        => (RemoteRpcComputed<Screenshot>)await Computed.Capture(() => service.GetScreenshot(100));
+    private static async Task<RemoteComputed<Screenshot>> GetScreenshotComputed(IScreenshotService service)
+        => (RemoteComputed<Screenshot>)await Computed.Capture(() => service.GetScreenshot(100));
 
-    private static async Task<RemoteRpcComputed<Screenshot>> GetScreenshotAltComputed(IScreenshotService service)
-        => (RemoteRpcComputed<Screenshot>)await Computed.Capture(() => service.GetScreenshotAlt(100));
+    private static async Task<RemoteComputed<Screenshot>> GetScreenshotAltComputed(IScreenshotService service)
+        => (RemoteComputed<Screenshot>)await Computed.Capture(() => service.GetScreenshotAlt(100));
 }

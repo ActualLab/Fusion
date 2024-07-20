@@ -54,7 +54,7 @@ public class RpcComputeMethodFunction<T>(
                 var peer = RpcCallRouter.Invoke(RpcMethodDef, typedInput.Invocation.Arguments);
                 if (peer.ConnectionKind == RpcPeerConnectionKind.Local) {
                     // Compute local
-                    var computed = new LocalRpcComputed<T>(ComputedOptions, typedInput);
+                    var computed = new ReplicaComputed<T>(ComputedOptions, typedInput);
                     using var _ = Computed.BeginCompute(computed);
                     if (LocalTarget != null) {
                         // With local target - it's a ClientAndServer case & the Service.Method is invoked
@@ -103,7 +103,7 @@ public class RpcComputeMethodFunction<T>(
                     return existing == null && cache != null
                         ? await ComputeCachedOrRpc(typedInput, cache, peer, cancellationToken)
                             .ConfigureAwait(false)
-                        : await ComputeRpc(typedInput, cache, (RemoteRpcComputed<T>)existing!, peer, cancellationToken)
+                        : await ComputeRpc(typedInput, cache, (RemoteComputed<T>)existing!, peer, cancellationToken)
                             .ConfigureAwait(false);
                 }
                 catch (Exception e) {
@@ -124,7 +124,7 @@ public class RpcComputeMethodFunction<T>(
     public static async Task<Computed<T>> ComputeRpc(
         ComputeMethodInput input,
         IRemoteComputedCache? cache,
-        RemoteRpcComputed<T>? existing,
+        RemoteComputed<T>? existing,
         RpcPeer peer,
         CancellationToken cancellationToken)
     {
@@ -149,7 +149,7 @@ public class RpcComputeMethodFunction<T>(
             cacheEntry = UpdateCache(cache!, key, data);
         }
 
-        var computed = new RemoteRpcComputed<T>(
+        var computed = new RemoteComputed<T>(
             input.MethodDef.ComputedOptions,
             input, result,
             cacheEntry, call);
@@ -185,7 +185,7 @@ public class RpcComputeMethodFunction<T>(
         }
 
         var cacheEntry = new RpcCacheEntry(cacheKey, cacheResult.Data);
-        var cachedComputed = new RemoteRpcComputed<T>(
+        var cachedComputed = new RemoteComputed<T>(
             input.MethodDef.ComputedOptions,
             input, cacheResult.Value,
             cacheEntry);
@@ -209,7 +209,7 @@ public class RpcComputeMethodFunction<T>(
     public async Task ApplyRpcUpdate(
         ComputeMethodInput input,
         IRemoteComputedCache cache,
-        RemoteRpcComputed<T> cachedComputed,
+        RemoteComputed<T> cachedComputed,
         RpcPeer peer)
     {
         // 1. Start the RPC call
@@ -271,7 +271,7 @@ public class RpcComputeMethodFunction<T>(
         var cacheEntry = UpdateCache(cache, key, data);
 
         // 6. Create the new computed - it invalidates the cached one upon registering
-        var computed = new RemoteRpcComputed<T>(
+        var computed = new RemoteComputed<T>(
             input.MethodDef.ComputedOptions,
             input, result,
             cacheEntry, call);
