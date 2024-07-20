@@ -1,6 +1,6 @@
 namespace ActualLab.Fusion;
 
-public enum ClientCacheMode
+public enum RemoteComputedCacheMode
 {
     Default = 0,
     Cache,

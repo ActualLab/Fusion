@@ -26,37 +26,36 @@ public class RemoteRpcComputed<T> : ComputeMethodComputed<T>, IRemoteRpcComputed
     public RpcCacheEntry? CacheEntry { get; }
     public Task WhenSynchronized => SynchronizedSource.Task;
 
+    // Called when computed is populated from cache
     public RemoteRpcComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
-        RpcCacheEntry? cacheEntry,
-        TaskCompletionSource<Unit>? synchronizedSource = null)
+        RpcCacheEntry? cacheEntry)
         : base(options, input, output, true, SkipComputedRegistration.Option)
     {
         CallSource = TaskCompletionSourceExt.New<RpcOutboundComputeCall<T>?>();
         CacheEntry = cacheEntry;
-        SynchronizedSource = synchronizedSource ?? TaskCompletionSourceExt.New<Unit>();
+        SynchronizedSource = TaskCompletionSourceExt.New<Unit>();
         ComputedRegistry.Instance.Register(this);
         StartAutoInvalidation();
     }
 
+    // Called when computed is populated after RPC call
     public RemoteRpcComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
         RpcCacheEntry? cacheEntry,
-        RpcOutboundComputeCall<T> call,
-        TaskCompletionSource<Unit>? synchronizedSource = null)
+        RpcOutboundComputeCall<T> call)
         : base(options, input, output, true, SkipComputedRegistration.Option)
     {
         CallSource = TaskCompletionSourceExt.New<RpcOutboundComputeCall<T>?>().WithResult(call);
         CacheEntry = cacheEntry;
-        SynchronizedSource = synchronizedSource ??= TaskCompletionSourceExt.New<Unit>();
+        SynchronizedSource = AlwaysSynchronized.Source;
         ComputedRegistry.Instance.Register(this);
 
         // This should go after .Register(this)
-        synchronizedSource.TrySetResult(default); // Call is there -> synchronized
         BindWhenInvalidatedToCall(call);
         StartAutoInvalidation();
     }
@@ -81,6 +80,7 @@ public class RemoteRpcComputed<T> : ComputeMethodComputed<T>, IRemoteRpcComputed
     {
 #pragma warning disable IL2026
         if (!CallSource.TrySetResult(call)) {
+            // Another call is already bound
             if (call == null) {
                 // Call from OnInvalidated - we need to cancel the old call
                 var boundCall = WhenCallBound.Result;
@@ -92,11 +92,11 @@ public class RemoteRpcComputed<T> : ComputeMethodComputed<T>, IRemoteRpcComputed
             }
             return false;
         }
-        if (call == null) // Invalidated before being bound to call - nothing else to do
-            return true;
 #pragma warning restore IL2026
+        // If we're here, the computed is bound to the specified call
 
-        BindWhenInvalidatedToCall(call);
+        if (call != null) // Otherwise the null call originates from OnInvalidated
+            BindWhenInvalidatedToCall(call);
         return true;
     }
 
@@ -132,13 +132,20 @@ public class RemoteRpcComputed<T> : ComputeMethodComputed<T>, IRemoteRpcComputed
         BindToCall(null);
         // PseudoUnregister triggers the Unregistered event in ComputedRegistry w/o actual unregistration.
         // We have to keep this computed in the registry even after the invalidation,
-        // if its SynchronizedSource is incomplete,
-        // otherwise this SynchronizedSource won't be reused in the next computed,
-        // and thus it may stay incomplete indefinitely.
+        // coz otherwise:
+        // - Its SynchronizedSource could be "lost" w/o ever transitioning to Completed state.
+        //   So we _at least_ must keep it in the registry while its SynchronizedSource isn't completed.
+        // - The logic in RpcComputeMethodFunction.Compute will resort to cache lookup
+        //   & produce another unsynchronized computed shortly after.
+        //   And we want to avoid an extra cache lookup - even if it's at cost of some extra
+        //   RAM consumption.
+        ComputedRegistry.Instance.PseudoUnregister(this);
+#if false // The code below reduces RAM consumption at cost of cache lookup rate
         if (SynchronizedSource.Task.IsCompleted)
             ComputedRegistry.Instance.Unregister(this);
         else
             ComputedRegistry.Instance.PseudoUnregister(this);
+#endif
         CancelTimeouts();
     }
 }

@@ -3,11 +3,11 @@ namespace ActualLab.Fusion;
 #pragma warning disable CA1813 // Consider making sealed
 
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-public class ClientComputeMethodAttribute : ComputeMethodAttribute
+public class RemoteComputeMethodAttribute : ComputeMethodAttribute
 {
     /// <summary>
-    /// <see cref="RpcCom"/> behavior.
+    /// Remote computed caching behavior.
     /// <code>null</code> means "use default".
     /// </summary>
-    public ClientCacheMode ClientCacheMode { get; set; }
+    public RemoteComputedCacheMode CacheMode { get; set; }
 }

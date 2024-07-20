@@ -8,7 +8,7 @@ public record ComputedOptions
     public static ComputedOptions Default { get; set; } = new();
     public static ComputedOptions ClientDefault { get; set; } = new() {
         MinCacheDuration = TimeSpan.FromMinutes(1),
-        ClientCacheMode = ClientCacheMode.Cache,
+        RemoteComputedCacheMode = RemoteComputedCacheMode.Cache,
         CancellationReprocessing = ComputedCancellationReprocessingOptions.ClientDefault,
     };
     public static ComputedOptions MutableStateDefault { get; set; } = new() {
@@ -19,7 +19,7 @@ public record ComputedOptions
     public TimeSpan TransientErrorInvalidationDelay { get; init; } = TimeSpan.FromSeconds(1);
     public TimeSpan AutoInvalidationDelay { get; init; } = TimeSpan.MaxValue; // No auto invalidation
     public TimeSpan InvalidationDelay { get; init; }
-    public ClientCacheMode ClientCacheMode { get; init; } = ClientCacheMode.NoCache;
+    public RemoteComputedCacheMode RemoteComputedCacheMode { get; init; } = RemoteComputedCacheMode.NoCache;
     public ComputedCancellationReprocessingOptions CancellationReprocessing { get; init; }
         = ComputedCancellationReprocessingOptions.Default;
 
@@ -31,7 +31,7 @@ public record ComputedOptions
 #pragma warning disable IL2026
         var cma = method.GetAttribute<ComputeMethodAttribute>(true, true);
         var rma = isClientServiceMethod
-            ? method.GetAttribute<ClientComputeMethodAttribute>(true, true)
+            ? method.GetAttribute<RemoteComputeMethodAttribute>(true, true)
             : null;
 #pragma warning restore IL2026
         var a = rma ?? cma;
@@ -47,8 +47,8 @@ public record ComputedOptions
             ? rma?.InvalidationDelay ?? double.NaN
             : a.InvalidationDelay;
         // Default cache behavior must be changed to null to let it "inherit" defaultOptions.ClientCacheMode
-        var rmaCacheMode = rma?.ClientCacheMode;
-        if (rmaCacheMode == ClientCacheMode.Default)
+        var rmaCacheMode = rma?.CacheMode;
+        if (rmaCacheMode == RemoteComputedCacheMode.Default)
             rmaCacheMode = null;
 
         var options = defaultOptions with {
@@ -56,7 +56,7 @@ public record ComputedOptions
             TransientErrorInvalidationDelay = ToTimeSpan(a.TransientErrorInvalidationDelay) ?? defaultOptions.TransientErrorInvalidationDelay,
             AutoInvalidationDelay = ToTimeSpan(autoInvalidationDelay) ?? defaultOptions.AutoInvalidationDelay,
             InvalidationDelay = ToTimeSpan(invalidationDelay) ?? defaultOptions.InvalidationDelay,
-            ClientCacheMode = rmaCacheMode ?? defaultOptions.ClientCacheMode,
+            RemoteComputedCacheMode = rmaCacheMode ?? defaultOptions.RemoteComputedCacheMode,
         };
         // We don't want to multiply instances of ComputedOptions here unless they differ from the default ones
         return options == defaultOptions ? defaultOptions : options;

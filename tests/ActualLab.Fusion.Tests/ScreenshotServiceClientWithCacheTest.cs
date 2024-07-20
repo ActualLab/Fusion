@@ -33,13 +33,13 @@ public class ScreenshotServiceClientWithCacheTest : FusionTestBase
         var c1 = await GetScreenshotComputed(service1);
         Out.WriteLine($"Miss in: {sw.ElapsedMilliseconds}ms");
         c1.WhenSynchronized().IsCompleted.Should().BeTrue();
-        c1.Options.ClientCacheMode.Should().Be(ClientCacheMode.Cache);
+        c1.Options.RemoteComputedCacheMode.Should().Be(RemoteComputedCacheMode.Cache);
 
         sw.Restart();
         var c2 = await GetScreenshotComputed(service2);
         Out.WriteLine($"Hit in: {sw.ElapsedMilliseconds}ms");
         var whenSynchronized = c2.WhenSynchronized();
-        whenSynchronized.IsCompleted.Should().BeFalse();
+        whenSynchronized.IsCompleted.Should().BeFalse(); // Service2.GetScreenshotComputed is pulled from cache
         await whenSynchronized;
         c2 = await GetScreenshotComputed(service2);
         c2.WhenSynchronized().IsCompleted.Should().BeTrue();
@@ -77,7 +77,7 @@ public class ScreenshotServiceClientWithCacheTest : FusionTestBase
         var c1 = await GetScreenshotAltComputed(service1);
         Out.WriteLine($"Miss in: {sw.ElapsedMilliseconds}ms");
         c1.Output.Value.Should().NotBeNull();
-        c1.Options.ClientCacheMode.Should().Be(ClientCacheMode.NoCache);
+        c1.Options.RemoteComputedCacheMode.Should().Be(RemoteComputedCacheMode.NoCache);
         c1.WhenSynchronized().IsCompleted.Should().BeTrue();
 
         sw.Restart();

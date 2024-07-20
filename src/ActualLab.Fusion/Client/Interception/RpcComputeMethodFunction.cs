@@ -149,11 +149,12 @@ public class RpcComputeMethodFunction<T>(
             cacheEntry = UpdateCache(cache!, key, data);
         }
 
-        var synchronizedSource = existing?.SynchronizedSource ?? AlwaysSynchronized.Source;
-        return new RemoteRpcComputed<T>(
+        var computed = new RemoteRpcComputed<T>(
             input.MethodDef.ComputedOptions,
             input, result,
-            cacheEntry, call, synchronizedSource);
+            cacheEntry, call);
+        existing?.SynchronizedSource.TrySetResult(default);
+        return computed;
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -208,7 +209,7 @@ public class RpcComputeMethodFunction<T>(
     public async Task ApplyRpcUpdate(
         ComputeMethodInput input,
         IRemoteComputedCache cache,
-        RemoteRpcComputed<T> cachedRpcComputed,
+        RemoteRpcComputed<T> cachedComputed,
         RpcPeer peer)
     {
         // 1. Start the RPC call
@@ -217,16 +218,16 @@ public class RpcComputeMethodFunction<T>(
         if (call == null) {
             // The call has been rerouted to a local peer.
             // The best we can do is to invalidate cached computed to trigger its update.
-            cachedRpcComputed.Invalidate(true);
+            cachedComputed.Invalidate(true);
             return;
         }
         // peer = call.Peer; // The call could be routed to another peer
 
         // 2. Bind the call to cachedComputed
-        if (!cachedRpcComputed.BindToCall(call)) {
-            // Ok, this is a weird case: existing was invalidated manually while we were getting here.
-            // This means the call is already aborted (see BindToCall logic), and since we're
-            // operating in background to update cached value, we can just exit.
+        if (!cachedComputed.BindToCall(call)) {
+            // A weird case: cachedComputed is already invalidated (manually?).
+            // This means the call is already aborted (see BindToCall logic),
+            // and since we're performing a background update, we can just exit.
             return;
         }
 
@@ -236,7 +237,7 @@ public class RpcComputeMethodFunction<T>(
             // The call was cancelled on the server side - e.g. due to peer termination.
             // Retrying is the best we can do here; and since this call is already bound to `cachedComputed`,
             // we should invalidate the `call` rather than `cachedComputed`.
-            var cancellationReprocessingOptions = cachedRpcComputed.Options.CancellationReprocessing;
+            var cancellationReprocessingOptions = cachedComputed.Options.CancellationReprocessing;
             var delay = cancellationReprocessingOptions.RetryDelays[1];
             Log.LogWarning(e,
                 "ApplyRpcUpdate was cancelled on the server side for {Category}, will invalidate IComputed in {Delay}",
@@ -256,14 +257,13 @@ public class RpcComputeMethodFunction<T>(
 
         // 5. Re-entering the lock & check if cachedComputed is still consistent
         using var releaser = await InputLocks.Lock(input).ConfigureAwait(false);
-        if (!cachedRpcComputed.IsConsistent())
+        if (!cachedComputed.IsConsistent())
             return; // Since the call was bound to cachedComputed, it's properly cancelled already
 
         releaser.MarkLockedLocally();
-        var synchronizedSource = cachedRpcComputed.SynchronizedSource;
-        if (cachedRpcComputed.CacheEntry is { } oldEntry && data?.DataEquals(oldEntry.Data) == true) {
+        if (cachedComputed.CacheEntry is { } oldEntry && data?.DataEquals(oldEntry.Data) == true) {
             // Existing cached entry is still intact
-            synchronizedSource.TrySetResult(default);
+            cachedComputed.SynchronizedSource.TrySetResult(default);
             return;
         }
 
@@ -274,8 +274,9 @@ public class RpcComputeMethodFunction<T>(
         var computed = new RemoteRpcComputed<T>(
             input.MethodDef.ComputedOptions,
             input, result,
-            cacheEntry, call, synchronizedSource);
+            cacheEntry, call);
         computed.RenewTimeouts(true);
+        cachedComputed.SynchronizedSource.TrySetResult(default);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -374,11 +375,9 @@ public class RpcComputeMethodFunction<T>(
     }
 
     protected IRemoteComputedCache? GetCache(ComputeMethodInput input)
-        => RemoteComputedCache == null
-            ? null :
-            input.MethodDef.ComputedOptions.ClientCacheMode != ClientCacheMode.Cache
-                ? null
-                : RemoteComputedCache;
+        => input.MethodDef.ComputedOptions.RemoteComputedCacheMode == RemoteComputedCacheMode.Cache
+            ? RemoteComputedCache
+            : null;
 
     protected Task TryReprocessServerSideCancellation(ComputeMethodInput input,
         Exception error,
