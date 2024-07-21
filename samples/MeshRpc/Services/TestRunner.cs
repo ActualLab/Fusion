@@ -28,7 +28,6 @@ public class TestRunner(IServiceProvider services) : WorkerBase
         if (!mustRun)
             return Task.CompletedTask;
 
-        var applicationLifetime = Services.GetRequiredService<IHostApplicationLifetime>();
         using var stopTokenSource = cancellationToken.CreateDelayedTokenSource(TestStopDelay);
         cancellationToken = stopTokenSource.Token;
         var testTasks = Enumerable.Range(0, ProcessesPerHost)
@@ -38,8 +37,6 @@ public class TestRunner(IServiceProvider services) : WorkerBase
                 }
                 catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                     if (Services.IsDisposedOrDisposing())
-                        return;
-                    if (applicationLifetime.ApplicationStopping.IsCancellationRequested)
                         return;
 
                     await Console.Error.WriteLineAsync($"{OwnHost} T{workerId} failed: {e.Message}".PastelBg(ConsoleColor.DarkRed));
