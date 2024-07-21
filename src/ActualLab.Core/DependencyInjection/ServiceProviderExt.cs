@@ -6,6 +6,17 @@ public static class ServiceProviderExt
 {
     public static readonly IServiceProvider Empty = new ServiceCollection().BuildServiceProvider();
 
+    public static bool IsDisposedOrDisposing(this IServiceProvider services)
+    {
+        try {
+            services.GetService<IServiceProvider>();
+            return false;
+        }
+        catch (ObjectDisposedException) {
+            return true;
+        }
+    }
+
     // Logging extensions
 
     public static ILoggerFactory LoggerFactory(this IServiceProvider services)

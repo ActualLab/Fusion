@@ -1,4 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
+using ActualLab.CommandR.Interception;
 using ActualLab.Generators;
+using ActualLab.Interception;
 using ActualLab.Resilience;
 using ActualLab.Versioning;
 
@@ -12,6 +15,7 @@ public sealed class CommanderHub(ICommander commander, IServiceProvider services
     private CommandHandlerResolver? _handlerResolver;
     private ChaosMaker? _chaosMaker;
     private MomentClockSet? _clocks;
+    private CommandServiceInterceptor? _interceptor;
 
     public ICommander Commander { get; } = commander;
     public IServiceProvider Services { get; } = services;
@@ -21,4 +25,16 @@ public sealed class CommanderHub(ICommander commander, IServiceProvider services
     public CommandHandlerResolver HandlerResolver => _handlerResolver ??= Services.GetRequiredService<CommandHandlerResolver>();
     public ChaosMaker ChaosMaker => _chaosMaker ??= Services.GetRequiredService<ChaosMaker>();
     public MomentClockSet Clocks => _clocks ??= Services.Clocks();
+
+    public CommandServiceInterceptor Interceptor
+        => _interceptor ??= Services.GetRequiredService<CommandServiceInterceptor>();
+
+    public IProxy NewProxy(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
+        bool initialize = true)
+    {
+        var interceptor = Interceptor;
+        interceptor.ValidateType(implementationType);
+        return Services.ActivateProxy(implementationType, interceptor, null, initialize);
+    }
 }

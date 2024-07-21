@@ -136,7 +136,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         // coz otherwise:
         // - Its SynchronizedSource could be "lost" w/o ever transitioning to Completed state.
         //   So we _at least_ must keep it in the registry while its SynchronizedSource isn't completed.
-        // - The logic in RpcComputeMethodFunction.Compute will resort to cache lookup
+        // - The logic in RemoteComputeMethodFunction.Compute will resort to cache lookup
         //   & produce another unsynchronized computed shortly after.
         //   And we want to avoid an extra cache lookup - even if it's at cost of some extra
         //   RAM consumption.

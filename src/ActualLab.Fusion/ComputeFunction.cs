@@ -5,7 +5,7 @@ namespace ActualLab.Fusion;
 
 public interface IComputeFunction : IHasServices
 {
-    FusionInternalHub Hub { get; }
+    FusionHub Hub { get; }
 }
 
 public interface IComputeFunction<T> : IComputeFunction
@@ -20,7 +20,7 @@ public interface IComputeFunction<T> : IComputeFunction
         CancellationToken cancellationToken = default);
 }
 
-public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFunction<T>
+public abstract class ComputeFunctionBase<T>(FusionHub hub) : IComputeFunction<T>
 {
     protected static AsyncLockSet<ComputedInput> InputLocks {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -34,9 +34,9 @@ public abstract class ComputeFunctionBase<T>(FusionInternalHub hub) : IComputeFu
     protected ILogger? DebugLog => (_debugLog ??= LazySlim.New(Log.IfEnabled(LogLevel.Debug))).Value;
 
     IServiceProvider IHasServices.Services => Services;
-    FusionInternalHub IComputeFunction.Hub => Hub;
+    FusionHub IComputeFunction.Hub => Hub;
 
-    public readonly FusionInternalHub Hub = hub;
+    public readonly FusionHub Hub = hub;
     public readonly IServiceProvider Services = hub.Services;
 
     [MethodImpl(MethodImplOptions.NoInlining)]

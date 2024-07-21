@@ -1,8 +1,8 @@
 namespace ActualLab.Fusion.Client.Interception;
 
-public record RpcComputeCallOptions
+public record RemoteComputeCallOptions
 {
-    public static RpcComputeCallOptions Default { get; set; } = new();
+    public static RemoteComputeCallOptions Default { get; set; } = new();
 
     public bool ValidateRpcCallOrigin { get; set; } = true;
 }

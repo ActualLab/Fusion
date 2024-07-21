@@ -25,7 +25,7 @@ public readonly struct RpcBuilder
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcByteArgumentSerializer))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcMethodTracer))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcMethodActivityCounters))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInterceptor))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcRoutingInterceptor))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcSwitchInterceptor))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundContext))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundContextFactory))]
@@ -95,7 +95,8 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcLimits.Default);
 
         // Interceptor options (the instances are created by RpcProxies)
-        services.AddSingleton(_ => RpcInterceptor.Options.Default);
+        services.AddSingleton(_ => RpcNonRoutingInterceptor.Options.Default);
+        services.AddSingleton(_ => RpcRoutingInterceptor.Options.Default);
         services.AddSingleton(_ => RpcSwitchInterceptor.Options.Default);
 
         // System services
@@ -204,9 +205,11 @@ public readonly struct RpcBuilder
             throw ActualLab.Internal.Errors.MustBeAssignableTo(proxyBaseType, serviceType, nameof(proxyBaseType));
 
         if (serviceType == proxyBaseType)
-            Services.AddSingleton(serviceType, c => RpcProxies.New(c, serviceType, proxyBaseType));
+            Services.AddSingleton(serviceType,
+                c => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, proxyBaseType));
         else {
-            Services.AddSingleton(proxyBaseType, c => RpcProxies.New(c, serviceType, proxyBaseType));
+            Services.AddSingleton(proxyBaseType,
+                c => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, proxyBaseType));
             Services.AddAlias(serviceType, proxyBaseType);
         }
         Service(serviceType).HasName(name);
@@ -280,7 +283,7 @@ public readonly struct RpcBuilder
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddServerAndRouter<
+    public RpcBuilder AddServerAndClient<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
         (Symbol name = default)
@@ -302,7 +305,12 @@ public readonly struct RpcBuilder
         // - TService configured as server resolving to TImplementation, so incoming calls won't be routed
 
         AddLocal(implementationType);
-        Services.AddSingleton(serviceType, c => RpcProxies.NewSwitch(c, serviceType, implementationType));
+        Services.AddSingleton(serviceType, c => {
+            var hub = c.RpcHub();
+            var localTarget = c.GetRequiredService(implementationType);
+            var remoteTarget = hub.InternalServices.NewNonRoutingInterceptor(serviceType);
+            return c.RpcHub().InternalServices.NewSwitchProxy(serviceType, serviceType, localTarget, remoteTarget);
+        });
         Service(serviceType).HasServer(implementationType).HasName(name);
         return this;
     }
@@ -336,7 +344,8 @@ public readonly struct RpcBuilder
         if (!implementationType.IsClass)
             throw ActualLab.Internal.Errors.MustBeClass(implementationType, nameof(implementationType));
 
-        Services.AddSingleton(serviceType, c => RpcProxies.NewHybrid(c, serviceType, implementationType));
+        Services.AddSingleton(serviceType,
+            c => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, implementationType));
         Service(serviceType).HasServer(serviceType).HasName(name);
         return this;
     }

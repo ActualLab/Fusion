@@ -67,6 +67,11 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
     public void Register(RpcOutboundCall call)
     {
+        if (call.NoWait)
+            throw new ArgumentOutOfRangeException(nameof(call), "call.NoWait == true.");
+        if (call.Id != 0)
+            throw new ArgumentOutOfRangeException(nameof(call), "call.Id != 0.");
+
         while (true) {
             call.Id = Interlocked.Increment(ref _lastId);
             if (Calls.TryAdd(call.Id, call)) {

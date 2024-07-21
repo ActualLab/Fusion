@@ -4,11 +4,10 @@ using ActualLab.Fusion.Internal;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
-using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Client.Interception;
 
-public class RpcComputeServiceInterceptor : ComputeServiceInterceptor
+public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
 {
     public new record Options : ComputeServiceInterceptor.Options
     {
@@ -16,33 +15,31 @@ public class RpcComputeServiceInterceptor : ComputeServiceInterceptor
     }
 
     public readonly RpcServiceDef RpcServiceDef;
-    public readonly RpcInterceptor RegularCallRpcInterceptor;
-    public readonly RpcInterceptor ComputeCallRpcInterceptor;
-    public RpcHub RpcHub => RpcServiceDef.Hub;
+    public readonly RpcRoutingInterceptor NonComputeCallInterceptor;
+    public readonly RpcNonRoutingInterceptor ComputeCallInterceptor;
     public readonly object? LocalTarget;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public RpcComputeServiceInterceptor(
-        Options settings,
-        RpcInterceptor regularCallRpcInterceptor,
-        RpcInterceptor computeCallRpcInterceptor,
-        object? localTarget,
-        FusionInternalHub hub
+    public RemoteComputeServiceInterceptor(Options settings,
+        FusionHub hub,
+        RpcRoutingInterceptor nonComputeCallInterceptor,
+        RpcNonRoutingInterceptor computeCallInterceptor,
+        object? localTarget
         ) : base(settings, hub)
     {
-        RpcServiceDef = regularCallRpcInterceptor.ServiceDef;
-        if (!ReferenceEquals(RpcServiceDef, computeCallRpcInterceptor.ServiceDef))
-            throw new ArgumentOutOfRangeException(nameof(computeCallRpcInterceptor),
-                $"{nameof(computeCallRpcInterceptor)}.ServiceDef != {nameof(regularCallRpcInterceptor)}.ServiceDef.");
+        RpcServiceDef = nonComputeCallInterceptor.ServiceDef;
+        if (!ReferenceEquals(RpcServiceDef, computeCallInterceptor.ServiceDef))
+            throw new ArgumentOutOfRangeException(nameof(computeCallInterceptor),
+                $"{nameof(computeCallInterceptor)}.ServiceDef != {nameof(nonComputeCallInterceptor)}.ServiceDef.");
 
-        RegularCallRpcInterceptor = regularCallRpcInterceptor;
-        ComputeCallRpcInterceptor = computeCallRpcInterceptor;
+        NonComputeCallInterceptor = nonComputeCallInterceptor;
+        ComputeCallInterceptor = computeCallInterceptor;
         LocalTarget = localTarget;
     }
 
     public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
         => GetHandler(invocation) // Compute service method
-            ?? RegularCallRpcInterceptor.SelectHandler(invocation); // Regular or command service method
+            ?? NonComputeCallInterceptor.SelectHandler(invocation); // Regular or command service method
 
     protected override Func<Invocation, object?>? CreateHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
@@ -52,18 +49,18 @@ public class RpcComputeServiceInterceptor : ComputeServiceInterceptor
         var rpcMethodDef = RpcServiceDef.GetOrFindMethod(initialInvocation.Method);
         var function = rpcMethodDef == null
             ? new ComputeMethodFunction<TUnwrapped>(computeMethodDef, Hub) // No RpcMethodDef -> it's a local call
-            : new RpcComputeMethodFunction<TUnwrapped>(computeMethodDef, rpcMethodDef, LocalTarget, Hub);
+            : new RemoteComputeMethodFunction<TUnwrapped>(computeMethodDef, rpcMethodDef, Hub, LocalTarget);
         return CreateHandler(function);
     }
 
     protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
         // This interceptor is created on per-service basis, so to reuse the validation cache,
         // we redirect this call to Hub.ComputeServiceInterceptor, which is a singleton.
-        => Hub.ComputeServiceInterceptor.GetMethodDef(method, proxyType);
+        => Hub.Interceptor.GetMethodDef(method, proxyType);
 
     protected override void ValidateTypeInternal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
         // This interceptor is created on per-service basis, so to reuse the validation cache,
         // we redirect this call to Hub.ComputeServiceInterceptor, which is a singleton.
-        => Hub.ComputeServiceInterceptor.ValidateType(type);
+        => Hub.Interceptor.ValidateType(type);
 }

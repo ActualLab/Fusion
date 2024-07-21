@@ -22,7 +22,7 @@ public class ReplicaComputed<T>(ComputedOptions options, ComputeMethodInput inpu
     {
         var dependencies = GetDependencies();
         if (dependencies.Length != 1 || dependencies[0] is not Computed<T> original)
-            throw Errors.InternalError("LocalRpcComputed must have a single dependency.");
+            throw Errors.InternalError($"{nameof(IReplicaComputed)} must have a single dependency.");
 
         lock (Lock)
             _original = original;

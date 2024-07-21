@@ -22,15 +22,18 @@ public static class Errors
         => new NotSupportedException(
             "Only IState and IAnonymousComputedInput allow to manually set Category property.");
 
-    public static Exception ComputeServiceMethodAttributeOnStaticMethod(MethodInfo method)
+    public static Exception ComputeMethodAttributeOnStaticMethod(MethodInfo method)
         => new InvalidOperationException($"{nameof(ComputeMethodAttribute)} is applied to static method '{method}'.");
-    public static Exception ComputeServiceMethodAttributeOnNonVirtualMethod(MethodInfo method)
+    public static Exception ComputeMethodAttributeOnNonVirtualMethod(MethodInfo method)
         => new InvalidOperationException($"{nameof(ComputeMethodAttribute)} is applied to non-virtual method '{method}'.");
-    public static Exception ComputeServiceMethodAttributeOnNonAsyncMethod(MethodInfo method)
+    public static Exception ComputeMethodAttributeOnNonAsyncMethod(MethodInfo method)
         => new InvalidOperationException($"{nameof(ComputeMethodAttribute)} is applied to non-async method '{method}'.");
-    public static Exception ComputeServiceMethodAttributeOnAsyncMethodReturningNonGenericTask(MethodInfo method)
+    public static Exception ComputeMethodAttributeOnAsyncMethodReturningNonGenericTask(MethodInfo method)
         => new InvalidOperationException($"{nameof(ComputeMethodAttribute)} is applied to a method " +
             $"returning non-generic Task/ValueTask: '{method}'.");
+    public static Exception ComputeMethodAttributeOnAsyncMethodReturningRpcNoWait(MethodInfo method)
+        => new InvalidOperationException($"{nameof(ComputeMethodAttribute)} is applied to a method " +
+            $"returning {nameof(RpcNoWait)}: '{method}'.");
 
     public static Exception InvalidContextCallOptions(CallOptions callOptions)
         => new InvalidOperationException(
@@ -38,7 +41,7 @@ public static class Errors
 
     // Rpc related
 
-    public static Exception RpcComputeMethodCallFromTheSameService(RpcMethodDef methodDef, RpcPeerRef peerRef)
+    public static Exception RemoteComputeMethodCallFromTheSameService(RpcMethodDef methodDef, RpcPeerRef peerRef)
         => new InvalidOperationException(
             $"Incoming RPC compute service call to {methodDef} via '{peerRef}' " +
             "is originating from the same compute service instance. " +

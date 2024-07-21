@@ -91,7 +91,7 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
         if (Call != null)
             hub.OutboundMiddlewares.NullIfEmpty()?.PrepareCall(this);
         if (ReferenceEquals(oldPeer, Peer))
-            oldPeer.Log.LogWarning("The call {Call} is rerouted to the same peer {Peer}", Call, Peer);
+            Peer.Log.LogWarning("The call {Call} is rerouted to the same peer {Peer}", Call, Peer);
         return Call;
     }
 

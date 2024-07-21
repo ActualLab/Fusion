@@ -1,6 +1,7 @@
 using ActualLab;
 using ActualLab.Async;
 using ActualLab.CommandR;
+using ActualLab.DependencyInjection;
 using ActualLab.Fusion;
 using ActualLab.Rpc;
 using ActualLab.Text;
@@ -10,10 +11,11 @@ using static Samples.MeshRpc.TestSettings;
 
 namespace Samples.MeshRpc.Services;
 
-public class Tester(IServiceProvider services) : WorkerBase
+public class TestRunner(IServiceProvider services) : WorkerBase
 {
     private readonly Dictionary<(Symbol HostId, Symbol ServiceName), CounterState> _lastStates = new();
 
+    private IServiceProvider Services { get; } = services;
     private Host OwnHost { get; } = services.GetRequiredService<Host>();
     private ICounter Counter { get; } = services.GetRequiredService<ICounter>();
     private IFusionCounter FusionCounter { get; } = services.GetRequiredService<IFusionCounter>();
@@ -26,6 +28,7 @@ public class Tester(IServiceProvider services) : WorkerBase
         if (!mustRun)
             return Task.CompletedTask;
 
+        var applicationLifetime = Services.GetRequiredService<IHostApplicationLifetime>();
         using var stopTokenSource = cancellationToken.CreateDelayedTokenSource(TestStopDelay);
         cancellationToken = stopTokenSource.Token;
         var testTasks = Enumerable.Range(0, ProcessesPerHost)
@@ -34,6 +37,11 @@ public class Tester(IServiceProvider services) : WorkerBase
                     await Test(workerId, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+                    if (Services.IsDisposedOrDisposing())
+                        return;
+                    if (applicationLifetime.ApplicationStopping.IsCancellationRequested)
+                        return;
+
                     await Console.Error.WriteLineAsync($"{OwnHost} T{workerId} failed: {e.Message}".PastelBg(ConsoleColor.DarkRed));
                 }
             })

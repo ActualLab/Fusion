@@ -45,7 +45,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public IServiceProvider Services { get; }
     public RpcConfiguration Configuration { get; }
     public RpcServiceRegistry ServiceRegistry => _serviceRegistry ??= Services.GetRequiredService<RpcServiceRegistry>();
-    public RpcInternalServices InternalServices => new(this);
+    public RpcInternalServices InternalServices;
     public RpcLimits Limits { get; }
     public MomentClock Clock { get; }
     public RpcClientPeer LoopbackPeer => _loopbackPeer ??= (RpcClientPeer)GetPeer(RpcPeerRef.Loopback);
@@ -79,6 +79,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         CallLoggerFilter = services.GetRequiredService<RpcCallLoggerFilter>();
         Limits = services.GetRequiredService<RpcLimits>();
         Clock = services.Clocks().CpuClock;
+        InternalServices = new(this); // Must go at last
     }
 
     protected override Task DisposeAsyncCore()

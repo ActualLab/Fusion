@@ -99,7 +99,7 @@ public class ComputedSource<T> : ComputedInput,
 
     // IFunction<T> & IFunction
 
-    FusionInternalHub IComputeFunction.Hub => Services.GetRequiredService<FusionInternalHub>();
+    FusionHub IComputeFunction.Hub => Services.GetRequiredService<FusionHub>();
 
     ValueTask<Computed<T>> IComputeFunction<T>.Invoke(
         ComputedInput input,

@@ -80,7 +80,7 @@ public abstract class Interceptor : IHasServices
         if (handler != null)
             handler.Invoke(invocation);
         else
-            invocation.Intercepted();
+            invocation.InvokeIntercepted();
     }
 
     /// <summary>
@@ -94,7 +94,7 @@ public abstract class Interceptor : IHasServices
         var handler = SelectHandler(invocation);
         return handler != null
             ? (TResult)handler.Invoke(invocation)!
-            : invocation.Intercepted<TResult>();
+            : invocation.InvokeIntercepted<TResult>();
     }
 
     public virtual Func<Invocation, object?>? SelectHandler(in Invocation invocation)

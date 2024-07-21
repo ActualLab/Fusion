@@ -66,14 +66,15 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             headers.Count > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
     }
 
+    public Task WhenConnected()
+        => Peer.WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CancellationToken);
+
+    public Task WhenConnected(CancellationToken cancellationToken)
+        => Peer.WhenConnected(MethodDef.Timeouts.ConnectTimeout, cancellationToken);
+
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public Task RegisterAndSend()
     {
-        if (NoWait)
-            throw Errors.InternalError("This method should never be called for NoWait calls.");
-        if (Id != 0)
-            throw Errors.InternalError("This method should never be called repeatedly for the same call.");
-
         Peer.OutboundCalls.Register(this);
         var sendTask = SendRegistered();
 
@@ -224,6 +225,28 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
         ResultSource = NoWait || CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly
             ? CompletedDefaultResultSource
             : new TaskCompletionSource<TResult>();
+    }
+
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    public Task<TResult> Invoke(bool assumeConnected = true)
+    {
+        if (CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly)
+            RegisterCacheKeyOnly();
+        else if (NoWait) // NoWait always means "send immediately, even if disconnected"
+            _ = SendNoWait(MethodDef.AllowArgumentPolymorphism);
+        else if (Peer.IsConnected() || assumeConnected)
+            _ = RegisterAndSend(); // Fast path
+        else
+            return InvokeOnceConnectedAsync(); // Slow path
+
+        return ResultTask;
+
+        async Task<TResult> InvokeOnceConnectedAsync()
+        {
+            await WhenConnected().ConfigureAwait(false);
+            _ = RegisterAndSend();
+            return await ResultTask.ConfigureAwait(false);
+        }
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]

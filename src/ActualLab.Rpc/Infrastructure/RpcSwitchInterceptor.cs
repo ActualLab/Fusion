@@ -14,17 +14,23 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
         public static Options Default { get; set; } = new();
     }
 
-    public Options Settings { get; }
-    public object? LocalTarget { get; init; }
-    public object? RemoteTarget { get; init; }
-    public RpcSafeCallRouter CallRouter { get; }
+    public readonly Options Settings;
+    public readonly RpcSafeCallRouter CallRouter;
+    public readonly object? LocalTarget;
+    public readonly object? RemoteTarget;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public RpcSwitchInterceptor(Options settings, IServiceProvider services, RpcServiceDef serviceDef)
+    public RpcSwitchInterceptor(
+        Options settings, IServiceProvider services,
+        RpcServiceDef serviceDef,
+        object? localTarget,
+        object? remoteTarget)
         : base(settings, services, serviceDef)
     {
         Settings = settings;
         CallRouter = Hub.CallRouter;
+        LocalTarget = localTarget;
+        RemoteTarget = remoteTarget;
     }
 
     public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
@@ -43,19 +49,21 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
         return invocation => {
             var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
             Task<TUnwrapped> resultTask;
-            if (peer.Ref.CanBeRerouted) {
+            if (peer.Ref.CanBeRerouted)
                 resultTask = InvokeWithRerouting(rpcMethodDef, localCallAsyncInvoker, remoteCallAsyncInvoker, invocation, peer);
-            }
             else if (peer.ConnectionKind == RpcPeerConnectionKind.Local) {
+                if (localCallAsyncInvoker == null)
+                    throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
+
                 resultTask = localCallAsyncInvoker.Invoke(invocation);
             }
             else {
                 var context = invocation.Context as RpcOutboundContext ?? new();
-                context.Peer = peer; // We already know the peer - this allows to skip its detection
+                context.Peer = peer; // We already know the peer, so let's skip RpcCallRouter call
                 invocation = invocation.With(context);
                 resultTask = remoteCallAsyncInvoker.Invoke(invocation);
             }
-            return rpcMethodDef.WrapAsyncInvokerResult(resultTask);
+            return rpcMethodDef.WrapAsyncInvokerResultAssumeAsync(resultTask);
         };
     }
 

@@ -65,7 +65,7 @@ public sealed class Host : WorkerBase
         fusion.AddService<IFusionCounter, FusionCounter>(ServiceMode);
         services.AddHostedService<MeshStateUpdater>();
         services.AddHostedService<LifetimeController>();
-        services.AddHostedService<Tester>();
+        services.AddHostedService<TestRunner>();
         var app = builder.Build();
 
         app.UseWebSockets();

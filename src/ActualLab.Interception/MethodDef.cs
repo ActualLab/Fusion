@@ -127,6 +127,22 @@ public class MethodDef
                 : resultTask.ToValueTask();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public object? WrapResultAssumeAsync<TUnwrapped>(TUnwrapped result)
+        => ReturnsTask
+            ? Task.FromResult(result)
+            : IsAsyncVoidMethod
+                ? ValueTaskExt.CompletedTask
+                : ValueTaskExt.FromResult(result);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public object? WrapAsyncInvokerResultAssumeAsync<TUnwrapped>(Task<TUnwrapped> resultTask)
+        => ReturnsTask
+            ? resultTask
+            : IsAsyncVoidMethod
+                ? ((Task)resultTask).ToValueTask()
+                : resultTask.ToValueTask();
+
     public Func<Invocation, Task<TUnwrapped>>? SelectAsyncInvoker<TUnwrapped>(
         object proxy,
         object? target = null)
@@ -233,25 +249,25 @@ public class MethodDef
         if (methodDef.ReturnsTask)
             return methodDef.IsAsyncVoidMethod
                 ? invocation => {
-                    var result = invocation.Intercepted<Task>().ToUnitTask();
+                    var result = invocation.InvokeIntercepted<Task>().ToUnitTask();
                     return result as Task<TUnwrapped> ?? throw new InvalidCastException();
                 }
-                : invocation => invocation.Intercepted<Task<TUnwrapped>>();
+                : invocation => invocation.InvokeIntercepted<Task<TUnwrapped>>();
 
         if (methodDef.ReturnsValueTask)
             return methodDef.IsAsyncVoidMethod
                 ? invocation => {
-                    var result = invocation.Intercepted<ValueTask>().ToUnitTask();
+                    var result = invocation.InvokeIntercepted<ValueTask>().ToUnitTask();
                     return result as Task<TUnwrapped> ?? throw new InvalidCastException();
                 }
-                : invocation => invocation.Intercepted<ValueTask<TUnwrapped>>().AsTask();
+                : invocation => invocation.InvokeIntercepted<ValueTask<TUnwrapped>>().AsTask();
 
         if (methodDef.ReturnType == typeof(void))
             return invocation => {
-                invocation.Intercepted();
+                invocation.InvokeIntercepted();
                 return TaskExt.UnitTask as Task<TUnwrapped> ?? throw new InvalidCastException();
             };
 
-        return invocation => Task.FromResult(invocation.Intercepted<TUnwrapped>());
+        return invocation => Task.FromResult(invocation.InvokeIntercepted<TUnwrapped>());
     }
 }

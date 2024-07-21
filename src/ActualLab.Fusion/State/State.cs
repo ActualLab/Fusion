@@ -242,7 +242,7 @@ public abstract class State<T> : ComputedInput,
 
     // IFunction<T>
 
-    FusionInternalHub IComputeFunction.Hub => Services.GetRequiredService<FusionInternalHub>();
+    FusionHub IComputeFunction.Hub => Services.GetRequiredService<FusionHub>();
 
     ValueTask<Computed<T>> IComputeFunction<T>.Invoke(
         ComputedInput input,
