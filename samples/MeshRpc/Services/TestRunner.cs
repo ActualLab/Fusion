@@ -83,9 +83,14 @@ public class TestRunner(IServiceProvider services) : WorkerBase
 
                 var lastState = UpdateLastState(state, serviceName);
                 var isFailed = false;
+                var message = $"{prefix} -> {state}";
                 if (lastState != null && state.Value < lastState.Value) {
-                    if (computed != null) {
-                        await computed.WhenSynchronized(cancellationToken).ConfigureAwait(false);
+                    if (computed != null && TrySynchronizeComputed) {
+                        var whenSynchronized = computed.WhenSynchronized(cancellationToken);
+                        if (!whenSynchronized.IsCompleted) {
+                            Console.WriteLine($"{message} - synchronizing".PastelBg(ConsoleColor.DarkYellow));
+                            await whenSynchronized.ConfigureAwait(false);
+                        }
                         computed = await computed.Update(cancellationToken).ConfigureAwait(false);
                         state = computed.Value;
                         lastState = UpdateLastState(state, serviceName);
@@ -96,7 +101,6 @@ public class TestRunner(IServiceProvider services) : WorkerBase
                         isFailed = true;
                 }
 
-                var message = $"{prefix} -> {state}";
                 if (isFailed) {
                     var timeDelta = state.CreatedAt - lastState!.CreatedAt;
                     message = $"{message} - {state.Value} < {lastState.Value}, {timeDelta.ToShortString()}"

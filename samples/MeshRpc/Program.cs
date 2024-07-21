@@ -7,6 +7,11 @@ using Samples.MeshRpc;
 using static Samples.MeshRpc.HostFactorySettings;
 using Host = Samples.MeshRpc.Host;
 
+var s1 = new ShardRef(0);
+var s2 = new ShardRef(1);
+Console.WriteLine(s1 == s2);
+// Console.ReadKey();
+
 var stopTokenSource = new CancellationTokenSource();
 var stopToken = stopTokenSource.Token;
 Console.CancelKeyPress += (_, e) => {
@@ -26,7 +31,7 @@ async Task AddHosts(CancellationToken cancellationToken = default)
     var maxAddProbability = (MaxHostCount - MinHostCount) / MaxHostCount;
     try {
         while (true) {
-            var hostCount = meshState.Value.Hosts.Count;
+            var hostCount = meshState.Value.Hosts.Length;
             var addProbability = (MaxHostCount - hostCount) / MaxHostCount;
             if (addProbability > maxAddProbability)
                 addProbability = 1;
@@ -39,7 +44,7 @@ async Task AddHosts(CancellationToken cancellationToken = default)
     finally {
         await clientHost.DisposeAsync().ConfigureAwait(false);
         while (true) {
-            var hostCount = meshState.Value.Hosts.Count;
+            var hostCount = meshState.Value.Hosts.Length;
             if (hostCount == 0)
                 break;
 

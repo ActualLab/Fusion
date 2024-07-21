@@ -59,8 +59,9 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
             await counters.Get("a");
         });
 
-        c = await Computed.Capture(() => counters.Get("a"));
-        c.Error.Should().BeOfType<InvalidOperationException>();
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+            await Computed.Capture(() => counters.Get("a"));
+        });
     }
 
     [Fact]

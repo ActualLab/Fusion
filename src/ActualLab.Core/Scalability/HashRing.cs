@@ -1,8 +1,6 @@
-using System.Runtime.CompilerServices;
-using ActualLab.Mathematics;
 using Microsoft.Toolkit.HighPerformance;
 
-namespace Samples.MeshRpc;
+namespace ActualLab.Scalability;
 
 public readonly struct HashRing<T>
     where T : notnull

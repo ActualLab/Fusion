@@ -108,8 +108,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
             peer.Start();
             if (peerRef.CanBeRerouted)
                 _ = peerRef.WhenRerouted().ContinueWith(_ => {
-                    peer.Log.LogWarning("'{PeerRef}': Ref is rerouted, disposing the peer {Peer}...", peer.Ref, peer);
                     peer.Dispose();
+                    peer.Log.LogWarning("'{PeerRef}': Ref is rerouted, peer {Peer} is disposed", peer.Ref, peer);
                 }, TaskScheduler.Default);
             return peer;
         }

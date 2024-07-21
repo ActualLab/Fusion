@@ -1,16 +1,21 @@
+using System.Collections.Immutable;
 using ActualLab.Fusion;
+using ActualLab.Scalability;
 using ActualLab.Text;
+using Pastel;
 
 namespace Samples.MeshRpc;
 
 public sealed class MeshState
 {
-    public static MutableState<MeshState> State { get; }
-        = StateFactory.Default.NewMutable(new MeshState());
+    private static long _lastVersion;
 
-    public IReadOnlyList<Host> Hosts { get; }
+    public static MutableState<MeshState> State { get; }
+
+    public long Version { get; } = Interlocked.Increment(ref _lastVersion);
+    public ImmutableArray<Host> Hosts { get; }
     public IReadOnlyDictionary<Symbol, Host> HostById { get; }
-    public HashRing<Host> HashRing { get; }
+    public ShardMap<Host> ShardMap { get; }
 
     public static void Register(Host host)
         => State.Set(x => x.Value.WithHost(host));
@@ -18,16 +23,25 @@ public sealed class MeshState
     public static void Unregister(Host host)
         => State.Set(x => x.Value.WithoutHost(host));
 
+    static MeshState()
+    {
+        State = StateFactory.Default.NewMutable(new MeshState());
+        _ = Task.Run(async () => {
+            await foreach (var (state, _) in State.Changes())
+                Console.WriteLine($"Updated shard map: {state.ShardMap}".Pastel(ConsoleColor.Blue));
+        });
+    }
+
     public MeshState(IReadOnlyList<Host>? hosts = null)
     {
-        hosts ??= Array.Empty<Host>();
-        Hosts = hosts.OrderBy(x => x.Id).ToArray();
+        hosts ??= [];
+        Hosts = [..hosts.OrderBy(x => x.Id)];
         HostById = hosts.ToDictionary(h => h.Id);
-        HashRing = new HashRing<Host>(hosts, h => h.Hash);
+        ShardMap = new ShardMap<Host>(MeshSettings.ShardCount, Hosts);
     }
 
     public Host? GetShardHost(ShardRef shardRef)
-        => HashRing.IsEmpty ? null : HashRing.FindNode(shardRef.Key * 1_299_709);
+        => ShardMap.IsEmpty ? null : ShardMap[shardRef.Key];
 
     public MeshState WithHost(Host host)
     {

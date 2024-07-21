@@ -136,17 +136,8 @@ public class RemoteComputeMethodFunction<T>(
         // SendRpcCall uses an interceptor with AssumeConnected == false,
         // so we await for the connection here.
         var whenConnected = WhenConnectedChecked(input, peer, cancellationToken);
-        if (!whenConnected.IsCompletedSuccessfully) { // Slow path
-            try {
-                await whenConnected.ConfigureAwait(false);
-            }
-            catch (Exception whenConnectedError) {
-                var errorComputed = new ComputeMethodComputed<T>(input.MethodDef.ComputedOptions, input);
-                errorComputed.TrySetOutput(Result.Error<T>(whenConnectedError));
-                existing?.SynchronizedSource.TrySetResult(default);
-                return errorComputed;
-            }
-        }
+        if (!whenConnected.IsCompletedSuccessfully) // Slow path
+            await whenConnected.ConfigureAwait(false);
 
         var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
         var (result, call) = await SendRpcCall(input, peer, cacheInfoCapture, cancellationToken).ConfigureAwait(false);
@@ -232,10 +223,7 @@ public class RemoteComputeMethodFunction<T>(
                 await whenConnected.ConfigureAwait(false);
             }
             catch (Exception whenConnectedError) {
-                // We want to throw the error here, but the call is already resolved from cache.
-                // The best we can do here is to invalidate cached computed to trigger its update.
-                // We don't remove the cached value, coz this doesn't necessarily mean it's outdated.
-                InvalidateToProduceError(cachedComputed, whenConnectedError);
+                await InvalidateOnError(cachedComputed, whenConnectedError).ConfigureAwait(false);
                 return;
             }
         }
@@ -244,9 +232,6 @@ public class RemoteComputeMethodFunction<T>(
         var cacheInfoCapture = new RpcCacheInfoCapture();
         var (result, call) = await SendRpcCall(input, peer, cacheInfoCapture, default).ConfigureAwait(false);
         if (call == null || result.Error is RpcRerouteException) {
-            // The call either wasn't sent or rerouted while being in flight.
-            // The best we can do here is to invalidate cached computed to trigger its update.
-            // We don't remove the cached value, coz this doesn't necessarily mean it's outdated.
             await InvalidateToReroute(cachedComputed, result.Error).ConfigureAwait(false);
             return;
         }
@@ -447,11 +432,12 @@ public class RemoteComputeMethodFunction<T>(
     protected Task WhenConnectedChecked(
         ComputeMethodInput input, RpcPeer peer, CancellationToken cancellationToken = default)
     {
-        return peer.ConnectionState.Value.Handshake is not { } handshake
-            ? CompleteWhenConnected(input, peer, RpcMethodDef, cancellationToken) // Slow path
-            : handshake.RemoteHubId == RpcHub.Id && input.Invocation.Proxy is not InterfaceProxy
-                ? Task.FromException(Errors.RemoteComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref))
-                : Task.CompletedTask;
+        if (peer.ConnectionState.Value.Handshake is not { } handshake)
+            return CompleteWhenConnected(input, peer, RpcMethodDef, cancellationToken);
+
+        return handshake.RemoteHubId == RpcHub.Id && input.Invocation.Proxy is not InterfaceProxy
+            ? Task.FromException(Errors.RemoteComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref))
+            : Task.CompletedTask;
 
         static async Task CompleteWhenConnected(
             ComputeMethodInput input, RpcPeer peer, RpcMethodDef rpcMethodDef, CancellationToken cancellationToken)
@@ -465,6 +451,17 @@ public class RemoteComputeMethodFunction<T>(
             if (handshake.RemoteHubId == rpcHubId && input.Invocation.Proxy is not InterfaceProxy)
                 throw Errors.RemoteComputeMethodCallFromTheSameService(rpcMethodDef, peer.Ref);
         }
+    }
+
+    // InvalidateXxx
+
+    protected Task InvalidateOnError(RemoteComputed<T> computed, Exception? error)
+    {
+        if (error is RpcRerouteException)
+            return InvalidateToReroute(computed, error);
+
+        InvalidateToProduceError(computed, error);
+        return Task.CompletedTask;
     }
 
     protected void InvalidateToProduceError(RemoteComputed<T> computed, Exception? error)
