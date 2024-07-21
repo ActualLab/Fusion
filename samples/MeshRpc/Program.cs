@@ -7,11 +7,6 @@ using Samples.MeshRpc;
 using static Samples.MeshRpc.HostFactorySettings;
 using Host = Samples.MeshRpc.Host;
 
-var s1 = new ShardRef(0);
-var s2 = new ShardRef(1);
-Console.WriteLine(s1 == s2);
-// Console.ReadKey();
-
 var stopTokenSource = new CancellationTokenSource();
 var stopToken = stopTokenSource.Token;
 Console.CancelKeyPress += (_, e) => {
