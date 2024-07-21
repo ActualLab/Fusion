@@ -1,5 +1,6 @@
 using ActualLab.Async;
 using ActualLab.Fusion;
+using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Server;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
@@ -20,6 +21,7 @@ public sealed class Host : WorkerBase
     public int Hash { get; }
     public int PortSlot { get; }
     public RpcServiceMode ServiceMode { get; }
+    public bool UseRemoteComputedCache { get; }
     public string Url { get; }
     public WebApplication App { get; }
     public IServiceProvider Services => App.Services;
@@ -34,8 +36,9 @@ public sealed class Host : WorkerBase
             : UseHybridServiceSampler.Next()
                 ? RpcServiceMode.Hybrid
                 : RpcServiceMode.ServerAndClient;
+        UseRemoteComputedCache = UseHybridServiceSampler.Next();
 
-        Id = $"{ServiceMode:G}-{Interlocked.Increment(ref _lastId)}:{portSlot}";
+        Id = $"{ServiceMode:G}{(UseRemoteComputedCache ? "+Cache" : "")}-{Interlocked.Increment(ref _lastId)}:{portSlot}";
         Ref = new HostRef(Id);
         Hash = Random.Shared.Next();
         PortSlot = portSlot;
@@ -57,11 +60,14 @@ public sealed class Host : WorkerBase
             };
         });
         services.AddSingleton<RpcCallRouter>(c => c.GetRequiredService<RpcHelpers>().RouteCall);
+        if (UseRemoteComputedCache)
+            fusion.AddSharedRemoteComputedCache<InMemoryRemoteComputedCache, InMemoryRemoteComputedCache.Options>(
+                _ => InMemoryRemoteComputedCache.Options.Default);
 
         // Actual services
         services.AddSingleton(_ => this);
-        fusion.Rpc.AddService<ICounter, Counter>(ServiceMode);
-        fusion.Commander.AddHandlers<ICounter>();
+        fusion.Rpc.AddService<ISimpleCounter, SimpleCounter>(ServiceMode);
+        fusion.Commander.AddHandlers<ISimpleCounter>();
         fusion.AddService<IFusionCounter, FusionCounter>(ServiceMode);
         services.AddHostedService<MeshStateUpdater>();
         services.AddHostedService<LifetimeController>();

@@ -11,7 +11,8 @@ public static class MeshSettings
 public static class HostFactorySettings
 {
     public static readonly Sampler UseHybridServiceSampler = Sampler.RandomShared(0.5);
-    public static readonly double MinHostCount = 1;
+    public static readonly Sampler UseRemoteComputedCacheSampler = Sampler.RandomShared(0.5);
+    public static readonly double MinHostCount = 0;
     public static readonly double MaxHostCount = 5;
     public static readonly RandomTimeSpan HostTryAddPeriod = TimeSpan.FromSeconds(1).ToRandom(0.5);
     public static readonly RandomTimeSpan HostLifespan = TimeSpan.FromSeconds(5).ToRandom(0.75);
@@ -21,12 +22,13 @@ public static class HostFactorySettings
 
 public static class TestSettings
 {
+    public static readonly int CounterCount = 20;
+    public static readonly int MaxRetryCount = 3;
     public static readonly Sampler UseFusionSampler = Sampler.RandomShared(0.5);
     public static readonly Sampler IncrementSampler = Sampler.RandomShared(0.25);
     public static readonly bool MustRunOnClientHost = true;
     public static readonly bool MustRunOnServerHost = true;
-    public static readonly int ProcessesPerHost = 3;
+    public static readonly int ProcessesPerHost = 5;
     public static readonly RandomTimeSpan CallPeriod = TimeSpan.FromSeconds(0.25).ToRandom(0.5);
     public static readonly TimeSpan TestStopDelay = TimeSpan.FromSeconds(5);
-    public static readonly bool TrySynchronizeComputed = true;
 }

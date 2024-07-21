@@ -1,5 +1,6 @@
 using ActualLab;
 using ActualLab.Async;
+using ActualLab.Collections;
 using ActualLab.CommandR;
 using ActualLab.DependencyInjection;
 using ActualLab.Fusion;
@@ -13,11 +14,9 @@ namespace Samples.MeshRpc.Services;
 
 public class TestRunner(IServiceProvider services) : WorkerBase
 {
-    private readonly Dictionary<(Symbol HostId, Symbol ServiceName), CounterState> _lastStates = new();
-
     private IServiceProvider Services { get; } = services;
     private Host OwnHost { get; } = services.GetRequiredService<Host>();
-    private ICounter Counter { get; } = services.GetRequiredService<ICounter>();
+    private ISimpleCounter SimpleCounter { get; } = services.GetRequiredService<ISimpleCounter>();
     private IFusionCounter FusionCounter { get; } = services.GetRequiredService<IFusionCounter>();
     private ICommander Commander { get; } = services.Commander();
 
@@ -51,77 +50,82 @@ public class TestRunner(IServiceProvider services) : WorkerBase
         var rnd = new Random();
         for (var callId = 0;; callId++) {
             var useFusion = UseFusionSampler.Next();
-            var serviceName = (Symbol)(useFusion ? nameof(IFusionCounter) : nameof(ICounter));
+            var serviceName = (Symbol)(useFusion ? nameof(IFusionCounter) : nameof(ISimpleCounter));
             var mustIncrement = IncrementSampler.Next();
-            var shardRef = ShardRef.New(rnd.Next());
+            var key = rnd.Next(CounterCount);
 
-            var prefix = $"{OwnHost} T{workerId}/{callId}: {serviceName}";
+            var prefix = $"{OwnHost} W{workerId}: call #{callId} {serviceName}";
             if (mustIncrement) {
-                prefix += $".Increment({shardRef})";
+                prefix += $".Increment({key})";
                 Console.WriteLine($"{prefix}...".Pastel(ConsoleColor.Gray));
-                var command = useFusion
-                    ? (ICommand)new FusionCounter_Increment(shardRef)
-                    : new Counter_Increment(shardRef);
-                await Commander.Call(command, cancellationToken).ConfigureAwait(false);
-                Console.WriteLine($"{prefix} -> ok");
+                var incrementTask = useFusion
+                    ? Commander.Call(new FusionCounter_Increment(key), cancellationToken)
+                    : Commander.Call(new SimpleCounter_Increment(key), cancellationToken);
+                var result = await incrementTask.ConfigureAwait(false);
+                Console.WriteLine($"{prefix} -> {result}");
             }
             else {
-                prefix += $".Get({shardRef})";
+                prefix += $".Get({key})";
                 Console.WriteLine($"{prefix}...".Pastel(ConsoleColor.Gray));
 
                 var useFusionCopy = useFusion;
-                var shardRefCopy = shardRef;
+                var shardRefCopy = key;
                 var computed = await Computed.TryCapture(
                     () => useFusionCopy
                         ? FusionCounter.Get(shardRefCopy, cancellationToken)
-                        : Counter.Get(shardRefCopy, cancellationToken)
+                        : SimpleCounter.Get(shardRefCopy, cancellationToken)
                     , cancellationToken).ConfigureAwait(false);
 
-                var state = useFusion
-                    ? await FusionCounter.Get(shardRef, cancellationToken).ConfigureAwait(false)
-                    : await Counter.Get(shardRef, cancellationToken).ConfigureAwait(false);
+                var counter = useFusion
+                    ? await FusionCounter.Get(key, cancellationToken).ConfigureAwait(false)
+                    : await SimpleCounter.Get(key, cancellationToken).ConfigureAwait(false);
+                var message = $"{prefix} -> {counter}";
 
-                var lastState = UpdateLastState(state, serviceName);
-                var isFailed = false;
-                var message = $"{prefix} -> {state}";
-                if (lastState != null && state.Value < lastState.Value) {
-                    if (computed != null && TrySynchronizeComputed) {
+                var trueCounter = CounterStorage.Get(key);
+                var fixupActions = new List<string>();
+                var isCorrect = IsCorrect(counter, trueCounter);
+                for (var tryIndex = 0; !isCorrect && tryIndex < MaxRetryCount; tryIndex++) {
+                    if (tryIndex > 0) {
+                        fixupActions.Add("wait 200ms");
+                        await Task.Delay(200, cancellationToken).ConfigureAwait(false);
+                    }
+                    if (computed != null) {
+                        // The logic below does ~ what computed.Synchronize() does, but step-by-step w/ logging
                         var whenSynchronized = computed.WhenSynchronized(cancellationToken);
                         if (!whenSynchronized.IsCompleted) {
-                            Console.WriteLine($"{message} - synchronizing".PastelBg(ConsoleColor.DarkYellow));
-                            await whenSynchronized.ConfigureAwait(false);
+                            fixupActions.Add("synchronize");
+                            await whenSynchronized.ConfigureAwait(false); // Completes when a value from RemoteComputedCache is in sync or unused
                         }
-                        computed = await computed.Update(cancellationToken).ConfigureAwait(false);
-                        state = computed.Value;
-                        lastState = UpdateLastState(state, serviceName);
-                        if (lastState != null && state.Value < lastState.Value)
-                            isFailed = true;
+                        if (!computed.IsConsistent()) {
+                            fixupActions.Add("update inconsistent");
+                            computed = await computed.Update(cancellationToken).ConfigureAwait(false);
+                        }
+                        counter = computed.Value;
                     }
-                    else
-                        isFailed = true;
+                    else {
+                        fixupActions.Add("retry .Get call");
+                        counter = await SimpleCounter.Get(key, cancellationToken).ConfigureAwait(false);
+                    }
+                    isCorrect = IsCorrect(counter, trueCounter);
                 }
+                if (fixupActions.Count != 0)
+                    Console.WriteLine($"{message}: {fixupActions.ToDelimitedString()}".PastelBg(ConsoleColor.DarkYellow));
 
-                if (isFailed) {
-                    var timeDelta = state.CreatedAt - lastState!.CreatedAt;
-                    message = $"{message} - {state.Value} < {lastState.Value}, {timeDelta.ToShortString()}"
+                if (!isCorrect) {
+                    var recency = counter.Counter.UpdatedAt.Elapsed;
+                    message = $"{message} - {counter.Counter.Value} < {trueCounter.Value}, read {recency.ToShortString()} ago"
                         .PastelBg(ConsoleColor.DarkRed);
                 }
                 Console.WriteLine(message);
             }
             await Task.Delay(CallPeriod.Next(), cancellationToken).ConfigureAwait(false);
         }
+        // ReSharper disable once FunctionNeverReturns
     }
 
-    private CounterState? UpdateLastState(CounterState state, Symbol serviceName)
+    public static bool IsCorrect(CounterWithOrigin counterWithOrigin, Counter trueCounter)
     {
-        lock (_lastStates) {
-            var key = (state.HostId, serviceName);
-            var lastState = _lastStates.GetValueOrDefault(key);
-            if (lastState == null)
-                _lastStates[key] = state;
-            else
-                _lastStates[key] = state;
-            return lastState;
-        }
+        var counter = counterWithOrigin.Counter;
+        return counter.Value >= trueCounter.Value;
     }
 }

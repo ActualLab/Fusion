@@ -104,7 +104,7 @@ public abstract class Computed<T> : Computed, IResult<T>
         if (this.IsConsistent())
             return this;
 
-        using var scope = Computed.BeginIsolation();
+        using var scope = BeginIsolation();
         return await Function.Invoke(Input, scope.Context, cancellationToken).ConfigureAwait(false);
     }
 

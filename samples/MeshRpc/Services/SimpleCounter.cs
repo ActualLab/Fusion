@@ -1,24 +1,22 @@
 using System.Runtime.Serialization;
-using ActualLab;
 using MemoryPack;
 using ActualLab.CommandR;
 using ActualLab.CommandR.Configuration;
-using ActualLab.Fusion;
+using ActualLab.Rpc;
 using static Samples.MeshRpc.HostFactorySettings;
 
 namespace Samples.MeshRpc.Services;
 
-public interface IFusionCounter : IComputeService
+public interface ISimpleCounter : IRpcService
 {
-    [ComputeMethod]
     Task<CounterWithOrigin> Get(int key, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task<CounterWithOrigin> Increment(FusionCounter_Increment command, CancellationToken cancellationToken);
+    Task<CounterWithOrigin> Increment(SimpleCounter_Increment command, CancellationToken cancellationToken);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 // ReSharper disable once InconsistentNaming
-public sealed partial record FusionCounter_Increment(
+public sealed partial record SimpleCounter_Increment(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] int Key
 ) : ICommand<CounterWithOrigin>, IHasShardRef
 {
@@ -26,21 +24,20 @@ public sealed partial record FusionCounter_Increment(
     public ShardRef ShardRef => ShardRef.New(Key);
 }
 
-public class FusionCounter(Host ownHost) : IFusionCounter
+public class SimpleCounter(Host ownHost) : ISimpleCounter
 {
-    // [ComputeMethod]
     public virtual async Task<CounterWithOrigin> Get(int key, CancellationToken cancellationToken = default)
     {
         var delay = CounterGetDelay.Next();
         if (delay > TimeSpan.Zero)
             await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
 
-        var counter = await CounterStorage.Use(key, cancellationToken).ConfigureAwait(false);
+        var counter = CounterStorage.Get(key);
         return new CounterWithOrigin(counter, ownHost.Id);
     }
 
     // [CommandHandler]
-    public virtual async Task<CounterWithOrigin> Increment(FusionCounter_Increment command, CancellationToken cancellationToken)
+    public virtual async Task<CounterWithOrigin> Increment(SimpleCounter_Increment command, CancellationToken cancellationToken)
     {
         var delay = CounterIncrementDelay.Next();
         if (delay > TimeSpan.Zero)
