@@ -95,9 +95,6 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
         return Call;
     }
 
-    public bool IsPeerChanged()
-        => Peer != MethodDef!.Hub.CallRouter.Invoke(MethodDef, Arguments!);
-
     // Nested types
 
     public readonly struct Scope : IDisposable

@@ -31,7 +31,7 @@ public sealed class Host : WorkerBase
     {
         ServiceMode = portSlot < 0
             ? RpcServiceMode.Client
-            : UseHybridMode.Next()
+            : UseHybridServiceSampler.Next()
                 ? RpcServiceMode.Hybrid
                 : RpcServiceMode.ServerAndClient;
 

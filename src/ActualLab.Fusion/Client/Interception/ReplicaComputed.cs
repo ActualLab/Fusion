@@ -8,12 +8,19 @@ public interface IReplicaComputed
     Computed? Original { get; }
 }
 
-public class ReplicaComputed<T>(ComputedOptions options, ComputeMethodInput input)
-    : ComputeMethodComputed<T>(options, input), IReplicaComputed
+public class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaComputed
 {
     private volatile Computed? _original;
 
     public Computed? Original => _original;
+
+    public ReplicaComputed(ComputedOptions options, ComputeMethodInput input)
+        : base(options, input)
+    { }
+
+    protected ReplicaComputed(ComputedOptions options, ComputeMethodInput input, Result<T> output, bool isConsistent = true)
+        : base(options, input, output, isConsistent)
+    { }
 
     public void Dispose()
     { }

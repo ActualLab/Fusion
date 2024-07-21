@@ -119,7 +119,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public bool IsConnected()
         => ConnectionState.Value.Connection != null;
 
-    public Task WhenConnected(TimeSpan timeout, CancellationToken cancellationToken)
+    public Task WhenConnected(CancellationToken cancellationToken = default)
+        => ConnectionState.WhenConnected(cancellationToken);
+
+    public Task WhenConnected(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         return IsConnected()
             ? Task.CompletedTask
@@ -127,8 +130,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 ? WhenConnectedAsync(this, timeout, cancellationToken)
                 : ConnectionState.WhenConnected(cancellationToken);
 
-        static async Task WhenConnectedAsync(RpcPeer peer, TimeSpan timeout1, CancellationToken cancellationToken1)
-        {
+        static async Task WhenConnectedAsync(RpcPeer peer, TimeSpan timeout1, CancellationToken cancellationToken1) {
             using var timeoutCts = cancellationToken1.CreateLinkedTokenSource(timeout1);
             var timeoutToken = timeoutCts.Token;
             try {

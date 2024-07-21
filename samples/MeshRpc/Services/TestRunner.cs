@@ -50,9 +50,9 @@ public class TestRunner(IServiceProvider services) : WorkerBase
     {
         var rnd = new Random();
         for (var callId = 0;; callId++) {
-            var useFusion = rnd.NextDouble() <= FusionServiceUseProbability;
+            var useFusion = UseFusionSampler.Next();
             var serviceName = (Symbol)(useFusion ? nameof(IFusionCounter) : nameof(ICounter));
-            var mustIncrement = rnd.NextDouble() <= IncrementProbability;
+            var mustIncrement = IncrementSampler.Next();
             var shardRef = ShardRef.New(rnd.Next());
 
             var prefix = $"{OwnHost} T{workerId}/{callId}: {serviceName}";

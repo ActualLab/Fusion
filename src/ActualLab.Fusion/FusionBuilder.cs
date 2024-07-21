@@ -72,7 +72,6 @@ public readonly struct FusionBuilder
         services.AddSingleton(c => new ComputeServiceInterceptor(
             c.GetRequiredService<ComputeServiceInterceptor.Options>(),
             c.FusionHub()));
-        services.AddSingleton(_ => RemoteComputeCallOptions.Default);
 
         // StateFactory
         services.AddSingleton(c => new MixedModeService<StateFactory>.Singleton(new StateFactory(c), c));

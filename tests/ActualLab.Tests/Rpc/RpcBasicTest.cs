@@ -32,6 +32,41 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     [Fact]
+    public async Task WhenConnectedTest1()
+    {
+        await using var services = CreateServices();
+        var peer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
+
+        var whenConnectedTask = peer.WhenConnected();
+        await peer.DisposeAsync();
+
+        var whenConnectedResult = await whenConnectedTask.ResultAwait();
+        whenConnectedResult.Error.Should().BeOfType<RpcReconnectFailedException>();
+    }
+
+    [Fact]
+    public async Task WhenConnectedTest2()
+    {
+        await using var services = CreateServices();
+        var testConnection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
+        var peer = testConnection.ClientPeer;
+
+        await peer.WhenConnected();
+        peer.WhenConnected().IsCompletedSuccessfully.Should().BeTrue();
+
+        testConnection.Disconnect();
+        await peer.ConnectionState.WhenDisconnected();
+
+        var whenConnectedResult = await peer.WhenConnected(TimeSpan.FromSeconds(1)).ResultAwait();
+        whenConnectedResult.Error.Should().BeOfType<RpcDisconnectedException>();
+
+        var whenConnectedTask = peer.WhenConnected(TimeSpan.FromHours(1));
+        await peer.DisposeAsync();
+        whenConnectedResult = await whenConnectedTask.ResultAwait();
+        whenConnectedResult.Error.Should().BeOfType<RpcReconnectFailedException>();
+    }
+
+    [Fact]
     public async Task TraceTest()
     {
         await using var services = CreateServices(s => {

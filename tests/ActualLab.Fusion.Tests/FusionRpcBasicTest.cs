@@ -46,6 +46,10 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
     {
         ServiceMode = RpcServiceMode.Hybrid;
         var services = CreateServices();
+        var testClient = services.GetRequiredService<RpcTestClient>();
+        var clientPeer = testClient.Connections.First().Value.ClientPeer;
+        await clientPeer.WhenConnected();
+
         var counters = services.GetRequiredService<ICounterService>();
 
         var c = Computed.GetExisting(() => counters.Get("a"));

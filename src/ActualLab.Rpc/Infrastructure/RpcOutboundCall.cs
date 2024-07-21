@@ -66,12 +66,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             headers.Count > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
     }
 
-    public Task WhenConnected()
-        => Peer.WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CancellationToken);
-
-    public Task WhenConnected(CancellationToken cancellationToken)
-        => Peer.WhenConnected(MethodDef.Timeouts.ConnectTimeout, cancellationToken);
-
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public Task RegisterAndSend()
     {
@@ -208,6 +202,18 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             // will be cancelled anyway.
         }
     }
+
+    public bool IsPeerChanged()
+        => Peer != MethodDef.Hub.CallRouter.Invoke(MethodDef, Context.Arguments!);
+
+    public void SetRerouteError()
+    {
+        var error = RpcRerouteException.MustReroute();
+        // This SetError call not only sets the error, but also
+        // invalidates computed method calls awaiting the invalidation.
+        // See RpcOutboundComputeCall.SetError / when it calls SetInvalidatedUnsafe.
+        SetError(error, context: null, assumeCancelled: true);
+    }
 }
 
 public class RpcOutboundCall<TResult> : RpcOutboundCall
@@ -228,22 +234,23 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public Task<TResult> Invoke(bool assumeConnected = true)
+    public Task<TResult> Invoke(bool assumeConnected)
     {
         if (CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly)
             RegisterCacheKeyOnly();
         else if (NoWait) // NoWait always means "send immediately, even if disconnected"
             _ = SendNoWait(MethodDef.AllowArgumentPolymorphism);
-        else if (Peer.IsConnected() || assumeConnected)
+        else if (assumeConnected || Peer.IsConnected())
             _ = RegisterAndSend(); // Fast path
         else
             return InvokeOnceConnectedAsync(); // Slow path
 
         return ResultTask;
 
-        async Task<TResult> InvokeOnceConnectedAsync()
-        {
-            await WhenConnected().ConfigureAwait(false);
+        async Task<TResult> InvokeOnceConnectedAsync() {
+            await Peer
+                .WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CancellationToken)
+                .ConfigureAwait(false);
             _ = RegisterAndSend();
             return await ResultTask.ConfigureAwait(false);
         }

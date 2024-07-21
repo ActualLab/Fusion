@@ -158,7 +158,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
                 var peer = Context.Peer;
                 if (peer.CallLogger.IsLogged(this))
                     peer.CallLogger.LogInbound(this);
-                if (MethodDef.Tracer is { } tracer && tracer.Sampler.Next.Invoke())
+                if (MethodDef.Tracer is { } tracer && tracer.Sampler.Next())
                     trace = tracer.TryStartTrace(this);
 
                 // Call

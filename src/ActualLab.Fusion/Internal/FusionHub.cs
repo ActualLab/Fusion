@@ -18,8 +18,6 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
 
     internal readonly RemoteComputeServiceInterceptor.Options RemoteComputeServiceInterceptorOptions
         = services.GetRequiredService<RemoteComputeServiceInterceptor.Options>();
-    internal readonly RemoteComputeCallOptions RemoteComputeCallOptions
-        = services.GetRequiredService<RemoteComputeCallOptions>();
 
     public IServiceProvider Services { get; } = services;
     public RpcHub RpcHub { get; } = services.RpcHub();
@@ -57,7 +55,7 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
     {
         var rpcInternalServices = RpcHub.InternalServices;
         var nonComputeCallRpcInterceptor = rpcInternalServices.NewRoutingInterceptor(serviceType, CommanderHub.Interceptor);
-        var computeCallRpcInterceptor = rpcInternalServices.NewNonRoutingInterceptor(serviceType);
+        var computeCallRpcInterceptor = rpcInternalServices.NewNonRoutingInterceptor(serviceType, assumeConnected: true);
         return new(RemoteComputeServiceInterceptorOptions, this,
             nonComputeCallRpcInterceptor,
             computeCallRpcInterceptor,
