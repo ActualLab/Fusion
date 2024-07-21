@@ -180,7 +180,7 @@ public readonly struct CommanderBuilder
             throw ActualLab.Internal.Errors.MustImplement<ICommandService>(implementationType, nameof(implementationType));
 
         var descriptor = new ServiceDescriptor(serviceType,
-            c => c.CommanderHub().NewProxy(implementationType),
+            c => c.CommanderHub().NewProxy(c, implementationType),
             lifetime);
         Services.TryAdd(descriptor);
         AddHandlers(serviceType, implementationType, priorityOverride);

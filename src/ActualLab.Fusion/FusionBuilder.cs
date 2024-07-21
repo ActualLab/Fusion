@@ -314,7 +314,7 @@ public readonly struct FusionBuilder
             throw Errors.MustImplement<IHasIsDisposed>(implementationType, nameof(implementationType));
 
         var descriptor = new ServiceDescriptor(serviceType,
-            c => c.FusionHub().NewProxy(implementationType),
+            c => c.FusionHub().NewProxy(c, implementationType),
             lifetime);
         Services.Add(descriptor);
         if (addCommandHandlers)

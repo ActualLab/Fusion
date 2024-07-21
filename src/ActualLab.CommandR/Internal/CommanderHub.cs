@@ -30,11 +30,12 @@ public sealed class CommanderHub(ICommander commander, IServiceProvider services
         => _interceptor ??= Services.GetRequiredService<CommandServiceInterceptor>();
 
     public IProxy NewProxy(
+        IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         bool initialize = true)
     {
         var interceptor = Interceptor;
         interceptor.ValidateType(implementationType);
-        return Services.ActivateProxy(implementationType, interceptor, null, initialize);
+        return services.ActivateProxy(implementationType, interceptor, null, initialize);
     }
 }

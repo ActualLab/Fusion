@@ -31,12 +31,13 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
         => _interceptor ??= Services.GetRequiredService<ComputeServiceInterceptor>();
 
     public IProxy NewProxy(
+        IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         bool initialize = true)
     {
         var interceptor = Interceptor;
         interceptor.ValidateType(serviceType);
-        return Services.ActivateProxy(serviceType, interceptor, null, initialize);
+        return services.ActivateProxy(serviceType, interceptor, null, initialize);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
