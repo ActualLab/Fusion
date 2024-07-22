@@ -163,8 +163,8 @@ public readonly struct RpcBuilder
             RpcServiceMode.Local => AddLocal(serviceType, implementationType),
             RpcServiceMode.Client => AddClient(serviceType, name),
             RpcServiceMode.Server => AddServer(serviceType, implementationType, name),
-            RpcServiceMode.ServerAndClient => AddServerAndClient(serviceType, implementationType, name),
-            RpcServiceMode.Hybrid => AddHybrid(serviceType, implementationType, name),
+            RpcServiceMode.Distributed => AddDistributed(serviceType, implementationType, name),
+            RpcServiceMode.DistributedPair => AddDistributedPair(serviceType, implementationType, name),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
 
@@ -283,48 +283,15 @@ public readonly struct RpcBuilder
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddServerAndClient<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+    public RpcBuilder AddDistributed<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
         (Symbol name = default)
         where TService : class
         where TImplementation : class, TService
-        => AddServerAndClient(typeof(TService), typeof(TImplementation), name);
+        => AddDistributed(typeof(TService), typeof(TImplementation), name);
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddServerAndClient(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        Symbol name = default)
-    {
-        // DI container:
-        // - TImplementation is a singleton
-        // - TService is a switch proxy singleton routing calls to:
-        //   - either TImplementation singleton,
-        //   - or its internal TService client.
-        // RPC:
-        // - TService configured as server resolving to TImplementation, so incoming calls won't be routed
-
-        AddLocal(implementationType);
-        Services.AddSingleton(serviceType, c => {
-            var hub = c.RpcHub();
-            var localTarget = c.GetRequiredService(implementationType);
-            var remoteTarget = hub.InternalServices.NewNonRoutingInterceptor(serviceType);
-            return c.RpcHub().InternalServices.NewSwitchProxy(serviceType, serviceType, localTarget, remoteTarget);
-        });
-        Service(serviceType).HasServer(implementationType).HasName(name);
-        return this;
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddHybrid<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (Symbol name = default)
-        where TService : class
-        where TImplementation : class, TService
-        => AddHybrid(typeof(TService), typeof(TImplementation), name);
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddHybrid(
+    public RpcBuilder AddDistributed(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         Symbol name = default)
@@ -347,6 +314,39 @@ public readonly struct RpcBuilder
         Services.AddSingleton(serviceType,
             c => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, implementationType));
         Service(serviceType).HasServer(serviceType).HasName(name);
+        return this;
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
+    public RpcBuilder AddDistributedPair<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+        (Symbol name = default)
+        where TService : class
+        where TImplementation : class, TService
+        => AddDistributedPair(typeof(TService), typeof(TImplementation), name);
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
+    public RpcBuilder AddDistributedPair(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
+        Symbol name = default)
+    {
+        // DI container:
+        // - TImplementation is a singleton
+        // - TService is a switch proxy singleton routing calls to:
+        //   - either TImplementation singleton,
+        //   - or its internal TService client.
+        // RPC:
+        // - TService configured as server resolving to TImplementation, so incoming calls won't be routed
+
+        AddLocal(implementationType);
+        Services.AddSingleton(serviceType, c => {
+            var hub = c.RpcHub();
+            var localTarget = c.GetRequiredService(implementationType);
+            var remoteTarget = hub.InternalServices.NewNonRoutingInterceptor(serviceType);
+            return c.RpcHub().InternalServices.NewSwitchProxy(serviceType, serviceType, localTarget, remoteTarget);
+        });
+        Service(serviceType).HasServer(implementationType).HasName(name);
         return this;
     }
 

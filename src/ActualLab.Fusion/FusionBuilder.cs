@@ -238,8 +238,8 @@ public readonly struct FusionBuilder
             RpcServiceMode.Local => AddLocal(serviceType, implementationType, addCommandHandlers),
             RpcServiceMode.Client => AddClient(serviceType, default, addCommandHandlers),
             RpcServiceMode.Server => AddServer(serviceType, implementationType, default, addCommandHandlers),
-            RpcServiceMode.ServerAndClient => AddServerAndClient(serviceType, implementationType, default, addCommandHandlers),
-            RpcServiceMode.Hybrid => AddHybrid(serviceType, implementationType, default, addCommandHandlers),
+            RpcServiceMode.Distributed => AddDistributed(serviceType, implementationType, default, addCommandHandlers),
+            RpcServiceMode.DistributedPair => AddDistributedPair(serviceType, implementationType, default, addCommandHandlers),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
     }
@@ -342,44 +342,20 @@ public readonly struct FusionBuilder
         return this;
     }
 
-    public FusionBuilder AddServerAndClient<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
+    public FusionBuilder AddDistributed<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
         (Symbol name = default, bool addCommandHandlers = true)
-        => AddServerAndClient(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
-    public FusionBuilder AddServerAndClient(
+        => AddDistributed(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
+    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
+    public FusionBuilder AddDistributed(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         Symbol name = default,
         bool addCommandHandlers = true)
     {
-        // ~ RpcBuilder.AddServerAndClient, but for Compute Service
-
-        AddLocal(implementationType, false);
-        Services.AddSingleton(serviceType, c => {
-            var localTarget = c.GetRequiredService(implementationType);
-            return c.FusionHub().NewClientProxy(serviceType, serviceType, localTarget);
-        });
-        if (addCommandHandlers)
-            Commander.AddHandlers(serviceType);
-        Rpc.Service(serviceType).HasServer(implementationType).HasName(name);
-        return this;
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
-    public FusionBuilder AddHybrid<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (Symbol name = default, bool addCommandHandlers = true)
-        => AddHybrid(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
-    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
-    public FusionBuilder AddHybrid(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        Symbol name = default,
-        bool addCommandHandlers = true)
-    {
-        // ~ RpcBuilder.AddHybrid, but for Compute Service
+        // ~ RpcBuilder.AddDistributed, but for Compute Service
 
         if (!typeof(IComputeService).IsAssignableFrom(serviceType))
             throw Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
@@ -393,6 +369,30 @@ public readonly struct FusionBuilder
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType);
         Rpc.Service(serviceType).HasServer(serviceType).HasName(name);
+        return this;
+    }
+
+    public FusionBuilder AddDistributedPair<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+        (Symbol name = default, bool addCommandHandlers = true)
+        => AddDistributedPair(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
+    public FusionBuilder AddDistributedPair(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
+        Symbol name = default,
+        bool addCommandHandlers = true)
+    {
+        // ~ RpcBuilder.AddDistributedPair, but for Compute Service
+
+        AddLocal(implementationType, false);
+        Services.AddSingleton(serviceType, c => {
+            var localTarget = c.GetRequiredService(implementationType);
+            return c.FusionHub().NewClientProxy(serviceType, serviceType, localTarget);
+        });
+        if (addCommandHandlers)
+            Commander.AddHandlers(serviceType);
+        Rpc.Service(serviceType).HasServer(implementationType).HasName(name);
         return this;
     }
 

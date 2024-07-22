@@ -5,9 +5,9 @@ public enum RpcServiceMode
     Default = 0,
     Local, // Singleton, no client or RPC exposure
     Client, // Client only, the implementation is ignored
-    Server, // IService -> Service; IService is exposed via RPC
-    ServerAndClient, // IService is a client invoking a local Server when possible; IService is exposed via RPC
-    Hybrid, // Service is a client+server, IService is exposed via RPC.
+    Server, // IService is an alias of Service; IService is exposed via RPC
+    Distributed, // IService/Service is a single client+server instance, IService is exposed via RPC.
+    DistributedPair, // IService is a client that may invoke local Server; IService is exposed via RPC
 }
 
 public static class RpcServiceModeExt

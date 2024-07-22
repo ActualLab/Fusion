@@ -59,7 +59,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     public WebSocket WebSocket { get; }
     public DualSerializer<T> Serializer { get; }
     public CancellationToken StopToken { get; }
-    public CpuTimestamp CreatedAt { get; } = CpuTimestamp.Now;
+    public CpuTimestamp StartedAt { get; } = CpuTimestamp.Now;
     public ILogger? Log { get; }
     public ILogger? ErrorLog { get; }
 
@@ -178,7 +178,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 // Binary -> we build frames
                 if (Settings.WriteDelayer is { } writeDelayer) {
                     // There is a write delay -> we use more complex write logic
-                    await RunWriterWithWriteDelay(reader, writeDelayer, cancellationToken).ConfigureAwait(false);
+                    await RunWriterWithWriteDelayer(reader, writeDelayer, cancellationToken).ConfigureAwait(false);
                     return;
                 }
 
@@ -207,12 +207,12 @@ public sealed class WebSocketChannel<T> : Channel<T>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    private async Task RunWriterWithWriteDelay(
+    private async Task RunWriterWithWriteDelayer(
         ChannelReader<T> reader,
         Func<CpuTimestamp, int, Task> writeDelayer,
         CancellationToken cancellationToken)
     {
-        var startedAt = CreatedAt;
+        var startedAt = StartedAt;
         Task? whenMustFlush = null; // null = no flush required / nothing to flush
         Task<bool>? waitToReadTask = null;
         while (true) {
@@ -263,7 +263,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             }
             if (whenMustFlush == null && _writeBuffer.WrittenCount > 0) {
                 // If we're here, the write flush isn't "planned" yet + there is some data to flush.
-                whenMustFlush = writeDelayer.Invoke(CreatedAt, _writeBuffer.WrittenCount);
+                whenMustFlush = writeDelayer.Invoke(startedAt, _writeBuffer.WrittenCount);
             }
         }
         // Final write flush

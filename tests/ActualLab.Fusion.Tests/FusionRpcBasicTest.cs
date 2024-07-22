@@ -9,7 +9,7 @@ namespace ActualLab.Fusion.Tests;
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
 {
-    protected RpcServiceMode ServiceMode { get; set; } = RpcServiceMode.ServerAndClient;
+    protected RpcServiceMode ServiceMode { get; set; } = RpcServiceMode.DistributedPair;
 
     protected override void ConfigureServices(ServiceCollection services)
     {
@@ -19,7 +19,30 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
     }
 
     [Fact]
-    public async Task ServerAndClientTest()
+    public async Task DistributedTest()
+    {
+        ServiceMode = RpcServiceMode.Distributed;
+        var services = CreateServices();
+        var testClient = services.GetRequiredService<RpcTestClient>();
+        var clientPeer = testClient.Connections.First().Value.ClientPeer;
+        await clientPeer.WhenConnected();
+
+        var counters = services.GetRequiredService<ICounterService>();
+
+        var c = Computed.GetExisting(() => counters.Get("a"));
+        c.Should().BeNull();
+
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+            await counters.Get("a");
+        });
+
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+            await Computed.Capture(() => counters.Get("a"));
+        });
+    }
+
+    [Fact]
+    public async Task DistributedPairTest()
     {
         var services = CreateServices();
         var counters = services.GetRequiredService<ICounterService>();
@@ -39,29 +62,6 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
 
         c1 = Computed.GetExisting(() => counters.Get("a"));
         c1.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task HybridTest()
-    {
-        ServiceMode = RpcServiceMode.Hybrid;
-        var services = CreateServices();
-        var testClient = services.GetRequiredService<RpcTestClient>();
-        var clientPeer = testClient.Connections.First().Value.ClientPeer;
-        await clientPeer.WhenConnected();
-
-        var counters = services.GetRequiredService<ICounterService>();
-
-        var c = Computed.GetExisting(() => counters.Get("a"));
-        c.Should().BeNull();
-
-        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
-            await counters.Get("a");
-        });
-
-        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
-            await Computed.Capture(() => counters.Get("a"));
-        });
     }
 
     [Fact]

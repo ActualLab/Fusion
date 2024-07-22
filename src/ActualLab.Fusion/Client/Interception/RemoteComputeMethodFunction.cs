@@ -58,7 +58,7 @@ public class RemoteComputeMethodFunction<T>(
                     // Local compute / no RPC call scenario
                     var computed = new ReplicaComputed<T>(ComputedOptions, typedInput);
                     using var _ = Computed.BeginCompute(computed);
-                    // LocalTarget != null -> it's a ClientAndServer service & the Service.Method is invoked
+                    // LocalTarget != null -> it's a DistributedPair service & the Service.Method is invoked
                     if (LocalTarget != null) {
                         try {
                             await MethodDef.TargetAsyncInvoker
@@ -74,7 +74,7 @@ public class RemoteComputeMethodFunction<T>(
 
                     // LocalTarget == null -> it's either:
                     // - a pure client, so InvokeIntercepted will fail for it
-                    // - or a Hybrid service, so its base.Method should be invoked
+                    // - or a Distributed service, so its base.Method should be invoked
                     try {
                         var result = InvokeIntercepted(typedInput, cancellationToken);
                         if (typedInput.MethodDef.ReturnsValueTask) {
