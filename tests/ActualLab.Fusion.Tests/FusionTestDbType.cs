@@ -17,7 +17,11 @@ public static class FusionTestDbTypeExt
             : dbType.IsAvailableLocally();
 
     public static bool IsAvailableLocally(this FusionTestDbType dbType)
-        => dbType is FusionTestDbType.InMemory or FusionTestDbType.Sqlite or FusionTestDbType.PostgreSql;
+        => dbType is FusionTestDbType.InMemory
+            or FusionTestDbType.Sqlite
+            or FusionTestDbType.PostgreSql
+            or FusionTestDbType.MariaDb
+            or FusionTestDbType.SqlServer;
 
     public static bool IsAvailableOnBuildAgent(this FusionTestDbType dbType)
         => dbType is FusionTestDbType.InMemory;
