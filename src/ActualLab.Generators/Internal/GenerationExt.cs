@@ -67,6 +67,8 @@ public static class GenerationExt
             return ns.Name;
         if (typeDef.Parent is FileScopedNamespaceDeclarationSyntax fns)
             return fns.Name;
+        if (typeDef.Parent is CompilationUnitSyntax)
+            return IdentifierName("");
         return null;
     }
 

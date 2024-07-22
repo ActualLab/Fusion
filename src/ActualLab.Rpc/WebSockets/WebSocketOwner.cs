@@ -6,8 +6,8 @@ namespace ActualLab.Rpc.WebSockets;
 public class WebSocketOwner(
     string name,
     WebSocket webSocket,
-    IServiceProvider services)
-    : SafeAsyncDisposableBase
+    IServiceProvider services
+    ) : SafeAsyncDisposableBase
 {
     private ILogger? _log;
 

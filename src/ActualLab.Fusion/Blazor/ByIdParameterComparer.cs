@@ -11,8 +11,8 @@ public sealed class ByIdParameterComparer<TId> : ParameterComparer
         if (newValue == null)
             return false;
 
-        var oldId = ((IHasId<TId>) oldValue).Id;
-        var newId = ((IHasId<TId>) newValue).Id;
+        var oldId = ((IHasId<TId>)oldValue).Id;
+        var newId = ((IHasId<TId>)newValue).Id;
         return EqualityComparer<TId>.Default.Equals(oldId, newId);
     }
 }

@@ -1,4 +1,5 @@
 using ActualLab.Internal;
+using ActualLab.Resilience;
 
 namespace ActualLab.Net;
 
@@ -19,7 +20,8 @@ public sealed class Connector<TConnection> : WorkerBase
     }
 
     public Func<TConnection, CancellationToken, Task>? Connected { get; init; }
-    public Func<Exception, bool> TerminalErrorDetector { get; init; } = static _ => false;
+    public TransiencyResolver TransiencyResolver { get; init; } = TransiencyResolvers.PreferTransient;
+    public bool ReconnectOnNonTransient { get; init; } = true;
     public IRetryDelayer ReconnectDelayer { get; init; } = new RetryDelayer();
     public ILogger? Log { get; init; }
     public LogLevel LogLevel { get; init; } = LogLevel.Debug;
@@ -152,8 +154,11 @@ public sealed class Connector<TConnection> : WorkerBase
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            if (error != null && TerminalErrorDetector.Invoke(error))
-                throw error;
+            if (error != null) {
+                var transiency = TransiencyResolver.Invoke(error);
+                if (!transiency.MustRetry(ReconnectOnNonTransient))
+                    throw error;
+            }
 
             if (state.Value.TryIndex is var tryIndex and > 0) {
                 var delayLogger = new RetryDelayLogger("reconnect", LogTag, Log, LogLevel);

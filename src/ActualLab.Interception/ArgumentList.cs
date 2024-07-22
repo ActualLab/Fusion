@@ -4,7 +4,9 @@ namespace ActualLab.Interception;
 
 public abstract partial record ArgumentList
 {
-    protected static readonly ConcurrentDictionary<(Type, MethodInfo), Func<object, ArgumentList, object?>> InvokerCache = new();
+    protected static readonly ConcurrentDictionary<
+        (Type, MethodInfo),
+        LazySlim<(Type, MethodInfo), Func<object, ArgumentList, object?>>> InvokerCache = new();
 
     public static readonly ArgumentList Empty = new ArgumentList0();
 
@@ -15,8 +17,8 @@ public abstract partial record ArgumentList
     public static ArgumentList New()
         => Empty;
 
-    public virtual object?[] ToArray() => Array.Empty<object?>();
-    public virtual object?[] ToArray(int skipIndex) => Array.Empty<object?>();
+    public virtual object?[] ToArray() => [];
+    public virtual object?[] ToArray(int skipIndex) => [];
 
     public virtual Type?[]? GetNonDefaultItemTypes()
         => null;
@@ -27,7 +29,9 @@ public abstract partial record ArgumentList
         => throw new ArgumentOutOfRangeException(nameof(index));
     public virtual object? GetUntyped(int index)
         => throw new ArgumentOutOfRangeException(nameof(index));
+
     // Virtual non-generic method for frequent operation
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual CancellationToken GetCancellationToken(int index)
         => throw new ArgumentOutOfRangeException(nameof(index));
 
@@ -35,7 +39,9 @@ public abstract partial record ArgumentList
          => throw new ArgumentOutOfRangeException(nameof(index));
     public virtual void SetUntyped(int index, object? value)
          => throw new ArgumentOutOfRangeException(nameof(index));
+
     // Virtual non-generic method for frequent operation
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual void SetCancellationToken(int index, CancellationToken item)
          => throw new ArgumentOutOfRangeException(nameof(index));
 
@@ -68,9 +74,10 @@ public abstract partial record ArgumentList
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record ArgumentList0 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore]
     public override int Length => 0;
 
     public override string ToString() => "()";
@@ -84,7 +91,7 @@ public sealed partial record ArgumentList0 : ArgumentList
             var declaringType = method1.DeclaringType!;
             var m = new DynamicMethod("_Invoke",
                 typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
+                [typeof(object), typeof(ArgumentList)],
                 true);
             var il = m.GetILGenerator();
 

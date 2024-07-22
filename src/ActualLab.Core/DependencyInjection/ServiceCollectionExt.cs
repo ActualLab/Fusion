@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -89,39 +88,89 @@ public static class ServiceCollectionExt
         return services;
     }
 
+    public static IServiceCollection AddAlias(
+        this IServiceCollection services,
+        Type aliasType,
+        Type serviceType,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+    {
+        var descriptor = new ServiceDescriptor(aliasType, c => c.GetRequiredService(serviceType), lifetime);
+        services.Add(descriptor);
+        return services;
+    }
+
+    public static IServiceCollection TryAddAlias(
+        this IServiceCollection services,
+        Type aliasType,
+        Type serviceType,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+    {
+        var descriptor = new ServiceDescriptor(aliasType, c => c.GetRequiredService(serviceType), lifetime);
+        services.TryAdd(descriptor);
+        return services;
+    }
+
     // AddSettings
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static IServiceCollection AddSettings<TSettings>(
         this IServiceCollection services,
-        string? sectionName = null)
-        => services.AddSettings(typeof(TSettings), sectionName);
+        bool mustValidate = true)
+        where TSettings : class, new()
+        => services.AddSingleton<TSettings>(c => {
+            var cfg = c.GetRequiredService<IConfiguration>();
+            return cfg.GetSettings<TSettings>(mustValidate);
+        });
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
-    public static IServiceCollection AddSettings(
+    public static IServiceCollection AddSettings<TSettings>(
         this IServiceCollection services,
-        Type settingsType,
-        string? sectionName = null)
-    {
-        var altSectionName = (string?) null;
-        if (sectionName == null) {
-            sectionName = settingsType.Name;
-            var plusIndex = sectionName.IndexOf('+', StringComparison.Ordinal);
-            if (plusIndex >= 0)
-                sectionName = sectionName[(plusIndex + 1)..];
-            altSectionName = sectionName.TrimSuffix("Settings", "Cfg", "Config", "Configuration");
-        }
-        services.TryAddSingleton(settingsType, c => {
-            var settings = c.Activate(settingsType);
+        string? sectionName,
+        bool mustValidate = true)
+        where TSettings : class, new()
+        => services.AddSingleton<TSettings>(c => {
             var cfg = c.GetRequiredService<IConfiguration>();
-            var section = cfg.GetSection(sectionName);
-            if (!section.Exists() && altSectionName != null)
-                section = cfg.GetSection(altSectionName);
-            section.Bind(settings);
-            var validationContext = new ValidationContext(settings, c, null);
-            Validator.ValidateObject(settings, validationContext);
-            return settings;
+            return cfg.GetSettings<TSettings>(sectionName, mustValidate);
         });
-        return services;
+
+    // FindInstance, AddInstance
+
+    public static T? FindInstance<T>(this IServiceCollection services)
+        where T : class
+        => services.FindInstance(typeof(T)) as T;
+
+    public static object? FindInstance(this IServiceCollection services, Type type)
+    {
+        foreach (var d in services) {
+            if (d.ServiceType != type)
+                continue;
+#if NET8_0_OR_GREATER
+            if (d is not { Lifetime: ServiceLifetime.Singleton, IsKeyedService: false })
+                continue;
+#else
+            if (d is not { Lifetime: ServiceLifetime.Singleton })
+                continue;
+#endif
+
+            return d.ImplementationInstance;
+        }
+        return null;
+    }
+
+    public static T FindOrAddInstance<T>(
+        this IServiceCollection services, Func<T> instanceFactory, bool addInFront = false)
+        where T : class
+        => services.FindInstance<T>() ?? services.AddInstance(instanceFactory.Invoke(), addInFront);
+
+    public static T AddInstance<T>(
+        this IServiceCollection services, T instance, bool addInFront = false)
+        where T : class
+    {
+        var descriptor = new ServiceDescriptor(typeof(T), instance);
+        if (addInFront)
+            services.Insert(0, descriptor);
+        else
+            services.Add(descriptor);
+        return instance;
     }
 }

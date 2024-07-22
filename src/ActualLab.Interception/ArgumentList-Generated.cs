@@ -3,6 +3,7 @@
 // ReSharper disable ArrangeConstructorOrDestructorBody
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
+using ActualLab.Concurrency;
 using ActualLab.Internal;
 
 namespace ActualLab.Interception;
@@ -92,6 +93,7 @@ public abstract record ArgumentList1 : ArgumentList
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record ArgumentList<T0> : ArgumentList1
 {
     private T0 _item0;
@@ -118,7 +120,7 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -353,6 +355,7 @@ public abstract record ArgumentList2 : ArgumentList
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record ArgumentList<T0, T1> : ArgumentList2
 {
     private T0 _item0;
@@ -384,9 +387,9 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -667,6 +670,7 @@ public abstract record ArgumentList3 : ArgumentList
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
 {
     private T0 _item0;
@@ -703,11 +707,11 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -1033,6 +1037,7 @@ public abstract record ArgumentList4 : ArgumentList
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
 {
     private T0 _item0;
@@ -1074,13 +1079,13 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -1451,6 +1456,7 @@ public abstract record ArgumentList5 : ArgumentList
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
 {
     private T0 _item0;
@@ -1497,15 +1503,15 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -1921,6 +1927,7 @@ public abstract record ArgumentList6 : ArgumentList
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList6
 {
     private T0 _item0;
@@ -1972,17 +1979,17 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -2443,6 +2450,7 @@ public abstract record ArgumentList7 : ArgumentList
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : ArgumentList7
 {
     private T0 _item0;
@@ -2499,19 +2507,19 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -3017,6 +3025,7 @@ public abstract record ArgumentList8 : ArgumentList
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : ArgumentList8
 {
     private T0 _item0;
@@ -3078,21 +3087,21 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(", ");
-        sb.Append(Item7);
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -3643,6 +3652,7 @@ public abstract record ArgumentList9 : ArgumentList
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8> : ArgumentList9
 {
     private T0 _item0;
@@ -3709,23 +3719,23 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8> : 
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(", ");
-        sb.Append(Item7);
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
         sb.Append(", ");
-        sb.Append(Item8);
+        sb.Append(Item8 is CancellationToken ct8 ? ct8.Format() : Item8);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }
@@ -4321,6 +4331,7 @@ public abstract record ArgumentList10 : ArgumentList
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> : ArgumentList10
 {
     private T0 _item0;
@@ -4392,25 +4403,25 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
     {
         var sb = StringBuilderExt.Acquire();
         sb.Append('(');
-        sb.Append(Item0);
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
         sb.Append(", ");
-        sb.Append(Item1);
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
         sb.Append(", ");
-        sb.Append(Item2);
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
         sb.Append(", ");
-        sb.Append(Item3);
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
         sb.Append(", ");
-        sb.Append(Item4);
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
         sb.Append(", ");
-        sb.Append(Item5);
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
         sb.Append(", ");
-        sb.Append(Item6);
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
         sb.Append(", ");
-        sb.Append(Item7);
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
         sb.Append(", ");
-        sb.Append(Item8);
+        sb.Append(Item8 is CancellationToken ct8 ? ct8.Format() : Item8);
         sb.Append(", ");
-        sb.Append(Item9);
+        sb.Append(Item9 is CancellationToken ct9 ? ct9.Format() : Item9);
         sb.Append(')');
         return sb.ToStringAndRelease();
     }

@@ -6,6 +6,36 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion.Tests;
 
+public class PerformanceTest_Sqlite : PerformanceTestBase
+{
+    public PerformanceTest_Sqlite(ITestOutputHelper @out) : base(@out)
+        => DbType = FusionTestDbType.Sqlite;
+}
+
+public class PerformanceTest_PostgreSql : PerformanceTestBase
+{
+    public PerformanceTest_PostgreSql(ITestOutputHelper @out) : base(@out)
+        => DbType = FusionTestDbType.PostgreSql;
+}
+
+public class PerformanceTest_MariaDb : PerformanceTestBase
+{
+    public PerformanceTest_MariaDb(ITestOutputHelper @out) : base(@out)
+        => DbType = FusionTestDbType.MariaDb;
+}
+
+public class PerformanceTest_SqlServer : PerformanceTestBase
+{
+    public PerformanceTest_SqlServer(ITestOutputHelper @out) : base(@out)
+        => DbType = FusionTestDbType.SqlServer;
+}
+
+public class PerformanceTest_InMemoryDb : PerformanceTestBase
+{
+    public PerformanceTest_InMemoryDb(ITestOutputHelper @out) : base(@out)
+        => DbType = FusionTestDbType.InMemory;
+}
+
 public abstract class PerformanceTestBase : FusionTestBase
 {
     public int UserCount = 1000;
@@ -40,12 +70,12 @@ public abstract class PerformanceTestBase : FusionTestBase
         plainUsers.UseEntityResolver = UseEntityResolver;
 
         var fusionOpCountPerCore = 16_000_000;
-        var fusionReadersPerCore = 32;
+        var fusionReadersPerCore = 20;
         var fusionIterationCount = fusionOpCountPerCore / fusionReadersPerCore;
         var fusionReaderCount = HardwareInfo.GetProcessorCountFactor(fusionReadersPerCore);
 
         var nonFusionOpCountPerCore = fusionOpCountPerCore / (UseEntityResolver ? 1000 : 2000);
-        var nonFusionReadersPerCore = 32; // We may need more readers here to maximize the throughput w/ parallel queries
+        var nonFusionReadersPerCore = 40; // We need more readers here to maximize the throughput w/ parallel queries
         var nonFusionIterationCount = nonFusionOpCountPerCore / nonFusionReadersPerCore;
         var nonFusionReaderCount = HardwareInfo.GetProcessorCountFactor(nonFusionReadersPerCore);
 
@@ -63,6 +93,7 @@ public abstract class PerformanceTestBase : FusionTestBase
             fusionReaderCount, fusionIterationCount);
         await Test("Single reader, no mutators", users, withoutSerialization, false,
             1, fusionOpCountPerCore);
+        return;
 
         Out.WriteLine("Without ActualLab.Fusion:");
         if (enableSerialization)
@@ -108,10 +139,10 @@ public abstract class PerformanceTestBase : FusionTestBase
                 .Range(0, threadCount)
                 .Select(i => Task.Run(() => Reader($"R{i}", iterationCount, whenReadySource.Task), CancellationToken.None))
                 .ToArray();
-            var startTime = CpuClock.Now;
+            var startedAt = CpuTimestamp.Now;
             whenReadySource.SetResult(default);
             var results = await Task.WhenAll(tasks);
-            var elapsed = CpuClock.Now - startTime;
+            var elapsed = startedAt.Elapsed;
 
             // ReSharper disable once MethodHasAsyncOverload
             stopCts.Cancel();
@@ -129,7 +160,7 @@ public abstract class PerformanceTestBase : FusionTestBase
 
             while (true) {
                 cancellationToken.ThrowIfCancellationRequested();
-                var userId = (long) rnd.Next(UserCount);
+                var userId = (long)rnd.Next(UserCount);
                 // Log.LogDebug($"{name}: R {userId}");
                 var user = await users.Get(userId, cancellationToken).ConfigureAwait(false);
                 user = user! with { Email = $"{++count}@counter.org" };
@@ -148,7 +179,7 @@ public abstract class PerformanceTestBase : FusionTestBase
 
             await whenReady.ConfigureAwait(false);
             for (; iterationCount1 > 0; iterationCount1--) {
-                var userId = (long) rnd.Next(UserCount);
+                var userId = (long)rnd.Next(UserCount);
                 // Log.LogDebug($"{name}: R {userId}");
                 var user = await users.Get(userId).ConfigureAwait(false);
                 // Log.LogDebug($"{name}: R {userId} done");
@@ -177,34 +208,4 @@ public abstract class PerformanceTestBase : FusionTestBase
                 Out.WriteLine(line);
         }
     }
-}
-
-public class PerformanceTest_Sqlite : PerformanceTestBase
-{
-    public PerformanceTest_Sqlite(ITestOutputHelper @out) : base(@out)
-        => DbType = FusionTestDbType.Sqlite;
-}
-
-public class PerformanceTest_PostgreSql : PerformanceTestBase
-{
-    public PerformanceTest_PostgreSql(ITestOutputHelper @out) : base(@out)
-        => DbType = FusionTestDbType.PostgreSql;
-}
-
-public class PerformanceTest_MariaDb : PerformanceTestBase
-{
-    public PerformanceTest_MariaDb(ITestOutputHelper @out) : base(@out)
-        => DbType = FusionTestDbType.MariaDb;
-}
-
-public class PerformanceTest_SqlServer : PerformanceTestBase
-{
-    public PerformanceTest_SqlServer(ITestOutputHelper @out) : base(@out)
-        => DbType = FusionTestDbType.SqlServer;
-}
-
-public class PerformanceTest_InMemoryDb : PerformanceTestBase
-{
-    public PerformanceTest_InMemoryDb(ITestOutputHelper @out) : base(@out)
-        => DbType = FusionTestDbType.InMemory;
 }

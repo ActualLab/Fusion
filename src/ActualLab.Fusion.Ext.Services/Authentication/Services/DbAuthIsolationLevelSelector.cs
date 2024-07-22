@@ -1,22 +1,17 @@
 using System.Data;
-using Microsoft.EntityFrameworkCore;
-using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
-public class DbAuthIsolationLevelSelector<TDbContext>() : DbIsolationLevelSelector<TDbContext>(null)
-    where TDbContext : DbContext
+public static class DbAuthIsolationLevelSelector
 {
-    public override IsolationLevel GetCommandIsolationLevel(CommandContext commandContext)
-    {
-        var command = commandContext.UntypedCommand;
-        switch (command) {
-        case AuthBackend_SignIn:
-        case Auth_SignOut:
-        case AuthBackend_SetupSession:
-        case Auth_SetSessionOptions:
-            return IsolationLevel.ReadCommitted;
-        }
-        return IsolationLevel.Unspecified;
-    }
+    public static IsolationLevel IsolationLevel { get; set; } = IsolationLevel.ReadCommitted;
+
+    public static IsolationLevel SelectIsolationLevel(CommandContext context)
+        => context.UntypedCommand switch {
+            AuthBackend_SignIn
+                or Auth_SignOut
+                or AuthBackend_SetupSession
+                or AuthBackend_SetSessionOptions => IsolationLevel,
+            _ => IsolationLevel.Unspecified
+        };
 }

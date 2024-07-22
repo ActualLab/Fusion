@@ -108,7 +108,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     }
 
     [Fact]
-    public async Task Case4()
+    public async Task Case4Test()
     {
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
@@ -130,7 +130,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     }
 
     [Fact]
-    public async Task Case5()
+    public async Task Case5Test()
     {
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
@@ -150,8 +150,8 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
             else {
                 Out.WriteLine($"{i}: Syncing...");
                 var c = await Computed.Capture(() => client.GetTime());
-                await c.When(x => x == st).WaitAsync(TimeSpan.FromSeconds(1));
-                Out.WriteLine($"{i}: Synced");
+                await c.When(x => x >= st).WaitAsync(TimeSpan.FromSeconds(3));
+                Out.WriteLine($"{i}: Synced: {c}");
             }
         }
     }

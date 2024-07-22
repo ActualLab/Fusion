@@ -51,8 +51,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         var s = new Screenshot {
             Width = 10,
             Height = 20,
-            CapturedAt = SystemClock.Now,
-            Image = new byte[] { 1, 2, 3 },
+            CapturedAt = Moment.Now,
+            Image = [1, 2, 3],
         };
         var t = s.PassThroughAllSerializers();
         t.Width.Should().Be(s.Width);
@@ -64,7 +64,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void Base64EncodedSerialization()
     {
-        var s = new Base64Encoded(new byte[] { 1, 2, 3 });
+        var s = new Base64Encoded([1, 2, 3]);
         s.AssertPassesThroughAllSerializers();
     }
 
@@ -92,8 +92,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var si = new SessionInfo(new Session(RandomStringGenerator.Default.Next())) {
             Version = 1,
-            CreatedAt = SystemClock.Now,
-            LastSeenAt = SystemClock.Now + TimeSpan.FromSeconds(1),
+            CreatedAt = Moment.Now,
+            LastSeenAt = Moment.Now + TimeSpan.FromSeconds(1),
             UserId = RandomStringGenerator.Default.Next(),
             AuthenticatedIdentity = new UserIdentity("a", "b"),
             IPAddress = "1.1.1.1",

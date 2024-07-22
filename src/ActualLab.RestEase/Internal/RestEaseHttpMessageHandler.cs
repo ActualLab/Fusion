@@ -28,7 +28,7 @@ public class RestEaseHttpMessageHandler(IServiceProvider services) : DelegatingH
     {
         var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         var contentType = response.Content.Headers.ContentType;
-        if (!StringComparer.Ordinal.Equals(contentType?.MediaType ?? "", "application/json"))
+        if (!string.Equals(contentType?.MediaType ?? "", "application/json", StringComparison.Ordinal))
             return new RemoteException(content);
 
         try {

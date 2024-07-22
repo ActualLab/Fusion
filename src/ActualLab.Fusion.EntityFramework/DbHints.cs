@@ -1,5 +1,12 @@
 namespace ActualLab.Fusion.EntityFramework;
 
+public static class DbHintSet
+{
+    public static readonly DbHint[] Empty = [];
+    public static readonly DbHint[] Update = [DbLockingHint.Update];
+    public static readonly DbHint[] UpdateSkipLocked = [DbLockingHint.Update, DbWaitHint.SkipLocked];
+}
+
 public abstract record DbHint(Symbol Value);
 
 public record DbLockingHint(Symbol Value) : DbHint(Value)

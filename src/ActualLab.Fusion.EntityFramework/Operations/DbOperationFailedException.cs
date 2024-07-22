@@ -8,8 +8,12 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 public class DbOperationFailedException : DbUpdateException
 {
     public DbOperationFailedException() { }
-    public DbOperationFailedException(string message) : base(message) { }
-    public DbOperationFailedException(string message, Exception innerException) : base(message, innerException) { }
+    public DbOperationFailedException(string message)
+        : base(message) { }
+    public DbOperationFailedException(string message, Exception innerException)
+        : base(message, innerException) { }
+
     [Obsolete("Obsolete")]
-    protected DbOperationFailedException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    protected DbOperationFailedException(SerializationInfo info, StreamingContext context)
+        : base(info, context) { }
 }

@@ -11,20 +11,21 @@ public enum DataFormat
 
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial record struct TextOrBytes(
     [property: DataMember(Order = 0), MemoryPackOrder(0)]
     DataFormat Format,
-    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
-    ReadOnlyMemory<byte> Data)
-{
+    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    ReadOnlyMemory<byte> Data
+) {
     public static readonly TextOrBytes EmptyBytes = new(DataFormat.Bytes, default!);
     public static readonly TextOrBytes EmptyText = new(DataFormat.Text, default!);
 
     private readonly byte[]? _data; // This field is used solely to avoid .ToArray() calls in Bytes property
 
+    // Computed properties
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public byte[] Bytes => _data ?? Data.ToArray();
-
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public bool IsEmpty => Data.Length == 0;
 
@@ -47,22 +48,22 @@ public readonly partial record struct TextOrBytes(
     public string ToString(int maxLength)
     {
         var isText = IsText(out var text);
-#if NET5_0_OR_GREATER
         var sData = isText
+#if NET5_0_OR_GREATER
             ? new string(text.Span[..Math.Min(text.Length, maxLength)])
             : Convert.ToHexString(Data.Span[..Math.Min(Data.Length, maxLength)]);
 #else
-        var sData = isText
             ? new string(text.Span[..Math.Min(text.Length, maxLength)].ToArray())
             : BitConverter.ToString(Data.Span[..Math.Min(Data.Length, maxLength)].ToArray());
 #endif
         return isText
-            ? ZString.Concat("[ ", text.Length, " char(s): `", sData, maxLength < text.Length ? "` ]" : "`... ]")
-            : ZString.Concat("[ ", Data.Length, " byte(s): ", sData, maxLength < Data.Length ? " ]" : "... ]");
+            ? ZString.Concat("[ ", text.Length, " char(s): `", sData, text.Length <= maxLength ? "` ]" : "`... ]")
+            : ZString.Concat("[ ", Data.Length, " byte(s): ", sData, Data.Length <= maxLength ? " ]" : "... ]");
     }
 
     public static implicit operator TextOrBytes(ReadOnlyMemory<byte> bytes) => new(bytes);
     public static implicit operator TextOrBytes(ReadOnlyMemory<char> text) => new(text);
+    public static implicit operator TextOrBytes(byte[] bytes) => new(bytes);
     public static implicit operator TextOrBytes(string text) => new(text);
 
     public bool IsText(out ReadOnlyMemory<char> text)

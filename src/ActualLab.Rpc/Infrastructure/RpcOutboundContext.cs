@@ -5,67 +5,93 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public sealed class RpcOutboundContext(List<RpcHeader>? headers = null)
+#pragma warning disable CA1721
+
+public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = null)
 {
     [ThreadStatic] private static RpcOutboundContext? _current;
 
-#pragma warning disable CA1721
     public static RpcOutboundContext? Current => _current;
-#pragma warning restore CA1721
 
-    public List<RpcHeader>? Headers = headers;
+    public byte CallTypeId = callTypeId;
+    public RpcHeader[]? Headers = headers;
     public RpcMethodDef? MethodDef;
     public ArgumentList? Arguments;
     public CancellationToken CancellationToken;
-    public byte CallTypeId;
-    public RpcOutboundCall? Call { get; private set; }
+    public RpcOutboundCall? Call;
     public RpcPeer? Peer;
-    public long RelatedCallId;
+    public long RelatedId;
     public RpcCacheInfoCapture? CacheInfoCapture;
 
     public static RpcOutboundContext GetCurrent()
         => Current ?? throw Errors.NoCurrentRpcOutboundContext();
 
-    public static Scope Use()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RpcOutboundContext(RpcHeader[]? headers = null)
+        : this(0, headers)
+    { }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RpcOutboundContext(RpcPeer peer, RpcHeader[]? headers = null)
+        : this(0, headers)
+        => Peer = peer;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RpcOutboundContext(RpcPeer peer, long relatedId, RpcHeader[]? headers = null)
+        : this(0, headers)
     {
-        var oldContext = _current;
-        var context = oldContext ?? new RpcOutboundContext();
-        return new Scope(context, oldContext);
+        Peer = peer;
+        RelatedId = relatedId;
     }
 
-    public static Scope Use(byte callTypeId)
-    {
-        var oldContext = _current;
-        var context = oldContext ?? new RpcOutboundContext();
-        context.CallTypeId = callTypeId;
-        return new Scope(context, oldContext);
-    }
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Scope Activate()
         => new(this, _current);
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcOutboundCall? PrepareCall(RpcMethodDef methodDef, ArgumentList arguments)
     {
-        if (MethodDef != null)
-            throw ActualLab.Internal.Errors.AlreadyInvoked(nameof(PrepareCall));
+        if (MethodDef != methodDef) {
+            if (MethodDef != null)
+                throw ActualLab.Internal.Errors.AlreadyInvoked(nameof(PrepareCall));
 
-        // MethodDef, Arguments, CancellationToken
-        MethodDef = methodDef;
-        Arguments = arguments;
-        var ctIndex = methodDef.CancellationTokenIndex;
-        CancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
+            // MethodDef, Arguments, CancellationToken
+            MethodDef = methodDef;
+            Arguments = arguments;
+            var ctIndex = methodDef.CancellationTokenIndex;
+            CancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
+        }
 
-        // Peer
+        // Peer & Call
         var hub = MethodDef.Hub;
-        Peer ??= hub.CallRouter.Invoke(methodDef, arguments);
-        if (Peer == null)
-            return null;
+        if (CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly }) {
+            Peer ??= hub.LoopbackPeer; // Peer must be set, but invoking the router makes no sense here
+            Call = RpcOutboundCall.New(this);
+            return Call ?? throw ActualLab.Internal.Errors.InternalError("Call == null, which isn't expected here.");
+        }
 
-        // Call
+        Peer ??= hub.CallRouter.Invoke(methodDef, arguments);
         Call = RpcOutboundCall.New(this);
-        if (!Call.NoWait)
+        if (Call != null)
             hub.OutboundMiddlewares.NullIfEmpty()?.PrepareCall(this);
+        return Call;
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
+    public RpcOutboundCall? PrepareReroutedCall()
+    {
+        if (MethodDef == null || Arguments == null)
+            throw ActualLab.Internal.Errors.NotInvoked(nameof(PrepareCall));
+
+        // Peer & Call
+        var hub = MethodDef.Hub;
+        var oldPeer = Peer;
+        Peer = hub.CallRouter.Invoke(MethodDef, Arguments);
+        Call = RpcOutboundCall.New(this);
+        if (Call != null)
+            hub.OutboundMiddlewares.NullIfEmpty()?.PrepareCall(this);
+        if (ReferenceEquals(oldPeer, Peer))
+            Peer.Log.LogWarning("The call {Call} is rerouted to the same peer {Peer}", Call, Peer);
         return Call;
     }
 

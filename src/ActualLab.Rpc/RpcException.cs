@@ -10,6 +10,8 @@ public class RpcException : Exception
         : base(message ?? "RPC error.") { }
     public RpcException(string? message, Exception innerException)
         : base(message ?? "RPC error.", innerException) { }
+
+    [Obsolete("Obsolete")]
     protected RpcException(SerializationInfo info, StreamingContext context)
         : base(info, context) { }
 }

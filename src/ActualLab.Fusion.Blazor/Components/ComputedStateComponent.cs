@@ -1,71 +1,62 @@
 using ActualLab.Fusion.Blazor.Internal;
-using ActualLab.OS;
+using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
-public static class ComputedStateComponent
+#pragma warning disable CA2007
+
+public abstract class ComputedStateComponent<TState> : StatefulComponentBase<ComputedState<TState>>
 {
-    private static readonly ConcurrentDictionary<Type, string> StateCategoryCache = new();
+    protected ComputedStateComponentOptions Options { get; set; } = ComputedStateComponent.DefaultOptions;
 
-    public static ComputedStateComponentOptions DefaultOptions { get; set; }
-
-    static ComputedStateComponent()
+    public override Task SetParametersAsync(ParameterView parameters)
     {
-        DefaultOptions = ComputedStateComponentOptions.SynchronizeComputeState
-            | ComputedStateComponentOptions.RecomputeOnParametersSet;
-        if (HardwareInfo.IsSingleThreaded)
-           DefaultOptions = ComputedStateComponentOptions.RecomputeOnParametersSet;
+        var parameterSetIndex = ParameterSetIndex;
+        var task = base.SetParametersAsync(parameters);
+        var mustRecompute =
+            (Options & ComputedStateComponentOptions.StateIsParameterDependent) != 0 // Requires recompute on parameter change
+            && parameterSetIndex != 0 // Not the very first call to SetParametersAsync
+            && ParameterSetIndex != parameterSetIndex; // And parameters were changed
+        if (!mustRecompute)
+            return task;
+
+        if (task.IsCompletedSuccessfully) {
+            _ = State.Recompute();
+            return task;
+        }
+
+        return CompleteAsync(task);
+
+        async Task CompleteAsync(Task dependency)
+        {
+            await dependency;
+            _ = State.Recompute();
+        }
     }
-
-    public static string GetStateCategory(Type componentType)
-        => StateCategoryCache.GetOrAdd(componentType, static t => $"{t.GetName()}.State");
-
-    public static string GetMutableStateCategory(Type componentType)
-        => StateCategoryCache.GetOrAdd(componentType, static t => $"{t.GetName()}.MutableState");
-}
-
-public abstract class ComputedStateComponent<TState> : StatefulComponentBase<IComputedState<TState>>
-{
-    protected ComputedStateComponentOptions Options { get; init; } = ComputedStateComponent.DefaultOptions;
-
-    // State frequently depends on component parameters, so...
-    protected override Task OnParametersSetAsync()
-    {
-        if ((Options & ComputedStateComponentOptions.RecomputeOnParametersSet) == 0)
-            return Task.CompletedTask;
-        _ = State.Recompute();
-        return Task.CompletedTask;
-    }
-
-    protected virtual string GetStateCategory()
-        => ComputedStateComponent.GetStateCategory(GetType());
 
     protected virtual ComputedState<TState>.Options GetStateOptions()
-        => new() { Category = GetStateCategory() };
+        => ComputedStateComponent.GetStateOptions<TState>(GetType());
 
-    protected override IComputedState<TState> CreateState()
+    protected override (ComputedState<TState> State, object? StateOptions) CreateState()
     {
         // Synchronizes ComputeState call as per:
         // https://github.com/servicetitan/Stl.Fusion/issues/202
         var stateOptions = GetStateOptions();
-        Func<IComputedState<TState>, CancellationToken, Task<TState>> computer =
+        Func<CancellationToken, Task<TState>> computer =
             (Options & ComputedStateComponentOptions.SynchronizeComputeState) == 0
                 ? UnsynchronizedComputeState
                 : stateOptions.FlowExecutionContext && DispatcherInfo.IsExecutionContextFlowSupported(this)
                     ? SynchronizedComputeState
                     : SynchronizedComputeStateWithManualExecutionContextFlow;
-        return new ComputedStateComponentState<TState>(stateOptions, computer, Services);
+        return (new ComputedStateComponentState<TState>(stateOptions, computer, Services), stateOptions);
 
-        Task<TState> UnsynchronizedComputeState(
-            IComputedState<TState> state, CancellationToken cancellationToken)
+        Task<TState> UnsynchronizedComputeState(CancellationToken cancellationToken)
             => ComputeState(cancellationToken);
 
-        Task<TState> SynchronizedComputeState(
-            IComputedState<TState> state, CancellationToken cancellationToken)
+        Task<TState> SynchronizedComputeState(CancellationToken cancellationToken)
             => this.GetDispatcher().InvokeAsync(() => ComputeState(cancellationToken));
 
-        Task<TState> SynchronizedComputeStateWithManualExecutionContextFlow(
-            IComputedState<TState> state, CancellationToken cancellationToken)
+        Task<TState> SynchronizedComputeStateWithManualExecutionContextFlow(CancellationToken cancellationToken)
         {
             var executionContext = ExecutionContext.Capture();
             var taskFactory = () => ComputeState(cancellationToken);

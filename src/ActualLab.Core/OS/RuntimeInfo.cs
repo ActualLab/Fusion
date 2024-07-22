@@ -18,7 +18,7 @@ public static class RuntimeInfo
         {
             var assembly = typeof(System.Runtime.GCSettings).GetTypeInfo().Assembly;
             var assemblyPath = assembly.Location.Split(
-                new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                new[] {'/', '\\'}, StringSplitOptions.RemoveEmptyEntries);
             var netCoreAppIndex = Array.IndexOf(assemblyPath, "Microsoft.NETCore.App");
             if (netCoreAppIndex > 0 && netCoreAppIndex < assemblyPath.Length - 2) {
                 VersionString = assemblyPath[netCoreAppIndex + 1];

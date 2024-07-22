@@ -87,6 +87,7 @@
     <Using Include="ActualLab.Collections" />
     <Using Include="ActualLab.DependencyInjection" />
     <Using Include="ActualLab.Diagnostics" />
+    <Using Include="ActualLab.Identifiers" />
     <Using Include="ActualLab.Mathematics" />
     <Using Include="ActualLab.Reflection" />
     <Using Include="ActualLab.Serialization" />

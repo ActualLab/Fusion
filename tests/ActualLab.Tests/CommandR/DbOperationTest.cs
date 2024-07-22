@@ -15,10 +15,12 @@ public class DbOperationTest : CommandRTestBase
     public async Task RecAddUsersTest()
     {
         var services = CreateServices();
-        var command = new RecAddUsersCommand() { Users = new [] {
-            new User() { Id = "a", Name = "Alice" },
-            new User() { Id = "b", Name = "Bob" },
-        }};
+        var command = new RecAddUsersCommand() {
+            Users = [
+                new User() { Id = "a", Name = "Alice" },
+                new User() { Id = "b", Name = "Bob" }
+            ]
+        };
         await services.Commander().Call(command);
 
         var f = services.GetRequiredService<IDbContextFactory<TestDbContext>>();
@@ -31,11 +33,13 @@ public class DbOperationTest : CommandRTestBase
     public async Task RecAddUserFailTest()
     {
         var services = CreateServices();
-        var command = new RecAddUsersCommand() { Users = new [] {
-            new User() { Id = "a", Name = "Alice" },
-            new User() { Id = "", Name = "Fail" },
-            new User() { Id = "b", Name = "Bob" },
-        }};
+        var command = new RecAddUsersCommand() {
+            Users = [
+                new User() { Id = "a", Name = "Alice" },
+                new User() { Id = "", Name = "Fail" },
+                new User() { Id = "b", Name = "Bob" }
+            ]
+        };
         await Assert.ThrowsAsync<InvalidOperationException>(async () => {
             await services.Commander().Call(command);
         });

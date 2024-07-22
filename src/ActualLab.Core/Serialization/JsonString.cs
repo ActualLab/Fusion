@@ -12,7 +12,7 @@ namespace ActualLab.Serialization;
 [JsonConverter(typeof(JsonStringJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(JsonStringNewtonsoftJsonConverter))]
 [TypeConverter(typeof(JsonStringTypeConverter))]
-[method: MemoryPackConstructor]
+[method: MemoryPackConstructor] // Has JsonConverters
 public partial class JsonString(string value) :
     IEquatable<JsonString>,
     IComparable<JsonString>,
@@ -58,13 +58,13 @@ public partial class JsonString(string value) :
 
     public bool Equals(JsonString? other)
         => !ReferenceEquals(other, null)
-            && StringComparer.Ordinal.Equals(Value, other.Value);
+            && string.Equals(Value, other.Value, StringComparison.Ordinal);
     public override bool Equals(object? obj)
         => obj is JsonString other && Equals(other);
     public override int GetHashCode()
         => StringComparer.Ordinal.GetHashCode(Value);
     public int CompareTo(JsonString? other)
-        => StringComparer.Ordinal.Compare(Value, other?.Value);
+        => string.Compare(Value, other?.Value, StringComparison.Ordinal);
 
     public static bool operator ==(JsonString? left, JsonString? right)
         => left?.Equals(right) ?? ReferenceEquals(right, null);

@@ -19,19 +19,13 @@ public class TestChannelPair<T> : ChannelPair<T>
             SingleWriter = false,
         };
         if (Out == null) {
-            var cp = ChannelPair.CreateTwisted(
-                Channel.CreateBounded<T>(options),
-                Channel.CreateBounded<T>(options));
+            var cp = ChannelPair.CreateTwisted<T>(options);
             Channel1 = cp.Channel1;
             Channel2 = cp.Channel2;
         }
         else {
-            var cp1 = ChannelPair.CreateTwisted(
-                Channel.CreateBounded<T>(options),
-                Channel.CreateBounded<T>(options));
-            var cp2 = ChannelPair.CreateTwisted(
-                Channel.CreateBounded<T>(options),
-                Channel.CreateBounded<T>(options));
+            var cp1 = ChannelPair.CreateTwisted<T>(options);
+            var cp2 = ChannelPair.CreateTwisted<T>(options);
             _ = cp1.Channel2.Connect(cp2.Channel1,
                 m => {
                     Out.WriteLine($"{Name}.Channel1 -> {m}");

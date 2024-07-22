@@ -2,8 +2,8 @@ namespace Templates.TodoApp.Host;
 
 public class HostSettings
 {
-    public bool UseMultitenancy { get; set; } = true;
     public bool UseInMemoryAuthService { get; set; } = false;
+    public bool UseMultitenancy { get; set; } = true;
 
     // DBs
     public string UseSqlServer { get; set; } = "";

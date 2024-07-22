@@ -1,17 +1,18 @@
 using Blazorise;
-using Blazorise.Bootstrap;
-using Blazorise.Icons.FontAwesome;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using ActualLab.Fusion.Blazor;
 using ActualLab.Fusion.Blazor.Authentication;
+using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.UI;
 using ActualLab.OS;
 using ActualLab.Rpc;
+using Blazorise.Bootstrap5;
+using Blazorise.Icons.FontAwesome;
 using Templates.TodoApp.Abstractions;
-using Templates.TodoApp.Services;
+using Templates.TodoApp.UI.Services;
 
 namespace Templates.TodoApp.UI;
 
@@ -24,21 +25,18 @@ public static class StartupHelper
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.Logging.AddFilter(typeof(App).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(Computed).Namespace, LogLevel.Information);
+        builder.Logging.AddFilter(typeof(InMemoryRemoteComputedCache).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(RpcHub).Namespace, LogLevel.Debug);
+        builder.Logging.AddFilter(typeof(CommandHandlerResolver).Namespace, LogLevel.Debug);
 
         // Fusion services
         var fusion = services.AddFusion();
+        fusion.AddInMemoryRemoteComputedCache(_ => new() { LogLevel = LogLevel.Information });
         fusion.AddAuthClient();
         fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
 
         var rpc = fusion.Rpc;
         rpc.AddWebSocketClient(builder.HostEnvironment.BaseAddress);
-        // You may comment this out - the call below just enables RPC call logging
-        services.AddSingleton<RpcPeerFactory>(_ =>
-            static (hub, peerRef) => peerRef.IsServer
-                ? throw new NotSupportedException("No server peers on the client.")
-                : new RpcClientPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
-            );
 
         // Option 1: Client-side SimpleTodoService (no RPC)
         // fusion.AddService<ITodoService, SimpleTodoService>();
@@ -55,15 +53,19 @@ public static class StartupHelper
         // Option 4: Remote TodoService, SandboxedKeyValueStore, and DbKeyValueStore
         fusion.AddClient<ITodos>();
 
-        ConfigureSharedServices(services);
+        ConfigureSharedServices(services, false);
     }
 
-    public static void ConfigureSharedServices(IServiceCollection services)
+    public static void ConfigureSharedServices(IServiceCollection services, bool isServer)
     {
-        IComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
+        ComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
+        if (!isServer)
+            RpcPeer.DefaultCallLogLevel = LogLevel.Debug;
 
         // Blazorise
-        services.AddBlazorise().AddBootstrapProviders().AddFontAwesomeIcons();
+        services.AddBlazorise(options => options.Immediate = true)
+            .AddBootstrap5Providers()
+            .AddFontAwesomeIcons();
 
         // Other UI-related services
         var fusion = services.AddFusion();
@@ -72,8 +74,8 @@ public static class StartupHelper
         fusion.AddService<TodoUI>(ServiceLifetime.Scoped);
         services.AddScoped(c => new RpcPeerStateMonitor(c, OSInfo.IsAnyClient ? RpcPeerRef.Default : null));
 
-        // Default update delay is 0.5s
-        services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.5));
+        // Default update delay is 0.25s
+        services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
 
         // Diagnostics
         services.AddHostedService(c => {
@@ -84,8 +86,8 @@ public static class StartupHelper
                     : TimeSpan.FromMinutes(1).ToRandom(0.25),
                 CollectPeriod = TimeSpan.FromSeconds(isWasm ? 3 : 60),
                 AccessFilter = isWasm
-                    ? static computed => computed.Input.Function is IClientComputeMethodFunction
-                    : static computed => true,
+                    ? static computed => computed.Input.Function is IRemoteComputeMethodFunction
+                    : static _ => true,
                 AccessStatisticsPreprocessor = StatisticsPreprocessor,
                 RegistrationStatisticsPreprocessor = StatisticsPreprocessor,
             };

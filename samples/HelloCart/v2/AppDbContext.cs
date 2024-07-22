@@ -30,8 +30,9 @@ public class AppDbContext(DbContextOptions options) : DbContextBase(options)
     public DbSet<DbCart> Carts { get; protected set; } = null!;
     public DbSet<DbCartItem> CartItems { get; protected set; } = null!;
 
-    // ActualLab.Fusion.EntityFramework tables
+    // ActualLab.Fusion.EntityFramework.Operations tables
     public DbSet<DbOperation> Operations { get; protected set; } = null!;
+    public DbSet<DbEvent> Events { get; protected set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

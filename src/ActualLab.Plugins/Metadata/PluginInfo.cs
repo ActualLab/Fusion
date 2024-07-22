@@ -9,7 +9,7 @@ public class PluginInfo
     public ImmutableArray<TypeRef> Ancestors { get; protected set; }
     public ImmutableArray<TypeRef> Interfaces { get; protected set; }
     public ImmutableHashSet<TypeRef> CastableTo { get; protected set; }
-    public ImmutableOptionSet Capabilities { get; protected set; }
+    public PropertyBag Capabilities { get; protected set; }
     public ImmutableHashSet<TypeRef> Dependencies { get; protected set; }
     public ImmutableHashSet<TypeRef> AllDependencies { get; protected set; }
     public int OrderByDependencyIndex { get; protected internal set; }
@@ -19,7 +19,7 @@ public class PluginInfo
         ImmutableArray<TypeRef> ancestors,
         ImmutableArray<TypeRef> interfaces,
         ImmutableHashSet<TypeRef> castableTo,
-        ImmutableOptionSet capabilities,
+        PropertyBag capabilities,
         ImmutableHashSet<TypeRef> dependencies,
         ImmutableHashSet<TypeRef> allDependencies,
         int orderByDependencyIndex)

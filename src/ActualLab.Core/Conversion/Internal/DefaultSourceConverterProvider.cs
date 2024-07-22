@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
-using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Conversion.Internal;
 
@@ -16,7 +15,7 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
             var mGetConverter = self.GetType()
                 .GetMethod(nameof(GetConverter), BindingFlags.Instance | BindingFlags.NonPublic)!
                 .MakeGenericMethod(targetType1);
-            return (Converter) mGetConverter.Invoke(self, Array.Empty<object>())!;
+            return (Converter) mGetConverter.Invoke(self, [])!;
         }, this);
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
@@ -78,7 +77,7 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
                 nameof(bool.TryParse),
                 BindingFlags.Static | BindingFlags.Public,
                 null,
-                new [] {typeof(string), typeof(TTarget).MakeByRefType()},
+                [typeof(string), typeof(TTarget).MakeByRefType()],
                 null);
             if (mTryParse != null && mTryParse.ReturnType == typeof(bool)) {
                 var tryParseFn = (TryParseFunc<TTarget>)mTryParse.CreateDelegate(typeof(TryParseFunc<TTarget>));
@@ -96,7 +95,7 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
                 nameof(bool.Parse),
                 BindingFlags.Static | BindingFlags.Public,
                 null,
-                new [] {typeof(string)},
+                [typeof(string)],
                 null);
             if (mParse != null && mParse.ReturnType == tTarget) {
                 var fn = (Func<TSource, TTarget>)mParse.CreateDelegate(typeof(Func<TSource, TTarget>));

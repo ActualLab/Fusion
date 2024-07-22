@@ -6,14 +6,20 @@ namespace ActualLab.Locking;
 
 #pragma warning disable CA2002
 
-public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLevel, int capacity)
-    where TKey : notnull
+public class AsyncLockSet<TKey>(
+    LockReentryMode reentryMode,
+    int concurrencyLevel,
+    int capacity,
+    IEqualityComparer<TKey>? equalityComparer = null
+    ) where TKey : notnull
 {
     public static int DefaultConcurrencyLevel => HardwareInfo.GetProcessorCountFactor();
     public static int DefaultCapacity => 31;
 
-    private readonly ConcurrentDictionary<TKey, Entry> _entries = new(concurrencyLevel, capacity);
-    private readonly ConcurrentPool<AsyncLock> _lockPool = new(() => new AsyncLock(reentryMode));
+    private readonly ConcurrentDictionary<TKey, Entry> _entries
+        = new(concurrencyLevel, capacity, equalityComparer ?? EqualityComparer<TKey>.Default);
+    private readonly ConcurrentPool<AsyncLock> _lockPool
+        = new(() => new AsyncLock(reentryMode));
 
     public LockReentryMode ReentryMode { get; } = reentryMode;
     public int Count => _entries.Count;
@@ -21,6 +27,7 @@ public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLeve
     public AsyncLockSet(LockReentryMode reentryMode = LockReentryMode.Unchecked)
         : this(reentryMode, DefaultConcurrencyLevel, DefaultCapacity) { }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public ValueTask<Releaser> Lock(TKey key, CancellationToken cancellationToken = default)
     {
         // This has to be non-async method, otherwise AsyncLocals
@@ -38,6 +45,7 @@ public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLeve
 
     // Private methods
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     private (AsyncLock, Entry) PrepareLock(TKey key)
     {
         var spinWait = new SpinWait();
@@ -46,10 +54,12 @@ public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLeve
             var asyncLock = entry.TryBeginUse();
             if (asyncLock != null)
                 return (asyncLock, entry);
+
             spinWait.SpinOnce(); // Safe for WASM
         }
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     private static async ValueTask<Releaser> ToReleaserTask(Entry entry, ValueTask<AsyncLock.Releaser> task)
     {
         try {
@@ -72,6 +82,7 @@ public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLeve
         private volatile AsyncLock? _asyncLock;
         private int _useCount;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entry(AsyncLockSet<TKey> owner, TKey key)
         {
             _owner = owner;
@@ -80,6 +91,7 @@ public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLeve
             _asyncLock = _lease.Resource;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AsyncLock? TryBeginUse()
         {
             lock (this) {
@@ -90,6 +102,7 @@ public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLeve
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EndUse()
         {
             var mustRelease = false;
@@ -110,15 +123,17 @@ public class AsyncLockSet<TKey>(LockReentryMode reentryMode, int concurrencyLeve
 
     public readonly struct Releaser(object entry, AsyncLock.Releaser releaser) : IAsyncLockReleaser
     {
-        private readonly Entry _entry = (Entry)entry;
+        private readonly Entry? _entry = (Entry)entry;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void MarkLockedLocally()
             => releaser.MarkLockedLocally();
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
         {
             releaser.Dispose();
-            _entry.EndUse();
+            _entry?.EndUse();
         }
     }
 }

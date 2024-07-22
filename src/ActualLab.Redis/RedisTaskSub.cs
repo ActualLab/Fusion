@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using StackExchange.Redis;
 using ActualLab.Internal;
 
@@ -100,10 +99,7 @@ public sealed class RedisTaskSub<T> : RedisSubBase
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2046
     protected override void OnMessage(RedisChannel redisChannel, RedisValue redisValue)
-#pragma warning restore IL2046
     {
         try {
             var value = Serializer.Read(redisValue);

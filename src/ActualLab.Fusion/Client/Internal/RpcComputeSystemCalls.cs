@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 
@@ -6,7 +7,7 @@ namespace ActualLab.Fusion.Client.Internal;
 
 public interface IRpcComputeSystemCalls : IRpcSystemService
 {
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     Task<RpcNoWait> Invalidate();
 }
 
@@ -15,7 +16,7 @@ public class RpcComputeSystemCalls(IServiceProvider services)
 {
     public static readonly Symbol Name = "$sys-c";
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task<RpcNoWait> Invalidate()
     {
         var context = RpcInboundContext.GetCurrent();

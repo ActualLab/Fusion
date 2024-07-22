@@ -10,12 +10,12 @@ public partial record Screenshot
     [DataMember, MemoryPackOrder(0)] public int Width { get; init; }
     [DataMember, MemoryPackOrder(1)] public int Height { get; init; }
     [DataMember, MemoryPackOrder(2)] public Moment CapturedAt { get; init; }
-    [DataMember, MemoryPackOrder(3)] public byte[] Image { get; init; } = Array.Empty<byte>();
+    [DataMember, MemoryPackOrder(3)] public byte[] Image { get; init; } = [];
 }
 
 public interface IScreenshotService : IComputeService
 {
-    [ComputeMethod, ClientComputeMethod(ClientCacheMode = ClientCacheMode.NoCache)]
+    [ComputeMethod, RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.NoCache)]
     Task<Screenshot> GetScreenshotAlt(int width, CancellationToken cancellationToken = default);
     [ComputeMethod(MinCacheDuration = 0.3)]
     Task<Screenshot> GetScreenshot(int width, CancellationToken cancellationToken = default);
@@ -69,7 +69,7 @@ public class ScreenshotService : IScreenshotService
         return new Screenshot {
             Width = ow,
             Height = oh,
-            CapturedAt = SystemClock.Now,
+            CapturedAt = Moment.Now,
             Image = stream.ToArray(),
         };
     }
@@ -84,7 +84,7 @@ public class ScreenshotService : IScreenshotService
         var bScreen = new Bitmap(w, h);
         using var gScreen = Graphics.FromImage(bScreen);
         gScreen.CopyFromScreen(0, 0, 0, 0, bScreen.Size);
-        Computed.GetCurrent()!.Invalidated += c => {
+        Computed.GetCurrent().Invalidated += c => {
             _ = Task.Delay(2000, default).ContinueWith(_ => {
                 // Let's dispose these values in 2 seconds
                 var computed = (Computed<Bitmap>) c;

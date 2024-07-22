@@ -9,10 +9,12 @@ public struct RingBuffer<T> : IReadOnlyList<T>
     private int _start;
     private int _end;
 
+    public readonly int Capacity;
     public readonly int Count => (_end - _start) & Capacity;
     public readonly bool IsEmpty => _start == _end;
     public readonly bool IsFull => Count == Capacity;
-    public int Capacity { get; }
+    public readonly int RemainingCapacity => Capacity - Count;
+    public readonly bool HasRemainingCapacity => Capacity > Count;
     public readonly bool IsReadOnly => false;
 
     public T this[int index] {
@@ -60,7 +62,7 @@ public struct RingBuffer<T> : IReadOnlyList<T>
     public readonly T[] ToArray()
     {
         if (Count == 0)
-            return Array.Empty<T>();
+            return [];
 
         var result = new T[Count];
         var resultSpan = result.AsSpan();
@@ -72,6 +74,8 @@ public struct RingBuffer<T> : IReadOnlyList<T>
 
     public void MoveHead(int skipCount)
     {
+        if (skipCount == 0)
+            return;
         if (skipCount < 0 || skipCount > Count)
             throw new ArgumentOutOfRangeException(nameof(skipCount));
 

@@ -1,3 +1,4 @@
+using ActualLab.Resilience;
 using static System.Console;
 
 namespace Samples.HelloCart;
@@ -6,6 +7,7 @@ public static class AutoRunner
 {
     public static async Task Run(AppBase app, CancellationToken cancellationToken = default)
     {
+        ChaosMaker.Default.TryEnable();
         var productService = app.ClientServices.GetRequiredService<IProductService>();
         var commander = app.ClientServices.Commander();
 
@@ -16,8 +18,8 @@ public static class AutoRunner
             var price = rnd.Next(10);
             var command = new EditCommand<Product>(product! with { Price = price });
             WriteLine(command);
-            await commander.Call(command, cancellationToken);
-            await Task.Delay(2000, cancellationToken);
+            _ = commander.Run(command, cancellationToken);
+            await Task.Delay(500, cancellationToken);
         }
     }
 }

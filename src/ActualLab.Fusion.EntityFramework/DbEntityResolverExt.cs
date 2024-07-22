@@ -1,5 +1,3 @@
-using ActualLab.Multitenancy;
-
 namespace ActualLab.Fusion.EntityFramework;
 
 public static class DbEntityResolverExt
@@ -10,7 +8,7 @@ public static class DbEntityResolverExt
         CancellationToken cancellationToken = default)
         where TKey : notnull
         where TDbEntity : class
-        => resolver.Get(Tenant.Default, key, cancellationToken);
+        => resolver.Get(default, key, cancellationToken);
 
     public static Task<Dictionary<TKey, TDbEntity>> GetMany<TKey, TDbEntity>(
         this IDbEntityResolver<TKey, TDbEntity> resolver,
@@ -18,11 +16,11 @@ public static class DbEntityResolverExt
         CancellationToken cancellationToken = default)
         where TKey : notnull
         where TDbEntity : class
-        => resolver.GetMany(Tenant.Default, keys, cancellationToken);
+        => resolver.GetMany(default, keys, cancellationToken);
 
     public static async Task<Dictionary<TKey, TDbEntity>> GetMany<TKey, TDbEntity>(
         this IDbEntityResolver<TKey, TDbEntity> resolver,
-        Tenant tenant,
+        DbShard shard,
         IEnumerable<TKey> keys,
         CancellationToken cancellationToken = default)
         where TKey : notnull
@@ -30,7 +28,7 @@ public static class DbEntityResolverExt
     {
         var entities = await keys
             .Distinct()
-            .Select(key => resolver.Get(tenant.Id, key, cancellationToken))
+            .Select(key => resolver.Get(shard, key, cancellationToken))
             .Collect()
             .ConfigureAwait(false);
         var result = new Dictionary<TKey, TDbEntity>();

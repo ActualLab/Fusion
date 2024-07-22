@@ -21,6 +21,7 @@ public interface IOption
 
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 public readonly partial struct Option<T> : IEquatable<Option<T>>, IOption
 {
@@ -44,6 +45,7 @@ public readonly partial struct Option<T> : IEquatable<Option<T>>, IOption
     /// <inheritdoc />
     // ReSharper disable once HeapView.BoxingAllocation
     object? IOption.Value => Value;
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     private string DebugValue => ToString();
 
     /// <summary>
@@ -98,6 +100,7 @@ public readonly partial struct Option<T> : IEquatable<Option<T>>, IOption
         value = ValueOrDefault!;
         return HasValue;
     }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsNone() => !HasValue;
 

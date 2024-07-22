@@ -8,7 +8,7 @@ public static class FusionBuilderExt
 
     public static FusionBuilder AddGlobalIsolationLevelSelector(
         this FusionBuilder fusion,
-        Func<IServiceProvider, GlobalIsolationLevelSelector> globalIsolationLevelSelector)
+        Func<IServiceProvider, DbIsolationLevelSelector> globalIsolationLevelSelector)
     {
         fusion.Services.AddSingleton(globalIsolationLevelSelector);
         return fusion;
@@ -18,7 +18,7 @@ public static class FusionBuilderExt
         this FusionBuilder fusion,
         Func<IServiceProvider, CommandContext, IsolationLevel> globalIsolationLevelSelector)
     {
-        fusion.Services.AddSingleton(c => new GlobalIsolationLevelSelector(
+        fusion.Services.AddSingleton(c => new DbIsolationLevelSelector(
             context => globalIsolationLevelSelector.Invoke(c, context)));
         return fusion;
     }

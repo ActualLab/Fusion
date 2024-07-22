@@ -1,15 +1,19 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Interception.Internal;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.Internal;
+using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc;
 
 public sealed class RpcServiceDef
 {
+    private readonly ConcurrentDictionary<MethodInfo, RpcMethodDef?> _getOrFindMethodCache = new();
     private Dictionary<MethodInfo, RpcMethodDef> _methods = null!;
     private Dictionary<Symbol, RpcMethodDef> _methodByName = null!;
     private object? _server;
     private string? _toStringCached;
+
+    internal Dictionary<Symbol, RpcMethodDef> MethodByName => _methodByName;
 
     public RpcHub Hub { get; }
     public Type Type { get; }
@@ -20,9 +24,11 @@ public sealed class RpcServiceDef
     public bool HasServer => ServerResolver != null;
     public object Server => _server ??= ServerResolver.Resolve(Hub.Services);
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
+    public Symbol Scope { get; init; }
+    public LegacyNames LegacyNames { get; init; }
 
-    public RpcMethodDef this[MethodInfo method] => Get(method) ?? throw Errors.NoMethod(Type, method);
-    public RpcMethodDef this[Symbol methodName] => Get(methodName) ?? throw Errors.NoMethod(Type, methodName);
+    public RpcMethodDef this[MethodInfo method] => GetMethod(method) ?? throw Errors.NoMethod(Type, method);
+    public RpcMethodDef this[Symbol methodName] => GetMethod(methodName) ?? throw Errors.NoMethod(Type, methodName);
 
     public RpcServiceDef(RpcHub hub, RpcServiceBuilder service)
     {
@@ -36,6 +42,10 @@ public sealed class RpcServiceDef
         ServerResolver = service.ServerResolver;
         IsSystem = typeof(IRpcSystemService).IsAssignableFrom(Type);
         IsBackend = hub.BackendServiceDetector.Invoke(service.Type);
+        Scope = hub.ServiceScopeResolver.Invoke(this);
+        LegacyNames = new LegacyNames(Type
+            .GetCustomAttributes<LegacyNameAttribute>(false)
+            .Select(x => LegacyName.New(x)));
     }
 
     internal void BuildMethods(
@@ -85,6 +95,40 @@ public sealed class RpcServiceDef
         return _toStringCached = $"'{Name}'{kindInfo}: {Type.GetName()}{serverInfo}, {Methods.Count} method(s)";
     }
 
-    public RpcMethodDef? Get(MethodInfo method) => _methods.GetValueOrDefault(method);
-    public RpcMethodDef? Get(Symbol methodName) => _methodByName.GetValueOrDefault(methodName);
+    public RpcMethodDef? GetMethod(MethodInfo method)
+        => _methods.GetValueOrDefault(method);
+    public RpcMethodDef? GetMethod(Symbol methodName)
+        => _methodByName.GetValueOrDefault(methodName);
+
+    public RpcMethodDef? GetOrFindMethod(MethodInfo method)
+        => _getOrFindMethodCache.GetOrAdd(method, static (methodInfo, self) => {
+            var methodDef = self.GetMethod(methodInfo);
+            if (methodDef != null)
+                return methodDef;
+            if (!methodInfo.IsPublic || typeof(InterfaceProxy).IsAssignableFrom(methodInfo.ReflectedType))
+                return null;
+
+            // It's a class proxy, let's try to map the method to interface
+            var methodName = methodInfo.Name;
+            var parameters = methodInfo.GetParameters();
+            foreach (var m in self.Methods) {
+                if (!m.Method.Name.Equals(methodName, StringComparison.Ordinal))
+                    continue;
+
+                if (m.Parameters.Length != parameters.Length)
+                    continue;
+
+                var isMatch = true;
+                for (var i = 0; i < parameters.Length; i++) {
+                    isMatch &= m.Parameters[i].ParameterType == parameters[i].ParameterType;
+                    if (!isMatch)
+                        break;
+                }
+
+                if (isMatch)
+                    return m;
+            }
+
+            return null;
+        }, this);
 }

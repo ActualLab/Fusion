@@ -8,5 +8,9 @@ public abstract class RpcServiceBase(IServiceProvider services) : IHasServices
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; } = services;
-    public RpcHub Hub => _hub ??= Services.RpcHub();
+
+    public RpcHub Hub {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _hub ??= Services.RpcHub();
+    }
 }

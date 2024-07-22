@@ -1,8 +1,6 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using ActualLab.Fusion.Server.Endpoints;
-using ActualLab.Internal;
 
 namespace ActualLab.Fusion.Server;
 
@@ -10,7 +8,6 @@ namespace ActualLab.Fusion.Server;
 
 public static class EndpointRouteBuilderExt
 {
-    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static IEndpointRouteBuilder MapFusionAuth(this IEndpointRouteBuilder endpoints)
     {
         var services = endpoints.ServiceProvider;
@@ -27,7 +24,6 @@ public static class EndpointRouteBuilderExt
         return endpoints;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static IEndpointRouteBuilder MapFusionBlazorMode(this IEndpointRouteBuilder endpoints)
     {
         var services = endpoints.ServiceProvider;

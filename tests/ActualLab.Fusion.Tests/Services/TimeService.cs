@@ -1,11 +1,11 @@
-using FluentAssertions.Extensions;
-
 namespace ActualLab.Fusion.Tests.Services;
 
 public interface ITimeServer : IComputeService
 {
     [ComputeMethod]
     Task<DateTime> GetTime(CancellationToken cancellationToken = default);
+    [ComputeMethod]
+    ValueTask<DateTime> GetTimeAsValueTask(CancellationToken cancellationToken = default);
     [ComputeMethod]
     Task<DateTime> GetTimeWithDelay(CancellationToken cancellationToken = default);
     [ComputeMethod]
@@ -44,6 +44,10 @@ public class TimeService : ITimeService
     [ComputeMethod(AutoInvalidationDelay = 0.25)]
     public virtual Task<DateTime> GetTime(CancellationToken cancellationToken = default)
         => Task.FromResult(Time);
+
+    [ComputeMethod(AutoInvalidationDelay = 0.25)]
+    public virtual ValueTask<DateTime> GetTimeAsValueTask(CancellationToken cancellationToken = default)
+        => new(Time);
 
     [ComputeMethod(AutoInvalidationDelay = 0.25)]
     public virtual Task<DateTime> GetTimeNoMethod(CancellationToken cancellationToken = default)

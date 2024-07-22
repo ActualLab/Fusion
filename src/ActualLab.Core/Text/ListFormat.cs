@@ -1,23 +1,15 @@
-using Cysharp.Text;
-
 namespace ActualLab.Text;
 
 [StructLayout(LayoutKind.Auto)]
-public readonly struct ListFormat
+public readonly struct ListFormat(char delimiter, char escape = '\\')
 {
     public static readonly ListFormat Default = new('|');
     public static readonly ListFormat CommaSeparated = new(',');
     public static readonly ListFormat SlashSeparated = new('/');
     public static readonly ListFormat TabSeparated = new('\t');
 
-    public readonly char Delimiter;
-    public readonly char Escape;
-
-    public ListFormat(char delimiter, char escape = '\\')
-    {
-        Delimiter = delimiter;
-        Escape = escape;
-    }
+    public readonly char Delimiter = delimiter;
+    public readonly char Escape = escape;
 
     public ListFormatter CreateFormatter(int itemIndex = 0)
         => new(this, itemIndex);

@@ -30,7 +30,7 @@ public class ScreenshotServiceTest(ITestOutputHelper @out) : SimpleFusionTestBas
         var c = await GetScreenshotComputed(screenshots);
         for (var i = 0; i < 10; i++) {
             c.Value.Image.Length.Should().BeGreaterThan(0);
-            await TestExt.WhenMet(
+            await TestExt.When(
                 () => c.IsConsistent().Should().BeFalse(),
                 TimeSpan.FromSeconds(0.5));
             c = await c.Update();
@@ -51,7 +51,7 @@ public class ScreenshotServiceTest(ITestOutputHelper @out) : SimpleFusionTestBas
         var c = await GetScreenshotComputed(screenshots);
         for (var i = 0; i < 50; i++) {
             c.Value.Image.Length.Should().BeGreaterThan(0);
-            await TestExt.WhenMet(
+            await TestExt.When(
                 () => c.IsConsistent().Should().BeFalse(),
                 TimeSpan.FromSeconds(1));
             var updateTask = c.Update();

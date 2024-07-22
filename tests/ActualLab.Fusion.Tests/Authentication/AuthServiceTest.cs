@@ -1,4 +1,5 @@
 using System.Security;
+using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.Tests.Model;
@@ -57,13 +58,13 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         if (MustSkip()) return;
 
         await using var serving = await WebHost.Serve();
-        var agentInfo1 = WebServices.GetRequiredService<AgentInfo>();
-        var agentInfo2 = Services.GetRequiredService<AgentInfo>();
+        var hostId1 = WebServices.GetRequiredService<HostId>();
+        var hostId2 = Services.GetRequiredService<HostId>();
         var notifier1 = WebServices.GetRequiredService<IOperationCompletionNotifier>();
         var notifier2 = Services.GetRequiredService<IOperationCompletionNotifier>();
 
-        agentInfo1.Should().NotBe(agentInfo2);
-        agentInfo1.Id.Should().NotBe(agentInfo2.Id);
+        hostId1.Should().NotBe(hostId2);
+        hostId1.Id.Should().NotBe(hostId2.Id);
         notifier1.Should().NotBe(notifier2);
 
         var auth = Services.GetRequiredService<IAuth>();
@@ -156,7 +157,7 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         user.ToClaimsPrincipal().Identity!.IsAuthenticated.Should().BeTrue();
 
         // Checking if local service is able to see the same user & sessions
-        if (!UseInMemoryAuthService) {
+        if (!UseInMemoryAuthService) { // In-memory auth services don't share the state
             await Delay(0.5);
             user = await auth.GetUser(session);
             user.Should().NotBeNull();
@@ -165,20 +166,20 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         }
 
         // Checking guest session
-        session = sessionB;
-        user = await authClient.GetUser(session);
+        user = await authClient.GetUser(sessionB);
         user.Should().BeNull();
 
         // Checking sign-out
-        await WebServices.Commander().Call(new Auth_SignOut(sessionA));
-        user = await webAuth.GetUser(sessionA);
+        session = sessionA;
+        await WebServices.Commander().Call(new Auth_SignOut(session));
+        user = await webAuth.GetUser(session);
         user.Should().BeNull();
 
         await Delay(0.5);
-        user = await authClient.GetUser(sessionA);
+        user = await authClient.GetUser(session);
         user.Should().BeNull();
-        if (!UseInMemoryAuthService) {
-            user = await auth.GetUser(sessionA);
+        if (!UseInMemoryAuthService) { // In-memory auth services don't share the state
+            user = await auth.GetUser(session);
             user.Should().BeNull();
         }
     }
@@ -234,7 +235,7 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         user.Claims.Count.Should().Be(2);
 
         // Checking if local service is able to see the same user & sessions
-        if (!UseInMemoryAuthService) {
+        if (!UseInMemoryAuthService) { // In-memory auth services don't share the state
             await Delay(0.5);
             user = await auth.GetUser(session);
             user.Should().NotBeNull();
@@ -255,7 +256,7 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         await Delay(0.5);
         user = await authClient.GetUser(sessionA);
         user.Should().BeNull();
-        if (!UseInMemoryAuthService) {
+        if (!UseInMemoryAuthService) { // In-memory auth services don't share the state
             user = await auth.GetUser(sessionA);
             user.Should().BeNull();
         }
@@ -340,7 +341,7 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         var user = await auth.GetUser(sessionA);
         user.Should().NotBeNull();
         user!.Name.Should().Be(bob.Name);
-        bob = (await authBackend.GetUser("", user.Id)).Require(User.MustBeAuthenticated);
+        bob = (await authBackend.GetUser(default, user.Id)).Require(User.MustBeAuthenticated);
 
         sessions = await auth.GetUserSessions(sessionA);
         sessions.Select(s => s.SessionHash).Should().BeEquivalentTo(sessionA.Hash);

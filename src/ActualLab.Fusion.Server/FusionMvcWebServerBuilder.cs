@@ -1,8 +1,6 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using ActualLab.Fusion.Server.Controllers;
 using ActualLab.Fusion.Server.Internal;
-using ActualLab.Internal;
 
 namespace ActualLab.Fusion.Server;
 
@@ -49,7 +47,6 @@ public readonly struct FusionMvcWebServerBuilder
         configure?.Invoke(this);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public FusionMvcWebServerBuilder AddControllers()
     {
         var services = Services;
@@ -61,7 +58,6 @@ public readonly struct FusionMvcWebServerBuilder
         return this;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public FusionMvcWebServerBuilder AddControllerFilter(Func<TypeInfo, bool> controllerFilter)
     {
         Services.AddControllers().ConfigureApplicationPartManager(

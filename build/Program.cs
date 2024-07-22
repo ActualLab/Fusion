@@ -78,6 +78,9 @@ internal static class Program
         var dotnetExePath = TryFindDotNetExePath() ?? throw new FileNotFoundException(
             "'dotnet' command isn't found. Use DOTNET_ROOT env. var to specify the path to custom 'dotnet' tool.");
 
+        // Multitargeting
+        var multitargetingProperty = "-p:UseMultitargeting=true";
+
         // For Nerdbank.GitVersioning: https://github.com/dotnet/Nerdbank.GitVersioning/blob/master/doc/public_vs_stable.md
         var publicReleaseProperty = isPublicRelease ? "-p:PublicRelease=true" : "";
 
@@ -98,14 +101,15 @@ internal static class Program
         });
 
         Target("restore", async () => {
-            await Cli.Wrap(dotnetExePath).WithArguments(new[] {
-                    "msbuild",
-                    "-noLogo",
-                    "-t:Restore",
-                    "-p:RestoreForce=true",
-                    "-p:RestoreIgnoreFailedSources=True",
-                    publicReleaseProperty
-                }).ToConsole()
+            await Cli.Wrap(dotnetExePath).WithArguments(args => args
+                    .Add("msbuild")
+                    .Add("-noLogo")
+                    .Add("-t:Restore")
+                    .Add("-p:RestoreForce=true")
+                    .Add("-p:RestoreIgnoreFailedSources=True")
+                    .AddIfNonEmpty(multitargetingProperty)
+                    .AddIfNonEmpty(publicReleaseProperty)
+                ).ToConsole()
                 .ExecuteAsync(cancellationToken).ConfigureAwait(false);
         });
 
@@ -116,7 +120,8 @@ internal static class Program
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
                     .Add("--no-restore")
-                    .Add(publicReleaseProperty)
+                    .AddIfNonEmpty(multitargetingProperty)
+                    .AddIfNonEmpty(publicReleaseProperty)
                 )
                 .ToConsole()
                 .ExecuteAsync(cancellationToken).ConfigureAwait(false);
@@ -132,7 +137,8 @@ internal static class Program
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
                     .Add("--no-restore")
-                    .Add(publicReleaseProperty)
+                    .AddIfNonEmpty(multitargetingProperty)
+                    .AddIfNonEmpty(publicReleaseProperty)
                 )
                 .ToConsole()
                 .ExecuteAsync(cancellationToken).ConfigureAwait(false);
@@ -143,6 +149,7 @@ internal static class Program
             var nugetApiKey = Environment.GetEnvironmentVariable("ActualChat_NuGet_API_Key") ?? "";
             if (string.IsNullOrWhiteSpace(nugetApiKey))
                 throw new InvalidOperationException("ActualChat_NuGet_API_Key env. var isn't set.");
+
             var nupkgPaths = Directory
                 .EnumerateFiles(nupkgPath.FullPath, "*.nupkg", SearchOption.TopDirectoryOnly)
                 .Select(FilePath.New)
@@ -177,6 +184,7 @@ internal static class Program
                     .Add("--results-directory").Add(testOutputPath)
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
+                    .AddIfNonEmpty(multitargetingProperty)
                     .Add("--")
                     .Add("DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=json,cobertura")
                 ).ToConsole()

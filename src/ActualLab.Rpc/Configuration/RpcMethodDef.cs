@@ -1,12 +1,14 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Interception.Interceptors;
 using ActualLab.Rpc.Diagnostics;
 
 namespace ActualLab.Rpc;
 
 public sealed class RpcMethodDef : MethodDef
 {
+    private static readonly HashSet<string> StreamMethodNames
+        = new(StringComparer.Ordinal) { "Ack", "AckEnd", "B", "I", "End" };
+
     private string? _toStringCached;
     private readonly Symbol _name;
 
@@ -19,25 +21,33 @@ public sealed class RpcMethodDef : MethodDef
                 throw new ArgumentOutOfRangeException(nameof(value));
 
             _name = value;
-            FullName = $"{Service.Name.Value}.{Name.Value}";
+            FullName = $"{Service.Name.Value}.{value}";
         }
     }
-    public new Symbol FullName { get; private init; }
 
-    public Type ArgumentListType { get; }
-    public bool HasObjectTypedArguments { get; }
-    public Func<ArgumentList> ArgumentListFactory { get; }
-    public Func<ArgumentList> ResultListFactory { get; }
-    public bool NoWait { get; }
+    public new readonly Symbol FullName;
+
+    public readonly Type ArgumentListType;
+    public readonly bool HasObjectTypedArguments;
+    public readonly Func<ArgumentList> ArgumentListFactory;
+    public readonly Func<ArgumentList> ResultListFactory;
+    public readonly bool NoWait;
+    public readonly bool IsSystem;
+    public readonly bool IsBackend;
+    public readonly bool IsStream;
+    public bool IsCommand { get; init; }
     public bool AllowArgumentPolymorphism { get; init; }
     public bool AllowResultPolymorphism { get; init; }
     public RpcMethodTracer? Tracer { get; init; }
+    public LegacyNames LegacyNames { get; init; }
+    public PropertyBag CustomProperties { get; init; } = PropertyBag.Empty;
+    public RpcCallTimeouts Timeouts { get; init; }
 
     public RpcMethodDef(
         RpcServiceDef service,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        MethodInfo method)
-        : base(serviceType, method)
+        MethodInfo method
+        ) : base(serviceType, method)
     {
         if (serviceType != service.Type)
             throw new ArgumentOutOfRangeException(nameof(serviceType));
@@ -48,10 +58,14 @@ public sealed class RpcMethodDef : MethodDef
             : ArgumentList.Types[Parameters.Length].MakeGenericType(ParameterTypes);
         HasObjectTypedArguments = ParameterTypes.Any(type => typeof(object) == type);
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);
+        IsSystem = service.IsSystem;
+        IsBackend = service.IsBackend;
+        IsStream = IsSystem && StreamMethodNames.Contains(method.Name);
 
         Service = service;
-        Name =  $"{Method.Name}:{ParameterTypes.Length}";
-        AllowResultPolymorphism = AllowArgumentPolymorphism = service.IsSystem || service.IsBackend;
+        var nameSuffix = $":{ParameterTypes.Length}";
+        Name = Method.Name + nameSuffix;
+        AllowResultPolymorphism = AllowArgumentPolymorphism = IsSystem || IsBackend;
 
 #pragma warning disable IL2055, IL2072
         ArgumentListFactory = (Func<ArgumentList>)ArgumentListType.GetConstructorDelegate()!;
@@ -64,6 +78,14 @@ public sealed class RpcMethodDef : MethodDef
             IsValid = false;
 
         Tracer = Hub.MethodTracerFactory.Invoke(this);
+        LegacyNames = new LegacyNames(Method
+            .GetCustomAttributes<LegacyNameAttribute>(false)
+            .Select(x => LegacyName.New(x, nameSuffix)));
+
+        IsCommand = ParameterTypes.Length == 2
+            && ParameterTypes[1] == typeof(CancellationToken)
+            && Hub.CommandTypeDetector(ParameterTypes[0]);
+        Timeouts = RpcCallTimeouts.DefaultProvider.Invoke(this).Normalize();
     }
 
     public override string ToString()

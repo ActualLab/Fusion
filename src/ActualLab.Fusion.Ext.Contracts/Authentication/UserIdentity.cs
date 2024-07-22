@@ -3,29 +3,28 @@ namespace ActualLab.Fusion.Authentication;
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public readonly partial struct UserIdentity : IEquatable<UserIdentity>
-{
+[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+public readonly partial record struct UserIdentity(
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] Symbol Id
+) {
     private static readonly ListFormat IdFormat = ListFormat.SlashSeparated;
 
     public static readonly UserIdentity None;
     public static string DefaultSchema { get; set; } = "Default";
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
-    public Symbol Id { get; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    // Computed properties
+
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public string Schema => ParseId(Id.Value).Schema;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public string SchemaBoundId => ParseId(Id.Value).SchemaBoundId;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
     public bool IsValid => !Id.IsEmpty;
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public UserIdentity(Symbol id)
-        => Id = id;
     public UserIdentity(string id)
-        => Id = id;
+        : this((Symbol)id) { }
     public UserIdentity(string provider, string providerBoundId)
-        => Id = FormatId(provider, providerBoundId);
+        : this(FormatId(provider, providerBoundId)) { }
 
     // Conversion
 
@@ -47,10 +46,7 @@ public readonly partial struct UserIdentity : IEquatable<UserIdentity>
     // Equality
 
     public bool Equals(UserIdentity other) => Id.Equals(other.Id);
-    public override bool Equals(object? obj) => obj is UserIdentity other && Equals(other);
-    public override int GetHashCode() => Id.GetHashCode();
-    public static bool operator ==(UserIdentity left, UserIdentity right) => left.Equals(right);
-    public static bool operator !=(UserIdentity left, UserIdentity right) => !left.Equals(right);
+    public override int GetHashCode() => Id.HashCode;
 
     // Private methods
 

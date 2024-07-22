@@ -9,6 +9,7 @@ public static class ServiceCollectionExt
 
     public static IServiceCollection AddTypeViewFactory(this IServiceCollection services)
     {
+        services.AddSingleton(_ => TypeViewInterceptor.Options.Default);
         services.AddSingleton<TypeViewInterceptor>();
         services.AddSingleton<ITypeViewFactory, TypeViewFactory>();
         return services;
@@ -17,7 +18,11 @@ public static class ServiceCollectionExt
     // Typed factories
 
     public static IServiceCollection UseTypedFactories(this IServiceCollection services)
-        => services.AddScoped<TypedFactoryInterceptor>();
+    {
+        services.AddSingleton(_ => TypedFactoryInterceptor.Options.Default);
+        services.AddScoped<TypedFactoryInterceptor>();
+        return services;
+    }
 
     public static IServiceCollection AddTypedFactory<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TFactory>(

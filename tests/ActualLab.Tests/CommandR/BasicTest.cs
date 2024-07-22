@@ -94,13 +94,13 @@ public class BasicTest(ITestOutputHelper @out) : CommandRTestBase(@out)
         var services = CreateServices();
         CommandContext.Current.Should().BeNull();
         var result = await services.Commander().Call(new RecSumCommand() {
-            Arguments = new double[] {1, 2, 3}
+            Arguments = [1, 2, 3]
         });
         result.Should().Be(6);
 
         CommandContext.Current.Should().BeNull();
         result = await services.Commander().Call(new RecSumCommand() {
-            Arguments = new double[] {1, 2, 3, 4},
+            Arguments = [1, 2, 3, 4],
         }, isOutermost: true);
         result.Should().Be(10);
 

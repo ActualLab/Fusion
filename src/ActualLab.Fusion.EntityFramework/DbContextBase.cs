@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
@@ -40,9 +39,7 @@ public abstract class DbContextBase : DbContext
     }
 #endif
 
-    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     protected DbContextBase() { }
-    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     protected DbContextBase(DbContextOptions options) : base(options) { }
 
 #if NET6_0_OR_GREATER

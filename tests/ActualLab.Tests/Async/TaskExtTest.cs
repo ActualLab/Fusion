@@ -154,7 +154,9 @@ public class TaskExtTest(ITestOutputHelper @out) : TestBase(@out)
         }
     }
 
-    Task<int> RandomIntDelay(int seed, int maxDelay)
+    // Private methods
+
+    private Task<int> RandomIntDelay(int seed, int maxDelay)
     {
         var delay = seed % maxDelay;
         return delay == 0
@@ -162,25 +164,25 @@ public class TaskExtTest(ITestOutputHelper @out) : TestBase(@out)
             : IntDelay(delay);
     }
 
-    async Task<int> IntDelay(int delay)
+    private async Task<int> IntDelay(int delay)
     {
         await Task.Delay(delay);
         return delay;
     }
 
-    async Task FailDelay(int delay)
+    private async Task FailDelay(int delay)
     {
         await Task.Delay(delay);
         throw new InvalidOperationException();
     }
 
-    async Task<int> IntDelayOne(int delay)
+    private async Task<int> IntDelayOne(int delay)
     {
         await Task.Delay(delay);
         return 1;
     }
 
-    async Task<int> FailIntDelay(int delay)
+    private async Task<int> FailIntDelay(int delay)
     {
         await Task.Delay(delay);
         throw new InvalidOperationException();

@@ -10,21 +10,21 @@ public static class MemberInfoExt
 
     public static Func<TType, TValue> GetGetter<TType, TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
-        => (Func<TType, TValue>) GetGetter(propertyOrField, typeof(TType), isValueUntyped);
-    public static Func<object, TValue> GetGetter<TValue>(
+        => (Func<TType, TValue>)GetGetter(propertyOrField, typeof(TType), isValueUntyped);
+    public static Func<object?, TValue> GetGetter<TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
-        => (Func<object, TValue>) GetGetter(propertyOrField, typeof(object), isValueUntyped);
-    public static Func<object, object> GetGetter(this MemberInfo propertyOrField)
-        => (Func<object, object>) GetGetter(propertyOrField, typeof(object), true);
+        => (Func<object?, TValue>)GetGetter(propertyOrField, typeof(object), isValueUntyped);
+    public static Func<object?, object?> GetGetter(this MemberInfo propertyOrField)
+        => (Func<object?, object?>)GetGetter(propertyOrField, typeof(object), true);
 
     public static Action<TType, TValue> GetSetter<TType, TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
-        => (Action<TType, TValue>) GetSetter(propertyOrField, typeof(TType), isValueUntyped);
-    public static Action<object, TValue> GetSetter<TValue>(
+        => (Action<TType, TValue>)GetSetter(propertyOrField, typeof(TType), isValueUntyped);
+    public static Action<object?, TValue> GetSetter<TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
-        => (Action<object, TValue>) GetSetter(propertyOrField, typeof(object), isValueUntyped);
-    public static Action<object, object> GetSetter(this MemberInfo propertyOrField)
-        => (Action<object, object>) GetSetter(propertyOrField, typeof(object), true);
+        => (Action<object?, TValue>)GetSetter(propertyOrField, typeof(object), isValueUntyped);
+    public static Action<object?, object?> GetSetter(this MemberInfo propertyOrField)
+        => (Action<object?, object?>)GetSetter(propertyOrField, typeof(object), true);
 
     public static Delegate GetGetter(this MemberInfo propertyOrField, Type sourceType, bool isValueUntyped = false)
     {
@@ -60,7 +60,7 @@ public static class MemberInfoExt
             if (!isStatic && declaringType.IsAssignableFrom(sourceType) && valueType == pi.PropertyType)
                 return pi.GetMethod!.CreateDelegate(funcType);
 
-            m = new DynamicMethod("_Getter", valueType, new[] { sourceType }, true);
+            m = new DynamicMethod("_Getter", valueType, [sourceType], true);
             il = m.GetILGenerator();
             if (isStatic)
                 il.Emit(OpCodes.Call, pi.GetMethod!);
@@ -71,7 +71,7 @@ public static class MemberInfoExt
             }
         }
         else if (propertyOrField is FieldInfo fi) {
-            m = new DynamicMethod("_Getter", valueType, new[] { sourceType }, true);
+            m = new DynamicMethod("_Getter", valueType, [sourceType], true);
             il = m.GetILGenerator();
             if (fi.IsStatic)
                 il.Emit(OpCodes.Ldsfld, fi);
@@ -103,7 +103,7 @@ public static class MemberInfoExt
             if (!isStatic && declaringType.IsAssignableFrom(sourceType) && valueType == pi.PropertyType)
                 return pi.SetMethod!.CreateDelegate(funcType);
 
-            m = new DynamicMethod("_Setter", null, new[] { sourceType, valueType }, true);
+            m = new DynamicMethod("_Setter", null, [sourceType, valueType], true);
             il = m.GetILGenerator();
             if (isStatic) {
                 il.Emit(OpCodes.Ldarg_1);
@@ -119,7 +119,7 @@ public static class MemberInfoExt
             }
         }
         else if (propertyOrField is FieldInfo fi) {
-            m = new DynamicMethod("_Setter", null, new[] { sourceType, valueType }, true);
+            m = new DynamicMethod("_Setter", null, [sourceType, valueType], true);
             il = m.GetILGenerator();
             if (fi.IsStatic) {
                 il.Emit(OpCodes.Ldarg_1);

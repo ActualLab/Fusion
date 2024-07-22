@@ -1,6 +1,8 @@
 using System.Globalization;
-using ActualLab.Fusion.Internal;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Versioning;
+using Errors = ActualLab.Fusion.Internal.Errors;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
@@ -9,31 +11,32 @@ public partial class InMemoryAuthService
     // Command handlers
 
     // [CommandHandler] inherited
-    public virtual async Task SignIn(AuthBackend_SignIn command, CancellationToken cancellationToken = default)
+    public virtual Task SignIn(AuthBackend_SignIn command, CancellationToken cancellationToken = default)
     {
         var (session, user, authenticatedIdentity) = (command.Session, command.User, command.AuthenticatedIdentity);
         session.RequireValid();
         var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve(command);
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
-            var invSessionInfo = context.Operation().Items.Get<SessionInfo>();
+            var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo != null) {
-                _ = GetUser(tenant.Id, invSessionInfo.UserId, default);
-                _ = GetUserSessions(tenant.Id, invSessionInfo.UserId, default);
+                _ = GetUser(shard, invSessionInfo.UserId, default);
+                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             }
-            return;
+            return Task.CompletedTask;
         }
 
+        InMemoryOperationScope.Require();
         if (!user.Identities.ContainsKey(authenticatedIdentity))
 #pragma warning disable MA0015
             throw new ArgumentOutOfRangeException(
                 $"{nameof(command)}.{nameof(AuthBackend_SignIn.AuthenticatedIdentity)}");
 #pragma warning restore MA0015
 
-        var sessionInfo = SessionInfos.GetValueOrDefault((tenant, session.Id));
+        var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
         sessionInfo ??= new SessionInfo(session, Clocks.SystemClock.Now);
         if (sessionInfo.IsSignOutForced)
             throw Errors.SessionUnavailable();
@@ -45,9 +48,9 @@ public partial class InMemoryAuthService
             _ = long.Parse(user.Id, NumberStyles.Integer, CultureInfo.InvariantCulture);
 
         // And find the existing user
-        var existingUser = GetByUserIdentity(tenant, authenticatedIdentity);
+        var existingUser = GetByUserIdentity(shard, authenticatedIdentity);
         if (existingUser == null && !user.Id.IsEmpty)
-            existingUser = Users.GetValueOrDefault((tenant, user.Id));
+            existingUser = Users.GetValueOrDefault((shard, user.Id));
 
         if (existingUser != null) {
             // Merge if found
@@ -72,92 +75,93 @@ public partial class InMemoryAuthService
         };
 
         // Persist changes
-        Users[(tenant, user.Id)] = user;
-        sessionInfo = UpsertSessionInfo(tenant, session.Id, sessionInfo, sessionInfo.Version);
-        context.Operation().Items.Set(sessionInfo);
-        context.Operation().Items.Set(isNewUser);
+        Users[(shard, user.Id)] = user;
+        sessionInfo = UpsertSessionInfo(shard, session.Id, sessionInfo, sessionInfo.Version);
+        context.Operation.Items.Set(sessionInfo);
+        context.Operation.Items.Set(isNewUser);
+        return Task.CompletedTask;
     }
 
     // [CommandHandler] inherited
-    public virtual async Task<SessionInfo> SetupSession(
+    public virtual Task<SessionInfo> SetupSession(
         AuthBackend_SetupSession command, CancellationToken cancellationToken = default)
     {
         var (session, ipAddress, userAgent, options) = command;
         session.RequireValid();
         var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve(command);
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
-            var invIsNew = context.Operation().Items.GetOrDefault<bool>();
-            if (invIsNew) {
+            var invIsNew = context.Operation.Items.GetOrDefault<bool>();
+            if (invIsNew)
                 _ = GetAuthInfo(session, default);
-                _ = GetOptions(session, default);
-            }
-            var invSessionInfo = context.Operation().Items.Get<SessionInfo>();
+            var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
             if (invSessionInfo?.IsAuthenticated() ?? false)
-                _ = GetUserSessions(tenant.Id, invSessionInfo.UserId, default);
-            return null!;
+                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
+            return Task.FromResult<SessionInfo>(null!);
         }
 
-        var sessionInfo = SessionInfos.GetValueOrDefault((tenant, session.Id));
-        context.Operation().Items.Set(sessionInfo == null); // invIsNew
+        InMemoryOperationScope.Require();
+        var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
+        context.Operation.Items.Set(sessionInfo == null); // invIsNew
         sessionInfo ??= new SessionInfo(session, Clocks.SystemClock.Now);
         sessionInfo = sessionInfo with {
             IPAddress = ipAddress.IsNullOrEmpty() ? sessionInfo.IPAddress : ipAddress,
             UserAgent = userAgent.IsNullOrEmpty() ? sessionInfo.UserAgent : userAgent,
             Options = options.SetMany(sessionInfo.Options),
         };
-        sessionInfo = UpsertSessionInfo(tenant, session.Id, sessionInfo, sessionInfo.Version);
-        context.Operation().Items.Set(sessionInfo); // invSessionInfo
-        return sessionInfo;
+        sessionInfo = UpsertSessionInfo(shard, session.Id, sessionInfo, sessionInfo.Version);
+        context.Operation.Items.Set(sessionInfo); // invSessionInfo
+        return Task.FromResult(sessionInfo);
     }
 
     // [CommandHandler] inherited
-    public virtual async Task SetOptions(Auth_SetSessionOptions command, CancellationToken cancellationToken = default)
+    public virtual Task SetOptions(AuthBackend_SetSessionOptions command, CancellationToken cancellationToken = default)
     {
         var (session, options, baseVersion) = command;
         session.RequireValid();
-        var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve(command);
 
-        if (Computed.IsInvalidating()) {
-            _ = GetSessionInfo(session, default); // Must go first!
-            _ = GetOptions(session, default);
-            return;
+        if (Invalidation.IsActive) {
+            _ = GetSessionInfo(session, default);
+            return Task.CompletedTask;
         }
 
-        var sessionInfo = SessionInfos.GetValueOrDefault((tenant, session.Id));
+        InMemoryOperationScope.Require();
+        var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
         if (sessionInfo == null || sessionInfo.IsSignOutForced)
             throw new KeyNotFoundException();
+
         sessionInfo = sessionInfo with {
             Options = options
         };
-        UpsertSessionInfo(tenant, session.Id, sessionInfo, baseVersion);
+        UpsertSessionInfo(shard, session.Id, sessionInfo, baseVersion);
+        return Task.CompletedTask;
     }
 
     // Compute methods
 
     // [ComputeMethod] inherited
-    public virtual Task<User?> GetUser(Symbol tenantId, Symbol userId, CancellationToken cancellationToken = default)
-        => Task.FromResult(Users.TryGetValue((tenantId, userId), out var user) ? user : null);
+    public virtual Task<User?> GetUser(DbShard shard, Symbol userId, CancellationToken cancellationToken = default)
+        => Task.FromResult(Users.GetValueOrDefault((shard, userId)))!;
 
     // Protected methods
 
     protected virtual Task<ImmutableArray<(Symbol Id, SessionInfo SessionInfo)>> GetUserSessions(
-        Symbol tenantId, Symbol userId, CancellationToken cancellationToken = default)
+        DbShard shard, Symbol userId, CancellationToken cancellationToken = default)
     {
         if (userId.IsEmpty)
             return Task.FromResult(ImmutableArray<(Symbol Id, SessionInfo SessionInfo)>.Empty);
         var result = SessionInfos
-            .Where(kv => kv.Key.TenantId == tenantId && kv.Value.UserId == userId)
+            .Where(kv => kv.Key.Shard == shard && kv.Value.UserId == userId)
             .OrderByDescending(kv => kv.Value.LastSeenAt)
             .Select(kv => (kv.Key.SessionId, kv.Value))
             .ToImmutableArray();
         return Task.FromResult(result);
     }
 
-    protected virtual SessionInfo UpsertSessionInfo(Symbol tenantId, Symbol sessionId, SessionInfo sessionInfo, long? expectedVersion)
+    protected virtual SessionInfo UpsertSessionInfo(DbShard shard, Symbol sessionId, SessionInfo sessionInfo, long? expectedVersion)
     {
         sessionInfo = sessionInfo with {
             Version = VersionGenerator.NextVersion(expectedVersion ?? sessionInfo.Version),
@@ -166,7 +170,7 @@ public partial class InMemoryAuthService
 #if NETSTANDARD2_0
         var sessionInfo1 = sessionInfo;
         var expectedVersion1 = expectedVersion;
-        SessionInfos.AddOrUpdate((tenantId, sessionId),
+        SessionInfos.AddOrUpdate((shard, sessionId),
             _ => {
                 VersionChecker.RequireExpected(0L, expectedVersion1);
                 return sessionInfo1;
@@ -182,7 +186,7 @@ public partial class InMemoryAuthService
                     };
             });
 #else
-        SessionInfos.AddOrUpdate((tenantId, sessionId),
+        SessionInfos.AddOrUpdate((shard, sessionId),
             static (_, arg) => {
                 var (sessionInfo1, expectedVersion1) = arg;
                 VersionChecker.RequireExpected(0L, expectedVersion1);
@@ -201,12 +205,12 @@ public partial class InMemoryAuthService
             },
             (sessionInfo, baseVersion: expectedVersion));
 #endif
-        return SessionInfos.GetValueOrDefault((tenantId, sessionId)) ?? sessionInfo;
+        return SessionInfos.GetValueOrDefault((shard, sessionId)) ?? sessionInfo;
     }
 
-    protected virtual User? GetByUserIdentity(Symbol tenantId, UserIdentity userIdentity)
+    protected virtual User? GetByUserIdentity(DbShard shard, UserIdentity userIdentity)
         => userIdentity.IsValid
-            ? Users.FirstOrDefault(kv => kv.Key.TenantId == tenantId && kv.Value.Identities.ContainsKey(userIdentity)).Value
+            ? Users.FirstOrDefault(kv => kv.Key.Shard == shard && kv.Value.Identities.ContainsKey(userIdentity)).Value
             : null;
 
     protected virtual User MergeUsers(User existingUser, User user)

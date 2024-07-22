@@ -3,55 +3,57 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.CommandR.Diagnostics;
 using ActualLab.CommandR.Interception;
 using ActualLab.CommandR.Internal;
-using ActualLab.CommandR.Rpc;
+using ActualLab.Generators;
 using ActualLab.Interception;
-using ActualLab.Rpc;
+using ActualLab.Resilience;
+using ActualLab.Versioning;
+using ActualLab.Versioning.Providers;
 
 namespace ActualLab.CommandR;
 
 public readonly struct CommanderBuilder
 {
-    private sealed class AddedTag;
-    private static readonly ServiceDescriptor AddedTagDescriptor = new(typeof(AddedTag), new AddedTag());
-
     public IServiceCollection Services { get; }
     public HashSet<CommandHandler> Handlers { get; }
 
-#if NET5_0_OR_GREATER
+    [RequiresUnreferencedCode(UnreferencedCode.Commander)]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Proxies))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CommandHandlerMethodDef))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(MethodCommandHandler<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(InterfaceCommandHandler<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CommandServiceInterceptor))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CommandContext<>))]
-#endif
-    [RequiresUnreferencedCode(UnreferencedCode.Commander)]
     internal CommanderBuilder(
         IServiceCollection services,
         Action<CommanderBuilder>? configure)
     {
         Services = services;
-        if (services.Contains(AddedTagDescriptor)) {
+        if (services.FindInstance<HashSet<CommandHandler>>() is { } handlers) {
             // Already configured
-            Handlers = GetCommandHandlers(services);
+            Handlers = handlers;
             configure?.Invoke(this);
             return;
         }
 
-        // We want above Contains call to run in O(1), so...
-        services.Insert(0, AddedTagDescriptor);
+        Handlers = services.AddInstance(new HashSet<CommandHandler>(), addInFront: true);
 
-        // Common services
-        services.TryAddSingleton<ICommander>(c => new Commander(c));
-        services.TryAddSingleton(new HashSet<CommandHandler>());
-        services.TryAddSingleton(c => new CommandHandlerRegistry(c));
-        services.TryAddSingleton(c => new CommandHandlerResolver(c));
+        // Core services
+        services.TryAddSingleton<UuidGenerator>(_ => new UlidUuidGenerator());
+        services.TryAddSingleton<VersionGenerator<long>>(c => new ClockBasedVersionGenerator(c.Clocks().SystemClock));
+        services.TryAddSingleton(_ => ChaosMaker.Default);
+
+        // Commander, handlers, etc.
+        services.AddSingleton<ICommander>(c => new Commander(c));
+        services.AddSingleton(c => c.GetRequiredService<ICommander>().Hub);
+        services.AddSingleton(c => new CommandHandlerRegistry(c));
+        services.AddSingleton(_ => new CommandHandlerResolver.Options());
+        services.AddSingleton(c => new CommandHandlerResolver(
+            c.GetRequiredService<CommandHandlerResolver.Options>(), c));
 
         // Command services & their dependencies
-        Services.TryAddSingleton(_ => new CommandServiceInterceptor.Options());
-        Services.TryAddSingleton(c => new CommandServiceInterceptor(
+        Services.AddSingleton(_ => CommandServiceInterceptor.Options.Default);
+        Services.AddSingleton(c => new CommandServiceInterceptor(
             c.GetRequiredService<CommandServiceInterceptor.Options>(), c));
-        Handlers = GetCommandHandlers(services);
 
         // Default handlers
         services.AddSingleton(_ => new PreparedCommandHandler());
@@ -60,10 +62,6 @@ public readonly struct CommanderBuilder
         AddHandlers<CommandTracer>();
         services.AddSingleton(_ => new LocalCommandRunner());
         AddHandlers<LocalCommandRunner>();
-
-        // Rpc
-        var rpc = services.AddRpc();
-        rpc.AddOutboundMiddleware<RpcOutboundCommandCallMiddleware>();
 
         configure?.Invoke(this);
     }
@@ -181,7 +179,9 @@ public readonly struct CommanderBuilder
         if (!typeof(ICommandService).IsAssignableFrom(implementationType))
             throw ActualLab.Internal.Errors.MustImplement<ICommandService>(implementationType, nameof(implementationType));
 
-        var descriptor = new ServiceDescriptor(serviceType, c => CommanderProxies.NewServiceProxy(c, implementationType), lifetime);
+        var descriptor = new ServiceDescriptor(serviceType,
+            c => c.CommanderHub().NewProxy(c, implementationType),
+            lifetime);
         Services.TryAdd(descriptor);
         AddHandlers(serviceType, implementationType, priorityOverride);
         return this;
@@ -263,25 +263,5 @@ public readonly struct CommanderBuilder
     {
         Services.RemoveAll<CommandHandlerFilter>();
         return this;
-    }
-
-    // Private methods
-
-    private static HashSet<CommandHandler> GetCommandHandlers(IServiceCollection services)
-    {
-        for (var i = 0; i < services.Count; i++) {
-            var descriptor = services[i];
-            if (descriptor.ServiceType == typeof(HashSet<CommandHandler>)) {
-                if (i > 16) {
-                    // Let's move it to the beginning of the list
-                    // to speed up future searches
-                    services.RemoveAt(i);
-                    services.Insert(0, descriptor);
-                }
-                return (HashSet<CommandHandler>?) descriptor.ImplementationInstance
-                    ?? throw Errors.CommandHandlerSetMustBeRegisteredAsInstance();
-            }
-        }
-        throw Errors.CommandHandlerSetIsNotRegistered();
     }
 }

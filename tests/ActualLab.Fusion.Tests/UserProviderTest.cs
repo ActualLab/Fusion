@@ -92,9 +92,9 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         await commander.Call(new UserService_Add(u));
 
         using var sText = await stateFactory.NewComputed<string>(
-            FixedDelayer.Instant,
-            async (s, cancellationToken) => {
-                var norris = await users.Get(int.MaxValue, cancellationToken).ConfigureAwait(false);
+            FixedDelayer.YieldUnsafe,
+            async ct => {
+                var norris = await users.Get(int.MaxValue, ct).ConfigureAwait(false);
                 var now = await time.GetTime().ConfigureAwait(false);
                 return $"@ {now:hh:mm:ss.fff}: {norris?.Name ?? "(none)"}";
             }).Update();
@@ -119,19 +119,21 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var count2 = 0;
 
 #pragma warning disable 1998
-        var s1 = await stateFactory.NewComputed<int>(
-            FixedDelayer.Instant,
-            async (s, ct) => count1++).Update();
+        var s1 = await stateFactory.NewComputed(
+            FixedDelayer.YieldUnsafe,
+            async _ => count1++
+        ).Update();
         var s2 = await stateFactory.NewComputed<int>(
-            FixedDelayer.Instant,
-            async (s, ct) => count2++).Update();
+            FixedDelayer.YieldUnsafe,
+            async _ => count2++
+        ).Update();
 #pragma warning restore 1998
         var s12 = await stateFactory.NewComputed<(int, int)>(
-            FixedDelayer.Instant,
-            async (s, cancellationToken) => {
-                var a = await s1.Use(cancellationToken);
-                using var _ = Computed.SuspendDependencyCapture();
-                var b = await s2.Use(cancellationToken);
+            FixedDelayer.YieldUnsafe,
+            async ct => {
+                var a = await s1.Use(ct);
+                using var _ = Computed.BeginIsolation();
+                var b = await s2.Use(ct);
                 return (a, b);
             }).Update();
 
@@ -153,7 +155,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
 
         Timeouts.GetKeepAliveSlot(Timeouts.StartedAt).Should().Be(0L);
         Timeouts.GetKeepAliveSlot(Timeouts.StartedAt + q).Should().Be(1L);
-        Timeouts.GetKeepAliveSlot(Timeouts.StartedAt + q.Multiply(2)).Should().Be(2L);
+        Timeouts.GetKeepAliveSlot(Timeouts.StartedAt + q.MultiplyBy(2)).Should().Be(2L);
     }
 
     [Fact]
@@ -174,22 +176,26 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var users = Services.GetRequiredService<IUserService>();
         await using var _ = await WebHost.Serve();
         var webUsers = WebServices.GetRequiredService<IUserService>();
+        var syncTimeout = TimeSpan.FromSeconds(1);
 
         async Task PingPong(IUserService users1, IUserService users2, User user)
         {
-            var commander = users1.GetCommander();
             var count0 = await users1.Count();
-            (await users2.Count()).Should().Be(count0);
+            var cCount = await Computed.Capture(() => users2.Count());
+            cCount = await cCount.When(x => x == count0).WaitAsync(syncTimeout);
 
+            var commander = users1.GetCommander();
             await commander.Call(new UserService_Add(user));
-            (await users1.Count()).Should().Be(++count0);
+            var count1 = count0 + 1;
+            (await users1.Count()).Should().Be(count1);
 
-            await Delay(0.5);
-
-            var user2 = await users2.Get(user.Id);
+            var cUser2 = await Computed.Capture(() => users2.Get(user.Id));
+            cUser2 = await cUser2.When(x => x != null).WaitAsync(syncTimeout);
+            var user2 = cUser2.Value;
             user2.Should().NotBeNull();
             user2!.Id.Should().Be(user.Id);
-            (await users2.Count()).Should().Be(count0);
+
+            await cCount.When(x => x == count1).WaitAsync(syncTimeout);
         }
 
         for (var i = 0; i < 5; i++) {
@@ -198,7 +204,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
             Out.WriteLine($"{i}: ping...");
             await PingPong(users, webUsers, new User() { Id = id1, Name = id1.ToString()});
             Out.WriteLine($"{i}: pong...");
-            await PingPong(users, webUsers, new User() { Id = id2, Name = id2.ToString()});
+            await PingPong(webUsers, users, new User() { Id = id2, Name = id2.ToString()});
             // await PingPong(webUsers, users, new User() { Id = id2, Name = id2.ToString()});
         }
     }

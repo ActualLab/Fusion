@@ -1,20 +1,29 @@
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
+using ActualLab.Rpc.Serialization;
 using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Rpc;
 
 public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 {
+    private HostId? _hostId;
     private RpcServiceRegistry? _serviceRegistry;
     private IEnumerable<RpcPeerTracker>? _peerTrackers;
     private RpcSystemCallSender? _systemCallSender;
     private RpcClient? _client;
+    private RpcClientPeer? _loopbackPeer;
+    private RpcClientPeer? _localPeer;
 
     internal readonly RpcServiceDefBuilder ServiceDefBuilder;
     internal readonly RpcMethodDefBuilder MethodDefBuilder;
-    internal readonly RpcCallRouter CallRouter;
+    internal readonly RpcBackendServiceDetector BackendServiceDetector;
+    internal readonly RpcCommandTypeDetector CommandTypeDetector;
+    internal readonly RpcServiceScopeResolver ServiceScopeResolver;
+    internal readonly RpcSafeCallRouter CallRouter;
+    internal readonly RpcRerouteDelayer RerouteDelayer;
     internal readonly RpcArgumentSerializer ArgumentSerializer;
+    internal readonly RpcHashProvider HashProvider;
     internal readonly RpcInboundCallFilter InboundCallFilter;
     internal readonly RpcInboundContextFactory InboundContextFactory;
     internal readonly RpcInboundMiddlewares InboundMiddlewares;
@@ -22,22 +31,26 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcPeerFactory PeerFactory;
     internal readonly RpcClientConnectionFactory ClientConnectionFactory;
     internal readonly RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer;
-    internal readonly RpcBackendServiceDetector BackendServiceDetector;
-    internal readonly RpcUnrecoverableErrorDetector UnrecoverableErrorDetector;
+    internal readonly RpcPeerTerminalErrorDetector PeerTerminalErrorDetector;
     internal readonly RpcMethodTracerFactory MethodTracerFactory;
+    internal readonly RpcCallLoggerFactory CallLoggerFactory;
+    internal readonly RpcCallLoggerFilter CallLoggerFilter;
     internal IEnumerable<RpcPeerTracker> PeerTrackers => _peerTrackers ??= Services.GetRequiredService<IEnumerable<RpcPeerTracker>>();
     internal RpcSystemCallSender SystemCallSender => _systemCallSender ??= Services.GetRequiredService<RpcSystemCallSender>();
     internal RpcClient Client => _client ??= Services.GetRequiredService<RpcClient>();
 
     internal ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers { get; } = new();
 
+    public Guid Id { get; init; } = Guid.NewGuid();
+    public HostId HostId => _hostId ??= Services.GetRequiredService<HostId>();
     public IServiceProvider Services { get; }
     public RpcConfiguration Configuration { get; }
     public RpcServiceRegistry ServiceRegistry => _serviceRegistry ??= Services.GetRequiredService<RpcServiceRegistry>();
-    public RpcInternalServices InternalServices => new(this);
-    public Guid Id { get; init; } = Guid.NewGuid();
+    public RpcInternalServices InternalServices;
     public RpcLimits Limits { get; }
-    public IMomentClock Clock { get; }
+    public MomentClock Clock { get; }
+    public RpcClientPeer LoopbackPeer => _loopbackPeer ??= (RpcClientPeer)GetPeer(RpcPeerRef.Loopback);
+    public RpcClientPeer LocalPeer => _localPeer ??= (RpcClientPeer)GetPeer(RpcPeerRef.Local);
 
     public RpcHub(IServiceProvider services)
     {
@@ -48,8 +61,13 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         // Delegates
         ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
         MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
-        CallRouter = services.GetRequiredService<RpcCallRouter>();
+        BackendServiceDetector = services.GetRequiredService<RpcBackendServiceDetector>();
+        CommandTypeDetector = services.GetRequiredService<RpcCommandTypeDetector>();
+        ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();
+        CallRouter = services.GetRequiredService<RpcSafeCallRouter>();
+        RerouteDelayer = services.GetRequiredService<RpcRerouteDelayer>();
         ArgumentSerializer = services.GetRequiredService<RpcArgumentSerializer>();
+        HashProvider = services.GetRequiredService<RpcHashProvider>();
         InboundCallFilter = services.GetRequiredService<RpcInboundCallFilter>();
         InboundContextFactory = services.GetRequiredService<RpcInboundContextFactory>();
         InboundMiddlewares = services.GetRequiredService<RpcInboundMiddlewares>();
@@ -57,11 +75,13 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         PeerFactory = services.GetRequiredService<RpcPeerFactory>();
         ClientConnectionFactory = services.GetRequiredService<RpcClientConnectionFactory>();
         ClientPeerReconnectDelayer = services.GetRequiredService<RpcClientPeerReconnectDelayer>();
-        BackendServiceDetector = services.GetRequiredService<RpcBackendServiceDetector>();
-        UnrecoverableErrorDetector = services.GetRequiredService<RpcUnrecoverableErrorDetector>();
+        PeerTerminalErrorDetector = services.GetRequiredService<RpcPeerTerminalErrorDetector>();
         MethodTracerFactory = services.GetRequiredService<RpcMethodTracerFactory>();
+        CallLoggerFactory = services.GetRequiredService<RpcCallLoggerFactory>();
+        CallLoggerFilter = services.GetRequiredService<RpcCallLoggerFilter>();
         Limits = services.GetRequiredService<RpcLimits>();
         Clock = services.Clocks().CpuClock;
+        InternalServices = new(this); // Must go at last
     }
 
     protected override Task DisposeAsyncCore()
@@ -82,10 +102,17 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
                 return peer;
             if (WhenDisposed != null)
                 throw Errors.AlreadyDisposed(GetType());
+            if (peerRef.IsRerouted)
+                throw RpcRerouteException.MustReroute(peerRef);
 
             peer = PeerFactory.Invoke(this, peerRef);
             Peers[peerRef] = peer;
             peer.Start();
+            if (peerRef.CanBeRerouted)
+                _ = peerRef.WhenRerouted().ContinueWith(_ => {
+                    peer.Dispose();
+                    peer.Log.LogWarning("'{PeerRef}': Ref is rerouted, peer {Peer} is disposed", peer.Ref, peer);
+                }, TaskScheduler.Default);
             return peer;
         }
     }
