@@ -69,7 +69,7 @@ public class MutableState<T> : State<T>, IMutableState<T>
         }
     }
 
-    public void Set(Func<Result<T>, Result<T>> updater)
+    public void Set(Func<Result<T>, Result<T>> updater, bool throwOnError = false)
     {
         lock (Lock) {
             var snapshot = Snapshot;
@@ -78,6 +78,9 @@ public class MutableState<T> : State<T>, IMutableState<T>
                 result = updater.Invoke(snapshot.Computed.Output);
             }
             catch (Exception e) {
+                if (throwOnError)
+                    throw;
+
                 result = Result.Error<T>(e);
             }
             NextOutput = result;
@@ -85,7 +88,7 @@ public class MutableState<T> : State<T>, IMutableState<T>
         }
     }
 
-    public void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater)
+    public void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater, bool throwOnError = false)
     {
         lock (Lock) {
             var snapshot = Snapshot;
@@ -94,6 +97,9 @@ public class MutableState<T> : State<T>, IMutableState<T>
                 result = updater.Invoke(state, snapshot.Computed.Output);
             }
             catch (Exception e) {
+                if (throwOnError)
+                    throw;
+
                 result = Result.Error<T>(e);
             }
             NextOutput = result;
@@ -120,18 +126,18 @@ public class MutableState<T> : State<T>, IMutableState<T>
         CancellationToken cancellationToken)
     {
         var computed = Computed;
-        if (computed.TryUseExisting(context))
+        if (ComputedImpl.TryUseExisting(computed, context))
             return ValueTaskExt.FromResult(computed);
 
         // Double-check locking
         lock (Lock) {
             computed = Computed;
-            if (computed.TryUseExistingFromLock(context))
+            if (ComputedImpl.TryUseExistingFromLock(computed, context))
                 return ValueTaskExt.FromResult(computed);
 
             OnUpdating(computed);
             computed = CreateComputed();
-            computed.UseNew(context);
+            ComputedImpl.UseNew(computed, context);
             return ValueTaskExt.FromResult(computed);
         }
     }
@@ -141,19 +147,19 @@ public class MutableState<T> : State<T>, IMutableState<T>
         CancellationToken cancellationToken)
     {
         var computed = Computed;
-        if (computed.TryUseExisting(context))
-            return computed.StripToTask(context);
+        if (ComputedImpl.TryUseExisting(computed, context))
+            return ComputedImpl.StripToTask(computed, context);
 
         // Double-check locking
         lock (Lock) {
             computed = Computed;
-            if (computed.TryUseExistingFromLock(context))
-                return computed.StripToTask(context);
+            if (ComputedImpl.TryUseExistingFromLock(computed, context))
+                return ComputedImpl.StripToTask(computed, context);
 
             OnUpdating(computed);
             computed = CreateComputed();
-            computed.UseNew(context);
-            return computed.StripToTask(context);
+            ComputedImpl.UseNew(computed, context);
+            return ComputedImpl.StripToTask(computed, context);
         }
     }
 

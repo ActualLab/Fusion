@@ -1,23 +1,16 @@
 namespace ActualLab.Fusion.UI;
 
-public abstract class UIAction
+public abstract class UIAction(ICommand command, Moment startedAt, CancellationToken cancellationToken)
 {
     private static long _nextActionId;
 
     public long ActionId { get; } = Interlocked.Increment(ref _nextActionId);
-    public ICommand Command { get; }
-    public Moment StartedAt { get; }
-    public CancellationToken CancellationToken { get; }
+    public ICommand Command { get; } = command;
+    public Moment StartedAt { get; } = startedAt;
+    public CancellationToken CancellationToken { get; } = cancellationToken;
 
     public abstract IUIActionResult? UntypedResult { get; }
     public abstract Task WhenCompleted();
-
-    protected UIAction(ICommand command, Moment startedAt, CancellationToken cancellationToken)
-    {
-        StartedAt = startedAt;
-        Command = command;
-        CancellationToken = cancellationToken;
-    }
 
     public override string ToString()
         => $"{GetType().GetName()}(#{ActionId}: {Command}, {UntypedResult?.ToString() ?? "still running"})";
@@ -31,11 +24,11 @@ public class UIAction<TResult> : UIAction
     public override IUIActionResult? UntypedResult => Result;
     public UIActionResult<TResult>? Result => ResultTask.IsCompleted ? ResultTask.Result : null;
 
-    protected UIAction(ICommand<TResult> command, IMomentClock clock, CancellationToken cancellationToken)
+    protected UIAction(ICommand<TResult> command, MomentClock clock, CancellationToken cancellationToken)
         : base(command, clock.Now, cancellationToken)
         => ResultTask = null!;
 
-    public UIAction(ICommand<TResult> command, IMomentClock clock, Task<TResult> resultTask, CancellationToken cancellationToken)
+    public UIAction(ICommand<TResult> command, MomentClock clock, Task<TResult> resultTask, CancellationToken cancellationToken)
         : base(command, clock.Now, cancellationToken)
     {
         ResultTask = resultTask.ContinueWith(

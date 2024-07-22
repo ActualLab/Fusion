@@ -27,7 +27,7 @@ public class OperationReprocessor : IOperationReprocessor
 
         public int MaxRetryCount { get; init; } = 3;
         public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(0.50, 3, 0.33);
-        public IMomentClock? DelayClock { get; init; }
+        public MomentClock? DelayClock { get; init; }
         public Func<ICommand, CommandContext, bool> Filter { get; init; } = DefaultFilter;
 
         public static bool DefaultFilter(ICommand command, CommandContext context)
@@ -46,7 +46,7 @@ public class OperationReprocessor : IOperationReprocessor
     }
 
     private TransiencyResolver<IOperationReprocessor>? _transiencyResolver;
-    private IMomentClock? _delayClock;
+    private MomentClock? _delayClock;
     private ILogger? _log;
 
     protected Dictionary<Exception, Transiency> KnownTransiencies { get; } = new();
@@ -57,7 +57,7 @@ public class OperationReprocessor : IOperationReprocessor
     protected IServiceProvider Services { get; }
     protected TransiencyResolver<IOperationReprocessor> TransiencyResolver
         => _transiencyResolver ??= Services.TransiencyResolver<IOperationReprocessor>();
-    public IMomentClock DelayClock => _delayClock ??= Settings.DelayClock ?? Services.Clocks().CpuClock;
+    public MomentClock DelayClock => _delayClock ??= Settings.DelayClock ?? Services.Clocks().CpuClock;
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     public Options Settings { get; }
@@ -75,7 +75,7 @@ public class OperationReprocessor : IOperationReprocessor
             throw new ArgumentOutOfRangeException(nameof(transiency));
 
         lock (KnownTransiencies)
-            KnownTransiencies.Add(error, transiency);
+            KnownTransiencies[error] = transiency;
     }
 
     public virtual Transiency GetTransiency(IReadOnlyList<Exception> allErrors)
@@ -109,7 +109,7 @@ public class OperationReprocessor : IOperationReprocessor
             return false;
 
         var operation = CommandContext.TryGetOperation();
-        return operation is { Scope: not TransientOperationScope };
+        return operation is { Scope: not InMemoryOperationScope };
     }
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.OperationReprocessor)]
@@ -118,7 +118,8 @@ public class OperationReprocessor : IOperationReprocessor
         var isReprocessingAllowed =
             context.IsOutermost // Should be a top-level command
             && command is not ISystemCommand // No reprocessing for system commands
-            && !Invalidation.IsActive
+            && context.TryGetOperation() == null // Operation isn't started yet
+            && !Invalidation.IsActive // No invalidation is running
             && Settings.Filter.Invoke(command, context);
         if (!isReprocessingAllowed) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
@@ -141,11 +142,14 @@ public class OperationReprocessor : IOperationReprocessor
             }
             catch (Exception error) when (!error.IsCancellationOf(cancellationToken)) {
                 LastError = error;
+                if (context.TryGetOperation() == null)
+                    throw; // No Operation -> no retry
                 if (!this.WillRetry(error, out var transiency))
-                    throw;
+                    throw; // The error can't be reprocessed -> no retry
 
                 if (!transiency.IsSuperTransient())
                     TryIndex++;
+                context.ChangeOperation(null);
                 context.Items.Snapshot = itemsBackup;
                 context.ExecutionState = executionStateBackup;
                 var delay = Settings.RetryDelays[TryIndex];

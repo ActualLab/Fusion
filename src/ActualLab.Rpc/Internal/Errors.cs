@@ -7,12 +7,6 @@ public static class Errors
     public static Exception UnknownCallType(byte callTypeId)
         => new KeyNotFoundException($"Unknown CallTypeId: {callTypeId}.");
 
-    public static Exception ServiceAlreadyExists(Type type)
-        => new InvalidOperationException($"Service of type '{type}' is already added.");
-    public static Exception ServiceTypeCannotBeChanged(Type originalType, Type type)
-        => new InvalidOperationException(
-            $"RpcServiceConfiguration.Type is changed from the original '{originalType}' to '{type}'.");
-
     public static Exception ServiceTypeConflict(Type serviceType)
         => new InvalidOperationException($"Service '{serviceType.GetName()}' is already registered.");
     public static Exception ServiceNameConflict(Type serviceType1, Type serviceType2, Symbol serviceName)
@@ -36,9 +30,8 @@ public static class Errors
         => new RpcException("Remote RpcPeer has been changed.");
     public static Exception EndpointNotFound(string serviceName, string methodName)
         => new RpcException($"Endpoint not found: '{serviceName}.{methodName}'.");
-
-    public static Exception ConnectionUnrecoverable(Exception? innerException = null)
-        => new ConnectionUnrecoverableException(innerException);
+    public static Exception MatchButNoCachedEntry()
+        => new RpcException("The remote server responded with 'Match', but the outbound call has no cached entry.");
 
     public static Exception NoCurrentRpcInboundContext()
         => new InvalidOperationException($"{nameof(RpcInboundContext)}.{nameof(RpcInboundContext.Current)} is unavailable.");
@@ -63,10 +56,13 @@ public static class Errors
         => new SerializationException($"Cannot deserialize polymorphic argument type: " +
             $"expected '{expectedType.GetName()}' or its descendant, got '{actualType.GetName()}'.");
 
-    public static Exception CallTimeout(RpcPeer peer)
+    public static Exception CallTimeout(RpcPeer peer, TimeSpan? timeout = null)
         => CallTimeout(peer.Ref.IsServer ? "client" : "server");
-    public static Exception CallTimeout(string partyName = "server")
-        => new TimeoutException($"The {partyName} didn't respond in time.");
+    public static Exception CallTimeout(string partyName = "server", TimeSpan? timeout = null)
+        => new TimeoutException(
+            timeout is { } t
+                ? $"The {partyName} didn't respond in time ({t.ToShortString()})."
+                : $"The {partyName} didn't respond in time.");
 
     public static Exception ConnectTimeout()
         => new TimeoutException("Timeout on connecting to server.");
@@ -74,11 +70,6 @@ public static class Errors
         => new TimeoutException("Timeout on handshake.");
     public static Exception KeepAliveTimeout()
         => new TimeoutException("Timeout while waiting for \"keep-alive\" message.");
-
-    public static Exception Disconnected(RpcPeer peer)
-        => Disconnected(peer.Ref.IsServer ? "client" : "server");
-    public static Exception Disconnected(string partyName = "server")
-        => new DisconnectedException($"The remote {partyName} is disconnected.");
 
     public static Exception ClientRpcPeerRefExpected(string argumentName)
         => new ArgumentOutOfRangeException(argumentName, "Client RpcPeerRef is expected.");
@@ -102,4 +93,12 @@ public static class Errors
 
     public static Exception UnsupportedWebSocketMessageKind()
         => new KeyNotFoundException("Unsupported WebSocket message kind.");
+
+    public static Exception NoLocalCallInvoker()
+        => new InvalidOperationException(
+            $"{nameof(RpcSwitchInterceptor)} is misconfigured: it can't route local calls.");
+
+    public static Exception NoRemoteCallInvoker()
+        => new InvalidOperationException(
+            $"{nameof(RpcSwitchInterceptor)} is misconfigured: it can't route remote calls.");
 }

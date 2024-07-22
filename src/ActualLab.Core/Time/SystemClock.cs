@@ -1,28 +1,13 @@
-using System.Reactive.PlatformServices;
-
 namespace ActualLab.Time;
 
-public sealed class SystemClock : IMomentClock
+public sealed class SystemClock : MomentClock
 {
-    public static readonly IMomentClock Instance = new SystemClock();
+    public static readonly MomentClock Instance = new SystemClock();
 
-    public static Moment Now {
+    public override Moment Now {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => DateTime.UtcNow;
+        get => new(DateTime.UtcNow);
     }
 
-    Moment IMomentClock.Now => Now;
-    DateTimeOffset ISystemClock.UtcNow => Now;
-
     private SystemClock() { }
-
-    public override string ToString() => $"{GetType().Name}()";
-    public Moment ToRealTime(Moment localTime) => localTime;
-    public Moment ToLocalTime(Moment realTime) => realTime;
-    public TimeSpan ToRealDuration(TimeSpan localDuration) => localDuration;
-    public TimeSpan ToLocalDuration(TimeSpan realDuration) => realDuration;
-
-    public Task Delay(TimeSpan dueIn, CancellationToken cancellationToken = default)
-        // TODO: Make it work properly, i.e. taking into account time changes, sleep/resume, etc.
-        => Task.Delay(dueIn, cancellationToken);
 }

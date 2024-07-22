@@ -15,7 +15,7 @@ public partial record Screenshot
 
 public interface IScreenshotService : IComputeService
 {
-    [ComputeMethod, ClientComputeMethod(ClientCacheMode = ClientCacheMode.NoCache)]
+    [ComputeMethod, RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.NoCache)]
     Task<Screenshot> GetScreenshotAlt(int width, CancellationToken cancellationToken = default);
     [ComputeMethod(MinCacheDuration = 0.3)]
     Task<Screenshot> GetScreenshot(int width, CancellationToken cancellationToken = default);
@@ -69,7 +69,7 @@ public class ScreenshotService : IScreenshotService
         return new Screenshot {
             Width = ow,
             Height = oh,
-            CapturedAt = SystemClock.Now,
+            CapturedAt = Moment.Now,
             Image = stream.ToArray(),
         };
     }

@@ -5,7 +5,7 @@ namespace ActualLab.Collections;
 public sealed class RecentlySeenMap<TKey, TValue>(
     int capacity,
     TimeSpan duration,
-    IMomentClock? clock = null)
+    MomentClock? clock = null)
     where TKey : notnull
 {
     private readonly BinaryHeap<Moment, TKey> _heap = new(capacity + 1); // we may add one extra item, so "+ 1"
@@ -13,7 +13,7 @@ public sealed class RecentlySeenMap<TKey, TValue>(
 
     public int Capacity { get; } = capacity;
     public TimeSpan Duration { get; } = duration;
-    public IMomentClock Clock { get; } = clock ?? MomentClockSet.Default.SystemClock;
+    public MomentClock Clock { get; } = clock ?? MomentClockSet.Default.SystemClock;
 
     public bool TryGet(TKey key, [MaybeNullWhen(false)] out TValue existingValue)
         => _map.TryGetValue(key, out existingValue);

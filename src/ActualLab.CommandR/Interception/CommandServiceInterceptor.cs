@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
 using ActualLab.Interception;
-using ActualLab.Interception.Interceptors;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.CommandR.Interception;
@@ -9,24 +8,29 @@ namespace ActualLab.CommandR.Interception;
 #if !NET5_0
 [RequiresUnreferencedCode(UnreferencedCode.Commander)]
 #endif
-public class CommandServiceInterceptor(CommandServiceInterceptor.Options settings, IServiceProvider services)
-    : InterceptorBase(settings, services)
+public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options settings, IServiceProvider services)
+    : Interceptor(settings, services)
 {
-    public new record Options : InterceptorBase.Options;
+    public new record Options : Interceptor.Options
+    {
+        public static Options Default { get; set; } = new();
+    }
 
-    protected readonly ICommander Commander = services.GetRequiredService<ICommander>();
+    public readonly ICommander Commander = services.Commander();
 
-    protected override Func<Invocation, object?> CreateHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
+    protected override Func<Invocation, object?>? CreateHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
         (Invocation initialInvocation, MethodDef methodDef)
-        => invocation => {
+    {
+        return invocation => {
             var arguments = invocation.Arguments;
             var command = arguments.Get<ICommand>(0);
             var context = CommandContext.Current;
             if (context == null) {
-                var rpcInboundCallContext = RpcInboundContext.Current;
-                if (rpcInboundCallContext != null) {
-                    var call = rpcInboundCallContext.Call;
+                // The logic below detects inbound RPC calls & reroutes them to local Commander
+                var rpcInboundContext = RpcInboundContext.Current;
+                if (rpcInboundContext != null) {
+                    var call = rpcInboundContext.Call;
                     var callMethodDef = call.MethodDef;
                     var callServiceDef = callMethodDef.Service;
                     var callArguments = call.Arguments;
@@ -39,14 +43,17 @@ public class CommandServiceInterceptor(CommandServiceInterceptor.Options setting
                             ? arguments.GetCancellationToken(1)
                             : default;
 
+                        // "isOutermost: true" also guarantees that RpcInboundContext.Current is null
+                        // when it enters the same interceptor once again
                         var resultTask = Commander.Call(command, isOutermost: true, cancellationToken);
                         return methodDef.ReturnsTask
                             ? resultTask
                             : methodDef.IsAsyncVoidMethod
                                 ? resultTask.ToValueTask()
-                                : ((Task<T>)resultTask).ToValueTask();
+                                : ((Task<TUnwrapped>)resultTask).ToValueTask();
                     }
                 }
+
                 // We're outside the ICommander pipeline
                 // and current inbound Rpc call isn't "ours"
                 throw Errors.DirectCommandHandlerCallsAreNotAllowed();
@@ -59,8 +66,9 @@ public class CommandServiceInterceptor(CommandServiceInterceptor.Options setting
             }
 
             // We're already inside the ICommander pipeline created for exactly this command
-            return invocation.InterceptedUntyped();
+            return invocation.InvokeInterceptedUntyped();
         };
+    }
 
     // We don't need to decorate this method with any dynamic access attributes
     protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)

@@ -24,13 +24,13 @@ public static partial class TaskExt
 
     public static Task WaitAsync(
         this Task task,
-        IMomentClock clock,
+        MomentClock clock,
         CancellationToken cancellationToken = default)
         => task.WaitAsync(clock, Timeout.InfiniteTimeSpan, cancellationToken);
 
     public static Task WaitAsync(
         this Task task,
-        IMomentClock clock,
+        MomentClock clock,
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
@@ -82,13 +82,13 @@ public static partial class TaskExt
 
     public static Task<T> WaitAsync<T>(
         this Task<T> task,
-        IMomentClock clock,
+        MomentClock clock,
         CancellationToken cancellationToken = default)
         => task.WaitAsync(clock, Timeout.InfiniteTimeSpan, cancellationToken);
 
     public static Task<T> WaitAsync<T>(
         this Task<T> task,
-        IMomentClock clock,
+        MomentClock clock,
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
@@ -144,13 +144,13 @@ public static partial class TaskExt
 
     public static Task<Result<Unit>> WaitResultAsync(
         this Task task,
-        IMomentClock clock,
+        MomentClock clock,
         CancellationToken cancellationToken = default)
         => task.WaitResultAsync(clock, Timeout.InfiniteTimeSpan, cancellationToken);
 
     public static Task<Result<Unit>> WaitResultAsync(
         this Task task,
-        IMomentClock clock,
+        MomentClock clock,
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
@@ -201,13 +201,13 @@ public static partial class TaskExt
 
     public static Task<Result<T>> WaitResultAsync<T>(
         this Task<T> task,
-        IMomentClock clock,
+        MomentClock clock,
         CancellationToken cancellationToken = default)
         => task.WaitResultAsync(clock, Timeout.InfiniteTimeSpan, cancellationToken);
 
     public static Task<Result<T>> WaitResultAsync<T>(
         this Task<T> task,
-        IMomentClock clock,
+        MomentClock clock,
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {

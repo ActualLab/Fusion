@@ -53,14 +53,14 @@ public static class OSInfo
         UserHomePath = Environment.GetEnvironmentVariable("HOME") ?? "";
 #else
         // WebAssembly w/ .NET 5.0+
-        if (StringComparer.Ordinal.Equals("browser", RuntimeInformation.OSDescription.ToLowerInvariant())) {
+        if (string.Equals("browser", RuntimeInformation.OSDescription.ToLowerInvariant(), StringComparison.Ordinal)) {
             Kind = OSKind.WebAssembly;
             UserHomePath = "";
             return;
         }
 
         // WebAssembly w/ .NET Core 3.1
-        if (StringComparer.Ordinal.Equals("web", RuntimeInformation.OSDescription)
+        if (string.Equals("web", RuntimeInformation.OSDescription, StringComparison.Ordinal)
             && RuntimeInformation.FrameworkDescription.StartsWith("Mono", StringComparison.Ordinal)) {
             Kind = OSKind.WebAssembly;
             UserHomePath = "";

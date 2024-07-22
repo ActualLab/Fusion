@@ -9,15 +9,11 @@ namespace Samples.HelloCart;
 
 public static class AppDb
 {
-    public static bool UsePostgreSql { get; set; } = true;
-    public static bool UseOperationLogWatchers { get; set; } = true;
-    public static bool UseRedisOperationLogWatchers { get; set; } = true;
-
     public static void Configure(IServiceCollection services)
     {
-        // Add AppDbContext & related services
+        // IDbContextFactory
         services.AddPooledDbContextFactory<AppDbContext>(db => {
-            if (UsePostgreSql) {
+            if (AppSettings.Db.UsePostgreSql) {
                 var connectionString =
                     "Server=localhost;Database=fusion_hellocart;Port=5432;User Id=postgres;Password=postgres";
                 db.UseNpgsql(connectionString, npgsql => {
@@ -32,16 +28,18 @@ public static class AppDb
             }
             db.EnableSensitiveDataLogging();
         });
+
+        // Related services
         services.AddDbContextServices<AppDbContext>(db => {
             db.AddOperations(operations => {
-                if (!UseOperationLogWatchers)
+                if (!AppSettings.Db.UseOperationLogWatchers)
                     return;
 
-                if (UseRedisOperationLogWatchers) {
+                if (AppSettings.Db.UseRedisOperationLogWatchers) {
                     db.AddRedisDb("localhost", "Fusion.Samples.HelloCart");
                     operations.AddRedisOperationLogWatcher();
                 }
-                else if (UsePostgreSql)
+                else if (AppSettings.Db.UsePostgreSql)
                     operations.AddNpgsqlOperationLogWatcher();
                 else
                     operations.AddFileSystemOperationLogWatcher();
@@ -52,5 +50,9 @@ public static class AppDb
                 QueryTransformer = carts => carts.Include(c => c.Items),
             });
         });
+
+        // Operation reprocessor
+        if (AppSettings.Db.UseOperationReprocessor)
+            services.AddFusion().AddOperationReprocessor();
     }
 }

@@ -4,11 +4,11 @@ public class RetryDelayer : IRetryDelayer
 {
     private CancellationTokenSource _cancelDelaysCts = new();
 
-    private IMomentClock? _clock;
+    private MomentClock? _clock;
     protected object Lock = new();
 
-    public Func<IMomentClock> ClockProvider { get; init; } = static () => CpuClock.Instance;
-    public IMomentClock Clock => _clock ??= ClockProvider.Invoke();
+    public Func<MomentClock> ClockProvider { get; init; } = static () => CpuClock.Instance;
+    public MomentClock Clock => _clock ??= ClockProvider.Invoke();
     public RetryDelaySeq Delays { get; set; } = RetryDelaySeq.Fixed(1);
     public int? Limit { get; set; }
 

@@ -1,9 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Samples.HelloCart.V2;
-using ActualLab.Fusion.EntityFramework;
-using ActualLab.Fusion.EntityFramework.Redis;
 using ActualLab.Fusion.Server;
-using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using Samples.HelloCart.V3;

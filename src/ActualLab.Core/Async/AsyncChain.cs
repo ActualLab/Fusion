@@ -30,11 +30,11 @@ public readonly record struct AsyncChain
         string name = "Unknown")
         => new(name, start);
 
-    public static AsyncChain Delay(TimeSpan timeSpan, IMomentClock? clock = null)
+    public static AsyncChain Delay(TimeSpan timeSpan, MomentClock? clock = null)
         => new($"Delay({timeSpan.ToString()})",
             ct => (clock ?? MomentClockSet.Default.CpuClock).Delay(timeSpan, ct));
 
-    public static AsyncChain Delay(RandomTimeSpan delay, IMomentClock? clock = null)
+    public static AsyncChain Delay(RandomTimeSpan delay, MomentClock? clock = null)
         => new($"Delay({delay.ToString()})",
             ct => (clock ?? MomentClockSet.Default.CpuClock).Delay(delay.Next(), ct));
 

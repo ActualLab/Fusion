@@ -1,22 +1,20 @@
 using ActualLab.Interception.Internal;
-using ActualLab.OS;
 
 namespace ActualLab.Interception;
 
-public readonly record struct Invocation(
-    object Proxy,
-    MethodInfo Method,
-    ArgumentList Arguments,
-    Delegate InterceptedDelegate,
-    object? Context = null)
+public readonly struct Invocation(
+    object proxy,
+    MethodInfo method,
+    ArgumentList arguments,
+    Delegate interceptedDelegate,
+    object? context = null)
 {
-    private static readonly MethodInfo InterceptedUntypedMethod = typeof(Invocation)
-        .GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
-        .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(InterceptedUntyped)));
-    private static readonly ConcurrentDictionary<Type, Func<Invocation, object?>> InterceptedUntypedCache
-        = new(HardwareInfo.GetProcessorCountPo2Factor(4), 256);
-
-    public object? ProxyTarget => (Proxy as InterfaceProxy)?.ProxyTarget;
+    public readonly object Proxy = proxy;
+    public readonly MethodInfo Method = method;
+    public readonly ArgumentList Arguments = arguments;
+    public readonly Delegate InterceptedDelegate = interceptedDelegate;
+    public readonly object? Context = context;
+    public object? InterfaceProxyTarget => (Proxy as InterfaceProxy)?.ProxyTarget;
 
     public override string ToString()
         => $"{nameof(Invocation)}({Proxy}, {Method.Name}, {Arguments})";
@@ -24,7 +22,8 @@ public readonly record struct Invocation(
     public string Format()
         => $"{Proxy.GetType().NonProxyType().GetName()}.{Method.Name}{Arguments}";
 
-    public void Intercepted()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void InvokeIntercepted()
     {
         if (InterceptedDelegate is Action<ArgumentList> action)
             action.Invoke(Arguments);
@@ -32,29 +31,22 @@ public readonly record struct Invocation(
             throw Errors.InvalidInterceptedDelegate();
     }
 
-    public TResult Intercepted<TResult>()
-    {
-        return InterceptedDelegate is Func<ArgumentList, TResult> func
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public TResult InvokeIntercepted<TResult>()
+        => InterceptedDelegate is Func<ArgumentList, TResult> func
             ? func.Invoke(Arguments)
             : throw Errors.InvalidInterceptedDelegate();
-    }
 
-    public object? InterceptedUntyped()
-        => InterceptedUntypedCache.GetOrAdd(Method.ReturnType,
-            static returnType => returnType == typeof(void)
-                ? invocation => {
-                    invocation.Intercepted();
-                    return null;
-                }
-                : (Func<Invocation, object?>)InterceptedUntypedMethod
-                    .MakeGenericMethod(returnType)
-                    .CreateDelegate(typeof(Func<Invocation, object?>))).Invoke(this);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Invocation With(ArgumentList arguments)
+        => new(Proxy, Method, arguments, InterceptedDelegate, Context);
 
-    // Private methods
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Invocation With(object? context)
+        => new(Proxy, Method, Arguments, InterceptedDelegate, context);
 
-    private static object? InterceptedUntyped<TResult>(Invocation invocation)
-        // ReSharper disable once HeapView.PossibleBoxingAllocation
-        => invocation.InterceptedDelegate is Func<ArgumentList, TResult> func
-            ? func.Invoke(invocation.Arguments)
-            : throw Errors.InvalidInterceptedDelegate();
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Invocation With(ArgumentList arguments, object? context)
+        => new(Proxy, Method, arguments, InterceptedDelegate, context);
+
 };

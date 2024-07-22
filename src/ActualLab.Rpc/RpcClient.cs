@@ -18,17 +18,17 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
     public Task<RpcConnection> Connect(RpcClientPeer clientPeer, CancellationToken cancellationToken)
         => clientPeer.ConnectionKind switch {
             RpcPeerConnectionKind.Remote => ConnectRemote(clientPeer, cancellationToken),
-            RpcPeerConnectionKind.LocalChannel => ConnectLocal(clientPeer, cancellationToken),
+            RpcPeerConnectionKind.Loopback => ConnectLoopback(clientPeer, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(clientPeer),
                 $"Invalid {nameof(clientPeer)}.{nameof(clientPeer.ConnectionKind)} value: {clientPeer.ConnectionKind}"),
         };
 
     public abstract Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken);
 
-    public virtual Task<RpcConnection> ConnectLocal(RpcClientPeer clientPeer, CancellationToken cancellationToken)
+    public virtual Task<RpcConnection> ConnectLoopback(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
         var serverPeerRef = RpcPeerRef.NewServer(
-            RpcPeerRef.LocalChannelPrefix + clientPeer.ClientId,
+            RpcPeerRef.LoopbackKeyPrefix + clientPeer.ClientId,
             clientPeer.Ref.IsBackend);
         var serverPeer = Hub.GetServerPeer(serverPeerRef);
         var channelPair = ChannelPair.CreateTwisted<RpcMessage>(LocalChannelOptions);

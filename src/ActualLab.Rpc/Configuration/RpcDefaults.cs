@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using ActualLab.OS;
 
 namespace ActualLab.Rpc;
@@ -10,8 +9,6 @@ public static class RpcDefaults
     private static VersionSet? _backendPeerVersions;
     private static RpcMode _mode;
 
-    public static bool DebugMode { get; set; } = Debugger.IsAttached;
-
     public static RpcMode Mode {
         get => _mode;
         set {
@@ -20,17 +17,15 @@ public static class RpcDefaults
             lock (Lock) {
                 _mode = value;
                 // Disabled for now due to possible perf. issues
-#if false
                 var isServer = Mode is RpcMode.Server;
-                WebSocketWriteDelayFactory = isServer
+                WebSocketWriteDelayer = isServer
                     ? null
-                    : TaskExt.YieldDelay;
-#endif
+                    : GetWriteDelayer(TimeSpan.FromSeconds(15));
             }
         }
     }
 
-    public static Func<Task>? WebSocketWriteDelayFactory { get; set; }
+    public static Func<CpuTimestamp, int, Task>? WebSocketWriteDelayer { get; set; }
     public static Symbol ApiScope { get; set; } = "Api";
     public static Symbol BackendScope { get; set; } = "Backend";
     public static Version ApiVersion { get; set; } = new(1, 0);
@@ -55,6 +50,13 @@ public static class RpcDefaults
             return _backendPeerVersions;
         }
     }
+
+    public static Func<CpuTimestamp, int, Task> GetWriteDelayer(TimeSpan activityPeriod)
+        => (startedAt, bufferedCount) => startedAt.Elapsed > activityPeriod
+            ? Task.CompletedTask
+            : TaskExt.YieldDelay();
+
+    // Type constructor
 
     static RpcDefaults()
         => Mode = OSInfo.IsAnyClient ? RpcMode.Client : RpcMode.Server;

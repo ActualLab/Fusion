@@ -9,15 +9,17 @@ namespace ActualLab.Fusion.Tests;
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
 {
+    protected RpcServiceMode ServiceMode { get; set; } = RpcServiceMode.ServerAndClient;
+
     protected override void ConfigureServices(ServiceCollection services)
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddService<ICounterService, CounterService>(RpcServiceMode.HybridServer);
+        fusion.AddService<ICounterService, CounterService>(ServiceMode);
     }
 
     [Fact]
-    public async Task BasicTest()
+    public async Task ServerAndClientTest()
     {
         var services = CreateServices();
         var counters = services.GetRequiredService<ICounterService>();
@@ -40,12 +42,35 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
     }
 
     [Fact]
+    public async Task HybridTest()
+    {
+        ServiceMode = RpcServiceMode.Hybrid;
+        var services = CreateServices();
+        var testClient = services.GetRequiredService<RpcTestClient>();
+        var clientPeer = testClient.Connections.First().Value.ClientPeer;
+        await clientPeer.WhenConnected();
+
+        var counters = services.GetRequiredService<ICounterService>();
+
+        var c = Computed.GetExisting(() => counters.Get("a"));
+        c.Should().BeNull();
+
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+            await counters.Get("a");
+        });
+
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+            await Computed.Capture(() => counters.Get("a"));
+        });
+    }
+
+    [Fact]
     public async Task PeerMonitorTest()
     {
         var services = CreateServices();
         var testClient = services.GetRequiredService<RpcTestClient>();
         var clientPeer = testClient.Connections.First().Value.ClientPeer;
-        var monitor = new RpcPeerStateMonitor(services, clientPeer);
+        var monitor = new RpcPeerStateMonitor(services, clientPeer.Ref);
         var state = monitor.State;
         await state.When(x => x.Kind == RpcPeerStateKind.JustConnected).WaitAsync(TimeSpan.FromSeconds(1));
         await state.When(x => x.Kind == RpcPeerStateKind.Connected).WaitAsync(TimeSpan.FromSeconds(2));
@@ -54,7 +79,7 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         await state.When(x => x.Kind == RpcPeerStateKind.JustDisconnected).WaitAsync(TimeSpan.FromSeconds(1));
         await state.When(x => x.Kind == RpcPeerStateKind.Disconnected).WaitAsync(TimeSpan.FromSeconds(5));
 
-        await testClient[clientPeer].Connect();
+        await testClient[clientPeer.Ref].Connect();
         await state.When(x => x.Kind == RpcPeerStateKind.JustConnected).WaitAsync(TimeSpan.FromSeconds(1));
         await state.When(x => x.Kind == RpcPeerStateKind.Connected).WaitAsync(TimeSpan.FromSeconds(2));
     }

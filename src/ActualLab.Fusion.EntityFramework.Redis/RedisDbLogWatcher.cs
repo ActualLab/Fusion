@@ -48,7 +48,7 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry>(
                     var value = await redisSub.Messages
                         .ReadAsync(cancellationToken)
                         .ConfigureAwait(false);
-                    if (!StringComparer.Ordinal.Equals(hostId.Id.Value, value))
+                    if (!string.Equals(hostId.Id.Value, value, StringComparison.Ordinal))
                         MarkChanged();
                 }
             }).RetryForever(owner.Settings.WatchRetryDelays, owner.Log);

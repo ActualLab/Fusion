@@ -24,20 +24,24 @@ public sealed class RpcMethodDef : MethodDef
             FullName = $"{Service.Name.Value}.{value}";
         }
     }
-    public new Symbol FullName { get; private init; }
 
-    public Type ArgumentListType { get; }
-    public bool HasObjectTypedArguments { get; }
-    public Func<ArgumentList> ArgumentListFactory { get; }
-    public Func<ArgumentList> ResultListFactory { get; }
-    public bool NoWait { get; }
-    public bool IsSystem { get; }
-    public bool IsBackend { get; }
-    public bool IsStream { get; }
+    public new readonly Symbol FullName;
+
+    public readonly Type ArgumentListType;
+    public readonly bool HasObjectTypedArguments;
+    public readonly Func<ArgumentList> ArgumentListFactory;
+    public readonly Func<ArgumentList> ResultListFactory;
+    public readonly bool NoWait;
+    public readonly bool IsSystem;
+    public readonly bool IsBackend;
+    public readonly bool IsStream;
+    public bool IsCommand { get; init; }
     public bool AllowArgumentPolymorphism { get; init; }
     public bool AllowResultPolymorphism { get; init; }
     public RpcMethodTracer? Tracer { get; init; }
     public LegacyNames LegacyNames { get; init; }
+    public PropertyBag CustomProperties { get; init; } = PropertyBag.Empty;
+    public RpcCallTimeouts Timeouts { get; init; }
 
     public RpcMethodDef(
         RpcServiceDef service,
@@ -77,6 +81,11 @@ public sealed class RpcMethodDef : MethodDef
         LegacyNames = new LegacyNames(Method
             .GetCustomAttributes<LegacyNameAttribute>(false)
             .Select(x => LegacyName.New(x, nameSuffix)));
+
+        IsCommand = ParameterTypes.Length == 2
+            && ParameterTypes[1] == typeof(CancellationToken)
+            && Hub.CommandTypeDetector(ParameterTypes[0]);
+        Timeouts = RpcCallTimeouts.DefaultProvider.Invoke(this).Normalize();
     }
 
     public override string ToString()

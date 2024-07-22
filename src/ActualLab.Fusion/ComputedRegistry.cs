@@ -17,6 +17,7 @@ public sealed class ComputedRegistry : IDisposable
         public int InitialCapacity { get; init; } = FusionDefaults.ComputedRegistryCapacity;
         public int ConcurrencyLevel { get; init; } = FusionDefaults.ComputedRegistryConcurrencyLevel;
         public Func<AsyncLockSet<ComputedInput>>? LocksFactory { get; init; } = null;
+        // ReSharper disable once InconsistentNaming
         public GCHandlePool? GCHandlePool { get; init; } = null;
     }
 
@@ -32,23 +33,28 @@ public sealed class ComputedRegistry : IDisposable
     public AsyncLockSet<ComputedInput> InputLocks { get; }
     public ComputedGraphPruner GraphPruner => _graphPruner;
 
-    public event Action<IComputed>? OnRegister;
-    public event Action<IComputed>? OnUnregister;
-    public event Action<IComputed, bool>? OnAccess;
+    public event Action<Computed>? OnRegister;
+    public event Action<Computed>? OnUnregister;
+    public event Action<Computed, bool>? OnAccess;
 
     public ComputedRegistry() : this(new()) { }
     public ComputedRegistry(Options settings)
     {
-        _storage = new ConcurrentDictionary<ComputedInput, GCHandle>(settings.ConcurrencyLevel, settings.InitialCapacity);
+        _storage = new ConcurrentDictionary<ComputedInput, GCHandle>(
+            settings.ConcurrencyLevel,
+            settings.InitialCapacity,
+            ComputedInput.EqualityComparer);
         _gcHandlePool = settings.GCHandlePool ?? new GCHandlePool(GCHandleType.Weak);
         if (_gcHandlePool.HandleType != GCHandleType.Weak)
             throw new ArgumentOutOfRangeException(
                 $"{nameof(settings)}.{nameof(settings.GCHandlePool)}.{nameof(_gcHandlePool.HandleType)}");
 
-        _opCounter = new StochasticCounter(HardwareInfo.GetProcessorCountPo2Factor(2));
+        _opCounter = new StochasticCounter(HardwareInfo.GetProcessorCountPo2Factor(4));
         InputLocks = settings.LocksFactory?.Invoke() ?? new AsyncLockSet<ComputedInput>(
             LockReentryMode.CheckedFail,
-            settings.ConcurrencyLevel, settings.InitialCapacity);
+            settings.ConcurrencyLevel,
+            settings.InitialCapacity,
+            ComputedInput.EqualityComparer);
         ChangeGraphPruner(new ComputedGraphPruner(new()), null!);
         UpdatePruneCounterThreshold();
     }
@@ -56,12 +62,12 @@ public sealed class ComputedRegistry : IDisposable
     public void Dispose()
         => _gcHandlePool.Dispose();
 
-    public IComputed? Get(ComputedInput key)
+    public Computed? Get(ComputedInput key)
     {
-        var random = Randomize(key.HashCode);
+        var random = key.HashCode + Environment.CurrentManagedThreadId;
         OnOperation(random);
         if (_storage.TryGetValue(key, out var handle)) {
-            var value = (IComputed?)handle.Target;
+            var value = (Computed?)handle.Target;
             if (value != null)
                 return value;
 
@@ -71,12 +77,13 @@ public sealed class ComputedRegistry : IDisposable
         return null;
     }
 
-    public void Register(IComputed computed)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public void Register(Computed computed)
     {
         // Debug.WriteLine($"{nameof(Register)}: {computed}");
 
         var key = computed.Input;
-        var random = Randomize(key.HashCode);
+        var random = key.HashCode + Environment.CurrentManagedThreadId;
         OnRegister?.Invoke(computed);
         OnOperation(random);
 
@@ -84,14 +91,14 @@ public sealed class ComputedRegistry : IDisposable
         GCHandle? newHandle = null;
         while (computed.ConsistencyState != ConsistencyState.Invalidated) {
             if (_storage.TryGetValue(key, out var handle)) {
-                var target = (IComputed?) handle.Target;
+                var target = (Computed?) handle.Target;
                 if (target == computed) {
                     if (newHandle.HasValue)
                         _gcHandlePool.Release(newHandle.Value, random);
                     return;
                 }
                 if (target is { ConsistencyState: not ConsistencyState.Invalidated }) {
-                    // This typically triggers Unregister - except for ClientComputed
+                    // This typically triggers Unregister - except for RemoteComputed
                     target.Invalidate();
                 }
                 if (_storage.TryRemove(key, handle))
@@ -106,7 +113,8 @@ public sealed class ComputedRegistry : IDisposable
         }
     }
 
-    public void Unregister(IComputed computed)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public void Unregister(Computed computed)
     {
         // We can't remove what still could be invalidated,
         // since "usedBy" links are resolved via this registry
@@ -114,7 +122,7 @@ public sealed class ComputedRegistry : IDisposable
             throw Errors.WrongComputedState(computed.ConsistencyState);
 
         var key = computed.Input;
-        var random = Randomize(key.HashCode);
+        var random = key.HashCode + Environment.CurrentManagedThreadId;
         OnUnregister?.Invoke(computed);
         OnOperation(random);
 
@@ -134,11 +142,11 @@ public sealed class ComputedRegistry : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void PseudoRegister(IComputed computed)
+    public void PseudoRegister(Computed computed)
         => OnRegister?.Invoke(computed);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void PseudoUnregister(IComputed computed)
+    public void PseudoUnregister(Computed computed)
         => OnUnregister?.Invoke(computed);
 
     public void InvalidateEverything()
@@ -171,19 +179,13 @@ public sealed class ComputedRegistry : IDisposable
         return graphPruner;
     }
 
-    public void ReportAccess(IComputed computed, bool isNew)
+    public void ReportAccess(Computed computed, bool isNew)
     {
         if (OnAccess != null && computed.Input.Function is IComputeMethodFunction)
             OnAccess.Invoke(computed, isNew);
     }
 
     // Private methods
-
-    private void OnOperation()
-    {
-        if (_opCounter.Increment() is { } c && c > _pruneOpCounterThreshold)
-            TryPrune();
-    }
 
     private void OnOperation(int random)
     {
@@ -207,7 +209,7 @@ public sealed class ComputedRegistry : IDisposable
         using var activity = type.GetActivitySource().StartActivity(type, nameof(Prune));
 
         // Debug.WriteLine(nameof(PruneInternal));
-        var randomOffset = Randomize(Environment.CurrentManagedThreadId);
+        var randomOffset = Environment.CurrentManagedThreadId + CoarseClockHelper.RandomInt32;
         foreach (var (key, handle) in _storage) {
             if (handle.Target == null && _storage.TryRemove(key, handle))
                 _gcHandlePool.Release(handle, key.HashCode + randomOffset);
@@ -228,8 +230,4 @@ public sealed class ComputedRegistry : IDisposable
             _pruneOpCounterThreshold = nextThreshold;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int Randomize(int random)
-        => random + CoarseClockHelper.RandomInt32;
 }

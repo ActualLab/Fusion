@@ -1,10 +1,11 @@
 namespace ActualLab.Time;
 
-public class MomentClockSet(IMomentClock systemClock,
-    IMomentClock cpuClock,
-    IServerClock serverClock,
-    IMomentClock coarseSystemClock,
-    IMomentClock coarseCpuClock)
+public class MomentClockSet(
+    MomentClock systemClock,
+    MomentClock cpuClock,
+    ServerClock serverClock,
+    MomentClock coarseSystemClock,
+    MomentClock coarseCpuClock)
 {
     public static MomentClockSet Default { get; set; } = new(
         ActualLab.Time.SystemClock.Instance,
@@ -13,11 +14,11 @@ public class MomentClockSet(IMomentClock systemClock,
         ActualLab.Time.CoarseSystemClock.Instance,
         ActualLab.Time.CoarseCpuClock.Instance);
 
-    public IMomentClock SystemClock { get; init; } = systemClock;
-    public IMomentClock CpuClock { get; init; } = cpuClock;
-    public IServerClock ServerClock { get; init; } = serverClock;
-    public IMomentClock CoarseSystemClock { get; init; } = coarseSystemClock;
-    public IMomentClock CoarseCpuClock { get; init; } = coarseCpuClock;
+    public MomentClock SystemClock { get; init; } = systemClock;
+    public MomentClock CpuClock { get; init; } = cpuClock;
+    public ServerClock ServerClock { get; init; } = serverClock;
+    public MomentClock CoarseSystemClock { get; init; } = coarseSystemClock;
+    public MomentClock CoarseCpuClock { get; init; } = coarseCpuClock;
 
     public MomentClockSet() : this(
         Default.SystemClock,
@@ -27,7 +28,7 @@ public class MomentClockSet(IMomentClock systemClock,
         Default.CoarseCpuClock)
     { }
 
-    public MomentClockSet(IMomentClock anyClock)
+    public MomentClockSet(MomentClock anyClock)
         : this(anyClock, anyClock, new ServerClock(anyClock), anyClock, anyClock)
     { }
 }

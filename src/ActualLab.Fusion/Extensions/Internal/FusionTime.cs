@@ -8,11 +8,11 @@ public class FusionTime : IFusionTime
 
         public TimeSpan DefaultUpdatePeriod { get; init; } = TimeSpan.FromSeconds(1);
         public TimeSpan MaxInvalidationDelay { get; init; } = TimeSpan.FromMinutes(10);
-        public IMomentClock? Clock { get; init; }
+        public MomentClock? Clock { get; init; }
     }
 
     public Options Settings { get; }
-    public IMomentClock Clock { get; }
+    public MomentClock Clock { get; }
 
     public FusionTime(Options settings, IServiceProvider services)
     {
@@ -49,7 +49,7 @@ public class FusionTime : IFusionTime
         }
 
         // Invalidate the result when it's supposed to change
-        var delay = TrimInvalidationDelay(unit.Multiply(unitCount + 1) - delta + TimeSpan.FromMilliseconds(100));
+        var delay = TrimInvalidationDelay(unit.MultiplyBy(unitCount + 1) - delta + TimeSpan.FromMilliseconds(100));
         Computed.GetCurrent().Invalidate(delay, false);
         return Task.FromResult(result);
     }

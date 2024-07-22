@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Client.Internal;
@@ -61,9 +63,40 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
                 return;
             }
 
+            Complete();
             ResultVersion = resultVersion;
-            if (context != null && Context.MustCaptureCacheData(out var dataSource))
-                dataSource.TrySetResult(context.Message.ArgumentData);
+            if (context != null)
+                Context.CacheInfoCapture?.CaptureValue(context.Message);
+        }
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void SetMatch(RpcInboundContext? context)
+    {
+        var resultVersion = context.GetResultVersion();
+        // We always use Lock to update ResultSource in this type
+        lock (Lock) {
+            // The code below is a copy of base.SetResult
+            // except the Unregister call in the end.
+            // We don't unregister the call here, coz
+            // we'll need to await for invalidation
+            var cacheEntry = Context.CacheInfoCapture?.CacheEntry as RpcCacheEntry<TResult>;
+            if (cacheEntry == null) {
+                SetError(Rpc.Internal.Errors.MatchButNoCachedEntry(), null);
+                return;
+            }
+
+            if (!ResultSource.TrySetResult(cacheEntry.Result)) {
+                // Result was set earlier; let's check for non-peer set or version mismatch
+                if (resultVersion == null || !resultVersion.Equals(ResultVersion, StringComparison.Ordinal))
+                    SetInvalidatedUnsafe(true);
+                return;
+            }
+
+            Complete();
+            ResultVersion = resultVersion;
+            if (context != null)
+                Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
         }
     }
 
@@ -72,6 +105,8 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
     {
         var resultVersion = context.GetResultVersion();
         var oce = error as OperationCanceledException;
+        if (error is RpcRerouteException)
+            oce = null; // RpcRerouteException is OperationCanceledException, but must be exposed as-is here
         var cancellationToken = oce?.CancellationToken ?? default;
         // We always use Lock to update ResultSource in this type
         lock (Lock) {
@@ -86,12 +121,9 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             }
 
             // Result was just set
+            Complete();
             ResultVersion = resultVersion;
-            if (Context.MustCaptureCacheData(out var dataSource))
-                if (oce != null)
-                    dataSource.TrySetCanceled(cancellationToken);
-                else
-                    dataSource.TrySetException(error);
+            Context.CacheInfoCapture?.CaptureValue(oce != null, error, cancellationToken);
             if (context == null) // Non-peer set
                 SetInvalidatedUnsafe(!assumeCancelled);
         }
@@ -103,10 +135,10 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
         // We always use Lock to update ResultSource in this type
         lock (Lock) {
             var isCancelled = ResultSource.TrySetCanceled(cancellationToken);
-            if (isCancelled && Context.MustCaptureCacheData(out var dataSource))
-                dataSource.TrySetCanceled(cancellationToken);
+            if (isCancelled)
+                Context.CacheInfoCapture?.CaptureValue(cancellationToken);
             WhenInvalidatedSource.TrySetResult(default);
-            Unregister(true);
+            CompleteAndUnregister(notifyCancelled: true);
             return isCancelled;
         }
     }
@@ -120,10 +152,11 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
     public void SetInvalidated(bool notifyCancelled)
     {
         lock (Lock) {
-            if (SetInvalidatedUnsafe(notifyCancelled)) {
-                if (ResultSource.TrySetCanceled() && Context.MustCaptureCacheData(out var dataSource))
-                    dataSource.TrySetCanceled();
-            }
+            if (!SetInvalidatedUnsafe(notifyCancelled))
+                return;
+
+            if (ResultSource.TrySetCanceled())
+                Context.CacheInfoCapture?.CaptureValue(CancellationToken.None);
         }
     }
 
@@ -135,7 +168,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
         if (!WhenInvalidatedSource.TrySetResult(default))
             return false;
 
-        Unregister(notifyCancelled);
+        CompleteAndUnregister(notifyCancelled);
         return true;
     }
 }

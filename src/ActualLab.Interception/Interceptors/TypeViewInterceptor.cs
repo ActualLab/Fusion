@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
 using ActualLab.Interception.Internal;
 
@@ -5,51 +6,37 @@ namespace ActualLab.Interception.Interceptors;
 
 public class TypeViewInterceptor : Interceptor
 {
-    private readonly Func<(MethodInfo, Type), Invocation, Func<Invocation, object?>> _createHandler;
-    private readonly ConcurrentDictionary<(MethodInfo, Type), Func<Invocation, object?>?> _handlerCache = new(1, 64);
+    public new record Options : Interceptor.Options
+    {
+        public static Options Default { get; set; } = new();
+    }
+
     private readonly MethodInfo _createConvertingHandlerMethod;
     private readonly MethodInfo _createTaskConvertingHandlerMethod;
     private readonly MethodInfo _createValueTaskConvertingHandlerMethod;
 
-    protected IServiceProvider Services { get; }
-
-    public TypeViewInterceptor(IServiceProvider services)
+    public TypeViewInterceptor(Options settings, IServiceProvider services)
+        : base(settings, services)
     {
-        Services = services;
-        _createHandler = CreateHandler;
+        MustInterceptSyncCalls = true;
+        MustValidateProxyType = false;
+
         _createConvertingHandlerMethod = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateConvertingHandler)));
+            .Single(m => string.Equals(m.Name, nameof(CreateConvertingHandler), StringComparison.Ordinal));
         _createTaskConvertingHandlerMethod = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateTaskConvertingHandler)));
+            .Single(m => string.Equals(m.Name, nameof(CreateTaskConvertingHandler), StringComparison.Ordinal));
         _createValueTaskConvertingHandlerMethod = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateValueTaskConvertingHandler)));
+            .Single(m => string.Equals(m.Name, nameof(CreateValueTaskConvertingHandler), StringComparison.Ordinal));
     }
 
-    public override void Intercept(Invocation invocation)
+    protected override Func<Invocation, object?>? CreateHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
+        Invocation initialInvocation, MethodDef methodDef)
     {
-        var key = (invocation.Method, invocation.Proxy.GetType());
-        var handler = _handlerCache.GetOrAdd(key, _createHandler, invocation);
-        if (handler == null)
-            invocation.Intercepted();
-        else
-            handler.Invoke(invocation);
-    }
-
-    public override TResult Intercept<TResult>(Invocation invocation)
-    {
-        var key = (invocation.Method, invocation.Proxy.GetType());
-        var handler = _handlerCache.GetOrAdd(key, _createHandler, invocation);
-        return handler == null
-            ? invocation.Intercepted<TResult>()
-            : (TResult)handler.Invoke(invocation)!;
-    }
-
-    protected virtual Func<Invocation, object?> CreateHandler((MethodInfo, Type) key, Invocation initialInvocation)
-    {
-        var tTarget = initialInvocation.ProxyTarget?.GetType() ?? throw Errors.NoProxyTarget();
+        var tTarget = initialInvocation.InterfaceProxyTarget?.GetType() ?? throw Errors.NoInterfaceProxyTarget();
         var mSource = initialInvocation.Method;
         var mArgTypes = mSource.GetParameters().Select(p => p.ParameterType).ToArray();
         var mTarget = tTarget.GetMethod(mSource.Name, mArgTypes);
@@ -109,7 +96,7 @@ public class TypeViewInterceptor : Interceptor
 
         return invocation => {
             // TODO: Get rid of reflection here (not critical)
-            var target = invocation.ProxyTarget;
+            var target = invocation.InterfaceProxyTarget;
             return mTarget.Invoke(target, invocation.Arguments.ToArray());
         };
     }
@@ -123,7 +110,7 @@ public class TypeViewInterceptor : Interceptor
             return null;
 
         return invocation => {
-            var target = invocation.ProxyTarget;
+            var target = invocation.InterfaceProxyTarget;
             var result = (TTarget) mTarget.Invoke(target, invocation.Arguments.ToArray())!;
             // ReSharper disable once HeapView.PossibleBoxingAllocation
             return converter.Convert(result);
@@ -139,7 +126,7 @@ public class TypeViewInterceptor : Interceptor
             return null;
 
         return invocation => {
-            var target = invocation.ProxyTarget;
+            var target = invocation.InterfaceProxyTarget;
             var untypedResult = mTarget.Invoke(target, invocation.Arguments.ToArray());
             var result = (Task<TTarget>) untypedResult!;
             return result.ContinueWith(
@@ -157,7 +144,7 @@ public class TypeViewInterceptor : Interceptor
             return null;
 
         return invocation => {
-            var target = invocation.ProxyTarget;
+            var target = invocation.InterfaceProxyTarget;
             var untypedResult = mTarget.Invoke(target, invocation.Arguments.ToArray());
             var result = (ValueTask<TTarget>) untypedResult!;
             // ReSharper disable once HeapView.BoxingAllocation

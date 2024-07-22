@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Requirements;
 
 namespace ActualLab;
 
@@ -7,29 +8,52 @@ namespace ActualLab;
 
 public static class RequireExt
 {
-    // Normal overloads
+    // Require w/ implicit MustExistRequirement
 
-    public static T Require<T>([NotNull] this T? target, Requirement<T>? requirement = null)
+    public static T Require<T>([NotNull] this T? target)
+        => MustExistRequirement.IsSatisfied(target)
+            ? target
+            : Requirement<T>.MustExist.Check(target);
+
+    public static async Task<T> Require<T>(this Task<T?> targetSource)
+    {
+        var target = await targetSource.ConfigureAwait(false);
+        return MustExistRequirement.IsSatisfied(target)
+            ? target
+            : Requirement<T>.MustExist.Check(target);
+    }
+
+    public static async ValueTask<T> Require<T>(this ValueTask<T?> targetSource)
+    {
+        var target = await targetSource.ConfigureAwait(false);
+        return MustExistRequirement.IsSatisfied(target)
+            ? target
+            : Requirement<T>.MustExist.Check(target);
+    }
+
+    // Require w/ explicit Requirement
+
+    public static T Require<T>([NotNull] this T? target, Requirement<T>? requirement)
     {
         requirement ??= Requirement<T>.MustExist;
         return requirement.Check(target);
     }
 
-    public static async Task<T> Require<T>(this Task<T?> targetSource, Requirement<T>? requirement = null)
+    public static async Task<T> Require<T>(this Task<T?> targetSource, Requirement<T>? requirement)
     {
         var target = await targetSource.ConfigureAwait(false);
         requirement ??= Requirement<T>.MustExist;
         return requirement.Check(target);
     }
 
-    public static async ValueTask<T> Require<T>(this ValueTask<T?> targetSource, Requirement<T>? requirement = null)
+    public static async ValueTask<T> Require<T>(this ValueTask<T?> targetSource, Requirement<T>? requirement)
     {
         var target = await targetSource.ConfigureAwait(false);
         requirement ??= Requirement<T>.MustExist;
         return requirement.Check(target);
     }
 
-    // Overloads accepting requirement builder
+    // Require w/ requirement builder
 
     public static T Require<T>([NotNull] this T? target, Func<Requirement<T>> requirementBuilder)
         where T : IRequirementTarget

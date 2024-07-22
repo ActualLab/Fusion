@@ -5,12 +5,12 @@ using ActualLab.Testing.Collections;
 namespace ActualLab.Tests.Rpc;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
-public class RpcLocalChannelConnectionTest(ITestOutputHelper @out)
-    : RpcLocalConnectionTestBase(RpcPeerConnectionKind.LocalChannel, @out);
+public class RpcLoopbackConnectionTest(ITestOutputHelper @out)
+    : RpcLocalConnectionTestBase(RpcPeerConnectionKind.Loopback, @out);
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
-public class RpcLocalCallConnectionTest(ITestOutputHelper @out)
-    : RpcLocalConnectionTestBase(RpcPeerConnectionKind.LocalCall, @out);
+public class RpcLocalConnectionTest(ITestOutputHelper @out)
+    : RpcLocalConnectionTestBase(RpcPeerConnectionKind.Local, @out);
 
 public abstract class RpcLocalConnectionTestBase : RpcTestBase
 {
@@ -26,15 +26,20 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         var rpc = services.AddRpc();
         var commander = services.AddCommander();
         if (isClient)
-            return;
+            throw new InvalidOperationException("Client shouldn't be used in this test.");
 
         rpc.AddServer<ITestRpcService, TestRpcService>();
-        commander.AddService<TestRpcService>();
-        rpc.AddClient<ITestRpcService>();
-
         rpc.AddServer<ITestRpcBackend, TestRpcBackend>();
-        commander.AddService<TestRpcBackend>();
-        rpc.AddClient<ITestRpcBackend>();
+        if (ConnectionKind == RpcPeerConnectionKind.Local) {
+            rpc.AddClient<ITestRpcService, TestRpcService>();
+            rpc.AddClient<ITestRpcBackend, TestRpcBackend>();
+        }
+        else {
+            rpc.AddClient<ITestRpcService>();
+            rpc.AddClient<ITestRpcBackend>();
+        }
+        commander.AddHandlers<TestRpcService>();
+        commander.AddHandlers<TestRpcBackend>();
     }
 
     [Fact]
@@ -61,8 +66,17 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         var t1 = await backendClient.Polymorph(t);
         t1.Should().Be(t);
 
-        await client.PolymorphArg(new Tuple<int>(1)); // No checks w/ local connection
-        await client.PolymorphResult(2); // No checks w/ local connection
+        if (ConnectionKind == RpcPeerConnectionKind.Local) {
+            // No serialization & no checks w/ local connection
+            await client.PolymorphArg(new Tuple<int>(1));
+            await client.PolymorphResult(2);
+        }
+        else {
+            await Assert.ThrowsAnyAsync<Exception>(
+                () => client.PolymorphArg(new Tuple<int>(1)));
+            await Assert.ThrowsAnyAsync<Exception>(
+                () => client.PolymorphResult(2));
+        }
     }
 
     [Theory]

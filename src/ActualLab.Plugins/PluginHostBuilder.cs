@@ -18,21 +18,21 @@ public class PluginHostBuilder
             services.AddLogging();
 
         // Own services
-        services.TryAddSingleton<IPluginHost>(c => new PluginHost(c));
-        services.TryAddSingleton<IPluginFactory>(c => new PluginFactory(c));
-        services.TryAddSingleton<IPluginCache>(c => new PluginCache(c));
-        services.TryAddSingleton<IPluginInfoProvider>(_ => new PluginInfoProvider());
-        services.TryAddSingleton(typeof(IPluginInstanceHandle<>), typeof(PluginInstanceHandle<>));
-        services.TryAddSingleton(typeof(IPluginHandle<>), typeof(PluginHandle<>));
-        services.TryAddSingleton(c => {
+        services.AddSingleton<IPluginHost>(c => new PluginHost(c));
+        services.AddSingleton<IPluginFactory>(c => new PluginFactory(c));
+        services.AddSingleton<IPluginCache>(c => new PluginCache(c));
+        services.AddSingleton<IPluginInfoProvider>(_ => new PluginInfoProvider());
+        services.AddSingleton(typeof(IPluginInstanceHandle<>), typeof(PluginInstanceHandle<>));
+        services.AddSingleton(typeof(IPluginHandle<>), typeof(PluginHandle<>));
+        services.AddSingleton(c => {
             var pluginFinder = c.GetRequiredService<IPluginFinder>();
             return pluginFinder.FoundPlugins
                 ?? throw Errors.PluginFinderRunFailed(pluginFinder.GetType());
         });
 
         // FileSystemPluginFinder is the default IPluginFinder
-        services.TryAddSingleton(_ => new FileSystemPluginFinder.Options());
-        services.TryAddSingleton<IPluginFinder>(c => new FileSystemPluginFinder(
+        services.AddSingleton(_ => new FileSystemPluginFinder.Options());
+        services.AddSingleton<IPluginFinder>(c => new FileSystemPluginFinder(
             c.GetRequiredService<FileSystemPluginFinder.Options>(),
             c.GetRequiredService<IPluginInfoProvider>(),
             c.LogFor<FileSystemPluginFinder>()));

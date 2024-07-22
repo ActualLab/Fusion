@@ -14,7 +14,7 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
         public int MaxKnownOperationCount { get; init; } = 16384;
         // Should be >= max commit + processing time @ DbOperationLogReader.Options
         public TimeSpan MaxKnownOperationAge { get; init; } = TimeSpan.FromMinutes(15);
-        public IMomentClock? Clock { get; init; }
+        public MomentClock? Clock { get; init; }
     }
 
     protected Options Settings { get; }
@@ -23,7 +23,7 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
     protected IOperationCompletionListener[] OperationCompletionListeners { get; }
     protected RecentlySeenMap<Symbol, Unit> RecentlySeenUuids { get; }
     protected object Lock => RecentlySeenUuids;
-    protected IMomentClock Clock { get; }
+    protected MomentClock Clock { get; }
     protected ILogger Log { get; }
 
     public OperationCompletionNotifier(Options settings, IServiceProvider services)
@@ -51,7 +51,7 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
         using var _ = ExecutionContextExt.TrySuppressFlow();
         return Task.Run(async () => {
             var isLocal = commandContext != null;
-            var isFromLocalAgent = StringComparer.Ordinal.Equals(operation.HostId, HostId.Id.Value);
+            var isFromLocalAgent = string.Equals(operation.HostId, HostId.Id.Value, StringComparison.Ordinal);
             // An important assertion
             if (isLocal != isFromLocalAgent) {
                 var message = isFromLocalAgent

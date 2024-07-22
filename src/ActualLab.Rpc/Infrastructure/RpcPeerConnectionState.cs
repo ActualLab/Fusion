@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Rpc.Infrastructure;
 
 public sealed record RpcPeerConnectionState(
@@ -7,7 +5,7 @@ public sealed record RpcPeerConnectionState(
     RpcHandshake? Handshake = null,
     Exception? Error = null,
     int TryIndex = 0,
-    CancellationTokenSource? ReaderAbortSource = null)
+    CancellationTokenSource? ReaderTokenSource = null)
 {
     public static readonly RpcPeerConnectionState Disconnected = new();
 
@@ -17,13 +15,15 @@ public sealed record RpcPeerConnectionState(
     public bool IsConnected()
         => Connection != null;
 
+    // NextXxx
+
 #pragma warning disable CA1822
     public RpcPeerConnectionState NextConnected(
 #pragma warning restore CA1822
         RpcConnection connection,
         RpcHandshake handshake,
-        CancellationTokenSource readerAbortToken)
-        => new(connection, handshake, null, 0, readerAbortToken);
+        CancellationTokenSource readerTokenSource)
+        => new(connection, handshake, null, 0, readerTokenSource);
 
     public RpcPeerConnectionState NextDisconnected(Exception? error = null)
         => error == null ? Disconnected

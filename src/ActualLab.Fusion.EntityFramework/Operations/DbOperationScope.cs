@@ -77,10 +77,15 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         CommandContext context,
         IsolationLevel isolationLevel = IsolationLevel.Unspecified)
     {
-        var scope = DbOperationScope.TryGet(context);
-        if (scope != null)
-            return scope as DbOperationScope<TDbContext>
-                   ?? throw Errors.WrongDbOperationScopeType(typeof(DbOperationScope<TDbContext>), scope.GetType());
+        var operation = context.TryGetOperation();
+        if (operation != null)
+            return operation.Scope as DbOperationScope<TDbContext>
+                ?? throw Fusion.Operations.Internal.Errors.WrongOperationScopeType(
+                    typeof(DbOperationScope<TDbContext>),
+                    operation.Scope?.GetType());
+
+        if (Invalidation.IsActive)
+            throw Fusion.Operations.Internal.Errors.NewOperationScopeIsRequestedFromInvalidationCode();
 
         var outermostContext = context.OutermostContext;
         isolationLevel = GetIsolationLevelOverride(outermostContext)
@@ -101,7 +106,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         AsyncLock = new AsyncLock();
         Operation = Operation.New(this);
         Operation.Command = outermostContext.UntypedCommand;
-        outermostContext.ChangeOperation(Operation, true);
+        outermostContext.ChangeOperation(Operation);
     }
 
     public override async ValueTask DisposeAsync()

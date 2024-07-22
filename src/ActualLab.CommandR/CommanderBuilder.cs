@@ -3,11 +3,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.CommandR.Diagnostics;
 using ActualLab.CommandR.Interception;
 using ActualLab.CommandR.Internal;
-using ActualLab.CommandR.Rpc;
 using ActualLab.Generators;
 using ActualLab.Interception;
 using ActualLab.Resilience;
-using ActualLab.Rpc;
 using ActualLab.Versioning;
 using ActualLab.Versioning.Providers;
 
@@ -40,24 +38,21 @@ public readonly struct CommanderBuilder
         Handlers = services.AddInstance(new HashSet<CommandHandler>(), addInFront: true);
 
         // Core services
-        services.TryAddSingleton(_ => new HostId());
-        services.TryAddSingleton(_ => MomentClockSet.Default);
-        services.TryAddSingleton(c => c.GetRequiredService<MomentClockSet>().SystemClock);
         services.TryAddSingleton<UuidGenerator>(_ => new UlidUuidGenerator());
         services.TryAddSingleton<VersionGenerator<long>>(c => new ClockBasedVersionGenerator(c.Clocks().SystemClock));
         services.TryAddSingleton(_ => ChaosMaker.Default);
 
         // Commander, handlers, etc.
-        services.TryAddSingleton<ICommander>(c => new Commander(c));
-        services.TryAddSingleton(c => c.GetRequiredService<ICommander>().Hub);
-        services.TryAddSingleton(c => new CommandHandlerRegistry(c));
-        services.TryAddSingleton(_ => new CommandHandlerResolver.Options());
-        services.TryAddSingleton(c => new CommandHandlerResolver(
+        services.AddSingleton<ICommander>(c => new Commander(c));
+        services.AddSingleton(c => c.GetRequiredService<ICommander>().Hub);
+        services.AddSingleton(c => new CommandHandlerRegistry(c));
+        services.AddSingleton(_ => new CommandHandlerResolver.Options());
+        services.AddSingleton(c => new CommandHandlerResolver(
             c.GetRequiredService<CommandHandlerResolver.Options>(), c));
 
         // Command services & their dependencies
-        Services.TryAddSingleton(_ => new CommandServiceInterceptor.Options());
-        Services.TryAddSingleton(c => new CommandServiceInterceptor(
+        Services.AddSingleton(_ => CommandServiceInterceptor.Options.Default);
+        Services.AddSingleton(c => new CommandServiceInterceptor(
             c.GetRequiredService<CommandServiceInterceptor.Options>(), c));
 
         // Default handlers
@@ -67,10 +62,6 @@ public readonly struct CommanderBuilder
         AddHandlers<CommandTracer>();
         services.AddSingleton(_ => new LocalCommandRunner());
         AddHandlers<LocalCommandRunner>();
-
-        // Rpc
-        var rpc = services.AddRpc();
-        rpc.AddOutboundMiddleware<RpcOutboundCommandCallMiddleware>();
 
         configure?.Invoke(this);
     }
@@ -188,7 +179,9 @@ public readonly struct CommanderBuilder
         if (!typeof(ICommandService).IsAssignableFrom(implementationType))
             throw ActualLab.Internal.Errors.MustImplement<ICommandService>(implementationType, nameof(implementationType));
 
-        var descriptor = new ServiceDescriptor(serviceType, c => CommanderProxies.NewProxy(c, implementationType), lifetime);
+        var descriptor = new ServiceDescriptor(serviceType,
+            c => c.CommanderHub().NewProxy(c, implementationType),
+            lifetime);
         Services.TryAdd(descriptor);
         AddHandlers(serviceType, implementationType, priorityOverride);
         return this;

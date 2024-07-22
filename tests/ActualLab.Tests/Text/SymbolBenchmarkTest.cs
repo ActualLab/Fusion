@@ -79,13 +79,13 @@ public sealed class SymbolBenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
             var s1 = new string('0', c);
             var s2 = new string('0', c);
             while (--n > 0)
-                _ = StringComparer.Ordinal.Equals(s1, s2);
+                _ = Equals(s1, s2);
         }, options);
         await Benchmark("string(length) == string(length) - when !=", iterationCount, static (c, n) => {
             var s1 = new string('0', c);
             var s2 = new string('1', c);
             while (--n > 0)
-                _ = StringComparer.Ordinal.Equals(s1, s2);
+                _ = Equals(s1, s2);
         }, options);
     }
 

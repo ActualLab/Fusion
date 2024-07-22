@@ -21,7 +21,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public int ReadBufferSize { get; init; } = 16_000; // Rented ~just once, so it can be large
         public int RetainedBufferSize { get; init; } = 64_000; // Any buffer is released when it hits this size
         public int MaxItemSize { get; init; } = 130_000_000; // 130 MB;
-        public Func<Task>? WriteDelayFactory { get; init; } = RpcDefaults.WebSocketWriteDelayFactory;
+        public Func<CpuTimestamp, int, Task>? WriteDelayer { get; init; } = RpcDefaults.WebSocketWriteDelayer;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public DualSerializer<T> Serializer { get; init; } = new();
         public BoundedChannelOptions ReadChannelOptions { get; init; } = new(128) {
@@ -53,14 +53,15 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private readonly WebSocketMessageType _defaultMessageType;
     // ReSharper disable once InconsistentlySynchronizedField
 
+    public bool OwnsWebSocketOwner { get; init; } = true;
     public Options Settings { get; }
     public WebSocketOwner WebSocketOwner { get; }
     public WebSocket WebSocket { get; }
     public DualSerializer<T> Serializer { get; }
     public CancellationToken StopToken { get; }
+    public CpuTimestamp CreatedAt { get; } = CpuTimestamp.Now;
     public ILogger? Log { get; }
     public ILogger? ErrorLog { get; }
-    public bool OwnsWebSocketOwner { get; init; } = true;
 
     public Task WhenReadCompleted { get; }
     public Task WhenWriteCompleted { get; }
@@ -149,14 +150,14 @@ public sealed class WebSocketChannel<T> : Channel<T>
             await foreach (var item in ReadAll(cancellationToken).ConfigureAwait(false)) {
                 while (!writer.TryWrite(item))
                     if (!await writer.WaitToWriteAsync(cancellationToken).ConfigureAwait(false)) {
-                        // This is a normal closure in most of cases,
+                        // This is a normal closure in most of the cases,
                         // so we don't want to report it as an error
                         return;
                     }
             }
         }
         catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) {
-            // This is a normal closure in most of cases,
+            // This is a normal closure in most of the cases,
             // so we don't want to report it as an error
         }
         catch (Exception e) {
@@ -175,9 +176,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
             var reader = _writeChannel.Reader;
             if (_defaultMessageType == WebSocketMessageType.Binary) {
                 // Binary -> we build frames
-                if (Settings.WriteDelayFactory is { } writeDelayFactory) {
-                    // There is write delay -> we use more complex write logic
-                    await RunWriterWithWriteDelay(reader, writeDelayFactory, cancellationToken).ConfigureAwait(false);
+                if (Settings.WriteDelayer is { } writeDelayer) {
+                    // There is a write delay -> we use more complex write logic
+                    await RunWriterWithWriteDelay(reader, writeDelayer, cancellationToken).ConfigureAwait(false);
                     return;
                 }
 
@@ -208,9 +209,10 @@ public sealed class WebSocketChannel<T> : Channel<T>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async Task RunWriterWithWriteDelay(
         ChannelReader<T> reader,
-        Func<Task> writeDelayFactory,
+        Func<CpuTimestamp, int, Task> writeDelayer,
         CancellationToken cancellationToken)
     {
+        var startedAt = CreatedAt;
         Task? whenMustFlush = null; // null = no flush required / nothing to flush
         Task<bool>? waitToReadTask = null;
         while (true) {
@@ -261,7 +263,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             }
             if (whenMustFlush == null && _writeBuffer.WrittenCount > 0) {
                 // If we're here, the write flush isn't "planned" yet + there is some data to flush.
-                whenMustFlush = writeDelayFactory.Invoke();
+                whenMustFlush = writeDelayer.Invoke(CreatedAt, _writeBuffer.WrittenCount);
             }
         }
         // Final write flush

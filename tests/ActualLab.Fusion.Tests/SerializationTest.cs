@@ -51,7 +51,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         var s = new Screenshot {
             Width = 10,
             Height = 20,
-            CapturedAt = SystemClock.Now,
+            CapturedAt = Moment.Now,
             Image = [1, 2, 3],
         };
         var t = s.PassThroughAllSerializers();
@@ -92,8 +92,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var si = new SessionInfo(new Session(RandomStringGenerator.Default.Next())) {
             Version = 1,
-            CreatedAt = SystemClock.Now,
-            LastSeenAt = SystemClock.Now + TimeSpan.FromSeconds(1),
+            CreatedAt = Moment.Now,
+            LastSeenAt = Moment.Now + TimeSpan.FromSeconds(1),
             UserId = RandomStringGenerator.Default.Next(),
             AuthenticatedIdentity = new UserIdentity("a", "b"),
             IPAddress = "1.1.1.1",

@@ -6,8 +6,8 @@ namespace ActualLab.Fusion.Authentication;
 public partial record SessionAuthInfo : IRequirementTarget
 {
     public static Requirement<SessionAuthInfo> MustBeAuthenticated { get; set; } = Requirement.New(
-        new("Session is not authenticated.", m => new SecurityException(m)),
-        (SessionAuthInfo? i) => i?.IsAuthenticated() ?? false);
+        (SessionAuthInfo? i) => i?.IsAuthenticated() ?? false,
+        new("Session is not authenticated.", m => new SecurityException(m)));
 
     [DataMember(Order = 0), MemoryPackOrder(0)] public string SessionHash { get; init; } = "";
 

@@ -6,18 +6,12 @@ namespace ActualLab.Rpc.Caching;
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
 {
-    public static readonly RpcCacheKey Invalid = new(default, default, default);
-
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public readonly int HashCode;
 
     [DataMember(Order = 0), MemoryPackOrder(0)] public readonly Symbol Service;
     [DataMember(Order = 1), MemoryPackOrder(1)] public readonly Symbol Method;
     [DataMember(Order = 2), MemoryPackOrder(2)] public readonly TextOrBytes ArgumentData;
-
-    // Computed
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public bool IsValid => !ReferenceEquals(this, Invalid);
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
     public RpcCacheKey(Symbol service, Symbol method, TextOrBytes argumentData)
@@ -39,12 +33,14 @@ public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
     public bool Equals(RpcCacheKey? other)
         =>  !ReferenceEquals(other, null)
             && HashCode == other.HashCode
-            && StringComparer.Ordinal.Equals(Method.Value, other.Method.Value)
-            && StringComparer.Ordinal.Equals(Service.Value, other.Service.Value)
+            && string.Equals(Method.Value, other.Method.Value, StringComparison.Ordinal)
+            && string.Equals(Service.Value, other.Service.Value, StringComparison.Ordinal)
             && ArgumentData.DataEquals(other.ArgumentData);
 
     public override bool Equals(object? obj) => obj is RpcCacheKey other && Equals(other);
     public override int GetHashCode() => HashCode;
-    public static bool operator ==(RpcCacheKey left, RpcCacheKey right) => left.Equals(right);
-    public static bool operator !=(RpcCacheKey left, RpcCacheKey right) => !left.Equals(right);
+    public static bool operator ==(RpcCacheKey? left, RpcCacheKey? right)
+        => left?.Equals(right) ?? ReferenceEquals(right, null);
+    public static bool operator !=(RpcCacheKey? left, RpcCacheKey? right)
+        => !(left?.Equals(right) ?? ReferenceEquals(right, null));
 }

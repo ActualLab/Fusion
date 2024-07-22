@@ -12,6 +12,7 @@ using ActualLab.Fusion.EntityFramework.Redis;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Server;
 using ActualLab.Fusion.Server.Middlewares;
+using ActualLab.Interception;
 using ActualLab.Interception.Interceptors;
 using ActualLab.IO;
 using ActualLab.OS;
@@ -34,7 +35,7 @@ using Templates.TodoApp.UI;
 
 // IComputeService validation should be off in release
 #if !DEBUG
-InterceptorBase.Options.Defaults.IsValidationEnabled = false;
+Interceptor.Options.Defaults.IsValidationEnabled = false;
 #endif
 
 var builder = WebApplication.CreateBuilder();
@@ -62,6 +63,7 @@ builder.WebHost.UseDefaultServiceProvider((ctx, options) => {
 
 // Build & configure app
 var app = builder.Build();
+StaticLog.Factory = app.Services.LoggerFactory();
 ConfigureApp();
 
 // Ensure the DB is created
@@ -106,6 +108,9 @@ void ConfigureServices()
                 // can be arbitrary long - all depends on the reliability of Notifier-Watcher chain.
                 CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
             });
+            operations.ConfigureEventLogReader(_ => new() {
+                CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
+            });
             operations.AddFileSystemOperationLogWatcher();
             // operations.AddRedisOperationLogWatcher();
         });
@@ -129,13 +134,7 @@ void ConfigureServices()
     // Fusion services
     var fusion = services.AddFusion(RpcServiceMode.Server, true);
     var fusionServer = fusion.AddWebServer();
-    // You may comment this out - the call below just enables RPC call logging
-    services.AddSingleton<RpcPeerFactory>(_ =>
-        static (hub, peerRef) => !peerRef.IsServer
-            ? throw new NotSupportedException("No client peers are allowed on the server.")
-            : new RpcServerPeer(hub, peerRef) { CallLogLevel = LogLevel.Debug }
-    );
-#if true
+#if false
     // Enable this to test how the client behaves w/ a delay
     fusion.Rpc.AddInboundMiddleware(c => new RpcRandomDelayMiddleware(c) {
         Delay = new(1, 0.1),
@@ -176,7 +175,7 @@ void ConfigureServices()
     fusion.AddService<ITodos, Todos>();
 
     // Shared services
-    StartupHelper.ConfigureSharedServices(services);
+    StartupHelper.ConfigureSharedServices(services, true);
 
     // ASP.NET Core authentication providers
     services.AddAuthentication(options => {

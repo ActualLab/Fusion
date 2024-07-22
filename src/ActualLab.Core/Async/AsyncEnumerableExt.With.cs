@@ -57,7 +57,7 @@ public static partial class AsyncEnumerableExt
     public static IAsyncEnumerable<T> WithItemTimeout<T>(
         this IAsyncEnumerable<T> source,
         TimeSpan itemTimeout,
-        IMomentClock clock,
+        MomentClock clock,
         CancellationToken cancellationToken = default)
         => source.WithItemTimeout(itemTimeout, itemTimeout, clock, cancellationToken);
 
@@ -65,7 +65,7 @@ public static partial class AsyncEnumerableExt
         this IAsyncEnumerable<T> source,
         TimeSpan firstItemTimeout,
         TimeSpan itemTimeout,
-        IMomentClock clock,
+        MomentClock clock,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         // ReSharper disable once NotDisposedResource

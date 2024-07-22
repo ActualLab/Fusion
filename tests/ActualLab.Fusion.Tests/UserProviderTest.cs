@@ -155,7 +155,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
 
         Timeouts.GetKeepAliveSlot(Timeouts.StartedAt).Should().Be(0L);
         Timeouts.GetKeepAliveSlot(Timeouts.StartedAt + q).Should().Be(1L);
-        Timeouts.GetKeepAliveSlot(Timeouts.StartedAt + q.Multiply(2)).Should().Be(2L);
+        Timeouts.GetKeepAliveSlot(Timeouts.StartedAt + q.MultiplyBy(2)).Should().Be(2L);
     }
 
     [Fact]

@@ -6,7 +6,7 @@ public static class CancellationTokenExt
 {
     public static string Format(this CancellationToken cancellationToken)
         => cancellationToken.CanBeCanceled
-            ? $"ct-#{(uint)cancellationToken.GetHashCode():x}"
+            ? $"ct-{(uint)cancellationToken.GetHashCode():x}"
             : "ct-none";
 
     // LinkWith
@@ -48,7 +48,9 @@ public static class CancellationTokenExt
     public static CancellationTokenSource CreateDelayedTokenSource(
         this CancellationToken cancellationToken,
         TimeSpan cancellationDelay)
-        => new DelayedCancellationTokenSource(cancellationToken, cancellationDelay);
+        => cancellationDelay > TimeSpan.Zero
+            ? new DelayedCancellationTokenSource(cancellationToken, cancellationDelay)
+            : cancellationToken.CreateLinkedTokenSource();
 
     // FromTask
 

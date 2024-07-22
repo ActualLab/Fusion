@@ -3,9 +3,17 @@ namespace ActualLab.Rpc;
 public partial record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBackend = false)
 {
     // private static readonly CancellationTokenSource FakeGoneCts = new();
-    public virtual CancellationToken GoneToken => default;
-    public bool IsGone => GoneToken.IsCancellationRequested;
-    public bool CanBeGone => GoneToken.CanBeCanceled;
+    public virtual CancellationToken RerouteToken => default;
+
+    public bool CanBeRerouted {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => RerouteToken.CanBeCanceled;
+    }
+
+    public bool IsRerouted {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => RerouteToken.IsCancellationRequested;
+    }
 
     public static RpcPeerRef NewServer(Symbol key, bool isBackend = false)
         => new(key, true, isBackend);
@@ -15,7 +23,7 @@ public partial record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBacke
     public override string ToString()
     {
         var result = $"{(IsBackend ? "backend-" : "")}{(IsServer ? "server" : "client")}:{Key}";
-        if (IsGone)
+        if (IsRerouted)
             result = "[gone]" + result;
         return result;
     }
@@ -23,33 +31,29 @@ public partial record RpcPeerRef(Symbol Key, bool IsServer = false, bool IsBacke
     public virtual VersionSet GetVersions()
         => IsBackend ? RpcDefaults.BackendPeerVersions : RpcDefaults.ApiPeerVersions;
 
-    public virtual RpcPeerConnectionKind GetConnectionKind()
+    public virtual RpcPeerConnectionKind GetConnectionKind(RpcHub hub)
     {
         var key = Key.Value;
-        return key.StartsWith(LocalCallPrefix, StringComparison.Ordinal)
-            ? RpcPeerConnectionKind.LocalCall
-            : key.StartsWith(LocalChannelPrefix, StringComparison.Ordinal)
-                ? RpcPeerConnectionKind.LocalChannel
+        return key.StartsWith(LocalKeyPrefix, StringComparison.Ordinal)
+            ? RpcPeerConnectionKind.Local
+            : key.StartsWith(LoopbackKeyPrefix, StringComparison.Ordinal)
+                ? RpcPeerConnectionKind.Loopback
                 : RpcPeerConnectionKind.Remote;
     }
 
-    public async Task WhenGone(CancellationToken cancellationToken = default)
+    public async Task WhenRerouted()
+        => await TaskExt.NewNeverEndingUnreferenced().WaitAsync(RerouteToken).SilentAwait(false);
+
+    public Task WhenRerouted(CancellationToken cancellationToken)
     {
-        var tcs = new TaskCompletionSource();
-        var r1 = cancellationToken.Register(static x => ((TaskCompletionSource)x!).TrySetResult(), tcs);
-        var r2 = GoneToken.Register(static x => ((TaskCompletionSource)x!).TrySetResult(), tcs);
-        try {
-            await tcs.Task.ConfigureAwait(false);
-        }
-        finally {
-            // ReSharper disable once MethodHasAsyncOverload
-            r2.Dispose();
-            // ReSharper disable once MethodHasAsyncOverload
-            r1.Dispose();
+        return cancellationToken.CanBeCanceled
+            ? WhenReroutedWithCancellationToken(cancellationToken)
+            : WhenRerouted();
+
+        async Task WhenReroutedWithCancellationToken(CancellationToken cancellationToken1) {
+            using var tcs = RerouteToken.LinkWith(cancellationToken1);
+            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(tcs.Token).SilentAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
         }
     }
-
-    // Operators
-
-    public static implicit operator RpcPeerRef(RpcPeer peer) => peer.Ref;
 }

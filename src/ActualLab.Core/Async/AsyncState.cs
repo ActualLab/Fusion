@@ -1,3 +1,5 @@
+using ActualLab.Internal;
+
 namespace ActualLab.Async;
 
 public interface IAsyncState
@@ -149,4 +151,24 @@ public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously)
 
     public bool TrySetFinal(CancellationToken cancellationToken)
         => _next.TrySetCanceled(cancellationToken);
+
+    // RequireNonFinal
+
+    public AsyncState<T> RequireNonFinal()
+    {
+        if (!IsFinal)
+            return this;
+
+        _ = _next.Task.Result; // Must throw in case there is an error
+        throw Errors.AsyncStateIsFinal();
+    }
+
+    public AsyncState<T> RequireNonFinal(Func<Exception> errorFactory)
+    {
+        if (!IsFinal)
+            return this;
+
+        _ = _next.Task.Result; // Must throw in case there is an error
+        throw errorFactory.Invoke();
+    }
 }

@@ -6,6 +6,17 @@ public static class ServiceProviderExt
 {
     public static readonly IServiceProvider Empty = new ServiceCollection().BuildServiceProvider();
 
+    public static bool IsDisposedOrDisposing(this IServiceProvider services)
+    {
+        try {
+            services.GetService<IServiceProvider>();
+            return false;
+        }
+        catch (ObjectDisposedException) {
+            return true;
+        }
+    }
+
     // Logging extensions
 
     public static ILoggerFactory LoggerFactory(this IServiceProvider services)
@@ -37,7 +48,7 @@ public static class ServiceProviderExt
     public static T GetOrActivate<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
         this IServiceProvider services, params object[] arguments)
-        => (T) services.GetOrActivate(typeof(T));
+        => (T)services.GetOrActivate(typeof(T));
 
     public static object GetOrActivate(
         this IServiceProvider services,

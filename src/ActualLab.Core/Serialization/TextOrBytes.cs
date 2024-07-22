@@ -48,18 +48,17 @@ public readonly partial record struct TextOrBytes(
     public string ToString(int maxLength)
     {
         var isText = IsText(out var text);
-#if NET5_0_OR_GREATER
         var sData = isText
+#if NET5_0_OR_GREATER
             ? new string(text.Span[..Math.Min(text.Length, maxLength)])
             : Convert.ToHexString(Data.Span[..Math.Min(Data.Length, maxLength)]);
 #else
-        var sData = isText
             ? new string(text.Span[..Math.Min(text.Length, maxLength)].ToArray())
             : BitConverter.ToString(Data.Span[..Math.Min(Data.Length, maxLength)].ToArray());
 #endif
         return isText
-            ? ZString.Concat("[ ", text.Length, " char(s): `", sData, maxLength < text.Length ? "` ]" : "`... ]")
-            : ZString.Concat("[ ", Data.Length, " byte(s): ", sData, maxLength < Data.Length ? " ]" : "... ]");
+            ? ZString.Concat("[ ", text.Length, " char(s): `", sData, text.Length <= maxLength ? "` ]" : "`... ]")
+            : ZString.Concat("[ ", Data.Length, " byte(s): ", sData, Data.Length <= maxLength ? " ]" : "... ]");
     }
 
     public static implicit operator TextOrBytes(ReadOnlyMemory<byte> bytes) => new(bytes);

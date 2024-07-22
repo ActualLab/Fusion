@@ -1,7 +1,6 @@
 @echo off
-set DOTNET_ReadyToRun=0
-set DOTNET_TieredPGO=1
-set DOTNET_TC_QuickJitForLoops=1
+rem Disables use of ReadToRun images / enables more aggressive optimization
+rem set DOTNET_ReadyToRun=0
 
 set runtime=%1
 if "%runtime%"=="" (

@@ -1,5 +1,5 @@
 using ActualLab.CommandR.Operations;
-using ActualLab.Resilience;
+using ActualLab.Fusion.EntityFramework.Internal;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
@@ -28,7 +28,7 @@ public class DbEventProcessor<TDbContext>(IServiceProvider services)
                 await Commander.Call(command, true, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-                throw new TerminalException("Already reprocessed.", e);
+                throw Errors.FailedToProcessCommandEvent(e);
             }
             return;
         }

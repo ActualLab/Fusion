@@ -22,7 +22,7 @@ public abstract class RpcInboundCall : RpcCall
     public readonly CancellationToken CancellationToken;
     public ArgumentList? Arguments;
     public abstract Task UntypedResultTask { get; }
-    public List<RpcHeader>? ResultHeaders;
+    public RpcHeader[]? ResultHeaders;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public static RpcInboundCall New(byte callTypeId, RpcInboundContext context, RpcMethodDef? methodDef)
@@ -80,7 +80,7 @@ public abstract class RpcInboundCall : RpcCall
             ' ',
             MethodDef.FullName,
             arguments,
-            headers.Count > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",
+            headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",
             relatedObject != null ? $" for {relatedObject}" : "");
     }
 
@@ -158,7 +158,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
                 var peer = Context.Peer;
                 if (peer.CallLogger.IsLogged(this))
                     peer.CallLogger.LogInbound(this);
-                if (MethodDef.Tracer is { } tracer && tracer.Sampler.Next.Invoke())
+                if (MethodDef.Tracer is { } tracer && tracer.Sampler.Next())
                     trace = tracer.TryStartTrace(this);
 
                 // Call
@@ -231,7 +231,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     {
         var methodDef = MethodDef;
         var server = methodDef.Service.Server;
-        return (Task<TResult>)methodDef.AsyncInvoker.Invoke(server, Arguments!);
+        return (Task<TResult>)methodDef.TargetAsyncInvoker.Invoke(server, Arguments!);
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
@@ -266,6 +266,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     {
         var resultTask = ResultTask;
         Result<TResult> result;
+        var peer = Context.Peer;
         if (!resultTask.IsCompleted)
             result = InvocationIsStillInProgressErrorResult();
         else if (resultTask.Exception is { } error) {
@@ -281,7 +282,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             result = resultTask.Result;
 
         var systemCallSender = Hub.SystemCallSender;
-        return systemCallSender.Complete(Context.Peer, Id, result, MethodDef.AllowResultPolymorphism, ResultHeaders);
+        return systemCallSender.Complete(peer, this, result, MethodDef.AllowResultPolymorphism, ResultHeaders);
     }
 
     // Private methods
