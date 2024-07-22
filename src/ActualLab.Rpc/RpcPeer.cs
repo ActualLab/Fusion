@@ -33,6 +33,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public int InboundCallConcurrencyLevel { get; init; } = 0; // 0 = no concurrency limit, 1 = one call at a time, etc.
     public TimeSpan InboundCallCancellationOnStopDelay { get; init; }
     public RpcArgumentSerializer ArgumentSerializer { get; init; }
+    public RpcHashProvider HashProvider { get; init; }
     public RpcInboundContextFactory InboundContextFactory { get; init; }
     public RpcInboundCallFilter InboundCallFilter { get; init; }
     public RpcInboundCallTracker InboundCalls { get; init; }
@@ -66,6 +67,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             InboundCallCancellationOnStopDelay = TimeSpan.FromSeconds(1);
 
         ArgumentSerializer = Hub.ArgumentSerializer;
+        HashProvider = Hub.HashProvider;
         InboundContextFactory = Hub.InboundContextFactory;
         InboundCallFilter = Hub.InboundCallFilter;
         InboundCalls = services.GetRequiredService<RpcInboundCallTracker>();

@@ -22,7 +22,7 @@ public abstract class RpcInboundCall : RpcCall
     public readonly CancellationToken CancellationToken;
     public ArgumentList? Arguments;
     public abstract Task UntypedResultTask { get; }
-    public List<RpcHeader>? ResultHeaders;
+    public RpcHeader[]? ResultHeaders;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public static RpcInboundCall New(byte callTypeId, RpcInboundContext context, RpcMethodDef? methodDef)
@@ -80,7 +80,7 @@ public abstract class RpcInboundCall : RpcCall
             ' ',
             MethodDef.FullName,
             arguments,
-            headers.Count > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",
+            headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",
             relatedObject != null ? $" for {relatedObject}" : "");
     }
 
@@ -282,7 +282,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             result = resultTask.Result;
 
         var systemCallSender = Hub.SystemCallSender;
-        return systemCallSender.Complete(peer, Id, result, MethodDef.AllowResultPolymorphism, ResultHeaders);
+        return systemCallSender.Complete(peer, this, result, MethodDef.AllowResultPolymorphism, ResultHeaders);
     }
 
     // Private methods

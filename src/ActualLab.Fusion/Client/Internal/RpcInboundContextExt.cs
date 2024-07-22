@@ -9,7 +9,7 @@ public static class RpcInboundContextExt
         if (context == null)
             return null;
 
-        return context.Message.Headers.TryGet(FusionRpcHeaders.Version.Name, out var versionHeader)
+        return context.Message.Headers.TryGet(FusionRpcHeaderNames.Version, out var versionHeader)
             ? versionHeader.Value
             : null;
     }

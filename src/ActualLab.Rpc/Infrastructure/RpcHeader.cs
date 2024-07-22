@@ -2,8 +2,10 @@ namespace ActualLab.Rpc.Infrastructure;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public readonly partial record struct RpcHeader
+public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
 {
+    public static RpcHeader None => default;
+
     private readonly string? _name;
     private readonly string? _value;
 
@@ -19,6 +21,9 @@ public readonly partial record struct RpcHeader
         init => _value = value;
     }
 
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public bool IsNone => ReferenceEquals(_name, null) && ReferenceEquals(_value, null);
+
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
     public RpcHeader(string? name, string? value = "")
     {
@@ -27,7 +32,7 @@ public readonly partial record struct RpcHeader
     }
 
     public override string ToString()
-        => $"({Name}: `{Value}`)";
+        => IsNone ? "(None)" : $"({Name}: `{Value}`)";
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcHeader With(string value)

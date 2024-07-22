@@ -161,20 +161,20 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
 
         Test(new RpcMessage(1, 3, "s", "m",
             new TextOrBytes([1, 2, 3]),
-            new()));
+            []));
 
         Test(new RpcMessage(2, 3, "s", "m",
             new TextOrBytes([1, 2, 3]),
-            new List<RpcHeader>() {
-                new("v", "@OVhtp0TRc"),
-            }));
+            [
+                new("v", "@OVhtp0TRc")
+            ]));
 
         Test(new RpcMessage(0, 3, "s", "m",
             new TextOrBytes([1, 2, 3]),
-            new List<RpcHeader>() {
+            [
                 new("a", "b"),
-                new("v", "@OVhtp0TRc"),
-            }));
+                new("v", "@OVhtp0TRc")
+            ]));
 
         void Test(RpcMessage m) {
             var ms = m.PassThroughAllSerializers();
@@ -182,7 +182,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             ms.Service.Should().Be(m.Service);
             ms.Method.Should().Be(m.Method);
             ms.ArgumentData.Data.ToArray().Should().Equal(m.ArgumentData.Data.ToArray());
-            ms.Headers?.Count.Should().Be(m.Headers?.Count);
+            ms.Headers?.Length.Should().Be(m.Headers?.Length);
             foreach (var (hs, h) in ms.Headers.OrEmpty().Zip(m.Headers.OrEmpty(), (hs, h) => (hs, h))) {
                 hs.Name.Should().Be(h.Name);
                 hs.Value.Should().Be(h.Value);

@@ -10,11 +10,11 @@ public interface IRemoteComputedCache
     Task WhenInitialized { get; }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    ValueTask<(T Value, TextOrBytes Data)?> Get<T>(
+    ValueTask<RpcCacheEntry<T>?> Get<T>(
         ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken);
-    ValueTask<TextOrBytes?> Get(RpcCacheKey key, CancellationToken cancellationToken = default);
+    ValueTask<RpcCacheValue> Get(RpcCacheKey key, CancellationToken cancellationToken = default);
 
-    void Set(RpcCacheKey key, TextOrBytes value);
+    void Set(RpcCacheKey key, RpcCacheValue value);
     void Remove(RpcCacheKey key);
     Task Clear(CancellationToken cancellationToken = default);
 }

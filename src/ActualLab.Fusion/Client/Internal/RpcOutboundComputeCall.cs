@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Client.Internal;
@@ -65,7 +66,37 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             Complete();
             ResultVersion = resultVersion;
             if (context != null)
-                Context.CacheInfoCapture?.CaptureData(context.Message);
+                Context.CacheInfoCapture?.CaptureValue(context.Message);
+        }
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void SetMatch(RpcInboundContext? context)
+    {
+        var resultVersion = context.GetResultVersion();
+        // We always use Lock to update ResultSource in this type
+        lock (Lock) {
+            // The code below is a copy of base.SetResult
+            // except the Unregister call in the end.
+            // We don't unregister the call here, coz
+            // we'll need to await for invalidation
+            var cachedEntry = Context.CacheInfoCapture?.CachedEntry as RpcCacheEntry<TResult>;
+            if (cachedEntry == null) {
+                SetError(Rpc.Internal.Errors.MatchButNoCachedEntry(), null);
+                return;
+            }
+
+            if (!ResultSource.TrySetResult(cachedEntry.Result)) {
+                // Result was set earlier; let's check for non-peer set or version mismatch
+                if (resultVersion == null || !resultVersion.Equals(ResultVersion, StringComparison.Ordinal))
+                    SetInvalidatedUnsafe(true);
+                return;
+            }
+
+            Complete();
+            ResultVersion = resultVersion;
+            if (context != null)
+                Context.CacheInfoCapture?.CaptureValue(context.Message);
         }
     }
 
@@ -92,7 +123,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             // Result was just set
             Complete();
             ResultVersion = resultVersion;
-            Context.CacheInfoCapture?.CaptureData(oce != null, error, cancellationToken);
+            Context.CacheInfoCapture?.CaptureValue(oce != null, error, cancellationToken);
             if (context == null) // Non-peer set
                 SetInvalidatedUnsafe(!assumeCancelled);
         }
@@ -105,7 +136,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
         lock (Lock) {
             var isCancelled = ResultSource.TrySetCanceled(cancellationToken);
             if (isCancelled)
-                Context.CacheInfoCapture?.CaptureData(cancellationToken);
+                Context.CacheInfoCapture?.CaptureValue(cancellationToken);
             WhenInvalidatedSource.TrySetResult(default);
             CompleteAndUnregister(notifyCancelled: true);
             return isCancelled;
@@ -125,7 +156,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
                 return;
 
             if (ResultSource.TrySetCanceled())
-                Context.CacheInfoCapture?.CaptureData(CancellationToken.None);
+                Context.CacheInfoCapture?.CaptureValue(CancellationToken.None);
         }
     }
 

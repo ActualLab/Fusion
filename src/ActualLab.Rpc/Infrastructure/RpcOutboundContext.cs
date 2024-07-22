@@ -7,14 +7,14 @@ namespace ActualLab.Rpc.Infrastructure;
 
 #pragma warning disable CA1721
 
-public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers = null)
+public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = null)
 {
     [ThreadStatic] private static RpcOutboundContext? _current;
 
     public static RpcOutboundContext? Current => _current;
 
     public byte CallTypeId = callTypeId;
-    public List<RpcHeader>? Headers = headers;
+    public RpcHeader[]? Headers = headers;
     public RpcMethodDef? MethodDef;
     public ArgumentList? Arguments;
     public CancellationToken CancellationToken;
@@ -27,17 +27,17 @@ public sealed class RpcOutboundContext(byte callTypeId, List<RpcHeader>? headers
         => Current ?? throw Errors.NoCurrentRpcOutboundContext();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public RpcOutboundContext(List<RpcHeader>? headers = null)
+    public RpcOutboundContext(RpcHeader[]? headers = null)
         : this(0, headers)
     { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public RpcOutboundContext(RpcPeer peer, List<RpcHeader>? headers = null)
+    public RpcOutboundContext(RpcPeer peer, RpcHeader[]? headers = null)
         : this(0, headers)
         => Peer = peer;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public RpcOutboundContext(RpcPeer peer, long relatedId, List<RpcHeader>? headers = null)
+    public RpcOutboundContext(RpcPeer peer, long relatedId, RpcHeader[]? headers = null)
         : this(0, headers)
     {
         Peer = peer;

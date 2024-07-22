@@ -145,11 +145,10 @@ public class RemoteComputeMethodFunction<T>(
             throw e; // We treat server-side cancellations the same way as client-side cancellations
 
         RpcCacheEntry? cacheEntry = null;
-        if (cacheInfoCapture != null && cacheInfoCapture.HasKeyAndData(out var key, out var dataSource)) {
+        if (cacheInfoCapture != null && cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueSource)) {
             // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
-            var dataResult = await dataSource.Task.ResultAwait(false);
-            var data = dataResult.IsValue(out var vData) ? (TextOrBytes?)vData : null;
-            cacheEntry = UpdateCache(cache!, key, data);
+            var cacheValue = (await cacheValueSource.Task.ResultAwait(false)).ValueOrDefault;
+            cacheEntry = UpdateCache(cache!, cacheKey, cacheValue, result.Value);
         }
 
         var computed = new RemoteComputed<T>(
@@ -181,16 +180,14 @@ public class RemoteComputeMethodFunction<T>(
             return await ComputeRpc(input, cache, null, peer, cancellationToken).ConfigureAwait(false);
         }
 
-        var cacheResultOpt = await cache.Get<T>(input, cacheKey, cancellationToken).ConfigureAwait(false);
-        if (cacheResultOpt is not { } cacheResult) {
+        var cacheEntry = await cache.Get<T>(input, cacheKey, cancellationToken).ConfigureAwait(false);
+        if (cacheEntry == null)
             // No cacheResult wasn't captured -> perform RPC call & update cache
             return await ComputeRpc(input, cache, null, peer, cancellationToken).ConfigureAwait(false);
-        }
 
-        var cacheEntry = new RpcCacheEntry(cacheKey, cacheResult.Data);
         var cachedComputed = new RemoteComputed<T>(
             input.MethodDef.ComputedOptions,
-            input, cacheResult.Value,
+            input, cacheEntry.Result,
             cacheEntry);
 
         // We suppress execution context flow here to ensure that
@@ -260,12 +257,10 @@ public class RemoteComputeMethodFunction<T>(
         }
 
         // 4. Get cache key & data
-        TextOrBytes? data = null;
-        if (cacheInfoCapture.HasKeyAndData(out var key, out var dataSource)) {
+        RpcCacheValue cacheValue = default;
+        if (cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueSource))
             // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
-            var dataResult = await dataSource.Task.ResultAwait(false);
-            data = dataResult.IsValue(out var vData) ? (TextOrBytes?)vData : null;
-        }
+            cacheValue = (await cacheValueSource.Task.ResultAwait(false)).ValueOrDefault;
 
         // 5. Re-entering the lock & check if cachedComputed is still consistent
         using var releaser = await InputLocks.Lock(input).ConfigureAwait(false);
@@ -273,14 +268,14 @@ public class RemoteComputeMethodFunction<T>(
             return; // Since the call was bound to cachedComputed, it's properly cancelled already
 
         releaser.MarkLockedLocally();
-        if (cachedComputed.CacheEntry is { } oldEntry && data?.DataEquals(oldEntry.Data) == true) {
+        if (cachedComputed.CacheEntry is { } oldCacheEntry && !cacheValue.IsNone && cacheValue.HashOrDataEquals(oldCacheEntry.Value)) {
             // Existing cached entry is still intact
             cachedComputed.SynchronizedSource.TrySetResult(default);
             return;
         }
 
         // 5. Now, let's update cache entry
-        var cacheEntry = UpdateCache(cache, key, data);
+        var cacheEntry = UpdateCache(cache, cacheKey, cacheValue, result.ValueOrDefault!);
 
         // 6. Create the new computed - it invalidates the cached one upon registering
         var computed = new RemoteComputed<T>(
@@ -386,18 +381,19 @@ public class RemoteComputeMethodFunction<T>(
     protected static RpcCacheEntry? UpdateCache(
         IRemoteComputedCache cache,
         RpcCacheKey? key,
-        TextOrBytes? data)
+        RpcCacheValue value,
+        T deserializedValue)
     {
         if (key == null)
             return null;
 
-        if (!data.HasValue) {
+        if (value.IsNone) {
             cache.Remove(key); // Error -> wipe cache entry
             return null;
         }
 
-        cache.Set(key, data.GetValueOrDefault());
-        return new RpcCacheEntry(key, data.GetValueOrDefault());
+        cache.Set(key, value);
+        return new RpcCacheEntry<T>(key, value, deserializedValue);
     }
 
     protected IRemoteComputedCache? GetCache(ComputeMethodInput input)

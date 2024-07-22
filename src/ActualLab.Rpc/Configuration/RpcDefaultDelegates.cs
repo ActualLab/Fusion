@@ -1,6 +1,9 @@
+using System.Buffers.Text;
+using System.Security.Cryptography;
 using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
+using Microsoft.Toolkit.HighPerformance;
 
 namespace ActualLab.Rpc;
 
@@ -10,6 +13,7 @@ public delegate bool RpcBackendServiceDetector(Type serviceType);
 public delegate bool RpcCommandTypeDetector(Type type);
 public delegate Symbol RpcServiceScopeResolver(RpcServiceDef serviceDef);
 public delegate RpcPeerRef RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
+public delegate string RpcHashProvider(TextOrBytes data);
 public delegate Task RpcRerouteDelayer(CancellationToken cancellationToken);
 public delegate void RpcPeerTracker(RpcPeer peer);
 public delegate RpcPeer RpcPeerFactory(RpcHub hub, RpcPeerRef peerRef);
@@ -54,6 +58,12 @@ public static class RpcDefaultDelegates
     // See also: RpcSafeCallRouter
     public static RpcCallRouter CallRouter { get; set; } =
         static (method, arguments) => RpcPeerRef.Default;
+
+    public static RpcHashProvider HashProvider { get; set; } =
+        static data => {
+            var bytes = SHA256.HashData(data.Data.Span); // 32 bytes
+            return Convert.ToBase64String(bytes[..18]); // 18 bytes -> 24 chars
+        };
 
     public static RandomTimeSpan RerouteDelayerDelay { get; set; } = TimeSpan.FromMilliseconds(100).ToRandom(0.25);
 

@@ -11,7 +11,7 @@ public sealed partial record RpcMessage(
     [property: DataMember(Order = 2), MemoryPackOrder(2)] string Service,
     [property: DataMember(Order = 3), MemoryPackOrder(3)] string Method,
     [property: DataMember(Order = 4), MemoryPackOrder(4)] TextOrBytes ArgumentData,
-    [property: DataMember(Order = 5), MemoryPackOrder(5)] List<RpcHeader>? Headers
+    [property: DataMember(Order = 5), MemoryPackOrder(5)] RpcHeader[]? Headers
 ) {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public ArgumentList? Arguments { get; init; }
@@ -23,7 +23,7 @@ public sealed partial record RpcMessage(
             + (Arguments != null
                 ? $"Arguments: {Arguments}"
                 : $"ArgumentData: {ArgumentData.ToString(16)}")
-            + (headers.Count > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
+            + (headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
     }
 
     // This record relies on referential equality

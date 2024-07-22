@@ -16,6 +16,7 @@ public interface IRpcSystemCalls : IRpcSystemService
     Task<RpcNoWait> Ok(object? result);
     Task<RpcNoWait> Error(ExceptionInfo error);
     Task<RpcNoWait> Cancel();
+    Task<RpcNoWait> M(); // Match
     Task<Unit> NotFound(string serviceName, string methodName);
 
     // Objects
@@ -34,6 +35,7 @@ public class RpcSystemCalls(IServiceProvider services)
     : RpcServiceBase(services), IRpcSystemCalls, IRpcDynamicCallHandler
 {
     private static readonly Symbol OkMethodName = nameof(Ok);
+    private static readonly Symbol MatchMethodName = nameof(M);
     private static readonly Symbol ItemMethodName = nameof(I);
     private static readonly Symbol BatchMethodName = nameof(B);
 
@@ -73,6 +75,15 @@ public class RpcSystemCalls(IServiceProvider services)
                 ?.LogDebug("Remote call cancelled on the client side: {Call}", inboundCall);
             inboundCall.Cancel();
         }
+        return RpcNoWait.Tasks.Completed;
+    }
+
+    public Task<RpcNoWait> M()
+    {
+        var context = RpcInboundContext.GetCurrent();
+        var peer = context.Peer;
+        var outboundCallId = context.Message.RelatedId;
+        peer.OutboundCalls.Get(outboundCallId)?.SetMatch(context);
         return RpcNoWait.Tasks.Completed;
     }
 

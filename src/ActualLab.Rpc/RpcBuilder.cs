@@ -43,7 +43,6 @@ public readonly struct RpcBuilder
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcSharedObjectTracker))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcSharedStream))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcCacheInfoCapture))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcCacheEntry))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcSystemCalls))]
     internal RpcBuilder(
         IServiceCollection services,
@@ -74,6 +73,7 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceScopeResolver);
         services.AddSingleton(_ => RpcDefaultDelegates.InboundCallFilter);
         services.AddSingleton(_ => RpcDefaultDelegates.CallRouter);
+        services.AddSingleton(_ => RpcDefaultDelegates.HashProvider);
         services.AddSingleton(_ => RpcDefaultDelegates.RerouteDelayer);
         services.AddSingleton(_ => RpcDefaultDelegates.InboundContextFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.PeerFactory);

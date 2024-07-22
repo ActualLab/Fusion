@@ -45,10 +45,10 @@ public abstract class RemoteComputedCache : RpcServiceBase, IRemoteComputedCache
             return;
         }
 
-        var expectedValue = new TextOrBytes(Encoding.UTF8.GetBytes(version));
-        var value = await Get(VersionKey, cancellationToken).ConfigureAwait(false);
-        if (value is { } vValue) {
-            if (vValue.DataEquals(expectedValue)) {
+        var expectedData = new TextOrBytes(Encoding.UTF8.GetBytes(version));
+        var entry = await Get(VersionKey, cancellationToken).ConfigureAwait(false);
+        if (!entry.IsNone) {
+            if (entry.Data.DataEquals(expectedData)) {
                 DefaultLog?.Log(Settings.LogLevel, "Initialize: version match -> will reuse cache content");
                 return;
             }
@@ -56,11 +56,12 @@ public abstract class RemoteComputedCache : RpcServiceBase, IRemoteComputedCache
 
         DefaultLog?.Log(Settings.LogLevel, "Initialize: version mismatch -> will clear cache content");
         await Clear(cancellationToken).ConfigureAwait(false);
-        Set(VersionKey, expectedValue);
+        Set(VersionKey, new RpcCacheValue(expectedData, ""));
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public async ValueTask<(T Value, TextOrBytes Data)?> Get<T>(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
+    public async ValueTask<RpcCacheEntry<T>?> Get<T>(
+        ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
     {
         var serviceDef = Hub.ServiceRegistry.Get(key.Service);
         var methodDef = serviceDef?.GetMethod(key.Method);
@@ -71,16 +72,16 @@ public abstract class RemoteComputedCache : RpcServiceBase, IRemoteComputedCache
             if (!WhenInitialized.IsCompleted)
                 await WhenInitializedUnlessVersionKey(key).WaitAsync(cancellationToken).SilentAwait(false);
 
-            var resultDataOpt = await Get(key, cancellationToken).ConfigureAwait(false);
-            if (resultDataOpt is not { } resultData) {
+            var entry = await Get(key, cancellationToken).ConfigureAwait(false);
+            if (entry.IsNone) {
                 DefaultLog?.Log(Settings.LogLevel, "[?] {Key} -> miss", key);
                 return null;
             }
 
             DefaultLog?.Log(Settings.LogLevel, "[?] {Key} -> hit", key);
             var resultList = methodDef.ResultListFactory.Invoke();
-            ArgumentSerializer.Deserialize(ref resultList, methodDef.AllowResultPolymorphism, resultData);
-            return (resultList.Get0<T>(), resultData);
+            ArgumentSerializer.Deserialize(ref resultList, methodDef.AllowResultPolymorphism, entry.Data);
+            return new RpcCacheEntry<T>(key, entry, resultList.Get0<T>());
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
             Log.LogError(e, "Cached result read failed");
@@ -88,8 +89,8 @@ public abstract class RemoteComputedCache : RpcServiceBase, IRemoteComputedCache
         }
     }
 
-    public abstract ValueTask<TextOrBytes?> Get(RpcCacheKey key, CancellationToken cancellationToken = default);
-    public abstract void Set(RpcCacheKey key, TextOrBytes value);
+    public abstract ValueTask<RpcCacheValue> Get(RpcCacheKey key, CancellationToken cancellationToken = default);
+    public abstract void Set(RpcCacheKey key, RpcCacheValue value);
     public abstract void Remove(RpcCacheKey key);
     public abstract Task Clear(CancellationToken cancellationToken = default);
 

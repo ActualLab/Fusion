@@ -12,29 +12,33 @@ public enum RpcCacheInfoCaptureMode
 public sealed class RpcCacheInfoCapture
 {
     public readonly RpcCacheInfoCaptureMode CaptureMode;
+    public readonly RpcCacheEntry? CachedEntry;
     public RpcCacheKey? Key;
-    public TaskCompletionSource<TextOrBytes>? DataSource; // Non-error IFF RpcOutboundCall.ResultTask is non-error
+    public TaskCompletionSource<RpcCacheValue>? ValueSource; // Non-error IFF RpcOutboundCall.ResultTask is non-error
 
-    public RpcCacheInfoCapture(RpcCacheInfoCaptureMode captureMode = RpcCacheInfoCaptureMode.KeyAndData)
+    public RpcCacheInfoCapture(
+        RpcCacheInfoCaptureMode captureMode = RpcCacheInfoCaptureMode.KeyAndData,
+        RpcCacheEntry? cachedEntry = null)
     {
         if (captureMode == RpcCacheInfoCaptureMode.None)
             throw new ArgumentOutOfRangeException(nameof(captureMode));
 
         CaptureMode = captureMode;
         if (captureMode == RpcCacheInfoCaptureMode.KeyAndData)
-            DataSource = new();
+            ValueSource = new();
+        CachedEntry = cachedEntry;
     }
 
-    public bool HasKeyAndData(out RpcCacheKey key, out TaskCompletionSource<TextOrBytes> dataSource)
+    public bool HasKeyAndValue(out RpcCacheKey key, out TaskCompletionSource<RpcCacheValue> valueSource)
     {
-        if (ReferenceEquals(Key, null) || DataSource == null) {
+        if (ReferenceEquals(Key, null) || ValueSource == null) {
             key = null!;
-            dataSource = null!;
+            valueSource = null!;
             return false;
         }
 
         key = Key;
-        dataSource = DataSource;
+        valueSource = ValueSource;
         return true;
     }
 
@@ -43,20 +47,28 @@ public sealed class RpcCacheInfoCapture
             ? new RpcCacheKey(context.MethodDef!.Service.Name, context.MethodDef.Name, message.ArgumentData)
             : null;
 
-    public void CaptureData(RpcMessage message)
-        => DataSource?.TrySetResult(message.ArgumentData);
+    public void CaptureValue(RpcMessage message)
+    {
+        var hash = message.Headers.TryGet(RpcHeaderNames.Hash, out var hashHeader)
+            ? hashHeader.Value
+            : "";
+        ValueSource?.TrySetResult(new RpcCacheValue(message.ArgumentData, hash));
+    }
 
-    public void CaptureData(Exception error)
-        => DataSource?.TrySetException(error);
+    public void CaptureValue(RpcCacheValue value)
+        => ValueSource?.TrySetResult(value);
 
-    public void CaptureData(CancellationToken cancellationToken)
-        => DataSource?.TrySetCanceled(cancellationToken);
+    public void CaptureValue(Exception error)
+        => ValueSource?.TrySetException(error);
 
-    public void CaptureData(bool isCancelled, Exception error, CancellationToken cancellationToken)
+    public void CaptureValue(CancellationToken cancellationToken)
+        => ValueSource?.TrySetCanceled(cancellationToken);
+
+    public void CaptureValue(bool isCancelled, Exception error, CancellationToken cancellationToken)
     {
         if (isCancelled)
-            DataSource?.TrySetCanceled(cancellationToken);
+            ValueSource?.TrySetCanceled(cancellationToken);
         else
-            DataSource?.TrySetException(error);
+            ValueSource?.TrySetException(error);
     }
 }
