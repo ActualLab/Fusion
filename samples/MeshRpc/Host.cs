@@ -39,7 +39,10 @@ public sealed class Host : WorkerBase
         UseRemoteComputedCache = ServiceMode == RpcServiceMode.Client
             || UseRemoteComputedCacheSampler.Next();
 
-        Id = $"{ServiceMode:G}{(UseRemoteComputedCache ? "+Cache" : "")}-{Interlocked.Increment(ref _lastId)}:{portSlot}";
+        var id = $"{ServiceMode:G}{(UseRemoteComputedCache ? "+Cache" : "")}-{Interlocked.Increment(ref _lastId)}";
+        if (portSlot >= 0)
+            id = $"{id}:{portSlot}";
+        Id = id;
         Ref = new HostRef(Id);
         Hash = Random.Shared.Next();
         PortSlot = portSlot;

@@ -15,7 +15,7 @@ public class LifetimeController(Host ownHost) : WorkerBase
             return; // No self-kill for the client
 
         await Task.Delay(lifespan, cancellationToken).ConfigureAwait(false);
-        Console.WriteLine($"{ownHost}: life is so boring...".Pastel(ConsoleColor.Magenta));
+        Console.WriteLine($"{ownHost}: x_x".Pastel(ConsoleColor.Magenta));
         ownHost.RequestStop();
     }
 }
