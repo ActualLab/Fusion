@@ -23,7 +23,7 @@ public class RpcWebHost(
 {
     public IServiceCollection BaseServices { get; } = baseServices;
     public Assembly? ControllerAssembly { get; set; } = controllerAssembly;
-    public Func<Task>? WebSocketWriteDelayFactory { get; set; }
+    public Func<CpuTimestamp, int, Task>? WebSocketWriteDelayFactory { get; set; }
     public bool ExposeBackend { get; set; } = false;
 
     protected override void ConfigureHost(IHostBuilder builder)
@@ -40,7 +40,7 @@ public class RpcWebHost(
                 return defaultOptions with {
                     ExposeBackend = ExposeBackend,
                     WebSocketChannelOptions = defaultOptions.WebSocketChannelOptions with {
-                        WriteDelayFactory = WebSocketWriteDelayFactory,
+                        WriteDelayer = WebSocketWriteDelayFactory,
                     },
                 };
             });
