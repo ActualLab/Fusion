@@ -110,7 +110,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var scope = Context.Activate();
         try {
             var cacheInfoCapture = Context.CacheInfoCapture;
-            var hash = cacheInfoCapture?.CachedEntry?.Value.Hash;
+            var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
             message = CreateMessage(Id, MethodDef.AllowArgumentPolymorphism, hash);
             cacheInfoCapture?.CaptureKey(Context, message);
         }
@@ -132,8 +132,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var arguments = Context.Arguments!;
         var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism);
         var headers = Context.Headers;
-        if (!ReferenceEquals(hash, null)) {
-            if (hash.Length == 0)
+        if (!ReferenceEquals(hash, null)) { // Hash must be used
+            if (hash.Length == 0) // "" is a special value here requiring hash to be added
                 hash = Peer.HashProvider.Invoke(argumentData);
             headers = headers.With(RpcHeaderNames.Hash, hash);
         }
@@ -274,7 +274,7 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
 
     public override void SetMatch(RpcInboundContext? context)
     {
-        var cachedEntry = Context.CacheInfoCapture?.CachedEntry as RpcCacheEntry<TResult>;
+        var cachedEntry = Context.CacheInfoCapture?.CacheEntry as RpcCacheEntry<TResult>;
         if (cachedEntry == null) {
             SetError(Rpc.Internal.Errors.MatchButNoCachedEntry(), null);
             return;

@@ -139,7 +139,9 @@ public class RemoteComputeMethodFunction<T>(
         if (!whenConnected.IsCompletedSuccessfully) // Slow path
             await whenConnected.ConfigureAwait(false);
 
-        var cacheInfoCapture = cache != null ? new RpcCacheInfoCapture() : null;
+        var cacheInfoCapture = cache != null
+            ? new RpcCacheInfoCapture(RpcCacheEntry.RequestHash)
+            : null;
         var (result, call) = await SendRpcCall(input, peer, cacheInfoCapture, cancellationToken).ConfigureAwait(false);
         if (result.Error is OperationCanceledException e) // Also handles RpcRerouteException
             throw e; // We treat server-side cancellations the same way as client-side cancellations
@@ -147,8 +149,8 @@ public class RemoteComputeMethodFunction<T>(
         RpcCacheEntry? cacheEntry = null;
         if (cacheInfoCapture != null && cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueSource)) {
             // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
-            var cacheValue = (await cacheValueSource.Task.ResultAwait(false)).ValueOrDefault;
-            cacheEntry = UpdateCache(cache!, cacheKey, cacheValue, result.Value);
+            var cacheValue = (await cacheValueSource.Task.ResultAwait(false)).ValueOrDefault; // None if error
+            cacheEntry = UpdateCache(cache!, cacheKey, cacheValue, result.ValueOrDefault!);
         }
 
         var computed = new RemoteComputed<T>(
@@ -226,7 +228,8 @@ public class RemoteComputeMethodFunction<T>(
         }
 
         // 1. Send the RPC call
-        var cacheInfoCapture = new RpcCacheInfoCapture();
+        var cacheInfoCapture = new RpcCacheInfoCapture(
+            cachedComputed.CacheEntry ?? RpcCacheEntry.RequestHash);
         var (result, call) = await SendRpcCall(input, peer, cacheInfoCapture, default).ConfigureAwait(false);
         if (call == null || result.Error is RpcRerouteException) {
             await InvalidateToReroute(cachedComputed, result.Error).ConfigureAwait(false);
@@ -260,7 +263,7 @@ public class RemoteComputeMethodFunction<T>(
         RpcCacheValue cacheValue = default;
         if (cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueSource))
             // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
-            cacheValue = (await cacheValueSource.Task.ResultAwait(false)).ValueOrDefault;
+            cacheValue = (await cacheValueSource.Task.ResultAwait(false)).ValueOrDefault; // None if error
 
         // 5. Re-entering the lock & check if cachedComputed is still consistent
         using var releaser = await InputLocks.Lock(input).ConfigureAwait(false);

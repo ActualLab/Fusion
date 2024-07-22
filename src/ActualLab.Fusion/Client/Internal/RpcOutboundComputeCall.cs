@@ -80,7 +80,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             // except the Unregister call in the end.
             // We don't unregister the call here, coz
             // we'll need to await for invalidation
-            var cachedEntry = Context.CacheInfoCapture?.CachedEntry as RpcCacheEntry<TResult>;
+            var cachedEntry = Context.CacheInfoCapture?.CacheEntry as RpcCacheEntry<TResult>;
             if (cachedEntry == null) {
                 SetError(Rpc.Internal.Errors.MatchButNoCachedEntry(), null);
                 return;

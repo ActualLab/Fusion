@@ -36,7 +36,8 @@ public sealed class Host : WorkerBase
             : UseHybridServiceSampler.Next()
                 ? RpcServiceMode.Hybrid
                 : RpcServiceMode.ServerAndClient;
-        UseRemoteComputedCache = UseHybridServiceSampler.Next();
+        UseRemoteComputedCache = ServiceMode == RpcServiceMode.Client
+            || UseRemoteComputedCacheSampler.Next();
 
         Id = $"{ServiceMode:G}{(UseRemoteComputedCache ? "+Cache" : "")}-{Interlocked.Increment(ref _lastId)}:{portSlot}";
         Ref = new HostRef(Id);

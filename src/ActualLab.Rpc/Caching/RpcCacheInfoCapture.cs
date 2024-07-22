@@ -12,13 +12,17 @@ public enum RpcCacheInfoCaptureMode
 public sealed class RpcCacheInfoCapture
 {
     public readonly RpcCacheInfoCaptureMode CaptureMode;
-    public readonly RpcCacheEntry? CachedEntry;
+    public readonly RpcCacheEntry? CacheEntry;
     public RpcCacheKey? Key;
     public TaskCompletionSource<RpcCacheValue>? ValueSource; // Non-error IFF RpcOutboundCall.ResultTask is non-error
 
+    public RpcCacheInfoCapture(RpcCacheInfoCaptureMode captureMode)
+        : this(cacheEntry: null, captureMode)
+    { }
+
     public RpcCacheInfoCapture(
-        RpcCacheInfoCaptureMode captureMode = RpcCacheInfoCaptureMode.KeyAndData,
-        RpcCacheEntry? cachedEntry = null)
+        RpcCacheEntry? cacheEntry = null,
+        RpcCacheInfoCaptureMode captureMode = RpcCacheInfoCaptureMode.KeyAndData)
     {
         if (captureMode == RpcCacheInfoCaptureMode.None)
             throw new ArgumentOutOfRangeException(nameof(captureMode));
@@ -26,7 +30,7 @@ public sealed class RpcCacheInfoCapture
         CaptureMode = captureMode;
         if (captureMode == RpcCacheInfoCaptureMode.KeyAndData)
             ValueSource = new();
-        CachedEntry = cachedEntry;
+        CacheEntry = cacheEntry;
     }
 
     public bool HasKeyAndValue(out RpcCacheKey key, out TaskCompletionSource<RpcCacheValue> valueSource)
