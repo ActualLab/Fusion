@@ -5,7 +5,7 @@ namespace ActualLab.Fusion.EntityFramework.Internal;
 public sealed class DbHintFormatterExtensionInfo(IDbContextOptionsExtension extension)
     : DbContextOptionsExtensionInfo(extension)
 {
-    public new DbHintFormatterOptionsExtension Extension => (DbHintFormatterOptionsExtension) base.Extension;
+    public new DbHintFormatterOptionsExtension Extension => (DbHintFormatterOptionsExtension)base.Extension;
     public override bool IsDatabaseProvider => false;
 
     public override string LogFragment {

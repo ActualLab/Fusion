@@ -8,7 +8,7 @@ public sealed class TestClockSettings : IDisposable
     public TimeSpan RealOffset { get; }
     public double Multiplier { get; }
 
-    public Moment Now => ToLocalTime(CpuClock.Now);
+    public Moment Now => ToLocalTime(Moment.CpuNow);
     public CancellationToken ChangedToken { get; }
     public bool IsUsable => !(_changedTokenSource?.IsCancellationRequested ?? true);
 
@@ -50,11 +50,11 @@ public sealed class TestClockSettings : IDisposable
     // Other operations
 
     public Moment ToLocalTime(Moment realTime)
-        => new(LocalOffset + (realTime.EpochOffset + RealOffset).Multiply(Multiplier));
+        => new(LocalOffset + (realTime.EpochOffset + RealOffset).MultiplyBy(Multiplier));
     public Moment ToRealTime(Moment localTime)
-        => new((localTime.EpochOffset - LocalOffset).Divide(Multiplier) - RealOffset);
+        => new((localTime.EpochOffset - LocalOffset).DivideBy(Multiplier) - RealOffset);
     public TimeSpan ToLocalDuration(TimeSpan realDuration)
-        => realDuration.Multiply(Multiplier);
+        => realDuration.MultiplyBy(Multiplier);
     public TimeSpan ToRealDuration(TimeSpan localDuration)
-        => localDuration.Divide(Multiplier);
+        => localDuration.DivideBy(Multiplier);
 }

@@ -13,10 +13,11 @@ public class NestedOperationLoggerTester(IKeyValueStore keyValueStore) : IComput
         var first = keys.FirstOrDefault();
         if (first == null)
             return;
-        await KeyValueStore.Set(default, first, valuePrefix + keys.Length, cancellationToken);
+
         var nextCommand = new NestedOperationLoggerTester_SetMany(keys.Skip(1).ToArray(), valuePrefix);
         var commander = this.GetCommander();
         await commander.Call(nextCommand, cancellationToken).ConfigureAwait(false);
+        await KeyValueStore.Set(default, first, valuePrefix + keys.Length, cancellationToken);
     }
 }
 

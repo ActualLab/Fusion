@@ -3,35 +3,35 @@ namespace ActualLab.CommandR.Configuration;
 public sealed record CommandHandlerSet
 {
     public Type CommandType { get; }
-    public ImmutableDictionary<Symbol, ImmutableArray<CommandHandler>> HandlerChains { get; }
-    public ImmutableArray<CommandHandler> SingleHandlerChain { get; }
+    public ImmutableDictionary<Symbol, CommandHandlerChain> HandlerChains { get; }
+    public CommandHandlerChain SingleHandlerChain { get; }
 
-    public CommandHandlerSet(Type commandType, ImmutableArray<CommandHandler> singleHandlerChain)
+    public CommandHandlerSet(Type commandType, CommandHandlerChain singleHandlerChain)
     {
         CommandType = commandType;
         SingleHandlerChain = singleHandlerChain;
-        HandlerChains = ImmutableDictionary<Symbol, ImmutableArray<CommandHandler>>.Empty;
+        HandlerChains = ImmutableDictionary<Symbol, CommandHandlerChain>.Empty;
     }
 
-    public CommandHandlerSet(Type commandType, ImmutableDictionary<Symbol, ImmutableArray<CommandHandler>> handlerChains)
+    public CommandHandlerSet(Type commandType, ImmutableDictionary<Symbol, CommandHandlerChain> handlerChains)
     {
         CommandType = commandType;
         HandlerChains = handlerChains;
-        SingleHandlerChain = ImmutableArray<CommandHandler>.Empty;
+        SingleHandlerChain = CommandHandlerChain.Empty;
     }
 
-    public ImmutableArray<CommandHandler> GetHandlerChain(ICommand command)
+    public CommandHandlerChain GetHandlerChain(ICommand command)
     {
         if (command is not IEventCommand eventCommand)
             return SingleHandlerChain;
 
         var chainId = eventCommand.ChainId;
         if (chainId.IsEmpty)
-            return ImmutableArray<CommandHandler>.Empty;
+            return CommandHandlerChain.Empty;
 
         return HandlerChains.TryGetValue(chainId, out var result)
             ? result
-            : ImmutableArray<CommandHandler>.Empty;
+            : CommandHandlerChain.Empty;
     }
 
     // This record relies on reference-based equality

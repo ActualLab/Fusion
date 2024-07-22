@@ -2,10 +2,6 @@ namespace ActualLab.CommandR.Internal;
 
 public static class Errors
 {
-    public static Exception CommandHandlerSetMustBeRegisteredAsInstance()
-        => new InvalidOperationException("HashSet<CommandHandler> should be registered as instance.");
-    public static Exception CommandHandlerSetIsNotRegistered()
-        => new InvalidOperationException("HashSet<CommandHandler> instance is not registered.");
     public static Exception CommandResultTypeMismatch(Type expectedType, Type actualType)
         => new InvalidOperationException($"Command result type mismatch: expected '{expectedType}', got '{actualType}'");
 
@@ -45,9 +41,13 @@ public static class Errors
     public static Exception CommandMustImplementICommandOfTResult(Type commandType)
         => new InvalidOperationException($"Command type '{commandType}' must implement {typeof(ICommand<>)}.");
 
-    public static Exception BackendCommandMustBeStartedOnBackend()
-        => new InvalidOperationException("Backend command must be started on backend.");
-
     public static Exception LocalCommandHasNoHandler()
         => new InvalidOperationException("LocalCommand.Handler is null.");
+
+    public static Exception CommandContextHasNoOperation()
+        => new InvalidOperationException("CommandContext has no handlers providing an Operation (CommandContext.Operation is null).");
+    public static Exception ActiveOperationRequired()
+        => new InvalidOperationException("This action cannot be performed on completed or inactive Operation.");
+    public static Exception TransientScopeOperationCannotHaveEvents()
+        => new NotSupportedException("An operation from transient scope cannot have events.");
 }

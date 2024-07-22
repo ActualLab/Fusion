@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security;
 using System.Security.Claims;
+using ActualLab.Requirements;
 using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Authentication;
@@ -10,12 +11,12 @@ namespace ActualLab.Fusion.Authentication;
 public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarget
 {
     public static string GuestName { get; set; } = "Guest";
-    public static Requirement<User> MustExist { get; set; } = Requirement.New(
-        new("You must sign-in to perform this action.", m => new SecurityException(m)),
-        (User? u) => u != null);
-    public static Requirement<User> MustBeAuthenticated { get; set; } = Requirement.New(
-        new("User is not authenticated.", m => new SecurityException(m)),
-        (User? u) => u?.IsAuthenticated() ?? false);
+    public static Requirement<User> MustExist { get; set; }
+        = new MustExistRequirement<User>().With("You must sign-in to perform this action.", m => new SecurityException(m));
+    public static Requirement<User> MustBeAuthenticated { get; set; }
+        = Requirement.New(
+            (User? u) => u?.IsAuthenticated() ?? false,
+            new("User is not authenticated.", m => new SecurityException(m)));
 
     private Lazy<ClaimsPrincipal>? _claimsPrincipalLazy;
 
@@ -29,6 +30,8 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
     public ImmutableDictionary<string, string> Claims { get; init; }
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public ImmutableDictionary<UserIdentity, string> Identities { get; init; }
+
+    // Computed properties
 
     [DataMember(Name = nameof(Identities)), MemoryPackOrder(4)]
     [JsonPropertyName(nameof(Identities)),  Newtonsoft.Json.JsonProperty(nameof(Identities))]

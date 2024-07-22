@@ -4,7 +4,7 @@ namespace ActualLab.Fusion;
 
 public interface IUpdateDelayer
 {
-    ValueTask Delay(int retryCount, CancellationToken cancellationToken = default);
+    Task Delay(int retryCount, CancellationToken cancellationToken = default);
 }
 
 public sealed record UpdateDelayer(
@@ -20,7 +20,7 @@ public sealed record UpdateDelayer(
     public UpdateDelayer(UIActionTracker uiActionTracker, RandomTimeSpan updateDelay)
         : this(uiActionTracker, updateDelay, Defaults.RetryDelays) { }
 
-    public async ValueTask Delay(int retryCount, CancellationToken cancellationToken = default)
+    public async Task Delay(int retryCount, CancellationToken cancellationToken = default)
     {
         var minDelay = retryCount == 0 ? MinDelay : RetryDelays.Min;
         var delay = TimeSpanExt.Max(minDelay, GetDelay(retryCount));

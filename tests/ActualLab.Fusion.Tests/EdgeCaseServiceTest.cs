@@ -19,6 +19,7 @@ public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
     {
         await using var serving = await WebHost.Serve();
         var client = ClientServices.GetRequiredService<IEdgeCaseService>();
+        // await client.SetSuffix("");
         var tfv = ClientServices.TypeViewFactory<IEdgeCaseService>();
         var service = tfv.CreateView(client);
         await ActualTest(service);
@@ -34,14 +35,14 @@ public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var actualService = WebServices.GetRequiredService<IEdgeCaseService>();
 
         (await service.GetNullable(1)).Should().Be((long?) 1);
-        using (Computed.Invalidate())
+        using (Invalidation.Begin())
             _ = actualService.GetNullable(1);
         await Delay(0.2);
         (await service.GetNullable(1)).Should().Be((long?) 1);
 
         var c = await Computed.Capture(() => service.GetNullable(0));
         c.Value.Should().Be(null);
-        using (Computed.Invalidate())
+        using (Invalidation.Begin())
             _ = actualService.GetNullable(0);
         await Delay(0.2);
         c.IsConsistent().Should().BeFalse();
@@ -53,7 +54,7 @@ public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
 
     private async Task ActualTest(IEdgeCaseService service)
     {
-        var error = (Exception?) null;
+        var error = (Exception?)null;
         await service.SetSuffix("");
         (await service.GetSuffix()).Should().Be("");
 
@@ -94,8 +95,8 @@ public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
 
     private async Task<Computed<T>> Update<T>(Computed<T> computed, CancellationToken cancellationToken = default)
     {
-        if (computed is IClientComputed clientComputed)
-            clientComputed.Invalidate();
+        if (computed is IRemoteComputed)
+            computed.Invalidate();
         return await computed.Update(cancellationToken);
     }
 }

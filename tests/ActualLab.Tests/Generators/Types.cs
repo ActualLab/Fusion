@@ -85,7 +85,7 @@ public class AltClassProxy
     {
         _interceptor = interceptor;
         _cachedIntercept = _interceptor.Intercept<Task>;
-        _cachedMethodInfo = ProxyHelper.GetMethodInfo(typeof(ClassProxy), "Method2", new[] { typeof(int), typeof(CancellationToken) });
+        _cachedMethodInfo = ProxyHelper.GetMethodInfo(typeof(ClassProxy), "Method2", [typeof(int), typeof(CancellationToken)]);
     }
 
     public virtual Task Method2(int x, CancellationToken cancellationToken)

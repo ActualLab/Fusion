@@ -1,14 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
-public class DbUserConverter<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUser,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>
-    (IServiceProvider services)
+public class DbUserConverter<TDbContext, TDbUser, TDbUserId>(IServiceProvider services)
     : DbEntityConverter<TDbContext, TDbUser, User>(services)
     where TDbContext : DbContext
     where TDbUser : DbUser<TDbUserId>, new()

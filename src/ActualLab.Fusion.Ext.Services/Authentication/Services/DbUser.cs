@@ -10,11 +10,13 @@ namespace ActualLab.Fusion.Authentication.Services;
 public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long>
     where TDbUserId : notnull
 {
-    private readonly NewtonsoftJsonSerialized<ImmutableDictionary<string, string>> _claims =
-        NewtonsoftJsonSerialized.New(ImmutableDictionary<string, string>.Empty);
+    private NewtonsoftJsonSerialized<ImmutableDictionary<string, string>> _claims
+        = ImmutableDictionary<string, string>.Empty;
 
     [Key] public TDbUserId Id { get; set; } = default!;
-    [ConcurrencyCheck] public long Version { get; set; }
+
+    [ConcurrencyCheck]
+    public long Version { get; set; }
 
 #pragma warning disable IL2026
     [MinLength(3)]
@@ -22,10 +24,8 @@ public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long>
 #pragma warning restore IL2026
 
     public string ClaimsJson {
-#pragma warning disable IL2026
         get => _claims.Data;
-#pragma warning restore IL2026
-        set => _claims.Data = value;
+        set => _claims = value;
     }
 
     [NotMapped]
@@ -33,7 +33,7 @@ public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long>
 #pragma warning disable IL2026
         get => _claims.Value;
 #pragma warning restore IL2026
-        set => _claims.Value = value;
+        set => _claims = value;
     }
 
     public List<DbUserIdentity<TDbUserId>> Identities { get; } = new();

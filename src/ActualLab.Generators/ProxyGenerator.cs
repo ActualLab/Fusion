@@ -21,15 +21,21 @@ public class ProxyGenerator : IIncrementalGenerator
     }
 
     private bool CouldBeAugmented(SyntaxNode node, CancellationToken cancellationToken)
-        => node is ClassDeclarationSyntax or InterfaceDeclarationSyntax {
-            Parent: FileScopedNamespaceDeclarationSyntax or NamespaceDeclarationSyntax
-        };
+    {
+        if (node is not (ClassDeclarationSyntax or InterfaceDeclarationSyntax))
+            return false;
+
+        return node.Parent
+            is NamespaceDeclarationSyntax
+            or FileScopedNamespaceDeclarationSyntax
+            or CompilationUnitSyntax;
+    }
 
     private (SemanticModel SemanticModel, TypeDeclarationSyntax? TypeDef)
         MustAugment(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
         var semanticModel = context.SemanticModel;
-        var typeDef = (TypeDeclarationSyntax) context.Node;
+        var typeDef = (TypeDeclarationSyntax)context.Node;
 
         var typeSymbol = semanticModel.GetDeclaredSymbol(typeDef, cancellationToken);
         if (typeSymbol == null)
@@ -78,11 +84,17 @@ public class ProxyGenerator : IIncrementalGenerator
 
                 var typeGenerator = new ProxyTypeGenerator(context, semanticModel, typeDef);
                 var code = typeGenerator.GeneratedCode;
-                if (string.IsNullOrEmpty(code))
+                if (string.IsNullOrEmpty(code)) {
+                    WriteDebug?.Invoke($"Codegen: {typeDef.Identifier.ToFullString()} -> no code.");
                     continue;
+                }
 
+                WriteDebug?.Invoke($"Codegen: {typeDef.Identifier.ToFullString()} -> {code.Length} chars.");
                 var typeType = (ITypeSymbol)semanticModel.GetDeclaredSymbol(typeDef)!;
-                context.AddSource($"{typeType.ContainingNamespace}.{typeType.Name}{ProxyClassSuffix}.g.cs", code);
+                var fileName = typeType.ContainingNamespace.IsGlobalNamespace
+                    ? $"{typeType.Name}{ProxyClassSuffix}.g.cs"
+                    : $"{typeType.ContainingNamespace}.{typeType.Name}{ProxyClassSuffix}.g.cs";
+                context.AddSource(fileName, code);
                 context.ReportDiagnostic(GenerateProxyTypeProcessedInfo(typeDef));
             }
         }

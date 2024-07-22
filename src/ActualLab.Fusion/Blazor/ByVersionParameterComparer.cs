@@ -14,8 +14,8 @@ public sealed class ByVersionParameterComparer<TVersion> : ParameterComparer
         if (newValue == null)
             return false;
 
-        var oldVersion = ((IHasVersion<TVersion>) oldValue).Version;
-        var newVersion = ((IHasVersion<TVersion>) newValue).Version;
+        var oldVersion = ((IHasVersion<TVersion>)oldValue).Version;
+        var newVersion = ((IHasVersion<TVersion>)newValue).Version;
         return EqualityComparer<TVersion>.Default.Equals(oldVersion, newVersion);
     }
 }

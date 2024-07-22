@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net7.0;net6.0;net5.0;net48;net471</TargetFrameworks>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net8.0;net7.0;net6.0;net5.0;net48;net471</TargetFrameworks>
+    <TargetFramework Condition="!$(UseMultitargeting)">net8.0</TargetFramework>
     <RootNamespace>ActualLab.Rpc.Server</RootNamespace>
     <AssemblyName>ActualLab.Rpc.Server.NetFx</AssemblyName>
     <PackageTags>actual_chat actual_lab actual_lab_fusion rpc server netfx</PackageTags>

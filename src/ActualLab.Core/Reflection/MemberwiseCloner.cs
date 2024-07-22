@@ -16,6 +16,6 @@ public static class MemberwiseCloner
         var oSource = (object?) source;
         if (oSource == null)
             return default!;
-        return (T) MemberwiseCloneFunc(oSource);
+        return (T)MemberwiseCloneFunc(oSource);
     }
 }

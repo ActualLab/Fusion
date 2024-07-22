@@ -1,11 +1,10 @@
 using ActualLab.Generators.Internal;
-using ActualLab.Time.Internal;
 
 namespace ActualLab.Generators;
 
 public static class ConcurrentInt64Generator
 {
-    public static readonly ConcurrentGenerator<long> Default = New(CoarseClockHelper.RandomInt64);
+    public static readonly ConcurrentGenerator<long> Default = New(RandomShared.Next());
 
     public static ConcurrentGenerator<long> New(long start, int concurrencyLevel = -1)
     {

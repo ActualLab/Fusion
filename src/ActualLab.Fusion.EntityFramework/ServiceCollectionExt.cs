@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+using System;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Internal;
 
@@ -6,35 +6,48 @@ namespace ActualLab.Fusion.EntityFramework;
 
 public static class ServiceCollectionExt
 {
-    public static DbContextBuilder<TDbContext> AddDbContextServices<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-        (this IServiceCollection services)
+    public static DbContextBuilder<TDbContext> AddDbContextServices<TDbContext>(this IServiceCollection services)
         where TDbContext : DbContext
         => new(services, null);
 
-    public static IServiceCollection AddDbContextServices<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-        (this IServiceCollection services, Action<DbContextBuilder<TDbContext>> configure)
+    public static IServiceCollection AddDbContextServices<TDbContext>(
+        this IServiceCollection services,
+        Action<DbContextBuilder<TDbContext>> configure)
         where TDbContext : DbContext
         => new DbContextBuilder<TDbContext>(services, configure).Services;
 
     // AddTransientDbContextFactory
 
-    public static IServiceCollection AddTransientDbContextFactory<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-        (this IServiceCollection services, Action<DbContextOptionsBuilder>? optionsAction)
+    public static IServiceCollection AddTransientDbContextFactory<TDbContext>(
+        this IServiceCollection services,
+        Action<DbContextOptionsBuilder>? optionsAction)
         where TDbContext : DbContext
         => services.AddTransientDbContextFactory<TDbContext>((_, db) => optionsAction?.Invoke(db));
 
-    public static IServiceCollection AddTransientDbContextFactory<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-        (this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder>? optionsAction)
+    public static IServiceCollection AddTransientDbContextFactory<TDbContext>(
+        this IServiceCollection services,
+        Action<IServiceProvider, DbContextOptionsBuilder>? optionsAction)
         where TDbContext : DbContext
     {
         services.AddDbContext<TDbContext>(optionsAction, ServiceLifetime.Singleton, ServiceLifetime.Singleton);
         services.RemoveAll(x => x.ServiceType == typeof(TDbContext));
         services.AddSingleton<IDbContextFactory<TDbContext>>(
             c => new FuncDbContextFactory<TDbContext>(() => c.Activate<TDbContext>()));
+        return services;
+    }
+
+    public static IServiceCollection ReplaceDbEntityResolvers(
+        this IServiceCollection services,
+        Type entityResolverGenericType)
+    {
+        foreach (var descriptor in services) {
+            var serviceType = descriptor.ServiceType;
+            if (!serviceType.IsGenericType || serviceType.GetGenericTypeDefinition() != typeof(IDbEntityResolver<,>))
+                continue;
+
+            var newImplementationType = entityResolverGenericType.MakeGenericType(serviceType.GetGenericArguments());
+            descriptor.SetImplementationFactory(c => c.Activate(newImplementationType));
+        }
         return services;
     }
 }

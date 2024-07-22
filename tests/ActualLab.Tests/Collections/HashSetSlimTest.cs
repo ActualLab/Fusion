@@ -54,27 +54,25 @@ public class HashSetSlimTest
                 c.Contains(item).Should().Be(hs.Contains(item));
             }
             c.Items.Should().BeEquivalentTo(hs);
-            var sum = hs.Sum(item => item.Sum(c => (long) c));
+            var sum = hs.Sum(item => item.Sum(x => (long)x));
 
             // Apply
-            var applyHandler = (Action<Box<long>, string>) (
-                (box, item) => box.Value += item.Sum(c => (long) c));
+            var applyHandler = (Action<Box<long>, string>)(
+                (box, item) => box.Value += item.Sum(x => (long)x));
             var box1 = new Box<long>();
             c.Apply(box1, applyHandler);
             box1.Value.Should().Be(sum);
 
             // Aggregate w/ ref
             long sum2 = 0;
-            var aggregateHandler1 = (Aggregator<long, string>) (
-                delegate(ref long s, string item) {
-                    s += item.Sum(c => (long) c);
-                });
+            var aggregateHandler1 = (Aggregator<long, string>)(
+                (ref long s, string item) => s += item.Sum(x => (long)x));
             c.Aggregate(ref sum2, aggregateHandler1);
             sum2.Should().Be(sum);
 
             // Aggregate
-            var aggregateHandler2 = (Func<long, string, long>) (
-                (s, item) => s + item.Sum(c => (long) c));
+            var aggregateHandler2 = (Func<long, string, long>)(
+                (s, item) => s + item.Sum(c => (long)c));
             var sum3 = c.Aggregate(0L, aggregateHandler2);
             sum3.Should().Be(sum);
 

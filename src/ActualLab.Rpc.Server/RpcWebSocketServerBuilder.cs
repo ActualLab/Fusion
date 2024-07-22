@@ -1,5 +1,3 @@
-using Microsoft.Extensions.DependencyInjection.Extensions;
-
 namespace ActualLab.Rpc.Server;
 
 public readonly struct RpcWebSocketServerBuilder
@@ -18,9 +16,9 @@ public readonly struct RpcWebSocketServerBuilder
             return;
         }
 
-        services.TryAddSingleton(_ => RpcWebSocketServerDefaultDelegates.PeerRefFactory);
-        services.TryAddSingleton(_ => RpcWebSocketServer.Options.Default);
-        services.TryAddSingleton(c => new RpcWebSocketServer(c.GetRequiredService<RpcWebSocketServer.Options>(), c));
+        services.AddSingleton(_ => RpcWebSocketServerDefaultDelegates.PeerRefFactory);
+        services.AddSingleton(_ => RpcWebSocketServer.Options.Default);
+        services.AddSingleton(c => new RpcWebSocketServer(c.GetRequiredService<RpcWebSocketServer.Options>(), c));
         configure?.Invoke(this);
     }
 

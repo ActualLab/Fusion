@@ -13,7 +13,7 @@ public abstract class RedisSubBase : ProcessorBase
     public RedisChannel.PatternMode PatternMode { get; }
     public string FullKey { get; }
     public TimeSpan SubscribeTimeout { get; }
-    public ISubscriber Subscriber { get; }
+    public RedisComponent<ISubscriber> Subscriber => RedisDb.Subscriber;
     public RedisChannel RedisChannel { get; }
     public Task? WhenSubscribed { get; private set; } = null!;
 
@@ -27,7 +27,6 @@ public abstract class RedisSubBase : ProcessorBase
         PatternMode = key.PatternMode;
         FullKey = RedisDb.FullKey(Key);
         SubscribeTimeout = subscribeTimeout ?? DefaultSubscribeTimeout;
-        Subscriber = RedisDb.Redis.GetSubscriber();
         RedisChannel = new RedisChannel(FullKey, PatternMode);
         _onMessage = OnMessage;
         if (subscribe)
@@ -48,7 +47,8 @@ public abstract class RedisSubBase : ProcessorBase
             catch {
                 // Intended
             }
-            await Subscriber
+            var subscriber = await Subscriber.Get().ConfigureAwait(false);
+            await subscriber
                 // ReSharper disable once InconsistentlySynchronizedField
                 .UnsubscribeAsync(RedisChannel, _onMessage, CommandFlags.FireAndForget)
                 .ConfigureAwait(false);
@@ -62,13 +62,15 @@ public abstract class RedisSubBase : ProcessorBase
     {
         if (WhenSubscribed != null!)
             return WhenSubscribed;
+
         lock (Lock) {
             WhenSubscribed ??= Task.Run(async () => {
                 using var timeoutCts = new CancellationTokenSource(SubscribeTimeout);
                 using var linkedCts = timeoutCts.Token.LinkWith(StopToken);
                 var cancellationToken = linkedCts.Token;
                 try {
-                    await Subscriber
+                    var subscriber = await Subscriber.Get(cancellationToken).ConfigureAwait(false);
+                    await subscriber
                         .SubscribeAsync(RedisChannel, _onMessage)
                         .WaitAsync(cancellationToken)
                         .ConfigureAwait(false);

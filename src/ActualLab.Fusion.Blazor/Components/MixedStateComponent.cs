@@ -4,27 +4,22 @@ namespace ActualLab.Fusion.Blazor;
 
 public abstract class MixedStateComponent<TState, TMutableState> : ComputedStateComponent<TState>
 {
-    private IMutableState<TMutableState>? _mutableState;
-
-    protected IMutableState<TMutableState> MutableState {
-        get => _mutableState!;
-        set {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
-            if (_mutableState == value)
-                return;
-            if (_mutableState != null)
-                throw Errors.AlreadyInitialized(nameof(MutableState));
-            _mutableState = value;
-        }
-    }
+    protected MutableState<TMutableState> MutableState { get; private set; } = null!;
 
     protected override void OnInitialized()
     {
-        // ReSharper disable once ConstantNullCoalescingCondition
-        MutableState ??= CreateMutableState();
-        MutableState.Updated += (_, _) => _ = State.Recompute();
+        if (ReferenceEquals(MutableState, null))
+            SetMutableState(CreateMutableState());
         base.OnInitialized();
+    }
+
+    protected void SetMutableState(MutableState<TMutableState> mutableState)
+    {
+        if (MutableState != null)
+            throw Errors.AlreadyInitialized(nameof(MutableState));
+
+        MutableState = mutableState ?? throw new ArgumentNullException(nameof(mutableState));
+        mutableState.Updated += (_, _) => _ = State.Recompute();
     }
 
     protected virtual string GetMutableStateCategory()
@@ -33,6 +28,6 @@ public abstract class MixedStateComponent<TState, TMutableState> : ComputedState
     protected virtual MutableState<TMutableState>.Options GetMutableStateOptions()
         => new() { Category = GetMutableStateCategory() };
 
-    protected virtual IMutableState<TMutableState> CreateMutableState()
+    protected virtual MutableState<TMutableState> CreateMutableState()
         => StateFactory.NewMutable(GetMutableStateOptions());
 }

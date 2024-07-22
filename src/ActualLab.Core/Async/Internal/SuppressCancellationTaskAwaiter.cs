@@ -3,53 +3,37 @@ namespace ActualLab.Async.Internal;
 // Based on https://github.com/dotnet/runtime/issues/22144#issuecomment-1328319861
 
 [StructLayout(LayoutKind.Auto)]
-public readonly struct SuppressCancellationTaskAwaiter : ICriticalNotifyCompletion
+public readonly struct SuppressCancellationTaskAwaiter(Task task, bool captureContext = true)
+    : ICriticalNotifyCompletion
 {
-    private readonly Task _task;
-    private readonly bool _captureContext;
-
-    public bool IsCompleted => _task.IsCompleted;
-
-    public SuppressCancellationTaskAwaiter(Task task, bool captureContext = true)
-    {
-        _task = task;
-        _captureContext = captureContext;
-    }
+    public bool IsCompleted => task.IsCompleted;
 
     public SuppressCancellationTaskAwaiter GetAwaiter() => this;
 
     public void GetResult()
     {
-        if (_task.IsCanceled)
+        if (task.IsCanceled)
             return;
-        _task.GetAwaiter().GetResult();
+        task.GetAwaiter().GetResult();
     }
 
     public void OnCompleted(Action action)
-        => _task.ConfigureAwait(_captureContext).GetAwaiter().OnCompleted(action);
+        => task.ConfigureAwait(captureContext).GetAwaiter().OnCompleted(action);
     public void UnsafeOnCompleted(Action action)
-        => _task.ConfigureAwait(_captureContext).GetAwaiter().UnsafeOnCompleted(action);
+        => task.ConfigureAwait(captureContext).GetAwaiter().UnsafeOnCompleted(action);
 }
 
 [StructLayout(LayoutKind.Auto)]
-public readonly struct SuppressCancellationTaskAwaiter<T> : ICriticalNotifyCompletion
+public readonly struct SuppressCancellationTaskAwaiter<T>(Task<T> task, bool captureContext = true)
+    : ICriticalNotifyCompletion
 {
-    private readonly Task<T> _task;
-    private readonly bool _captureContext;
-
-    public bool IsCompleted => _task.IsCompleted;
-
-    public SuppressCancellationTaskAwaiter(Task<T> task, bool captureContext = true)
-    {
-        _task = task;
-        _captureContext = captureContext;
-    }
+    public bool IsCompleted => task.IsCompleted;
 
     public SuppressCancellationTaskAwaiter<T> GetAwaiter() => this;
-    public T GetResult() => _task.IsCanceled ? default! : _task.GetAwaiter().GetResult();
+    public T GetResult() => task.IsCanceled ? default! : task.GetAwaiter().GetResult();
 
     public void OnCompleted(Action action)
-        => _task.ConfigureAwait(_captureContext).GetAwaiter().OnCompleted(action);
+        => task.ConfigureAwait(captureContext).GetAwaiter().OnCompleted(action);
     public void UnsafeOnCompleted(Action action)
-        => _task.ConfigureAwait(_captureContext).GetAwaiter().UnsafeOnCompleted(action);
+        => task.ConfigureAwait(captureContext).GetAwaiter().UnsafeOnCompleted(action);
 }

@@ -1,29 +1,29 @@
+using ActualLab.CommandR.Operations;
 namespace ActualLab.Fusion.Operations;
 
 public interface IOperationCompletionNotifier
 {
-    bool IsReady();
-    Task<bool> NotifyCompleted(IOperation operation, CommandContext? commandContext);
+    Task<bool> NotifyCompleted(Operation operation, CommandContext? commandContext);
 }
 
 public class OperationCompletionNotifier : IOperationCompletionNotifier
 {
     public record Options
     {
-        // Should be >= MaxBatchSize @ DbOperationLogReader.Options
+        // Should be >= BatchSize @ DbOperationLogReader.Options
         public int MaxKnownOperationCount { get; init; } = 16384;
-        // Should be >= MaxCommitAge + MaxCommitDuration @ DbOperationLogReader.Options
-        public TimeSpan MaxKnownOperationAge { get; init; } = TimeSpan.FromMinutes(10);
-        public IMomentClock? Clock { get; init; }
+        // Should be >= max commit + processing time @ DbOperationLogReader.Options
+        public TimeSpan MaxKnownOperationAge { get; init; } = TimeSpan.FromMinutes(15);
+        public MomentClock? Clock { get; init; }
     }
 
     protected Options Settings { get; }
     protected IServiceProvider Services { get; }
-    protected AgentInfo AgentInfo { get; }
+    protected HostId HostId { get; }
     protected IOperationCompletionListener[] OperationCompletionListeners { get; }
-    protected RecentlySeenMap<Symbol, Unit> RecentlySeenOperationIds { get; }
-    protected object Lock => RecentlySeenOperationIds;
-    protected IMomentClock Clock { get; }
+    protected RecentlySeenMap<Symbol, Unit> RecentlySeenUuids { get; }
+    protected object Lock => RecentlySeenUuids;
+    protected MomentClock Clock { get; }
     protected ILogger Log { get; }
 
     public OperationCompletionNotifier(Options settings, IServiceProvider services)
@@ -33,35 +33,32 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
         Log = Services.LogFor(GetType());
         Clock = Settings.Clock ?? Services.Clocks().SystemClock;
 
-        AgentInfo = Services.GetRequiredService<AgentInfo>();
+        HostId = Services.GetRequiredService<HostId>();
         OperationCompletionListeners = Services.GetServices<IOperationCompletionListener>().ToArray();
-        RecentlySeenOperationIds = new RecentlySeenMap<Symbol, Unit>(
+        RecentlySeenUuids = new RecentlySeenMap<Symbol, Unit>(
             Settings.MaxKnownOperationCount,
             Settings.MaxKnownOperationAge,
             Clock);
     }
 
-    public bool IsReady()
-        => OperationCompletionListeners.All(x => x.IsReady());
-
-    public Task<bool> NotifyCompleted(IOperation operation, CommandContext? commandContext)
+    public Task<bool> NotifyCompleted(Operation operation, CommandContext? commandContext)
     {
-        var operationId = (Symbol) operation.Id;
         lock (Lock) {
-            if (!RecentlySeenOperationIds.TryAdd(operationId, operation.StartTime))
+            if (!RecentlySeenUuids.TryAdd(operation.Uuid, operation.LoggedAt))
                 return TaskExt.FalseTask;
         }
 
         using var _ = ExecutionContextExt.TrySuppressFlow();
         return Task.Run(async () => {
             var isLocal = commandContext != null;
-            var isFromLocalAgent = StringComparer.Ordinal.Equals(operation.AgentId, AgentInfo.Id.Value);
+            var isFromLocalAgent = string.Equals(operation.HostId, HostId.Id.Value, StringComparison.Ordinal);
             // An important assertion
             if (isLocal != isFromLocalAgent) {
-                if (isFromLocalAgent)
-                    Log.LogError("Assertion failed: operation w/o CommandContext originates from local agent");
-                else
-                    Log.LogError("Assertion failed: operation with CommandContext originates from another agent");
+                var message = isFromLocalAgent
+                    ? "Assertion failed: operation w/o CommandContext originates from local agent"
+                    : "Assertion failed: operation with CommandContext originates from another agent";
+                // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                Log.LogError(message);
             }
 
             // Notification

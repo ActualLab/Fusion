@@ -26,7 +26,7 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
         var actualType = actualTypeRef.Resolve();
         if (!type.IsAssignableFrom(actualType))
             throw Errors.UnsupportedSerializedType(actualType);
-        if (!TypeFilter(actualType))
+        if (!TypeFilter.Invoke(actualType))
             throw Errors.UnsupportedSerializedType(actualType);
 
         var unreadData = data[typeRefLength..];

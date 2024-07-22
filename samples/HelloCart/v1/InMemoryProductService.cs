@@ -1,3 +1,5 @@
+using ActualLab.Fusion.Operations.Internal;
+
 namespace Samples.HelloCart.V1;
 
 public class InMemoryProductService : IProductService
@@ -9,11 +11,17 @@ public class InMemoryProductService : IProductService
         var (productId, product) = command;
         if (string.IsNullOrEmpty(productId))
             throw new ArgumentOutOfRangeException(nameof(command));
-        if (Computed.IsInvalidating()) {
+
+        if (Invalidation.IsActive) {
+            // Invalidation logic
             _ = Get(productId, default);
             return Task.CompletedTask;
         }
 
+        // This call triggers Operations Framework use for this command,
+        // which is responsible for triggering invalidation pass.
+        // Compare the invalidation logic here and in InMemoryCartService.Edit.
+        InMemoryOperationScope.Require();
         if (product == null)
             _products.Remove(productId, out _);
         else

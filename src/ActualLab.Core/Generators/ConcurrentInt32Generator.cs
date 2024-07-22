@@ -1,6 +1,5 @@
 using ActualLab.Generators.Internal;
 using ActualLab.OS;
-using ActualLab.Time.Internal;
 
 namespace ActualLab.Generators;
 
@@ -8,7 +7,7 @@ public static class ConcurrentInt32Generator
 {
     internal static int DefaultConcurrencyLevel => HardwareInfo.GetProcessorCountPo2Factor(2);
 
-    public static readonly ConcurrentGenerator<int> Default = New(CoarseClockHelper.RandomInt32);
+    public static readonly ConcurrentGenerator<int> Default = New(RandomShared.Next());
 
     public static ConcurrentGenerator<int> New(int start, int concurrencyLevel = -1)
     {

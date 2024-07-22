@@ -37,7 +37,7 @@ public class RestEaseRequestQueryParamSerializer : RequestQueryParamSerializer
         object source,
         RequestQueryParamSerializerInfo info)
     {
-        if (source is string or IHasJsonCompatibleToString)
+        if (source is string or IHasToStringProducingJson)
             return source.ToString() ?? "";
         if (source.GetType().IsValueType)
             return source is DateTime dateTime

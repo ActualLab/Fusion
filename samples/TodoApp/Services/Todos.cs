@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Rpc;
@@ -15,11 +14,14 @@ public class Todos(ISandboxedKeyValueStore store, IAuth auth) : ITodos
     public Task<RpcStream<int>> GetTestStream()
         => Task.FromResult(new RpcStream<int>(Enumerable.Range(0, 5).ToAsyncEnumerable()));
 
+    public Task<int> SumTestStream(RpcStream<int> stream, CancellationToken cancellationToken = default)
+        => stream.SumAsync(cancellationToken).AsTask();
+
     // Commands
 
     public virtual async Task<Todo> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default)
     {
-        if (Computed.IsInvalidating())
+        if (Invalidation.IsActive)
             return default!;
 
         var (session, todo) = command;
@@ -32,7 +34,7 @@ public class Todos(ISandboxedKeyValueStore store, IAuth auth) : ITodos
             oldTodo = await Get(session, todo.Id, cancellationToken);
 
         if (todo.Title.Contains("@"))
-            throw new ValidationException("Todo title can't contain '@' symbol.");
+            throw new InvalidOperationException("Todo title can't contain '@' symbol.");
 
         var key = GetTodoKey(user, todo.Id);
         await store.Set(session, key, todo, cancellationToken);
@@ -54,11 +56,11 @@ public class Todos(ISandboxedKeyValueStore store, IAuth auth) : ITodos
 
     public virtual async Task Remove(Todos_Remove command, CancellationToken cancellationToken = default)
     {
-        if (Computed.IsInvalidating()) return;
+        if (Invalidation.IsActive)
+            return;
+
         var (session, id) = command;
-
         var user = await auth.GetUser(session, cancellationToken).Require();
-
         var key = GetTodoKey(user, id);
         var doneKey = GetDoneKey(user, id);
         await store.Remove(session, key, cancellationToken);

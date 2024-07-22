@@ -5,10 +5,14 @@ namespace ActualLab.Serialization;
 
 public static class TypeDecoratingMessagePackSerialized
 {
-    public static TypeDecoratingMemoryPackSerialized<TValue> New<TValue>() => new();
-    public static TypeDecoratingMemoryPackSerialized<TValue> New<TValue>(TValue value) => new() { Value = value };
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TypeDecoratingMessagePackSerialized<TValue> New<TValue>(TValue value = default!)
+        => new() { Value = value };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public static TypeDecoratingMemoryPackSerialized<TValue> New<TValue>(byte[] data) => new(data);
+    public static TypeDecoratingMessagePackSerialized<TValue> New<TValue>(byte[] data)
+        => new() { Data = data };
 }
 
 #if !NET5_0
@@ -18,16 +22,14 @@ public static class TypeDecoratingMessagePackSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class TypeDecoratingMessagePackSerialized<T> : ByteSerialized<T>
 {
-    [ThreadStatic] private static IByteSerializer<T>? _serializer;
-
-    public TypeDecoratingMessagePackSerialized() { }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    [MemoryPackConstructor]
-    public TypeDecoratingMessagePackSerialized(byte[] data)
-        : base(data) { }
+    private static IByteSerializer<T>? _serializer;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override IByteSerializer<T> GetSerializer()
-        => _serializer ??= new TypeDecoratingByteSerializer(MessagePackByteSerializer.Default).ToTyped<T>();
+        => _serializer ??= MessagePackByteSerializer.DefaultTypeDecorating.ToTyped<T>();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator TypeDecoratingMessagePackSerialized<T>(T value) => new() { Value = value };
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator TypeDecoratingMessagePackSerialized<T>(byte[] data) => new() { Data = data };
 }

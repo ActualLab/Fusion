@@ -21,7 +21,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public int ReadBufferSize { get; init; } = 16_000; // Rented ~just once, so it can be large
         public int RetainedBufferSize { get; init; } = 64_000; // Any buffer is released when it hits this size
         public int MaxItemSize { get; init; } = 130_000_000; // 130 MB;
-        public TimeSpan WriteDelay { get; init; }
+        public Func<CpuTimestamp, int, Task>? WriteDelayer { get; init; } = RpcDefaults.WebSocketWriteDelayer;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public DualSerializer<T> Serializer { get; init; } = new();
         public BoundedChannelOptions ReadChannelOptions { get; init; } = new(128) {
@@ -48,20 +48,20 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private readonly int _writeBufferSize;
     private readonly int _releaseBufferSize;
     private readonly int _maxItemSize;
-    private readonly TimeSpan _writeDelay;
     private readonly IByteSerializer<T> _byteSerializer;
     private readonly ITextSerializer<T> _textSerializer;
     private readonly WebSocketMessageType _defaultMessageType;
     // ReSharper disable once InconsistentlySynchronizedField
 
+    public bool OwnsWebSocketOwner { get; init; } = true;
     public Options Settings { get; }
     public WebSocketOwner WebSocketOwner { get; }
     public WebSocket WebSocket { get; }
     public DualSerializer<T> Serializer { get; }
     public CancellationToken StopToken { get; }
+    public CpuTimestamp CreatedAt { get; } = CpuTimestamp.Now;
     public ILogger? Log { get; }
     public ILogger? ErrorLog { get; }
-    public bool OwnsWebSocketOwner { get; init; } = true;
 
     public Task WhenReadCompleted { get; }
     public Task WhenWriteCompleted { get; }
@@ -94,7 +94,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         _writeBufferSize = settings.WriteBufferSize;
         _releaseBufferSize = settings.RetainedBufferSize;
         _maxItemSize = settings.MaxItemSize;
-        _writeDelay = settings.WriteDelay.Positive();
         _byteSerializer = settings.Serializer.ByteSerializer;
         _textSerializer = settings.Serializer.TextSerializer;
         _defaultMessageType = Serializer.DefaultFormat == DataFormat.Text
@@ -150,20 +149,22 @@ public sealed class WebSocketChannel<T> : Channel<T>
         try {
             await foreach (var item in ReadAll(cancellationToken).ConfigureAwait(false)) {
                 while (!writer.TryWrite(item))
-                    await writer.WaitToWriteAsync(cancellationToken).ConfigureAwait(false);
+                    if (!await writer.WaitToWriteAsync(cancellationToken).ConfigureAwait(false)) {
+                        // This is a normal closure in most of the cases,
+                        // so we don't want to report it as an error
+                        return;
+                    }
             }
-            writer.TryComplete();
         }
         catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) {
-            // This is a normal closure in most of cases,
+            // This is a normal closure in most of the cases,
             // so we don't want to report it as an error
-            writer.TryComplete();
         }
         catch (Exception e) {
             writer.TryComplete(e);
-            throw;
         }
         finally {
+            writer.TryComplete(); // We do this no matter what
             _ = Close();
         }
     }
@@ -175,9 +176,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
             var reader = _writeChannel.Reader;
             if (_defaultMessageType == WebSocketMessageType.Binary) {
                 // Binary -> we build frames
-                if (_writeDelay != default) {
-                    // There is write delay -> we use more complex write logic
-                    await RunWriterWithWriteDelay(reader, cancellationToken).ConfigureAwait(false);
+                if (Settings.WriteDelayer is { } writeDelayer) {
+                    // There is a write delay -> we use more complex write logic
+                    await RunWriterWithWriteDelay(reader, writeDelayer, cancellationToken).ConfigureAwait(false);
                     return;
                 }
 
@@ -206,8 +207,12 @@ public sealed class WebSocketChannel<T> : Channel<T>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    private async Task RunWriterWithWriteDelay(ChannelReader<T> reader, CancellationToken cancellationToken)
+    private async Task RunWriterWithWriteDelay(
+        ChannelReader<T> reader,
+        Func<CpuTimestamp, int, Task> writeDelayer,
+        CancellationToken cancellationToken)
     {
+        var startedAt = CreatedAt;
         Task? whenMustFlush = null; // null = no flush required / nothing to flush
         Task<bool>? waitToReadTask = null;
         while (true) {
@@ -258,7 +263,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             }
             if (whenMustFlush == null && _writeBuffer.WrittenCount > 0) {
                 // If we're here, the write flush isn't "planned" yet + there is some data to flush.
-                whenMustFlush = Task.Delay(_writeDelay, CancellationToken.None);
+                whenMustFlush = writeDelayer.Invoke(CreatedAt, _writeBuffer.WrittenCount);
             }
         }
         // Final write flush

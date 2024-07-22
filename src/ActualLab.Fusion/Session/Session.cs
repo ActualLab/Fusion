@@ -3,6 +3,7 @@ using System.Globalization;
 using Microsoft.Toolkit.HighPerformance;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
+using Cysharp.Text;
 
 namespace ActualLab.Fusion;
 
@@ -10,11 +11,12 @@ namespace ActualLab.Fusion;
 [JsonConverter(typeof(SessionJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(SessionNewtonsoftJsonConverter))]
 [TypeConverter(typeof(SessionTypeConverter))]
-public sealed partial class Session : IHasId<Symbol>, IRequirementTarget,
+public sealed partial class Session : IHasId<Symbol>,
     IEquatable<Session>, IConvertibleTo<string>, IConvertibleTo<Symbol>,
-    IHasJsonCompatibleToString
+    IHasToStringProducingJson
 {
     public static readonly Session Default = new("~");
+    public static readonly string ShardTag = "s";
     public static SessionFactory Factory { get; set; } = DefaultSessionFactory.New();
     public static SessionValidator Validator { get; set; } = session => !session.IsDefault();
 
@@ -39,23 +41,54 @@ public sealed partial class Session : IHasId<Symbol>, IRequirementTarget,
         Id = id;
     }
 
-    public Symbol GetTenantId()
+    public string GetTags()
     {
-        var idValue = Id.Value;
-        var atIndex = idValue.IndexOf('@', StringComparison.Ordinal);
-        if (atIndex <= 0)
-            return Symbol.Empty;
-        return idValue[(atIndex + 1)..];
+        var s = Id.Value;
+        var startIndex = s.IndexOf('&', StringComparison.Ordinal);
+        return startIndex < 0 ? "" : s[(startIndex + 1)..];
     }
 
-    public Session WithTenantId(Symbol tenantId)
+    public string GetTag(string tag)
     {
-        var idValue = Id.Value;
-        var atIndex = idValue.IndexOf('@', StringComparison.Ordinal);
-        if (atIndex < 0)
-            return tenantId.IsEmpty ? this : new Session($"{idValue}@{tenantId.Value}");
-        var prefix = idValue[..atIndex];
-        return new Session(tenantId.IsEmpty ? prefix :$"{prefix}@{tenantId.Value}");
+        var s = Id.Value;
+        var tagPrefix = $"&{tag}=";
+        var startIndex = s.IndexOf(tagPrefix, StringComparison.Ordinal);
+        if (startIndex < 0)
+            return "";
+
+        var valueIndex = startIndex + tagPrefix.Length;
+        var endIndex = s.IndexOf('&', valueIndex);
+        if (endIndex < 0)
+            endIndex = s.Length;
+        return s.Substring(valueIndex, endIndex - valueIndex);
+    }
+
+    public Session WithTags(string tags)
+    {
+        var s = Id.Value;
+        var startIndex = s.IndexOf('&', StringComparison.Ordinal);
+        s = startIndex < 0 ? s : s[startIndex..];
+        if (tags.IsNullOrEmpty())
+            return startIndex < 0 ? this : new Session(s);
+        return new Session(ZString.Concat(s, '&', tags));
+    }
+
+    public Session WithTag(string tag, string value)
+    {
+        var s = Id.Value;
+        var tagPrefix = $"&{tag}=";
+        var startIndex = s.IndexOf(tagPrefix, StringComparison.Ordinal);
+        if (startIndex > 0) {
+            var endIndex = s.IndexOf('&', startIndex + tagPrefix.Length);
+            s = endIndex < 0
+                ? s[..startIndex]
+#if NETCOREAPP3_1_OR_GREATER
+                : string.Concat(s.AsSpan(0, startIndex), s.AsSpan(startIndex + s.Length));
+#else
+                : string.Concat(s.Substring(0, startIndex), s.Substring(startIndex + s.Length));
+#endif
+        }
+        return new Session(ZString.Concat(s, tagPrefix, value));
     }
 
     // We use non-cryptographic hash here because System.Security.Cryptography isn't supported in Blazor.

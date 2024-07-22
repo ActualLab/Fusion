@@ -1,4 +1,8 @@
+using ActualLab.Resilience;
+
 namespace ActualLab.Fusion.Tests.Services;
+
+#pragma warning disable CA1024, CA1067
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public partial record SetValueCommand : ICommand<Unit>
@@ -7,15 +11,19 @@ public partial record SetValueCommand : ICommand<Unit>
     public string Value { get; init; } = "";
 }
 
-public interface ISimplestProvider
+public interface ISimpleProviderImpl
 {
     // These two properties are here solely for testing purposes
     int GetValueCallCount { get; }
     int GetCharCountCallCount { get; }
 
-    void SetValue(string value);
+    void SetValue(string? value);
+}
+
+public interface ISimplestProvider : IComputeService
+{
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<string> GetValue();
+    Task<string?> GetValue();
     [ComputeMethod(MinCacheDuration = 0.5, TransientErrorInvalidationDelay = 0.5)]
     Task<int> GetCharCount();
     [ComputeMethod(TransientErrorInvalidationDelay = 0.5)]
@@ -25,9 +33,9 @@ public interface ISimplestProvider
     Task SetValue(SetValueCommand command, CancellationToken cancellationToken = default);
 }
 
-public class SimplestProvider : ISimplestProvider, IHasId<Type>, IComputeService, IHasIsDisposed
+public class SimplestProvider : ISimplestProvider, ISimpleProviderImpl, IHasId<Type>, IHasIsDisposed
 {
-    private static volatile string _value = "";
+    private static volatile string? _value;
     private readonly bool _isCaching;
 
     public Type Id => GetType();
@@ -38,13 +46,13 @@ public class SimplestProvider : ISimplestProvider, IHasId<Type>, IComputeService
     public SimplestProvider()
         => _isCaching = GetType().Name.EndsWith("Proxy");
 
-    public void SetValue(string value)
+    public void SetValue(string? value)
     {
         Interlocked.Exchange(ref _value, value);
         Invalidate();
     }
 
-    public virtual Task<string> GetValue()
+    public virtual Task<string?> GetValue()
     {
         GetValueCallCount++;
         return Task.FromResult(_value);
@@ -55,7 +63,7 @@ public class SimplestProvider : ISimplestProvider, IHasId<Type>, IComputeService
         GetCharCountCallCount++;
         try {
             var value = await GetValue().ConfigureAwait(false);
-            return value.Length;
+            return value!.Length;
         }
         catch (NullReferenceException e) {
             throw new TransientException(null, e);
@@ -79,7 +87,7 @@ public class SimplestProvider : ISimplestProvider, IHasId<Type>, IComputeService
         if (!_isCaching)
             return;
 
-        using (Computed.Invalidate())
+        using (Invalidation.Begin())
             _ = GetValue().AssertCompleted();
 
         // No need to invalidate GetCharCount,

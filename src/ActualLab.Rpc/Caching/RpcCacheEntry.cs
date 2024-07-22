@@ -1,19 +1,26 @@
 namespace ActualLab.Rpc.Caching;
 
-[StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-public sealed partial class RpcCacheEntry(RpcCacheKey key, TextOrBytes data)
+public abstract class RpcCacheEntry(RpcCacheKey key, RpcCacheValue value)
 {
-    [DataMember(Order = 0), MemoryPackOrder(0)] public RpcCacheKey Key { get; init; } = key;
-    [DataMember(Order = 1), MemoryPackOrder(1)] public TextOrBytes Data { get; init; } = data;
+    public static readonly RpcCacheEntry RequestHash = new RequestHashEntry();
 
-    public void Deconstruct(out RpcCacheKey key, out TextOrBytes data)
-    {
-        key = Key;
-        data = Data;
-    }
+    public RpcCacheKey Key { get; } = key;
+    public RpcCacheValue Value { get; } = value;
 
     public override string ToString()
-        => $"{nameof(RpcCacheEntry)}({Key} -> {Data.ToString(16)})";
+        => $"{{ {Key} -> {Value} }}";
+
+    // Nested types
+
+    private sealed class RequestHashEntry() : RpcCacheEntry(null!, new RpcCacheValue(default, ""))
+    {
+        public override string ToString()
+            => nameof(RequestHash);
+    }
+}
+
+public sealed class RpcCacheEntry<T>(RpcCacheKey key, RpcCacheValue value, T result)
+    : RpcCacheEntry(key, value)
+{
+    public T Result { get; } = result;
 }

@@ -4,5 +4,6 @@ namespace ActualLab.Fusion.Operations.Internal;
 public enum ComputedFlags
 {
     InvalidateOnSetOutput = 1,
-    InvalidationDelayStarted = 2,
+    InvalidateOnSetOutputImmediately = 2,
+    DelayedInvalidationStarted = 4,
 }

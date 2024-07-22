@@ -13,6 +13,7 @@
     <Description>A part of Actual Chat, Inc. Library.</Description>
     <NoLogo>true</NoLogo>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
     <!--
     <ApplicationIcon>$(MSBuildThisFileDirectory)\docs\img\Logo128.jpg</ApplicationIcon>
     -->
@@ -47,11 +48,32 @@
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
   </PropertyGroup>
 
+  <!-- Multitargeting -->
+  <PropertyGroup Condition="'$(UseMultitargeting)' == ''">
+    <UseMultitargeting>false</UseMultitargeting>
+  </PropertyGroup>
+
+  <!-- Common properties -->
+  <PropertyGroup>
+    <ProjectKind>Other</ProjectKind>
+    <IsServerSideProject>false</IsServerSideProject>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <ProjectKind Condition="$(MSBuildProjectName.Contains('.EntityFramework'))">EntityFramework</ProjectKind>
+    <ProjectKind Condition="$(MSBuildProjectName.Contains('.Redis'))">Redis</ProjectKind>
+    <ProjectKind Condition="$(MSBuildProjectName.Contains('.Server'))">Server</ProjectKind>
+    <ProjectKind Condition="$(MSBuildProjectName.Contains('.Tests'))">Tests</ProjectKind>
+    <IsServerSideProject Condition="'$(ProjectKind)' == 'EntityFramework'">true</IsServerSideProject>
+    <IsServerSideProject Condition="'$(ProjectKind)' == 'Redis'">true</IsServerSideProject>
+    <IsServerSideProject Condition="'$(ProjectKind)' == 'Server'">true</IsServerSideProject>
+    <IsServerSideProject Condition="'$(ProjectKind)' == 'Tests'">true</IsServerSideProject>
+  </PropertyGroup>
+
   <!-- Analyzers & warnings -->
-  <PropertyGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+  <PropertyGroup Condition="$(IsServerSideProject) and '$(TargetFramework)' != 'netstandard2.0'">
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+  <PropertyGroup Condition="!$(IsServerSideProject) or '$(TargetFramework)' == 'netstandard2.0'">
     <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
   </PropertyGroup>
   <PropertyGroup>
@@ -133,6 +155,14 @@
     <!-- CA2227: Change P to be read-only by removing the property setter -->
     <NoWarn>$(NoWarn);CA1000;CA1512;CA1513;CA1710;CA1716;CA1849;CA2012;CA2207;CA2227</NoWarn>
   </PropertyGroup>
+  <PropertyGroup Condition="$(IsServerSideProject)">
+    <!-- IL2026: Members attributed with RequiresUnreferencedCode may break when trimming -->
+    <!-- IL2046: All interface implementations and method overrides must have annotations matching the interface or overridden virtual method 'RequiresUnreferencedCodeAttribute' annotations -->
+    <!-- IL2055: IL2055: Call to 'System.Type.MakeGenericType' cannot be statically analyzed by the trimmer -->
+    <!-- IL2067, IL2070, IL2072, IL2075, IL2087: 'type' argument does not satisfy 'DynamicallyAccessedMemberTypes.*' -->
+    <!-- IL2091: 'target generic parameter' generic argument does not satisfy 'DynamicallyAccessedMembersAttribute' ... -->
+    <NoWarn>$(NoWarn);IL2026;IL2046;IL2055;IL2067;IL2070;IL2072;IL2075;IL2087;IL2091</NoWarn>
+  </PropertyGroup>
 
   <PropertyGroup>
     <PrereleaseBuild>false</PrereleaseBuild>
@@ -144,5 +174,9 @@
   <PropertyGroup Condition="$(TargetFramework.StartsWith('net4')) or $(TargetFramework.StartsWith('netstandard'))">
     <LegacyBuild>true</LegacyBuild>
   </PropertyGroup>
+
+  <Target Name="LogCommonProperties" AfterTargets="Build" >
+    <Message Text="$(MSBuildProjectName) $(TargetFramework): $(ProjectKind), is server side: $(IsServerSideProject)" Importance="low"/>
+  </Target>
 
 </Project>

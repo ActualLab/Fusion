@@ -1,4 +1,8 @@
-﻿using Samples.HelloCart;
+﻿using ActualLab.Fusion.EntityFramework.LogProcessing;
+using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.IO;
+using ActualLab.Resilience;
+using Samples.HelloCart;
 using Samples.HelloCart.V1;
 using Samples.HelloCart.V2;
 using Samples.HelloCart.V3;
@@ -6,9 +10,14 @@ using Samples.HelloCart.V4;
 using Samples.HelloCart.V5;
 using static System.Console;
 
+if (AppSettings.Db.UseChaosMaker) {
+    var dbChaosMaker = AppSettings.Db.ChaosMaker;
+    WriteLine(dbChaosMaker);
+    ChaosMaker.Default = dbChaosMaker;
+}
+
 // Create services
 AppBase? app;
-var isFirstTry = true;
 while(true) {
     WriteLine("Select the implementation to use:");
     WriteLine("  1: ConcurrentDictionary-based");
@@ -18,11 +27,12 @@ while(true) {
     WriteLine("  5: EF Core + OF + DbEntityResolvers + Client-Server + Multi-Host");
     // WriteLine("  4: 3 + client-server mode");
     Write("Type 1..5: ");
-    var input = isFirstTry
-        ? args.SingleOrDefault() ?? ReadLine()
-        : ReadLine();
-    input = (input ?? "").Trim();
-    app = input switch {
+    var input = args.SingleOrDefault();
+    if (input != null)
+        WriteLine(input);
+    else
+        input = await ConsoleExt.ReadLineAsync() ?? "";
+    app = input.Trim() switch {
         "1" => new AppV1(),
         "2" => new AppV2(),
         "3" => new AppV3(),
@@ -34,17 +44,17 @@ while(true) {
         break;
     WriteLine("Invalid selection.");
     WriteLine();
-    isFirstTry = false;
 }
 await using var appDisposable = app;
-await app.InitializeAsync(app.ServerServices);
+await app.InitializeAsync(app.ServerServices, true);
 
 // Starting watch tasks
 WriteLine("Initial state:");
 using var cts = new CancellationTokenSource();
 _ = app.Watch(app.WatchedServices, cts.Token);
 await Task.Delay(700); // Just to make sure watch tasks print whatever they want before our prompt appears
-// await AutoRunner.Run(app);
+if (AppSettings.UseAutoRunner)
+    await AutoRunner.Run(app); // This method call never ends
 
 var productService = app.ClientServices.GetRequiredService<IProductService>();
 var commander = app.ClientServices.Commander();
@@ -56,7 +66,7 @@ while (true) {
     WriteLine();
     Write("[productId]=[price]: ");
     try {
-        var input = (ReadLine() ?? "").Trim();
+        var input = (await ConsoleExt.ReadLineAsync() ?? "").Trim();
         if (input == "")
             break;
         var parts = input.Split("=");

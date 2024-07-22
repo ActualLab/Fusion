@@ -12,14 +12,15 @@ namespace ActualLab.Fusion.Authentication.Services;
 [Index(nameof(IPAddress), nameof(IsSignOutForced))]
 public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
 {
-    private readonly NewtonsoftJsonSerialized<ImmutableOptionSet> _options =
-        NewtonsoftJsonSerialized.New(ImmutableOptionSet.Empty);
+    private NewtonsoftJsonSerialized<ImmutableOptionSet> _options = ImmutableOptionSet.Empty;
     private DateTime _createdAt;
     private DateTime _lastSeenAt;
 
     [Key, StringLength(256)]
     public string Id { get; set; } = "";
-    [ConcurrencyCheck] public long Version { get; set; }
+
+    [ConcurrencyCheck]
+    public long Version { get; set; }
 
     public DateTime CreatedAt {
         get => _createdAt.DefaultKind(DateTimeKind.Utc);
@@ -40,10 +41,8 @@ public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
 
     // Options
     public string OptionsJson {
-#pragma warning disable IL2026
         get => _options.Data;
-#pragma warning restore IL2026
-        set => _options.Data = value;
+        set => _options = value;
     }
 
     [NotMapped]
@@ -51,6 +50,6 @@ public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
 #pragma warning disable IL2026
         get => _options.Value;
 #pragma warning restore IL2026
-        set => _options.Value = value;
+        set => _options = value;
     }
 }

@@ -16,6 +16,7 @@ public interface IRpcSystemCalls : IRpcSystemService
     Task<RpcNoWait> Ok(object? result);
     Task<RpcNoWait> Error(ExceptionInfo error);
     Task<RpcNoWait> Cancel();
+    Task<RpcNoWait> M(); // Match
     Task<Unit> NotFound(string serviceName, string methodName);
 
     // Objects
@@ -24,6 +25,7 @@ public interface IRpcSystemCalls : IRpcSystemService
 
     // Streams
     Task<RpcNoWait> Ack(long nextIndex, Guid hostId = default);
+    Task<RpcNoWait> AckEnd(Guid hostId = default);
     Task<RpcNoWait> I(long index, object? item);
     Task<RpcNoWait> B(long index, object? items);
     Task<RpcNoWait> End(long index, ExceptionInfo error);
@@ -33,6 +35,7 @@ public class RpcSystemCalls(IServiceProvider services)
     : RpcServiceBase(services), IRpcSystemCalls, IRpcDynamicCallHandler
 {
     private static readonly Symbol OkMethodName = nameof(Ok);
+    private static readonly Symbol MatchMethodName = nameof(M);
     private static readonly Symbol ItemMethodName = nameof(I);
     private static readonly Symbol BatchMethodName = nameof(B);
 
@@ -69,9 +72,18 @@ public class RpcSystemCalls(IServiceProvider services)
         var inboundCall = peer.InboundCalls.Get(inboundCallId);
         if (inboundCall != null) {
             peer.Log.IfEnabled(LogLevel.Debug)
-                ?.LogDebug("Remote call cancelled on the client side: {Call}", inboundCallId);
+                ?.LogDebug("Remote call cancelled on the client side: {Call}", inboundCall);
             inboundCall.Cancel();
         }
+        return RpcNoWait.Tasks.Completed;
+    }
+
+    public Task<RpcNoWait> M()
+    {
+        var context = RpcInboundContext.GetCurrent();
+        var peer = context.Peer;
+        var outboundCallId = context.Message.RelatedId;
+        peer.OutboundCalls.Get(outboundCallId)?.SetMatch(context);
         return RpcNoWait.Tasks.Completed;
     }
 
@@ -105,9 +117,13 @@ public class RpcSystemCalls(IServiceProvider services)
         if (peer.SharedObjects.Get(localId) is RpcSharedStream stream)
             await stream.OnAck(nextIndex, hostId).ConfigureAwait(false);
         else
-            await peer.Hub.SystemCallSender.Disconnect(peer, new[] { localId }).ConfigureAwait(false);
+            await peer.Hub.SystemCallSender.Disconnect(peer, [localId]).ConfigureAwait(false);
         return default;
     }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public Task<RpcNoWait> AckEnd(Guid hostId = default)
+        => Ack(long.MaxValue, hostId);
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task<RpcNoWait> I(long index, object? item)

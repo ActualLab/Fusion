@@ -4,6 +4,7 @@ using System.Text.Encodings.Web;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.WebSockets;
+using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Clients;
 
@@ -18,24 +19,32 @@ public class RpcWebSocketClient(
 
         public Func<RpcWebSocketClient, RpcClientPeer, string> HostUrlResolver { get; init; }
             = DefaultHostUrlResolver;
-        public Func<RpcWebSocketClient, RpcClientPeer, Uri> ConnectionUriResolver { get; init; }
+        public Func<RpcWebSocketClient, RpcClientPeer, Uri?> ConnectionUriResolver { get; init; }
             = DefaultConnectionUriResolver;
         public Func<RpcWebSocketClient, RpcClientPeer, WebSocketOwner> WebSocketOwnerFactory { get; init; }
             = DefaultWebSocketOwnerFactory;
-        public WebSocketChannel<RpcMessage>.Options WebSocketChannelOptions { get; init; }
-            = WebSocketChannel<RpcMessage>.Options.Default;
 
         public string RequestPath { get; init; } = "/rpc/ws";
         public string BackendRequestPath { get; init; } = "/backend/rpc/ws";
         public string ClientIdParameterName { get; init; } = "clientId";
+#pragma warning disable IL2026
+        public Func<RpcWebSocketClient, WebSocketOwner, PropertyBag, WebSocketChannel<RpcMessage>>
+            WebSocketChannelFactory { get; init; } = DefaultWebSocketChannelFactory;
+#pragma warning restore IL2026
 
         public static string DefaultHostUrlResolver(RpcWebSocketClient client, RpcClientPeer peer)
             => peer.Ref.Key.Value;
 
-        public static Uri DefaultConnectionUriResolver(RpcWebSocketClient client, RpcClientPeer peer)
+        public static bool DefaultLocalUriDetector(RpcWebSocketClient client, Uri uri)
+            => uri.IsDefaultPort && uri.Host.EndsWith(".localhost", StringComparison.Ordinal);
+
+        public static Uri? DefaultConnectionUriResolver(RpcWebSocketClient client, RpcClientPeer peer)
         {
             var settings = client.Settings;
             var url = settings.HostUrlResolver.Invoke(client, peer).TrimSuffix("/");
+            if (url.IsNullOrEmpty())
+                return null;
+
             var isWebSocketUrl = url.StartsWith("ws://", StringComparison.Ordinal)
                 || url.StartsWith("wss://", StringComparison.Ordinal);
             if (!isWebSocketUrl) {
@@ -62,22 +71,30 @@ public class RpcWebSocketClient(
 
         public static WebSocketOwner DefaultWebSocketOwnerFactory(RpcWebSocketClient client, RpcClientPeer peer)
             => new(peer.Ref.Key, new ClientWebSocket(), client.Services);
+
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public static WebSocketChannel<RpcMessage> DefaultWebSocketChannelFactory(
+            RpcWebSocketClient client, WebSocketOwner webSocketOwner, PropertyBag properties)
+            => new(WebSocketChannel<RpcMessage>.Options.Default, webSocketOwner);
     }
 
     public Options Settings { get; } = settings;
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public override Task<RpcConnection> Connect(RpcClientPeer peer, CancellationToken cancellationToken)
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
-        var uri = Settings.ConnectionUriResolver(this, peer);
-        return Connect(peer, uri, cancellationToken);
+        var uri = Settings.ConnectionUriResolver(this, clientPeer);
+        return ConnectRemote(clientPeer, uri, cancellationToken);
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public virtual async Task<RpcConnection> Connect(
-        RpcClientPeer peer, Uri uri, CancellationToken cancellationToken)
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public virtual async Task<RpcConnection> ConnectRemote(
+        RpcClientPeer clientPeer, Uri? uri, CancellationToken cancellationToken)
     {
-        var hub = peer.Hub;
+        if (uri == null) // The expected behavior for null URI
+            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        var hub = clientPeer.Hub;
         var connectCts = new CancellationTokenSource();
         var connectToken = connectCts.Token;
         _ = hub.Clock
@@ -89,7 +106,7 @@ public class RpcWebSocketClient(
                 .Run(async () => {
                     WebSocketOwner? o = null;
                     try {
-                        o = Settings.WebSocketOwnerFactory.Invoke(this, peer);
+                        o = Settings.WebSocketOwnerFactory.Invoke(this, clientPeer);
                         await o.ConnectAsync(uri, connectToken).ConfigureAwait(false);
                         return o;
                     }
@@ -112,12 +129,12 @@ public class RpcWebSocketClient(
             throw;
         }
 
-        var channel = new WebSocketChannel<RpcMessage>(Settings.WebSocketChannelOptions, webSocketOwner);
-        var options = ImmutableOptionSet.Empty
-            .Set((RpcPeer)peer)
+        var properties = PropertyBag.Empty
+            .Set((RpcPeer)clientPeer)
             .Set(uri)
             .Set(webSocketOwner)
             .Set(webSocketOwner.WebSocket);
-        return new RpcConnection(channel, options);
+        var channel = Settings.WebSocketChannelFactory.Invoke(this, webSocketOwner, properties);
+        return new RpcConnection(channel, properties);
     }
 }

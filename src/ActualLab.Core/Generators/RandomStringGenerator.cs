@@ -13,6 +13,7 @@ public class RandomStringGenerator : Generator<string>, IDisposable
     public static readonly RandomStringGenerator Default = new();
 
     protected readonly RandomNumberGenerator Rng;
+    // ReSharper disable once InconsistentlySynchronizedField
     protected object Lock => Rng;
 
     public string Alphabet { get; }

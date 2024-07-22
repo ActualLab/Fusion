@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using ActualLab.Fusion.EntityFramework.Internal;
@@ -7,90 +6,98 @@ namespace ActualLab.Fusion.EntityFramework;
 
 public static class DbSetExt
 {
-    public static DbContext GetDbContext<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(this DbSet<T> dbSet)
-        where T: class
+    public static DbContext GetDbContext<TEntity>(this DbSet<TEntity> dbSet)
+        where TEntity: class
         => dbSet.GetInfrastructure().GetRequiredService<ICurrentDbContext>().Context;
 
-    public static string GetTableName<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (this DbSet<T> dbSet)
-        where T: class
+    public static string GetTableName<TEntity>(this DbSet<TEntity> dbSet)
+        where TEntity: class
     {
         var dbContext = dbSet.GetDbContext();
         var model = dbContext.Model;
         var entityTypes = model.GetEntityTypes();
-        var entityType = entityTypes.Single(t => t.ClrType == typeof(T));
+        var entityType = entityTypes.Single(t => t.ClrType == typeof(TEntity));
         var tableNameAnnotation = entityType.GetAnnotation("Relational:TableName");
         var tableName = tableNameAnnotation.Value!.ToString();
         return tableName!;
     }
 
-    public static IQueryable<T> WithHints<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (this DbSet<T> dbSet, params DbHint[] hints)
-        where T: class
+    public static IQueryable<TEntity> WithHints<TEntity>(this DbSet<TEntity> dbSet, DbHint hint)
+        where TEntity: class
     {
         var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
         if (hintFormatter == null)
             return dbSet;
-        var tableName = dbSet.GetTableName();
+
         var mHints = MemoryBuffer<DbHint>.Lease(false);
         try {
-            mHints.AddSpan(hints.AsSpan());
-            if (mHints.Count == 0)
-                return dbSet;
-            var sql = hintFormatter.FormatSelectSql(tableName, ref mHints);
-            return dbSet.FromSqlRaw(sql);
+            mHints.Add(hint);
+            return hintFormatter.Apply(dbSet, ref mHints);
         }
         finally {
             mHints.Release();
         }
     }
 
-    public static IQueryable<T> WithHints<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (this DbSet<T> dbSet, DbHint primaryHint, params DbHint[] hints)
-        where T: class
+    public static IQueryable<TEntity> WithHints<TEntity>(this DbSet<TEntity> dbSet, DbHint hint1, DbHint hint2)
+        where TEntity: class
     {
         var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
         if (hintFormatter == null)
             return dbSet;
-        var tableName = dbSet.GetTableName();
+
         var mHints = MemoryBuffer<DbHint>.Lease(false);
         try {
-            mHints.Add(primaryHint);
-            mHints.AddSpan(hints.AsSpan());
-            if (mHints.Count == 0)
-                return dbSet;
-            var sql = hintFormatter.FormatSelectSql(tableName, ref mHints);
-            return dbSet.FromSqlRaw(sql);
+            mHints.Add(hint1);
+            mHints.Add(hint2);
+            return hintFormatter.Apply(dbSet, ref mHints);
         }
         finally {
             mHints.Release();
         }
     }
 
-    public static IQueryable<T> ForShare<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (this DbSet<T> dbSet, params DbHint[] otherHints)
-        where T: class
-        => dbSet.WithHints(DbLockingHint.Share, otherHints);
+    public static IQueryable<TEntity> WithHints<TEntity>(this DbSet<TEntity> dbSet, params DbHint[] hints)
+        where TEntity: class
+    {
+        if (hints.Length == 0)
+            return dbSet;
 
-    public static IQueryable<T> ForKeyShare<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (this DbSet<T> dbSet, params DbHint[] otherHints)
-        where T: class
-        => dbSet.WithHints(DbLockingHint.KeyShare, otherHints);
+        var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
+        if (hintFormatter == null)
+            return dbSet;
 
-    public static IQueryable<T> ForUpdate<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (this DbSet<T> dbSet, params DbHint[] otherHints)
-        where T: class
-        => dbSet.WithHints(DbLockingHint.Update, otherHints);
+        var mHints = MemoryBuffer<DbHint>.Lease(false);
+        try {
+            mHints.AddSpan(hints.AsSpan());
+            return hintFormatter.Apply(dbSet, ref mHints);
+        }
+        finally {
+            mHints.Release();
+        }
+    }
 
-    public static IQueryable<T> ForNoKeyUpdate<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (this DbSet<T> dbSet, params DbHint[] otherHints)
-        where T: class
-        => dbSet.WithHints(DbLockingHint.NoKeyUpdate, otherHints);
+    public static IQueryable<TEntity> ForShare<TEntity>(this DbSet<TEntity> dbSet)
+        where TEntity: class
+        => dbSet.WithHints(DbLockingHint.Share);
+
+    public static IQueryable<TEntity> ForKeyShare<TEntity>(this DbSet<TEntity> dbSet)
+        where TEntity: class
+        => dbSet.WithHints(DbLockingHint.KeyShare);
+
+    public static IQueryable<TEntity> ForUpdate<TEntity>(this DbSet<TEntity> dbSet)
+        where TEntity: class
+        => dbSet.WithHints(DbLockingHint.Update);
+
+    public static IQueryable<TEntity> ForNoKeyUpdate<TEntity>(this DbSet<TEntity> dbSet)
+        where TEntity: class
+        => dbSet.WithHints(DbLockingHint.NoKeyUpdate);
+
+    public static IQueryable<TEntity> ForUpdateSkipLocked<TEntity>(this DbSet<TEntity> dbSet)
+        where TEntity: class
+        => dbSet.WithHints(DbLockingHint.Update, DbWaitHint.SkipLocked);
+
+    public static IQueryable<TEntity> ForNoKeyUpdateSkipLocked<TEntity>(this DbSet<TEntity> dbSet)
+        where TEntity: class
+        => dbSet.WithHints(DbLockingHint.NoKeyUpdate, DbWaitHint.SkipLocked);
 }

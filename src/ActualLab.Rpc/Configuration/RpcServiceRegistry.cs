@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Text;
 using ActualLab.OS;
 using ActualLab.Rpc.Infrastructure;
@@ -11,12 +10,14 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
 {
     private readonly Dictionary<Type, RpcServiceDef> _services = new();
     private readonly Dictionary<Symbol, RpcServiceDef> _serviceByName = new();
+    private readonly ConcurrentDictionary<VersionSet, RpcServerMethodResolver> _serverMethodResolvers = new();
 
     public static LogLevel ConstructionDumpLogLevel { get; set; } = OSInfo.IsAnyClient ? LogLevel.None : LogLevel.Information;
 
     public int Count => _serviceByName.Count;
     public RpcServiceDef this[Type serviceType] => Get(serviceType) ?? throw Errors.NoService(serviceType);
     public RpcServiceDef this[Symbol serviceName] => Get(serviceName) ?? throw Errors.NoService(serviceName);
+    public RpcServerMethodResolver DefaultServerMethodResolver { get; }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public IEnumerator<RpcServiceDef> GetEnumerator() => _serviceByName.Values.GetEnumerator();
@@ -37,6 +38,7 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
 
             _serviceByName.Add(serviceDef.Name, serviceDef);
         }
+        DefaultServerMethodResolver = new RpcServerMethodResolver(this);
         DumpTo(Log, ConstructionDumpLogLevel, "Registered services:");
     }
 
@@ -85,4 +87,14 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
 
     public RpcServiceDef? Get(Symbol serviceName)
         => _serviceByName.GetValueOrDefault(serviceName);
+
+    public RpcServerMethodResolver GetServerMethodResolver(VersionSet? apiVersion)
+    {
+        if (apiVersion == null)
+            return DefaultServerMethodResolver;
+
+        return _serverMethodResolvers.GetOrAdd(apiVersion,
+            static (key, self) => new RpcServerMethodResolver(self, key),
+            this);
+    }
 }

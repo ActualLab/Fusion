@@ -8,7 +8,7 @@ namespace ActualLab.Serialization;
 [JsonConverter(typeof(Base64EncodedJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(Base64EncodedNewtonsoftJsonConverter))]
 [TypeConverter(typeof(Base64EncodedTypeConverter))]
-[method: MemoryPackConstructor]
+[method: MemoryPackConstructor] // Has JsonConverters
 #pragma warning disable CA1710
 public readonly partial struct Base64Encoded(byte[] data)
 #pragma warning restore CA1710
@@ -17,12 +17,11 @@ public readonly partial struct Base64Encoded(byte[] data)
     private readonly byte[]? _data = data;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    public byte[] Data => _data ?? Array.Empty<byte>();
+    public byte[] Data => _data ?? [];
 
     [IgnoreDataMember, MemoryPackIgnore]
     public int Count => Data.Length;
 
-    [DataMember]
     public byte this[int index] {
         get => Data[index];
         set => Data[index] = value;
@@ -39,7 +38,7 @@ public readonly partial struct Base64Encoded(byte[] data)
     public string? Encode()
         => Convert.ToBase64String(Data);
     public static Base64Encoded Decode(string? encodedData)
-        => encodedData.IsNullOrEmpty() ? Array.Empty<byte>() : Convert.FromBase64String(encodedData);
+        => encodedData.IsNullOrEmpty() ? [] : Convert.FromBase64String(encodedData);
 
     // Operators
     public static implicit operator Base64Encoded(byte[] data) => new(data);

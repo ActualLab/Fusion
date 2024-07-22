@@ -16,19 +16,20 @@ namespace ActualLab.Tests;
 public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsyncLifetime
 {
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
-    protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.Default;
-    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.Default with { IsBackend = true };
+    protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.GetDefaultClientPeerRef();
+    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.GetDefaultClientPeerRef(true);
 
     private IServiceProvider? _services;
     private IServiceProvider? _clientServices;
     private RpcWebHost? _webHost;
     private ILogger? _log;
 
-    public TimeSpan WebSocketWriteDelay { get; set; } = TimeSpan.FromMilliseconds(1);
+    public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
+    public Func<CpuTimestamp, int, Task>? WebSocketWriteDelayFactory { get; set; } = (_, _) => Task.Delay(1);
     public bool UseLogging { get; init; } = true;
     public bool UseTestClock { get; init; }
-    public bool IsLogEnabled { get; init; } = true;
     public bool ExposeBackend { get; init; } = false;
+    public bool IsLogEnabled { get; init; } = true;
 
     public IServiceProvider Services => _services ??= CreateServices();
     public IServiceProvider ClientServices => _clientServices ??= CreateServices(true);
@@ -45,21 +46,23 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
 
     public override async Task DisposeAsync()
     {
-        if (ClientServices is IAsyncDisposable adcs)
+        if (_clientServices is IAsyncDisposable adcs)
             await adcs.DisposeAsync();
-        if (ClientServices is IDisposable dcs)
+        if (_clientServices is IDisposable dcs)
             dcs.Dispose();
 
         try {
-            await Services.HostedServices().Stop();
+            var hostedServices = _services?.HostedServices();
+            if (hostedServices != null)
+                await hostedServices.Stop();
         }
         catch {
             // Intended
         }
 
-        if (Services is IAsyncDisposable ads)
+        if (_services is IAsyncDisposable ads)
             await ads.DisposeAsync();
-        if (Services is IDisposable ds)
+        if (_services is IDisposable ds)
             ds.Dispose();
     }
 
@@ -77,7 +80,8 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
     protected virtual void ConfigureServices(IServiceCollection services, bool isClient)
     {
         if (UseTestClock)
-            services.AddSingleton(new MomentClockSet(new TestClock()));
+            services.AddSingleton(_ => new MomentClockSet(new TestClock()));
+
         services.AddSingleton(Out);
 
         // Logging
@@ -115,27 +119,25 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
             });
 
         var rpc = services.AddRpc();
+        rpc.AddWebSocketClient(_ => RpcWebSocketClient.Options.Default with {
+            HostUrlResolver = (_, _) => WebHost.ServerUri.ToString(),
+            WebSocketChannelFactory = (_, webSocketOwner, _) => {
+                var channelOptions = WebSocketChannel<RpcMessage>.Options.Default with {
+                    WriteDelayer = WebSocketWriteDelayFactory,
+                };
+                return new WebSocketChannel<RpcMessage>(channelOptions, webSocketOwner);
+            }
+        });
+        services.AddSingleton<RpcCallRouter>(_ => {
+            return (method, arguments) => RpcPeerRef.GetDefaultClientPeerRef(ConnectionKind, method.IsBackend);
+        });
         if (!isClient) {
             services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly) {
                 ExposeBackend = ExposeBackend,
-                WebSocketWriteDelay = WebSocketWriteDelay,
+                WebSocketWriteDelayFactory = WebSocketWriteDelayFactory,
             });
         }
         else {
-            rpc.AddWebSocketClient(_ => RpcWebSocketClient.Options.Default with {
-                HostUrlResolver = (_, _) => WebHost.ServerUri.ToString(),
-                WebSocketChannelOptions = WebSocketChannel<RpcMessage>.Options.Default with {
-                    WriteDelay = WebSocketWriteDelay,
-                },
-            });
-            services.AddSingleton<RpcCallRouter>(_ => {
-                RpcHub? rpcHub = null;
-                return (method, arguments) => {
-                    rpcHub ??= method.Hub;
-                    var peerRef = method.Service.IsBackend ? BackendClientPeerRef : ClientPeerRef;
-                    return rpcHub.GetClientPeer(peerRef);
-                };
-            });
             var restEase = services.AddRestEase();
             restEase.ConfigureHttpClient((_, _, options) => {
                 var apiUri = new Uri($"{WebHost.ServerUri}api/");

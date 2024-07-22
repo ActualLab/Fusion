@@ -1,7 +1,8 @@
 @page "/todo"
 @using System.Globalization
-@using Templates.TodoApp.Services
-@inherits ComputedStateComponent<Todo[]>
+@using ActualLab.Rpc
+@using Templates.TodoApp.UI.Services
+@inherits ComputedStateComponent<TodoPage.Model>
 @inject Session Session
 @inject ITodos Todos
 @inject TodoUI TodoUI
@@ -14,7 +15,7 @@
         "Rendering, Computed.Version = {Version}, IsConsistent = {IsConsistent}",
         c.Version, c.IsConsistent());
     var error = c.Error;
-    var todos = c.ValueOrDefault ?? Array.Empty<Todo>(); // ValueOrDefault returns default if there is an Error
+    var model = c.ValueOrDefault ?? Model.None; // ValueOrDefault returns default if there is an Error
 }
 
 <h1>Todo List</h1>
@@ -22,10 +23,10 @@
 <TextConnectionStatus />
 <StateOfStateBadge State="@State" />
 <Div Margin="Margin.Is1.OnY">
-    Updated: <b><MomentsAgoBadge Value="LastStateUpdateTime" /></b>
+    @* Updated: <b><MomentsAgoBadge Value="model.ComputedAt" /></b> *@
 </Div>
 <Div Margin="Margin.Is1.OnY">
-    Current culture: <b>@(CultureInfo.CurrentUICulture.Name)</b> @@ @LastStateUpdateTime.ToString("D")
+    Current culture: <b>@(CultureInfo.CurrentUICulture.Name)</b> @@ @model.ComputedAt.ToString("D")
 </Div>
 <Div Margin="Margin.Is1.OnY">
     Call:
@@ -46,13 +47,13 @@
                     <TodoSummaryBadge/>
                 </Paragraph>
 
-                @foreach (var todo in todos) {
+                @foreach (var todo in model.Items) {
                     <TodoItemView @key="@todo.Id" Value="@todo" />
                 }
 
-                @if (HasMore) {
+                @if (model.HasMore) {
                     <Button Clicked="_ => LoadMore()" Color="Color.Primary" Margin="Margin.Is3.OnY">
-                        Load @PageSize more <Blazorise.Icon Name="FontAwesomeIcons.AngleDoubleDown"/>
+                        Load @LoadedItemCount more <Blazorise.Icon Name="FontAwesomeIcons.AngleDoubleDown"/>
                     </Button>
                 }
 
@@ -72,14 +73,17 @@
 </AuthorizeView>
 
 @code {
-    private int PageSize { get; set; } = 5;
-    private bool HasMore { get; set; }
+    private int LoadedItemCount { get; set; } = 5;
     private string NewTodoTitle { get; set; } = "";
-    private DateTime LastStateUpdateTime { get; set; } = DateTime.UtcNow;
-    // AuthState property below seemingly does nothing, right?
-    // But try to comment out this line & sign-in + sign-out.
-    // See the error badge stays there for a while now?
-    // Check your explanation on our Discord: https://discord.gg/EKEwv6d
+
+    // AuthState property below is seemingly unused - the real reason it is declared here is:
+    // - AuthState is a cascading parameter
+    // - TodoPage.Options (inherited from ComputedStateComponent) include StateIsParameterDependent flag
+    // So when AuthState changes, State here gets recomputed instantly (i.e. w/o a delay).
+    // If you'll comment it out, you'll notice a regular update delay before it changes on sign-out.
+    // It's not a recommended way to apply some change instantly on sign-in or sign-out though -
+    // i.e. ideally you just need to trigger a full re-render as a reaction to sign-in / sign-out somewhere
+    // in one of your top-level components.
     [CascadingParameter] protected Task<AuthState> AuthState { get; set; } = null!;
 
     protected override async Task OnInitializedAsync()
@@ -87,25 +91,27 @@
         var objectId = await Todos.GetTestObjectId();
         Log.LogInformation("Test ObjectId: {ObjectId}", objectId);
         var stream = await Todos.GetTestStream();
-        Log.LogInformation("Test stream: {Stream}", stream);
-        var itemCount = await stream.CountAsync();
-        Log.LogInformation("Test stream item count: {Count}", itemCount);
+        var list = await stream.ToListAsync();
+        var sum = await Todos.SumTestStream(RpcStream.New(list));
+        Log.LogInformation("Test stream: {Stream} = [{List}], sum = {Sum}", stream, list.ToDelimitedString(), sum);
     }
 
-    protected override async Task<Todo[]> ComputeState(CancellationToken cancellationToken)
+    protected override bool ShouldRender()
+        => IsRenderStateChanged(State);
+
+    protected override async Task<Model> ComputeState(CancellationToken cancellationToken)
     {
-        _ = State.ValueOrDefault; // To trigger NullReferenceException when State setup is off
-        var items = await TodoUI.List(PageSize + 1, cancellationToken);
-        HasMore = items.Length > PageSize;
-        if (HasMore)
-            items = items[..PageSize];
-        LastStateUpdateTime = DateTime.UtcNow;
-        return items;
+        Log.LogInformation("ComputeState: LoadedItemCount = {LoadedItemCount}", LoadedItemCount);
+        var items = await TodoUI.List(LoadedItemCount + 1, cancellationToken);
+        var hasMore = items.Length > LoadedItemCount;
+        if (hasMore)
+            items = items[..LoadedItemCount];
+        return new Model(items, hasMore, DateTime.UtcNow);
     }
 
     private void LoadMore()
     {
-        PageSize *= 2;
+        LoadedItemCount *= 2;
         _ = State.Recompute();
     }
 
@@ -114,5 +120,15 @@
         var todo = new Todo("", NewTodoTitle);
         NewTodoTitle = "";
         _ = UICommander.Run(new Todos_AddOrUpdate(Session, todo));
+    }
+
+    // Nested types
+
+    public sealed record Model(
+        Todo[] Items,
+        bool HasMore,
+        DateTime ComputedAt)
+    {
+        public static Model None => new([], false, DateTime.UtcNow);
     }
 }

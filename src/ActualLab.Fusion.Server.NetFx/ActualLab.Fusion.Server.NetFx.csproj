@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net7.0;net6.0;net5.0;net48;net471</TargetFrameworks>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net8.0;net7.0;net6.0;net5.0;net48;net471</TargetFrameworks>
+    <TargetFramework Condition="!$(UseMultitargeting)">net8.0</TargetFramework>
     <RootNamespace>ActualLab.Fusion.Server</RootNamespace>
     <AssemblyName>ActualLab.Fusion.Server.NetFx</AssemblyName>
     <PackageTags>actual_chat actual_lab actual_lab_fusion server netfx</PackageTags>
@@ -11,6 +12,7 @@
     -->and ready to serve replicas of computed instances to remote clients.<!--
     --></Description>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
+    <IsServerSideOnly>true</IsServerSideOnly>
   </PropertyGroup>
 
   <ItemGroup>

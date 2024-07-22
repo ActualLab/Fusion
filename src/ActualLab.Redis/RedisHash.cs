@@ -2,32 +2,44 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
-public sealed class RedisHash
+public sealed class RedisHash(RedisDb redisDb, string hashKey)
 {
-    public RedisDb RedisDb { get; }
-    public string HashKey { get; }
+    public RedisDb RedisDb { get; } = redisDb;
+    public string HashKey { get; } = hashKey;
 
-    public RedisHash(RedisDb redisDb, string hashKey)
+    public async Task<RedisValue> Get(string key)
     {
-        RedisDb = redisDb;
-        HashKey = hashKey;
+        var database = await RedisDb.Database.Get().ConfigureAwait(false);
+        return await database.HashGetAsync(HashKey, key).ConfigureAwait(false);
     }
 
-    public Task<RedisValue> Get(string key)
-        => RedisDb.Database.HashGetAsync(HashKey, key);
+    public async Task<HashEntry[]> GetAll()
+    {
+        var database = await RedisDb.Database.Get().ConfigureAwait(false);
+        return await database.HashGetAllAsync(HashKey).ConfigureAwait(false);
+    }
 
-    public Task<HashEntry[]> GetAll()
-        => RedisDb.Database.HashGetAllAsync(HashKey);
+    public async Task<bool> Set(string key, RedisValue value)
+    {
+        var database = await RedisDb.Database.Get().ConfigureAwait(false);
+        return await database.HashSetAsync(HashKey, key, value).ConfigureAwait(false);
+    }
 
-    public Task<bool> Set(string key, RedisValue value)
-        => RedisDb.Database.HashSetAsync(HashKey, key, value);
+    public async Task<bool> Remove(string key)
+    {
+        var database = await RedisDb.Database.Get().ConfigureAwait(false);
+        return await database.HashDeleteAsync(HashKey, key).ConfigureAwait(false);
+    }
 
-    public Task<bool> Remove(string key)
-        => RedisDb.Database.HashDeleteAsync(HashKey, key);
+    public async Task<long> Increment(string key, long increment = 1)
+    {
+        var database = await RedisDb.Database.Get().ConfigureAwait(false);
+        return await database.HashIncrementAsync(HashKey, key, increment).ConfigureAwait(false);
+    }
 
-    public Task<long> Increment(string key, long increment = 1)
-        => RedisDb.Database.HashIncrementAsync(HashKey, key, increment);
-
-    public Task<bool> Clear()
-        => RedisDb.Database.KeyDeleteAsync(HashKey);
+    public async Task<bool> Clear()
+    {
+        var database = await RedisDb.Database.Get().ConfigureAwait(false);
+        return await database.KeyDeleteAsync(HashKey).ConfigureAwait(false);
+    }
 }

@@ -4,7 +4,7 @@ namespace ActualLab.Fusion.Extensions;
 
 public class RpcPeerStateMonitor : WorkerBase
 {
-    private IMutableState<RpcPeerRawState> _rawState = null!;
+    private MutableState<RpcPeerRawState> _rawState = null!;
     private ILogger? _log;
 
     protected IServiceProvider Services => RpcHub.Services;
@@ -20,7 +20,7 @@ public class RpcPeerStateMonitor : WorkerBase
 
     public IState<RpcPeerRawState> RawState {
         get => _rawState;
-        protected set => _rawState = (IMutableState<RpcPeerRawState>)value;
+        protected set => _rawState = (MutableState<RpcPeerRawState>)value;
     }
     public IState<Moment> LastReconnectDelayCancelledAt { get; protected set; } = null!;
     public IState<RpcPeerState> State { get; protected set; } = null!;
@@ -50,7 +50,7 @@ public class RpcPeerStateMonitor : WorkerBase
         LastReconnectDelayCancelledAt = peerRef == null
             ? stateFactory.NewMutable((Moment)default, stateCategory)
             : stateFactory.NewComputed<Moment>(
-                FixedDelayer.Instant,
+                FixedDelayer.NextTick,
                 ComputeLastReconnectDelayCancelledAtState,
                 stateCategory);
 
@@ -60,7 +60,7 @@ public class RpcPeerStateMonitor : WorkerBase
             : new RpcPeerState(RpcPeerStateKind.JustDisconnected, connectionState?.Error);
         State = peerRef == null
             ? stateFactory.NewMutable(initialState, stateCategory)
-            : stateFactory.NewComputed(initialState, FixedDelayer.Instant, ComputeState, stateCategory);
+            : stateFactory.NewComputed(initialState, FixedDelayer.NextTick, ComputeState, stateCategory);
         if (mustStart)
             Start();
     }
@@ -141,22 +141,20 @@ public class RpcPeerStateMonitor : WorkerBase
         }
     }
 
-    protected virtual Task<Moment> ComputeLastReconnectDelayCancelledAtState(
-        IComputedState<Moment> state, CancellationToken cancellationToken)
+    protected virtual Task<Moment> ComputeLastReconnectDelayCancelledAtState(CancellationToken cancellationToken)
     {
         var reconnectDelayer = RpcHub.InternalServices.ClientPeerReconnectDelayer;
         var computed = Computed.GetCurrent();
         reconnectDelayer.CancelDelaysToken.Register(static c => {
             // It makes sense to wait a bit after the cancellation to let RpcPeer do some work
             _ = Task.Delay(50, CancellationToken.None).ContinueWith(
-                _ => (c as IComputed)?.Invalidate(),
+                _ => (c as Computed)?.Invalidate(),
                 TaskScheduler.Default);
         }, computed);
         return Task.FromResult(Now);
     }
 
-    protected virtual async Task<RpcPeerState> ComputeState(
-        IComputedState<RpcPeerState> state, CancellationToken cancellationToken)
+    protected virtual async Task<RpcPeerState> ComputeState(CancellationToken cancellationToken)
     {
         var s = await RawState.Use(cancellationToken).ConfigureAwait(false);
         var now = Now;
@@ -187,5 +185,5 @@ public class RpcPeerStateMonitor : WorkerBase
     }
 
     protected void InvalidateIn(TimeSpan delay)
-        => Computed.GetCurrent()!.Invalidate(delay + ExtraInvalidationDelay);
+        => Computed.GetCurrent().Invalidate(delay + ExtraInvalidationDelay);
 }

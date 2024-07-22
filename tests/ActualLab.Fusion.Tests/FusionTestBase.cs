@@ -34,7 +34,7 @@ public abstract class FusionTestBase : RpcTestBase
     public bool UseRedisOperationLogChangeTracking { get; set; } = !TestRunnerInfo.IsBuildAgent();
     public bool UseInMemoryKeyValueStore { get; set; }
     public bool UseInMemoryAuthService { get; set; }
-    public bool UseClientComputedCache { get; set; }
+    public bool UseRemoteComputedCache { get; set; }
     public LogLevel RpcCallLogLevel { get; set; } = LogLevel.None;
 
     public FilePath SqliteDbPath { get; protected set; }
@@ -71,9 +71,7 @@ public abstract class FusionTestBase : RpcTestBase
             }
         }
 
-        var dbContext = CreateDbContext();
-        await using var _ = dbContext.ConfigureAwait(false);
-
+        await using var dbContext = await CreateDbContext();
         await dbContext.Database.EnsureDeletedAsync();
         try {
             await dbContext.Database.EnsureCreatedAsync();
@@ -106,9 +104,9 @@ public abstract class FusionTestBase : RpcTestBase
                 => peerRef.IsServer
                     ? new RpcServerPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
                     : new RpcClientPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel });
-            if (UseClientComputedCache)
-                fusion.AddSharedClientComputedCache<InMemoryClientComputedCache, FlushingClientComputedCache.Options>(
-                    _ => new FlushingClientComputedCache.Options(CpuTimestamp.Now.ToString()));
+            if (UseRemoteComputedCache)
+                fusion.AddSharedRemoteComputedCache<InMemoryRemoteComputedCache, InMemoryRemoteComputedCache.Options>(
+                    _ => InMemoryRemoteComputedCache.Options.Default);
             fusion.AddClient<ITimeService>();
             fusion.AddClient<IUserService>();
             fusion.AddClient<IScreenshotService>();
@@ -116,8 +114,8 @@ public abstract class FusionTestBase : RpcTestBase
             fusion.AddClient<IKeyValueService<string>>();
         }
         services.AddSingleton<UserService>();
-        services.AddSingleton<IComputedState<ServerTimeModel1>, ServerTimeModel1State>();
-        services.AddSingleton<IComputedState<KeyValueModel<string>>, StringKeyValueModelState>();
+        services.AddSingleton<ComputedState<ServerTimeModel1>, ServerTimeModel1State>();
+        services.AddSingleton<ComputedState<KeyValueModel<string>>, StringKeyValueModelState>();
         fusion.AddService<ISimplestProvider, SimplestProvider>(ServiceLifetime.Scoped);
         fusion.AddService<NestedOperationLoggerTester>();
     }
@@ -197,13 +195,12 @@ public abstract class FusionTestBase : RpcTestBase
                         // MaxCommitDuration = TimeSpan.FromMinutes(5),
                     });
                     if (useRedis)
-                        operations.AddRedisOperationLogChangeTracking();
+                        operations.AddRedisOperationLogWatcher();
                     else if (DbType == FusionTestDbType.PostgreSql)
-                        operations.AddNpgsqlOperationLogChangeTracking();
+                        operations.AddNpgsqlOperationLogWatcher();
                     else
-                        operations.AddFileBasedOperationLogChangeTracking();
+                        operations.AddFileSystemOperationLogWatcher();
                 });
-
                 db.AddEntityResolver<long, User>();
             });
         }
@@ -221,6 +218,6 @@ public abstract class FusionTestBase : RpcTestBase
         }
     }
 
-    protected TestDbContext CreateDbContext()
-        => Services.GetRequiredService<DbHub<TestDbContext>>().CreateDbContext(readWrite: true);
+    protected ValueTask<TestDbContext> CreateDbContext(CancellationToken cancellationToken = default)
+        => Services.GetRequiredService<DbHub<TestDbContext>>().CreateDbContext(readWrite: true, cancellationToken);
 }

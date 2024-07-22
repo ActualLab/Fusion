@@ -1,3 +1,4 @@
+using ActualLab.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Samples.HelloCart.V2;
 using static System.Console;
@@ -10,40 +11,47 @@ public abstract class AppBase
     public IServiceProvider ClientServices { get; protected set; } = null!;
     public virtual IServiceProvider WatchedServices => ClientServices;
 
-    public Product[] ExistingProducts { get; set; } = Array.Empty<Product>();
-    public Cart[] ExistingCarts { get; set; } = Array.Empty<Cart>();
+    public Product[] ExistingProducts { get; set; } = [];
+    public Cart[] ExistingCarts { get; set; } = [];
+    public bool MustRecreateDb { get; set; } = true;
+    public int ExtraProductCount { get; set; } = 5;
 
-    public virtual async Task InitializeAsync(IServiceProvider services)
+    public virtual async Task InitializeAsync(IServiceProvider services, bool startHostedServices)
     {
-        var dbContextFactory = services.GetService<IDbContextFactory<AppDbContext>>();
-        if (dbContextFactory != null) {
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-            await dbContext.Database.EnsureDeletedAsync();
-            await dbContext.Database.EnsureCreatedAsync();
-        }
-
-        var commander = services.Commander();
-
-        var pApple = new Product { Id = "apple", Price = 2M };
-        var pBanana = new Product { Id = "banana", Price = 0.5M };
-        var pCarrot = new Product { Id = "carrot", Price = 1M };
-        ExistingProducts = new [] { pApple, pBanana, pCarrot };
-        foreach (var product in ExistingProducts)
-            await commander.Call(new EditCommand<Product>(product));
-
-        var cart1 = new Cart() { Id = "cart:apple=1,banana=2",
+        var pApple = new Product("apple", 2);
+        var pBanana = new Product("banana", 0.5M);
+        var pCarrot = new Product("carrot", 1);
+        var cart1 = new Cart("cart1(apple=1,banana=2)") {
             Items = ImmutableDictionary<string, decimal>.Empty
                 .Add(pApple.Id, 1)
                 .Add(pBanana.Id, 2)
         };
-        var cart2 = new Cart() { Id = "cart:banana=1,carrot=1",
+        var cart2 = new Cart("cart2(banana=1,carrot=1)") {
             Items = ImmutableDictionary<string, decimal>.Empty
                 .Add(pBanana.Id, 1)
                 .Add(pCarrot.Id, 1)
         };
-        ExistingCarts = new [] { cart1, cart2 };
-        foreach (var cart in ExistingCarts)
-            await commander.Call(new EditCommand<Cart>(cart));
+        var extraProducts = Enumerable.Range(0, ExtraProductCount)
+            .Select(i => new Product($"product{i + 1}", i));
+        ExistingProducts = [pApple, pBanana, pCarrot, ..extraProducts];
+        ExistingCarts = [cart1, cart2];
+
+        if (MustRecreateDb) {
+            var dbContextFactory = services.GetService<IDbContextFactory<AppDbContext>>();
+            if (dbContextFactory != null) {
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+                await dbContext.Database.EnsureDeletedAsync();
+                await dbContext.Database.EnsureCreatedAsync();
+            }
+            var commander = services.Commander();
+            foreach (var product in ExistingProducts)
+                await commander.Call(new EditCommand<Product>(product));
+            foreach (var cart in ExistingCarts)
+                await commander.Call(new EditCommand<Cart>(cart));
+        }
+
+        if (startHostedServices)
+            await services.HostedServices().Start();
     }
 
     public virtual async ValueTask DisposeAsync()

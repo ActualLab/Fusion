@@ -6,7 +6,9 @@ public static class EnumerableExt
 {
     // Regular static methods
 
-    public static IEnumerable<T> One<T>(T value) => Enumerable.Repeat(value, 1);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IEnumerable<T> One<T>(T value)
+        => Enumerable.Repeat(value, 1);
 
     public static IEnumerable<T> Concat<T>(params IEnumerable<T>[] sequences)
     {
@@ -18,7 +20,40 @@ public static class EnumerableExt
         return result;
     }
 
-    // Extensions
+    // SkipNullItems
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IEnumerable<T> SkipNullItems<T>(this IEnumerable<T?> source)
+        where T : class
+        => source.Where(x => x != null)!;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IEnumerable<T> SkipNullItems<T>(this IEnumerable<T?> source)
+        where T : struct
+        => source.Where(x => x != null).Select(x => x!.Value);
+
+    public static IEnumerable<T> SuppressExceptions<T>(this IEnumerable<T> source)
+    {
+        using var e = source.GetEnumerator();
+        while (true) {
+            bool hasMore;
+            T item = default!;
+            try {
+                hasMore = e.MoveNext();
+                if (hasMore)
+                    item = e.Current;
+            }
+            catch (Exception) {
+                yield break;
+            }
+            if (hasMore)
+                yield return item;
+            else
+                yield break;
+        }
+    }
+
+    // Apply
 
     public static IEnumerable<T> Apply<T>(this IEnumerable<T> source, Action<T> action)
     {
@@ -31,6 +66,7 @@ public static class EnumerableExt
 
     // ToDelimitedString
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ToDelimitedString<T>(this IEnumerable<T> source, string? delimiter = null)
         => string.Join(delimiter ?? ", ", source);
 

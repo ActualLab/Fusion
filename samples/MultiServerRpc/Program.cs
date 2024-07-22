@@ -3,6 +3,7 @@ using Samples.MultiServerRpc;
 using ActualLab.CommandR;
 using ActualLab.Fusion;
 using ActualLab.Fusion.Server;
+using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Server;
@@ -16,8 +17,8 @@ var serverUrls = Enumerable.Range(0, serverCount).Select(i => $"http://localhost
 var clientPeerRefs = Enumerable.Range(0, serverCount).Select(i => new RpcPeerRef(serverUrls[i])).ToArray();
 
 await (args switch {
-    [ "server" ] => RunServers(),
-    [ "client" ] => RunClient(),
+    ["server"] => RunServers(),
+    ["client"] => RunClient(),
     _ => Task.WhenAll(RunServers(), RunClient()),
 });
 
@@ -56,9 +57,7 @@ async Task RunClient()
             fusion.AddClient<IChat>();
         })
         .AddSingleton<RpcCallRouter>(c => {
-            RpcHub? rpcHub = null;
             return (methodDef, args) => {
-                rpcHub ??= c.RpcHub(); // We can't resolve it earlier, coz otherwise it will trigger recursion
                 if (methodDef.Service.Type == typeof(IChat)) {
                     var arg0Type = args.GetType(0);
                     int hash;
@@ -69,21 +68,21 @@ async Task RunClient()
                         hash = args.Get<Chat_Post>(0).ChatId.Value.GetDjb2HashCode();
                     else
                         throw new NotSupportedException("Can't route this call.");
-                    return rpcHub.GetClientPeer(clientPeerRefs[hash % serverCount]);
+                    return clientPeerRefs[hash % serverCount];
                 }
-                return rpcHub.GetClientPeer(RpcPeerRef.Default);
+                return RpcPeerRef.Default;
             };
         })
         .BuildServiceProvider();
 
     Write("Enter chat ID: ");
-    var chatId = new Symbol((ReadLine() ?? "").Trim());
+    var chatId = new Symbol((await ConsoleExt.ReadLineAsync() ?? "").Trim());
     var chat = services.GetRequiredService<IChat>();
     var commander = services.Commander();
     _ = Task.Run(ObserveMessages);
     _ = Task.Run(ObserveWordCount);
     while (true) {
-        var message = ReadLine() ?? "";
+        var message = await ConsoleExt.ReadLineAsync() ?? "";
         try {
             await commander.Call(new Chat_Post(chatId, message));
         }

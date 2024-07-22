@@ -1,11 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
-public class DbHintFormatterOptionsExtension(
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type dbHintFormatterType)
-    : IDbContextOptionsExtension
+public class DbHintFormatterOptionsExtension(Type dbHintFormatterType) : IDbContextOptionsExtension
 {
     public Type DbHintFormatterType { get; } = dbHintFormatterType;
 
@@ -13,9 +10,11 @@ public class DbHintFormatterOptionsExtension(
         => new DbHintFormatterExtensionInfo(this);
 
     public void ApplyServices(IServiceCollection services)
-#pragma warning disable IL2072
-        => services.AddSingleton(typeof(IDbHintFormatter), DbHintFormatterType);
-#pragma warning restore IL2072
+    {
+        var hintFormatter = (IDbHintFormatter)DbHintFormatterType.CreateInstance();
+        services.AddSingleton(typeof(IDbHintFormatter), DbHintFormatterType);
+        hintFormatter.Configure(services);
+    }
 
     public void Validate(IDbContextOptions options)
     { }

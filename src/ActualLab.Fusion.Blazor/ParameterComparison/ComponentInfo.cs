@@ -6,7 +6,7 @@ namespace ActualLab.Fusion.Blazor;
 
 public sealed class ComponentInfo
 {
-    private static readonly ConcurrentDictionary<Type, ComponentInfo> ComponentInfoCache = new();
+    private static readonly ConcurrentDictionary<Type, LazySlim<Type, ComponentInfo>> ComponentInfoCache = new();
 
     public Type Type { get; }
     public bool HasCustomParameterComparers { get; }

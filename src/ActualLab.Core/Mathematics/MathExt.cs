@@ -63,6 +63,7 @@ public static class MathExt
     {
         if (power < 0)
             throw new ArgumentOutOfRangeException(nameof(power));
+
         var r = one;
         for (; power != 0; power >>= 1, n = multiply(n, n))
             if ((power & 1) != 0)
@@ -70,9 +71,25 @@ public static class MathExt
         return r;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int PositiveModulo(this int x, int divider)
+    {
+        var m = x % divider;
+        return m >= 0 ? m : m + divider;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static long PositiveModulo(this long x, long divider)
+    {
+        var m = x % divider;
+        return m >= 0 ? m : m + divider;
+    }
+
     // Format & parse for arbitrary radix
 
     public static readonly string Digits64 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
+    public static readonly string Digits32 = Digits64[..32];
+    public static readonly string Digits16 = Digits64[..16];
 
     public static string Format(long number, int radix)
         => radix <= 64

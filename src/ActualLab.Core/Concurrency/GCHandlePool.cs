@@ -1,5 +1,8 @@
+using ActualLab.Generators;
+
 namespace ActualLab.Concurrency;
 
+// ReSharper disable once InconsistentNaming
 public sealed class GCHandlePool(GCHandlePool.Options settings) : IDisposable
 {
     public record Options
@@ -31,8 +34,10 @@ public sealed class GCHandlePool(GCHandlePool.Options settings) : IDisposable
         Clear();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public GCHandle Acquire(object? target)
-        => Acquire(target, _opCounter.NextRandom());
+        => Acquire(target, ThreadRandom.Next());
+
     public GCHandle Acquire(object? target, int random)
     {
         if (_queue.TryDequeue(out var handle)) {
@@ -46,8 +51,10 @@ public sealed class GCHandlePool(GCHandlePool.Options settings) : IDisposable
         return GCHandle.Alloc(target, HandleType);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Release(GCHandle handle)
-        => Release(handle, _opCounter.NextRandom());
+        => Release(handle, ThreadRandom.Next());
+
     public bool Release(GCHandle handle, int random)
     {
         if (!_opCounter.TryIncrement(Capacity, random)) {

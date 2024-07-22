@@ -5,10 +5,14 @@ namespace ActualLab.Serialization;
 
 public static class TypeDecoratingMemoryPackSerialized
 {
-    public static TypeDecoratingMemoryPackSerialized<TValue> New<TValue>() => new();
-    public static TypeDecoratingMemoryPackSerialized<TValue> New<TValue>(TValue value) => new() { Value = value };
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TypeDecoratingMemoryPackSerialized<TValue> New<TValue>(TValue value = default!)
+        => new() { Value = value };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public static TypeDecoratingMemoryPackSerialized<TValue> New<TValue>(byte[] data) => new(data);
+    public static TypeDecoratingMemoryPackSerialized<TValue> New<TValue>(byte[] data)
+        => new() { Data = data };
 }
 
 #if !NET5_0
@@ -18,16 +22,14 @@ public static class TypeDecoratingMemoryPackSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class TypeDecoratingMemoryPackSerialized<T> : ByteSerialized<T>
 {
-    [ThreadStatic] private static IByteSerializer<T>? _serializer;
-
-    public TypeDecoratingMemoryPackSerialized() { }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    [MemoryPackConstructor]
-    public TypeDecoratingMemoryPackSerialized(byte[] data)
-        : base(data) { }
+    private static IByteSerializer<T>? _serializer;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override IByteSerializer<T> GetSerializer()
-        => _serializer ??= new TypeDecoratingByteSerializer(MemoryPackByteSerializer.Default).ToTyped<T>();
+        => _serializer ??= MemoryPackByteSerializer.DefaultTypeDecorating.ToTyped<T>();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator TypeDecoratingMemoryPackSerialized<T>(T value) => new() { Value = value };
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator TypeDecoratingMemoryPackSerialized<T>(byte[] data) => new() { Data = data };
 }

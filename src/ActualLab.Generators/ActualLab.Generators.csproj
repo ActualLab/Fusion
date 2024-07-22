@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net7.0;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
@@ -9,9 +9,32 @@
     <Description>ActualLab.Generators - ActualLab.Fusion proxy type generator.</Description>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <EnableDebugOutput>false</EnableDebugOutput>
+    <DefineConstants Condition="$(EnableDebugOutput)">$(DefineConstants);DEBUG_OUTPUT</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Generator-specific settings -->
+  <PropertyGroup>
+    <AnalyzerLanguage>cs</AnalyzerLanguage>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <IncludeSymbols>false</IncludeSymbols>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <!-- Ensures consuming project doesn't get a reference to the source generator assembly -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+  </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <!-- Ensures the library will be packaged as a source generator with `dotnet pack` -->
+    <None Include="$(OutputPath)\netstandard2.0\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,11 +45,6 @@
     <Using Include="System.Collections.Immutable" />
     <Using Include="ActualLab.Generators.Internal" />
     <Using Include="ActualLab.Generators.Internal.DiagnosticsHelpers" Static="true" />
-  </ItemGroup>
-
-  <!-- This ensures the library will be packaged as a source generator when we use `dotnet pack` -->
-  <ItemGroup>
-    <None Include="$(OutputPath)\netstandard2.0\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
 </Project>

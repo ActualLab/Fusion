@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ActualLab.Generators;
 
 namespace ActualLab.Fusion.Tests.Services;
 
@@ -14,24 +15,29 @@ public interface ICounterService : IComputeService
     Task SetOffset(int offset, CancellationToken cancellationToken = default);
 }
 
-public class CounterService : ICounterService
+public class CounterService(StateFactory stateFactory) : ICounterService
 {
+    private readonly MutableState<int> _offset = stateFactory.NewMutable<int>();
     private readonly ConcurrentDictionary<string, int> _counters = new(StringComparer.Ordinal);
-    private readonly IMutableState<int> _offset;
-
-    public CounterService(IMutableState<int> offset)
-        // ReSharper disable once ConvertToPrimaryConstructor
-        => _offset = offset;
 
     public virtual async Task<int> Get(string key, CancellationToken cancellationToken = default)
     {
-        if (key.Contains("wait"))
-            await Task.Delay(500, cancellationToken).ConfigureAwait(false);
+        if (key.IndexOf("cancel", StringComparison.Ordinal) is var cancelIndex and >= 0) {
+            if (!int.TryParse(key[(cancelIndex + 6)..], out var chance))
+                chance = 100;
+            if (RandomShared.NextDouble() * 100 < chance)
+                throw new OperationCanceledException();
+        }
+        if (key.IndexOf("wait", StringComparison.Ordinal) is var waitIndex and >= 0) {
+            if (!int.TryParse(key[(waitIndex + 4)..], out var duration))
+                duration = 500;
+            await Task.Delay(duration, cancellationToken).ConfigureAwait(false);
+        }
         if (key.Contains("fail"))
             throw new ArgumentOutOfRangeException(nameof(key));
 
-        var offset = await _offset.Use(cancellationToken).ConfigureAwait(false);
-        return offset + (_counters.TryGetValue(key, out var value) ? value : 0);
+        var offset1 = await _offset.Use(cancellationToken).ConfigureAwait(false);
+        return offset1 + (_counters.TryGetValue(key, out var value) ? value : 0);
     }
 
     public virtual async Task<int> GetFirstNonZero(string key1, string key2, CancellationToken cancellationToken = default)
@@ -50,7 +56,7 @@ public class CounterService : ICounterService
     {
         _counters[key] = value;
 
-        using (Computed.Invalidate())
+        using (Invalidation.Begin())
             _ = Get(key, default).AssertCompleted();
 
         return Task.CompletedTask;
@@ -60,15 +66,15 @@ public class CounterService : ICounterService
     {
         _counters.AddOrUpdate(key, k => 1, (k, v) => v + 1);
 
-        using (Computed.Invalidate())
+        using (Invalidation.Begin())
             _ = Get(key, default).AssertCompleted();
 
         return Task.CompletedTask;
     }
 
-    public Task SetOffset(int offset, CancellationToken cancellationToken = default)
+    public Task SetOffset(int offset1, CancellationToken cancellationToken = default)
     {
-        _offset.Set(offset);
+        _offset.Set(offset1);
         return Task.CompletedTask;
     }
 }

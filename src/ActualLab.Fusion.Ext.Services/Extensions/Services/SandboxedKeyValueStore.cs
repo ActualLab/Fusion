@@ -1,12 +1,12 @@
 using System.Globalization;
 using ActualLab.Fusion.Authentication;
-using ActualLab.Multitenancy;
+using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Extensions.Internal;
 
 namespace ActualLab.Fusion.Extensions.Services;
 
-public partial class SandboxedKeyValueStore(
-        SandboxedKeyValueStore.Options settings,
+public partial class SandboxedKeyValueStore<TContext>(
+        SandboxedKeyValueStore<TContext>.Options settings,
         IServiceProvider services
         ) : ISandboxedKeyValueStore
 {
@@ -18,20 +18,21 @@ public partial class SandboxedKeyValueStore(
         public TimeSpan? SessionKeyExpirationTime { get; set; } = TimeSpan.FromDays(30);
         public string UserKeyPrefixFormat { get; set; } = "@user/{0}";
         public TimeSpan? UserKeyExpirationTime { get; set; } = null;
-        public IMomentClock? Clock { get; set; } = null;
+        public MomentClock? Clock { get; set; } = null;
     }
 
     protected Options Settings { get; } = settings;
     protected IKeyValueStore Store { get; } = services.GetRequiredService<IKeyValueStore>();
     protected IAuth Auth { get; } = services.GetRequiredService<IAuth>();
-    protected ITenantResolver TenantResolver { get; } = services.GetRequiredService<ITenantResolver>();
-    protected IMomentClock Clock { get; } = settings.Clock ?? services.Clocks().SystemClock;
+    protected IDbShardResolver<TContext> ShardResolver { get; } = services.GetRequiredService<IDbShardResolver<TContext>>();
+    protected MomentClock Clock { get; } = settings.Clock ?? services.Clocks().SystemClock;
 
     // Commands
 
     public virtual async Task Set(SandboxedKeyValueStore_Set command, CancellationToken cancellationToken = default)
     {
-        if (Computed.IsInvalidating()) return;
+        if (Invalidation.IsActive)
+            return;
 
         var keyChecker = await GetKeyChecker(command.Session, cancellationToken).ConfigureAwait(false);
         var items = command.Items;
@@ -43,23 +44,22 @@ public partial class SandboxedKeyValueStore(
             newItems[i] = (item.Key, item.Value, expiresAt);
         }
 
-        var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
-        await Store.Set(tenant.Id, newItems, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve(command);
+        await Store.Set(shard, newItems, cancellationToken).ConfigureAwait(false);
     }
 
     public virtual async Task Remove(SandboxedKeyValueStore_Remove command, CancellationToken cancellationToken = default)
     {
-        if (Computed.IsInvalidating()) return;
+        if (Invalidation.IsActive)
+            return;
 
         var keyChecker = await GetKeyChecker(command.Session, cancellationToken).ConfigureAwait(false);
         var keys = command.Keys;
         foreach (var t in keys)
             keyChecker.CheckKey(t);
 
-        var context = CommandContext.GetCurrent();
-        var tenant = await TenantResolver.Resolve(command, context, cancellationToken).ConfigureAwait(false);
-        await Store.Remove(tenant, keys, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve(command);
+        await Store.Remove(shard, keys, cancellationToken).ConfigureAwait(false);
     }
 
     // Compute methods
@@ -69,8 +69,8 @@ public partial class SandboxedKeyValueStore(
         var keyChecker = await GetKeyChecker(session, cancellationToken).ConfigureAwait(false);
         keyChecker.CheckKey(key);
 
-        var tenant = await TenantResolver.Resolve(session, this, cancellationToken).ConfigureAwait(false);
-        return await Store.Get(tenant.Id, key, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve(session);
+        return await Store.Get(shard, key, cancellationToken).ConfigureAwait(false);
     }
 
     public virtual async Task<int> Count(Session session, string prefix, CancellationToken cancellationToken = default)
@@ -78,8 +78,8 @@ public partial class SandboxedKeyValueStore(
         var keyChecker = await GetKeyChecker(session, cancellationToken).ConfigureAwait(false);
         keyChecker.CheckKeyPrefix(prefix);
 
-        var tenant = await TenantResolver.Resolve(session, this, cancellationToken).ConfigureAwait(false);
-        return await Store.Count(tenant.Id, prefix, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve(session);
+        return await Store.Count(shard, prefix, cancellationToken).ConfigureAwait(false);
     }
 
     public virtual async Task<string[]> ListKeySuffixes(
@@ -89,8 +89,8 @@ public partial class SandboxedKeyValueStore(
         var keyChecker = await GetKeyChecker(session, cancellationToken).ConfigureAwait(false);
         keyChecker.CheckKeyPrefix(prefix);
 
-        var tenant = await TenantResolver.Resolve(session, this, cancellationToken).ConfigureAwait(false);
-        return await Store.ListKeySuffixes(tenant.Id, prefix, pageRef, sortDirection, cancellationToken).ConfigureAwait(false);
+        var shard = ShardResolver.Resolve(session);
+        return await Store.ListKeySuffixes(shard, prefix, pageRef, sortDirection, cancellationToken).ConfigureAwait(false);
     }
 
     [ComputeMethod]

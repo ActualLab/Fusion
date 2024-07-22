@@ -1,35 +1,30 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Interception.Interceptors;
-using ActualLab.Internal;
+using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public abstract class RpcInterceptorBase(
-    RpcInterceptorBase.Options settings,
-    IServiceProvider services
-    ) : InterceptorBase(settings, services)
+#if !NET5_0
+[RequiresUnreferencedCode(UnreferencedCode.Rpc)]
+#endif
+public abstract class RpcInterceptorBase : Interceptor
 {
-    public new record Options : InterceptorBase.Options;
+    public new record Options : Interceptor.Options;
 
-    private RpcHub? _rpcHub;
+    public readonly RpcHub Hub;
+    public readonly RpcServiceDef ServiceDef;
 
-    public RpcHub Hub => _rpcHub ??= Services.RpcHub();
-    public RpcServiceDef ServiceDef { get; private set; } = null!;
-
-    public void Setup(RpcServiceDef serviceDef)
+    // ReSharper disable once ConvertToPrimaryConstructor
+    protected RpcInterceptorBase(Options settings, IServiceProvider services, RpcServiceDef serviceDef)
+        : base(settings, services)
     {
-        if (ServiceDef != null)
-            throw Errors.AlreadyInitialized(nameof(ServiceDef));
-
+        Hub = services.RpcHub();
         ServiceDef = serviceDef;
     }
 
-    // We don't need to decorate this method with any dynamic access attributes
-    protected override MethodDef? CreateMethodDef(MethodInfo method, Invocation initialInvocation)
-        => ServiceDef.Methods.FirstOrDefault(m => m.Method == method);
+    public override MethodDef? GetMethodDef(MethodInfo method, Type proxyType)
+        => ServiceDef.GetOrFindMethod(method);
 
-    protected override void ValidateTypeInternal(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
-    { }
+    protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
+        => ServiceDef.GetOrFindMethod(method);
 }

@@ -4,10 +4,8 @@ namespace ActualLab.Async;
 
 #pragma warning disable CA2012
 
-public static class ValueTaskExt
+public static partial class ValueTaskExt
 {
-    public static readonly ValueTask NeverEndingTask = TaskExt.NeverEndingTask.ToValueTask();
-    public static readonly ValueTask<Unit> NeverEndingUnitTask = TaskExt.NeverEndingUnitTask.ToValueTask();
     public static readonly ValueTask CompletedTask = Task.CompletedTask.ToValueTask();
     public static readonly ValueTask<bool> TrueTask = FromResult(true);
     public static readonly ValueTask<bool> FalseTask = FromResult(false);
@@ -50,6 +48,19 @@ public static class ValueTaskExt
         }
         catch (Exception e) {
             return new Result<T>(default!, e);
+        }
+    }
+
+    // ToUnitTask
+
+    public static Task<Unit> ToUnitTask(this ValueTask source)
+    {
+        return source.IsCompletedSuccessfully ? TaskExt.UnitTask : ConvertAsync(source);
+
+        static async Task<Unit> ConvertAsync(ValueTask source)
+        {
+            await source.ConfigureAwait(false);
+            return default;
         }
     }
 

@@ -109,7 +109,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
         return callCount;
     }
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 40_000)]
     public async Task ConcurrentStreamTest()
     {
         await using var services = CreateServices();

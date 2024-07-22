@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
-using ActualLab.Interception.Interceptors;
+using ActualLab.Interception;
 
 namespace ActualLab.CommandR.Interception;
 
@@ -8,8 +8,8 @@ public sealed class CommandHandlerMethodDef : MethodDef
 {
     public CommandHandlerMethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
-        MethodInfo method)
-        : base(type, method)
+        MethodInfo method
+        ) : base(type, method)
     {
 #pragma warning disable IL2026, IL2072
         var commandHandler = MethodCommandHandler.TryNew(method.ReflectedType!, method);

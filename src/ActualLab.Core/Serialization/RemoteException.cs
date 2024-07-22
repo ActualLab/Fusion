@@ -1,3 +1,5 @@
+using ActualLab.Resilience;
+
 namespace ActualLab.Serialization;
 
 #pragma warning disable SYSLIB0051
@@ -22,5 +24,7 @@ public class RemoteException : Exception, ITransientException
         : base(message, innerException)
         => ExceptionInfo = exceptionInfo;
 
-    protected RemoteException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    [Obsolete("Obsolete")]
+    protected RemoteException(SerializationInfo info, StreamingContext context)
+        : base(info, context) { }
 }

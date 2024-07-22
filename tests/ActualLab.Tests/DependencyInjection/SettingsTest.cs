@@ -52,7 +52,6 @@ public class SettingsTest
         z.Value.Should().Be("3");
 
         Assert.Throws<ValidationException>(() => services.GetRequiredService<FSettings>());
-
         Assert.Throws<ValidationException>(() => services.GetRequiredService<NoSettings>());
     }
 

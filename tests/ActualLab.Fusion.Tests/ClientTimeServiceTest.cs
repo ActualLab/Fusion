@@ -31,7 +31,7 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
         }
         (DateTime.Now - cTime.Value).Should().BeLessThan(epsilon);
 
-        await TestExt.WhenMet(
+        await TestExt.When(
             () => cTime.IsConsistent().Should().BeFalse(),
             TimeSpan.FromSeconds(5));
         var time = await cTime.Use();
@@ -43,7 +43,7 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
     {
         var epsilon = GetEpsilon();
         if (TestRunnerInfo.IsBuildAgent())
-            epsilon = epsilon.Multiply(2);
+            epsilon = epsilon.MultiplyBy(2);
 
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<ITimeService>();
@@ -51,7 +51,23 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
         for (int i = 0; i < 20; i++) {
             var time = await service.GetTime();
             (DateTime.Now - time).Should().BeLessThan(epsilon);
+            time = await service.GetTimeAsValueTask();
+            (DateTime.Now - time).Should().BeLessThan(epsilon);
             await Task.Delay(TimeSpan.FromSeconds(0.1));
+        }
+    }
+
+    [Fact]
+    public async Task TestInvalidation()
+    {
+        await using var serving = await WebHost.Serve();
+        var service = ClientServices.GetRequiredService<ITimeService>();
+
+        using (Invalidation.Begin()) {
+            var time = await service.GetTime();
+            time.Should().Be(default);
+            time = await service.GetTimeAsValueTask();
+            time.Should().Be(default);
         }
     }
 

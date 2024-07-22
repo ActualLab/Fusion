@@ -10,29 +10,29 @@ public class SessionBoundRpcConnectionFactory
     public string SessionParameterName { get; init; } = "session";
 
     public Task<RpcConnection> Invoke(
-        RpcServerPeer peer, Channel<RpcMessage> channel, ImmutableOptionSet options,
+        RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties,
         CancellationToken cancellationToken)
     {
-        if (!options.TryGet<HttpContext>(out var httpContext))
-            return RpcConnectionTask(channel, options);
+        if (!properties.TryGet<HttpContext>(out var httpContext))
+            return CreateRpcConnectionAsync(channel, properties);
 
         var query = httpContext.Request.Query;
         var sessionId = query[SessionParameterName].SingleOrDefault() ?? "";
-        if (!sessionId.IsNullOrEmpty() && new Session(sessionId) is { } session1 && session1.IsValid())
-            return SessionBoundRpcConnectionTask(channel, options, session1);
+        if (!sessionId.IsNullOrEmpty() && new Session(sessionId) is var session1 && session1.IsValid())
+            return CreateSessionBoundRpcConnectionAsync(channel, properties, session1);
 
         var sessionMiddleware = httpContext.RequestServices.GetService<SessionMiddleware>();
         if (sessionMiddleware?.GetSession(httpContext) is { } session2 && session2.IsValid())
-            return SessionBoundRpcConnectionTask(channel, options, session2);
+            return CreateSessionBoundRpcConnectionAsync(channel, properties, session2);
 
-        return RpcConnectionTask(channel, options);
+        return CreateRpcConnectionAsync(channel, properties);
     }
 
-    protected static Task<RpcConnection> SessionBoundRpcConnectionTask(
-        Channel<RpcMessage> channel, ImmutableOptionSet options, Session session)
-        => Task.FromResult<RpcConnection>(new SessionBoundRpcConnection(channel, options, session));
+    protected static Task<RpcConnection> CreateSessionBoundRpcConnectionAsync(
+        Channel<RpcMessage> channel, PropertyBag properties, Session session)
+        => Task.FromResult<RpcConnection>(new SessionBoundRpcConnection(channel, properties, session));
 
-    protected static Task<RpcConnection> RpcConnectionTask(
-        Channel<RpcMessage> channel, ImmutableOptionSet options)
-        => Task.FromResult(new RpcConnection(channel, options));
+    protected static Task<RpcConnection> CreateRpcConnectionAsync(
+        Channel<RpcMessage> channel, PropertyBag properties)
+        => Task.FromResult(new RpcConnection(channel, properties));
 }

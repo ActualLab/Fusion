@@ -10,22 +10,45 @@ public static partial class TaskExt
         typeof(TaskExt).GetMethod(nameof(FromTypedTaskInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
     private static readonly ConcurrentDictionary<Type, Func<Task, IResult>> ToTypedResultCache = new();
 
-    public static readonly Task NeverEndingTask;
-    public static readonly Task<Unit> NeverEndingUnitTask;
     public static readonly Task<Unit> UnitTask = Task.FromResult(Unit.Default);
     public static readonly Task<bool> TrueTask = Task.FromResult(true);
     public static readonly Task<bool> FalseTask = Task.FromResult(false);
 
-    static TaskExt()
-    {
-        NeverEndingUnitTask = TaskCompletionSourceExt.New<Unit>().Task;
-        NeverEndingTask = NeverEndingUnitTask;
-    }
+    // NewNeverEndingUnreferenced
+
+    // The tasks these methods return aren't referenced,
+    // so unless whatever awaits them is referenced,
+    // it may simply evaporate on the next GC cycle.
+    //
+    // Earlier such tasks were stored in a static var, which is actually wrong:
+    // if one of them get N dependencies, all of these N dependencies will stay
+    // in RAM forever, since there is no way to "unsubscribe" an awaiter.
+    //
+    // So the best option here is to return a task that won't prevent
+    // GC from collecting the awaiter in case nothing else "holds" it -
+    // and assuming the task is really never ending, this is the right thing to do.
+    public static Task NewNeverEndingUnreferenced()
+        => TaskCompletionSourceExt.New<Unit>().Task;
+    public static Task<T> NewNeverEndingUnreferenced<T>()
+        => TaskCompletionSourceExt.New<T>().Task;
 
     // ToValueTask
 
     public static ValueTask<T> ToValueTask<T>(this Task<T> source) => new(source);
     public static ValueTask ToValueTask(this Task source) => new(source);
+
+    // ToUnitTask
+
+    public static Task<Unit> ToUnitTask(this Task source)
+    {
+        return source.IsCompletedSuccessfully() ? UnitTask : ConvertAsync(source);
+
+        static async Task<Unit> ConvertAsync(Task source)
+        {
+            await source.ConfigureAwait(false);
+            return default;
+        }
+    }
 
     // GetBaseException
 

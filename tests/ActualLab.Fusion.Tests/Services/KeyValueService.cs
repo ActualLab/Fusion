@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Reflection;
 
 namespace ActualLab.Fusion.Tests.Services;
@@ -62,23 +63,27 @@ public class KeyValueService<TValue> : IKeyValueService<TValue>
 
     public virtual Task SetCmd(KeyValueService_Set<TValue> cmd, CancellationToken cancellationToken = default)
     {
-        _values[cmd.Key] = cmd.Value;
-
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = TryGet(cmd.Key, default).AssertCompleted();
             _ = Get(cmd.Key, default).AssertCompleted();
+            return Task.CompletedTask;
         }
+
+        InMemoryOperationScope.Require();
+        _values[cmd.Key] = cmd.Value;
         return Task.CompletedTask;
     }
 
     public virtual Task RemoveCmd(KeyValueService_Remove cmd, CancellationToken cancellationToken = default)
     {
-        _values.TryRemove(cmd.Key, out _);
-
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             _ = TryGet(cmd.Key, default).AssertCompleted();
             _ = Get(cmd.Key, default).AssertCompleted();
+            return Task.CompletedTask;
         }
+
+        InMemoryOperationScope.Require();
+        _values.TryRemove(cmd.Key, out _);
         return Task.CompletedTask;
     }
 }

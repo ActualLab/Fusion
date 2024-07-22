@@ -1,5 +1,4 @@
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc;
 
@@ -13,8 +12,8 @@ public class RpcClientPeer : RpcPeer
 
     public AsyncState<Moment> ReconnectsAt => _reconnectAt;
 
-    public RpcClientPeer(RpcHub hub, RpcPeerRef @ref)
-        : base(hub, @ref)
+    public RpcClientPeer(RpcHub hub, RpcPeerRef @ref, VersionSet? versions = null)
+        : base(hub, @ref, versions)
     {
         ClientId = Id.ToBase64Url();
         ConnectionFactory = Hub.ClientConnectionFactory;
@@ -29,7 +28,7 @@ public class RpcClientPeer : RpcPeer
     {
         var delay = ReconnectDelayer.GetDelay(this, connectionState.TryIndex, connectionState.Error, cancellationToken);
         if (delay.IsLimitExceeded)
-            throw Errors.ConnectionUnrecoverable();
+            throw new RpcReconnectFailedException();
 
         SetReconnectsAt(delay.EndsAt);
         try {
