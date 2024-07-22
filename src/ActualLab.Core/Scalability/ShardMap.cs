@@ -55,7 +55,7 @@ public class ShardMap<TNode>
             remainingShardCount -= nodeShardCount;
             remainingNodeCount--;
         }
-        NodeIndexes = [..shards];
+        NodeIndexes = ImmutableArray.Create(shards);
     }
 
     public override string ToString()

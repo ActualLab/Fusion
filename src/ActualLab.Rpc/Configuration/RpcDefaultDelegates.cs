@@ -61,8 +61,14 @@ public static class RpcDefaultDelegates
 
     public static RpcHashProvider HashProvider { get; set; } =
         static data => {
+#if NET5_0_OR_GREATER
             var bytes = SHA256.HashData(data.Data.Span); // 32 bytes
             return Convert.ToBase64String(bytes[..18]); // 18 bytes -> 24 chars
+#else
+            using var sha256 = SHA256.Create();
+            var bytes = sha256.ComputeHash(data.Bytes); // 32 bytes
+            return Convert.ToBase64String(bytes.AsSpan(0, 18).ToArray()); // 18 bytes -> 24 chars
+#endif
         };
 
     public static RandomTimeSpan RerouteDelayerDelay { get; set; } = TimeSpan.FromMilliseconds(100).ToRandom(0.25);

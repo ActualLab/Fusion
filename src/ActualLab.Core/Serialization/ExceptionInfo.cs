@@ -70,7 +70,7 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 
     public bool Equals(ExceptionInfo other)
         => TypeRef.Equals(other.TypeRef)
-            && StringComparer.Ordinal.Equals(Message, other.Message);
+            && string.Equals(Message, other.Message, StringComparison.Ordinal);
     public override bool Equals(object? obj)
         => obj is ExceptionInfo other && Equals(other);
     public override int GetHashCode()
@@ -108,7 +108,7 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
             return null;
 
         var parameter = ctor.GetParameters().SingleOrDefault();
-        if (!StringComparer.Ordinal.Equals("message", parameter?.Name ?? ""))
+        if (!string.Equals("message", parameter?.Name ?? "", StringComparison.Ordinal))
             return null;
 
         return (Exception)type.CreateInstance(message);

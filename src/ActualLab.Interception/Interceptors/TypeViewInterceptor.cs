@@ -23,13 +23,13 @@ public class TypeViewInterceptor : Interceptor
 
         _createConvertingHandlerMethod = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateConvertingHandler)));
+            .Single(m => string.Equals(m.Name, nameof(CreateConvertingHandler), StringComparison.Ordinal));
         _createTaskConvertingHandlerMethod = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateTaskConvertingHandler)));
+            .Single(m => string.Equals(m.Name, nameof(CreateTaskConvertingHandler), StringComparison.Ordinal));
         _createValueTaskConvertingHandlerMethod = GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateValueTaskConvertingHandler)));
+            .Single(m => string.Equals(m.Name, nameof(CreateValueTaskConvertingHandler), StringComparison.Ordinal));
     }
 
     protected override Func<Invocation, object?>? CreateHandler<

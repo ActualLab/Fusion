@@ -29,10 +29,10 @@ public readonly partial record struct RpcCacheValue(
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool HashOrDataEquals(RpcCacheValue other)
-        => HashEquals(other) || DataEquals(other);
+        => HashEquals(other) || Data.DataEquals(other.Data);
 
     public bool HashEquals(RpcCacheValue other)
-        => HasHash && other.HasHash && StringComparer.Ordinal.Equals(Hash, other.Hash);
+        => !Hash.IsNullOrEmpty() && string.Equals(Hash, other.Hash, StringComparison.Ordinal);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool DataEquals(RpcCacheValue other)

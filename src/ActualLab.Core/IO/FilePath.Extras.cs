@@ -32,7 +32,7 @@ public readonly partial struct FilePath
         result = NonAlphaOrNumberRe.Replace(result, "_");
         result = TrailingUnderscoresRe.Replace(result, "");
 
-        var mustAddHash = alwaysHash || !StringComparer.Ordinal.Equals(result, key);
+        var mustAddHash = alwaysHash || !string.Equals(result, key, StringComparison.Ordinal);
         if (mustAddHash || result.Length > maxLength) {
             var hash = Convert.ToBase64String(BitConverter.GetBytes(key.GetDeterministicHashCode()));
             hash = NonAlphaOrNumberRe.Replace(hash, "_");

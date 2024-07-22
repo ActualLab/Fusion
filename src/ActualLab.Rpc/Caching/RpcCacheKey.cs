@@ -33,8 +33,8 @@ public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
     public bool Equals(RpcCacheKey? other)
         =>  !ReferenceEquals(other, null)
             && HashCode == other.HashCode
-            && StringComparer.Ordinal.Equals(Method.Value, other.Method.Value)
-            && StringComparer.Ordinal.Equals(Service.Value, other.Service.Value)
+            && string.Equals(Method.Value, other.Method.Value, StringComparison.Ordinal)
+            && string.Equals(Service.Value, other.Service.Value, StringComparison.Ordinal)
             && ArgumentData.DataEquals(other.ArgumentData);
 
     public override bool Equals(object? obj) => obj is RpcCacheKey other && Equals(other);

@@ -53,10 +53,11 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
             foreach (var entry in entries) {
                 var status = (string?)entry[Settings.StatusKey];
                 if (!status.IsNullOrEmpty()) {
-                    if (StringComparer.Ordinal.Equals(status, Settings.StartedStatus))
+                    if (string.Equals(status, Settings.StartedStatus, StringComparison.Ordinal))
                         continue;
-                    if (StringComparer.Ordinal.Equals(status, Settings.EndedStatus))
+                    if (string.Equals(status, Settings.EndedStatus, StringComparison.Ordinal))
                         yield break;
+
                     var errorInfo = Settings.ErrorSerializer.Read(status!);
                     throw errorInfo.ToException() ?? Errors.SourceStreamError();
                 }

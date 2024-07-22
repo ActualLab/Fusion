@@ -21,7 +21,7 @@ public abstract class Interceptor : IHasServices
 
     private static readonly MethodInfo CreateTypedHandlerMethod = typeof(Interceptor)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-        .Single(m => StringComparer.Ordinal.Equals(m.Name, nameof(CreateHandler)));
+        .Single(m => string.Equals(m.Name, nameof(CreateHandler), StringComparison.Ordinal));
     private static readonly ConcurrentDictionary<MethodInfo, Func<Invocation, object?>> SkippingHandlerCache = new();
 
     private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandlerUntyped;

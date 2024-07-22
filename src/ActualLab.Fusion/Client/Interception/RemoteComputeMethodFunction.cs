@@ -136,7 +136,7 @@ public class RemoteComputeMethodFunction<T>(
         // SendRpcCall uses an interceptor with AssumeConnected == false,
         // so we await for the connection here.
         var whenConnected = WhenConnectedChecked(input, peer, cancellationToken);
-        if (!whenConnected.IsCompletedSuccessfully) // Slow path
+        if (!whenConnected.IsCompletedSuccessfully()) // Slow path
             await whenConnected.ConfigureAwait(false);
 
         var cacheInfoCapture = cache != null
@@ -217,7 +217,7 @@ public class RemoteComputeMethodFunction<T>(
         // 0. Await for the connection
         // SendRpcCall uses an interceptor with AssumeConnected == false, so we have to do it here.
         var whenConnected = WhenConnectedChecked(input, peer);
-        if (!whenConnected.IsCompletedSuccessfully) { // Slow path
+        if (!whenConnected.IsCompletedSuccessfully()) { // Slow path
             try {
                 await whenConnected.ConfigureAwait(false);
             }
@@ -271,7 +271,7 @@ public class RemoteComputeMethodFunction<T>(
             return; // Since the call was bound to cachedComputed, it's properly cancelled already
 
         releaser.MarkLockedLocally();
-        if (cachedComputed.CacheEntry is { } oldCacheEntry && !cacheValue.IsNone && cacheValue.HashOrDataEquals(oldCacheEntry.Value)) {
+        if (!cacheValue.IsNone && cachedComputed.CacheEntry is { } oldCacheEntry && cacheValue.HashOrDataEquals(oldCacheEntry.Value)) {
             // Existing cached entry is still intact
             cachedComputed.SynchronizedSource.TrySetResult(default);
             return;
@@ -370,7 +370,7 @@ public class RemoteComputeMethodFunction<T>(
             }
 
             var resultTask = call.ResultTask;
-            if (resultTask.IsCompletedSuccessfully)
+            if (resultTask.IsCompletedSuccessfully())
                 return (resultTask.Result, call);
 
             var result = await resultTask.ConfigureAwait(false);

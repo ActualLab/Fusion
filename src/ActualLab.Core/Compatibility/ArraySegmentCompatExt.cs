@@ -5,6 +5,9 @@ namespace System;
 
 public static class ArraySegmentCompatExt
 {
+    public static ArraySegment<T> Empty<T>()
+        => Static<T>.Empty;
+
     public static ArraySegment<T> Slice<T>(this ArraySegment<T> arraySegment, int start)
     {
         if (start > arraySegment.Count)
@@ -32,6 +35,13 @@ public static class ArraySegmentCompatExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ToString(this ArraySegment<char> chars)
         => new(chars.Array!, chars.Offset, chars.Count);
+
+    // Nested types
+
+    private static class Static<T>
+    {
+        public static readonly ArraySegment<T> Empty = new ArraySegment<T>([]);
+    }
 }
 
 #endif

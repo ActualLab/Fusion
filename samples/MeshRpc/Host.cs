@@ -14,6 +14,7 @@ namespace Samples.MeshRpc;
 
 public sealed class Host : WorkerBase
 {
+    private static readonly IRemoteComputedCache SharedRemoteComputedCache;
     private static int _lastId;
 
     public Symbol Id { get; }
@@ -28,6 +29,17 @@ public sealed class Host : WorkerBase
 
     public static string GetUrl(int portSlot)
         => $"http://localhost:{22222 + portSlot}/";
+
+    static Host()
+    {
+        var sharedServices = new ServiceCollection()
+            .AddFusion()
+            .AddSharedRemoteComputedCache<InMemoryRemoteComputedCache, InMemoryRemoteComputedCache.Options>(
+                _ => InMemoryRemoteComputedCache.Options.Default)
+            .Services
+            .BuildServiceProvider();
+        SharedRemoteComputedCache = sharedServices.GetRequiredService<IRemoteComputedCache>();
+    }
 
     public Host(int portSlot)
     {
@@ -65,8 +77,7 @@ public sealed class Host : WorkerBase
         });
         services.AddSingleton<RpcCallRouter>(c => c.GetRequiredService<RpcHelpers>().RouteCall);
         if (UseRemoteComputedCache)
-            fusion.AddSharedRemoteComputedCache<InMemoryRemoteComputedCache, InMemoryRemoteComputedCache.Options>(
-                _ => InMemoryRemoteComputedCache.Options.Default);
+            services.AddSingleton(SharedRemoteComputedCache);
 
         // Actual services
         services.AddSingleton(_ => this);

@@ -80,13 +80,13 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             // except the Unregister call in the end.
             // We don't unregister the call here, coz
             // we'll need to await for invalidation
-            var cachedEntry = Context.CacheInfoCapture?.CacheEntry as RpcCacheEntry<TResult>;
-            if (cachedEntry == null) {
+            var cacheEntry = Context.CacheInfoCapture?.CacheEntry as RpcCacheEntry<TResult>;
+            if (cacheEntry == null) {
                 SetError(Rpc.Internal.Errors.MatchButNoCachedEntry(), null);
                 return;
             }
 
-            if (!ResultSource.TrySetResult(cachedEntry.Result)) {
+            if (!ResultSource.TrySetResult(cacheEntry.Result)) {
                 // Result was set earlier; let's check for non-peer set or version mismatch
                 if (resultVersion == null || !resultVersion.Equals(ResultVersion, StringComparison.Ordinal))
                     SetInvalidatedUnsafe(true);
@@ -96,7 +96,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             Complete();
             ResultVersion = resultVersion;
             if (context != null)
-                Context.CacheInfoCapture?.CaptureValue(context.Message);
+                Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
         }
     }
 

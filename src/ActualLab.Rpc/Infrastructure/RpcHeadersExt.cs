@@ -8,21 +8,16 @@ public static class RpcHeadersExt
     public static RpcHeader[] OrEmpty(this RpcHeader[]? headers)
         => headers ?? Empty;
 
-    public static bool TryGet(this RpcHeader[]? headers, string name, out RpcHeader header)
+    public static string? TryGet(this RpcHeader[]? headers, string name)
     {
-        if (headers == null || headers.Length == 0) {
-            header = default;
-            return false;
-        }
+        if (headers == null || headers.Length == 0)
+            return null;
 
         foreach (var h in headers)
-            if (StringComparer.Ordinal.Equals(h.Name, name)) {
-                header = h;
-                return true;
-            }
+            if (string.Equals(h.Name, name, StringComparison.Ordinal))
+                return h.Value;
 
-        header = default;
-        return false;
+        return null;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -34,7 +29,7 @@ public static class RpcHeadersExt
         if (headers == null || headers.Length == 0)
             return [header];
 
-        if (headers.TryGet(header.Name, out _))
+        if (headers.TryGet(header.Name) != null)
             return headers;
 
         var newHeaders = new RpcHeader[headers.Length + 1];

@@ -86,18 +86,15 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         bool allowPolymorphism,
         RpcHeader[]? headers = null)
     {
-        var inboundHeaders = inboundCall.Context.Message.Headers;
-        inboundHeaders.TryGet(RpcHeaderNames.Hash, out var inboundHashHeader);
         try {
             var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
             var call = context.PrepareCall(OkMethodDef, ArgumentList.New(result))!;
-            if (inboundHashHeader.IsNone)
+            var inboundHash = inboundCall.Context.Message.Headers.TryGet(RpcHeaderNames.Hash);
+            if (inboundHash == null)
                 return call.SendNoWait(allowPolymorphism);
 
-            var message = call.CreateMessage(call.Context.RelatedId, allowPolymorphism, "");
-            var isMatch = message.Headers.TryGet(RpcHeaderNames.Hash, out var outboundHashHeader)
-                && StringComparer.Ordinal.Equals(inboundHashHeader.Value, outboundHashHeader.Value);
-            return isMatch
+            var (message, hash) = call.CreateMessageWithHashHeader(call.Context.RelatedId, allowPolymorphism);
+            return string.Equals(hash, inboundHash, StringComparison.Ordinal)
                 ? Match(peer, inboundCall.Id, headers)
                 : call.SendNoWait(message);
         }

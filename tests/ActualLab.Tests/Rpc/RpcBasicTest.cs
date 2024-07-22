@@ -52,7 +52,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var peer = testConnection.ClientPeer;
 
         await peer.WhenConnected();
-        peer.WhenConnected().IsCompletedSuccessfully.Should().BeTrue();
+        peer.WhenConnected().IsCompletedSuccessfully().Should().BeTrue();
 
         testConnection.Disconnect();
         await peer.ConnectionState.WhenDisconnected();

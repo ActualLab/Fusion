@@ -111,7 +111,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         try {
             var cacheInfoCapture = Context.CacheInfoCapture;
             var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
-            message = CreateMessage(Id, MethodDef.AllowArgumentPolymorphism, hash);
+            message = CreateMessageWithHashHeader(Id, MethodDef.AllowArgumentPolymorphism, hash);
             cacheInfoCapture?.CaptureKey(Context, message);
         }
         catch (Exception error) {
@@ -127,16 +127,36 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public RpcMessage CreateMessage(long relatedId, bool allowPolymorphism, string? hash = null)
+    public RpcMessage CreateMessage(long relatedId, bool allowPolymorphism)
     {
         var arguments = Context.Arguments!;
         var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism);
-        var headers = Context.Headers;
-        if (!ReferenceEquals(hash, null)) { // Hash must be used
-            if (hash.Length == 0) // "" is a special value here requiring hash to be added
-                hash = Peer.HashProvider.Invoke(argumentData);
-            headers = headers.With(RpcHeaderNames.Hash, hash);
-        }
+        return new RpcMessage(
+            Context.CallTypeId, relatedId,
+            MethodDef.Service.Name, MethodDef.Name,
+            argumentData, Context.Headers);
+    }
+
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    public (RpcMessage Message, string Hash) CreateMessageWithHashHeader(long relatedId, bool allowPolymorphism)
+    {
+        var arguments = Context.Arguments!;
+        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism);
+        var hash = Peer.HashProvider.Invoke(argumentData);
+        var headers = Context.Headers.With(RpcHeaderNames.Hash, hash);
+        var message = new RpcMessage(
+            Context.CallTypeId, relatedId,
+            MethodDef.Service.Name, MethodDef.Name,
+            argumentData, headers);
+        return (message, hash);
+    }
+
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    public RpcMessage CreateMessageWithHashHeader(long relatedId, bool allowPolymorphism, string hash)
+    {
+        var arguments = Context.Arguments!;
+        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism);
+        var headers = Context.Headers.With(RpcHeaderNames.Hash, hash);
         return new RpcMessage(
             Context.CallTypeId, relatedId,
             MethodDef.Service.Name, MethodDef.Name,
@@ -274,16 +294,16 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
 
     public override void SetMatch(RpcInboundContext? context)
     {
-        var cachedEntry = Context.CacheInfoCapture?.CacheEntry as RpcCacheEntry<TResult>;
-        if (cachedEntry == null) {
+        var cacheEntry = Context.CacheInfoCapture?.CacheEntry as RpcCacheEntry<TResult>;
+        if (cacheEntry == null) {
             SetError(Rpc.Internal.Errors.MatchButNoCachedEntry(), null);
             return;
         }
 
-        if (ResultSource.TrySetResult(cachedEntry.Result)) {
+        if (ResultSource.TrySetResult(cacheEntry.Result)) {
             CompleteAndUnregister(notifyCancelled: false);
             if (context != null)
-                Context.CacheInfoCapture?.CaptureValue(cachedEntry.Value);
+                Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
         }
     }
 

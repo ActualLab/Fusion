@@ -51,7 +51,11 @@ public readonly struct HashRing<T>
     {
         count = count.Clamp(0, Count);
         if (count == 0)
+#if NETSTANDARD2_0
+            return ArraySegmentCompatExt.Empty<T>();
+#else
             return ArraySegment<T>.Empty;
+#endif
 
         offset = (offset + FindNodeIndex(hash)).PositiveModulo(Count);
         return new ArraySegment<T>(_doubleNodes, offset, count);

@@ -39,6 +39,6 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
         => new(Name, value);
 
     // Equality is based solely on header name
-    public bool Equals(RpcHeader other) => StringComparer.Ordinal.Equals(Name, other.Name);
+    public bool Equals(RpcHeader other) => string.Equals(Name, other.Name, StringComparison.Ordinal);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Name);
 }

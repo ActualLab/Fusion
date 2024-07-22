@@ -97,8 +97,8 @@ public class ServerAuthHelper : IHasServices
         var sessionInfo = await GetSessionInfo(session, cancellationToken).ConfigureAwait(false);
         var mustSetupSession =
             sessionInfo == null
-            || !StringComparer.Ordinal.Equals(sessionInfo.IPAddress, ipAddress)
-            || !StringComparer.Ordinal.Equals(sessionInfo.UserAgent, userAgent)
+            || !string.Equals(sessionInfo.IPAddress, ipAddress, StringComparison.Ordinal)
+            || !string.Equals(sessionInfo.UserAgent, userAgent, StringComparison.Ordinal)
             || sessionInfo.LastSeenAt + Settings.SessionInfoUpdatePeriod < Clocks.SystemClock.Now;
         if (mustSetupSession || sessionInfo == null)
             sessionInfo = await SetupSession(session, sessionInfo, ipAddress, userAgent, cancellationToken)
@@ -133,7 +133,8 @@ public class ServerAuthHelper : IHasServices
     public virtual bool IsCloseWindowRequest(HttpContext httpContext, out string closeWindowFlowName)
     {
         var request = httpContext.Request;
-        var isCloseWindowRequest = StringComparer.Ordinal.Equals(request.Path.Value, Settings.CloseWindowRequestPath);
+        var isCloseWindowRequest =
+            string.Equals(request.Path.Value, Settings.CloseWindowRequestPath, StringComparison.Ordinal);
         closeWindowFlowName = "";
         if (isCloseWindowRequest && request.Query.TryGetValue("flow", out var flows))
             closeWindowFlowName = flows.FirstOrDefault() ?? "";
