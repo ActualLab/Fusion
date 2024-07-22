@@ -111,7 +111,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         try {
             var cacheInfoCapture = Context.CacheInfoCapture;
             var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
-            message = CreateMessageWithHashHeader(Id, MethodDef.AllowArgumentPolymorphism, hash);
+            message = CreateMessage(Id, MethodDef.AllowArgumentPolymorphism, hash);
             cacheInfoCapture?.CaptureKey(Context, message);
         }
         catch (Exception error) {
@@ -127,14 +127,17 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public RpcMessage CreateMessage(long relatedId, bool allowPolymorphism)
+    public RpcMessage CreateMessage(long relatedId, bool allowPolymorphism, string? hash = null)
     {
         var arguments = Context.Arguments!;
         var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism);
+        var headers = Context.Headers;
+        if (hash != null)
+            headers = headers.With(RpcHeaderNames.Hash, hash);
         return new RpcMessage(
             Context.CallTypeId, relatedId,
             MethodDef.Service.Name, MethodDef.Name,
-            argumentData, Context.Headers);
+            argumentData, headers);
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
@@ -149,18 +152,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             MethodDef.Service.Name, MethodDef.Name,
             argumentData, headers);
         return (message, hash);
-    }
-
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public RpcMessage CreateMessageWithHashHeader(long relatedId, bool allowPolymorphism, string hash)
-    {
-        var arguments = Context.Arguments!;
-        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism);
-        var headers = Context.Headers.With(RpcHeaderNames.Hash, hash);
-        return new RpcMessage(
-            Context.CallTypeId, relatedId,
-            MethodDef.Service.Name, MethodDef.Name,
-            argumentData, headers);
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]

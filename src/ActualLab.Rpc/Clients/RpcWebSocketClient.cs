@@ -107,7 +107,7 @@ public class RpcWebSocketClient(
                     WebSocketOwner? o = null;
                     try {
                         o = Settings.WebSocketOwnerFactory.Invoke(this, clientPeer);
-                        await o.ConnectAsync(uri, connectToken).ConfigureAwait(false);
+                        await o.ConnectAsync(uri!, connectToken).ConfigureAwait(false);
                         return o;
                     }
                     catch when (o != null) {
