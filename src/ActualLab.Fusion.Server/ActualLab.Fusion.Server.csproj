@@ -1,13 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net7.0;net6.0;net5.0;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net8.0;net7.0;net6.0;net5.0;netcoreapp3.1</TargetFrameworks>
+    <TargetFramework Condition="!$(UseMultitargeting)">net8.0</TargetFramework>
     <PackageTags>actual_chat actual_lab actual_lab_fusion server</PackageTags>
     <Description>Server-side components of ActualLab.Fusion - <!--
     -->a new implementation of "computed observables" <!--
     -->designed to power distributed apps. Thread-safe, asynchronous, immutable,  <!--
     -->and ready to serve replicas of computed instances to remote clients.<!--
     --></Description>
+    <IsServerSideOnly>true</IsServerSideOnly>
   </PropertyGroup>
 
   <ItemGroup>

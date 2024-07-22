@@ -1,5 +1,3 @@
-using ActualLab.IO;
-
 namespace ActualLab.Internal;
 
 public static class Errors
@@ -72,6 +70,9 @@ public static class Errors
     public static Exception TaskIsFaultedButNoExceptionAvailable()
         => new InvalidOperationException("Task hasn't completed successfully but has no Exception.");
 
+    public static Exception AsyncStateIsFinal()
+        => new InvalidOperationException("AsyncState is expected to be non-final at this point, but it's final.");
+
     public static Exception PathIsRelative(string? paramName)
         => new ArgumentException("Path is relative.", paramName);
 
@@ -101,10 +102,16 @@ public static class Errors
 
     public static Exception AlreadyInvoked(string methodName)
         => new InvalidOperationException($"'{methodName}' can be invoked just once.");
+    public static Exception NotInvoked(string methodName)
+        => new InvalidOperationException($"'{methodName}' must be invoked first.");
     public static Exception AlreadyInitialized(string? propertyName = null)
         => new InvalidOperationException(propertyName == null
             ? "Already initialized."
             : $"Property {propertyName} is already initialized.");
+    public static Exception NotInitialized(string? propertyName = null)
+        => new InvalidOperationException(propertyName == null
+            ? "Not initialized."
+            : $"Property {propertyName} is not initialized.");
 
     public static Exception AlreadyReadOnly<TObject>()
         => new InvalidOperationException($"{typeof(TObject).GetName()} is already transitioned to read-only state.");
@@ -112,16 +119,9 @@ public static class Errors
         => new InvalidOperationException("The lock is already acquired by one of callers of the current method.");
     public static Exception AlreadyUsed()
         => new InvalidOperationException("The object was already used somewhere else.");
-    public static Exception AlreadyCompleted()
-        => new InvalidOperationException("The event source is already completed.");
-    public static Exception ThisValueCanBeSetJustOnce()
-        => new InvalidOperationException("This value can be set just once.");
+
     public static Exception NoDefaultConstructor(Type type)
         => new InvalidOperationException($"Type '{type}' doesn't have a default constructor.");
-    public static Exception NotInitialized(string? propertyName = null)
-        => new InvalidOperationException(propertyName == null
-            ? "Not initialized."
-            : $"Property {propertyName} is not initialized.");
     public static Exception NotSupported(string message)
         => new NotSupportedException(message);
 
@@ -129,15 +129,25 @@ public static class Errors
         => new InvalidOperationException("This batch item wasn't processed.");
 
     public static Exception InternalError(string message)
-#pragma warning disable CA2201
-        => new SystemException(message);
-#pragma warning restore CA2201
+        => new InternalError(message);
 
-    public static Exception GenericMatchForConcreteType(Type type, Type matchType)
-        => new InvalidOperationException($"Generic type '{matchType}' can't be a match for concrete type '{type}'.");
-    public static Exception ConcreteMatchForGenericType(Type type, Type matchType)
-        => new InvalidOperationException($"Concrete type '{matchType}' can't be a match for generic type '{type}'.");
+    public static Exception Constraint(string message)
+        => new InvalidOperationException(message);
+    public static Exception Constraint<TTarget>(string message)
+        => Constraint(typeof(TTarget), message);
+    public static Exception Constraint(Type target, string message)
+        => Constraint(target.GetName(), message);
+    public static Exception Constraint(string target, string message)
+        => Constraint($"Invalid {target}: {message}");
 
-    public static Exception TenantNotFound(Symbol tenantId)
-        => new KeyNotFoundException($"Tenant '{tenantId.Value}' doesn't exist.");
+    public static Exception Format(string message)
+        => new FormatException(message);
+    public static Exception Format<TTarget>(string? value = null)
+        => Format(typeof(TTarget), value);
+    public static Exception Format(Type target, string? value = null)
+        => Format(target.GetName(), value);
+    public static Exception Format(string target, string? value)
+#pragma warning disable IL2026 // We format string as JSON here, so no reflection needed
+        => Format($"Invalid {target} format: {(value == null ? "null" : JsonFormatter.Format(value))}");
+#pragma warning restore IL2026
 }

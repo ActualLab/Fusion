@@ -17,11 +17,14 @@ public class TestDbContext : DbContextBase
     public DbSet<Chat> Chats { get; protected set; } = null!;
 
     // ActualLab.Fusion.EntityFramework tables
-    public DbSet<DbOperation> Operations { get; protected set; } = null!;
     public DbSet<DbAuthUser> AuthUsers { get; protected set; } = null!;
     public DbSet<DbUserIdentity<long>> AuthUserIdentities { get; protected set; } = null!;
     public DbSet<DbAuthSessionInfo> AuthSessions { get; protected set; } = null!;
     public DbSet<DbKeyValue> KeyValues { get; protected set; } = null!;
+
+    // ActualLab.Fusion.EntityFramework.Operations tables
+    public DbSet<DbOperation> Operations { get; protected set; } = null!;
+    public DbSet<DbEvent> Events { get; protected set; } = null!;
 
     public TestDbContext(DbContextOptions options) : base(options)
         => this.EnableChangeTracking(false);

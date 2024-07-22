@@ -5,134 +5,55 @@ using ActualLab.Interception.Internal;
 
 namespace ActualLab.Interception;
 
+#pragma warning disable IL2026, IL2055, IL2072
+
 public static class Proxies
 {
     private static readonly ConcurrentDictionary<Type, Type?> Cache = new();
 
-    // New
-
-#pragma warning disable IL2072
-    public static TType New<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TType>
-        (Interceptor interceptor, object? proxyTarget = null)
-        where TType : class, IRequiresAsyncProxy
-    {
-        var proxy = (TType)GetProxyType(typeof(TType)).CreateInstance();
-        return interceptor.BindTo(proxy, proxyTarget);
-    }
-
-    public static TType New<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TType, T1>
-        (T1 arg1, Interceptor interceptor, object? proxyTarget = null)
-        where TType : class, IRequiresAsyncProxy
-    {
-        var proxy = (TType)GetProxyType(typeof(TType)).CreateInstance(arg1);
-        return interceptor.BindTo(proxy, proxyTarget);
-    }
-
-    public static TType New<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TType, T1, T2>
-        (T1 arg1, T2 arg2, Interceptor interceptor, object? proxyTarget = null)
-        where TType : class, IRequiresAsyncProxy
-    {
-        var proxy = (TType)GetProxyType(typeof(TType)).CreateInstance(arg1, arg2);
-        return interceptor.BindTo(proxy, proxyTarget);
-    }
-
-    public static TType New<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TType, T1, T2, T3>
-        (T1 arg1, T2 arg2, T3 arg3, Interceptor interceptor, object? proxyTarget = null)
-        where TType : class, IRequiresAsyncProxy
-    {
-        var proxy = (TType)GetProxyType(typeof(TType)).CreateInstance(arg1, arg2, arg3);
-        return interceptor.BindTo(proxy, proxyTarget);
-    }
-
-    public static TType New<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TType, T1, T2, T3, T4>
-        (T1 arg1, T2 arg2, T3 arg3, T4 arg4, Interceptor interceptor, object? proxyTarget = null)
-        where TType : class, IRequiresAsyncProxy
-    {
-        var proxy = (TType)GetProxyType(typeof(TType)).CreateInstance(arg1, arg2, arg3, arg4);
-        return interceptor.BindTo(proxy, proxyTarget);
-    }
-
     public static IProxy New(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
-        Interceptor interceptor, object? proxyTarget = null)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type baseType,
+        Interceptor interceptor, object? proxyTarget = null, bool initialize = true)
     {
-        var proxy = (IProxy)GetProxyType(type).CreateInstance();
-        return InterceptorExt.BindTo(interceptor, proxy, proxyTarget);
+        var proxyType = GetProxyType(baseType);
+        var proxy = (IProxy)proxyType.CreateInstance();
+        interceptor.BindTo(proxy, proxyTarget, initialize);
+        return proxy;
     }
-
-    public static IProxy New<T1>(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
-        T1 arg1, Interceptor interceptor, object? proxyTarget = null)
-    {
-        var proxy = (IProxy)GetProxyType(type).CreateInstance(arg1);
-        return InterceptorExt.BindTo(interceptor, proxy, proxyTarget);
-    }
-
-    public static IProxy New<T1, T2>(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
-        T1 arg1, T2 arg2, Interceptor interceptor, object? proxyTarget = null)
-    {
-        var proxy = (IProxy)GetProxyType(type).CreateInstance(arg1, arg2);
-        return InterceptorExt.BindTo(interceptor, proxy, proxyTarget);
-    }
-
-    public static IProxy New<T1, T2, T3>(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
-        T1 arg1, T2 arg2, T3 arg3, Interceptor interceptor, object? proxyTarget = null)
-    {
-        var proxy = (IProxy)GetProxyType(type).CreateInstance(arg1, arg2, arg3);
-        return InterceptorExt.BindTo(interceptor, proxy, proxyTarget);
-    }
-
-    public static IProxy New<T1, T2, T3, T4>(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
-        T1 arg1, T2 arg2, T3 arg3, T4 arg4, Interceptor interceptor, object? proxyTarget = null)
-    {
-        var proxy = (IProxy)GetProxyType(type).CreateInstance(arg1, arg2, arg3, arg4);
-        return InterceptorExt.BindTo(interceptor, proxy, proxyTarget);
-    }
-#pragma warning restore IL2072
 
     // GetProxyType
 
-#pragma warning disable IL2026, IL2055
-    public static Type GetProxyType<TType>()
-        where TType : class, IRequiresAsyncProxy
-        => GetProxyType(typeof(TType));
+    public static Type GetProxyType<TBaseType>()
+        where TBaseType : class, IRequiresAsyncProxy
+        => GetProxyType(typeof(TBaseType));
 
-    public static Type GetProxyType(Type type)
-        => TryGetProxyType(type) ?? throw Errors.NoProxyType(type);
+    public static Type GetProxyType(Type baseType)
+        => TryGetProxyType(baseType) ?? throw Errors.NoProxyType(baseType);
 
 #if NET5_0_OR_GREATER
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(InterfaceProxy))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ProxyHelper))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Interceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(InterceptorBase))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Interceptor))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TypeViewInterceptor))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TypedFactoryInterceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(InterceptorExt))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(MethodDef))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Invocation))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Result<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ResultBox<>))]
 #endif
-    public static Type? TryGetProxyType(Type type)
-        => Cache.GetOrAdd(type, static type1 => {
-            if (type1.IsConstructedGenericType) {
-                var genericType = TryGetProxyType(type1.GetGenericTypeDefinition());
-                return genericType?.MakeGenericType(type1.GenericTypeArguments);
+    public static Type? TryGetProxyType(Type baseType)
+        => Cache.GetOrAdd(baseType, static type => {
+            if (type.IsConstructedGenericType) {
+                var genericType = TryGetProxyType(type.GetGenericTypeDefinition());
+                return genericType?.MakeGenericType(type.GenericTypeArguments);
             }
 
-            var name = type1.Name;
+            var name = type.Name;
             var namePrefix = name;
             var nameSuffix = "";
-            if (type1.IsGenericTypeDefinition) {
+            if (type.IsGenericTypeDefinition) {
                 var backTrickIndex = name.IndexOf('`', StringComparison.Ordinal);
                 if (backTrickIndex < 0)
                     return null; // Weird case, shouldn't happen
@@ -141,12 +62,12 @@ public static class Proxies
                 nameSuffix = name[backTrickIndex..];
             }
             var proxyTypeName = ZString.Concat(
-                type1.Namespace,
-                ".ActualLabProxies.",
+                type.Namespace,
+                type.Namespace.IsNullOrEmpty() ? "" : ".",
+                "ActualLabProxies.",
                 namePrefix,
                 "Proxy",
                 nameSuffix);
-            return type1.Assembly.GetType(proxyTypeName);
+            return type.Assembly.GetType(proxyTypeName);
         });
-#pragma warning restore IL2026, IL2055
 }

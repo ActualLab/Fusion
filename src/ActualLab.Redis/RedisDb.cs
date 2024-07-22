@@ -8,19 +8,19 @@ public class RedisDb
 {
     public static string DefaultKeyDelimiter { get; set; } = ".";
 
-    public IConnectionMultiplexer Redis { get; }
+    public RedisConnector Connector { get; }
     public string KeyPrefix { get; }
     public string KeyDelimiter { get; }
-    public IDatabase Database { get; }
+    public RedisComponent<IDatabase> Database { get; }
+    public RedisComponent<ISubscriber> Subscriber { get; }
 
-    public RedisDb(IConnectionMultiplexer redis, string keyPrefix = "", string? keyDelimiter = null)
+    public RedisDb(RedisConnector connector, string keyPrefix = "", string? keyDelimiter = null)
     {
-        Redis = redis;
+        Connector = connector;
         KeyPrefix = keyPrefix;
         KeyDelimiter = keyDelimiter ?? DefaultKeyDelimiter;
-        Database = Redis.GetDatabase();
-        if (!KeyPrefix.IsNullOrEmpty())
-            Database = Database.WithKeyPrefix(ZString.Concat(KeyPrefix, KeyDelimiter));
+        Database = new RedisComponent<IDatabase>(connector, GetDatabase);
+        Subscriber = new RedisComponent<ISubscriber>(connector, m => m.GetSubscriber());
     }
 
     public override string ToString()
@@ -34,8 +34,21 @@ public class RedisDb
     public RedisDb WithKeyPrefix(string keyPrefix)
         => keyPrefix.IsNullOrEmpty()
             ? this
-            : new RedisDb(Redis, FullKey(keyPrefix), KeyDelimiter);
+            : new RedisDb(Connector, FullKey(keyPrefix), KeyDelimiter);
+
+    // Private methods
+
+    private IDatabase GetDatabase(IConnectionMultiplexer multiplexer)
+    {
+        var database = multiplexer.GetDatabase();
+        if (!KeyPrefix.IsNullOrEmpty())
+            database = database.WithKeyPrefix(ZString.Concat(KeyPrefix, KeyDelimiter));
+        return database;
+    }
 }
 
-public class RedisDb<TContext>(IConnectionMultiplexer redis, string keyPrefix = "", string? keyDelimiter = null)
-    : RedisDb(redis, keyPrefix, keyDelimiter);
+public class RedisDb<TContext>(
+    RedisConnector connector,
+    string keyPrefix = "",
+    string? keyDelimiter = null)
+    : RedisDb(connector, keyPrefix, keyDelimiter);

@@ -24,7 +24,7 @@ public class ProxyTypeGenerator
     private List<MemberDeclarationSyntax> Constructors { get; } = new();
     private List<MemberDeclarationSyntax> Methods { get; } = new();
     private Dictionary<ITypeSymbol, string> CachedInterceptFieldNames { get; } = new(SymbolEqualityComparer.Default);
-    private List<StatementSyntax> BindMethodStatements { get; } = new();
+    private List<StatementSyntax> PostSetInterceptorStatements { get; } = new();
 
     public string GeneratedCode { get; } = "";
 
@@ -97,7 +97,9 @@ public class ProxyTypeGenerator
             .NormalizeWhitespace();
         // WriteDebug?.Invoke(ProxyDef.ToString());
 
-        var proxyNamespaceRef = QualifiedName(NamespaceRef, IdentifierName(ProxyNamespaceSuffix));
+        var proxyNamespaceRef = (NameSyntax)(NamespaceRef.GetText().ToString().Length == 0
+            ? IdentifierName(ProxyNamespaceSuffix)
+            : QualifiedName(NamespaceRef, IdentifierName(ProxyNamespaceSuffix)));
         var proxyNamespaceDef = FileScopedNamespaceDeclaration(proxyNamespaceRef)
             .AddMembers(ProxyDef);
 
@@ -195,7 +197,7 @@ public class ProxyTypeGenerator
                     : InterceptGenericMethodName
                         .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(returnType)));
 
-                BindMethodStatements.Add(
+                PostSetInterceptorStatements.Add(
                     ExpressionStatement(
                         AssignmentExpression(
                             SyntaxKind.SimpleAssignmentExpression,
@@ -471,41 +473,23 @@ public class ProxyTypeGenerator
                     LiteralExpression(SyntaxKind.NullLiteralExpression)),
                 ThrowStatement(NoInterceptorMethodName)),
             ReturnStatement(InterceptorFieldName));
-
-        Properties.Add(
-            PropertyDeclaration(InterceptorTypeName, InterceptorPropertyName.Identifier)
-                .WithExplicitInterfaceSpecifier(ExplicitInterfaceSpecifier(ProxyInterfaceTypeName))
-                .WithAccessorList(
-                    AccessorList(
-                        SingletonList(
-                            AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
-                                .WithBody(interceptorGetterDef)))));
-
-        var bindMethodBody = Block(
-            IfStatement(
-                BinaryExpression(
-                    SyntaxKind.NotEqualsExpression,
-                    InterceptorFieldName,
-                    LiteralExpression(
-                        SyntaxKind.NullLiteralExpression)),
-                ThrowStatement(InterceptorIsAlreadyBoundMethodName)),
+        var interceptorSetterDef = Block(
             ExpressionStatement(
                 AssignmentExpression(
                     SyntaxKind.SimpleAssignmentExpression,
                     InterceptorFieldName,
                     BinaryExpression(
                         SyntaxKind.CoalesceExpression,
-                        InterceptorParameterName,
-                        ThrowExpression<ArgumentNullException>(InterceptorParameterName.Identifier.Text)))));
-        bindMethodBody = bindMethodBody.AddStatements(BindMethodStatements.ToArray());
+                        ValueParameterName,
+                        ThrowExpression<ArgumentNullException>(ValueParameterName.Identifier.Text)))));
+        interceptorSetterDef = interceptorSetterDef.AddStatements(PostSetInterceptorStatements.ToArray());
 
-        Methods.Add(
-            MethodDeclaration(PredefinedType(Token(SyntaxKind.VoidKeyword)), SetInterceptorMethodName.Identifier)
+        Properties.Add(
+            PropertyDeclaration(InterceptorTypeName, InterceptorPropertyName.Identifier)
                 .WithExplicitInterfaceSpecifier(ExplicitInterfaceSpecifier(ProxyInterfaceTypeName))
-                .WithParameterList(
-                    ParameterList(SingletonSeparatedList(
-                        Parameter(InterceptorParameterName.Identifier)
-                            .WithType(InterceptorTypeName))))
-                .WithBody(bindMethodBody));
+                .WithAccessorList(
+                    AccessorList(SyntaxList(
+                        AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithBody(interceptorGetterDef),
+                        AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithBody(interceptorSetterDef)))));
     }
 }

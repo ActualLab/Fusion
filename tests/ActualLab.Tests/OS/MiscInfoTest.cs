@@ -4,8 +4,6 @@ namespace ActualLab.Tests.OS;
 
 public class MiscInfoTest(ITestOutputHelper @out) : TestBase(@out)
 {
-    void WriteLine(string line) => Out.WriteLine(line);
-
     [Fact]
     public void OSInfoTest()
     {
@@ -43,4 +41,6 @@ public class MiscInfoTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
 #endif
+
+    private void WriteLine(string line) => Out.WriteLine(line);
 }

@@ -1,4 +1,5 @@
 using ActualLab.Generators;
+using ActualLab.Generators.Internal;
 using ActualLab.Rpc;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
@@ -12,10 +13,11 @@ public static class TestHelpers
 
     public static Task RandomDelay(double maxSeconds, CancellationToken cancellationToken = default)
     {
-        var seconds = ConcurrentRandomDoubleGenerator.Default.Next() * maxSeconds;
+        var seconds = RandomShared.NextDouble() * maxSeconds;
         return Task.Delay(TimeSpan.FromSeconds(seconds), cancellationToken);
     }
 
+    // ReSharper disable once InconsistentNaming
     public static void GCCollect()
     {
         for (var i = 0; i < 3; i++) {
@@ -45,13 +47,13 @@ public static class TestHelpers
     // Rpc
 
     public static Task AssertNoCalls(RpcPeer peer)
-        => TestExt.WhenMet(() => {
+        => TestExt.When(() => {
             peer.OutboundCalls.Count.Should().Be(0);
             peer.InboundCalls.Count.Should().Be(0);
         }, TimeSpan.FromSeconds(1));
 
     public static Task AssertNoObjects(RpcPeer peer)
-        => TestExt.WhenMet(() => {
+        => TestExt.When(() => {
             peer.RemoteObjects.Count.Should().Be(0);
             peer.SharedObjects.Count.Should().Be(0);
         }, TimeSpan.FromSeconds(1));

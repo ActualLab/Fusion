@@ -1,17 +1,15 @@
 using ActualLab.Interception;
-using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Tests.Services;
 
-public interface IBuggyService
+public interface IBuggyService : IComputeService, IRequiresFullProxy
 {
     void Test();
 }
 
-public interface IBuggyServiceClient : IBuggyService, IRpcService, IRequiresFullProxy
-{ }
+public interface IBuggyServiceClient : IBuggyService;
 
-public class BuggyService : IBuggyService, IComputeService
+public class BuggyService : IBuggyService
 {
-    public void Test() { }
+    public virtual void Test() { }
 }

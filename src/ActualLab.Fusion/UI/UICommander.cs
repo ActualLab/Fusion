@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Fusion.UI;
 
 public class UICommander(IServiceProvider services) : IHasServices
@@ -15,7 +13,7 @@ public class UICommander(IServiceProvider services) : IHasServices
     public IServiceProvider Services { get; } = services;
     public ICommander Commander => _commander ??= Services.Commander();
     public UIActionTracker UIActionTracker => _uiActionTracker ??= Services.GetRequiredService<UIActionTracker>();
-    public IMomentClock Clock => UIActionTracker.Clock;
+    public MomentClock Clock => UIActionTracker.Clock;
 
     public async Task<TResult> Call<TResult>(ICommand<TResult> command, CancellationToken cancellationToken = default)
     {

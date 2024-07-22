@@ -16,6 +16,7 @@ public abstract class RpcObjectTracker
         protected set {
             if (_peer != null)
                 throw Errors.AlreadyInitialized(nameof(Peer));
+
             _peer = value;
             Limits = _peer.Hub.Limits;
         }
@@ -29,6 +30,7 @@ public abstract class RpcObjectTracker
 
 public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 {
+    // ReSharper disable once InconsistentNaming
     public static GCHandlePool GCHandlePool { get; set; } = new(new GCHandlePool.Options() {
         Capacity = HardwareInfo.GetProcessorCountPo2Factor(16),
     });
@@ -97,10 +99,10 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public async Task Maintain(RpcPeerConnectionState connectionState, CancellationToken cancellationToken)
+    public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
     {
         try {
-            var remotePeerId = connectionState.Handshake!.RemotePeerId;
+            var remotePeerId = handshake.RemotePeerId;
             var reconnectTasks = new List<Task>();
             foreach (var (_, handle) in _objects)
                 if (handle.Target is IRpcObject obj) {
@@ -184,6 +186,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public IEnumerator<IRpcSharedObject> GetEnumerator()
+        // ReSharper disable once NotDisposedResourceIsReturned
         => _objects.Values.GetEnumerator();
 
     public void Register(IRpcSharedObject obj)
@@ -203,7 +206,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
         return _objects.TryRemove(obj.Id.LocalId, obj);
     }
 
-    public async Task Maintain(RpcPeerConnectionState connectionState, CancellationToken cancellationToken)
+    public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
     {
         _lastKeepAliveAt = CpuTimestamp.Now.Value;
         try {

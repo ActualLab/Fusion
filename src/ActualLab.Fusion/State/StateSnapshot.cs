@@ -5,8 +5,8 @@ namespace ActualLab.Fusion;
 public interface IStateSnapshot
 {
     IState State { get; }
-    IComputed Computed { get; }
-    IComputed LastNonErrorComputed { get; }
+    Computed Computed { get; }
+    Computed LastNonErrorComputed { get; }
     int UpdateCount { get; }
     int ErrorCount { get; }
     int RetryCount { get; }
@@ -38,8 +38,8 @@ public class StateSnapshot<T> : IStateSnapshot<T>
     public bool IsInitial => UpdateCount == 0;
 
     IState IStateSnapshot.State => State;
-    IComputed IStateSnapshot.Computed => Computed;
-    IComputed IStateSnapshot.LastNonErrorComputed => LastNonErrorComputed;
+    Computed IStateSnapshot.Computed => Computed;
+    Computed IStateSnapshot.LastNonErrorComputed => LastNonErrorComputed;
 
     public StateSnapshot(IState<T> state, Computed<T> computed)
     {

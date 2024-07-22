@@ -1,20 +1,14 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.EntityFramework.Internal;
-using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion.Authentication;
 
 [StructLayout(LayoutKind.Auto)]
-public readonly struct DbAuthServiceBuilder<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbSessionInfo,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUser,
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>
+public readonly struct DbAuthServiceBuilder<TDbContext, TDbSessionInfo, TDbUser, TDbUserId>
     where TDbContext : DbContext
     where TDbSessionInfo : DbSessionInfo<TDbUserId>, new()
     where TDbUser : DbUser<TDbUserId>, new()
@@ -24,7 +18,6 @@ public readonly struct DbAuthServiceBuilder<
     public DbContextBuilder<TDbContext> DbContext { get; }
     public IServiceCollection Services => Fusion.Services;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     internal DbAuthServiceBuilder(
         FusionBuilder fusion,
         Action<DbAuthServiceBuilder<TDbContext, TDbSessionInfo, TDbUser, TDbUserId>>? configure)
@@ -37,9 +30,9 @@ public readonly struct DbAuthServiceBuilder<
             return;
         }
 
-        // Operations framework
-        DbContext.AddOperations(operations => operations.TryAddIsolationLevelSelector(
-            _ => new DbAuthIsolationLevelSelector<TDbContext>()));
+        // Isolation level selector for IAuth commands
+        DbContext.AddOperations(operations =>
+            operations.AddIsolationLevelSelector(DbAuthIsolationLevelSelector.SelectIsolationLevel));
 
         // DbAuthService
         fusion.AddAuthService<DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserId>>();

@@ -1,6 +1,5 @@
 using ActualLab.Channels;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Testing;
 
@@ -89,7 +88,7 @@ public class RpcTestConnection
 
             if (!ReferenceEquals(_channels.Value, null))
                 _channels = _channels.SetNext(null);
-            _channels.SetFinal(new ConnectionUnrecoverableException());
+            _channels.SetFinal(new RpcReconnectFailedException());
         }
         _ = ClientPeer.Disconnect();
         _ = ServerPeer.Disconnect();
@@ -119,7 +118,8 @@ public class RpcTestConnection
 
             return channels;
         }
+
         // Impossible to get here, but we still need to return something, so...
-        throw Errors.ConnectionUnrecoverable();
+        throw new RpcReconnectFailedException();
     }
 }

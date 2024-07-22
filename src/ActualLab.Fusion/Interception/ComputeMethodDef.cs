@@ -1,19 +1,18 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Interception.Interceptors;
 
 namespace ActualLab.Fusion.Interception;
 
 public sealed class ComputeMethodDef : MethodDef
 {
-    public ComputedOptions ComputedOptions { get; init; } = ComputedOptions.Default;
+    public ComputedOptions ComputedOptions { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = ComputedOptions.Default;
     public readonly bool IsDisposable;
 
     public ComputeMethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]Type type,
         MethodInfo method,
-        ComputeServiceInterceptorBase interceptor)
-        : base(type, method)
+        ComputeServiceInterceptor interceptor
+        ) : base(type, method)
     {
         if (!IsAsyncMethod) {
             IsValid = false;
@@ -29,7 +28,4 @@ public sealed class ComputeMethodDef : MethodDef
         IsDisposable = typeof(IHasIsDisposed).IsAssignableFrom(type);
         ComputedOptions = computedOptions;
     }
-
-    public ComputeMethodInput CreateInput(IFunction function, Invocation invocation)
-        => new(function, this, invocation);
 }

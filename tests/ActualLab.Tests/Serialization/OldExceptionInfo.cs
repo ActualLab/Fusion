@@ -5,12 +5,13 @@ using ActualLab.Serialization.Internal;
 namespace ActualLab.Tests.Serialization;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
 {
-    private static readonly Type[] ExceptionCtorArgumentTypes1 = { typeof(string), typeof(Exception) };
-    private static readonly Type[] ExceptionCtorArgumentTypes2 = { typeof(string) };
+    private static readonly Type[] ExceptionCtorArgumentTypes1 = [typeof(string), typeof(Exception)];
+    private static readonly Type[] ExceptionCtorArgumentTypes2 = [typeof(string)];
 
-    public static readonly OldExceptionInfo None = default;
+    public static readonly OldExceptionInfo None;
     public static Func<OldExceptionInfo, Exception?> ToExceptionConverter { get; set; } = DefaultToExceptionConverter;
 
     private readonly string _message;
@@ -27,11 +28,18 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
     public bool HasWrappedTypeRef => !WrappedTypeRef.AssemblyQualifiedName.IsEmpty;
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public OldExceptionInfo(TypeRef typeRef, string? message, TypeRef wrappedTypeRef = default)
+    public OldExceptionInfo(TypeRef typeRef, string? message, TypeRef wrappedTypeRef)
     {
         TypeRef = typeRef;
         _message = message ?? "";
         WrappedTypeRef = wrappedTypeRef;
+    }
+
+    public OldExceptionInfo(TypeRef typeRef, string? message)
+    {
+        TypeRef = typeRef;
+        _message = message ?? "";
+        WrappedTypeRef = default;
     }
 
     public OldExceptionInfo(Exception? exception)
@@ -119,7 +127,7 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
             return null;
 
         var parameter = ctor.GetParameters().SingleOrDefault();
-        if (!StringComparer.Ordinal.Equals("message", parameter?.Name ?? ""))
+        if (!string.Equals("message", parameter?.Name ?? "", StringComparison.Ordinal))
             return null;
 
         return (Exception) type.CreateInstance(message);
@@ -130,7 +138,7 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
     public bool Equals(OldExceptionInfo other)
         => TypeRef.Equals(other.TypeRef)
             && WrappedTypeRef.Equals(other.WrappedTypeRef)
-            && StringComparer.Ordinal.Equals(Message, other.Message);
+            && string.Equals(Message, other.Message, StringComparison.Ordinal);
     public override bool Equals(object? obj)
         => obj is OldExceptionInfo other && Equals(other);
     public override int GetHashCode()

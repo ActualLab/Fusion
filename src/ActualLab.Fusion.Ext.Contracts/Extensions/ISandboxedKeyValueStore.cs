@@ -19,3 +19,17 @@ public interface ISandboxedKeyValueStore : IComputeService
         SortDirection sortDirection = SortDirection.Ascending,
         CancellationToken cancellationToken = default);
 }
+
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+// ReSharper disable once InconsistentNaming
+public partial record SandboxedKeyValueStore_Set(
+    [property: DataMember, MemoryPackOrder(0)] Session Session,
+    [property: DataMember, MemoryPackOrder(1)] (string Key, string Value, Moment? ExpiresAt)[] Items
+) : ISessionCommand<Unit>;
+
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+// ReSharper disable once InconsistentNaming
+public partial record SandboxedKeyValueStore_Remove(
+    [property: DataMember, MemoryPackOrder(0)] Session Session,
+    [property: DataMember, MemoryPackOrder(1)] string[] Keys
+) : ISessionCommand<Unit>;

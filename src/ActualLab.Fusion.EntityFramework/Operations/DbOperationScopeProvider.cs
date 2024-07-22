@@ -1,86 +1,63 @@
-using System.Diagnostics.CodeAnalysis;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.Operations.Reprocessing;
+using ActualLab.Resilience;
+using RetryLimitExceededException = Microsoft.EntityFrameworkCore.Storage.RetryLimitExceededException;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-public class DbOperationScopeProvider<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    (IServiceProvider services) : DbServiceBase<TDbContext>(services),
-    ICommandHandler<ICommand>
-    where TDbContext : DbContext
+public class DbOperationScopeProvider(IServiceProvider services)
 {
-    // ReSharper disable once StaticMemberInGenericType
-    protected static MemberInfo ExecutionStrategyShouldRetryOnMethod { get; } = typeof(ExecutionStrategy)
-        .GetMethod("ShouldRetryOn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    private ILogger? _log;
 
-    protected IOperationCompletionNotifier OperationCompletionNotifier { get; } =
-        services.GetRequiredService<IOperationCompletionNotifier>();
+    protected IServiceProvider Services { get; } = services;
+    protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = FusionEntityFrameworkCommandHandlerPriority.DbOperationScopeProvider)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
-        var isOperationRequired =
+        var isRequired =
             context.IsOutermost // Should be a top-level command
-            && command is not IMetaCommand // No operations for meta commands
-            && !Computed.IsInvalidating();
-        if (!isOperationRequired) {
+            && command is not ISystemCommand // No operations for system commands
+            && !Invalidation.IsActive;
+        if (!isRequired) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
         }
 
-        var tScope = typeof(DbOperationScope<TDbContext>);
-        if (context.Items[tScope] != null) // Safety check
-            throw ActualLab.Internal.Errors.InternalError($"'{tScope}' scope is already provided. Duplicate handler?");
-
-        var scope = context.Services.Activate<DbOperationScope<TDbContext>>();
-        await using var _ = scope.ConfigureAwait(false);
-
-        var operation = scope.Operation;
-        operation.Command = command;
-        context.Items.Set(scope);
-
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
-            if (!scope.IsClosed)
+            if (DbOperationScope.TryGet(context) is { IsCommitted: null } scope)
                 await scope.Commit(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception error) when (!error.IsCancellationOf(cancellationToken)) {
             if (error is RetryLimitExceededException { InnerException: { } innerError })
                 throw innerError; // Strip RetryLimitExceededException, coz it masks the real one after 0 retries
-
-            try {
-                var operationReprocessor = context.Items.Get<IOperationReprocessor>();
-                if (operationReprocessor == null)
-                    throw;
-
-                var allErrors = error.Flatten();
-                var transientError = allErrors.FirstOrDefault(scope.IsTransientFailure);
-                if (transientError == null)
-                    throw;
-
-                // It's a transient failure - let's tag it so that IOperationReprocessor retries on it
-                operationReprocessor.AddTransientFailure(transientError);
-
-                // But if retry still won't happen (too many retries?) - let's log error here
-                if (!operationReprocessor.WillRetry(allErrors))
-                    Log.LogError(error, "Operation failed: {Command}", command);
-                else
-                    Log.LogInformation("Transient failure on {Command}: {TransientError}",
-                        command, transientError.ToExceptionInfo());
+            if (DbOperationScope.TryGet(context) is not { } scope)
                 throw;
-            }
-            finally {
-                // 7. Ensure everything is rolled back
-                try {
-                    await scope.Rollback().ConfigureAwait(false);
-                }
-                catch {
-                    // Intended
-                }
-            }
+
+            var operationReprocessor = context.Items.Get<IOperationReprocessor>();
+            if (operationReprocessor == null)
+                throw;
+
+            var allErrors = error.Flatten();
+            var transientError = allErrors.FirstOrDefault(scope.IsTransientFailure);
+            if (transientError == null)
+                throw;
+
+            // It's a transient failure - let's tag it so that IOperationReprocessor retries on it
+            operationReprocessor.MarkTransient(transientError, Transiency.Transient);
+
+            // But if retry still won't happen (too many retries?) - let's log error here
+            if (!operationReprocessor.WillRetry(allErrors, out _))
+                Log.LogError(error, "Operation failed: {Command}", command);
+            else
+                Log.LogInformation("Transient failure on {Command}: {TransientError}",
+                    command, transientError.ToExceptionInfo());
+            throw;
+        }
+        finally {
+            if (DbOperationScope.TryGet(context) is { } scope)
+                await scope.DisposeAsync().ConfigureAwait(false); // Triggers rollback
         }
     }
 }

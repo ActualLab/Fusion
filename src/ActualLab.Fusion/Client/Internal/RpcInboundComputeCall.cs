@@ -2,15 +2,17 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Client.Internal;
 
-public interface IRpcInboundComputeCall
-{ }
+public interface IRpcInboundComputeCall;
 
 public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInboundComputeCall
 {
     private CancellationTokenSource? _stopCompletionSource;
+
+    protected override string DebugTypeName => "<=";
 
     public Computed<TResult>? Computed { get; protected set; }
 
@@ -30,7 +32,8 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
             return await base.InvokeTarget().ConfigureAwait(false);
         }
         finally {
-            if (ccs.Context.TryGetCaptured<TResult>(out var computed)) {
+            var computed = ccs.Context.TryGetCaptured<TResult>();
+            if (computed != null) {
                 lock (Lock)
                     Computed ??= computed;
             }
@@ -58,10 +61,9 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
 
             // 3. Retrieve Computed + update ResultHeaders
             computed = Computed;
-            if (computed != null) {
-                var versionHeader = FusionRpcHeaders.Version with { Value = computed.Version.ToString() };
-                ResultHeaders = ResultHeaders.TryAdd(versionHeader);
-            }
+            if (computed != null)
+                // '@' is required to make it compatible with pre-v7.2 versions
+                ResultHeaders = ResultHeaders.With(FusionRpcHeaderNames.Version, computed.Version.FormatVersion('@'));
         }
 
         // 4. Actually run completion

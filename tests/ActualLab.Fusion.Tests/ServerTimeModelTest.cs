@@ -8,14 +8,14 @@ public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
     public async Task ServerTimeModelTest1()
     {
         await using var serving = await WebHost.Serve();
-        using var stm = ClientServices.GetRequiredService<IComputedState<ServerTimeModel1>>();
+        using var stm = ClientServices.GetRequiredService<ComputedState<ServerTimeModel1>>();
 
         var c = stm.Computed;
         c.IsConsistent().Should().BeFalse();
         c.Value.Time.Should().Be(default);
 
         Debug.WriteLine("0");
-        await Update(stm);
+        await stm.Update();
         Debug.WriteLine("1");
         await c.Update();
         Debug.WriteLine("2");
@@ -27,7 +27,7 @@ public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
         Debug.WriteLine("3");
         await Task.Delay(TimeSpan.FromSeconds(3));
         Debug.WriteLine("4");
-        await Update(stm);
+        await stm.Update();
         Debug.WriteLine("5");
         await Task.Delay(300); // Let's just wait for the updates to happen
         Debug.WriteLine("6");
@@ -44,14 +44,14 @@ public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
     public async Task ServerTimeModelTest2()
     {
         await using var serving = await WebHost.Serve();
-        using var stm = ClientServices.GetRequiredService<IComputedState<ServerTimeModel2>>();
+        using var stm = ClientServices.GetRequiredService<ComputedState<ServerTimeModel2>>();
 
         var c = stm.Computed;
         c.IsConsistent().Should().BeFalse();
         c.Value.Time.Should().Be(default);
 
         Debug.WriteLine("0");
-        await Update(stm);
+        await stm.Update();
         Debug.WriteLine("1");
         await c.Update();
         Debug.WriteLine("2");
@@ -63,7 +63,7 @@ public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
         Debug.WriteLine("3");
         await Task.Delay(TimeSpan.FromSeconds(3));
         Debug.WriteLine("4");
-        await Update(stm);
+        await stm.Update();
         Debug.WriteLine("5");
         await Task.Delay(300); // Let's just wait for the updates to happen
         Debug.WriteLine("6");
@@ -75,10 +75,4 @@ public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
         Debug.WriteLine(delta.TotalSeconds);
         delta.Should().BeLessThan(TimeSpan.FromSeconds(1));
     }
-
-    // Private methods
-
-    private static ValueTask<IComputedState<T>> Update<T>(
-        IComputedState<T> state, CancellationToken cancellationToken = default)
-        => state.Update(cancellationToken);
 }

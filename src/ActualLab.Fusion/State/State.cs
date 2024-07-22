@@ -2,9 +2,11 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
-using ActualLab.Versioning;
 
 namespace ActualLab.Fusion;
+
+#pragma warning disable CA1721
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
 
 public interface IState : IResult, IHasServices
 {
@@ -16,7 +18,7 @@ public interface IState : IResult, IHasServices
     }
 
     IStateSnapshot Snapshot { get; }
-    IComputed Computed { get; }
+    Computed Computed { get; }
     object? LastNonErrorValue { get; }
 
     event Action<IState, StateEventKind>? Invalidated;
@@ -38,7 +40,7 @@ public interface IState<T> : IState, IResult<T>
 public abstract class State<T> : ComputedInput,
     IState<T>,
     IEquatable<State<T>>,
-    IFunction<T>
+    IComputeFunction<T>
 {
     public record Options : IState.IOptions
     {
@@ -59,7 +61,6 @@ public abstract class State<T> : ComputedInput,
     private string? _category;
     private ILogger? _log;
 
-    protected VersionGenerator<LTag> VersionGenerator { get; set; } = null!;
     protected ComputedOptions ComputedOptions { get; private set; } = null!;
     protected AsyncLock AsyncLock { get; } = new(LockReentryMode.CheckedFail);
     protected object Lock => AsyncLock;
@@ -73,9 +74,7 @@ public abstract class State<T> : ComputedInput,
         init => _category = value;
     }
 
-#pragma warning disable CA1721
     public Computed<T> Computed {
-#pragma warning restore CA1721
         get => Snapshot.Computed;
         protected set {
             value.AssertConsistencyStateIsNot(ConsistencyState.Computing);
@@ -104,7 +103,7 @@ public abstract class State<T> : ComputedInput,
 
     IStateSnapshot IState.Snapshot => Snapshot;
     Computed<T> IState<T>.Computed => Computed;
-    IComputed IState.Computed => Computed;
+    Computed IState.Computed => Computed;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
     object? IState.LastNonErrorValue => LastNonErrorValue;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
@@ -133,8 +132,8 @@ public abstract class State<T> : ComputedInput,
 
     protected State(Options settings, IServiceProvider services, bool initialize = true)
     {
-        Initialize(this, RuntimeHelpers.GetHashCode(this));
         Services = services;
+        Initialize(this, RuntimeHelpers.GetHashCode(this));
 
         // ReSharper disable once VirtualMemberCallInConstructor
         if (initialize)
@@ -166,8 +165,6 @@ public abstract class State<T> : ComputedInput,
         => ReferenceEquals(this, other);
     public override bool Equals(object? obj)
         => ReferenceEquals(this, obj);
-    public override int GetHashCode()
-        => base.GetHashCode();
 
     // Protected methods
 
@@ -175,7 +172,6 @@ public abstract class State<T> : ComputedInput,
     {
         _category = settings.Category;
         ComputedOptions = settings.ComputedOptions;
-        VersionGenerator = Services.VersionGenerator<LTag>();
         settings.EventConfigurator?.Invoke(this);
         var untypedOptions = (IState.IOptions) settings;
         untypedOptions.EventConfigurator?.Invoke(this);
@@ -200,7 +196,7 @@ public abstract class State<T> : ComputedInput,
             UntypedInvalidated?.Invoke(this, StateEventKind.Invalidated);
         }
         catch (Exception e) {
-            Log.LogError(e, "Invalidated / UntypedInvalidated handler failed");
+            Log.LogError(e, "Invalidated / UntypedInvalidated handler failed for {Category}", Category);
         }
     }
 
@@ -216,7 +212,7 @@ public abstract class State<T> : ComputedInput,
             UntypedUpdating?.Invoke(this, StateEventKind.Updating);
         }
         catch (Exception e) {
-            Log.LogError(e, "Updating / UntypedUpdating handler failed");
+            Log.LogError(e, "Updating / UntypedUpdating handler failed for {Category}", Category);
         }
     }
 
@@ -232,120 +228,115 @@ public abstract class State<T> : ComputedInput,
             UntypedUpdated?.Invoke(this, StateEventKind.Updated);
         }
         catch (Exception e) {
-            Log.LogError(e, "Updated / UntypedUpdated handler failed");
+            Log.LogError(e, "Updated / UntypedUpdated handler failed for {Category}", Category);
         }
     }
 
     // ComputedInput
 
-    public override IComputed? GetExistingComputed()
+    public override ComputedOptions GetComputedOptions()
+        => ComputedOptions;
+
+    public override Computed? GetExistingComputed()
         => _snapshot?.Computed;
 
-    // IFunction<T> & IFunction
+    // IFunction<T>
 
-    ValueTask<Computed<T>> IFunction<T>.Invoke(ComputedInput input, IComputed? usedBy, ComputeContext? context,
+    FusionHub IComputeFunction.Hub => Services.GetRequiredService<FusionHub>();
+
+    ValueTask<Computed<T>> IComputeFunction<T>.Invoke(
+        ComputedInput input,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
         if (!ReferenceEquals(input, this))
             // This "Function" supports just a single input == this
             throw new ArgumentOutOfRangeException(nameof(input));
 
-        return Invoke(usedBy, context, cancellationToken);
-    }
-
-    async ValueTask<IComputed> IFunction.Invoke(ComputedInput input, IComputed? usedBy, ComputeContext? context,
-        CancellationToken cancellationToken)
-    {
-        if (!ReferenceEquals(input, this))
-            // This "Function" supports just a single input == this
-            throw new ArgumentOutOfRangeException(nameof(input));
-
-        return await Invoke(usedBy, context, cancellationToken).ConfigureAwait(false);
+        return Invoke(context, cancellationToken);
     }
 
     protected virtual async ValueTask<Computed<T>> Invoke(
-        IComputed? usedBy, ComputeContext? context,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
-        context ??= ComputeContext.Current;
-
         var computed = Computed;
-        if (computed.TryUseExisting(context, usedBy))
+        if (ComputedImpl.TryUseExisting(computed, context))
             return computed;
 
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
         computed = Computed;
-        if (computed.TryUseExistingFromLock(context, usedBy))
+        if (ComputedImpl.TryUseExistingFromLock(computed, context))
             return computed;
 
         releaser.MarkLockedLocally();
         OnUpdating(computed);
         computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context, usedBy);
+        ComputedImpl.UseNew(computed, context);
         return computed;
     }
 
-    async Task IFunction.InvokeAndStrip(
-        ComputedInput input, IComputed? usedBy, ComputeContext? context,
+    Task<T> IComputeFunction<T>.InvokeAndStrip(
+        ComputedInput input,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
         if (!ReferenceEquals(input, this))
             // This "Function" supports just a single input == this
             throw new ArgumentOutOfRangeException(nameof(input));
 
-        await InvokeAndStrip(usedBy, context, cancellationToken).ConfigureAwait(false);
-    }
-
-    Task<T> IFunction<T>.InvokeAndStrip(ComputedInput input, IComputed? usedBy, ComputeContext? context,
-        CancellationToken cancellationToken)
-    {
-        if (!ReferenceEquals(input, this))
-            // This "Function" supports just a single input == this
-            throw new ArgumentOutOfRangeException(nameof(input));
-
-        return InvokeAndStrip(usedBy, context, cancellationToken);
+        return InvokeAndStrip(context, cancellationToken);
     }
 
     protected virtual Task<T> InvokeAndStrip(
-        IComputed? usedBy, ComputeContext? context,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
-        context ??= ComputeContext.Current;
-
         var result = Computed;
-        return result.TryUseExisting(context, usedBy)
-            ? result.StripToTask(context)
-            : TryRecompute(usedBy, context, cancellationToken);
+        return ComputedImpl.TryUseExisting(result, context)
+            ? ComputedImpl.StripToTask(result, context)
+            : TryRecompute(context, cancellationToken);
     }
 
     protected async Task<T> TryRecompute(
-        IComputed? usedBy, ComputeContext context,
+        ComputeContext context,
         CancellationToken cancellationToken)
     {
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
         var computed = Computed;
-        if (computed.TryUseExistingFromLock(context, usedBy))
-            return computed.Strip(context);
+        if (ComputedImpl.TryUseExistingFromLock(computed, context))
+            return ComputedImpl.Strip(computed, context);
 
         releaser.MarkLockedLocally();
         OnUpdating(computed);
         computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        computed.UseNew(context, usedBy);
+        ComputedImpl.UseNew(computed, context);
         return computed.Value;
     }
 
     protected async ValueTask<StateBoundComputed<T>> GetComputed(CancellationToken cancellationToken)
     {
-        var computed = CreateComputed();
-        using (Fusion.Computed.ChangeCurrent(computed)) {
+        var tryIndex = 0;
+        var startedAt = CpuTimestamp.Now;
+        StateBoundComputed<T> computed;
+        while (true) {
+            computed = CreateComputed();
             try {
+                using var _ = Fusion.Computed.BeginCompute(computed);
                 var value = await Compute(cancellationToken).ConfigureAwait(false);
                 computed.TrySetOutput(Result.New(value));
+                break;
             }
-            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-                computed.TrySetOutput(Result.Error<T>(e));
+            catch (Exception e) {
+                var delayTask = ComputedImpl.FinalizeAndTryReprocessInternalCancellation(
+                    nameof(GetComputed), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
+                if (delayTask == SpecialTasks.MustThrow)
+                    throw;
+                if (delayTask == SpecialTasks.MustReturn)
+                    return computed;
+                await delayTask.ConfigureAwait(false);
             }
         }
 
@@ -360,5 +351,5 @@ public abstract class State<T> : ComputedInput,
     protected abstract Task<T> Compute(CancellationToken cancellationToken);
 
     protected virtual StateBoundComputed<T> CreateComputed()
-        => new(ComputedOptions, this, VersionGenerator.NextVersion());
+        => new(ComputedOptions, this);
 }

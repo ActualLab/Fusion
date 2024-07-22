@@ -1,3 +1,5 @@
+using ActualLab.Concurrency;
+
 namespace ActualLab.Plugins.Internal;
 
 public interface IPluginCache
@@ -13,6 +15,6 @@ public class PluginCache(IServiceProvider services) : IPluginCache
     public IPluginInstanceHandle GetOrCreate(Type pluginImplementationType)
         => _cache.GetOrAdd(pluginImplementationType, static (pluginImplementationType1, self) => {
             var handleType = typeof(IPluginInstanceHandle<>).MakeGenericType(pluginImplementationType1);
-            return (IPluginInstanceHandle) self._services.GetRequiredService(handleType);
+            return (IPluginInstanceHandle)self._services.GetRequiredService(handleType);
         }, this);
 }

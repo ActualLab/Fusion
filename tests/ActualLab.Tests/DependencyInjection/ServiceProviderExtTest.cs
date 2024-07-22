@@ -61,4 +61,13 @@ public class ServiceProviderExtTest(ITestOutputHelper @out) : TestBase(@out)
         c.X.Should().Be("1");
         c.Y.Should().Be("2");
     }
+
+    [Fact]
+    public void IsDisposedOrDisposingTest()
+    {
+        var services = new ServiceCollection().BuildServiceProvider();
+        services.IsDisposedOrDisposing().Should().BeFalse();
+        services.Dispose();
+        services.IsDisposedOrDisposing().Should().BeTrue();
+    }
 }

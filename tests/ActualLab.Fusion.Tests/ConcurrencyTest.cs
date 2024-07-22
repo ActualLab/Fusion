@@ -14,10 +14,16 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
         var services = CreateServices();
         var factory = services.StateFactory();
 
-        var updateDelayer = FixedDelayer.ZeroUnsafe;
+        var updateDelayer = (FixedDelayer)FixedDelayer.NoneUnsafe;
         await Test(50);
         await Test(1000);
-        updateDelayer = FixedDelayer.Instant;
+        updateDelayer = FixedDelayer.YieldUnsafe;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.NextTick;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.MinDelay;
         await Test(50);
         await Test(1000);
         updateDelayer = FixedDelayer.Get(0.1);
@@ -31,7 +37,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
             var computedStates = Enumerable.Range(0, HardwareInfo.GetProcessorCountFactor(2))
                 .Select(_ => factory.NewComputed<int>(
                     updateDelayer,
-                    async (_, ct) => {
+                    async ct => {
                         var m1 = await ms1.Use(ct).ConfigureAwait(false);
                         var m2 = await ms2.Use(ct).ConfigureAwait(false);
                         return m1 + m2;
@@ -73,16 +79,22 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
     }
 
     [Fact]
-    public async Task AnonymousComputedConcurrencyTest()
+    public async Task ComputedSourceConcurrencyTest()
     {
         const int iterationCount = 10_000;
         var services = CreateServices();
         var factory = services.StateFactory();
 
-        var updateDelayer = FixedDelayer.ZeroUnsafe;
+        var updateDelayer = (FixedDelayer)FixedDelayer.NoneUnsafe;
         await Test(50);
         await Test(1000);
-        updateDelayer = FixedDelayer.Instant;
+        updateDelayer = FixedDelayer.YieldUnsafe;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.NextTick;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.MinDelay;
         await Test(50);
         await Test(1000);
         updateDelayer = FixedDelayer.Get(0.1);
@@ -95,7 +107,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
             var ms2 = factory.NewMutable(2);
             var readers = Enumerable.Range(0, HardwareInfo.GetProcessorCountFactor(2))
                 .Select(_ => {
-                    var source =  new AnonymousComputedSource<int>(
+                    var source =  new ComputedSource<int>(
                         services,
                         async (_, ct) => {
                             var m1 = await ms1.Use(ct).ConfigureAwait(false);
@@ -145,10 +157,16 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
         var services = CreateServices();
         var counterSum = services.GetRequiredService<CounterSumService>();
 
-        var updateDelayer = FixedDelayer.ZeroUnsafe;
+        var updateDelayer = (FixedDelayer)FixedDelayer.NoneUnsafe;
         await Test(50);
         await Test(1000);
-        updateDelayer = FixedDelayer.Instant;
+        updateDelayer = FixedDelayer.YieldUnsafe;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.NextTick;
+        await Test(50);
+        await Test(1000);
+        updateDelayer = FixedDelayer.MinDelay;
         await Test(50);
         await Test(1000);
         updateDelayer = FixedDelayer.Get(0.1);
@@ -159,7 +177,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
         {
             var readers = (await Enumerable.Range(0, HardwareInfo.GetProcessorCountFactor())
                 .Select(async _ => {
-                    var source =  new AnonymousComputedSource<int>(
+                    var source =  new ComputedSource<int>(
                         services,
                         async (_, ct) => await counterSum.Sum(0, 1));
                     var computed = await Computed.Capture(() => counterSum.Sum(0, 1));

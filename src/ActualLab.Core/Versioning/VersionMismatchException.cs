@@ -11,6 +11,8 @@ public class VersionMismatchException : Exception
         : this(message, innerException: null) { }
     public VersionMismatchException(string? message, Exception? innerException)
         : base(message ?? "Version mismatch.", innerException) { }
+
+    [Obsolete("Obsolete")]
     protected VersionMismatchException(SerializationInfo info, StreamingContext context)
         : base(info, context) { }
 }

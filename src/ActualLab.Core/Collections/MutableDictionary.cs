@@ -6,10 +6,10 @@ public interface IReadOnlyMutableDictionary<TKey, TValue> : IReadOnlyDictionary<
     where TKey : notnull
 {
     ImmutableDictionary<TKey, TValue> Items { get; }
-    Task WhenChanged { get; }
     event Action? Changed;
 }
 
+// ReSharper disable once PossibleInterfaceMemberAmbiguity
 public interface IMutableDictionary<TKey, TValue> : IReadOnlyMutableDictionary<TKey, TValue>, IDictionary<TKey, TValue>
     where TKey : notnull
 {
@@ -25,7 +25,6 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
     where TKey : notnull
 {
     private readonly object _lock = new();
-    private volatile TaskCompletionSource<Unit> _whenChangedSource = TaskCompletionSourceExt.New<Unit>();
     private volatile ImmutableDictionary<TKey, TValue> _items = items;
 
     public ImmutableDictionary<TKey, TValue> Items {
@@ -33,7 +32,6 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
         set => Update(value);
     }
 
-    public Task WhenChanged => _whenChangedSource.Task;
     public event Action? Changed;
 
     public int Count => _items.Count;
@@ -47,7 +45,7 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
     public IEnumerable<TValue> Values => _items.Values;
     ICollection<TKey> IDictionary<TKey, TValue>.Keys => throw new NotSupportedException();
     ICollection<TValue> IDictionary<TKey, TValue>.Values => throw new NotSupportedException();
-    public bool IsReadOnly { get; } = false;
+    public bool IsReadOnly => false;
 
     public MutableDictionary() : this(ImmutableDictionary<TKey, TValue>.Empty) { }
 
@@ -61,9 +59,6 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
                 return false;
 
             _items = items;
-            var oldWhenChangedSource = _whenChangedSource;
-            _whenChangedSource = TaskCompletionSourceExt.New<Unit>();
-            oldWhenChangedSource.TrySetResult(default);
         }
         Changed?.Invoke();
         return true;
@@ -76,9 +71,6 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
                 return false;
 
             _items = items;
-            var oldWhenChangedSource = _whenChangedSource;
-            _whenChangedSource = TaskCompletionSourceExt.New<Unit>();
-            oldWhenChangedSource.TrySetResult(default);
         }
         Changed?.Invoke();
         return true;
@@ -93,9 +85,6 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
                 return false;
 
             _items = newItems;
-            var oldWhenChangedSource = _whenChangedSource;
-            _whenChangedSource = TaskCompletionSourceExt.New<Unit>();
-            oldWhenChangedSource.TrySetResult(default);
         }
         Changed?.Invoke();
         return true;
@@ -110,9 +99,6 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
                 return false;
 
             _items = newItems;
-            var oldWhenChangedSource = _whenChangedSource;
-            _whenChangedSource = TaskCompletionSourceExt.New<Unit>();
-            oldWhenChangedSource.TrySetResult(default);
         }
         Changed?.Invoke();
         return true;

@@ -32,13 +32,13 @@ public class EnumerableExtTest(ITestOutputHelper @out) : TestBase(@out)
     {
         using var cts1 = new CancellationTokenSource(TimeSpan.FromSeconds(0.1));
         (await Delays(new [] {0.2d, 0.5, 1}, cts1.Token)
-            .TrimOnCancellation()
+            .SuppressCancellation()
             .ToArrayAsync()
             ).Should().Equal();
 
         using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(0.5));
         (await Delays(new [] {0.1d, 0.2, 1}, cts2.Token)
-            .TrimOnCancellation(cts2.Token)
+            .SuppressCancellation(cts2.Token)
             .ToArrayAsync()
             ).Should().Equal(0, 1);
     }

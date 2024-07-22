@@ -17,19 +17,19 @@ public class SimpleTodos : ITodos
     public Task<RpcStream<int>> GetTestStream()
         => Task.FromResult(new RpcStream<int>(Enumerable.Range(0, 5).ToAsyncEnumerable()));
 
+    public Task<int> SumTestStream(RpcStream<int> stream, CancellationToken cancellationToken = default)
+        => stream.SumAsync(cancellationToken).AsTask();
+
     // Commands
 
     public virtual async Task<Todo> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default)
     {
-        if (Computed.IsInvalidating())
-            return null!;
-
         var (session, todo) = command;
         if (string.IsNullOrEmpty(todo.Id))
             todo = todo with { Id = Ulid.NewUlid().ToString() };
         _store = _store.RemoveAll(i => i.Id == todo.Id).Add(todo);
 
-        using var invalidating = Computed.Invalidate();
+        using var invalidating = Invalidation.Begin();
         _ = Get(session, todo.Id, default);
         _ = PseudoGetAllItems(session);
         return todo;
@@ -37,13 +37,10 @@ public class SimpleTodos : ITodos
 
     public virtual async Task Remove(Todos_Remove command, CancellationToken cancellationToken = default)
     {
-        if (Computed.IsInvalidating())
-            return;
-
         var (session, todoId) = command;
         _store = _store.RemoveAll(i => i.Id == todoId);
 
-        using var invalidating = Computed.Invalidate();
+        using var invalidating = Invalidation.Begin();
         _ = Get(session, todoId, default);
         _ = PseudoGetAllItems(session);
     }

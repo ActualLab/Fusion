@@ -6,7 +6,11 @@ public class NullChannel<T> : Channel<T>
 
     private sealed class NullChannelReader : ChannelReader<T>
     {
-        public override Task Completion => TaskExt.NeverEndingUnitTask;
+        internal NullChannelReader()
+        { }
+
+        public override Task Completion
+            => TaskCompletionSourceExt.New<Unit>().Task; // Note that it returns unreferenced Task!
 
         public override bool TryRead(out T item)
         {
@@ -14,20 +18,29 @@ public class NullChannel<T> : Channel<T>
             return false;
         }
 
-        public override ValueTask<bool> WaitToReadAsync(CancellationToken cancellationToken = new CancellationToken())
-            => ValueTaskExt.FalseTask;
+        public override ValueTask<bool> WaitToReadAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTaskExt.FalseTask;
+        }
     }
 
     private sealed class NullChannelWriter : ChannelWriter<T>
     {
+        internal NullChannelWriter()
+        { }
+
         public override bool TryComplete(Exception? error = null)
             => false;
 
         public override bool TryWrite(T item)
             => true;
 
-        public override ValueTask<bool> WaitToWriteAsync(CancellationToken cancellationToken = new CancellationToken())
-            => ValueTaskExt.TrueTask;
+        public override ValueTask<bool> WaitToWriteAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTaskExt.TrueTask;
+        }
     }
 
     private NullChannel()

@@ -1,6 +1,5 @@
-using ActualLab.DependencyInjection.Internal;
+using ActualLab.Collections.Internal;
 using ActualLab.Interception;
-using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.Reflection;
 using ActualLab.Rpc.Infrastructure;
@@ -33,10 +32,10 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         var serializer = TypeDecoratingTextSerializer.Default;
 
         var value = new Tuple<DateTime>(DateTime.Now);
-        var json = serializer.Write(value);
+        var json = serializer.Write<object>(value);
         Out.WriteLine(json);
 
-        var deserialized = (Tuple<DateTime>) serializer.Read<object>(json);
+        var deserialized = (Tuple<DateTime>)serializer.Read<object>(json);
         deserialized.Item1.Should().Be(value.Item1);
     }
 
@@ -53,7 +52,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     {
         default(Moment).AssertPassesThroughAllSerializers(Out);
         Moment.EpochStart.AssertPassesThroughAllSerializers(Out);
-        SystemClock.Now.AssertPassesThroughAllSerializers(Out);
+        Moment.Now.AssertPassesThroughAllSerializers(Out);
         new Moment(DateTime.MinValue.ToUniversalTime()).AssertPassesThroughAllSerializers(Out);
         new Moment(DateTime.MaxValue.ToUniversalTime()).AssertPassesThroughAllSerializers(Out);
     }
@@ -85,15 +84,6 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void LTagSerialization()
-    {
-        default(LTag).AssertPassesThroughAllSerializers(Out);
-        LTag.Default.AssertPassesThroughAllSerializers(Out);
-        new LTag(3).AssertPassesThroughAllSerializers(Out);
-        new LTag(-5).AssertPassesThroughAllSerializers(Out);
-    }
-
-    [Fact]
     public void SymbolSerialization()
     {
         default(Symbol).AssertPassesThroughAllSerializers(Out);
@@ -101,6 +91,24 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         new Symbol(null!).AssertPassesThroughAllSerializers(Out);
         new Symbol("").AssertPassesThroughAllSerializers(Out);
         new Symbol("1234").AssertPassesThroughAllSerializers(Out);
+    }
+
+    [Fact]
+    public void VersionSetSerialization()
+    {
+        Test(null);
+        Test(new VersionSet());
+        Test(new VersionSet(("", new Version())));
+        Test(new VersionSet(("X", "1.0"), ("Y", "1.1.1")));
+
+        Assert.Throws<ArgumentException>(() => new VersionSet(("X", "A")));
+        Assert.Throws<ArgumentException>(() => new VersionSet(("X", "1"), ("X", "2")));
+
+        void Test(VersionSet? s) {
+            Out.WriteLine(s?.ToString() ?? "null");
+            var hs = s.PassThroughAllSerializers();
+            hs.Should().Be(s);
+        }
     }
 
     [Fact]
@@ -122,15 +130,14 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void RpcHandshakeSerialization()
     {
-        Test(new RpcHandshake(default));
-        Test(new RpcHandshake(new Guid()));
+        Test(new RpcHandshake(default, null, default));
+        Test(new RpcHandshake(new Guid(), new VersionSet(("Test", "1.0")), new Guid()));
 
         void Test(RpcHandshake h) {
             var hs = h.PassThroughAllSerializers();
             hs.RemotePeerId.Should().Be(h.RemotePeerId);
         }
     }
-
 
     [Fact]
     public void RpcObjectIdSerialization()
@@ -149,25 +156,25 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     public void RpcMessageSerialization()
     {
         Test(new RpcMessage(0, 3, "s", "m",
-            new TextOrBytes(new byte[] { 1, 2, 3 }),
+            new TextOrBytes([1, 2, 3]),
             null));
 
         Test(new RpcMessage(1, 3, "s", "m",
-            new TextOrBytes(new byte[] { 1, 2, 3 }),
-            new()));
+            new TextOrBytes([1, 2, 3]),
+            []));
 
         Test(new RpcMessage(2, 3, "s", "m",
-            new TextOrBytes(new byte[] { 1, 2, 3 }),
-            new List<RpcHeader>() {
-                new("v", "@OVhtp0TRc"),
-            }));
+            new TextOrBytes([1, 2, 3]),
+            [
+                new("v", "@OVhtp0TRc")
+            ]));
 
         Test(new RpcMessage(0, 3, "s", "m",
-            new TextOrBytes(new byte[] { 1, 2, 3 }),
-            new List<RpcHeader>() {
+            new TextOrBytes([1, 2, 3]),
+            [
                 new("a", "b"),
-                new("v", "@OVhtp0TRc"),
-            }));
+                new("v", "@OVhtp0TRc")
+            ]));
 
         void Test(RpcMessage m) {
             var ms = m.PassThroughAllSerializers();
@@ -175,7 +182,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             ms.Service.Should().Be(m.Service);
             ms.Method.Should().Be(m.Method);
             ms.ArgumentData.Data.ToArray().Should().Equal(m.ArgumentData.Data.ToArray());
-            ms.Headers?.Count.Should().Be(m.Headers?.Count);
+            ms.Headers?.Length.Should().Be(m.Headers?.Length);
             foreach (var (hs, h) in ms.Headers.OrEmpty().Zip(m.Headers.OrEmpty(), (hs, h) => (hs, h))) {
                 hs.Name.Should().Be(h.Name);
                 hs.Value.Should().Be(h.Value);
@@ -206,9 +213,9 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     {
         Test(default);
         Test(new Base64Encoded(null!));
-        Test(new Base64Encoded(Array.Empty<byte>()));
-        Test(new Base64Encoded(new byte[] {1}));
-        Test(new Base64Encoded(new byte[] {1, 2}));
+        Test(new Base64Encoded([]));
+        Test(new Base64Encoded([1]));
+        Test(new Base64Encoded([1, 2]));
 
         void Test(Base64Encoded src) {
             var dst = src.PassThroughAllSerializers(Out);
@@ -228,8 +235,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
 
         Test(TextOrBytes.EmptyBytes);
         Test(new TextOrBytes(Array.Empty<byte>()));
-        Test(new TextOrBytes(new byte[] {1}));
-        Test(new TextOrBytes(new byte[] {1, 2}));
+        Test(new TextOrBytes([1]));
+        Test(new TextOrBytes([1, 2]));
 
         void Test(TextOrBytes src) {
             var dst = src.PassThroughAllSerializers(Out);
@@ -245,6 +252,25 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         Option.None<int>().AssertPassesThroughAllSerializers(Out);
         Option.Some(0).AssertPassesThroughAllSerializers(Out);
         Option.Some(1).AssertPassesThroughAllSerializers(Out);
+    }
+
+    [Fact]
+    public void ImmutableBimapSerialization()
+    {
+        default(ImmutableBimap<string, string>).AssertPassesThroughAllSerializers(Out);
+        var m = new ImmutableBimap<string, int>().PassThroughAllSerializers();
+        m.Forward.Count.Should().Be(0);
+        m.Backward.Count.Should().Be(0);
+
+        m = new ImmutableBimap<string, int>() {
+            Forward = new Dictionary<string, int>() {{ "A", 1 }}
+        };
+        m.Backward.Count.Should().Be(1);
+        m.Backward[1].Should().Be("A");
+
+        var m1 = m.PassThroughAllSerializers(Out);
+        m1.Forward.Should().BeEquivalentTo(m.Forward);
+        m1.Backward.Should().BeEquivalentTo(m.Backward);
     }
 
     [Fact]
@@ -272,19 +298,78 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void ValueOfSerialization()
+    public void UniSerializedSerialization()
     {
-        Test<int>(null);
-        Test<string>(null);
-        Test(ValueOf.New(1));
-        Test(ValueOf.New("1"));
+        UniSerialized.New(default(Unit)).AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New(1).AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New((int?)null).AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New((int?)1).AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New((string?)null).AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New("").AssertPassesThroughAllSerializers(Out);
+        UniSerialized.New("A").AssertPassesThroughAllSerializers(Out);
+    }
 
-        void Test<T>(ValueOf<T>? src) {
-            var dst = src.PassThroughAllSerializers(Out);
-            if (src == null)
-                dst.Should().BeNull();
-            else
-                dst!.Value.Should().Be(src.Value);
-        }
+    [Fact]
+    public void TypeDecoratingUniSerializedSerialization()
+    {
+        TypeDecoratingUniSerialized.New(default(Unit)).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New(1).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New((int?)null).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New((int?)1).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New((string?)null).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New("").AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New("A").AssertPassesThroughAllSerializers(Out);
+    }
+
+    [Fact]
+    public void PropertyBagItemSerialization()
+    {
+        PropertyBagItem.New("X", default(Unit)).AssertPassesThroughAllSerializers(Out);
+        var a = PropertyBagItem.New("X", 3).AssertPassesThroughAllSerializers(Out);
+        a.Value.Should().Be(3);
+        var b = PropertyBagItem.New("X", (int?)3).AssertPassesThroughAllSerializers(Out);
+        b.Value.Should().Be(3);
+    }
+
+    [Fact]
+    public void PropertyBagSerialization()
+    {
+        default(PropertyBag).AssertPassesThroughAllSerializers();
+        var s = new PropertyBag();
+        s.Set(default(Unit));
+        s.Set(3);
+        s.Set((int?)4);
+        s.Set("X");
+        Out.WriteLine(s.ToString());
+        var s1 = s.PassThroughSystemJsonSerializer(Out);
+        Out.WriteLine(s1.ToString());
+        s1.Items.Should().BeEquivalentTo(s.Items, o => o.ComparingRecordsByMembers());
+    }
+
+    [Fact]
+    public void MutablePropertyBagSerialization()
+    {
+        default(MutablePropertyBag).AssertPassesThroughAllSerializers();
+        var s = new MutablePropertyBag();
+        s.Set(default(Unit));
+        s.Set(3);
+        s.Set((int?)4);
+        s.Set("X");
+        Out.WriteLine(s.ToString());
+        var s1 = s.PassThroughAllSerializers(Out);
+        Out.WriteLine(s.ToString());
+        s1.Items.Should().BeEquivalentTo(s.Items, o => o.ComparingRecordsByMembers());
+    }
+
+    [Fact]
+    public void ValueTupleSerialization()
+    {
+        // System.Text.Json fails to serialize ValueTuple fields, see:
+        // - https://stackoverflow.com/questions/70436689/net-jsonserializer-does-not-serialize-tuples-values
+        var s = (1, "X");
+        Out.WriteLine(s.ToString());
+        var s1 = s.PassThroughSystemJsonSerializer(Out);
+        Out.WriteLine(s1.ToString());
+        s1.Should().NotBe(s);
     }
 }

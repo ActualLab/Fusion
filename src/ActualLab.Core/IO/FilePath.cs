@@ -62,7 +62,7 @@ public readonly partial struct FilePath : IEquatable<FilePath>, IComparable<File
         => Join(p1.Value, p2.Value);
 
     // Equality
-    public bool Equals(FilePath other) => StringComparer.Ordinal.Equals(Value, other.Value);
+    public bool Equals(FilePath other) => string.Equals(Value, other.Value, StringComparison.Ordinal);
     public override bool Equals(object? obj) => obj is FilePath other && Equals(other);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Value);
     public static bool operator ==(FilePath left, FilePath right) => left.Equals(right);

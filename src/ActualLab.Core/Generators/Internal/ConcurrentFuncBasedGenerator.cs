@@ -17,6 +17,7 @@ public sealed class ConcurrentFuncBasedGenerator<T> : ConcurrentGenerator<T>
     {
         if (!Bits.IsPowerOf2((uint) generators.Length))
             throw new ArgumentOutOfRangeException(nameof(generators));
+
         _generators = generators;
         ConcurrencyLevelMask = generators.Length - 1;
     }
@@ -25,6 +26,6 @@ public sealed class ConcurrentFuncBasedGenerator<T> : ConcurrentGenerator<T>
     {
         var generator = _generators[random & ConcurrencyLevelMask];
         lock (generator)
-            return generator();
+            return generator.Invoke();
     }
 }

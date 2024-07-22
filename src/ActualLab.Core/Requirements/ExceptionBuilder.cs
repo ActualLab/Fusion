@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 
 namespace ActualLab.Requirements;
@@ -6,7 +5,7 @@ namespace ActualLab.Requirements;
 public readonly record struct ExceptionBuilder
 {
     public static Func<string, Exception> DefaultExceptionFactory { get; set; }
-        = message => new ValidationException(message);
+        = message => new InvalidOperationException(message);
     public static string DefaultMessageTemplate { get; set; }
         = "{0}: validation failed.";
 

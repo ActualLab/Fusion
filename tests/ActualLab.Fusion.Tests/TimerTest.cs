@@ -14,14 +14,14 @@ public class TimerTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var cTime = await Computed.Capture(() => ctp.GetTime()).AsTask().WaitAsync(TimeSpan.FromMinutes(1));
         var count = 0;
         using var state = WebServices.StateFactory().NewComputed<DateTime>(
-            FixedDelayer.Instant,
-            async (_, ct) => await ctp.GetTime(ct));
+            FixedDelayer.NextTick,
+            async ct => await ctp.GetTime(ct));
         state.Updated += (s, _) => {
             Out.WriteLine($"Client: {s.Value}");
             count++;
         };
 
-        await TestExt.WhenMet(
+        await TestExt.When(
             () => count.Should().BeGreaterThan(2),
             TimeSpan.FromSeconds(5));
     }

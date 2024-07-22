@@ -10,10 +10,28 @@ namespace ActualLab.Serialization;
 public class MessagePackByteSerializer(MessagePackSerializerOptions options) : IByteSerializer
 {
     private readonly ConcurrentDictionary<Type, MessagePackByteSerializer> _typedSerializers = new();
+    private static MessagePackSerializerOptions? _defaultOptions;
+    private static MessagePackByteSerializer? _default;
+    private static TypeDecoratingByteSerializer? _defaultTypeDecorating;
 
     public static IFormatterResolver DefaultResolver { get; set; } = DefaultMessagePackResolver.Instance;
-    public static MessagePackSerializerOptions DefaultOptions { get; set; } = new(DefaultResolver);
-    public static MessagePackByteSerializer Default { get; set; } = new(DefaultOptions);
+
+    public static MessagePackSerializerOptions DefaultOptions {
+        get => _defaultOptions ??= new(DefaultResolver);
+        set => _defaultOptions = value;
+    }
+
+    public static MessagePackByteSerializer Default {
+        get => _default ??= new(DefaultOptions);
+        set => _default = value;
+    }
+
+    public static TypeDecoratingByteSerializer DefaultTypeDecorating {
+        get => _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
+        set => _defaultTypeDecorating = value;
+    }
+
+    // Instance members
 
     public MessagePackSerializerOptions Options { get; } = options;
 

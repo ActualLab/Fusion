@@ -1,3 +1,5 @@
+using System.Runtime.ExceptionServices;
+
 namespace ActualLab;
 
 /// <summary>
@@ -8,6 +10,8 @@ public static class ExceptionExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsCancellationOf(this Exception error, CancellationToken cancellationToken)
         => error is OperationCanceledException && cancellationToken.IsCancellationRequested;
+
+    // Flatten, Any, GetFirstInnerException
 
     public static IReadOnlyList<Exception> Flatten(this Exception? exception)
     {
@@ -55,5 +59,31 @@ public static class ExceptionExt
                 return e;
         }
         return exception;
+    }
+
+    // LogXxx
+
+    public static Exception LogError(this Exception error, ILogger? log)
+        => error.LogError(log, error);
+    public static T LogError<T>(this Exception error, ILogger? log, T replacement)
+    {
+#if NET5_0_OR_GREATER
+        ExceptionDispatchInfo.SetCurrentStackTrace(error);
+#endif
+        // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+        log?.LogError(error, error.Message);
+        return replacement;
+    }
+
+    public static Exception LogWarning(this Exception error, ILogger? log)
+        => error.LogWarning(log, error);
+    public static T LogWarning<T>(this Exception error, ILogger? log, T result)
+    {
+#if NET5_0_OR_GREATER
+        ExceptionDispatchInfo.SetCurrentStackTrace(error);
+#endif
+        // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+        log?.LogWarning(error, error.Message);
+        return result;
     }
 }

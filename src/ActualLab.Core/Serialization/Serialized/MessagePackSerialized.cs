@@ -5,25 +5,28 @@ namespace ActualLab.Serialization;
 
 public static class MessagePackSerialized
 {
-    public static MessagePackSerialized<TValue> New<TValue>() => new();
-    public static MessagePackSerialized<TValue> New<TValue>(TValue value) => new() { Value = value };
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static MessagePackSerialized<TValue> New<TValue>(TValue value = default!)
+        => new() { Value = value };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public static MessagePackSerialized<TValue> New<TValue>(byte[] data) => new(data);
+    public static MessagePackSerialized<TValue> New<TValue>(byte[] data)
+        => new() { Data = data };
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class MessagePackSerialized<T> : ByteSerialized<T>
 {
-    [ThreadStatic] private static IByteSerializer<T>? _serializer;
-
-    public MessagePackSerialized() { }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    [MemoryPackConstructor]
-    public MessagePackSerialized(byte[] data) : base(data) { }
+    private static IByteSerializer<T>? _serializer;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override IByteSerializer<T> GetSerializer()
         => _serializer ??= MessagePackByteSerializer.Default.ToTyped<T>();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator MessagePackSerialized<T>(T value) => new() { Value = value };
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator MessagePackSerialized<T>(byte[] data) => new() { Data = data };
 }

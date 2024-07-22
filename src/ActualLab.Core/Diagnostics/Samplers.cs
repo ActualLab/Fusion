@@ -18,10 +18,15 @@ public sealed record Sampler(
 
     public double InverseProbability { get; } = 1d / Probability;
 
+    // Conversion
+
     public override string ToString()
         => Id.EndsWith(')')
             ? Id // .ToConcurrent(...)-like case, the probability is already in Id there
             : $"{Id}({Probability.ToString("P1",CultureInfo.InvariantCulture)})";
+
+    public static implicit operator Sampler(double probability)
+        => Random(probability);
 
     public Sampler ToConcurrent(int concurrencyLevel = -1)
     {
@@ -84,9 +89,8 @@ public sealed record Sampler(
         var rnd = new Random();
         var maxIntBasedLimit = (int)((1d + int.MaxValue) * probability - 1);
         var sampler = new Sampler(nameof(Random), probability, () => {
-            lock (rnd) {
+            lock (rnd)
                 return rnd.Next() <= maxIntBasedLimit;
-            }
         }, () => Random(probability));
         Thread.MemoryBarrier();
         return sampler;
@@ -103,9 +107,9 @@ public sealed record Sampler(
         return Random(probability);
 #else
         var maxIntBasedLimit = (int)((1d + int.MaxValue) * probability - 1);
-        var sampler = new Sampler(nameof(RandomShared), probability, () => {
-            return System.Random.Shared.Next() <= maxIntBasedLimit;
-        }, () => RandomShared(probability));
+        var sampler = new Sampler(nameof(RandomShared), probability,
+            () => System.Random.Shared.Next() <= maxIntBasedLimit,
+            () => RandomShared(probability));
         Thread.MemoryBarrier();
         return sampler;
 #endif

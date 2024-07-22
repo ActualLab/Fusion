@@ -21,12 +21,12 @@ public record RecSumCommand : ICommand<double>
 {
     public static readonly AsyncLocal<object> Tag = new();
 
-    public double[] Arguments { get; init; } = Array.Empty<double>();
+    public double[] Arguments { get; init; } = [];
 }
 
 public record RecAddUsersCommand : ICommand<Unit>
 {
-    public User[] Users { get; init; } = Array.Empty<User>();
+    public User[] Users { get; init; } = [];
 }
 
 public record IncSetFailCommand : IEventCommand

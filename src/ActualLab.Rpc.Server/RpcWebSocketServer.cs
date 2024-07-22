@@ -1,8 +1,6 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.WebSockets;
 using Microsoft.AspNetCore.Http;
-using ActualLab.Internal;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
@@ -35,7 +33,6 @@ public class RpcWebSocketServer(
     public RpcServerConnectionFactory ServerConnectionFactory { get; }
         = services.GetRequiredService<RpcServerConnectionFactory>();
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Invoke(HttpContext context, bool isBackend)
     {
         var cancellationToken = context.RequestAborted;
@@ -45,10 +42,11 @@ public class RpcWebSocketServer(
         }
 
         WebSocket? webSocket = null;
+        RpcConnection? connection = null;
         try {
             var peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
             var peer = Hub.GetServerPeer(peerRef);
-            if (peer.ConnectionState.Value.IsConnected()) {
+            if (peer.IsConnected()) {
                 var delay = Settings.ChangeConnectionDelay;
                 Log.LogWarning("{Peer} is already connected, will change its connection in {Delay}...",
                     peer, delay.ToShortString());
@@ -67,18 +65,31 @@ public class RpcWebSocketServer(
                 Settings.WebSocketChannelOptions, webSocketOwner, cancellationToken) {
                 OwnsWebSocketOwner = false,
             };
-            var options = ImmutableOptionSet.Empty
+            var properties = PropertyBag.Empty
                 .Set((RpcPeer)peer)
                 .Set(context)
                 .Set(webSocket);
-            var connection = await ServerConnectionFactory
-                .Invoke(peer, channel, options, cancellationToken)
+            connection = await ServerConnectionFactory
+                .Invoke(peer, channel, properties, cancellationToken)
                 .ConfigureAwait(false);
             peer.SetConnection(connection);
             await channel.WhenClosed.ConfigureAwait(false);
         }
-        catch (Exception e) when (e.IsCancellationOf(cancellationToken)) {
-            // Intended: this is typically a normal connection termination
+        catch (Exception e) {
+            if (connection != null || e.IsCancellationOf(cancellationToken))
+                return; // Intended: this is typically a normal connection termination
+
+            var request = context.Request;
+            Log.LogWarning(e, "Failed to accept RPC connection: {Path}{Query}", request.Path, request.QueryString);
+            if (webSocket != null)
+                return;
+
+            try {
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            }
+            catch {
+                // Intended
+            }
         }
         finally {
             webSocket?.Dispose();

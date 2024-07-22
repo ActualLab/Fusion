@@ -1,14 +1,11 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using ActualLab.Internal;
 using Microsoft.AspNetCore.Http;
 
 namespace ActualLab.Rpc.Server;
 
 public static class EndpointRouteBuilderExt
 {
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static IEndpointRouteBuilder MapRpcWebSocketServer(this IEndpointRouteBuilder endpoints)
     {
         var services = endpoints.ServiceProvider;

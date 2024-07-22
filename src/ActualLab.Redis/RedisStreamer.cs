@@ -1,6 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
 using StackExchange.Redis;
-using ActualLab.Internal;
 using Errors = ActualLab.Redis.Internal.Errors;
 
 namespace ActualLab.Redis;
@@ -16,7 +14,7 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
         public TimeSpan? ExpirationPeriod { get; set; } = TimeSpan.FromHours(1);
         public IByteSerializer<T> Serializer { get; init; } = ByteSerializer<T>.Default;
         public ITextSerializer<ExceptionInfo> ErrorSerializer { get; init; } = TextSerializer<ExceptionInfo>.Default;
-        public IMomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
+        public MomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
 
         // You normally don't need to modify these
         public string ItemKey { get; init; } = "i";
@@ -29,7 +27,6 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
     public RedisDb RedisDb { get; } = redisDb;
     public string Key { get; } = key;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async IAsyncEnumerable<T> Read([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var appendSub = GetAppendSub();
@@ -41,7 +38,8 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
         var appendNotificationTask = appendSub.NextMessage();
         while (true) {
             cancellationToken.ThrowIfCancellationRequested(); // Redis doesn't support cancellation
-            var entries = await RedisDb.Database.StreamReadAsync(Key, position, 10).ConfigureAwait(false);
+            var database = await RedisDb.Database.Get(cancellationToken).ConfigureAwait(false);
+            var entries = await database.StreamReadAsync(Key, position, 10).ConfigureAwait(false);
             if (entries == null! || entries.Length == 0) {
                 var appendResult = await appendNotificationTask
                     .WaitResultAsync(Settings.Clock, Settings.AppendCheckPeriod, cancellationToken)
@@ -55,10 +53,11 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
             foreach (var entry in entries) {
                 var status = (string?)entry[Settings.StatusKey];
                 if (!status.IsNullOrEmpty()) {
-                    if (StringComparer.Ordinal.Equals(status, Settings.StartedStatus))
+                    if (string.Equals(status, Settings.StartedStatus, StringComparison.Ordinal))
                         continue;
-                    if (StringComparer.Ordinal.Equals(status, Settings.EndedStatus))
+                    if (string.Equals(status, Settings.EndedStatus, StringComparison.Ordinal))
                         yield break;
+
                     var errorInfo = Settings.ErrorSerializer.Read(status!);
                     throw errorInfo.ToException() ?? Errors.SourceStreamError();
                 }
@@ -72,13 +71,11 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Write(
         IAsyncEnumerable<T> source,
         CancellationToken cancellationToken = default)
         => Write(source, _ => default, cancellationToken);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Write(
         IAsyncEnumerable<T> source,
         Action<RedisStreamer<T>> newStreamAnnouncer,
@@ -90,21 +87,21 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
             },
             cancellationToken);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Write(
         IAsyncEnumerable<T> source,
         Func<RedisStreamer<T>, ValueTask> newStreamAnnouncer,
         CancellationToken cancellationToken = default)
     {
+        var database = await RedisDb.Database.Get(cancellationToken).ConfigureAwait(false);
         var appendPub = GetAppendPub();
         var error = (Exception?) null;
-        var lastAppendTask = AppendStart(newStreamAnnouncer, appendPub, cancellationToken);
+        var lastAppendTask = AppendStart(database, newStreamAnnouncer, appendPub, cancellationToken);
         if (Settings.ExpirationPeriod is { } expirationPeriod)
-            await RedisDb.Database.KeyExpireAsync(Key, expirationPeriod).ConfigureAwait(false);
+            await database.KeyExpireAsync(Key, expirationPeriod).ConfigureAwait(false);
         try {
             await foreach (var item in source.WithCancellation(cancellationToken).ConfigureAwait(false)) {
                 await lastAppendTask.ConfigureAwait(false);
-                lastAppendTask = AppendItem(item, appendPub, cancellationToken);
+                lastAppendTask = AppendItem(database, item, appendPub, cancellationToken);
             }
             await lastAppendTask.ConfigureAwait(false);
         }
@@ -120,7 +117,7 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
                     error = e;
                 }
             // No cancellation for AppendEnd - it should propagate it
-            await AppendEnd(error, appendPub).ConfigureAwait(false);
+            await AppendEnd(database, error, appendPub).ConfigureAwait(false);
         }
         if (error != null)
             throw error;
@@ -128,12 +125,13 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
     }
 
     private async Task AppendStart(
+        IDatabase database,
         Func<RedisStreamer<T>, ValueTask> newStreamAnnouncer,
         RedisPub appendPub,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested(); // StackExchange.Redis doesn't support cancellation
-        await RedisDb.Database.StreamAddAsync(
+        await database.StreamAddAsync(
                 Key, Settings.StatusKey, Settings.StartedStatus,
                 maxLength: Settings.MaxStreamLength,
                 useApproximateMaxLength: true)
@@ -142,15 +140,15 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
         await newStreamAnnouncer(this).ConfigureAwait(false);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async Task AppendItem(
+        IDatabase database,
         T item,
         RedisPub appendPub,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested(); // StackExchange.Redis doesn't support cancellation
         using var bufferWriter = Settings.Serializer.Write(item);
-        await RedisDb.Database.StreamAddAsync(
+        await database.StreamAddAsync(
                 Key, Settings.ItemKey, bufferWriter.WrittenMemory,
                 maxLength: Settings.MaxStreamLength,
                 useApproximateMaxLength: true)
@@ -158,15 +156,15 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
         await appendPub.Publish(RedisValue.EmptyString).ConfigureAwait(false);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async Task AppendEnd(
+        IDatabase database,
         Exception? error,
         RedisPub appendPub)
     {
         var finalStatus = Settings.EndedStatus;
         if (error != null)
             finalStatus = Settings.ErrorSerializer.Write(error);
-        await RedisDb.Database.StreamAddAsync(
+        await database.StreamAddAsync(
                 Key, Settings.StatusKey, finalStatus,
                 maxLength: Settings.MaxStreamLength,
                 useApproximateMaxLength: true)
@@ -174,9 +172,11 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
         await appendPub.Publish(RedisValue.EmptyString).ConfigureAwait(false);
     }
 
-    public Task Remove()
-        => RedisDb.Database.KeyDeleteAsync(Key, CommandFlags.FireAndForget);
-
+    public async Task Remove()
+    {
+        var database = await RedisDb.Database.Get().ConfigureAwait(false);
+        await database.KeyDeleteAsync(Key, CommandFlags.FireAndForget).ConfigureAwait(false);
+    }
 
     // Protected methods
 

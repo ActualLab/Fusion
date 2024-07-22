@@ -5,14 +5,35 @@ using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
 
+#pragma warning disable IL2026
+
 public class SystemJsonSerializer : TextSerializerBase
 {
-    public static JsonSerializerOptions PrettyOptions { get; set; } = new() { WriteIndented = true };
-    public static JsonSerializerOptions DefaultOptions { get; set; } = new() {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
-    public static SystemJsonSerializer Pretty { get; set; } = new(PrettyOptions);
-    public static SystemJsonSerializer Default { get; set; } = new(DefaultOptions);
+    private static SystemJsonSerializer? _pretty;
+    private static SystemJsonSerializer? _default;
+    private static TypeDecoratingTextSerializer? _defaultTypeDecorating;
+
+    public static JsonSerializerOptions PrettyOptions { get; set; }
+        = new() { WriteIndented = true };
+    public static JsonSerializerOptions DefaultOptions { get; set; }
+        = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+    public static SystemJsonSerializer Pretty {
+        get => _pretty ??= new(PrettyOptions);
+        set => _pretty = value;
+    }
+
+    public static SystemJsonSerializer Default {
+        get => _default ??= new(DefaultOptions);
+        set => _default = value;
+    }
+
+    public static TypeDecoratingTextSerializer DefaultTypeDecorating {
+        get => _defaultTypeDecorating ??= new TypeDecoratingTextSerializer(Default);
+        set => _defaultTypeDecorating = value;
+    }
+
+    // Instance members
 
     public JsonSerializerOptions Options { get; }
 

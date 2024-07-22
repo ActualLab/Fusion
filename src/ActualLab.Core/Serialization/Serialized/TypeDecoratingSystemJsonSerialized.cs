@@ -5,9 +5,14 @@ namespace ActualLab.Serialization;
 
 public static class TypeDecoratingSystemJsonSerialized
 {
-    public static TypeDecoratingSystemJsonSerialized<TValue> New<TValue>() => new();
-    public static TypeDecoratingSystemJsonSerialized<TValue> New<TValue>(TValue value) => new() { Value = value };
-    public static TypeDecoratingSystemJsonSerialized<TValue> New<TValue>(string data) => new(data);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TypeDecoratingSystemJsonSerialized<TValue> New<TValue>(TValue value = default!)
+        => new() { Value = value };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public static TypeDecoratingSystemJsonSerialized<TValue> New<TValue>(string data)
+        => new() { Data = data };
 }
 
 #if !NET5_0
@@ -17,15 +22,14 @@ public static class TypeDecoratingSystemJsonSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class TypeDecoratingSystemJsonSerialized<T> : TextSerialized<T>
 {
-    [ThreadStatic] private static ITextSerializer<T>? _serializer;
-
-    public TypeDecoratingSystemJsonSerialized() { }
-
-    [MemoryPackConstructor]
-    public TypeDecoratingSystemJsonSerialized(string data)
-        : base(data) { }
+    private static ITextSerializer<T>? _serializer;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override ITextSerializer<T> GetSerializer()
         => _serializer ??= new TypeDecoratingTextSerializer(SystemJsonSerializer.Default).ToTyped<T>();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator TypeDecoratingSystemJsonSerialized<T>(T value) => new() { Value = value };
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator TypeDecoratingSystemJsonSerialized<T>(string data) => new() { Data = data };
 }

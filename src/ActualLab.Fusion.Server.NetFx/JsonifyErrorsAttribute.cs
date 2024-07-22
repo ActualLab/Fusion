@@ -1,17 +1,12 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http.Filters;
-using ActualLab.Internal;
 
 namespace ActualLab.Fusion.Server;
 
 public sealed class JsonifyErrorsAttribute : ExceptionFilterAttribute
 {
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2046
     public override void OnException(HttpActionExecutedContext actionExecutedContext)
-#pragma warning restore IL2046
     {
         var exception = actionExecutedContext.Exception;
         var actionContext = actionExecutedContext.ActionContext;

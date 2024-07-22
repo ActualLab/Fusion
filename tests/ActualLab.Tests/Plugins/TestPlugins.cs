@@ -42,7 +42,7 @@ public class TestPlugin1 : TestPlugin, IHasDependencies, ITestSingletonPlugin
 public class TestPlugin2 : TestPlugin, ITestPluginEx, IHasCapabilities, ITestSingletonPlugin
 {
     public virtual string GetVersion() => "1.0";
-    public ImmutableOptionSet Capabilities { get; } = ImmutableOptionSet.Empty
+    public PropertyBag Capabilities { get; } = PropertyBag.Empty
         .Set("Client", true)
         .Set("Server", false);
 

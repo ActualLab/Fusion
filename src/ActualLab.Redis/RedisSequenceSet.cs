@@ -1,12 +1,9 @@
 namespace ActualLab.Redis;
 
-public class RedisSequenceSet
+public class RedisSequenceSet(RedisHash hash)
 {
-    public RedisHash Hash { get; }
+    public RedisHash Hash { get; } = hash;
     public long ResetRange { get; init; } = 1024;
-
-    public RedisSequenceSet(RedisHash hash)
-        => Hash = hash;
 
     public async Task<long> Next(string key, long maxUsedValue = -1, long increment = 1)
     {

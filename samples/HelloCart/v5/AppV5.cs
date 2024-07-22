@@ -22,11 +22,14 @@ public class AppV5 : AppV4
         ClientServices = BuildClientServices(extraAppUri);
     }
 
-    public override async Task InitializeAsync(IServiceProvider services)
+    public override async Task InitializeAsync(IServiceProvider services, bool startHostedServices)
     {
-        await base.InitializeAsync(services);
-        await ExtraApp.StartAsync();
-        await Task.Delay(100);
+        await base.InitializeAsync(services, false);
+        if (startHostedServices) {
+            await App.StartAsync();
+            await ExtraApp.StartAsync();
+            await Task.Delay(100);
+        }
     }
 
     public override async ValueTask DisposeAsync()

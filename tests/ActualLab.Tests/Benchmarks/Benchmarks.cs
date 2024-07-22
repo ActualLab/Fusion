@@ -25,14 +25,14 @@ public class BenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
             }
             return sum;
         });
-        RunOne("Read CoarseStopwatch.ElapsedTicks", baseOpCount, opCount => {
+        RunOne("Read CoarseClockHelper.ElapsedTicks", baseOpCount, opCount => {
             var sum = 0L;
             for (; opCount > 0; opCount--) {
                 sum += CoarseClockHelper.ElapsedTicks;
             }
             return sum;
         });
-        RunOne("Read CoarseStopwatch.NowEpochOffsetTicks", baseOpCount, opCount => {
+        RunOne("Read CoarseClockHelper.NowEpochOffsetTicks", baseOpCount, opCount => {
             var sum = 0L;
             for (; opCount > 0; opCount--) {
                 sum += CoarseClockHelper.NowEpochOffsetTicks;
@@ -41,8 +41,9 @@ public class BenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
         });
         RunOne("Read CoarseCpuClock.Now.EpochOffsetTicks", baseOpCount, opCount => {
             var sum = 0L;
+            var clock = CoarseCpuClock.Instance;
             for (; opCount > 0; opCount--) {
-                sum += CoarseCpuClock.Now.EpochOffsetTicks;
+                sum += clock.Now.EpochOffsetTicks;
             }
             return sum;
         });

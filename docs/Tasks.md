@@ -1,7 +1,11 @@
-Now:
-- Nothing :)
+Dynamic Routing:
+- Test - covering switch to local service
+
+Edge cases:
+- Invalidation
+- Commands + invalidation
+- Capture with rerouting
 
 Near-term:
 - Robust routing tests
-- InvalidationInfoProvider.IsClientComputeServiceCommand & command execution w/ routers
-- ComputeServiceExt.IsClient
+- Propagate activity for nested commands (even w/ isolate)

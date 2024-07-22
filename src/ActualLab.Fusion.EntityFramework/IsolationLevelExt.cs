@@ -4,6 +4,12 @@ namespace ActualLab.Fusion.EntityFramework;
 
 public static class IsolationLevelExt
 {
+    public static IsolationLevel Or(this IsolationLevel first, IsolationLevel second)
+        => first == IsolationLevel.Unspecified ? second : first;
+
+    public static IsolationLevel Or<TState>(this IsolationLevel first, TState state, Func<TState, IsolationLevel> second)
+        => first == IsolationLevel.Unspecified ? second.Invoke(state) : first;
+
     public static IsolationLevel Max(this IsolationLevel first, IsolationLevel second)
     {
         // If one is unspecified, we return the other one
@@ -19,6 +25,6 @@ public static class IsolationLevelExt
             return second;
 
         // Otherwise we return max. of two
-        return (IsolationLevel) MathExt.Max((int) first, (int) second);
+        return (IsolationLevel)MathExt.Max((int)first, (int)second);
     }
 }

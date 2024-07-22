@@ -2,11 +2,9 @@ using ActualLab.Testing.Output;
 
 namespace ActualLab.Tests;
 
-public abstract class TestBase : IAsyncLifetime
+public abstract class TestBase(ITestOutputHelper @out) : IAsyncLifetime
 {
-    public ITestOutputHelper Out { get; set; }
-
-    protected TestBase(ITestOutputHelper @out) => Out = @out;
+    public ITestOutputHelper Out { get; set; } = @out;
 
     public virtual Task InitializeAsync() => Task.CompletedTask;
     public virtual Task DisposeAsync() => Task.CompletedTask;

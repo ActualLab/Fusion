@@ -1,5 +1,6 @@
 using ActualLab.Interception;
 using ActualLab.Reflection;
+using ServiceProviderExt = ActualLab.DependencyInjection.ServiceProviderExt;
 
 namespace ActualLab.Tests.Generators;
 
@@ -11,11 +12,11 @@ public class ProxyTest(ITestOutputHelper @out) : TestBase(@out)
     [InlineData(25_000_000)]
     public void BenchmarkAll(int baseOpCount)
     {
-        var interceptor = new Interceptor();
+        var interceptor = new TestInterceptor(new(), ServiceProviderExt.Empty);
         var noProxy = new ClassProxy();
         var altProxy = new AltClassProxy(interceptor);
-        var classProxy = Proxies.New<ClassProxy>(interceptor);
-        var interfaceProxy = Proxies.New<IInterfaceProxy>(interceptor, noProxy);
+        var classProxy = (ClassProxy)Proxies.New(typeof(ClassProxy), interceptor);
+        var interfaceProxy = (IInterfaceProxy)Proxies.New(typeof(IInterfaceProxy), interceptor, noProxy);
 
         classProxy.GetType().NonProxyType().Should().Be(typeof(ClassProxy));
         classProxy.IsInitialized.Should().BeTrue();
@@ -94,7 +95,7 @@ public class ProxyTest(ITestOutputHelper @out) : TestBase(@out)
     {
         action(Math.Min(1, opCount / 10));
         var sw = Stopwatch.StartNew();
-        _ = action(opCount);
+        _ = action.Invoke(opCount);
         sw.Stop();
         var rate = opCount / sw.Elapsed.TotalSeconds;
         Out.WriteLine($"{title} ({opCount}): {rate:N3} ops/s");

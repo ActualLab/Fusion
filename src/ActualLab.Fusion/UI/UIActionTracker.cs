@@ -7,10 +7,10 @@ public sealed class UIActionTracker(
 {
     public sealed record Options {
         public TimeSpan InstantUpdatePeriod { get; init; } = TimeSpan.FromMilliseconds(300);
-        public IMomentClock? Clock { get; init; }
+        public MomentClock? Clock { get; init; }
     }
 
-    private IMomentClock? _clock;
+    private MomentClock? _clock;
     private ILogger? _log;
     private long _runningActionCount;
     private volatile AsyncState<UIAction?> _lastAction = new(null, true);
@@ -18,7 +18,7 @@ public sealed class UIActionTracker(
 
     public Options Settings { get; } = settings;
     public IServiceProvider Services { get; } = services;
-    public IMomentClock Clock => _clock ??= Settings.Clock ?? Services.Clocks().CpuClock;
+    public MomentClock Clock => _clock ??= Settings.Clock ?? Services.Clocks().CpuClock;
     public ILogger Log => _log ??= Services.LogFor(GetType());
 
     public long RunningActionCount => Interlocked.Read(ref _runningActionCount);

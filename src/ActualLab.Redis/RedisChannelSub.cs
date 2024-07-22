@@ -1,25 +1,22 @@
-using System.Diagnostics.CodeAnalysis;
 using StackExchange.Redis;
-using ActualLab.Internal;
 
 namespace ActualLab.Redis;
 
-public sealed class RedisChannelSub : RedisSubBase
+public sealed class RedisChannelSub(
+    RedisDb redisDb,
+    RedisSubKey key,
+    Channel<RedisValue>? channel = null,
+    TimeSpan? subscribeTimeout = null
+    ) : RedisSubBase(redisDb, key, subscribeTimeout)
 {
-    private readonly Channel<RedisValue> _channel;
+    private readonly Channel<RedisValue> _channel = channel ?? Channel.CreateUnbounded<RedisValue>(
+        new UnboundedChannelOptions() {
+            SingleWriter = true,
+            SingleReader = true,
+            AllowSynchronousContinuations = false,
+        });
 
     public ChannelReader<RedisValue> Messages => _channel.Reader;
-
-    public RedisChannelSub(RedisDb redisDb, RedisSubKey key,
-        Channel<RedisValue>? channel = null,
-        TimeSpan? subscribeTimeout = null)
-        : base(redisDb, key, subscribeTimeout)
-        => _channel = channel ?? Channel.CreateUnbounded<RedisValue>(
-            new UnboundedChannelOptions() {
-                SingleWriter = true,
-                SingleReader = true,
-                AllowSynchronousContinuations = false,
-            });
 
     protected override async Task DisposeAsyncCore()
     {
@@ -31,27 +28,23 @@ public sealed class RedisChannelSub : RedisSubBase
         => _channel.Writer.TryWrite(redisValue);
 }
 
-public sealed class RedisChannelSub<T> : RedisSubBase
+public sealed class RedisChannelSub<T>(
+    RedisDb redisDb,
+    RedisSubKey key,
+    Channel<T>? channel = null,
+    IByteSerializer<T>? serializer = null,
+    TimeSpan? subscribeTimeout = null
+    ) : RedisSubBase(redisDb, key, subscribeTimeout)
 {
-    private readonly Channel<T> _channel;
+    private readonly Channel<T> _channel = channel ?? Channel.CreateUnbounded<T>(
+        new UnboundedChannelOptions() {
+            SingleWriter = true,
+            SingleReader = true,
+            AllowSynchronousContinuations = false,
+        });
 
-    public IByteSerializer<T> Serializer { get; }
+    public IByteSerializer<T> Serializer { get; } = serializer ?? ByteSerializer<T>.Default;
     public ChannelReader<T> Messages => _channel.Reader;
-
-    public RedisChannelSub(RedisDb redisDb, RedisSubKey key,
-        Channel<T>? channel = null,
-        IByteSerializer<T>? serializer = null,
-        TimeSpan? subscribeTimeout = null)
-        : base(redisDb, key, subscribeTimeout)
-    {
-        Serializer = serializer ?? ByteSerializer<T>.Default;
-        _channel = channel ?? Channel.CreateUnbounded<T>(
-            new UnboundedChannelOptions() {
-                SingleWriter = true,
-                SingleReader = true,
-                AllowSynchronousContinuations = false,
-            });
-    }
 
     protected override async Task DisposeAsyncCore()
     {
@@ -59,10 +52,7 @@ public sealed class RedisChannelSub<T> : RedisSubBase
         _channel.Writer.TryComplete();
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2046
     protected override void OnMessage(RedisChannel redisChannel, RedisValue redisValue)
-#pragma warning restore IL2046
     {
         try {
             var value = Serializer.Read(redisValue);

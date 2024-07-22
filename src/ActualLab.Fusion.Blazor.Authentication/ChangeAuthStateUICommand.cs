@@ -1,3 +1,3 @@
 namespace ActualLab.Fusion.Blazor.Authentication;
 
-public class ChangeAuthStateUICommand : ICommand<AuthState>;
+public sealed class ChangeAuthStateUICommand : ICommand<AuthState>;

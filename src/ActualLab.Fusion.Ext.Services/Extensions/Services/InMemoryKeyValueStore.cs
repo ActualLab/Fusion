@@ -1,3 +1,6 @@
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.Operations.Internal;
+
 namespace ActualLab.Fusion.Extensions.Services;
 
 public class InMemoryKeyValueStore(
@@ -10,13 +13,13 @@ public class InMemoryKeyValueStore(
         public static Options Default { get; set; } = new();
 
         public RandomTimeSpan CleanupPeriod { get; init; } = TimeSpan.FromMinutes(1).ToRandom(0.05);
-        public IMomentClock? Clock { get; init; } = null;
+        public MomentClock? Clock { get; init; } = null;
     }
 
     protected Options Settings { get; } = settings;
-    protected IMomentClock Clock { get; }
+    protected MomentClock Clock { get; }
         = settings.Clock ?? services.Clocks().SystemClock;
-    protected ConcurrentDictionary<(Symbol TenantId, Symbol Key), (string Value, Moment? ExpiresAt)> Store { get; }
+    protected ConcurrentDictionary<(DbShard Shard, Symbol Key), (string Value, Moment? ExpiresAt)> Store { get; }
         = new();
 
     // Commands
@@ -24,60 +27,64 @@ public class InMemoryKeyValueStore(
     public virtual Task Set(KeyValueStore_Set command, CancellationToken cancellationToken = default)
     {
         var items = command.Items;
-        var tenantId = command.TenantId;
+        var shard = command.Shard;
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             foreach (var item in items)
-                PseudoGetAllPrefixes(tenantId, item.Key);
+                PseudoGetAllPrefixes(shard, item.Key);
             return Task.CompletedTask;
         }
 
+        InMemoryOperationScope.Require();
         foreach (var item in items)
-            AddOrUpdate(tenantId, item.Key, item.Value, item.ExpiresAt);
+            AddOrUpdate(shard, item.Key, item.Value, item.ExpiresAt);
         return Task.CompletedTask;
     }
 
     public virtual Task Remove(KeyValueStore_Remove command, CancellationToken cancellationToken = default)
     {
         var keys = command.Keys;
-        var tenantId = command.TenantId;
+        var shard = command.Shard;
 
-        if (Computed.IsInvalidating()) {
+        if (Invalidation.IsActive) {
             foreach (var key in keys)
-                PseudoGetAllPrefixes(tenantId, key);
+                PseudoGetAllPrefixes(shard, key);
             return Task.CompletedTask;
         }
 
+        InMemoryOperationScope.Require();
         foreach (var key in keys)
-            Store.Remove((TenantId: tenantId, key), out _);
+            Store.Remove((shard, key), out _);
         return Task.CompletedTask;
     }
 
     // Queries
 
-    public virtual Task<string?> Get(Symbol tenantId, string key, CancellationToken cancellationToken = default)
+    public virtual Task<string?> Get(DbShard shard, string key, CancellationToken cancellationToken = default)
     {
-        _ = PseudoGet(tenantId, key);
-        if (!Store.TryGetValue((tenantId, key), out var item))
-            return Task.FromResult((string?) null);
+        _ = PseudoGet(shard, key);
+        if (!Store.TryGetValue((shard, key), out var item))
+            return Task.FromResult((string?)null);
+
         var expiresAt = item.ExpiresAt;
-        if (expiresAt.HasValue && expiresAt.GetValueOrDefault() < Clock.Now)
-            return Task.FromResult((string?) null);
-        return Task.FromResult((string?) item.Value);
+        return Task.FromResult(
+            expiresAt.HasValue && expiresAt.GetValueOrDefault() < Clock.Now
+            ? null
+            : (string?)item.Value);
     }
 
-    public virtual Task<int> Count(Symbol tenantId, string prefix, CancellationToken cancellationToken = default)
+    public virtual Task<int> Count(DbShard shard, string prefix, CancellationToken cancellationToken = default)
     {
         // O(Store.Count) cost - definitely not for prod,
         // but fine for client-side use cases & testing.
-        _ = PseudoGet(tenantId, prefix);
+        _ = PseudoGet(shard, prefix);
         var count = Store.Keys
-            .Count(k => k.TenantId == tenantId && k.Key.Value.StartsWith(prefix, StringComparison.Ordinal));
+            .Count(k => k.Shard == shard && k.Key.Value.StartsWith(prefix, StringComparison.Ordinal));
         return Task.FromResult(count);
     }
 
     public virtual Task<string[]> ListKeySuffixes(
-        Symbol tenantId,
+        DbShard shard,
         string prefix,
         PageRef<string> pageRef,
         SortDirection sortDirection = SortDirection.Ascending,
@@ -85,9 +92,9 @@ public class InMemoryKeyValueStore(
     {
         // O(Store.Count) cost - definitely not for prod,
         // but fine for client-side use cases & testing.
-        _ = PseudoGet(tenantId, prefix);
+        _ = PseudoGet(shard, prefix);
         var query = Store.Keys
-            .Where(k => k.TenantId == tenantId && k.Key.Value.StartsWith(prefix, StringComparison.Ordinal));
+            .Where(k => k.Shard == shard && k.Key.Value.StartsWith(prefix, StringComparison.Ordinal));
         query = query.OrderByAndTakePage(k => k.Key, pageRef, sortDirection);
         var result = query
             .Select(k => k.Key.Value.Substring(prefix.Length))
@@ -98,30 +105,31 @@ public class InMemoryKeyValueStore(
     // PseudoXxx query-like methods
 
     [ComputeMethod]
-    protected virtual Task<Unit> PseudoGet(Symbol tenantId, string keyPart) => TaskExt.UnitTask;
+    protected virtual Task<Unit> PseudoGet(DbShard shard, string keyPart)
+        => TaskExt.UnitTask;
 
-    protected void PseudoGetAllPrefixes(Symbol tenantId, string key)
+    protected void PseudoGetAllPrefixes(DbShard shard, string key)
     {
         var delimiter = KeyValueStoreExt.Delimiter;
         var delimiterIndex = key.IndexOf(delimiter, 0);
         for (; delimiterIndex >= 0; delimiterIndex = key.IndexOf(delimiter, delimiterIndex + 1)) {
             var keyPart = key.Substring(0, delimiterIndex);
-            _ = PseudoGet(tenantId, keyPart);
+            _ = PseudoGet(shard, keyPart);
         }
-        _ = PseudoGet(tenantId, key);
+        _ = PseudoGet(shard, key);
     }
 
     // Private / protected
 
-    protected bool AddOrUpdate(Symbol tenantId, string key, string value, Moment? expiresAt)
+    protected bool AddOrUpdate(DbShard shard, string key, string value, Moment? expiresAt)
     {
         var spinWait = new SpinWait();
         while (true) {
-            if (Store.TryGetValue((tenantId, key), out var item)) {
-                if (Store.TryUpdate((tenantId, key), (value, expiresAt), item))
+            if (Store.TryGetValue((shard, key), out var item)) {
+                if (Store.TryUpdate((shard, key), (value, expiresAt), item))
                     return false;
             }
-            if (Store.TryAdd((tenantId, key), (value, expiresAt)))
+            if (Store.TryAdd((shard, key), (value, expiresAt)))
                 return true;
             spinWait.SpinOnce(); // Safe for WASM (unused there)
         }

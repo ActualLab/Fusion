@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Internal;
+using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -12,9 +13,9 @@ public enum RpcObjectKind
 public interface IRpcObject : IHasId<RpcObjectId>
 {
     RpcObjectKind Kind { get; }
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     Task Reconnect(CancellationToken cancellationToken);
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     void Disconnect();
 }
 

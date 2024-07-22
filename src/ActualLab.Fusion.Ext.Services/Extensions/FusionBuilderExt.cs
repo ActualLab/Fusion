@@ -1,7 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ActualLab.CommandR.Internal;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Extensions.Services;
 
@@ -11,13 +9,13 @@ public static class FusionBuilderExt
 {
     // SandboxedKeyValueStore
 
-    public static FusionBuilder AddSandboxedKeyValueStore(
+    public static FusionBuilder AddSandboxedKeyValueStore<TContext>(
         this FusionBuilder fusion,
-        Func<IServiceProvider, SandboxedKeyValueStore.Options>? optionsFactory = null)
+        Func<IServiceProvider, SandboxedKeyValueStore<TContext>.Options>? optionsFactory = null)
     {
         var services = fusion.Services;
-        services.AddSingleton(optionsFactory, _ => SandboxedKeyValueStore.Options.Default);
-        fusion.AddService<ISandboxedKeyValueStore, SandboxedKeyValueStore>();
+        services.AddSingleton(optionsFactory, _ => SandboxedKeyValueStore<TContext>.Options.Default);
+        fusion.AddService<ISandboxedKeyValueStore, SandboxedKeyValueStore<TContext>>();
         return fusion;
     }
 
@@ -28,6 +26,11 @@ public static class FusionBuilderExt
         Func<IServiceProvider, InMemoryKeyValueStore.Options>? optionsFactory = null)
     {
         var services = fusion.Services;
+        // Even though InMemoryKeyValueStore doesn't need TDbContext,
+        // SandboxedKeyValueStore uses DbShard-based APIs, so we add fake IDbShardRegistry<Unit>
+        // to let it use Unit as TDbContext.
+        services.TryAddSingleton<IDbShardRegistry<Unit>>(c => new DbShardRegistry<Unit>(c, DbShard.None));
+        services.TryAddSingleton<IDbShardResolver<Unit>>(c => new DbShardResolver<Unit>(c));
         services.AddSingleton(optionsFactory, _ => InMemoryKeyValueStore.Options.Default);
         fusion.AddService<IKeyValueStore, InMemoryKeyValueStore>();
         services.AddHostedService(c => (InMemoryKeyValueStore)c.GetRequiredService<IKeyValueStore>());
@@ -36,18 +39,13 @@ public static class FusionBuilderExt
 
     // DbKeyValueStore
 
-    [RequiresUnreferencedCode(Fusion.Internal.UnreferencedCode.Fusion)]
-    public static FusionBuilder AddDbKeyValueStore<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>(
+    public static FusionBuilder AddDbKeyValueStore<TDbContext>(
         this FusionBuilder fusion,
         Func<IServiceProvider, DbKeyValueTrimmer<TDbContext, DbKeyValue>.Options>? keyValueTrimmerOptionsFactory = null)
         where TDbContext : DbContext
         => fusion.AddDbKeyValueStore<TDbContext, DbKeyValue>(keyValueTrimmerOptionsFactory);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Commander)]
-    public static FusionBuilder AddDbKeyValueStore<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbKeyValue>(
+    public static FusionBuilder AddDbKeyValueStore<TDbContext, TDbKeyValue>(
         this FusionBuilder fusion,
         Func<IServiceProvider, DbKeyValueTrimmer<TDbContext, TDbKeyValue>.Options>? keyValueTrimmerOptionsFactory = null)
         where TDbContext : DbContext

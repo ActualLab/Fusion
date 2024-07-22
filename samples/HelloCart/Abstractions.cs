@@ -1,43 +1,70 @@
 using System.Runtime.Serialization;
+using System.Transactions;
+using ActualLab.CommandR.Operations;
 using MemoryPack;
 using Newtonsoft.Json;
+using Pastel;
 
 namespace Samples.HelloCart;
 
 [DataContract, MemoryPackable]
-public partial record Product : IHasId<string>
-{
-    [DataMember] public string Id { get; init; } = "";
-    [DataMember] public decimal Price { get; init; } = 0;
-}
+[method: JsonConstructor, MemoryPackConstructor]
+public partial record Product(
+    [property: DataMember] string Id,
+    [property: DataMember] decimal Price
+) : IHasId<string>;
 
 [DataContract, MemoryPackable]
-public partial record Cart : IHasId<string>
+[method: JsonConstructor, MemoryPackConstructor]
+public partial record Cart(
+    [property: DataMember] string Id
+) : IHasId<string>
 {
-    [DataMember] public string Id { get; init; } = "";
     [DataMember] public ImmutableDictionary<string, decimal> Items { get; init; } = ImmutableDictionary<string, decimal>.Empty;
 }
 
 [DataContract, MemoryPackable]
-public partial record EditCommand<TItem> : ICommand<Unit>
+[method: JsonConstructor, MemoryPackConstructor]
+public partial record EditCommand<TItem>(
+    [property: DataMember] string Id,
+    [property: DataMember] TItem? Item
+) : ICommand<Unit>
     where TItem : class, IHasId<string>
 {
-    [DataMember] public string Id { get; init; }
-    [DataMember] public TItem? Item { get; init; }
-
     public EditCommand(TItem value) : this(value.Id, value) { }
+}
 
-    [JsonConstructor, MemoryPackConstructor]
-    public EditCommand(string id, TItem item)
+[DataContract, MemoryPackable]
+[method: JsonConstructor, MemoryPackConstructor]
+public partial record LogMessageCommand(
+    [property: DataMember] Symbol Uuid,
+    [property: DataMember] string Message,
+    [property: DataMember] Moment DelayUntil = default
+) : ILocalCommand<Unit>, IHasUuid, IHasDelayUntil
+{
+    private static long _nextIndex;
+
+    public static LogMessageCommand New()
     {
-        Id = id;
-        Item = item;
+        var now = Moment.Now;
+        var delay = TimeSpan.FromSeconds((10*Random.Shared.NextDouble()) - 5).Positive();
+        var index = Interlocked.Increment(ref _nextIndex);
+        var message = delay > TimeSpan.FromMilliseconds(1)
+            ? $"Message #{index}, triggered with {delay.ToShortString()} delay"
+            : $"Message #{index}";
+        return new(Ulid.NewUlid().ToString(), message, now + delay);
     }
 
-    public void Deconstruct(out string id, out TItem? item)
+    // This is ILocalCommand, so Run is its own handler
+    public async Task Run(CommandContext context, CancellationToken cancellationToken)
     {
-        id = Id;
-        item = Item;
+        var hasDelayUntil = DelayUntil != default;
+        var color = hasDelayUntil ? ConsoleColor.Green : ConsoleColor.Blue;
+        Console.WriteLine($"[{Uuid}] {Message}".Pastel(color));
+        if (AppSettings.EnableRandomLogMessageCommandFailures && char.IsDigit(Uuid.Value[^1])) {
+            await Task.Delay(300, CancellationToken.None).ConfigureAwait(false);
+            throw new TransactionException("Can't run this command!");
+        }
     }
 }
 

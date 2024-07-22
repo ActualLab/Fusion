@@ -2,24 +2,36 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
-public interface IStateFactory : IHasServices
+public class StateFactory(IServiceProvider services) : IHasServices
 {
-    IMutableState<T> NewMutable<T>(MutableState<T>.Options settings);
+    private static readonly object Lock = new();
+    private static StateFactory? _default;
 
-    IComputedState<T> NewComputed<T>(
-        ComputedState<T>.Options settings,
-        Func<IComputedState<T>, CancellationToken, Task<T>> computer);
-}
+    public static StateFactory Default {
+        get {
+            if (_default != null)
+                return _default;
 
-public class StateFactory(IServiceProvider services) : IStateFactory
-{
+            lock (Lock) {
+                _default ??= new ServiceCollection().AddFusion().Services.BuildServiceProvider().StateFactory();
+                return _default;
+            }
+        }
+        set => _default = value;
+    }
+
     public IServiceProvider Services { get; } = services;
 
-    public IMutableState<T> NewMutable<T>(MutableState<T>.Options settings)
-        => new MutableState<T>(settings, Services);
+    public virtual MutableState<T> NewMutable<T>(MutableState<T>.Options settings)
+        => new(settings, Services);
 
-    public IComputedState<T> NewComputed<T>(
+    public virtual ComputedState<T> NewComputed<T>(
         ComputedState<T>.Options settings,
-        Func<IComputedState<T>, CancellationToken, Task<T>> computer)
+        Func<CancellationToken, Task<T>> computer)
         => new FuncComputedState<T>(settings, Services, computer);
+
+    public virtual ComputedState<T> NewComputed<T>(
+        ComputedState<T>.Options settings,
+        Func<ComputedState<T>, CancellationToken, Task<T>> computer)
+        => new FuncComputedStateEx<T>(settings, Services, computer);
 }

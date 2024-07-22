@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Fusion.Authentication;
 
 namespace ActualLab.Fusion.Extensions;
 
@@ -30,7 +29,7 @@ public static class SandboxedKeyValueStoreExt
     public static Task Set(this ISandboxedKeyValueStore keyValueStore,
         Session session, string key, string value, Moment? expiresAt, CancellationToken cancellationToken = default)
     {
-        var command = new SandboxedKeyValueStore_Set(session, new[] { (key, value, expiresAt) });
+        var command = new SandboxedKeyValueStore_Set(session, [(key, value, expiresAt)]);
         return keyValueStore.GetCommander().Call(command, cancellationToken);
     }
 
@@ -47,7 +46,7 @@ public static class SandboxedKeyValueStoreExt
     public static Task Remove(this ISandboxedKeyValueStore keyValueStore,
         Session session, string key, CancellationToken cancellationToken = default)
     {
-        var command = new SandboxedKeyValueStore_Remove(session, new[] { key });
+        var command = new SandboxedKeyValueStore_Remove(session, [key]);
         return keyValueStore.GetCommander().Call(command, cancellationToken);
     }
 

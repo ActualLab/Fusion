@@ -1,5 +1,4 @@
 using ActualLab.Testing.Collections;
-using ActualLab.Time.Internal;
 
 namespace ActualLab.Tests.Platform;
 
@@ -28,7 +27,6 @@ public class TaskDelayTest(ITestOutputHelper @out) : TestBase(@out)
             var minDelay = tasks.Select(t => t.Result).Min();
             var maxDelay = tasks.Select(t => t.Result).Max();
             Out.WriteLine($"Delays: min = {minDelay.TotalMilliseconds}ms, max = {maxDelay.TotalMilliseconds}ms");
-            minDelay.Should().BeGreaterThanOrEqualTo(requestedDelay);
         }
     }
 

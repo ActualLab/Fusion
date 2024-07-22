@@ -69,7 +69,7 @@ public abstract class CachingPluginFinderBase : IPluginFinder
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected virtual PluginSetInfo Deserialize(string source)
-        => new NewtonsoftJsonSerialized<PluginSetInfo?>(source).Value ?? PluginSetInfo.Empty;
+        => NewtonsoftJsonSerialized.New<PluginSetInfo?>(source).Value ?? PluginSetInfo.Empty;
 
     protected abstract IAsyncCache<string, string> CreateCache();
     protected abstract string? GetCacheKey();

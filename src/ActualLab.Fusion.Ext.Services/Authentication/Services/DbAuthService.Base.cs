@@ -1,12 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
-public abstract class DbAuthService<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbContext>
-    (IServiceProvider services)
+public abstract class DbAuthService<TDbContext>(IServiceProvider services)
     : DbServiceBase<TDbContext>(services), IAuth, IAuthBackend
     where TDbContext : DbContext
 {
@@ -28,8 +25,7 @@ public abstract class DbAuthService<
     // IAuthBackend
     public abstract Task SignIn(AuthBackend_SignIn command, CancellationToken cancellationToken = default);
     public abstract Task<SessionInfo> SetupSession(AuthBackend_SetupSession command, CancellationToken cancellationToken = default);
-    public abstract Task SetOptions(Auth_SetSessionOptions command, CancellationToken cancellationToken = default);
+    public abstract Task SetOptions(AuthBackend_SetSessionOptions command, CancellationToken cancellationToken = default);
     public abstract Task<SessionInfo?> GetSessionInfo(Session session, CancellationToken cancellationToken = default);
-    public abstract Task<ImmutableOptionSet> GetOptions(Session session, CancellationToken cancellationToken = default);
-    public abstract Task<User?> GetUser(Symbol tenantId, Symbol userId, CancellationToken cancellationToken = default);
+    public abstract Task<User?> GetUser(DbShard shard, Symbol userId, CancellationToken cancellationToken = default);
 }

@@ -143,7 +143,7 @@
     private static readonly Parser Parser = Parser.GetDefault();
 
     private ConcurrentDictionary<string, UserAgent> UserAgentCache { get; } = new();
-    private (string Name, string DisplayName)[] AuthSchemas { get; set; } = Array.Empty<(string, string)>();
+    private (string Name, string DisplayName)[] AuthSchemas { get; set; } = [];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

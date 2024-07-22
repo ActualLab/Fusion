@@ -1,11 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Samples.HelloCart.V2;
-using ActualLab.Fusion.EntityFramework;
-using ActualLab.Fusion.EntityFramework.Redis;
 using ActualLab.Fusion.Server;
-using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
+using Samples.HelloCart.V3;
 
 namespace Samples.HelloCart.V4;
 
@@ -31,28 +29,12 @@ public class AppV4 : AppBase
 
         // Configure services
         var services = builder.Services;
+        AppLogging.Configure(services);
+        AppDb.Configure(services);
         services.AddFusion(RpcServiceMode.Server, fusion => {
             fusion.AddWebServer();
-            fusion.AddService<IProductService, DbProductService>();
-            fusion.AddService<ICartService, DbCartService>();
-        });
-        // Add AppDbContext & related services
-        var appTempDir = FilePath.GetApplicationTempDirectory("", true);
-        var dbPath = appTempDir & "HelloCart_v01.db";
-        services.AddTransientDbContextFactory<AppDbContext>(db => {
-            db.UseSqlite($"Data Source={dbPath}");
-            db.EnableSensitiveDataLogging();
-        });
-        services.AddDbContextServices<AppDbContext>(db => {
-            db.AddOperations(operations => {
-                operations.AddRedisOperationLogChangeTracking();
-            });
-            db.AddRedisDb("localhost", "Fusion.Samples.HelloCart");
-            db.AddEntityResolver<string, DbProduct>();
-            db.AddEntityResolver<string, DbCart>(_ => new() {
-                // Cart is always loaded together with items
-                QueryTransformer = carts => carts.Include(c => c.Items),
-            });
+            fusion.AddService<IProductService, DbProductServiceUsingEntityResolver>();
+            fusion.AddService<ICartService, DbCartServiceUsingEntityResolver>();
         });
 
         // Configure WebApplication
@@ -69,7 +51,7 @@ public class AppV4 : AppBase
     protected IServiceProvider BuildClientServices(string baseUri)
     {
         var services = new ServiceCollection();
-        ConfigureLogging(services);
+        AppLogging.Configure(services);
         services.AddFusion(fusion => {
             fusion.Rpc.AddWebSocketClient(baseUri);
             fusion.AddClient<IProductService>();
@@ -78,27 +60,17 @@ public class AppV4 : AppBase
         return services.BuildServiceProvider();
     }
 
-    protected void ConfigureLogging(IServiceCollection services)
-    {
-        services.AddLogging(logging => {
-            logging.ClearProviders();
-            logging.AddConsole();
-            logging.SetMinimumLevel(LogLevel.Error);
-            // logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Information);
-            // logging.AddFilter("ActualLab.Fusion.Operations", LogLevel.Information);
-        });
-    }
-
-    public override async Task InitializeAsync(IServiceProvider services)
+    public override async Task InitializeAsync(IServiceProvider services, bool startHostedServices)
     {
         // Let's re-create the database first
         await using var dbContext = ServerServices.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
         await dbContext.Database.EnsureDeletedAsync();
         await dbContext.Database.EnsureCreatedAsync();
-        await base.InitializeAsync(services);
-
-        await App.StartAsync();
-        await Task.Delay(100);
+        await base.InitializeAsync(services, false);
+        if (startHostedServices) {
+            await App.StartAsync();
+            await Task.Delay(100);
+        }
     }
 
     public override async ValueTask DisposeAsync()

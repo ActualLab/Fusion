@@ -1,5 +1,4 @@
 using ActualLab.Caching;
-using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
@@ -8,7 +7,7 @@ public static partial class ComputedExt
 {
     // Invalidate
 
-    public static void Invalidate(this IComputed computed, TimeSpan delay, bool? usePreciseTimer = null)
+    public static void Invalidate(this Computed computed, TimeSpan delay, bool? usePreciseTimer = null)
     {
         if (delay == TimeSpan.MaxValue) // No invalidation
             return;
@@ -20,8 +19,8 @@ public static partial class ComputedExt
 
         var bPrecise = usePreciseTimer ?? delay <= Computed.PreciseInvalidationDelayThreshold;
         if (!bPrecise) {
-            Timeouts.Invalidate.AddOrUpdateToEarlier(computed, Timeouts.Clock.Now + delay);
-            computed.Invalidated += c => Timeouts.Invalidate.Remove(c);
+            Timeouts.Generic.AddOrUpdateToEarlier((IGenericTimeoutHandler)computed, Timeouts.Clock.Now + delay);
+            computed.Invalidated += static c => Timeouts.Generic.Remove((IGenericTimeoutHandler)c);
             return;
         }
 
@@ -66,8 +65,8 @@ public static partial class ComputedExt
 
         var bPrecise = usePreciseTimer ?? delay <= Computed.PreciseInvalidationDelayThreshold;
         if (!bPrecise) {
-            Timeouts.Invalidate.AddOrUpdateToEarlier(computed, Timeouts.Clock.Now + delay);
-            computed.Invalidated += c => Timeouts.Invalidate.Remove(c);
+            Timeouts.Generic.AddOrUpdateToEarlier(computed, Timeouts.Clock.Now + delay);
+            computed.Invalidated += static c => Timeouts.Generic.Remove((IGenericTimeoutHandler)c);
             return;
         }
 
@@ -101,13 +100,16 @@ public static partial class ComputedExt
 
     // WhenInvalidated
 
-    public static Task WhenInvalidated(this IComputed computed, CancellationToken cancellationToken = default)
+    public static Task WhenInvalidated(this Computed computed, CancellationToken cancellationToken = default)
     {
         if (computed.ConsistencyState == ConsistencyState.Invalidated)
             return Task.CompletedTask;
+
         var tcs = TaskCompletionSourceExt.New<Unit>();
-        if (cancellationToken != default)
+        if (cancellationToken.CanBeCanceled) {
+            cancellationToken.ThrowIfCancellationRequested();
             return new WhenInvalidatedClosure(tcs, computed, cancellationToken).Task;
+        }
 
         // No way to cancel / unregister the handler here
         computed.Invalidated += _ => tcs.TrySetResult(default);
@@ -121,8 +123,10 @@ public static partial class ComputedExt
             return Task.CompletedTask;
 
         var tcs = TaskCompletionSourceExt.New<Unit>();
-        if (cancellationToken != default)
+        if (cancellationToken.CanBeCanceled) {
+            cancellationToken.ThrowIfCancellationRequested();
             return new WhenInvalidatedClosure(tcs, computed, cancellationToken).Task;
+        }
 
         // No way to cancel / unregister the handler here
         computed.Invalidated += _ => tcs.TrySetResult(default);
@@ -171,7 +175,8 @@ public static partial class ComputedExt
     public static Task<Computed<T>> When<T>(this Computed<T> computed,
         Func<T, bool> predicate,
         CancellationToken cancellationToken = default)
-        => computed.When(predicate, FixedDelayer.Instant, cancellationToken);
+        => computed.When(predicate, FixedDelayer.NextTick, cancellationToken);
+
     public static async Task<Computed<T>> When<T>(this Computed<T> computed,
         Func<T, bool> predicate,
         IUpdateDelayer updateDelayer,
@@ -191,7 +196,8 @@ public static partial class ComputedExt
     public static Task<Computed<T>> When<T>(this Computed<T> computed,
         Func<T, Exception?, bool> predicate,
         CancellationToken cancellationToken = default)
-        => computed.When(predicate, FixedDelayer.Instant, cancellationToken);
+        => computed.When(predicate, FixedDelayer.NextTick, cancellationToken);
+
     public static async Task<Computed<T>> When<T>(this Computed<T> computed,
         Func<T, Exception?, bool> predicate,
         IUpdateDelayer updateDelayer,
@@ -214,7 +220,8 @@ public static partial class ComputedExt
     public static IAsyncEnumerable<Computed<T>> Changes<T>(
         this Computed<T> computed,
         CancellationToken cancellationToken = default)
-        => computed.Changes(FixedDelayer.Instant, cancellationToken);
+        => computed.Changes(FixedDelayer.NextTick, cancellationToken);
+
     public static async IAsyncEnumerable<Computed<T>> Changes<T>(
         this Computed<T> computed,
         IUpdateDelayer updateDelayer,
@@ -238,7 +245,7 @@ public static partial class ComputedExt
     // WhenSynchronized & Synchronize
 
     public static Task WhenSynchronized(
-        this IComputed computed,
+        this Computed computed,
         CancellationToken cancellationToken = default)
     {
         if (computed is IMaybeCachedValue mcv)
@@ -260,11 +267,10 @@ public static partial class ComputedExt
         }
 
         // Computed is a regular computed instance
-        var computedImpl = (IComputedImpl)computed;
-        var usedBuffer = ArrayBuffer<IComputedImpl>.Lease(false);
+        var usedBuffer = ArrayBuffer<Computed>.Lease(false);
         var taskBuffer = ArrayBuffer<Task>.Lease(false);
         try {
-            computedImpl.CopyUsedTo(ref usedBuffer);
+            computed.CopyDependenciesTo(ref usedBuffer);
             var usedArray = usedBuffer.Buffer;
             for (var i = 0; i < usedBuffer.Count; i++) {
                 var used = usedArray[i];

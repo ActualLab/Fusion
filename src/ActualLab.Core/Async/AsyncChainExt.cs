@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ActualLab.Resilience;
 
 namespace ActualLab.Async;
 
@@ -33,20 +34,20 @@ public static class AsyncChainExt
     public static AsyncChain Rename(this AsyncChain asyncChain, string name)
         => asyncChain with { Name = name };
 
-    public static AsyncChain WithTerminalErrorDetector(this AsyncChain asyncChain, TerminalErrorDetector terminalErrorDetector)
-        => asyncChain with { TerminalErrorDetector = terminalErrorDetector };
+    public static AsyncChain WithTransiencyResolver(this AsyncChain asyncChain, TransiencyResolver transiencyResolver)
+        => asyncChain with { TransiencyResolver = transiencyResolver };
 
     public static AsyncChain Append(this AsyncChain asyncChain, AsyncChain suffixChain)
         => new($"{asyncChain.Name} & {suffixChain.Name}", async cancellationToken => {
             await asyncChain.Start(cancellationToken).ConfigureAwait(false);
             await suffixChain.Start(cancellationToken).ConfigureAwait(false);
-        }, asyncChain.TerminalErrorDetector);
+        }, asyncChain.TransiencyResolver);
 
     public static AsyncChain Prepend(this AsyncChain asyncChain, AsyncChain prefixChain)
         => new($"{prefixChain.Name} & {asyncChain.Name}", async cancellationToken => {
             await prefixChain.Start(cancellationToken).ConfigureAwait(false);
             await asyncChain.Start(cancellationToken).ConfigureAwait(false);
-        }, asyncChain.TerminalErrorDetector);
+        }, asyncChain.TransiencyResolver);
 
     public static AsyncChain LogError(this AsyncChain asyncChain, ILogger? log)
     {
@@ -58,10 +59,11 @@ public static class AsyncChainExt
                 try {
                     await asyncChain.Start(cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception e) {
-                    if (!asyncChain.TerminalErrorDetector.Invoke(e, cancellationToken))
-                        log.LogError(e, "{ChainName} failed", asyncChain.Name);
-                    throw;
+                catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+                    if (asyncChain.TransiencyResolver.Invoke(e).IsTerminal())
+                        throw;
+
+                    log.LogError(e, "{ChainName} failed", asyncChain.Name);
                 }
             }
         };
@@ -83,11 +85,15 @@ public static class AsyncChainExt
                         "{ChainName} completed", asyncChain.Name);
                 }
                 catch (Exception e) {
-                    if (!asyncChain.TerminalErrorDetector.Invoke(e, cancellationToken))
-                        log.LogError(e, "{ChainName} failed", asyncChain.Name);
-                    else
+                    if (e.IsCancellationOf(cancellationToken))
+                        log.IfEnabled(logLevel)?.Log(logLevel,
+                            "{ChainName} completed (cancelled)", asyncChain.Name);
+                    else if (asyncChain.TransiencyResolver.Invoke(e).IsTerminal())
                         log.IfEnabled(logLevel)?.Log(logLevel,
                             "{ChainName} completed (terminal error)", asyncChain.Name);
+                    else
+                        log.LogError(e,
+                            "{ChainName} failed", asyncChain.Name);
                     throw;
                 }
             }
@@ -111,103 +117,115 @@ public static class AsyncChainExt
             try {
                 await asyncChain.Start(cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception e) {
-                if (!asyncChain.TerminalErrorDetector.Invoke(e, cancellationToken))
-                    log?.IfEnabled(LogLevel.Error)?.LogError(e,
-                        "{ChainName} failed, the error is silenced", asyncChain.Name);
-            }
-        }, asyncChain.TerminalErrorDetector);
+            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+                if (asyncChain.TransiencyResolver.Invoke(e).IsTerminal())
+                    throw;
 
-    public static AsyncChain AppendDelay(this AsyncChain asyncChain, Func<RandomTimeSpan> delayFactory, IMomentClock? clock = null)
+                log?.IfEnabled(LogLevel.Error)?.LogError(e,
+                    "{ChainName} failed, the error is silenced", asyncChain.Name);
+            }
+        }, asyncChain.TransiencyResolver);
+
+    public static AsyncChain AppendDelay(this AsyncChain asyncChain, Func<RandomTimeSpan> delayFactory, MomentClock? clock = null)
         => asyncChain.AppendDelay(() => delayFactory.Invoke().Next());
-    public static AsyncChain AppendDelay(this AsyncChain asyncChain, Func<TimeSpan> delayFactory, IMomentClock? clock = null)
+    public static AsyncChain AppendDelay(this AsyncChain asyncChain, Func<TimeSpan> delayFactory, MomentClock? clock = null)
     {
         clock ??= MomentClockSet.Default.CpuClock;
         return new($"{asyncChain.Name}.AppendDelay(?)", async cancellationToken => {
             await asyncChain.Start(cancellationToken).ConfigureAwait(false);
             await clock.Delay(delayFactory.Invoke(), cancellationToken).ConfigureAwait(false);
-        }, asyncChain.TerminalErrorDetector);
+        }, asyncChain.TransiencyResolver);
     }
-    public static AsyncChain AppendDelay(this AsyncChain asyncChain, RandomTimeSpan delay, IMomentClock? clock = null)
+    public static AsyncChain AppendDelay(this AsyncChain asyncChain, RandomTimeSpan delay, MomentClock? clock = null)
     {
         clock ??= MomentClockSet.Default.CpuClock;
         return new($"{asyncChain.Name}.AppendDelay({delay})", async cancellationToken => {
             await asyncChain.Start(cancellationToken).ConfigureAwait(false);
             await clock.Delay(delay.Next(), cancellationToken).ConfigureAwait(false);
-        }, asyncChain.TerminalErrorDetector);
+        }, asyncChain.TransiencyResolver);
     }
 
-    public static AsyncChain PrependDelay(this AsyncChain asyncChain, Func<RandomTimeSpan> delayFactory, IMomentClock? clock = null)
+    public static AsyncChain PrependDelay(this AsyncChain asyncChain, Func<RandomTimeSpan> delayFactory, MomentClock? clock = null)
         => asyncChain.PrependDelay(() => delayFactory.Invoke().Next());
-    public static AsyncChain PrependDelay(this AsyncChain asyncChain, Func<TimeSpan> delayFactory, IMomentClock? clock = null)
+    public static AsyncChain PrependDelay(this AsyncChain asyncChain, Func<TimeSpan> delayFactory, MomentClock? clock = null)
     {
         clock ??= MomentClockSet.Default.CpuClock;
         return new($"{asyncChain.Name}.PrependDelay(?)", async cancellationToken => {
             await clock.Delay(delayFactory.Invoke(), cancellationToken).ConfigureAwait(false);
             await asyncChain.Start(cancellationToken).ConfigureAwait(false);
-        }, asyncChain.TerminalErrorDetector);
+        }, asyncChain.TransiencyResolver);
     }
-    public static AsyncChain PrependDelay(this AsyncChain asyncChain, RandomTimeSpan delay, IMomentClock? clock = null)
+    public static AsyncChain PrependDelay(this AsyncChain asyncChain, RandomTimeSpan delay, MomentClock? clock = null)
     {
         clock ??= MomentClockSet.Default.CpuClock;
         return new($"{asyncChain.Name}.PrependDelay({delay})", async cancellationToken => {
             await clock.Delay(delay.Next(), cancellationToken).ConfigureAwait(false);
             await asyncChain.Start(cancellationToken).ConfigureAwait(false);
-        }, asyncChain.TerminalErrorDetector);
+        }, asyncChain.TransiencyResolver);
     }
 
     public static AsyncChain RetryForever(this AsyncChain asyncChain, RetryDelaySeq retryDelays, ILogger? log = null)
         => asyncChain.RetryForever(retryDelays, null, log);
-    public static AsyncChain RetryForever(this AsyncChain asyncChain, RetryDelaySeq retryDelays, IMomentClock? clock, ILogger? log = null)
+    public static AsyncChain RetryForever(this AsyncChain asyncChain, RetryDelaySeq retryDelays, MomentClock? clock, ILogger? log = null)
         => new($"{asyncChain.Name}.RetryForever({retryDelays}", async cancellationToken => {
             clock ??= MomentClockSet.Default.CpuClock;
-            for (var failedTryCount = 0;; failedTryCount++) {
+            var tryIndex = 0;
+            while (true) {
                 try {
-                    if (failedTryCount >= 1)
+                    if (tryIndex >= 1)
                         log?.IfEnabled(LogLevel.Information)?.LogInformation(
-                            "Retrying {ChainName} (#{FailedTryCount})",
-                            asyncChain.Name, failedTryCount);
+                            "Retrying {ChainName} (#{TryIndex})",
+                            asyncChain.Name, tryIndex);
                     await asyncChain.Start(cancellationToken).ConfigureAwait(false);
                     return;
                 }
-                catch (Exception e) {
-                    if (asyncChain.TerminalErrorDetector.Invoke(e, cancellationToken))
+                catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+                    var transiency = asyncChain.TransiencyResolver.Invoke(e);
+                    if (transiency.IsTerminal())
                         throw;
-                    // Everything else must be retried
+
+                    if (!transiency.IsSuperTransient())
+                        tryIndex++;
                 }
-                var retryDelay = retryDelays[failedTryCount];
+                var retryDelay = retryDelays[Math.Max(1, tryIndex)];
                 await clock.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
             }
-        }, asyncChain.TerminalErrorDetector);
+        }, asyncChain.TransiencyResolver);
 
-    public static AsyncChain Retry(this AsyncChain asyncChain, RetryDelaySeq retryDelays, int? maxRetryCount, ILogger? log = null)
-        => asyncChain.Retry(retryDelays, maxRetryCount, null, log);
-    public static AsyncChain Retry(this AsyncChain asyncChain, RetryDelaySeq retryDelays, int? maxRetryCount, IMomentClock? clock, ILogger? log = null)
+    public static AsyncChain Retry(this AsyncChain asyncChain, RetryDelaySeq retryDelays, int? tryCount, ILogger? log = null)
+        => asyncChain.Retry(retryDelays, tryCount, null, log);
+    public static AsyncChain Retry(this AsyncChain asyncChain, RetryDelaySeq retryDelays, int? tryCount, MomentClock? clock, ILogger? log = null)
     {
-        if (maxRetryCount is not { } maxCount)
+        if (tryCount is not { } vTryCount)
             return asyncChain.RetryForever(retryDelays, log);
 
-        return new($"{asyncChain.Name}.Retry({retryDelays}, {maxRetryCount})",
+        return new($"{asyncChain.Name}.Retry({retryDelays}, {tryCount})",
             async cancellationToken => {
                 clock ??= MomentClockSet.Default.CpuClock;
-                for (var failedTryCount = 0; failedTryCount <= maxCount; failedTryCount++) {
+                var tryIndex = 0;
+                while (true) {
                     try {
-                        if (failedTryCount >= 1)
+                        if (tryIndex >= 1)
                             log?.IfEnabled(LogLevel.Information)?.LogInformation(
-                                "Retrying {ChainName} (#{FailedTryCount}/{MaxRetryCount})",
-                                asyncChain.Name, failedTryCount, maxCount);
+                                "Retrying {ChainName} (#{TryIndex}/{MaxRetryCount})",
+                                asyncChain.Name, tryIndex, vTryCount);
                         await asyncChain.Start(cancellationToken).ConfigureAwait(false);
                         return;
                     }
-                    catch (Exception e) {
-                        if (asyncChain.TerminalErrorDetector.Invoke(e, cancellationToken) || failedTryCount >= maxCount)
+                    catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+                        var transiency = asyncChain.TransiencyResolver.Invoke(e);
+                        if (transiency.IsTerminal())
                             throw;
-                        // Everything else must be retried
+
+                        if (!transiency.IsSuperTransient())
+                            tryIndex++;
+                        if (tryIndex >= vTryCount)
+                            throw;
                     }
-                    var retryDelay = retryDelays[failedTryCount];
+                    var retryDelay = retryDelays[Math.Max(1, tryIndex)];
                     await clock.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
                 }
-            }, asyncChain.TerminalErrorDetector);
+            }, asyncChain.TransiencyResolver);
     }
 
     public static AsyncChain CycleForever(this AsyncChain asyncChain)
@@ -217,5 +235,5 @@ public static class AsyncChainExt
                 cancellationToken.ThrowIfCancellationRequested();
             }
             // ReSharper disable once FunctionNeverReturns
-        }, asyncChain.TerminalErrorDetector);
+        }, asyncChain.TransiencyResolver);
 }

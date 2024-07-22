@@ -1,6 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
 using StackExchange.Redis;
-using ActualLab.Internal;
 
 namespace ActualLab.Redis;
 
@@ -11,7 +9,7 @@ public sealed class RedisQueue : IAsyncDisposable
         public string EnqueuePubKeySuffix { get; init; } = "-updates";
         public TimeSpan EnqueueCheckPeriod { get; init; } = TimeSpan.FromSeconds(1);
         public TimeSpan? EnqueueSubscribeTimeout { get; init; } = TimeSpan.FromSeconds(5);
-        public IMomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
+        public MomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
     }
 
     private RedisPub EnqueuePub { get; }
@@ -38,7 +36,9 @@ public sealed class RedisQueue : IAsyncDisposable
     {
         if (redisValue.IsNullOrEmpty)
             throw new ArgumentOutOfRangeException(nameof(redisValue));
-        await RedisDb.Database.ListLeftPushAsync(Key, redisValue).ConfigureAwait(false);
+
+        var database = await RedisDb.Database.Get().ConfigureAwait(false);
+        await database.ListLeftPushAsync(Key, redisValue).ConfigureAwait(false);
         await EnqueuePub.Publish(RedisValue.EmptyString).ConfigureAwait(false);
     }
 
@@ -47,9 +47,11 @@ public sealed class RedisQueue : IAsyncDisposable
         await EnqueueSub.Subscribe().ConfigureAwait(false);
         var nextMessageTask = EnqueueSub.NextMessage();
         while (true) {
-            var redisValue = await RedisDb.Database.ListRightPopAsync(Key).ConfigureAwait(false);
+            var database = await RedisDb.Database.Get(cancellationToken).ConfigureAwait(false);
+            var redisValue = await database.ListRightPopAsync(Key).ConfigureAwait(false);
             if (!redisValue.IsNullOrEmpty)
                 return redisValue;
+
             var notificationResult = await nextMessageTask
                 .WaitResultAsync(Settings.Clock, Settings.EnqueueCheckPeriod, cancellationToken)
                 .ConfigureAwait(false);
@@ -59,8 +61,11 @@ public sealed class RedisQueue : IAsyncDisposable
         }
     }
 
-    public Task Remove()
-        => RedisDb.Database.KeyDeleteAsync(Key, CommandFlags.FireAndForget);
+    public async Task Remove()
+    {
+        var database = await RedisDb.Database.Get().ConfigureAwait(false);
+        await database.KeyDeleteAsync(Key, CommandFlags.FireAndForget).ConfigureAwait(false);
+    }
 }
 
 public sealed class RedisQueue<T> : IAsyncDisposable
@@ -71,7 +76,7 @@ public sealed class RedisQueue<T> : IAsyncDisposable
         public TimeSpan EnqueueCheckPeriod { get; init; } = TimeSpan.FromSeconds(1);
         public TimeSpan? EnqueueSubscribeTimeout { get; init; } = TimeSpan.FromSeconds(5);
         public IByteSerializer<T> Serializer { get; init; } = ByteSerializer<T>.Default;
-        public IMomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
+        public MomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
     }
 
     private RedisPub EnqueuePub { get; }
@@ -96,21 +101,21 @@ public sealed class RedisQueue<T> : IAsyncDisposable
     public ValueTask DisposeAsync()
         => EnqueueSub.DisposeAsync();
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Enqueue(T item)
     {
         using var bufferWriter = Settings.Serializer.Write(item);
-        await RedisDb.Database.ListLeftPushAsync(Key, bufferWriter.WrittenMemory).ConfigureAwait(false);
+        var database = await RedisDb.Database.Get().ConfigureAwait(false);
+        await database.ListLeftPushAsync(Key, bufferWriter.WrittenMemory).ConfigureAwait(false);
         await EnqueuePub.Publish(RedisValue.EmptyString).ConfigureAwait(false);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task<T> Dequeue(CancellationToken cancellationToken = default)
     {
         await EnqueueSub.Subscribe().ConfigureAwait(false);
         var nextMessageTask = EnqueueSub.NextMessage();
         while (true) {
-            var value = await RedisDb.Database.ListRightPopAsync(Key).ConfigureAwait(false);
+            var database = await RedisDb.Database.Get(cancellationToken).ConfigureAwait(false);
+            var value = await database.ListRightPopAsync(Key).ConfigureAwait(false);
             if (!value.IsNullOrEmpty)
                 return Settings.Serializer.Read(value);
             var notificationResult = await nextMessageTask
@@ -122,6 +127,9 @@ public sealed class RedisQueue<T> : IAsyncDisposable
         }
     }
 
-    public Task Remove()
-        => RedisDb.Database.KeyDeleteAsync(Key, CommandFlags.FireAndForget);
+    public async Task Remove()
+    {
+        var database = await RedisDb.Database.Get().ConfigureAwait(false);
+        await database.KeyDeleteAsync(Key, CommandFlags.FireAndForget).ConfigureAwait(false);
+    }
 }

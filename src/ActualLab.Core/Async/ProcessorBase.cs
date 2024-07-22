@@ -1,11 +1,15 @@
+using System.Diagnostics;
+
 namespace ActualLab.Async;
 
 public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDisposed
 {
     private volatile Task? _disposeTask;
+    private ActivitySource? _activitySource;
 
     protected CancellationTokenSource StopTokenSource { get; }
     protected object Lock => StopTokenSource;
+    protected ActivitySource ActivitySource => _activitySource ??= GetType().GetActivitySource();
 
     public CancellationToken StopToken { get; }
     public bool IsDisposed => _disposeTask != null;
@@ -17,6 +21,7 @@ public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDis
         StopToken = StopTokenSource.Token;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose()
         => _ = DisposeAsync();
 

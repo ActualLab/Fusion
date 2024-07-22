@@ -1,4 +1,3 @@
-@using ActualLab.Async;
 @implements IDisposable
 @*
     StateOfStateBadge:
@@ -9,16 +8,12 @@
 <Div Margin="Margin.Is1.OnY">
     <span>Component state: </span>
     @if (IsLoading) {
-        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
         <b>Loading...</b>
     } else if (IsUpdating) {
-        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
         <b>Updating...</b>
     } else if (IsUpdatePending) {
-        <div class="spinner-grow spinner-grow-sm text-secondary" role="status"></div>
         <b class="text-secondary">Update pending...</b>
     } else {
-        <span class="oi oi-check" aria-hidden="true"></span>
         <b>In sync.</b>
     }
 </Div>

@@ -13,5 +13,8 @@ public class AppDbContext(DbContextOptions options) : DbContextBase(options)
     public DbSet<DbUserIdentity<string>> UserIdentities { get; protected set; } = null!;
     public DbSet<DbSessionInfo<string>> Sessions { get; protected set; } = null!;
     public DbSet<DbKeyValue> KeyValues { get; protected set; } = null!;
+
+    // ActualLab.Fusion.EntityFramework.Operations tables
     public DbSet<DbOperation> Operations { get; protected set; } = null!;
+    public DbSet<DbEvent> Events { get; protected set; } = null!;
 }

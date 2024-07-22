@@ -1,6 +1,5 @@
 using ActualLab.Fusion.Operations.Internal;
-using ActualLab.Generators;
-using ActualLab.OS;
+using ActualLab.Resilience;
 using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Operations.Reprocessing;
@@ -11,100 +10,106 @@ namespace ActualLab.Fusion.Operations.Reprocessing;
 /// </summary>
 public interface IOperationReprocessor : ICommandHandler<ICommand>
 {
-    public OperationReprocessorOptions Options { get; }
-    public IMomentClock DelayClock { get; }
-    int FailedTryCount { get; }
-    Exception? LastError { get; }
-
-    void AddTransientFailure(Exception error);
-    bool IsTransientFailure(IReadOnlyList<Exception> allErrors);
-    bool WillRetry(IReadOnlyList<Exception> allErrors);
-}
-
-public record OperationReprocessorOptions
-{
-    public static OperationReprocessorOptions Default { get; set; } = new();
-
-    public int MaxRetryCount { get; init; } = 3;
-    public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(0.50, 3, 0.33);
-    public IMomentClock? DelayClock { get; init; }
-    public Func<ICommand, CommandContext, bool> Filter { get; init; } = DefaultFilter;
-
-    public static bool DefaultFilter(ICommand command, CommandContext context)
-    {
-        if (FusionSettings.Mode != FusionMode.Server)
-            return false; // Only server can do the reprocessing
-
-        // No reprocessing for commands running from scoped Commander instances,
-        // i.e. no reprocessing for UI commands:
-        // - the underlying backend commands are anyway reprocessed on the server side
-        // - so reprocessing UI commands means N*N times reprocessing.
-        return !context.Commander.Services.IsScoped();
-    }
+    void MarkTransient(Exception error, Transiency transiency);
+    Transiency GetTransiency(IReadOnlyList<Exception> allErrors);
+    bool WillRetry(IReadOnlyList<Exception> allErrors, out Transiency transiency);
 }
 
 /// <summary>
 /// Tries to reprocess commands that failed with a reprocessable (transient) error.
 /// Must be a transient service.
 /// </summary>
-public class OperationReprocessor(
-        OperationReprocessorOptions options,
-        IServiceProvider services
-        ) : IOperationReprocessor
+public class OperationReprocessor : IOperationReprocessor
 {
-    private ITransientErrorDetector<IOperationReprocessor>? _transientErrorDetector;
-    private IMomentClock? _delayClock;
-    private ILogger? _log;
-
-    protected IServiceProvider Services { get; } = services;
-    protected ITransientErrorDetector<IOperationReprocessor> TransientErrorDetector
-        => _transientErrorDetector ??= Services.GetRequiredService<ITransientErrorDetector<IOperationReprocessor>>();
-    protected HashSet<Exception> KnownTransientFailures { get; } = new();
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
-
-    public OperationReprocessorOptions Options { get; } = options;
-    public IMomentClock DelayClock => _delayClock ??= Options.DelayClock ?? Services.Clocks().CpuClock;
-
-    public int FailedTryCount { get; protected set; }
-    public Exception? LastError { get; protected set; }
-    public CommandContext CommandContext { get; protected set; } = null!;
-
-    public void AddTransientFailure(Exception error)
+    public record Options
     {
-        lock (KnownTransientFailures)
-            KnownTransientFailures.Add(error);
+        public static Options Default { get; set; } = new();
+
+        public int MaxRetryCount { get; init; } = 3;
+        public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(0.50, 3, 0.33);
+        public MomentClock? DelayClock { get; init; }
+        public Func<ICommand, CommandContext, bool> Filter { get; init; } = DefaultFilter;
+
+        public static bool DefaultFilter(ICommand command, CommandContext context)
+        {
+            if (FusionDefaults.Mode != FusionMode.Server)
+                return false; // Only server can do the reprocessing
+            if (command is IApiCommand)
+                return false; // No reprocessing for IApiCommands
+
+            // No reprocessing for commands running from scoped Commander instances,
+            // i.e. no reprocessing for UI commands:
+            // - the underlying backend commands are anyway reprocessed on the server side
+            // - so reprocessing UI commands means N*N times reprocessing.
+            return !context.Commander.Services.IsScoped();
+        }
     }
 
-    public virtual bool IsTransientFailure(IReadOnlyList<Exception> allErrors)
+    private TransiencyResolver<IOperationReprocessor>? _transiencyResolver;
+    private MomentClock? _delayClock;
+    private ILogger? _log;
+
+    protected Dictionary<Exception, Transiency> KnownTransiencies { get; } = new();
+    protected CommandContext CommandContext { get; set; } = null!;
+    protected int TryIndex { get; set; }
+    protected Exception? LastError { get; set; }
+
+    protected IServiceProvider Services { get; }
+    protected TransiencyResolver<IOperationReprocessor> TransiencyResolver
+        => _transiencyResolver ??= Services.TransiencyResolver<IOperationReprocessor>();
+    public MomentClock DelayClock => _delayClock ??= Settings.DelayClock ?? Services.Clocks().CpuClock;
+    protected ILogger Log => _log ??= Services.LogFor(GetType());
+
+    public Options Settings { get; }
+
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public OperationReprocessor(Options settings, IServiceProvider services)
     {
-#pragma warning disable CA1851
-        lock (KnownTransientFailures) {
+        Services = services;
+        Settings = settings;
+    }
+
+    public void MarkTransient(Exception error, Transiency transiency)
+    {
+        if (!transiency.IsTransient())
+            throw new ArgumentOutOfRangeException(nameof(transiency));
+
+        lock (KnownTransiencies)
+            KnownTransiencies[error] = transiency;
+    }
+
+    public virtual Transiency GetTransiency(IReadOnlyList<Exception> allErrors)
+    {
+        lock (KnownTransiencies) {
             // ReSharper disable once PossibleMultipleEnumeration
-            if (allErrors.Any(KnownTransientFailures.Contains))
-                return true;
+            foreach (var error in allErrors)
+                if (KnownTransiencies.TryGetValue(error, out var transiency))
+                    return transiency;
         }
         // ReSharper disable once PossibleMultipleEnumeration
         foreach (var error in allErrors) {
-            if (TransientErrorDetector.IsTransient(error)) {
-                lock (KnownTransientFailures)
-                    KnownTransientFailures.Add(error);
-                return true;
-            }
+            var transiency = TransiencyResolver.Invoke(error);
+            if (transiency.IsNonTransient())
+                continue;
+
+            lock (KnownTransiencies)
+                KnownTransiencies.Add(error, transiency);
+            return transiency;
         }
-#pragma warning restore CA1851
-        return false;
+        return Transiency.Unknown;
     }
 
-    public virtual bool WillRetry(IReadOnlyList<Exception> allErrors)
+    public virtual bool WillRetry(IReadOnlyList<Exception> allErrors, out Transiency transiency)
     {
-        if (FailedTryCount > Options.MaxRetryCount)
+        transiency = GetTransiency(allErrors);
+        if (transiency.IsNonTransient())
             return false;
 
-        var operationScope = CommandContext.Items.Get<IOperationScope>();
-        if (operationScope is TransientOperationScope)
+        if (!transiency.IsSuperTransient() && TryIndex >= Settings.MaxRetryCount)
             return false;
 
-        return IsTransientFailure(allErrors);
+        var operation = CommandContext.TryGetOperation();
+        return operation is { Scope: not InMemoryOperationScope };
     }
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.OperationReprocessor)]
@@ -112,9 +117,10 @@ public class OperationReprocessor(
     {
         var isReprocessingAllowed =
             context.IsOutermost // Should be a top-level command
-            && command is not IMetaCommand // No reprocessing for meta commands
-            && !Computed.IsInvalidating()
-            && Options.Filter.Invoke(command, context);
+            && command is not ISystemCommand // No reprocessing for system commands
+            && context.TryGetOperation() == null // Operation isn't started yet
+            && !Invalidation.IsActive // No invalidation is running
+            && Settings.Filter.Invoke(command, context);
         if (!isReprocessingAllowed) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
@@ -125,8 +131,8 @@ public class OperationReprocessor(
                 $"{GetType().GetName()} cannot be used more than once in the same command execution pipeline.");
         CommandContext = context;
 
-        context.Items.Set((IOperationReprocessor) this);
-        var itemsBackup = context.Items.Items;
+        context.Items.Set((IOperationReprocessor)this);
+        var itemsBackup = context.Items.Snapshot;
         var executionStateBackup = context.ExecutionState;
         while (true) {
             try {
@@ -136,16 +142,20 @@ public class OperationReprocessor(
             }
             catch (Exception error) when (!error.IsCancellationOf(cancellationToken)) {
                 LastError = error;
-                FailedTryCount++;
-                if (!this.WillRetry(error))
-                    throw;
+                if (context.TryGetOperation() == null)
+                    throw; // No Operation -> no retry
+                if (!this.WillRetry(error, out var transiency))
+                    throw; // The error can't be reprocessed -> no retry
 
-                context.Items.Items = itemsBackup;
+                if (!transiency.IsSuperTransient())
+                    TryIndex++;
+                context.ChangeOperation(null);
+                context.Items.Snapshot = itemsBackup;
                 context.ExecutionState = executionStateBackup;
-                var delay = Options.RetryDelays[FailedTryCount];
+                var delay = Settings.RetryDelays[TryIndex];
                 Log.LogWarning(
-                    "Retry #{FailedTryCount}/{MaxTryCount} on {Error}: {Command} with {Delay} delay",
-                    FailedTryCount, Options.MaxRetryCount,
+                    "Retry #{TryIndex}/{MaxTryCount} on {Error}: {Command} with {Delay} delay",
+                    TryIndex, Settings.MaxRetryCount,
                     new ExceptionInfo(error), command, delay.ToShortString());
                 await DelayClock.Delay(delay, cancellationToken).ConfigureAwait(false);
             }

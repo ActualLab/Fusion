@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using ActualLab.Fusion.Authentication;
+using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Server.Internal;
-using ActualLab.Multitenancy;
 
 namespace ActualLab.Fusion.Server.Authentication;
 
@@ -12,8 +12,8 @@ public class ServerAuthHelper : IHasServices
     {
         public static Options Default { get; set; } = new();
 
-        public string[] IdClaimKeys { get; init; } = [ ClaimTypes.NameIdentifier ];
-        public string[] NameClaimKeys { get; init; } = [ ClaimTypes.Name ];
+        public string[] IdClaimKeys { get; init; } = [ClaimTypes.NameIdentifier];
+        public string[] NameClaimKeys { get; init; } = [ClaimTypes.Name];
         public string CloseWindowRequestPath { get; init; } = "/fusion/close";
         public TimeSpan SessionInfoUpdatePeriod { get; init; } = TimeSpan.FromSeconds(30);
         public Func<ServerAuthHelper, HttpContext, bool> AllowSignIn = AllowAnywhere;
@@ -31,7 +31,6 @@ public class ServerAuthHelper : IHasServices
     protected IAuthBackend AuthBackend { get; }
     protected ISessionResolver SessionResolver { get; }
     protected AuthSchemasCache AuthSchemasCache { get; }
-    protected ITenantResolver TenantResolver { get; }
     protected ICommander Commander { get; }
     protected MomentClockSet Clocks { get; }
 
@@ -50,7 +49,6 @@ public class ServerAuthHelper : IHasServices
         AuthBackend = services.GetRequiredService<IAuthBackend>();
         SessionResolver = services.GetRequiredService<ISessionResolver>();
         AuthSchemasCache = services.GetRequiredService<AuthSchemasCache>();
-        TenantResolver = services.GetRequiredService<ITenantResolver>();
         Commander = services.Commander();
         Clocks = services.Clocks();
     }
@@ -99,8 +97,8 @@ public class ServerAuthHelper : IHasServices
         var sessionInfo = await GetSessionInfo(session, cancellationToken).ConfigureAwait(false);
         var mustSetupSession =
             sessionInfo == null
-            || !StringComparer.Ordinal.Equals(sessionInfo.IPAddress, ipAddress)
-            || !StringComparer.Ordinal.Equals(sessionInfo.UserAgent, userAgent)
+            || !string.Equals(sessionInfo.IPAddress, ipAddress, StringComparison.Ordinal)
+            || !string.Equals(sessionInfo.UserAgent, userAgent, StringComparison.Ordinal)
             || sessionInfo.LastSeenAt + Settings.SessionInfoUpdatePeriod < Clocks.SystemClock.Now;
         if (mustSetupSession || sessionInfo == null)
             sessionInfo = await SetupSession(session, sessionInfo, ipAddress, userAgent, cancellationToken)
@@ -135,7 +133,8 @@ public class ServerAuthHelper : IHasServices
     public virtual bool IsCloseWindowRequest(HttpContext httpContext, out string closeWindowFlowName)
     {
         var request = httpContext.Request;
-        var isCloseWindowRequest = StringComparer.Ordinal.Equals(request.Path.Value, Settings.CloseWindowRequestPath);
+        var isCloseWindowRequest =
+            string.Equals(request.Path.Value, Settings.CloseWindowRequestPath, StringComparison.Ordinal);
         closeWindowFlowName = "";
         if (isCloseWindowRequest && request.Query.TryGetValue("flow", out var flows))
             closeWindowFlowName = flows.FirstOrDefault() ?? "";

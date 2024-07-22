@@ -57,10 +57,10 @@ public static class ActivatorExt
             (type, argument1),
             static key => {
                 var (tObject, tArg1) = key;
-                var ctor = tObject.GetConstructor(new[] { tArg1 });
+                var ctor = tObject.GetConstructor([tArg1]);
                 if (ctor == null) return null;
 
-                var m = new DynamicMethod("_Create1", tObject, new[] { tArg1 }, true);
+                var m = new DynamicMethod("_Create1", tObject, [tArg1], true);
                 var il = m.GetILGenerator();
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Newobj, ctor);
@@ -73,10 +73,10 @@ public static class ActivatorExt
             (type, argument1, argument2),
             static key => {
                 var (tObject, tArg1, tArg2) = key;
-                var ctor = tObject.GetConstructor(new[] { tArg1, tArg2 });
+                var ctor = tObject.GetConstructor([tArg1, tArg2]);
                 if (ctor == null) return null;
 
-                var m = new DynamicMethod("_Create2", tObject, new[] { tArg1, tArg2 }, true);
+                var m = new DynamicMethod("_Create2", tObject, [tArg1, tArg2], true);
                 var il = m.GetILGenerator();
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_1);
@@ -90,10 +90,10 @@ public static class ActivatorExt
             (type, argument1, argument2, argument3),
             static key => {
                 var (tObject, tArg1, tArg2, tArg3) = key;
-                var ctor = tObject.GetConstructor(new[] { tArg1, tArg2, tArg3 });
+                var ctor = tObject.GetConstructor([tArg1, tArg2, tArg3]);
                 if (ctor == null) return null;
 
-                var m = new DynamicMethod("_Create3", tObject, new[] { tArg1, tArg2, tArg3 }, true);
+                var m = new DynamicMethod("_Create3", tObject, [tArg1, tArg2, tArg3], true);
                 var il = m.GetILGenerator();
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_1);
@@ -109,10 +109,10 @@ public static class ActivatorExt
             (type, argument1, argument2, argument3, argument4),
             static key => {
                 var (tObject, tArg1, tArg2, tArg3, tArg4) = key;
-                var ctor = tObject.GetConstructor(new[] { tArg1, tArg2, tArg3, tArg4 });
+                var ctor = tObject.GetConstructor([tArg1, tArg2, tArg3, tArg4]);
                 if (ctor == null) return null;
 
-                var m = new DynamicMethod("_Create4", tObject, new[] { tArg1, tArg2, tArg3, tArg4 }, true);
+                var m = new DynamicMethod("_Create4", tObject, [tArg1, tArg2, tArg3, tArg4], true);
                 var il = m.GetILGenerator();
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_1);
@@ -129,10 +129,10 @@ public static class ActivatorExt
             (type, argument1, argument2, argument3, argument4, argument5),
             static key => {
                 var (tObject, tArg1, tArg2, tArg3, tArg4, tArg5) = key;
-                var ctor = tObject.GetConstructor(new[] { tArg1, tArg2, tArg3, tArg4, tArg5 });
+                var ctor = tObject.GetConstructor([tArg1, tArg2, tArg3, tArg4, tArg5]);
                 if (ctor == null) return null;
 
-                var m = new DynamicMethod("_Create5", tObject, new[] { tArg1, tArg2, tArg3, tArg4, tArg5 }, true);
+                var m = new DynamicMethod("_Create5", tObject, [tArg1, tArg2, tArg3, tArg4, tArg5], true);
                 var il = m.GetILGenerator();
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_1);

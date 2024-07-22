@@ -1,29 +1,19 @@
-using Microsoft.EntityFrameworkCore;
+using ActualLab.Resilience;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public static class Errors
 {
-    public static Exception CreateCommandDbContextIsCalledFromInvalidationCode()
-        => new InvalidOperationException(
-            $"{nameof(DbHub<DbContext>.CreateCommandDbContext)} is called from the invalidation code. " +
-            $"If you want to read the data there, use {nameof(DbHub<DbContext>.CreateDbContext)} instead.");
     public static Exception DbContextIsReadOnly()
         => new InvalidOperationException("This DbContext is read-only.");
 
-    public static Exception NoOperationsFrameworkServices()
-        => new InvalidOperationException(
-            "Operations Framework services aren't registered. " +
-            "Call DbContextBuilder<TDbContext>.AddDbOperations before calling this method to add them.");
+    public static Exception WrongDbOperationScopeShard(Type scopeType, DbShard shard, DbShard requestedShard)
+        => new InvalidOperationException($"{scopeType} is already bound to shard '{shard}', which differs from '{requestedShard}'.");
+    public static Exception DbOperationIndexWasNotAssigned()
+        => new InvalidOperationException("DbOperation.Index wasn't assigned on save.");
 
-    public static Exception TenantCannotBeChanged()
-        => new InvalidOperationException("DbContext is already created, so its Tenant property cannot be changed at this point.");
-    public static Exception NonDefaultTenantIsUsedInSingleTenantMode()
-        => new NotSupportedException(
-            "A tenant other than Tenant.Default is attempted to be used in single-tenant mode.");
-    public static Exception DefaultTenantCanOnlyBeUsedInSingleTenantMode()
-        => new NotSupportedException(
-            "Tenant.Default can only be used in single-tenant mode (with SingleTenantResolver).");
+    public static Exception NoShard(DbShard shard)
+        => new InvalidOperationException($"Shard doesn't exist: '{shard}'.");
 
     public static Exception EntityNotFound<TEntity>()
         => EntityNotFound(typeof(TEntity));
@@ -42,4 +32,9 @@ public static class Errors
         => new InvalidOperationException("ConfigureBatchProcessor delegate cannot change BatchProcessor's BatchSize.");
     public static Exception BatchSizeIsTooLarge()
         => new InvalidOperationException("DbEntityResolver's BatchSize is too large.");
+    public static Exception CannotCompileQuery()
+        => new InvalidOperationException("DbEntityResolver is unable to produce compiled query.");
+
+    public static Exception FailedToProcessCommandEvent(Exception originalException)
+        => new TerminalException("Failed to process command event.", originalException); // Any terminal error is ok here
 }
