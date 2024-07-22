@@ -35,7 +35,6 @@ public class RpcSystemCalls(IServiceProvider services)
     : RpcServiceBase(services), IRpcSystemCalls, IRpcDynamicCallHandler
 {
     private static readonly Symbol OkMethodName = nameof(Ok);
-    private static readonly Symbol MatchMethodName = nameof(M);
     private static readonly Symbol ItemMethodName = nameof(I);
     private static readonly Symbol BatchMethodName = nameof(B);
 
