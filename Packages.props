@@ -6,7 +6,7 @@
 
   <PropertyGroup>
     <!-- Core packages -->
-    <AspNetCoreVersion>8.0.0</AspNetCoreVersion>
+    <AspNetCoreVersion>8.0.4</AspNetCoreVersion>
     <AspNetCoreVersion7>7.*</AspNetCoreVersion7>
     <AspNetCoreVersion6>6.*</AspNetCoreVersion6>
     <AspNetCoreVersion5>5.*</AspNetCoreVersion5>
@@ -30,7 +30,7 @@
     <EntityFrameworkCoreVersion6>$(AspNetCoreVersion6)</EntityFrameworkCoreVersion6>
     <EntityFrameworkCoreVersion5>$(AspNetCoreVersion5)</EntityFrameworkCoreVersion5>
     <EntityFrameworkCoreVersion3>$(AspNetCoreVersion3)</EntityFrameworkCoreVersion3>
-    <EntityFrameworkCoreNpgsqlVersion>$(EntityFrameworkCoreVersion)</EntityFrameworkCoreNpgsqlVersion>
+    <EntityFrameworkCoreNpgsqlVersion>$(AspNetCoreVersion)</EntityFrameworkCoreNpgsqlVersion>
     <EntityFrameworkCoreNpgsqlVersion7>$(EntityFrameworkCoreVersion7)</EntityFrameworkCoreNpgsqlVersion7>
     <EntityFrameworkCoreNpgsqlVersion6>$(EntityFrameworkCoreVersion6)</EntityFrameworkCoreNpgsqlVersion6>
     <EntityFrameworkCoreNpgsqlVersion5>$(EntityFrameworkCoreVersion5)</EntityFrameworkCoreNpgsqlVersion5>
@@ -40,7 +40,7 @@
     <MySqlConnectorVersion6>$(MySqlConnectorVersion7)</MySqlConnectorVersion6>
     <MySqlConnectorVersion5>$(MySqlConnectorVersion6)</MySqlConnectorVersion5>
     <MySqlConnectorVersion3>0.*</MySqlConnectorVersion3>
-    <EntityFrameworkCoreMySqlVersion>$(EntityFrameworkCoreVersion)</EntityFrameworkCoreMySqlVersion>
+    <EntityFrameworkCoreMySqlVersion>8.0.2</EntityFrameworkCoreMySqlVersion>
     <EntityFrameworkCoreMySqlVersion7>$(EntityFrameworkCoreVersion7)</EntityFrameworkCoreMySqlVersion7>
     <EntityFrameworkCoreMySqlVersion6>$(EntityFrameworkCoreVersion6)</EntityFrameworkCoreMySqlVersion6>
     <EntityFrameworkCoreMySqlVersion5>$(EntityFrameworkCoreVersion5)</EntityFrameworkCoreMySqlVersion5>
@@ -126,7 +126,7 @@
     <PackageReference Update="Pomelo.EntityFrameworkCore.MySql" Version="$(EntityFrameworkCoreMySqlVersion)" />
     <PackageReference Update="RestEase" Version="$(RestEaseVersion)" />
     <PackageReference Update="StackExchange.Redis" Version="2.7.*" />
-    <PackageReference Update="System.Collections.Immutable" Version="$(SystemXxxVersion)" />
+    <PackageReference Update="System.Collections.Immutable" Version="8.0.0" />
     <PackageReference Update="System.Configuration.ConfigurationManager" Version="$(SystemXxxVersion)" />
     <PackageReference Update="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Update="System.CommandLine.DragonFruit" Version="0.3.0-alpha.21216.1" />
@@ -142,7 +142,7 @@
     <PackageReference Update="System.Runtime.Loader" Version="4.3.*" />
     <PackageReference Update="System.Runtime.Numerics" Version="$(SystemXxxVersion)" />
     <PackageReference Update="System.Text.Json" Version="$(SystemXxxVersion)" />
-    <PackageReference Update="System.Threading.Channels" Version="$(SystemXxxVersion)" />
+    <PackageReference Update="System.Threading.Channels" Version="8.0.0" />
     <PackageReference Update="UAParser" Version="3.1.*" />
     <PackageReference Update="Ulid" Version="1.3.*" />
     <PackageReference Update="ZString" Version="2.5.*" />
