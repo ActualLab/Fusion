@@ -11,6 +11,7 @@ public sealed class RpcHelpers(Host ownHost)
         if (arguments.Length == 0)
             return RpcPeerRef.Local;
 
+        // Ideally we don't want too many conditions here: the routing runs per every RPC service call
         var arg0Type = arguments.GetType(0);
         if (arg0Type == typeof(HostRef))
             return RpcHostPeerRef.Get(arguments.Get<HostRef>(0));
@@ -21,6 +22,9 @@ public sealed class RpcHelpers(Host ownHost)
             return RpcShardPeerRef.Get(arguments.Get<ShardRef>(0));
         if (typeof(IHasShardRef).IsAssignableFrom(arg0Type))
             return RpcShardPeerRef.Get(arguments.Get<IHasShardRef>(0).ShardRef);
+
+        if (arg0Type == typeof(int))
+            return RpcShardPeerRef.Get(ShardRef.New(arguments.Get<int>(0)));
 
         return RpcShardPeerRef.Get(ShardRef.New(arguments.GetUntyped(0)));
 
