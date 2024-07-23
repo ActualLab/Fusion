@@ -1,29 +1,16 @@
-using System.Diagnostics;
-
 namespace ActualLab.Rpc;
 
 public sealed record RpcCallTimeouts
 {
-    public static Func<RpcMethodDef, RpcCallTimeouts> DefaultProvider { get; set; } =
-        method => {
-            if (Debugger.IsAttached)
-                return Defaults.Debug;
-
-            if (method.IsBackend)
-                return method.IsCommand ? Defaults.BackendCommand : Defaults.BackendQuery;
-
-            return method.IsCommand ? Defaults.Command : Defaults.Query;
-        };
-
     public static readonly RpcCallTimeouts None = new();
-    private static readonly RpcCallTimeouts Default = new(null, 30) { TimeoutAction = RpcCallTimeoutAction.Log };
+    private static readonly RpcCallTimeouts NoneButLogLongRunning = new(null, 30) { TimeoutAction = RpcCallTimeoutAction.Log };
 
     public static class Defaults
     {
         public static RpcCallTimeouts Debug { get; set; } = new(null, 3) { TimeoutAction = RpcCallTimeoutAction.Log };
-        public static RpcCallTimeouts Query { get; set; } = Default;
+        public static RpcCallTimeouts Query { get; set; } = NoneButLogLongRunning;
         public static RpcCallTimeouts Command { get; set; } = new(1.5, 10);
-        public static RpcCallTimeouts BackendQuery { get; set; } = Default;
+        public static RpcCallTimeouts BackendQuery { get; set; } = NoneButLogLongRunning;
         public static RpcCallTimeouts BackendCommand { get; set; } = new(300, 300);
     }
 

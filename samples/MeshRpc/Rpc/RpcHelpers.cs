@@ -6,6 +6,11 @@ namespace Samples.MeshRpc;
 
 public sealed class RpcHelpers(Host ownHost)
 {
+    private static readonly RpcCallTimeouts CallTimeouts = new(null, 60);
+
+    public RpcCallTimeouts GetCallTimeouts(RpcMethodDef methodDef)
+        => CallTimeouts;
+
     public RpcPeerRef RouteCall(RpcMethodDef method, ArgumentList arguments)
     {
         if (arguments.Length == 0)

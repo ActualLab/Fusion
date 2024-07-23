@@ -19,6 +19,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcMethodDefBuilder MethodDefBuilder;
     internal readonly RpcBackendServiceDetector BackendServiceDetector;
     internal readonly RpcCommandTypeDetector CommandTypeDetector;
+    internal readonly RpcCallTimeoutsProvider CallTimeoutsProvider;
     internal readonly RpcServiceScopeResolver ServiceScopeResolver;
     internal readonly RpcSafeCallRouter CallRouter;
     internal readonly RpcRerouteDelayer RerouteDelayer;
@@ -63,6 +64,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
         BackendServiceDetector = services.GetRequiredService<RpcBackendServiceDetector>();
         CommandTypeDetector = services.GetRequiredService<RpcCommandTypeDetector>();
+        CallTimeoutsProvider = services.GetRequiredService<RpcCallTimeoutsProvider>();
         ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();
         CallRouter = services.GetRequiredService<RpcSafeCallRouter>();
         RerouteDelayer = services.GetRequiredService<RpcRerouteDelayer>();

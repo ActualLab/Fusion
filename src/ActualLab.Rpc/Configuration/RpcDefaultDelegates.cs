@@ -1,9 +1,8 @@
-using System.Buffers.Text;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
-using Microsoft.Toolkit.HighPerformance;
 
 namespace ActualLab.Rpc;
 
@@ -11,6 +10,7 @@ public delegate RpcServiceDef RpcServiceDefBuilder(RpcHub hub, RpcServiceBuilder
 public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodInfo method);
 public delegate bool RpcBackendServiceDetector(Type serviceType);
 public delegate bool RpcCommandTypeDetector(Type type);
+public delegate RpcCallTimeouts RpcCallTimeoutsProvider(RpcMethodDef methodDef);
 public delegate Symbol RpcServiceScopeResolver(RpcServiceDef serviceDef);
 public delegate RpcPeerRef RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
 public delegate string RpcHashProvider(TextOrBytes data);
@@ -49,6 +49,21 @@ public static class RpcDefaultDelegates
     public static RpcCommandTypeDetector CommandTypeDetector { get; set; } =
         static type => IsCommandTypeCache.GetOrAdd(type,
             static t => t.GetInterfaces().Any(x => CommandInterfaceFullName.Equals(x.FullName, StringComparison.Ordinal)));
+
+    public static RpcCallTimeoutsProvider CallTimeoutsProvider { get; set; } =
+        method => {
+            if (Debugger.IsAttached)
+                return RpcCallTimeouts.Defaults.Debug;
+
+            if (method.IsBackend)
+                return method.IsCommand
+                    ? RpcCallTimeouts.Defaults.BackendCommand
+                    : RpcCallTimeouts.Defaults.BackendQuery;
+
+            return method.IsCommand
+                ? RpcCallTimeouts.Defaults.Command
+                : RpcCallTimeouts.Defaults.Query;
+        };
 
     public static RpcServiceScopeResolver ServiceScopeResolver { get; set; } =
         static service => service.IsBackend
