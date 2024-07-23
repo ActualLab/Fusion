@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Microsoft.Extensions.Hosting</RootNamespace>
+    <RootNamespace>Templates.TodoApp</RootNamespace>
     <AssemblyName>Templates.TodoApp.ServiceDefaults</AssemblyName>
     <IsAspireSharedProject>true</IsAspireSharedProject>
   </PropertyGroup>

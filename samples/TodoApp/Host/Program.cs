@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using Microsoft.AspNetCore.Hosting.StaticWebAssets;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Templates.TodoApp;
 using Templates.TodoApp.Abstractions;
 using Templates.TodoApp.Host;
 using Templates.TodoApp.Services;
@@ -39,19 +40,19 @@ Interceptor.Options.Defaults.IsValidationEnabled = false;
 #endif
 
 var builder = WebApplication.CreateBuilder();
-builder.AddServiceDefaults(); // Aspire defaults
 var env = builder.Environment;
 var cfg = builder.Configuration;
+var hostSettings = cfg.GetSettings<HostSettings>();
+if (hostSettings.IsAspireManaged)
+    builder.AddServiceDefaults();
 
-// Set default server URLs
 cfg.Sources.Insert(0, new MemoryConfigurationSource() {
     InitialData = new Dictionary<string, string>() {
-        { WebHostDefaults.ServerUrlsKey, "http://localhost:5005;http://localhost:5006" },
+        { WebHostDefaults.ServerUrlsKey, $"http://localhost:{hostSettings.Port}" }, // Override default server URLs
     }!
 });
 
 // Configure services
-var hostSettings = cfg.GetSettings<HostSettings>();
 var services = builder.Services;
 ConfigureLogging();
 ConfigureServices();
@@ -116,9 +117,9 @@ void ConfigureServices()
             // operations.AddRedisOperationLogWatcher();
         });
 
-        if (hostSettings.UseMultitenancy) {
+        if (hostSettings.UseTenants) {
             db.AddSharding(sharding => {
-                sharding.AddShardRegistry(Enumerable.Range(0, 3).Select(i => new DbShard($"tenant{i}")));
+                sharding.AddShardRegistry(Enumerable.Range(0, hostSettings.TenantCount).Select(i => new DbShard($"tenant{i}")));
                 sharding.AddTransientShardDbContextFactory(ConfigureShardDbContext);
             });
         }
@@ -149,15 +150,15 @@ void ConfigureServices()
         fusion.AddDbAuthService<AppDbContext, string>();
     fusion.AddDbKeyValueStore<AppDbContext>();
 
-    if (hostSettings.UseMultitenancy) {
-        var tenantExtractor = HttpContextExtractors.Subdomain(".localhost")
-            .Or(HttpContextExtractors.PortOffset(5005, 5010).WithPrefix("tenant"))
+    if (hostSettings.UseTenants) {
+        var shardTagExtractor = HttpContextExtractors.Subdomain(".localhost")
+            .Or(HttpContextExtractors.PortOffset(hostSettings.Tenant0Port, hostSettings.TenantCount).WithPrefix("tenant"))
             .WithValidator(value => {
                 if (!value.StartsWith("tenant", StringComparison.Ordinal))
                     throw new ArgumentOutOfRangeException(nameof(value), $"Invalid Tenant ID: '{value}'.");
             });
         fusionServer.ConfigureSessionMiddleware(_ => new() {
-            TagProvider = (session, httpContext) => session.WithTag(Session.ShardTag, tenantExtractor.Invoke(httpContext)),
+            TagProvider = (session, httpContext) => session.WithTag(Session.ShardTag, shardTagExtractor.Invoke(httpContext)),
         });
     }
     fusionServer.ConfigureAuthEndpoint(_ => new() {
