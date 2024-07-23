@@ -39,6 +39,7 @@ Interceptor.Options.Defaults.IsValidationEnabled = false;
 #endif
 
 var builder = WebApplication.CreateBuilder();
+builder.AddServiceDefaults(); // Aspire defaults
 var env = builder.Environment;
 var cfg = builder.Configuration;
 

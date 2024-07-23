@@ -34,6 +34,7 @@
     <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
     <ProjectReference Include="..\UI\UI.csproj" />
     <ProjectReference Include="..\Services\Services.csproj" />
+    <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
   </ItemGroup>
 
   <ItemGroup>

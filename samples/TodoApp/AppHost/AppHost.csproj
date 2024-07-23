@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Templates.TodoApp.AppHost</RootNamespace>
+    <AssemblyName>Templates.TodoApp.AppHost</AssemblyName>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>7039dcb7-bd79-4568-a2ae-0b7662dd6f4e</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Host\Host.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Remove all global usings - they'll fail, coz we don't reference any ActualLab.* projects here -->
+    <Using Remove="*" />
+  </ItemGroup>
+
+</Project>
