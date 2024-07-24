@@ -22,14 +22,14 @@
     GetComplex: <b>@_complex</b>
 </Div>
 <Div Margin="Margin.Is1.OnY">
-    GetStream(@StreamSize): <b>@_list.ToDelimitedString()</b>
+    GetStream().Take(@StreamLimit): <b>@_list.ToDelimitedString()</b>
 </Div>
 <Div Margin="Margin.Is1.OnY">
     SumStream: <b>@_sum</b>
 </Div>
 
 @code {
-    private const int StreamSize = 10;
+    private const int StreamLimit = 10;
     private string _greeting = "";
     private (RpcObjectId, string) _complex;
     private List<int> _list = new();
@@ -39,11 +39,11 @@
     {
         var greetingTask = RpcExample.Greet("Fusion explorer");
         var complexTask = RpcExample.GetComplex();
-        var streamTask = RpcExample.GetStream(StreamSize);
+        var streamTask = RpcExample.GetStream();
         _greeting = await greetingTask;
         _complex = await complexTask;
         var stream = await streamTask;
-        _list = await stream.ToListAsync();
+        _list = await stream.Take(StreamLimit).ToListAsync();
         _sum = await RpcExample.SumStream(RpcStream.New(_list));
     }
 }

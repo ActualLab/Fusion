@@ -7,6 +7,6 @@ public interface IRpcExample : IRpcService
 {
     Task<string> Greet(string name);
     Task<(RpcObjectId, string)> GetComplex();
-    Task<RpcStream<int>> GetStream(int count, CancellationToken cancellationToken = default);
+    Task<RpcStream<int>> GetStream(CancellationToken cancellationToken = default);
     Task<int> SumStream(RpcStream<int> stream, CancellationToken cancellationToken = default);
 }
