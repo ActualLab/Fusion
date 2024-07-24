@@ -1,10 +1,20 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Text.RegularExpressions;
 
 namespace ActualLab.Diagnostics;
 
-public static class DiagnosticsExt
+public static partial class DiagnosticsExt
 {
+#if NET7_0_OR_GREATER
+    [GeneratedRegex("[^A-Za-z0-9_\\-/\\.]+")]
+    private static partial Regex InvalidMetricNameCharReFactory();
+
+    private static readonly Regex InvalidMetricNameCharRe = InvalidMetricNameCharReFactory();
+#else
+    private static readonly Regex InvalidMetricNameCharRe = new("[^A-Za-z0-9_\\-/\\.]+", RegexOptions.Compiled);
+#endif
+
     private static readonly ConcurrentDictionary<Assembly, ActivitySource> ActivitySources = new();
     private static readonly ConcurrentDictionary<Assembly, Meter> Meters = new();
     private const string UnknownName = "unknown";
@@ -45,4 +55,9 @@ public static class DiagnosticsExt
 
     public static Meter GetMeter(this Assembly assembly)
         => AssemblyMeterResolver.Invoke(assembly);
+
+    // Helpers
+
+    public static string FixName(string name)
+        => InvalidMetricNameCharRe.Replace(name, "_");
 }

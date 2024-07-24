@@ -521,9 +521,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
             OutgoingFrameCounter = m.CreateUpDownCounter<long>($"{ms}.outgoing.frame.count",
                 null, "Number of frames sent via WebSocketChannel.");
             IncomingFrameSizeHistogram = m.CreateHistogram<int>($"{ms}.incoming.frame.size",
-                "By", "WebSocketChannel's incoming frame size in bytes");
+                "By", "WebSocketChannel's incoming frame size in bytes.");
             OutgoingFrameSizeHistogram = m.CreateHistogram<int>($"{ms}.outgoing.frame.size",
-                "By", "WebSocketChannel's outgoing frame size in bytes");
+                "By", "WebSocketChannel's outgoing frame size in bytes.");
         }
     }
 }

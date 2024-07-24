@@ -17,12 +17,12 @@ public static class RpcMeters
         var server = $"{ms}.server";
         // See https://opentelemetry.io/docs/specs/semconv/rpc/rpc-metrics/
         ServerCallCounter = m.CreateCounter<long>($"{server}.call.count",
-            null, "Call count.");
+            null, "Count of incoming RPC calls.");
         ServerErrorCounter = m.CreateCounter<long>($"{server}.error.count",
-            null, "Error count.");
+            null, "Count of incoming RPC calls completed with an error.");
         ServerCancellationCounter = m.CreateCounter<long>($"{server}.cancellation.count",
-            null, "Cancellation count.");
+            null, "Count of cancelled incoming RPC calls.");
         ServerDurationHistogram = m.CreateHistogram<double>($"{server}.duration",
-            "ms", "Duration of inbound RPC calls.");
+            "ms", "Duration of incoming RPC calls.");
     }
 }

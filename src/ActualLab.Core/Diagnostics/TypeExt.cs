@@ -6,5 +6,5 @@ public static class TypeExt
 
     public static string GetOperationName(this Type type, [CallerMemberName] string operation = "")
         => OperationNameCache.GetOrAdd((type, operation),
-            static key => $"{key.Item1.NonProxyType().GetName()}/{key.Item2}");
+            static key => $"{DiagnosticsExt.FixName(key.Item1.NonProxyType().GetName())}/{key.Item2}");
 }

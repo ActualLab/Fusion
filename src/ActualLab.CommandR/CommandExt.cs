@@ -45,9 +45,9 @@ public static class CommandExt
         return OperationNameCache.GetOrAdd((type, chainId, operation),
             static key => {
                 var (type, chainId, operation) = key;
-                var result = "command." + type.NonProxyType().GetName();
+                var result = "command." + DiagnosticsExt.FixName(type.NonProxyType().GetName());
                 if (!chainId.IsEmpty)
-                    result += $"-{chainId.Value}";
+                    result += $"-{DiagnosticsExt.FixName(chainId.Value)}";
                 if (!operation.IsNullOrEmpty())
                     result += $".{operation}";
                 return result;
