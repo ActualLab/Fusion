@@ -80,7 +80,7 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.ClientConnectionFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.ServerConnectionFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.PeerTerminalErrorDetector);
-        services.AddSingleton(_ => RpcDefaultDelegates.MethodTracerFactory);
+        services.AddSingleton(_ => RpcDefaultDelegates.CallTracerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFilter);
         services.AddSingleton(_ => RpcArgumentSerializer.Default);

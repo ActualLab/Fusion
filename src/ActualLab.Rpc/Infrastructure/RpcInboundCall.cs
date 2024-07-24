@@ -245,7 +245,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         Unregister();
         var durationMs = Context.CreatedAt.Elapsed.TotalMilliseconds;
         Trace?.Complete(this, durationMs);
-        if (RpcMeters.ServerCallCounter.IsObservable) {
+        if (RpcMeters.ServerCallCounter.Enabled) {
             RpcMeters.ServerCallCounter.Add(1);
             if (!ResultTask.IsCompletedSuccessfully())
                 (ResultTask.IsCanceled ? RpcMeters.ServerCancellationCounter : RpcMeters.ServerErrorCounter).Add(1);

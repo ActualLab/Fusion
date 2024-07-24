@@ -21,11 +21,11 @@ public class RpcDefaultCallTracer : RpcCallTracer
         ActivitySource = method.Hub.ActivitySource;
 
         var m = RpcMeters.Meter;
-        var ns = $"rpc.server.{method.Service.Name.Value}.{method.Name.Value}";
-        CallCounter = m.CreateCounter<long>($"{ns}.call.count", null, "Call count.");
-        ErrorCounter = m.CreateCounter<long>($"{ns}.error.count", null, "Error count.");
-        CancellationCounter = m.CreateCounter<long>($"{ns}.cancellation.count", null, "Error count.");
-        DurationHistogram = m.CreateHistogram<double>($"{ns}.call.duration", "ms", "Call duration.");
+        var ms = $"rpc.server.{method.Service.Name.Value}.{method.Name.Value}";
+        CallCounter = m.CreateCounter<long>($"{ms}.call.count", null, "Call count.");
+        ErrorCounter = m.CreateCounter<long>($"{ms}.error.count", null, "Error count.");
+        CancellationCounter = m.CreateCounter<long>($"{ms}.cancellation.count", null, "Error count.");
+        DurationHistogram = m.CreateHistogram<double>($"{ms}.call.duration", "ms", "Call duration.");
     }
 
     public override RpcCallTrace? TryStartTrace(RpcInboundCall call)

@@ -8,7 +8,7 @@ public sealed class RpcDefaultCallTrace(RpcDefaultCallTracer tracer, Activity? a
     public override void Complete(RpcInboundCall call, double durationMs)
     {
         activity?.Dispose();
-        if (tracer.CallCounter.IsObservable) {
+        if (tracer.CallCounter.Enabled) {
             tracer.CallCounter.Add(1);
             var resultTask = call.UntypedResultTask;
             if (!resultTask.IsCompletedSuccessfully())

@@ -14,14 +14,15 @@ public static class RpcMeters
     {
         var m = Meter = typeof(RpcHub).GetMeter();
         var ms = "rpc";
+        var server = $"{ms}.server";
         // See https://opentelemetry.io/docs/specs/semconv/rpc/rpc-metrics/
-        ServerCallCounter = m.CreateCounter<long>($"{ms}.call.count",
+        ServerCallCounter = m.CreateCounter<long>($"{server}.call.count",
             null, "Call count.");
-        ServerErrorCounter = m.CreateCounter<long>($"{ms}.error.count",
+        ServerErrorCounter = m.CreateCounter<long>($"{server}.error.count",
             null, "Error count.");
-        ServerCancellationCounter = m.CreateCounter<long>($"{ms}.cancellation.count",
+        ServerCancellationCounter = m.CreateCounter<long>($"{server}.cancellation.count",
             null, "Cancellation count.");
-        ServerDurationHistogram = m.CreateHistogram<double>($"{ms}.server.duration",
+        ServerDurationHistogram = m.CreateHistogram<double>($"{server}.duration",
             "ms", "Duration of inbound RPC calls.");
     }
 }

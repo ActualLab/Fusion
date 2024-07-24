@@ -113,8 +113,8 @@ public static class RpcDefaultDelegates
     public static RpcPeerTerminalErrorDetector PeerTerminalErrorDetector { get; set; } =
         static error => error is RpcReconnectFailedException or RpcRerouteException;
 
-    public static RpcMethodTracerFactory MethodTracerFactory { get; set; } =
-        static method => null;
+    public static RpcMethodTracerFactory CallTracerFactory { get; set; } =
+        static method => new RpcDefaultCallTracer(method);
 
     public static RpcCallLoggerFactory CallLoggerFactory { get; set; } =
         static (peer, filter, log, logLevel) => new RpcCallLogger(peer, filter, log, logLevel);
