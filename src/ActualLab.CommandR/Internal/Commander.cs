@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace ActualLab.CommandR.Internal;
 
 public class Commander : ICommander
@@ -28,8 +30,13 @@ public class Commander : ICommander
         // Task.Run is used to call RunInternal to make sure parent
         // task's ExecutionContext won't be "polluted" by temp.
         // change of CommandContext.Current (via AsyncLocal).
+        var currentActivity = Activity.Current;
         using var _ = context.IsOutermost ? ExecutionContextExt.TrySuppressFlow() : default;
-        return Task.Run(() => RunCommand(context, cancellationToken), CancellationToken.None);
+        return Task.Run(() => {
+            if (currentActivity != null)
+                Activity.Current = currentActivity; // We want to restore it even though we suppress the flow here
+            return RunCommand(context, cancellationToken);
+        }, CancellationToken.None);
     }
 
     protected virtual async Task RunCommand(
