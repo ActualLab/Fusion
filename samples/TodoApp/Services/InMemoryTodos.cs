@@ -1,24 +1,13 @@
 ﻿using ActualLab.Fusion.Extensions;
-using ActualLab.Rpc;
-using ActualLab.Rpc.Infrastructure;
 using Templates.TodoApp.Abstractions;
 
 namespace Templates.TodoApp.Services;
 
 #pragma warning disable 1998
 
-public class SimpleTodos : ITodos
+public class InMemoryTodos : ITodos
 {
     private ImmutableList<Todo> _store = ImmutableList<Todo>.Empty; // It's always sorted by Id though
-
-    public Task<RpcObjectId> GetTestObjectId()
-        => Task.FromResult(new RpcObjectId(Guid.NewGuid(), 1));
-
-    public Task<RpcStream<int>> GetTestStream()
-        => Task.FromResult(new RpcStream<int>(Enumerable.Range(0, 5).ToAsyncEnumerable()));
-
-    public Task<int> SumTestStream(RpcStream<int> stream, CancellationToken cancellationToken = default)
-        => stream.SumAsync(cancellationToken).AsTask();
 
     // Commands
 

@@ -7,8 +7,17 @@ public class RpcConfiguration
 {
     private readonly object _lock = new();
     private IDictionary<Type, RpcServiceBuilder> _services = new Dictionary<Type, RpcServiceBuilder>();
+    private RpcServiceMode _defaultServiceMode;
 
     public bool IsFrozen { get; private set; }
+
+    public RpcServiceMode DefaultServiceMode {
+        get => _defaultServiceMode;
+        set {
+            AssertNotFrozen();
+            _defaultServiceMode = value.Or(RpcServiceMode.Server);
+        }
+    }
 
     public IDictionary<Type, RpcServiceBuilder> Services {
         get => _services;

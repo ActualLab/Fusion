@@ -12,5 +12,5 @@ public readonly partial record struct RpcObjectId(
     public bool IsNone => LocalId == 0 && HostId == default;
 
     public override string ToString()
-        => $"{HostId}:{LocalId.ToString(CultureInfo.InvariantCulture)}";
+        => IsNone ? "" : $"{HostId}:{LocalId.ToString(CultureInfo.InvariantCulture)}";
 }

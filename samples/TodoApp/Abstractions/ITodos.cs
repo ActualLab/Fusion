@@ -2,8 +2,6 @@ using System.Runtime.Serialization;
 using MemoryPack;
 using ActualLab.Fusion.Blazor;
 using ActualLab.Fusion.Extensions;
-using ActualLab.Rpc;
-using ActualLab.Rpc.Infrastructure;
 
 namespace Templates.TodoApp.Abstractions;
 
@@ -39,10 +37,6 @@ public sealed partial record Todos_Remove(
 
 public interface ITodos : IComputeService
 {
-    Task<RpcObjectId> GetTestObjectId();
-    Task<RpcStream<int>> GetTestStream();
-    Task<int> SumTestStream(RpcStream<int> stream, CancellationToken cancellationToken = default);
-
     // Commands
     [CommandHandler]
     Task<Todo> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default);

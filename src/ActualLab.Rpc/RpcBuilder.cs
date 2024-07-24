@@ -14,6 +14,7 @@ public readonly struct RpcBuilder
 {
     public IServiceCollection Services { get; }
     public RpcConfiguration Configuration { get; }
+    public RpcServiceMode DefaultServiceMode { get; }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Proxies))]
@@ -45,17 +46,26 @@ public readonly struct RpcBuilder
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcSystemCalls))]
     internal RpcBuilder(
         IServiceCollection services,
-        Action<RpcBuilder>? configure)
+        Action<RpcBuilder>? configure,
+        RpcServiceMode defaultServiceMode,
+        bool saveDefaultServiceMode)
     {
         Services = services;
         if (services.FindInstance<RpcConfiguration>() is { } configuration) {
+            DefaultServiceMode = defaultServiceMode.Or(configuration.DefaultServiceMode);
+            if (saveDefaultServiceMode)
+                configuration.DefaultServiceMode = DefaultServiceMode;
+
             // Already configured
             Configuration = configuration;
             configure?.Invoke(this);
             return;
         }
 
+        DefaultServiceMode = defaultServiceMode.Or(RpcServiceMode.Server);
         Configuration = services.AddInstance(new RpcConfiguration());
+        if (saveDefaultServiceMode)
+            Configuration.DefaultServiceMode = DefaultServiceMode;
 
         // HostId & clocks
         services.AddSingleton(_ => new HostId());
@@ -138,28 +148,30 @@ public readonly struct RpcBuilder
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
-        (RpcServiceMode mode, Symbol name = default)
+        (RpcServiceMode mode = default, Symbol name = default)
         where TService : class
         => AddService(typeof(TService), mode, name);
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (RpcServiceMode mode, Symbol name = default)
+        (RpcServiceMode mode = default, Symbol name = default)
         where TService : class
         where TImplementation : class, TService
         => AddService(typeof(TService), typeof(TImplementation), mode, name);
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        RpcServiceMode mode, Symbol name = default)
+        RpcServiceMode mode = default, Symbol name = default)
         => AddService(serviceType, serviceType, mode, name);
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        RpcServiceMode mode, Symbol name = default)
-        => mode switch {
+        RpcServiceMode mode = default, Symbol name = default)
+    {
+        mode = mode.Or(DefaultServiceMode);
+        return mode switch {
             RpcServiceMode.Local => AddLocal(serviceType, implementationType),
             RpcServiceMode.Client => AddClient(serviceType, name),
             RpcServiceMode.Server => AddServer(serviceType, implementationType, name),
@@ -167,6 +179,7 @@ public readonly struct RpcBuilder
             RpcServiceMode.DistributedPair => AddDistributedPair(serviceType, implementationType, name),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
+    }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient<

@@ -35,23 +35,13 @@ public static class StartupHelper
         fusion.AddAuthClient();
         fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
 
+        // RPC setup
         var rpc = fusion.Rpc;
         rpc.AddWebSocketClient(builder.HostEnvironment.BaseAddress);
 
-        // Option 1: Client-side SimpleTodoService (no RPC)
-        // fusion.AddService<ITodoService, SimpleTodoService>();
-
-        // Option 2: Client-side TodoService and SandboxedKeyValueStore using InMemoryKeyValueStore (no RPC)
-        // fusion.AddInMemoryKeyValueStore();
-        // fusion.AddSandboxedKeyValueStore();
-        // fusion.AddService<ITodoService, TodoService>();
-
-        // Option 3: Client-side TodoService + remote SandboxedKeyValueStore -> DbKeyValueStore
-        // fusion.AddClient<ISandboxedKeyValueStore>();
-        // fusion.AddService<ITodos, TodoService>();
-
-        // Option 4: Remote TodoService, SandboxedKeyValueStore, and DbKeyValueStore
+        // RPC clients
         fusion.AddClient<ITodos>();
+        fusion.Rpc.AddClient<IRpcExample>();
 
         ConfigureSharedServices(services, false);
     }
@@ -77,7 +67,7 @@ public static class StartupHelper
         // Default update delay is 0.25s
         services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
 
-        // Diagnostics
+        // Fusion diagnostics
         services.AddHostedService(c => {
             var isWasm = OSInfo.IsWebAssembly;
             return new FusionMonitor(c) {

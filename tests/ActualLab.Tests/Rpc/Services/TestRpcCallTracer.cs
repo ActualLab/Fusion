@@ -29,14 +29,10 @@ public class TestRpcCallTracer(RpcMethodDef method) : RpcCallTracer(method)
             Interlocked.Increment(ref _tracer._enterCount);
         }
 
-        public override void OnResultTaskReady(RpcInboundCall call)
-            => _ = call.UntypedResultTask.ContinueWith(Complete,
-                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-
-        private void Complete(Task resultTask)
+        public override void Complete(RpcInboundCall call, double durationMs)
         {
             Interlocked.Increment(ref _tracer._exitCount);
-            if (!resultTask.IsCompletedSuccessfully())
+            if (!call.UntypedResultTask.IsCompletedSuccessfully())
                 Interlocked.Increment(ref _tracer._errorCount);
         }
     }

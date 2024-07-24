@@ -9,9 +9,9 @@ public static class ServiceCollectionExt
     [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static FusionBuilder AddFusion(
         this IServiceCollection services,
-        RpcServiceMode serviceMode = RpcServiceMode.Default,
+        RpcServiceMode defaultServiceMode = RpcServiceMode.Default,
         bool setDefaultServiceMode = false)
-        => new(services, null, serviceMode, setDefaultServiceMode);
+        => new(services, null, defaultServiceMode, setDefaultServiceMode);
 
     [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static IServiceCollection AddFusion(
@@ -22,15 +22,15 @@ public static class ServiceCollectionExt
     [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static IServiceCollection AddFusion(
         this IServiceCollection services,
-        RpcServiceMode serviceMode,
+        RpcServiceMode defaultServiceMode,
         Action<FusionBuilder> configure)
-        => new FusionBuilder(services, configure, serviceMode, false).Services;
+        => new FusionBuilder(services, configure, defaultServiceMode, false).Services;
 
     [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public static IServiceCollection AddFusion(
         this IServiceCollection services,
-        RpcServiceMode serviceMode,
+        RpcServiceMode defaultServiceMode,
         bool setDefaultServiceMode,
         Action<FusionBuilder> configure)
-        => new FusionBuilder(services, configure, serviceMode, setDefaultServiceMode).Services;
+        => new FusionBuilder(services, configure, defaultServiceMode, setDefaultServiceMode).Services;
 }

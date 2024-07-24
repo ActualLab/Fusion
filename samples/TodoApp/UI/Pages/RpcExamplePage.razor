@@ -1,0 +1,59 @@
+@page "/rpc-example"
+@using System.Globalization
+@using ActualLab.Rpc.Infrastructure
+@using ActualLab.Rpc
+@inject IRpcExample RpcExample
+@inject ILogger<RpcExamplePage> Log
+
+@{
+    Log.LogInformation("Rendering");
+}
+
+<h1>RPC Example</h1>
+
+<TextConnectionStatus />
+<Div Margin="Margin.Is1.OnY">
+    Current culture: <b>@(CultureInfo.CurrentUICulture.Name)</b> @@ @DateTime.Now.ToString("D")
+</Div>
+<Div Margin="Margin.Is1.OnY">
+    Greet: <b>@_greeting</b>
+</Div>
+<Div Margin="Margin.Is1.OnY">
+    GetComplex: <b>@_complex</b>
+</Div>
+<Div Margin="Margin.Is1.OnY">
+    GetStream(@StreamSize): <b>@_list.ToDelimitedString()</b>
+</Div>
+<Div Margin="Margin.Is1.OnY">
+    SumStream: <b>@_sum</b>
+</Div>
+
+@code {
+    private const int StreamSize = 10;
+    private string _greeting = "";
+    private (RpcObjectId, string) _complex;
+    private List<int> _list = new();
+    private int _sum;
+
+    // AuthState property below is seemingly unused - the real reason it is declared here is:
+    // - AuthState is a cascading parameter
+    // - TodoPage.Options (inherited from ComputedStateComponent) include StateIsParameterDependent flag
+    // So when AuthState changes, State here gets recomputed instantly (i.e. w/o a delay).
+    // If you'll comment it out, you'll notice a regular update delay before it changes on sign-out.
+    // It's not a recommended way to apply some change instantly on sign-in or sign-out though -
+    // i.e. ideally you just need to trigger a full re-render as a reaction to sign-in / sign-out somewhere
+    // in one of your top-level components.
+    [CascadingParameter] protected Task<AuthState> AuthState { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var greetingTask = RpcExample.Greet("Fusion explorer");
+        var complexTask = RpcExample.GetComplex();
+        var streamTask = RpcExample.GetStream(StreamSize);
+        _greeting = await greetingTask;
+        _complex = await complexTask;
+        var stream = await streamTask;
+        _list = await stream.ToListAsync();
+        _sum = await RpcExample.SumStream(RpcStream.New(_list));
+    }
+}

@@ -1,22 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.Extensions;
-using ActualLab.Rpc;
-using ActualLab.Rpc.Infrastructure;
 using Templates.TodoApp.Abstractions;
 
 namespace Templates.TodoApp.Services;
 
-public class Todos(ISandboxedKeyValueStore store, IAuth auth) : ITodos
+public class DbTodos(ISandboxedKeyValueStore store, IAuth auth) : ITodos
 {
-    public Task<RpcObjectId> GetTestObjectId()
-        => Task.FromResult(new RpcObjectId(Guid.NewGuid(), 1));
-
-    public Task<RpcStream<int>> GetTestStream()
-        => Task.FromResult(new RpcStream<int>(Enumerable.Range(0, 5).ToAsyncEnumerable()));
-
-    public Task<int> SumTestStream(RpcStream<int> stream, CancellationToken cancellationToken = default)
-        => stream.SumAsync(cancellationToken).AsTask();
-
     // Commands
 
     public virtual async Task<Todo> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default)

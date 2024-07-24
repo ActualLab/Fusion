@@ -21,7 +21,7 @@ public readonly struct FusionBuilder
     public IServiceCollection Services { get; }
     public CommanderBuilder Commander { get; }
     public RpcBuilder Rpc { get; }
-    public RpcServiceMode ServiceMode { get; }
+    public RpcServiceMode DefaultServiceMode { get; }
 
     [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CommanderBuilder))]
@@ -38,26 +38,26 @@ public readonly struct FusionBuilder
     internal FusionBuilder(
         IServiceCollection services,
         Action<FusionBuilder>? configure,
-        RpcServiceMode serviceMode,
-        bool setDefaultServiceMode)
+        RpcServiceMode defaultServiceMode,
+        bool saveDefaultServiceMode)
     {
         Services = services;
         Commander = services.AddCommander();
-        Rpc = services.AddRpc();
         if (services.FindInstance<FusionTag>() is { } fusionTag) {
-            ServiceMode = serviceMode.Or(fusionTag.ServiceMode);
-            if (setDefaultServiceMode)
-                fusionTag.ServiceMode = ServiceMode;
+            DefaultServiceMode = defaultServiceMode.Or(fusionTag.DefaultServiceMode);
+            Rpc = services.AddRpc(DefaultServiceMode);
+            if (saveDefaultServiceMode)
+                fusionTag.DefaultServiceMode = DefaultServiceMode;
 
             configure?.Invoke(this);
             return;
         }
 
-        ServiceMode = serviceMode.Or(RpcServiceMode.Local);
-        var fusionTagServiceMode = setDefaultServiceMode
-            ? ServiceMode
-            : RpcServiceMode.Local;
-        services.AddInstance(new FusionTag(fusionTagServiceMode), addInFront: true);
+        DefaultServiceMode = defaultServiceMode.Or(RpcServiceMode.Local);
+        Rpc = services.AddRpc(DefaultServiceMode);
+        fusionTag = services.AddInstance(new FusionTag(), addInFront: true);
+        if (saveDefaultServiceMode)
+            fusionTag.DefaultServiceMode = DefaultServiceMode;
 
         // Common services
         services.AddOptions();
@@ -139,20 +139,20 @@ public readonly struct FusionBuilder
         configure?.Invoke(this);
     }
 
-    internal FusionBuilder(FusionBuilder fusion, RpcServiceMode serviceMode, bool setDefaultServiceMode)
+    internal FusionBuilder(FusionBuilder fusion, RpcServiceMode defaultServiceMode, bool setDefaultServiceMode)
     {
         Services = fusion.Services;
         Commander = fusion.Commander;
         Rpc = fusion.Rpc;
-        ServiceMode = serviceMode;
+        DefaultServiceMode = defaultServiceMode;
         if (!setDefaultServiceMode)
             return;
 
         if (Services.FindInstance<FusionTag>() is not { } fusionTag)
             throw Errors.InternalError("Something is off: FusionTag service must be registered at this point.");
 
-        ServiceMode = serviceMode.Or(fusionTag.ServiceMode);
-        fusionTag.ServiceMode = ServiceMode;
+        DefaultServiceMode = defaultServiceMode.Or(fusionTag.DefaultServiceMode);
+        fusionTag.DefaultServiceMode = DefaultServiceMode;
     }
 
     public FusionBuilder WithServiceMode(
@@ -233,7 +233,7 @@ public readonly struct FusionBuilder
             return AddLocal(serviceType, implementationType, lifetime);
         }
 
-        mode = mode.Or(ServiceMode);
+        mode = mode.Or(DefaultServiceMode);
         return mode switch {
             RpcServiceMode.Local => AddLocal(serviceType, implementationType, addCommandHandlers),
             RpcServiceMode.Client => AddClient(serviceType, default, addCommandHandlers),
@@ -479,14 +479,11 @@ public readonly struct FusionBuilder
 
     public class FusionTag
     {
-        private RpcServiceMode _serviceMode;
+        private RpcServiceMode _defaultServiceMode = RpcServiceMode.Local;
 
-        public RpcServiceMode ServiceMode {
-            get => _serviceMode;
-            set => _serviceMode = value.Or(RpcServiceMode.Local);
+        public RpcServiceMode DefaultServiceMode {
+            get => _defaultServiceMode;
+            set => _defaultServiceMode = value.Or(RpcServiceMode.Local);
         }
-
-        public FusionTag(RpcServiceMode serviceMode)
-            => ServiceMode = serviceMode;
     }
 }

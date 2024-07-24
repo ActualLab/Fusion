@@ -176,8 +176,10 @@ void ConfigureServices()
     fusion.AddSandboxedKeyValueStore<AppDbContext>();
     fusion.AddOperationReprocessor();
 
-    // Compute service(s)
-    fusion.AddService<ITodos, Todos>();
+    // RPC-exposed compute service(s)
+    fusion.AddService<ITodos, DbTodos>();
+    // RPC-exposed non-compute services
+    fusion.Rpc.AddService<IRpcExample, RpcExample>();
 
     // Shared services
     StartupHelper.ConfigureSharedServices(services, true);

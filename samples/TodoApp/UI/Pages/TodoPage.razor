@@ -1,10 +1,7 @@
 @page "/todo"
-@using System.Globalization
-@using ActualLab.Rpc
 @using Templates.TodoApp.UI.Services
 @inherits ComputedStateComponent<TodoPage.Model>
 @inject Session Session
-@inject ITodos Todos
 @inject TodoUI TodoUI
 @inject UICommander UICommander
 @inject ILogger<TodoPage> Log
@@ -23,10 +20,7 @@
 <TextConnectionStatus />
 <StateOfStateBadge State="@State" />
 <Div Margin="Margin.Is1.OnY">
-    @* Updated: <b><MomentsAgoBadge Value="model.ComputedAt" /></b> *@
-</Div>
-<Div Margin="Margin.Is1.OnY">
-    Current culture: <b>@(CultureInfo.CurrentUICulture.Name)</b> @@ @model.ComputedAt.ToString("D")
+    Updated: <b><MomentsAgoBadge Value="model.ComputedAt" /></b>
 </Div>
 <Div Margin="Margin.Is1.OnY">
     Call:
@@ -85,16 +79,6 @@
     // i.e. ideally you just need to trigger a full re-render as a reaction to sign-in / sign-out somewhere
     // in one of your top-level components.
     [CascadingParameter] protected Task<AuthState> AuthState { get; set; } = null!;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var objectId = await Todos.GetTestObjectId();
-        Log.LogInformation("Test ObjectId: {ObjectId}", objectId);
-        var stream = await Todos.GetTestStream();
-        var list = await stream.ToListAsync();
-        var sum = await Todos.SumTestStream(RpcStream.New(list));
-        Log.LogInformation("Test stream: {Stream} = [{List}], sum = {Sum}", stream, list.ToDelimitedString(), sum);
-    }
 
     protected override bool ShouldRender()
         => IsRenderStateChanged(State);
