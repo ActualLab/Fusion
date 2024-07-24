@@ -59,7 +59,7 @@ public class DbKeyValueTrimmer<TDbContext, TDbKeyValue> : DbShardWorkerBase<TDbC
                 Log.Log(Settings.LogLevel,
                     "Trim({Shard}) trimmed {Count} entries", shard.Value, lastTrimCount);
             // ReSharper disable once ExplicitCallerInfoArgument
-        }).Trace(() => activitySource.StartActivity("Trim").AddShardTags(shard), Log);
+        }).Trace(() => activitySource.StartActivity(GetType(), "Trim").AddShardTags(shard), Log);
 
         var chain = runChain
             .RetryForever(Settings.RetryDelays, Clocks.CpuClock, Log)

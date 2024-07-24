@@ -42,7 +42,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal RpcSystemCallSender SystemCallSender => _systemCallSender ??= Services.GetRequiredService<RpcSystemCallSender>();
     internal RpcClient Client => _client ??= Services.GetRequiredService<RpcClient>();
     internal new readonly ActivitySource ActivitySource;
-    internal readonly Meter Meter;
 
     internal ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers { get; } = new();
 
@@ -64,7 +63,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         // ActivitySource & Meter
         var type = GetType();
         ActivitySource = base.ActivitySource = type.GetActivitySource();
-        Meter = type.GetMeter();
 
         // Configuration
         Configuration = services.GetRequiredService<RpcConfiguration>();

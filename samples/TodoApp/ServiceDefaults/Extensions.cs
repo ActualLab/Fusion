@@ -56,6 +56,7 @@ public static class Extensions
                     .AddRuntimeInstrumentation();
                 metrics.AddMeter("ActualLab.Core");
                 metrics.AddMeter("ActualLab.Rpc");
+                metrics.AddMeter("ActualLab.CommandR");
                 metrics.AddMeter("ActualLab.Fusion");
                 metrics.AddMeter("ActualLab.Fusion.EntityFramework");
             })
@@ -67,6 +68,7 @@ public static class Extensions
                     .AddHttpClientInstrumentation();
                 tracing.AddSource("ActualLab.Core");
                 tracing.AddSource("ActualLab.Rpc");
+                tracing.AddSource("ActualLab.CommandR");
                 tracing.AddSource("ActualLab.Fusion");
                 tracing.AddSource("ActualLab.Fusion.EntityFramework");
             });

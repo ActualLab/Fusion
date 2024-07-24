@@ -23,6 +23,7 @@ public abstract class RpcInboundCall : RpcCall
     public ArgumentList? Arguments;
     public abstract Task UntypedResultTask { get; }
     public RpcHeader[]? ResultHeaders;
+    public RpcCallTrace? Trace;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public static RpcInboundCall New(byte callTypeId, RpcInboundContext context, RpcMethodDef? methodDef)
@@ -94,18 +95,6 @@ public abstract class RpcInboundCall : RpcCall
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected abstract Task StartCompletion();
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    protected bool PrepareToStart()
-    {
-        var inboundCalls = Context.Peer.InboundCalls;
-        var existingCall = inboundCalls.GetOrRegister(this);
-        if (existingCall == this)
-            return true;
-
-        _ = existingCall.StartCompletion(); // Starts or restarts the completion
-        return false;
-    }
-
     protected virtual bool Unregister()
     {
         if (!Context.Peer.InboundCalls.Unregister(this))
@@ -143,12 +132,15 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             }
         }
 
-        lock (Lock) {
-            if (!PrepareToStart())
-                return Task.CompletedTask;
+        var existingCall = Context.Peer.InboundCalls.GetOrRegister(this);
+        if (existingCall != this) // Weird scenario: the
+            return Task.CompletedTask;
 
-            RpcMethodTrace? trace = null;
-            var inboundMiddlewares = Hub.InboundMiddlewares.NullIfEmpty();
+        var tracer = MethodDef.Tracer;
+        if (tracer != null && tracer.Sampler.Next())
+            Trace = tracer.TryStartTrace(this);
+        var inboundMiddlewares = Hub.InboundMiddlewares.NullIfEmpty();
+        lock (Lock) {
             try {
                 Arguments ??= DeserializeArguments();
                 if (Arguments == null)
@@ -158,8 +150,6 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
                 var peer = Context.Peer;
                 if (peer.CallLogger.IsLogged(this))
                     peer.CallLogger.LogInbound(this);
-                if (MethodDef.Tracer is { } tracer && tracer.Sampler.Next())
-                    trace = tracer.TryStartTrace(this);
 
                 // Call
                 ResultTask = inboundMiddlewares != null
@@ -168,9 +158,6 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             }
             catch (Exception error) {
                 ResultTask = Task.FromException<TResult>(error);
-            }
-            finally {
-                trace?.OnResultTaskReady(this);
             }
         }
         return StartCompletion();
@@ -238,24 +225,32 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     protected override Task StartCompletion()
     {
         if (!ResultTask.IsCompleted)
-            return Complete();
+            return StartCompletionAsync();
 
-        _ = CompleteSendResult();
+        _ = CompleteAndSendResult();
         return Task.CompletedTask;
+
+        [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+        async Task StartCompletionAsync()
+        {
+            await ResultTask.SilentAwait(false);
+            _ = CompleteAndSendResult();
+        }
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    protected async Task Complete()
-    {
-        await ResultTask.SilentAwait(false);
-        _ = CompleteSendResult();
-    }
-
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    protected virtual Task CompleteSendResult()
+    protected virtual Task CompleteAndSendResult()
     {
         var mustSendResult = !CancellationToken.IsCancellationRequested;
         Unregister();
+        var durationMs = Context.CreatedAt.Elapsed.TotalMilliseconds;
+        Trace?.Complete(this, durationMs);
+        if (RpcMeters.ServerCallCounter.IsObservable) {
+            RpcMeters.ServerCallCounter.Add(1);
+            if (!ResultTask.IsCompletedSuccessfully())
+                (ResultTask.IsCanceled ? RpcMeters.ServerCancellationCounter : RpcMeters.ServerErrorCounter).Add(1);
+            RpcMeters.ServerDurationHistogram.Record(durationMs);
+        }
         return mustSendResult
             ? SendResult()
             : Task.CompletedTask;

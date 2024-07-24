@@ -52,7 +52,7 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
         while (!cancellationToken.IsCancellationRequested) {
             await Task.Delay(Settings.StatisticsPeriod.Next(), cancellationToken).ConfigureAwait(false);
 
-            using var _ = ActivitySource.StartActivity().AddShardTags(shard);
+            using var _ = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
             var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
             await using var _1 = dbContext.ConfigureAwait(false);
             dbContext.EnableChangeTracking(false);
@@ -84,7 +84,7 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
     {
         var minDelayUntil = SystemClock.Now.ToDateTime() - Settings.MaxEntryAge;
 
-        using var _ = ActivitySource.StartActivity().AddShardTags(shard);
+        using var _ = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
         var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);

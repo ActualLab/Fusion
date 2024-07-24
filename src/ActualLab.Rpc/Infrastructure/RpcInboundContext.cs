@@ -15,6 +15,7 @@ public class RpcInboundContext
     public readonly RpcPeer Peer;
     public readonly RpcMessage Message;
     public readonly CancellationToken CancellationToken;
+    public readonly CpuTimestamp CreatedAt = CpuTimestamp.Now;
     public RpcInboundCall Call { get; protected init; }
 
     public static RpcInboundContext GetCurrent()

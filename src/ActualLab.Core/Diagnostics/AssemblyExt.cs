@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using ActualLab.OS;
 
 namespace ActualLab.Diagnostics;

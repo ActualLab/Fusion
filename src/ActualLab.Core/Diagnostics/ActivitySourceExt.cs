@@ -6,12 +6,15 @@ public static class ActivitySourceExt
 {
     public static readonly ActivitySource Unknown = new("<Unknown>");
 
+    public static ActivitySource? IfEnabled(this ActivitySource activitySource, bool isEnabled)
+        => isEnabled ? activitySource : null;
+
     public static Activity? StartActivity(
-        this ActivitySource activitySource,
+        this ActivitySource? activitySource,
         Type sourceType,
-        string operationName,
+        [CallerMemberName] string operationName = "",
         ActivityKind activityKind = ActivityKind.Internal)
-        => activitySource.StartActivity(
+        => activitySource?.StartActivity(
             sourceType.GetOperationName(operationName),
             activityKind);
 }

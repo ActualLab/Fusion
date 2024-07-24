@@ -70,13 +70,13 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     public async Task TraceTest()
     {
         await using var services = CreateServices(s => {
-            s.AddSingleton<RpcMethodTracerFactory>(method => new TestRpcMethodTracer(method));
+            s.AddSingleton<RpcMethodTracerFactory>(method => new TestRpcCallTracer(method));
         });
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
         var client = services.GetRequiredService<ITestRpcServiceClient>();
 
         var divMethod = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
-        var divTracer = (TestRpcMethodTracer)divMethod.Tracer!;
+        var divTracer = (TestRpcCallTracer)divMethod.Tracer!;
 
         divTracer.EnterCount.Should().Be(0);
         divTracer.ExitCount.Should().Be(0);
@@ -95,7 +95,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     public async Task TraceActivityTest()
     {
         await using var services = CreateServices(s => {
-            s.AddSingleton<RpcMethodTracerFactory>(method => new RpcMethodActivityTracer(method) {
+            s.AddSingleton<RpcMethodTracerFactory>(method => new RpcDefaultCallTracer(method) {
                 UseCounters = true,
             });
         });
@@ -103,14 +103,14 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var client = services.GetRequiredService<ITestRpcServiceClient>();
 
         var divMethod = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
-        var divTracer = (RpcMethodActivityTracer)divMethod.Tracer!;
+        var divTracer = (RpcDefaultCallTracer)divMethod.Tracer!;
 
         (await client.Div(6, 2)).Should().Be(3);
         await Assert.ThrowsAsync<DivideByZeroException>(
             () => client.Div(1, 0));
         await AssertNoCalls(clientPeer);
 
-        divTracer.Counters.Should().NotBeNull();
+        divTracer.Meters.Should().NotBeNull();
     }
 
     [Fact]

@@ -20,7 +20,7 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
 
     protected override async Task<int> ProcessBatch(DbShard shard, int batchSize, CancellationToken cancellationToken)
     {
-        using var _ = ActivitySource.StartActivity().AddShardTags(shard);
+        using var _ = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
         var dbContext = await DbHub.CreateDbContext(shard, readWrite: true, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
         var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);

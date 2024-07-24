@@ -19,6 +19,7 @@ public abstract record DbLogReaderOptions
     public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(0.25, 5);
     public int ConcurrencyLevel { get; init; } = HardwareInfo.GetProcessorCountFactor(4);
     public LogLevel LogLevel { get; init; } = LogLevel.Information;
+    public bool UseActivitySource { get; init; }
 }
 
 public abstract record DbOperationLogReaderOptions : DbLogReaderOptions

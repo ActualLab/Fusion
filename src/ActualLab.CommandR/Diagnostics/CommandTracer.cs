@@ -9,7 +9,7 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
     private ILogger? _log;
 
     protected IServiceProvider Services { get; } = services;
-    protected ActivitySource ActivitySource => _activitySource ??= GetType().GetActivitySource();
+    protected ActivitySource ActivitySource => _activitySource ??= typeof(ICommand).GetActivitySource();
 
     protected ILogger Log {
         get => _log ??= Services.LogFor(GetType());
@@ -41,7 +41,7 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
         if (!ShouldTrace(command, context))
             return null;
 
-        var operationName = command.GetType().GetOperationName("Run");
+        var operationName = command.GetOperationName();
         var activity = ActivitySource.StartActivity(operationName);
         if (activity != null) {
             var tags = new ActivityTagsCollection { { "command", command.ToString() } };

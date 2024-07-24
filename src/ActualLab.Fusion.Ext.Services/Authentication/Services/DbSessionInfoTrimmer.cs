@@ -20,6 +20,7 @@ public abstract class DbSessionInfoTrimmer<TDbContext>(
         public RandomTimeSpan CheckPeriod { get; init; } =  TimeSpan.FromMinutes(15).ToRandom(0.25);
         public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(10));
         public LogLevel LogLevel { get; init; } = LogLevel.Information;
+        public bool UseActivitySource { get; init; }
     }
 
     protected Options Settings { get; } = settings;
@@ -51,7 +52,7 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
         var batchSize = Settings.BatchSize;
         while (true) {
             var maxLastSeenAt = (SystemClock.Now - Settings.MaxSessionAge).ToDateTime();
-            using var _ = ActivitySource.StartActivity().AddShardTags(shard);
+            using var _ = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
             var count = await Sessions.Trim(shard, maxLastSeenAt, batchSize, cancellationToken)
                 .ConfigureAwait(false);
             if (count > 0)

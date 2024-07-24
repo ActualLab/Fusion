@@ -53,6 +53,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
             Delays = RetryDelaySeq.Exp(0.125, 0.5, 0.1, 2),
             Limit = 3,
         };
+        public bool UseActivitySource { get; init; }
     }
 
     // ReSharper disable once StaticMemberInGenericType
@@ -297,7 +298,8 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
     protected virtual Activity? StartProcessBatchActivity(DbShard shard, int batchSize)
         => ActivitySource
-            .StartActivity(nameof(ProcessBatch))
+            .IfEnabled(Settings.UseActivitySource)
+            .StartActivity(GetType(), nameof(ProcessBatch))
             .AddShardTags(shard)?
             .AddTag("batchSize", batchSize.ToString(CultureInfo.InvariantCulture));
 

@@ -4,7 +4,7 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Tests.Rpc;
 
-public class TestRpcMethodTracer(RpcMethodDef method) : RpcMethodTracer(method)
+public class TestRpcCallTracer(RpcMethodDef method) : RpcCallTracer(method)
 {
     private long _enterCount;
     private long _exitCount;
@@ -14,16 +14,16 @@ public class TestRpcMethodTracer(RpcMethodDef method) : RpcMethodTracer(method)
     public long ExitCount => Interlocked.Read(ref _exitCount);
     public long ErrorCount => Interlocked.Read(ref _errorCount);
 
-    public override RpcMethodTrace? TryStartTrace(RpcInboundCall call)
+    public override RpcCallTrace? TryStartTrace(RpcInboundCall call)
         => new Trace(this);
 
     // Nested types
 
-    private sealed class Trace : RpcMethodTrace
+    private sealed class Trace : RpcCallTrace
     {
-        private readonly TestRpcMethodTracer _tracer;
+        private readonly TestRpcCallTracer _tracer;
 
-        public Trace(TestRpcMethodTracer tracer)
+        public Trace(TestRpcCallTracer tracer)
         {
             _tracer = tracer;
             Interlocked.Increment(ref _tracer._enterCount);

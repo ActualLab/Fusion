@@ -209,8 +209,6 @@ public sealed class ComputedRegistry : IDisposable
     {
         var startedAt = CpuTimestamp.Now;
         Metrics.KeyPruneCount.Add(1);
-        var type = GetType();
-        using var activity = type.GetActivitySource().StartActivity(type, nameof(Prune));
 
         // Debug.WriteLine(nameof(PruneInternal));
         var randomOffset = Environment.CurrentManagedThreadId + CoarseClockHelper.RandomInt32;

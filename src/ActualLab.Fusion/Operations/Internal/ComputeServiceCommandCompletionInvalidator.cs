@@ -5,9 +5,9 @@ using ActualLab.CommandR.Operations;
 namespace ActualLab.Fusion.Operations.Internal;
 
 public class ComputeServiceCommandCompletionInvalidator(
-        ComputeServiceCommandCompletionInvalidator.Options settings,
-        IServiceProvider services
-        ) : ICommandHandler<ICompletion>
+    ComputeServiceCommandCompletionInvalidator.Options settings,
+    IServiceProvider services
+    ) : ICommandHandler<ICompletion>
 {
     public record Options
     {
@@ -20,12 +20,10 @@ public class ComputeServiceCommandCompletionInvalidator(
 
     protected IServiceProvider Services { get; } = services;
     protected Options Settings { get; } = settings;
-    protected ActivitySource ActivitySource
-        => _activitySource ??= GetType().GetActivitySource();
     protected CommandHandlerResolver CommandHandlerResolver
         => _commandHandlerResolver ??= Services.GetRequiredService<CommandHandlerResolver>();
-    protected ILogger Log
-        => _log ??= Services.LogFor(GetType());
+    protected ActivitySource ActivitySource => _activitySource ??= typeof(ICommand).GetActivitySource();
+    protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.ComputeServiceCommandCompletionInvalidator)]
     public async Task OnCommand(ICompletion completion, CommandContext context, CancellationToken cancellationToken)
@@ -40,8 +38,8 @@ public class ComputeServiceCommandCompletionInvalidator(
 
         Log.IfEnabled(Settings.LogLevel)
             ?.Log(Settings.LogLevel, "Invalidating: {CommandType}", command.GetType());
-        using var activity = StartActivity(command);
 
+        using var _1 = StartActivity(command);
         var operationItems = operation.Items;
         var oldOperation = context.TryGetOperation();
         context.ChangeOperation(operation);
@@ -112,7 +110,7 @@ public class ComputeServiceCommandCompletionInvalidator(
 
     protected virtual Activity? StartActivity(ICommand command)
     {
-        var operationName = command.GetType().GetOperationName("Invalidate");
+        var operationName = command.GetOperationName("Invalidate");
         var activity = ActivitySource.StartActivity(operationName);
         if (activity != null) {
             var tags = new ActivityTagsCollection { { "command", command.ToString() } };

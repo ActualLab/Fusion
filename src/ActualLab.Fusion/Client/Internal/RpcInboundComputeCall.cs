@@ -42,7 +42,7 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    protected override Task CompleteSendResult()
+    protected override Task CompleteAndSendResult()
     {
         Computed<TResult>? computed;
         CancellationToken stopCompletionToken;

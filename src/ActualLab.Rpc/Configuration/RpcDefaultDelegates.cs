@@ -25,7 +25,7 @@ public delegate Task<RpcConnection> RpcClientConnectionFactory(
 public delegate Task<RpcConnection> RpcServerConnectionFactory(
     RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties, CancellationToken cancellationToken);
 public delegate bool RpcPeerTerminalErrorDetector(Exception error);
-public delegate RpcMethodTracer? RpcMethodTracerFactory(RpcMethodDef method);
+public delegate RpcCallTracer? RpcMethodTracerFactory(RpcMethodDef method);
 public delegate RpcCallLogger RpcCallLoggerFactory(RpcPeer peer, RpcCallLoggerFilter filter, ILogger log, LogLevel logLevel);
 public delegate bool RpcCallLoggerFilter(RpcPeer peer, RpcCall call);
 

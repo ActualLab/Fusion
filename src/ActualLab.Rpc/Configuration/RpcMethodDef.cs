@@ -38,7 +38,7 @@ public sealed class RpcMethodDef : MethodDef
     public bool IsCommand { get; init; }
     public bool AllowArgumentPolymorphism { get; init; }
     public bool AllowResultPolymorphism { get; init; }
-    public RpcMethodTracer? Tracer { get; init; }
+    public RpcCallTracer? Tracer { get; init; }
     public LegacyNames LegacyNames { get; init; }
     public PropertyBag CustomProperties { get; init; } = PropertyBag.Empty;
     public RpcCallTimeouts Timeouts { get; init; }
