@@ -7,18 +7,9 @@ namespace ActualLab.Diagnostics;
 public static class AssemblyExt
 {
     private static readonly ConcurrentDictionary<Assembly, string?> InformationalVersions = new();
-    private static readonly ConcurrentDictionary<Assembly, ActivitySource> ActivitySources = new();
-    private static readonly ConcurrentDictionary<Assembly, Meter> Meters = new();
-    private static readonly string UnknownName = "<Unknown>";
-    private static readonly string UnknownVersion = "<Unknown Version>";
 
     public static string? GetInformationalVersion(this Assembly assembly)
         => InformationalVersionResolver.Invoke(assembly);
-
-    public static ActivitySource GetActivitySource(this Assembly assembly)
-        => ActivitySourceResolver.Invoke(assembly);
-    public static Meter GetMeter(this Assembly assembly)
-        => MeterResolver.Invoke(assembly);
 
     // Overridable part
 
@@ -44,16 +35,4 @@ public static class AssemblyExt
                     return null;
                 }
             });
-
-    public static Func<Assembly, ActivitySource> ActivitySourceResolver { get; set; } =
-        assembly => ActivitySources.GetOrAdd(assembly,
-            static a => new ActivitySource(
-                a.GetName().Name ?? UnknownName,
-                a.GetInformationalVersion() ?? UnknownVersion));
-
-    public static Func<Assembly, Meter> MeterResolver { get; set; } =
-        assembly => Meters.GetOrAdd(assembly,
-            static a => new Meter(
-                a.GetName().Name ?? UnknownName,
-                a.GetInformationalVersion() ?? UnknownVersion));
 }

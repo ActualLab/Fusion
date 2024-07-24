@@ -6,7 +6,7 @@ public class HostSettings
     public bool UseTenants { get; set; } = true;
     public int TenantCount { get; set; } = 3;
     public int Tenant0Port { get; set; } = 5005;
-    public int Port { get; set; } = 5005;
+    public int? Port { get; set; }
 
     // DBs
     public string UseSqlServer { get; set; } = "";

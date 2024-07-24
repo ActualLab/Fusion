@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using ActualLab.Concurrency;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
@@ -11,6 +12,7 @@ namespace ActualLab.Fusion;
 public sealed class ComputedRegistry : IDisposable
 {
     public static ComputedRegistry Instance { get; set; } = new();
+    internal static readonly MeterSet Metrics = new();
 
     public sealed record Options
     {
@@ -205,19 +207,28 @@ public sealed class ComputedRegistry : IDisposable
 
     private void PruneUnsafe()
     {
+        var startedAt = CpuTimestamp.Now;
+        Metrics.KeyPruneCount.Add(1);
         var type = GetType();
         using var activity = type.GetActivitySource().StartActivity(type, nameof(Prune));
 
         // Debug.WriteLine(nameof(PruneInternal));
         var randomOffset = Environment.CurrentManagedThreadId + CoarseClockHelper.RandomInt32;
+        var prunedKeyCount = 0L;
+
         foreach (var (key, handle) in _storage) {
-            if (handle.Target == null && _storage.TryRemove(key, handle))
+            if (handle.Target == null && _storage.TryRemove(key, handle)) {
                 _gcHandlePool.Release(handle, key.HashCode + randomOffset);
+                prunedKeyCount++;
+            }
         }
         lock (Lock) {
             UpdatePruneCounterThreshold();
             _opCounter.Value = 0;
         }
+        Interlocked.Exchange(ref Metrics.Capacity, _storage.GetCapacity());
+        Metrics.PrunedKeyCount.Add(prunedKeyCount);
+        Metrics.KeyPruneDuration.Record(startedAt.Elapsed.TotalMilliseconds);
     }
 
     private void UpdatePruneCounterThreshold()
@@ -228,6 +239,59 @@ public sealed class ComputedRegistry : IDisposable
             var doubleCapacity = Math.Max(capacity, capacity << 1);
             var nextThreshold = doubleCapacity.Clamp(1024, int.MaxValue >> 1);
             _pruneOpCounterThreshold = nextThreshold;
+        }
+    }
+
+    // Nested types
+
+    public class MeterSet
+    {
+        public readonly ObservableCounter<long> CapacityCounter;
+        public readonly ObservableCounter<long> NodeCounter;
+        public readonly ObservableCounter<long> EdgeCounter;
+        public readonly UpDownCounter<long> PrunedKeyCount;
+        public readonly UpDownCounter<long> PrunedDisposedCount;
+        public readonly UpDownCounter<long> PrunedEdgeCount;
+        public readonly UpDownCounter<long> KeyPruneCount;
+        public readonly UpDownCounter<long> NodeEdgePruneCount;
+        public readonly Histogram<double> KeyPruneDuration;
+        public readonly Histogram<double> NodePruneDuration;
+        public readonly Histogram<double> EdgePruneDuration;
+        public long Capacity;
+        public long NodeCount;
+        public long EdgeCount;
+
+        public MeterSet()
+        {
+            var m = typeof(ComputedRegistry).GetMeter();
+            var ms = "computed.registry";
+            CapacityCounter = m.CreateObservableCounter($"{ms}.capacity",
+                () => Interlocked.Read(ref Capacity),
+                null, "ComputedRegistry capacity.");
+            NodeCounter = m.CreateObservableCounter($"{ms}.node.count",
+                () => Interlocked.Read(ref NodeCount),
+                null, "Count of nodes in Computed<T> dependency graph.");
+            EdgeCounter = m.CreateObservableCounter($"{ms}.edge.count",
+                () => Interlocked.Read(ref EdgeCount),
+                null, "Count of edges in Computed<T> dependency graph.");
+
+            PrunedKeyCount = m.CreateUpDownCounter<long>($"{ms}.pruned.key.count",
+                null, "Count of pruned Computed<T> instances.");
+            PrunedDisposedCount = m.CreateUpDownCounter<long>($"{ms}.pruned.disposed.count",
+                null, "Count of pruned disposable Computed<T> instances.");
+            PrunedEdgeCount = m.CreateUpDownCounter<long>($"{ms}.pruned.edge.count",
+                null, "Count of pruned edges in Computed<T> dependency graph.");
+
+            KeyPruneCount = m.CreateUpDownCounter<long>($"{ms}.prunes.key-cycle.count",
+                null, "Count of computed registry key prune cycles.");
+            NodeEdgePruneCount = m.CreateUpDownCounter<long>($"{ms}.prunes.node-edge-cycle.count",
+                null, "Count of computed registry node & edge prune cycles.");
+            KeyPruneDuration = m.CreateHistogram<double>($"{ms}.prunes.key-cycle.duration",
+                "ms", "Duration of computed registry key prune cycle.");
+            NodePruneDuration = m.CreateHistogram<double>($"{ms}.prunes.node-cycle.duration",
+                "ms", "Duration of computed registry graph node prune cycle.");
+            EdgePruneDuration = m.CreateHistogram<double>($"{ms}.prunes.edge-cycle.duration",
+                "ms", "Duration of computed registry graph edge prune cycle.");
         }
     }
 }

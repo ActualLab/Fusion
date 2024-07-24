@@ -4,7 +4,7 @@ namespace ActualLab.DependencyInjection;
 
 public static class ServiceProviderExt
 {
-    public static readonly IServiceProvider Empty = new ServiceCollection().BuildServiceProvider();
+    public static readonly IServiceProvider Empty = new EmptyServiceProvider();
 
     public static bool IsDisposedOrDisposing(this IServiceProvider services)
     {
@@ -82,5 +82,13 @@ public static class ServiceProviderExt
 
         var scoped = services.GetRequiredService<MixedModeService<T>.Scoped>();
         return scoped.Service;
+    }
+
+    // Nested types
+
+    private class EmptyServiceProvider : IServiceProvider
+    {
+        public object? GetService(Type serviceType)
+            => serviceType == typeof(IServiceProvider) ? this : null;
     }
 }

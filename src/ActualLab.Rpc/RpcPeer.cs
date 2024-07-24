@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
@@ -19,10 +21,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     private ILogger? _log;
 
     protected IServiceProvider Services => Hub.Services;
-    protected internal ILogger Log => _log ??= Services.LogFor(GetType());
     protected internal RpcCallLogger CallLogger
         => _callLogger ??= Hub.CallLoggerFactory.Invoke(this, Hub.CallLoggerFilter, Log, CallLogLevel);
     protected internal ChannelWriter<RpcMessage>? Sender => _sender;
+    protected internal ILogger Log => _log ??= Services.LogFor(GetType());
 
     public RpcHub Hub { get; }
     public RpcPeerRef Ref { get; }
@@ -57,19 +59,21 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         // ServiceRegistry is resolved in lazy fashion in RpcHub.
         // We access it here to make sure any configuration error gets thrown at this point.
         _ = hub.ServiceRegistry;
-        var services = hub.Services;
+
         Hub = hub;
         Ref = @ref;
         ConnectionKind = @ref.GetConnectionKind(hub);
         Versions = versions ?? @ref.GetVersions();
-        ServerMethodResolver = Hub.ServiceRegistry.DefaultServerMethodResolver;
-        if (Ref.IsServer)
-            InboundCallCancellationOnStopDelay = TimeSpan.FromSeconds(1);
 
+        ActivitySource = hub.ActivitySource; // Just to make sure they're the same
+        ServerMethodResolver = Hub.ServiceRegistry.DefaultServerMethodResolver;
         ArgumentSerializer = Hub.ArgumentSerializer;
         HashProvider = Hub.HashProvider;
         InboundContextFactory = Hub.InboundContextFactory;
         InboundCallFilter = Hub.InboundCallFilter;
+        InboundCallCancellationOnStopDelay = Ref.IsServer ? TimeSpan.FromSeconds(1) : TimeSpan.Zero;
+
+        var services = hub.Services;
         InboundCalls = services.GetRequiredService<RpcInboundCallTracker>();
         InboundCalls.Initialize(this);
         OutboundCalls = services.GetRequiredService<RpcOutboundCallTracker>();

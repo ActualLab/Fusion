@@ -54,6 +54,10 @@ public static class Extensions
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation();
+                metrics.AddMeter("ActualLab.Core");
+                metrics.AddMeter("ActualLab.Rpc");
+                metrics.AddMeter("ActualLab.Fusion");
+                metrics.AddMeter("ActualLab.Fusion.EntityFramework");
             })
             .WithTracing(tracing =>
             {
@@ -61,6 +65,10 @@ public static class Extensions
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()
                     .AddHttpClientInstrumentation();
+                tracing.AddSource("ActualLab.Core");
+                tracing.AddSource("ActualLab.Rpc");
+                tracing.AddSource("ActualLab.Fusion");
+                tracing.AddSource("ActualLab.Fusion.EntityFramework");
             });
 
         builder.AddOpenTelemetryExporters();

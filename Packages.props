@@ -63,7 +63,7 @@
     <AspNetCoreMvcTestingVersionN4>$(AspNetCoreVersion5)</AspNetCoreMvcTestingVersionN4>
     <!-- Build & Samples -->
     <BlazoriseVersion>1.5.*</BlazoriseVersion>
-    <FusionVersion>7.1.*</FusionVersion>
+    <FusionVersion>9.0.*</FusionVersion>
   </PropertyGroup>
 
   <ItemGroup Label="Package Versions">
@@ -148,7 +148,7 @@
     <PackageReference Update="ZString" Version="2.5.*" />
 
     <!-- Aspire -->
-    <PackageReference Update="Aspire.Hosting.AppHost" Version="8.0.2" />
+    <PackageReference Update="Aspire.Hosting.AppHost" Version="8.1.0" />
     <PackageReference Update="Microsoft.Extensions.Http.Resilience" Version="8.6.0" />
     <PackageReference Update="Microsoft.Extensions.ServiceDiscovery" Version="8.0.2" />
     <PackageReference Update="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.8.1" />

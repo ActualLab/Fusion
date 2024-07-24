@@ -48,7 +48,7 @@ if (hostSettings.IsAspireManaged)
 
 cfg.Sources.Insert(0, new MemoryConfigurationSource() {
     InitialData = new Dictionary<string, string>() {
-        { WebHostDefaults.ServerUrlsKey, $"http://localhost:{hostSettings.Port}" }, // Override default server URLs
+        { WebHostDefaults.ServerUrlsKey, $"http://localhost:{hostSettings.Port ?? 5005}" }, // Override default server URLs
     }!
 });
 
@@ -151,8 +151,11 @@ void ConfigureServices()
     fusion.AddDbKeyValueStore<AppDbContext>();
 
     if (hostSettings.UseTenants) {
+        int PortExtractor(HttpContext ctx)
+            => hostSettings.Port ?? ctx.Connection.LocalPort;
+
         var shardTagExtractor = HttpContextExtractors.Subdomain(".localhost")
-            .Or(HttpContextExtractors.PortOffset(hostSettings.Tenant0Port, hostSettings.TenantCount).WithPrefix("tenant"))
+            .Or(HttpContextExtractors.PortOffset(hostSettings.Tenant0Port, hostSettings.TenantCount, PortExtractor).WithPrefix("tenant"))
             .WithValidator(value => {
                 if (!value.StartsWith("tenant", StringComparison.Ordinal))
                     throw new ArgumentOutOfRangeException(nameof(value), $"Invalid Tenant ID: '{value}'.");

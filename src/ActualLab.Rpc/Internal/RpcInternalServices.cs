@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
@@ -33,6 +35,8 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcSystemCallSender SystemCallSender => Hub.SystemCallSender;
     public RpcClient Client => Hub.Client;
     public ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers => Hub.Peers;
+    public ActivitySource ActivitySource => Hub.ActivitySource;
+    public Meter Meter => Hub.Meter;
 
     internal readonly RpcNonRoutingInterceptor.Options NonRoutingInterceptorOptions
         = hub.Services.GetRequiredService<RpcNonRoutingInterceptor.Options>();

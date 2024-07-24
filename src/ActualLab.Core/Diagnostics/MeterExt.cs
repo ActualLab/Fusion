@@ -4,5 +4,5 @@ namespace ActualLab.Diagnostics;
 
 public static class MeterExt
 {
-    public static readonly Meter Unknown = new("<Unknown>");
+    public static readonly Meter Unknown = new("unknown");
 }

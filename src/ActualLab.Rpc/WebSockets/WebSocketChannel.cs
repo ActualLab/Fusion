@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
 using Microsoft.Toolkit.HighPerformance;
 using ActualLab.Internal;
@@ -38,6 +39,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         };
     }
 
+    private static readonly MeterSet StaticMeters = new();
     private const int MinMessageSize = 32;
 
     private volatile CancellationTokenSource? _stopCts;
@@ -51,21 +53,20 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private readonly IByteSerializer<T> _byteSerializer;
     private readonly ITextSerializer<T> _textSerializer;
     private readonly WebSocketMessageType _defaultMessageType;
-    // ReSharper disable once InconsistentlySynchronizedField
+    private readonly MeterSet _meters = StaticMeters;
 
     public bool OwnsWebSocketOwner { get; init; } = true;
     public Options Settings { get; }
     public WebSocketOwner WebSocketOwner { get; }
     public WebSocket WebSocket { get; }
-    public DualSerializer<T> Serializer { get; }
-    public CancellationToken StopToken { get; }
-    public CpuTimestamp StartedAt { get; } = CpuTimestamp.Now;
-    public ILogger? Log { get; }
-    public ILogger? ErrorLog { get; }
-
-    public Task WhenReadCompleted { get; }
-    public Task WhenWriteCompleted { get; }
-    public Task WhenClosed { get; }
+    public readonly CancellationToken StopToken;
+    public readonly DualSerializer<T> Serializer;
+    public readonly CpuTimestamp StartedAt = CpuTimestamp.Now;
+    public readonly ILogger? Log;
+    public readonly ILogger? ErrorLog;
+    public readonly Task WhenReadCompleted;
+    public readonly Task WhenWriteCompleted;
+    public readonly Task WhenClosed;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public WebSocketChannel(
@@ -110,20 +111,27 @@ public sealed class WebSocketChannel<T> : Channel<T>
         WhenReadCompleted = Task.Run(() => RunReader(StopToken), default);
         WhenWriteCompleted = Task.Run(() => RunWriter(StopToken), default);
         WhenClosed = Task.Run(async () => {
-            var completedTask = await Task.WhenAny(WhenReadCompleted, WhenWriteCompleted).ConfigureAwait(false);
-            if (completedTask != WhenWriteCompleted)
-                await WhenWriteCompleted.SilentAwait(false);
-            else
-                await WhenReadCompleted.SilentAwait(false);
-
+            Interlocked.Increment(ref _meters.ChannelCount);
             try {
-                await completedTask.ConfigureAwait(false);
+                var completedTask = await Task.WhenAny(WhenReadCompleted, WhenWriteCompleted).ConfigureAwait(false);
+                if (completedTask != WhenWriteCompleted)
+                    await WhenWriteCompleted.SilentAwait(false);
+                else
+                    await WhenReadCompleted.SilentAwait(false);
+
+                try {
+                    await completedTask.ConfigureAwait(false);
+                }
+                catch (Exception error) {
+                    await CloseWebSocket(error).ConfigureAwait(false);
+                    throw;
+                }
+
+                await CloseWebSocket(null).ConfigureAwait(false);
             }
-            catch (Exception error) {
-                await CloseWebSocket(error).ConfigureAwait(false);
-                throw;
+            finally {
+                Interlocked.Decrement(ref _meters.ChannelCount);
             }
-            await CloseWebSocket(null).ConfigureAwait(false);
         }, default);
     }
 
@@ -295,6 +303,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 await WebSocket
                     .SendAsync(part, _defaultMessageType, isEndOfMessage, cancellationToken)
                     .ConfigureAwait(false);
+                _meters.OutgoingFrameCounter.Add(1);
+                _meters.OutgoingFrameSizeHistogram.Record(part.Length);
             }
             _writeBuffer.Reset();
         }
@@ -317,6 +327,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
             while (true) {
                 T value;
                 var r = await WebSocket.ReceiveAsync(readBuffer, cancellationToken).ConfigureAwait(false);
+                _meters.IncomingFrameCounter.Add(1);
+                _meters.IncomingFrameSizeHistogram.Record(r.Count);
                 switch (r.MessageType) {
                 case WebSocketMessageType.Binary:
                     if (r.EndOfMessage && byteBuffer.WrittenCount == 0) {
@@ -394,6 +406,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private bool TrySerialize(T value, ArrayPoolBuffer<byte> buffer)
     {
+        _meters.OutgoingItemCounter.Add(1);
         var startOffset = buffer.WrittenCount;
         try {
             int size;
@@ -430,6 +443,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private bool TryDeserializeBytes(ref ReadOnlyMemory<byte> bytes, out T value)
     {
+        _meters.IncomingItemCounter.Add(1);
         int size = 0;
         bool isSizeValid = false;
         try {
@@ -463,6 +477,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private bool TryDeserializeText(ReadOnlyMemory<byte> bytes, out T value)
     {
+        _meters.IncomingItemCounter.Add(1);
         try {
             if (bytes.Length > _maxItemSize)
                 throw Errors.ItemSizeExceedsTheLimit();
@@ -474,6 +489,41 @@ public sealed class WebSocketChannel<T> : Channel<T>
             ErrorLog?.LogError(e, "Couldn't deserialize: {Data}", new TextOrBytes(DataFormat.Text, bytes));
             value = default!;
             return false;
+        }
+    }
+
+    // Nested types
+
+    public class MeterSet
+    {
+        public readonly ObservableCounter<long> ChannelCounter;
+        public readonly UpDownCounter<long> IncomingItemCounter;
+        public readonly UpDownCounter<long> OutgoingItemCounter;
+        public readonly UpDownCounter<long> IncomingFrameCounter;
+        public readonly UpDownCounter<long> OutgoingFrameCounter;
+        public readonly Histogram<int> IncomingFrameSizeHistogram;
+        public readonly Histogram<int> OutgoingFrameSizeHistogram;
+        public long ChannelCount;
+
+        public MeterSet()
+        {
+            var m = typeof(WebSocketChannel<T>).GetMeter();
+            var ms = $"rpc.websocket-channel.{typeof(T).GetName()}";
+            ChannelCounter = m.CreateObservableCounter($"{ms}.count",
+                () => Interlocked.Read(ref ChannelCount),
+                null, "Number of WebSocketChannel instances.");
+            IncomingItemCounter = m.CreateUpDownCounter<long>($"{ms}.incoming.item.count",
+                null, "Number of items received via WebSocketChannel.");
+            OutgoingItemCounter = m.CreateUpDownCounter<long>($"{ms}.outgoing.item.count",
+                null, "Number of items sent via WebSocketChannel.");
+            IncomingFrameCounter = m.CreateUpDownCounter<long>($"{ms}.incoming.frame.count",
+                null, "Number of frames received via WebSocketChannel.");
+            OutgoingFrameCounter = m.CreateUpDownCounter<long>($"{ms}.outgoing.frame.count",
+                null, "Number of frames sent via WebSocketChannel.");
+            IncomingFrameSizeHistogram = m.CreateHistogram<int>($"{ms}.incoming.frame.size",
+                "By", "WebSocketChannel's incoming frame size in bytes");
+            OutgoingFrameSizeHistogram = m.CreateHistogram<int>($"{ms}.outgoing.frame.size",
+                "By", "WebSocketChannel's outgoing frame size in bytes");
         }
     }
 }

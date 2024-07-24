@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ActualLab;
 using ActualLab.Collections;
 using ActualLab.Fusion;
 using ActualLab.Rpc;
@@ -9,14 +10,13 @@ namespace Samples.MeshRpc;
 
 public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
 {
-    private static readonly ConcurrentDictionary<ShardRef, RpcShardPeerRef> Cache = new();
+    private static readonly ConcurrentDictionary<ShardRef, LazySlim<ShardRef, RpcShardPeerRef>> Cache = new();
 
-    private int _isStarted;
-    private readonly CancellationTokenSource _rerouteTokenSource;
+    private volatile CancellationTokenSource? _rerouteTokenSource;
 
-    public int ShardKey { get; }
+    public ShardRef ShardRef { get; }
     public Symbol HostId { get; }
-    public override CancellationToken RerouteToken { get; }
+    public override CancellationToken RerouteToken => _rerouteTokenSource?.Token ?? CancellationToken.None;
 
     public static Symbol GetKey(ShardRef shardRef)
     {
@@ -26,30 +26,35 @@ public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
 
     public static RpcShardPeerRef Get(ShardRef shardRef)
     {
+        var sw = new SpinWait();
         while (true) {
-            var peerRef = Cache.GetOrAdd(shardRef, key => new RpcShardPeerRef(key));
-            if (peerRef.RerouteToken.IsCancellationRequested) {
-                Cache.TryRemove(shardRef, peerRef);
-                continue;
+            var lazy = Cache.GetOrAdd(shardRef,
+                static shardRef1 => new LazySlim<ShardRef, RpcShardPeerRef>(shardRef1,
+                    static shardRef2 => new RpcShardPeerRef(shardRef2)));
+            var shardPeerRef = lazy.Value;
+            if (!shardPeerRef.RerouteToken.IsCancellationRequested) {
+                shardPeerRef.TryStart(lazy);
+                return shardPeerRef;
             }
 
-            peerRef.TryStartRerouteTokenUpdater();
-            return peerRef;
+            sw.SpinOnce();
         }
     }
 
-    public RpcShardPeerRef(ShardRef shardRef)
+    private RpcShardPeerRef(ShardRef shardRef)
         : base(GetKey(shardRef))
     {
-        ShardKey = shardRef.Key;
+        ShardRef = shardRef;
         HostId = Key.Value.Split(" -> ")[1];
-        _rerouteTokenSource = new CancellationTokenSource();
-        RerouteToken = _rerouteTokenSource.Token;
     }
 
-    public void TryStartRerouteTokenUpdater()
+    public void TryStart(LazySlim<ShardRef, RpcShardPeerRef> lazy)
     {
-        if (Interlocked.CompareExchange(ref _isStarted, 1, 0) != 0)
+        if (_rerouteTokenSource != null)
+            return;
+
+        var rerouteTokenSource = new CancellationTokenSource();
+        if (Interlocked.CompareExchange(ref _rerouteTokenSource, rerouteTokenSource, null) != null)
             return;
 
         _ = Task.Run(async () => {
@@ -58,8 +63,9 @@ public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
                 await MeshState.State.When(x => x.Hosts.Length > 0).ConfigureAwait(false);
             else
                 await MeshState.State.When(x => !x.HostById.ContainsKey(HostId)).ConfigureAwait(false);
-            Console.WriteLine($"{Key}: rerouted.".Pastel(ConsoleColor.Yellow));
+            Cache.TryRemove(ShardRef, lazy);
             await _rerouteTokenSource.CancelAsync();
+            Console.WriteLine($"{Key}: rerouted.".Pastel(ConsoleColor.Yellow));
         });
     }
 

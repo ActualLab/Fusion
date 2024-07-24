@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Serialization;
@@ -39,6 +41,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal IEnumerable<RpcPeerTracker> PeerTrackers => _peerTrackers ??= Services.GetRequiredService<IEnumerable<RpcPeerTracker>>();
     internal RpcSystemCallSender SystemCallSender => _systemCallSender ??= Services.GetRequiredService<RpcSystemCallSender>();
     internal RpcClient Client => _client ??= Services.GetRequiredService<RpcClient>();
+    internal new readonly ActivitySource ActivitySource;
+    internal readonly Meter Meter;
 
     internal ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers { get; } = new();
 
@@ -56,6 +60,13 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public RpcHub(IServiceProvider services)
     {
         Services = services;
+
+        // ActivitySource & Meter
+        var type = GetType();
+        ActivitySource = base.ActivitySource = type.GetActivitySource();
+        Meter = type.GetMeter();
+
+        // Configuration
         Configuration = services.GetRequiredService<RpcConfiguration>();
         Configuration.Freeze();
 

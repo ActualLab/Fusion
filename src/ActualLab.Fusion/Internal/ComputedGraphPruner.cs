@@ -1,3 +1,5 @@
+using System.Diagnostics.Metrics;
+
 namespace ActualLab.Fusion.Internal;
 
 public sealed class ComputedGraphPruner : WorkerBase
@@ -13,8 +15,10 @@ public sealed class ComputedGraphPruner : WorkerBase
         public RandomTimeSpan InterBatchDelay { get; init; } = TimeSpan.FromSeconds(0.1).ToRandom(0.25);
         public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
         public TimeSpan DisposedComputedInvalidationDelay { get; init; } = TimeSpan.FromSeconds(5);
+        public Meter? Meter { get; init; } = null;
     }
 
+    internal static readonly ComputedRegistry.MeterSet Metrics = ComputedRegistry.Metrics;
     private readonly TaskCompletionSource<Unit> _whenActivatedSource;
 
     public Options Settings { get; init; }
@@ -25,6 +29,8 @@ public sealed class ComputedGraphPruner : WorkerBase
 
     public ComputedGraphPruner(Options settings, ILogger<ComputedGraphPruner>? log = null)
         : this(settings, MomentClockSet.Default, log) { }
+    public ComputedGraphPruner(Options settings, IServiceProvider services)
+        : this(settings, services.Clocks(), services.LogFor<ComputedGraphPruner>()) { }
     public ComputedGraphPruner(Options settings, MomentClockSet clocks, ILogger<ComputedGraphPruner>? log = null)
     {
         Settings = settings;
@@ -36,23 +42,8 @@ public sealed class ComputedGraphPruner : WorkerBase
             this.Start();
     }
 
-    public ComputedGraphPruner(Options settings, IServiceProvider services)
-    {
-        Settings = settings;
-        Clock = services.Clocks().CpuClock;
-        Log = services.LogFor(GetType());
-        _whenActivatedSource = TaskCompletionSourceExt.New<Unit>();
-
-        if (settings.AutoActivate)
-            this.Start();
-    }
-
     public Task PruneOnce(CancellationToken cancellationToken)
         => CreatePruneOnceChain().Run(cancellationToken);
-
-    public AsyncChain CreatePruneOnceChain()
-        => CreatePruneDisposedInstancesChain()
-            .Append(CreatePruneEdgesChain());
 
     // Protected methods
 
@@ -85,24 +76,14 @@ public sealed class ComputedGraphPruner : WorkerBase
 
     // Private methods
 
-    private AsyncChain CreatePruneDisposedInstancesChain()
-    {
-        var activitySource = GetType().GetActivitySource();
-        return new AsyncChain(nameof(PruneDisposedInstances), PruneDisposedInstances)
-            .Trace(() => activitySource.StartActivity(nameof(PruneDisposedInstances)), Log)
-            .Silence();
-    }
-
-    private AsyncChain CreatePruneEdgesChain()
-    {
-        var activitySource = GetType().GetActivitySource();
-        return new AsyncChain(nameof(PruneEdges), PruneEdges)
-            .Trace(() => activitySource.StartActivity(nameof(PruneEdges)), Log)
-            .Silence();
-    }
+    private AsyncChain CreatePruneOnceChain()
+        => new AsyncChain(nameof(PruneDisposedInstances), PruneDisposedInstances).Silence()
+            .Append(new AsyncChain(nameof(PruneEdges), PruneEdges).Silence());
 
     private async Task PruneDisposedInstances(CancellationToken cancellationToken)
     {
+        var startedAt = CpuTimestamp.Now;
+        Metrics.NodeEdgePruneCount.Add(1);
         var registry = ComputedRegistry.Instance;
         var batchSize = Settings.BatchSize;
         var interBatchDelay = Settings.InterBatchDelay;
@@ -114,7 +95,9 @@ public sealed class ComputedGraphPruner : WorkerBase
         var batchCount = 0;
         while (keyEnumerator.MoveNext()) {
             if (--remainingBatchCapacity <= 0) {
+                var pausedAt = CpuTimestamp.Now;
                 await Clock.Delay(interBatchDelay.Next(), cancellationToken).ConfigureAwait(false);
+                startedAt += pausedAt.Elapsed;
                 remainingBatchCapacity = batchSize;
                 batchCount++;
             }
@@ -128,6 +111,8 @@ public sealed class ComputedGraphPruner : WorkerBase
         if (disposedCount == 0)
             return;
 
+        Metrics.PrunedDisposedCount.Add(disposedCount);
+        Metrics.NodePruneDuration.Record(startedAt.Elapsed.TotalMilliseconds);
         Log.LogInformation(
             "Removed {DisposedCount} instances originating from disposed compute services " +
             "in {BatchCount} batches (x {BatchSize})",
@@ -136,6 +121,7 @@ public sealed class ComputedGraphPruner : WorkerBase
 
     private async Task PruneEdges(CancellationToken ct)
     {
+        var startedAt = CpuTimestamp.Now;
         var registry = ComputedRegistry.Instance;
         using var keyEnumerator = registry.Keys.GetEnumerator();
         var computedCount = 0L;
@@ -144,9 +130,12 @@ public sealed class ComputedGraphPruner : WorkerBase
         var removedEdgeCount = 0L;
         var remainingBatchCapacity = Settings.BatchSize;
         var batchCount = 0;
+        CpuTimestamp pausedAt;
         while (keyEnumerator.MoveNext()) {
             if (--remainingBatchCapacity <= 0) {
+                pausedAt = CpuTimestamp.Now;
                 await Clock.Delay(Settings.InterBatchDelay.Next(), ct).ConfigureAwait(false);
+                startedAt += pausedAt.Elapsed;
                 remainingBatchCapacity = Settings.BatchSize;
                 batchCount++;
             }
@@ -160,14 +149,18 @@ public sealed class ComputedGraphPruner : WorkerBase
                 removedEdgeCount += oldEdgeCount - newEdgeCount;
             }
         }
-        await Clock.Delay(Settings.InterBatchDelay.Next(), ct).ConfigureAwait(false);
-        if (Settings.MustPruneRegistry)
-            await registry.Prune().ConfigureAwait(false);
-
+        Interlocked.Exchange(ref Metrics.NodeCount, computedCount);
+        Interlocked.Exchange(ref Metrics.EdgeCount, edgeCount);
+        Metrics.PrunedEdgeCount.Add(removedEdgeCount);
+        Metrics.EdgePruneDuration.Record(startedAt.Elapsed.TotalMilliseconds);
         Log.LogInformation(
             "Processed {ConsistentCount}/{ComputedCount} instances, " +
             "removed {RemovedEdgeCount}/{EdgeCount} dependency-to-dependant edges, " +
             "in {BatchCount} batches (x {BatchSize})",
             consistentCount, computedCount, removedEdgeCount, edgeCount, batchCount + 1, Settings.BatchSize);
+
+        await Clock.Delay(Settings.InterBatchDelay.Next(), ct).ConfigureAwait(false);
+        if (Settings.MustPruneRegistry)
+            await registry.Prune().ConfigureAwait(false);
     }
 }

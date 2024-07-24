@@ -5,12 +5,22 @@ namespace ActualLab.Fusion.Server.Middlewares;
 
 public static class HttpContextExtractors
 {
-    public static Func<HttpContext, string> Port()
-        => httpContext => httpContext.Connection.LocalPort.ToString(CultureInfo.InvariantCulture);
+    public static Func<HttpContext, int> PortExtractor { get; set; }
+        = httpContext => httpContext.Connection.LocalPort;
 
-    public static Func<HttpContext, string> PortOffset(int minPort, int portCount)
+    public static Func<HttpContext, string> Port(Func<HttpContext, int>? portExtractor = null)
         => httpContext => {
-            var portOffset = httpContext.Connection.LocalPort - minPort;
+            portExtractor ??= PortExtractor;
+            var port = portExtractor.Invoke(httpContext);
+            return port.ToString(CultureInfo.InvariantCulture);
+        };
+
+    public static Func<HttpContext, string> PortOffset(
+        int minPort, int portCount,
+        Func<HttpContext, int>? portExtractor = null)
+        => httpContext => {
+            portExtractor ??= PortExtractor;
+            var portOffset = portExtractor.Invoke(httpContext) - minPort;
             if (portOffset < 0 || portOffset >= portCount)
                 return "";
 
