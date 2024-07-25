@@ -1,14 +1,19 @@
+using Templates.TodoApp.Abstractions;
+
 namespace Templates.TodoApp.Host;
 
 public class HostSettings
 {
     public bool IsAspireManaged { get; set; }
+    public HostKind HostKind { get; set; } = HostKind.SingleServer;
     public bool UseTenants { get; set; } = true;
     public int TenantCount { get; set; } = 3;
     public int Tenant0Port { get; set; } = 5005;
     public int? Port { get; set; }
+    public string BackendUrl { get; set; } = "";
 
     // DBs
+    public bool MustRecreateDb { get; set; } = false;
     public string UseSqlServer { get; set; } = "";
         // "Data Source=localhost;Initial Catalog=fusion_blazorise_template;Integrated Security=False;User ID=sa;Password=SqlServer1";
     public string UsePostgreSql { get; set; } =

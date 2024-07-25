@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\..\src\ActualLab.Fusion\ActualLab.Fusion.csproj" />
     <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Ext.Services\ActualLab.Fusion.Ext.Services.csproj" />
     <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
+    <PackageReference Include="MemoryPack.Generator" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />

@@ -16,8 +16,8 @@ namespace ActualLab.Tests;
 public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsyncLifetime
 {
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
-    protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.GetDefaultClientPeerRef();
-    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.GetDefaultClientPeerRef(true);
+    protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.GetDefaultPeerRef();
+    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.GetDefaultPeerRef(true);
 
     private IServiceProvider? _services;
     private IServiceProvider? _clientServices;
@@ -129,7 +129,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
             }
         });
         services.AddSingleton<RpcCallRouter>(_ => {
-            return (method, arguments) => RpcPeerRef.GetDefaultClientPeerRef(ConnectionKind, method.IsBackend);
+            return (method, arguments) => RpcPeerRef.GetDefaultPeerRef(ConnectionKind, method.IsBackend);
         });
         if (!isClient) {
             services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly) {

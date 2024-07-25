@@ -13,15 +13,15 @@ public partial record RpcPeerRef
     public const string LoopbackKeyPrefix = "loopback:";
     public const string LocalKeyPrefix = "local:";
 
-    public static RpcPeerRef Default { get; set; } = GetDefaultClientPeerRef();
-    public static RpcPeerRef Loopback { get; set; } = GetDefaultClientPeerRef(RpcPeerConnectionKind.Loopback, true);
-    public static RpcPeerRef Local { get; set; } = GetDefaultClientPeerRef(RpcPeerConnectionKind.Local, true);
+    public static RpcPeerRef Default { get; set; } = GetDefaultPeerRef();
+    public static RpcPeerRef Loopback { get; set; } = GetDefaultPeerRef(RpcPeerConnectionKind.Loopback, true);
+    public static RpcPeerRef Local { get; set; } = GetDefaultPeerRef(RpcPeerConnectionKind.Local, true);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static RpcPeerRef GetDefaultClientPeerRef(bool isBackend = false)
-        => GetDefaultClientPeerRef(RpcPeerConnectionKind.Remote, isBackend);
+    public static RpcPeerRef GetDefaultPeerRef(bool isBackend = false)
+        => GetDefaultPeerRef(RpcPeerConnectionKind.Remote, isBackend);
 
-    public static RpcPeerRef GetDefaultClientPeerRef(RpcPeerConnectionKind kind, bool isBackend = false)
+    public static RpcPeerRef GetDefaultPeerRef(RpcPeerConnectionKind kind, bool isBackend = false)
         => (kind, isBackend) switch {
             (RpcPeerConnectionKind.Remote, false) => _remote ??= NewClient(DefaultKey),
             (RpcPeerConnectionKind.Loopback, false) => _loopback ??= NewClient(LoopbackKeyPrefix + DefaultKey),

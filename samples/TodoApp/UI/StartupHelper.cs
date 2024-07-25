@@ -31,43 +31,50 @@ public static class StartupHelper
 
         // Fusion services
         var fusion = services.AddFusion();
+
         fusion.AddInMemoryRemoteComputedCache(_ => new() { LogLevel = LogLevel.Information });
         fusion.AddAuthClient();
         fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
-
-        // RPC setup
-        var rpc = fusion.Rpc;
-        rpc.AddWebSocketClient(builder.HostEnvironment.BaseAddress);
 
         // RPC clients
         fusion.AddClient<ITodoService>();
         fusion.Rpc.AddClient<IRpcExampleService>();
 
-        ConfigureSharedServices(services, false);
+        ConfigureSharedServices(services, HostKind.Client, builder.HostEnvironment.BaseAddress);
     }
 
-    public static void ConfigureSharedServices(IServiceCollection services, bool isServer)
+    public static void ConfigureSharedServices(IServiceCollection services, HostKind hostKind, string remoteRpcHostUrl)
     {
-        ComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
-        if (!isServer)
-            RpcPeer.DefaultCallLogLevel = LogLevel.Debug;
-
-        // Blazorise
-        services.AddBlazorise(options => options.Immediate = true)
-            .AddBootstrap5Providers()
-            .AddFontAwesomeIcons();
-
-        // Other UI-related services
         var fusion = services.AddFusion();
-        fusion.AddComputedGraphPruner(_ => new() { CheckPeriod = TimeSpan.FromSeconds(10) });
-        fusion.AddFusionTime();
-        fusion.AddService<TodoUI>(ServiceLifetime.Scoped);
-        services.AddScoped(c => new RpcPeerStateMonitor(c, OSInfo.IsAnyClient ? RpcPeerRef.Default : null));
+        fusion.AddComputedGraphPruner(_ => new() {
+            CheckPeriod = TimeSpan.FromSeconds(10) // You should stick to defaults here, it's just for testing
+        });
+        fusion.AddFusionTime(); // Add it only if you use it
 
-        // Default update delay is 0.25s
-        services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
+        if (hostKind != HostKind.BackendServer) {
+            // Client and API host use RPC client
+            fusion.Rpc.AddWebSocketClient(remoteRpcHostUrl);
+            if (hostKind == HostKind.ApiServer)
+                // ApiServer should always go to BackendServer's /backend/rpc/ws endpoint
+                RpcPeerRef.Default = RpcPeerRef.GetDefaultPeerRef(isBackend: true);
 
-        // Fusion diagnostics
+            // Client and SSB services
+            ComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
+            fusion.AddService<TodoUI>(ServiceLifetime.Scoped);
+            services.AddScoped(c => new RpcPeerStateMonitor(c, OSInfo.IsAnyClient ? RpcPeerRef.Default : null));
+            services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25)); // 0.25s
+
+            // Blazorise
+            services.AddBlazorise(options => options.Immediate = true)
+                .AddBootstrap5Providers()
+                .AddFontAwesomeIcons();
+        }
+        else {
+        }
+
+        // Diagnostics
+        if (hostKind == HostKind.Client)
+            RpcPeer.DefaultCallLogLevel = LogLevel.Debug;
         services.AddHostedService(c => {
             var isWasm = OSInfo.IsWebAssembly;
             return new FusionMonitor(c) {

@@ -46,6 +46,8 @@ var cfg = builder.Configuration;
 var hostSettings = cfg.GetSettings<HostSettings>();
 if (hostSettings.IsAspireManaged)
     builder.AddServiceDefaults();
+var hostKind = hostSettings.HostKind;
+Console.WriteLine($"Host kind: {hostKind}");
 
 cfg.Sources.Insert(0, new MemoryConfigurationSource() {
     InitialData = new Dictionary<string, string>() {
@@ -70,12 +72,15 @@ StaticLog.Factory = app.Services.LoggerFactory();
 ConfigureApp();
 
 // Ensure the DB is created
-var dbContextFactory = app.Services.GetRequiredService<IShardDbContextFactory<AppDbContext>>();
-var shardRegistry = app.Services.GetRequiredService<IDbShardRegistry<AppDbContext>>();
-foreach (var shard in shardRegistry.Shards.Value) {
-    await using var dbContext = await dbContextFactory.CreateDbContextAsync(shard);
-    // await dbContext.Database.EnsureDeletedAsync();
-    await dbContext.Database.EnsureCreatedAsync();
+if (hostKind != HostKind.BackendServer) { // This has to be done in a more robust way in a real app - e.g. by a sidecar container
+    var dbContextFactory = app.Services.GetRequiredService<IShardDbContextFactory<AppDbContext>>();
+    var shardRegistry = app.Services.GetRequiredService<IDbShardRegistry<AppDbContext>>();
+    foreach (var shard in shardRegistry.Shards.Value) {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(shard);
+        if (hostSettings.MustRecreateDb)
+            await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.EnsureCreatedAsync();
+    }
 }
 
 // Run the app
@@ -137,7 +142,7 @@ void ConfigureServices()
 
     // Fusion services
     var fusion = services.AddFusion(RpcServiceMode.Server, true);
-    var fusionServer = fusion.AddWebServer();
+    var fusionServer = fusion.AddWebServer(hostKind == HostKind.BackendServer);
 #if false
     // Enable this to test how the client behaves w/ a delay
     fusion.Rpc.AddInboundMiddleware(c => new RpcRandomDelayMiddleware(c) {
@@ -163,15 +168,21 @@ void ConfigureServices()
         NameClaimKeys = [],
     });
 
-    // Local services
-    fusion.AddLocal<ITodoBackend, TodoBackend>();
+    // ITodoBackend
+    _ = hostKind switch {
+        HostKind.SingleServer => fusion.AddLocal<ITodoBackend, TodoBackend>(),
+        HostKind.BackendServer => fusion.AddServer<ITodoBackend, TodoBackend>(),
+        HostKind.ApiServer => fusion.AddClient<ITodoBackend>(),
+        _ => throw new ArgumentOutOfRangeException()
+    };
+
     // RPC-exposed compute service(s)
     fusion.AddService<ITodoService, TodoService>();
     // RPC-exposed non-compute services
     fusion.Rpc.AddService<IRpcExampleService, RpcExampleService>();
 
     // Shared services
-    StartupHelper.ConfigureSharedServices(services, true);
+    StartupHelper.ConfigureSharedServices(services, hostKind, hostSettings.BackendUrl);
 
     // ASP.NET Core authentication providers
     services.AddAuthentication(options => {
