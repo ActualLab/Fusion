@@ -28,6 +28,7 @@ using Templates.TodoApp;
 using Templates.TodoApp.Abstractions;
 using Templates.TodoApp.Host;
 using Templates.TodoApp.Services;
+using Templates.TodoApp.Services.Db;
 using Templates.TodoApp.UI;
 
 // Constrain thread pool to 1 thread to debug possible issues with async logic
@@ -116,6 +117,7 @@ void ConfigureServices()
             operations.AddFileSystemOperationLogWatcher();
             // operations.AddRedisOperationLogWatcher();
         });
+        db.AddEntityResolver<string, DbTodo>();
 
         if (hostSettings.UseTenants) {
             db.AddSharding(sharding => {
@@ -142,26 +144,13 @@ void ConfigureServices()
         Delay = new(1, 0.1),
     });
 #endif
-
-    // fusionServer.AddMvc().AddControllers();
-    if (hostSettings.UseInMemoryAuthService)
-        fusion.AddInMemoryAuthService();
-    else
-        fusion.AddDbAuthService<AppDbContext, string>();
-    fusion.AddDbKeyValueStore<AppDbContext>();
+    fusion.AddOperationReprocessor();
+    fusion.AddDbAuthService<AppDbContext, string>();
 
     if (hostSettings.UseTenants) {
-        int PortExtractor(HttpContext ctx)
-            => hostSettings.Port ?? ctx.Connection.LocalPort;
-
-        var shardTagExtractor = HttpContextExtractors.Subdomain(".localhost")
-            .Or(HttpContextExtractors.PortOffset(hostSettings.Tenant0Port, hostSettings.TenantCount, PortExtractor).WithPrefix("tenant"))
-            .WithValidator(value => {
-                if (!value.StartsWith("tenant", StringComparison.Ordinal))
-                    throw new ArgumentOutOfRangeException(nameof(value), $"Invalid Tenant ID: '{value}'.");
-            });
-        fusionServer.ConfigureSessionMiddleware(_ => new() {
-            TagProvider = (session, httpContext) => session.WithTag(Session.ShardTag, shardTagExtractor.Invoke(httpContext)),
+        var tenantTagExtractor = TenantExt.CreateTagExtractor(hostSettings.Tenant0Port, hostSettings.TenantCount, hostSettings.Port);
+        fusionServer.ConfigureSessionMiddleware(c => new() {
+            TagProvider = (session, httpContext) => session.WithTag(TenantExt.TagName, tenantTagExtractor.Invoke(httpContext)),
         });
     }
     fusionServer.ConfigureAuthEndpoint(_ => new() {
@@ -173,13 +162,13 @@ void ConfigureServices()
     fusionServer.ConfigureServerAuthHelper(_ => new() {
         NameClaimKeys = [],
     });
-    fusion.AddSandboxedKeyValueStore<AppDbContext>();
-    fusion.AddOperationReprocessor();
 
+    // Local services
+    fusion.AddLocal<ITodoBackend, TodoBackend>();
     // RPC-exposed compute service(s)
-    fusion.AddService<ITodos, DbTodos>();
+    fusion.AddService<ITodoService, TodoService>();
     // RPC-exposed non-compute services
-    fusion.Rpc.AddService<IRpcExample, RpcExample>();
+    fusion.Rpc.AddService<IRpcExampleService, RpcExampleService>();
 
     // Shared services
     StartupHelper.ConfigureSharedServices(services, true);

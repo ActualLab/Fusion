@@ -29,41 +29,40 @@
     <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => State.Recompute()">State.Recompute()</Button>
 </Div>
 
+<WhenException Exception="error" />
+<Row>
+    <Column ColumnSize="ColumnSize.Is6.OnDesktop.Is12.OnTablet">
+        <Paragraph>
+            <TodoSummaryBadge/>
+        </Paragraph>
+
+        @foreach (var todo in model.Items) {
+            <TodoItemView @key="@todo.Id" Value="@todo" />
+        }
+
+        @if (model.HasMore) {
+            <Button Clicked="_ => LoadMore()" Color="Color.Primary" Margin="Margin.Is3.OnY">
+                Load @LoadedItemCount more <Blazorise.Icon Name="FontAwesomeIcons.AngleDoubleDown"/>
+            </Button>
+        }
+
+        <Form @onsubmit="Create" Margin="Margin.Is3.OnY">
+            <Addons>
+                <Addon AddonType="AddonType.Start">
+                    <Button Type="@ButtonType.Submit" Color="Color.Primary">
+                        <Blazorise.Icon Name="@FontAwesomeIcons.PlusSquare"/>
+                    </Button>
+                </Addon>
+                <input @bind="NewTodoTitle" @bind:event="onchange" class="form-control"/>
+            </Addons>
+        </Form>
+    </Column>
+</Row>
+
 <AuthorizeView>
     <NotAuthorized>
-        <SignInDropdown Why="to use this page" />
+        <SignInDropdown Why="to see your personal Todos instead of shared ones" />
     </NotAuthorized>
-    <Authorized>
-        <WhenException Exception="error" />
-        <Row>
-            <Column ColumnSize="ColumnSize.Is6.OnDesktop.Is12.OnTablet">
-                <Paragraph>
-                    <TodoSummaryBadge/>
-                </Paragraph>
-
-                @foreach (var todo in model.Items) {
-                    <TodoItemView @key="@todo.Id" Value="@todo" />
-                }
-
-                @if (model.HasMore) {
-                    <Button Clicked="_ => LoadMore()" Color="Color.Primary" Margin="Margin.Is3.OnY">
-                        Load @LoadedItemCount more <Blazorise.Icon Name="FontAwesomeIcons.AngleDoubleDown"/>
-                    </Button>
-                }
-
-                <Form @onsubmit="Create" Margin="Margin.Is3.OnY">
-                    <Addons>
-                        <Addon AddonType="AddonType.Start">
-                            <Button Type="@ButtonType.Submit" Color="Color.Primary">
-                                <Blazorise.Icon Name="@FontAwesomeIcons.PlusSquare"/>
-                            </Button>
-                        </Addon>
-                        <input @bind="NewTodoTitle" @bind:event="onchange" class="form-control"/>
-                    </Addons>
-                </Form>
-            </Column>
-        </Row>
-    </Authorized>
 </AuthorizeView>
 
 @code {
@@ -101,7 +100,7 @@
 
     private void Create()
     {
-        var todo = new Todo("", NewTodoTitle);
+        var todo = new Todo(default, NewTodoTitle);
         NewTodoTitle = "";
         _ = UICommander.Run(new Todos_AddOrUpdate(Session, todo));
     }

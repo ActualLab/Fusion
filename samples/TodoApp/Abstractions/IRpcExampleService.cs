@@ -3,7 +3,7 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace Templates.TodoApp.Abstractions;
 
-public interface IRpcExample : IRpcService
+public interface IRpcExampleService : IRpcService
 {
     Task<string> Greet(string name);
     Task<(RpcObjectId, string)> GetComplex();

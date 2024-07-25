@@ -2,7 +2,7 @@
 @using System.Globalization
 @using ActualLab.Rpc.Infrastructure
 @using ActualLab.Rpc
-@inject IRpcExample RpcExample
+@inject IRpcExampleService RpcExampleService
 @inject ILogger<RpcExamplePage> Log
 
 @{
@@ -37,13 +37,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var greetingTask = RpcExample.Greet("Fusion explorer");
-        var complexTask = RpcExample.GetComplex();
-        var streamTask = RpcExample.GetStream();
+        var greetingTask = RpcExampleService.Greet("Fusion explorer");
+        var complexTask = RpcExampleService.GetComplex();
+        var streamTask = RpcExampleService.GetStream();
         _greeting = await greetingTask;
         _complex = await complexTask;
         var stream = await streamTask;
         _list = await stream.Take(StreamLimit).ToListAsync();
-        _sum = await RpcExample.SumStream(RpcStream.New(_list));
+        _sum = await RpcExampleService.SumStream(RpcStream.New(_list));
     }
 }

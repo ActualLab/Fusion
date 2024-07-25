@@ -40,8 +40,8 @@ public static class StartupHelper
         rpc.AddWebSocketClient(builder.HostEnvironment.BaseAddress);
 
         // RPC clients
-        fusion.AddClient<ITodos>();
-        fusion.Rpc.AddClient<IRpcExample>();
+        fusion.AddClient<ITodoService>();
+        fusion.Rpc.AddClient<IRpcExampleService>();
 
         ConfigureSharedServices(services, false);
     }

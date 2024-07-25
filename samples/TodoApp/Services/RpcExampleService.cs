@@ -4,7 +4,7 @@ using Templates.TodoApp.Abstractions;
 
 namespace Templates.TodoApp.Services;
 
-public class RpcExample : IRpcExample
+public class RpcExampleService : IRpcExampleService
 {
     public Task<string> Greet(string name)
         => Task.FromResult($"Hello, {name}!");

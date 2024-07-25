@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
     <ProjectReference Include="..\..\..\src\ActualLab.Fusion\ActualLab.Fusion.csproj" />
     <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Ext.Services\ActualLab.Fusion.Ext.Services.csproj" />
     <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
