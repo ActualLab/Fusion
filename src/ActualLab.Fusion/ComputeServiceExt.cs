@@ -4,6 +4,6 @@ namespace ActualLab.Fusion;
 
 public static class ComputeServiceExt
 {
-    public static bool IsClient(this IComputeService service)
-        => service is InterfaceProxy;
+    public static bool IsLocal(this IComputeService service)
+        => service is not InterfaceProxy;
 }

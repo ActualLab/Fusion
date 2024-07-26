@@ -249,7 +249,7 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
             RegisterCacheKeyOnly();
         else if (NoWait) // NoWait always means "send immediately, even if disconnected"
             _ = SendNoWait(MethodDef.AllowArgumentPolymorphism);
-        else if (assumeConnected || Peer.IsConnected())
+        else if (assumeConnected || Peer.IsConnected(out _))
             _ = RegisterAndSend(); // Fast path
         else
             return InvokeOnceConnectedAsync(); // Slow path

@@ -21,8 +21,7 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
     protected override Func<Invocation, object?>? CreateHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
         (Invocation initialInvocation, MethodDef methodDef)
-    {
-        return invocation => {
+        => invocation => {
             var arguments = invocation.Arguments;
             var command = arguments.Get<ICommand>(0);
             var context = CommandContext.Current;
@@ -68,7 +67,6 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
             // We're already inside the ICommander pipeline created for exactly this command
             return invocation.InvokeInterceptedUntyped();
         };
-    }
 
     // We don't need to decorate this method with any dynamic access attributes
     protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)

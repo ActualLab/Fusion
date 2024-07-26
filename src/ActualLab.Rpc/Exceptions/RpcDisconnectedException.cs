@@ -7,7 +7,7 @@ namespace ActualLab.Rpc;
 [Serializable]
 public class RpcDisconnectedException : Exception, ITransientException
 {
-    private const string DefaultMessage = $"The remote server is disconnected.";
+    private const string DefaultMessage = "The remote server is disconnected.";
 
     public static Exception New(RpcPeer peer)
         => New(peer.Ref.IsServer ? "client" : "server");

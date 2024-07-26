@@ -17,6 +17,7 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         if (Invalidation.IsActive) {
             _ = Get(folder, todo.Id, default);
             _ = PseudoAccessFolder(folder);
+            return null!;
         }
 
         var tenant = folder.GetTenant();
@@ -47,6 +48,7 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         if (Invalidation.IsActive) {
             _ = Get(folder, id, default);
             _ = PseudoAccessFolder(folder);
+            return;
         }
 
         var tenant = folder.GetTenant();

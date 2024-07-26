@@ -113,7 +113,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 if (startedAt.Elapsed <= timeouts.Timeout)
                     continue;
 
-                var error = Internal.Errors.CallTimeout(Peer, timeouts.Timeout);
+                var error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.Timeout);
                 // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
                 if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Log) != 0)
                     Peer.Log.LogError(error, "{PeerRef}': {Message}", Peer.Ref, error.Message);

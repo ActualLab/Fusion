@@ -26,7 +26,7 @@ public sealed record InterfaceCommandHandler<
         CancellationToken cancellationToken)
     {
         var handler = (ICommandHandler<TCommand>) GetHandlerService(command, context);
-        return handler.OnCommand((TCommand) command, context, cancellationToken);
+        return handler.OnCommand((TCommand)command, context, cancellationToken);
     }
 
     public override string ToString() => base.ToString();

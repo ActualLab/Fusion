@@ -121,30 +121,49 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     }
 
     public bool IsConnected()
-        => ConnectionState.Value.Connection != null;
+        => ConnectionState.Value.Handshake != null;
 
-    public Task WhenConnected(CancellationToken cancellationToken = default)
-        => ConnectionState.WhenConnected(cancellationToken);
-
-    public Task WhenConnected(TimeSpan timeout, CancellationToken cancellationToken = default)
+    public bool IsConnected([NotNullWhen(true)] out RpcHandshake? handshake)
     {
-        return IsConnected()
-            ? Task.CompletedTask
-            : timeout != TimeSpan.MaxValue
-                ? WhenConnectedAsync(this, timeout, cancellationToken)
-                : ConnectionState.WhenConnected(cancellationToken);
+        var connectionState = ConnectionState.Value;
+        handshake = connectionState.Handshake;
+        return handshake != null;
+    }
 
-        static async Task WhenConnectedAsync(RpcPeer peer, TimeSpan timeout1, CancellationToken cancellationToken1) {
+    public async Task<RpcHandshake> WhenConnected(CancellationToken cancellationToken = default)
+    {
+        var connectionState = ConnectionState;
+        while (true) {
+            try {
+                connectionState = await connectionState.WhenConnected(cancellationToken).ConfigureAwait(false);
+                if (connectionState.Value.Handshake is { } handshake && !connectionState.HasNext)
+                    return handshake;
+            }
+            catch (RpcDisconnectedException) {
+                if (Ref.IsRerouted)
+                    throw RpcRerouteException.MustReroute();
+                throw;
+            }
+        }
+    }
+
+    public Task<RpcHandshake> WhenConnected(TimeSpan timeout, CancellationToken cancellationToken = default)
+    {
+        return timeout == TimeSpan.MaxValue
+            ? WhenConnected(cancellationToken)
+            : WhenConnectedWithTimeout(this, timeout, cancellationToken);
+
+        static async Task<RpcHandshake> WhenConnectedWithTimeout(RpcPeer peer, TimeSpan timeout1, CancellationToken cancellationToken1) {
             using var timeoutCts = cancellationToken1.CreateLinkedTokenSource(timeout1);
             var timeoutToken = timeoutCts.Token;
             try {
-                await peer.ConnectionState.WhenConnected(timeoutToken).ConfigureAwait(false);
+                return await peer.WhenConnected(timeoutToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (timeoutToken.IsCancellationRequested) {
                 if (cancellationToken1.IsCancellationRequested)
                     throw; // Not a timeout
 
-                throw RpcDisconnectedException.New(peer);
+                throw Errors.ConnectTimeout(peer.Ref);
             }
         }
     }

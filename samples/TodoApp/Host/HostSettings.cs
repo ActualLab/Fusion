@@ -13,7 +13,7 @@ public class HostSettings
     public string BackendUrl { get; set; } = "";
 
     // DBs
-    public bool MustRecreateDb { get; set; } = false;
+    public bool MustRecreateDb { get; set; } = true;
     public string UseSqlServer { get; set; } = "";
         // "Data Source=localhost;Initial Catalog=fusion_blazorise_template;Integrated Security=False;User ID=sa;Password=SqlServer1";
     public string UsePostgreSql { get; set; } =

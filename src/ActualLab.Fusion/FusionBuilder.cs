@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.CommandR.Interception;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Client.Caching;
@@ -9,6 +10,7 @@ using ActualLab.Fusion.Operations.Reprocessing;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.UI;
+using ActualLab.Interception;
 using ActualLab.Resilience;
 using ActualLab.Rpc;
 using Errors = ActualLab.Internal.Errors;
@@ -258,7 +260,7 @@ public readonly struct FusionBuilder
             throw Errors.MustImplement<IComputeService>(serviceType, nameof(serviceType));
 
         Services.AddSingleton(serviceType,
-            c => c.FusionHub().NewClientProxy(serviceType, serviceType, null));
+            c => c.FusionHub().NewRemoteComputeServiceProxy(serviceType, serviceType, null));
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType);
         Rpc.Service(serviceType).HasName(name);
@@ -314,7 +316,7 @@ public readonly struct FusionBuilder
             throw Errors.MustImplement<IHasIsDisposed>(implementationType, nameof(implementationType));
 
         var descriptor = new ServiceDescriptor(serviceType,
-            c => c.FusionHub().NewProxy(c, implementationType),
+            c => c.FusionHub().NewComputeServiceProxy(c, implementationType),
             lifetime);
         Services.Add(descriptor);
         if (addCommandHandlers)
@@ -365,7 +367,7 @@ public readonly struct FusionBuilder
             throw Errors.MustBeClass(implementationType, nameof(implementationType));
 
         Services.AddSingleton(serviceType,
-            c => c.FusionHub().NewClientProxy(serviceType, implementationType, null));
+            c => c.FusionHub().NewRemoteComputeServiceProxy(serviceType, implementationType, null));
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType);
         Rpc.Service(serviceType).HasServer(serviceType).HasName(name);
@@ -388,7 +390,7 @@ public readonly struct FusionBuilder
         AddLocal(implementationType, false);
         Services.AddSingleton(serviceType, c => {
             var localTarget = c.GetRequiredService(implementationType);
-            return c.FusionHub().NewClientProxy(serviceType, serviceType, localTarget);
+            return c.FusionHub().NewRemoteComputeServiceProxy(serviceType, serviceType, localTarget);
         });
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType);

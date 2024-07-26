@@ -94,23 +94,18 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [Fact]
     public async Task TraceActivityTest()
     {
-        await using var services = CreateServices(s => {
-            s.AddSingleton<RpcMethodTracerFactory>(method => new RpcDefaultCallTracer(method) {
-                UseCounters = true,
-            });
-        });
+        await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
         var client = services.GetRequiredService<ITestRpcServiceClient>();
 
         var divMethod = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
         var divTracer = (RpcDefaultCallTracer)divMethod.Tracer!;
+        divTracer.CallCounter.Should().NotBeNull();
 
         (await client.Div(6, 2)).Should().Be(3);
         await Assert.ThrowsAsync<DivideByZeroException>(
             () => client.Div(1, 0));
         await AssertNoCalls(clientPeer);
-
-        divTracer.Meters.Should().NotBeNull();
     }
 
     [Fact]

@@ -56,18 +56,25 @@ public static class Errors
         => new SerializationException($"Cannot deserialize polymorphic argument type: " +
             $"expected '{expectedType.GetName()}' or its descendant, got '{actualType.GetName()}'.");
 
-    public static Exception CallTimeout(RpcPeer peer, TimeSpan? timeout = null)
-        => CallTimeout(peer.Ref.IsServer ? "client" : "server");
+    public static Exception ConnectTimeout(RpcPeerRef peerRef, TimeSpan? timeout = null)
+        => ConnectTimeout(peerRef.GetRemoteSideDescription());
+    public static Exception ConnectTimeout(string partyName = "server", TimeSpan? timeout = null)
+        => new TimeoutException(
+            timeout is { } t
+                ? $"Timeout while connecting to {partyName} ({t.ToShortString()})."
+                : $"Timeout while connecting to {partyName}.");
+
+    public static Exception CallTimeout(RpcPeerRef peerRef, TimeSpan? timeout = null)
+        => CallTimeout(peerRef.GetRemoteSideDescription());
+
     public static Exception CallTimeout(string partyName = "server", TimeSpan? timeout = null)
         => new TimeoutException(
             timeout is { } t
                 ? $"The {partyName} didn't respond in time ({t.ToShortString()})."
                 : $"The {partyName} didn't respond in time.");
 
-    public static Exception ConnectTimeout()
-        => new TimeoutException("Timeout on connecting to server.");
     public static Exception HandshakeTimeout()
-        => new TimeoutException("Timeout on handshake.");
+        => new TimeoutException("Timeout while waiting for handshake.");
     public static Exception KeepAliveTimeout()
         => new TimeoutException("Timeout while waiting for \"keep-alive\" message.");
 

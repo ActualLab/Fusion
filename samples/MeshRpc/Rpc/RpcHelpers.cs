@@ -8,7 +8,7 @@ public sealed class RpcHelpers(Host ownHost)
 {
     private static readonly RpcCallTimeouts CallTimeouts = new(null, 60);
 
-    public RpcCallTimeouts GetCallTimeouts(RpcMethodDef methodDef)
+    public RpcCallTimeouts GetCallTimeouts(RpcMethodDef method)
         => CallTimeouts;
 
     public RpcPeerRef RouteCall(RpcMethodDef method, ArgumentList arguments)

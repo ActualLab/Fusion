@@ -5,6 +5,7 @@ namespace ActualLab.Async;
 public interface IAsyncState
 {
     bool IsFinal { get; }
+    bool HasNext { get; }
     IAsyncState? Next { get; }
     IAsyncState Last { get; }
     Task WhenNext();
@@ -34,6 +35,7 @@ public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously)
     IAsyncState? IAsyncState.Next => Next;
     IAsyncState<T>? IAsyncState<T>.Next => Next;
     public AsyncState<T>? Next => _next.Task.IsCompleted ? _next.Task.Result : null;
+    public bool HasNext => _next.Task.IsCompleted;
 
     // Last
     IAsyncState IAsyncState.Last => Last;

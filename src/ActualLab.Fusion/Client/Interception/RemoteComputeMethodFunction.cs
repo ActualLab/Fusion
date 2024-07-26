@@ -431,24 +431,21 @@ public class RemoteComputeMethodFunction<T>(
     protected Task WhenConnectedChecked(
         ComputeMethodInput input, RpcPeer peer, CancellationToken cancellationToken = default)
     {
-        if (peer.ConnectionState.Value.Handshake is not { } handshake)
-            return CompleteWhenConnected(input, peer, RpcMethodDef, cancellationToken);
+        if (peer.IsConnected(out var handshake))
+            return handshake.RemoteHubId == RpcHub.Id && input.Invocation.Proxy is not InterfaceProxy
+                ? Task.FromException(Errors.RemoteComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref))
+                : Task.CompletedTask;
 
-        return handshake.RemoteHubId == RpcHub.Id && input.Invocation.Proxy is not InterfaceProxy
-            ? Task.FromException(Errors.RemoteComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref))
-            : Task.CompletedTask;
+        return WhenConnectedCheckedAsync(input, peer, RpcMethodDef, cancellationToken);
 
-        static async Task CompleteWhenConnected(
-            ComputeMethodInput input, RpcPeer peer, RpcMethodDef rpcMethodDef, CancellationToken cancellationToken)
+        static async Task WhenConnectedCheckedAsync(
+            ComputeMethodInput input, RpcPeer peer, RpcMethodDef methodDef, CancellationToken cancellationToken)
         {
-            var rpcHubId = rpcMethodDef.Hub.Id;
-            RpcHandshake? handshake;
-            while ((handshake = peer.ConnectionState.Value.Handshake) == null)
-                await peer
-                    .WhenConnected(rpcMethodDef.Timeouts.ConnectTimeout, cancellationToken)
-                    .ConfigureAwait(false);
-            if (handshake.RemoteHubId == rpcHubId && input.Invocation.Proxy is not InterfaceProxy)
-                throw Errors.RemoteComputeMethodCallFromTheSameService(rpcMethodDef, peer.Ref);
+            var handshake = await peer
+                .WhenConnected(methodDef.Timeouts.ConnectTimeout, cancellationToken)
+                .ConfigureAwait(false);
+            if (handshake.RemoteHubId == methodDef.Hub.Id && input.Invocation.Proxy is not InterfaceProxy)
+                throw Errors.RemoteComputeMethodCallFromTheSameService(methodDef, peer.Ref);
         }
     }
 

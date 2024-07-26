@@ -56,11 +56,11 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
     protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
         // This interceptor is created on per-service basis, so to reuse the validation cache,
         // we redirect this call to Hub.ComputeServiceInterceptor, which is a singleton.
-        => Hub.Interceptor.GetMethodDef(method, proxyType);
+        => Hub.ComputeServiceInterceptor.GetMethodDef(method, proxyType);
 
     protected override void ValidateTypeInternal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
         // This interceptor is created on per-service basis, so to reuse the validation cache,
         // we redirect this call to Hub.ComputeServiceInterceptor, which is a singleton.
-        => Hub.Interceptor.ValidateType(type);
+        => Hub.ComputeServiceInterceptor.ValidateType(type);
 }
