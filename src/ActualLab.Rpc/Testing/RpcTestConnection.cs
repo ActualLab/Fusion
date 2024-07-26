@@ -88,7 +88,7 @@ public class RpcTestConnection
 
             if (!ReferenceEquals(_channels.Value, null))
                 _channels = _channels.SetNext(null);
-            _channels.SetFinal(new RpcReconnectFailedException());
+            _channels.SetFinal(RpcReconnectFailedException.DisconnectedExplicitly());
         }
         _ = ClientPeer.Disconnect();
         _ = ServerPeer.Disconnect();
@@ -120,6 +120,6 @@ public class RpcTestConnection
         }
 
         // Impossible to get here, but we still need to return something, so...
-        throw new RpcReconnectFailedException();
+        throw RpcReconnectFailedException.DisconnectedExplicitly();
     }
 }

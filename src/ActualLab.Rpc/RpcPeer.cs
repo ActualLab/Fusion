@@ -139,7 +139,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 if (connectionState.Value.Handshake is { } handshake && !connectionState.HasNext)
                     return handshake;
             }
-            catch (RpcDisconnectedException) {
+            catch (RpcReconnectFailedException) {
                 if (Ref.IsRerouted)
                     throw RpcRerouteException.MustReroute();
                 throw;
@@ -330,7 +330,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 // which becomes RpcInboundCallContext.CancellationToken.
                 InboundCalls.Clear();
                 if (Ref.IsRerouted)
-                    error = new RpcRerouteException();
+                    error = RpcRerouteException.MustReroute();
                 else if (cancellationToken.IsCancellationRequested) {
                     var isTerminal = error != null && Hub.PeerTerminalErrorDetector.Invoke(error);
                     if (!isTerminal)
@@ -362,7 +362,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 }
                 else if (error == null) {
                     Log.LogError("The final connection state must have a non-null Error");
-                    error = new RpcReconnectFailedException();
+                    error = Ref.IsRerouted
+                        ? RpcRerouteException.MustReroute()
+                        : RpcReconnectFailedException.StopRequested();
                 }
             }
             await Reset(error!, true).ConfigureAwait(false);

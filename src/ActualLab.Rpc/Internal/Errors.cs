@@ -57,21 +57,21 @@ public static class Errors
             $"expected '{expectedType.GetName()}' or its descendant, got '{actualType.GetName()}'.");
 
     public static Exception ConnectTimeout(RpcPeerRef peerRef, TimeSpan? timeout = null)
-        => ConnectTimeout(peerRef.GetRemoteSideDescription());
-    public static Exception ConnectTimeout(string partyName = "server", TimeSpan? timeout = null)
+        => ConnectTimeout(peerRef.GetRemotePartyName());
+    public static Exception ConnectTimeout(string remoteParty = "remote host", TimeSpan? timeout = null)
         => new TimeoutException(
             timeout is { } t
-                ? $"Timeout while connecting to {partyName} ({t.ToShortString()})."
-                : $"Timeout while connecting to {partyName}.");
+                ? $"Timeout while connecting to {remoteParty} ({t.ToShortString()})."
+                : $"Timeout while connecting to {remoteParty}.");
 
     public static Exception CallTimeout(RpcPeerRef peerRef, TimeSpan? timeout = null)
-        => CallTimeout(peerRef.GetRemoteSideDescription());
+        => CallTimeout(peerRef.GetRemotePartyName());
 
-    public static Exception CallTimeout(string partyName = "server", TimeSpan? timeout = null)
+    public static Exception CallTimeout(string remoteParty = "remote host", TimeSpan? timeout = null)
         => new TimeoutException(
             timeout is { } t
-                ? $"The {partyName} didn't respond in time ({t.ToShortString()})."
-                : $"The {partyName} didn't respond in time.");
+                ? $"The {remoteParty} didn't respond in time ({t.ToShortString()})."
+                : $"The {remoteParty} didn't respond in time.");
 
     public static Exception HandshakeTimeout()
         => new TimeoutException("Timeout while waiting for handshake.");

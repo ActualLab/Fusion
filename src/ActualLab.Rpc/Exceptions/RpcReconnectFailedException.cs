@@ -5,9 +5,15 @@ namespace ActualLab.Rpc;
 [Serializable]
 public class RpcReconnectFailedException : Exception
 {
-    private const string DefaultMessage = "Impossible to (re)connect: remote host is unreachable.";
+    private const string DefaultMessage = "Impossible to (re)connect: the remote host is unreachable.";
     private const string DefaultMessagePrefix = "Impossible to (re)connect:";
 
+    public static RpcReconnectFailedException ReconnectFailed(RpcPeerRef peerRef, Exception? innerException = null)
+        => ReconnectFailed(peerRef.GetRemotePartyName(), innerException);
+    public static RpcReconnectFailedException ReconnectFailed(string remoteParty = "remote host", Exception? innerException = null)
+        => new($"Impossible to (re)connect: the {remoteParty} is unreachable.", innerException);
+    public static RpcReconnectFailedException DisconnectedExplicitly(Exception? innerException = null)
+        => new("Disconnected.", innerException);
     public static RpcReconnectFailedException StopRequested(Exception? innerException = null)
         => new("Stop requested.", innerException);
     public static RpcReconnectFailedException ClientIsGone(Exception? innerException = null)

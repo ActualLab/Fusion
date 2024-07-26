@@ -58,7 +58,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await peer.ConnectionState.WhenDisconnected();
 
         var whenConnectedResult = await peer.WhenConnected(TimeSpan.FromSeconds(1)).ResultAwait();
-        whenConnectedResult.Error.Should().BeOfType<RpcDisconnectedException>();
+        whenConnectedResult.Error.Should().BeOfType<TimeoutException>();
 
         var whenConnectedTask = peer.WhenConnected(TimeSpan.FromHours(1));
         await peer.DisposeAsync();
@@ -138,7 +138,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         connection.Disconnect();
         await clientPeer.ConnectionState.WhenDisconnected();
         // NOTE: It won't throw under debugger due to debug mode timeouts
-        await Assert.ThrowsAsync<RpcDisconnectedException>(
+        await Assert.ThrowsAsync<TimeoutException>(
             () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(2))));
         await Delay(0.1);
         await AssertNoCalls(clientPeer);

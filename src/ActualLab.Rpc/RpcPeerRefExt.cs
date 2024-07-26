@@ -4,7 +4,7 @@ namespace ActualLab.Rpc;
 
 public static class RpcPeerRefExt
 {
-    public static string GetRemoteSideDescription(this RpcPeerRef peerRef)
+    public static string GetRemotePartyName(this RpcPeerRef peerRef)
         => (peerRef.IsBackend, peerRef.IsServer) switch {
             (true, true) => "backend client",
             (true, false) => "backend server",
