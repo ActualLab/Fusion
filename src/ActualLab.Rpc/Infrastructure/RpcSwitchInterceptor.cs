@@ -9,25 +9,18 @@ namespace ActualLab.Rpc.Infrastructure;
 #endif
 public class RpcSwitchInterceptor : RpcInterceptorBase
 {
-    public new record Options : RpcInterceptorBase.Options
-    {
-        public static Options Default { get; set; } = new();
-    }
-
-    public readonly Options Settings;
     public readonly RpcSafeCallRouter CallRouter;
     public readonly object? LocalTarget;
     public readonly object? RemoteTarget;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public RpcSwitchInterceptor(
-        Options settings, IServiceProvider services,
+        RpcInterceptorOptions settings, IServiceProvider services,
         RpcServiceDef serviceDef,
         object? localTarget,
         object? remoteTarget)
         : base(settings, services, serviceDef)
     {
-        Settings = settings;
         CallRouter = Hub.CallRouter;
         LocalTarget = localTarget;
         RemoteTarget = remoteTarget;

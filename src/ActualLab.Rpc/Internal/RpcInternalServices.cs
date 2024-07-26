@@ -37,12 +37,8 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers => Hub.Peers;
     public ActivitySource ActivitySource => Hub.ActivitySource;
 
-    internal readonly RpcNonRoutingInterceptor.Options NonRoutingInterceptorOptions
-        = hub.Services.GetRequiredService<RpcNonRoutingInterceptor.Options>();
-    internal readonly RpcRoutingInterceptor.Options RoutingInterceptorOptions
-        = hub.Services.GetRequiredService<RpcRoutingInterceptor.Options>();
-    internal readonly RpcSwitchInterceptor.Options SwitchInterceptorOptions
-        = hub.Services.GetRequiredService<RpcSwitchInterceptor.Options>();
+    internal readonly RpcInterceptorOptions InterceptorOptions
+        = hub.Services.GetRequiredService<RpcInterceptorOptions>();
 
     // NewXxx
 
@@ -59,7 +55,7 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcNonRoutingInterceptor NewNonRoutingInterceptor(Type serviceType, object? localTarget = null, bool assumeConnected = false)
     {
         var serviceDef = Hub.ServiceRegistry[serviceType];
-        return new RpcNonRoutingInterceptor(NonRoutingInterceptorOptions, Hub.Services, serviceDef, localTarget, assumeConnected);
+        return new RpcNonRoutingInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget, assumeConnected);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
@@ -75,7 +71,7 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcRoutingInterceptor NewRoutingInterceptor(Type serviceType, object? localTarget = null, bool assumeConnected = false)
     {
         var serviceDef = Hub.ServiceRegistry[serviceType];
-        return new RpcRoutingInterceptor(RoutingInterceptorOptions, Hub.Services, serviceDef, localTarget, assumeConnected);
+        return new RpcRoutingInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget, assumeConnected);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
@@ -93,6 +89,6 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcSwitchInterceptor NewSwitchInterceptor(Type serviceType, object? localTarget, object? remoteTarget)
     {
         var serviceDef = Hub.ServiceRegistry[serviceType];
-        return new RpcSwitchInterceptor(SwitchInterceptorOptions, Hub.Services, serviceDef, localTarget, remoteTarget);
+        return new RpcSwitchInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget, remoteTarget);
     }
 }

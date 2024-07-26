@@ -52,7 +52,7 @@ public static class StartupHelper
 
         if (hostKind != HostKind.BackendServer) {
             // Client and API host use RPC client
-            RpcCallTimeouts.Defaults.BackendCommand = RpcCallTimeouts.Defaults.Command; // To simplify debugging
+            // RpcCallTimeouts.Defaults.BackendCommand = RpcCallTimeouts.Defaults.Command; // Just for debugging
             fusion.Rpc.AddWebSocketClient(remoteRpcHostUrl);
             if (hostKind == HostKind.ApiServer)
                 // ApiServer should always go to BackendServer's /backend/rpc/ws endpoint

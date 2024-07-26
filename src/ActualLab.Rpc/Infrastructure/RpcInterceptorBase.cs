@@ -9,13 +9,11 @@ namespace ActualLab.Rpc.Infrastructure;
 #endif
 public abstract class RpcInterceptorBase : Interceptor
 {
-    public new record Options : Interceptor.Options;
-
     public readonly RpcHub Hub;
     public readonly RpcServiceDef ServiceDef;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected RpcInterceptorBase(Options settings, IServiceProvider services, RpcServiceDef serviceDef)
+    protected RpcInterceptorBase(RpcInterceptorOptions settings, IServiceProvider services, RpcServiceDef serviceDef)
         : base(settings, services)
     {
         Hub = services.RpcHub();

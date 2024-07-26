@@ -4,7 +4,7 @@ using ActualLab.Rpc.Clients;
 
 namespace Samples.MeshRpc;
 
-public sealed class RpcHelpers(Host ownHost)
+public sealed class RpcHelpers
 {
     private static readonly RpcCallTimeouts CallTimeouts = new(null, 60);
 

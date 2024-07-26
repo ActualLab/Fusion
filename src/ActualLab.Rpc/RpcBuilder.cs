@@ -103,11 +103,7 @@ public readonly struct RpcBuilder
         services.AddTransient(_ => new RpcSharedObjectTracker());
         services.AddSingleton(c => new RpcClientPeerReconnectDelayer(c));
         services.AddSingleton(_ => RpcLimits.Default);
-
-        // Interceptor options (the instances are created by RpcProxies)
-        services.AddSingleton(_ => RpcNonRoutingInterceptor.Options.Default);
-        services.AddSingleton(_ => RpcRoutingInterceptor.Options.Default);
-        services.AddSingleton(_ => RpcSwitchInterceptor.Options.Default);
+        services.AddSingleton(_ => RpcInterceptorOptions.Default);
 
         // System services
         if (!Configuration.Services.ContainsKey(typeof(IRpcSystemCalls))) {

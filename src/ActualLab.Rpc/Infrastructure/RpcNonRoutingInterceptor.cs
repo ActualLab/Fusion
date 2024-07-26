@@ -9,17 +9,12 @@ namespace ActualLab.Rpc.Infrastructure;
 #endif
 public class RpcNonRoutingInterceptor : RpcInterceptorBase
 {
-    public new record Options : RpcInterceptorBase.Options
-    {
-        public static Options Default { get; set; } = new();
-    }
-
     public readonly object? LocalTarget;
     public readonly bool AssumeConnected;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public RpcNonRoutingInterceptor(
-        Options settings, IServiceProvider services,
+        RpcInterceptorOptions settings, IServiceProvider services,
         RpcServiceDef serviceDef,
         object? localTarget,
         bool assumeConnected = false
