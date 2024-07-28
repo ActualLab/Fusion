@@ -22,6 +22,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public RpcPeer? Peer;
     public long RelatedId;
     public RpcCacheInfoCapture? CacheInfoCapture;
+    public Func<RpcMethodDef, Invocation, Task>? Suppressor;
 
     public static RpcOutboundContext GetCurrent()
         => Current ?? throw Errors.NoCurrentRpcOutboundContext();

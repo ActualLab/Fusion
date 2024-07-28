@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
+using ActualLab.Rpc.Caching;
+using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
 
@@ -39,11 +41,12 @@ public class ComputeServiceCommandCompletionInvalidator(
         Log.IfEnabled(Settings.LogLevel)
             ?.Log(Settings.LogLevel, "Invalidating: {CommandType}", command.GetType());
 
-        using var _1 = StartActivity(command);
+        var activity = StartActivity(command);
         var operationItems = operation.Items;
         var oldOperation = context.TryGetOperation();
         context.ChangeOperation(operation);
         var invalidateScope = Invalidation.Begin();
+        var suppressRpcScope = SuppressRpc();
         try {
             // If we care only about the eventual consistency, the invalidation order
             // doesn't matter:
@@ -61,8 +64,10 @@ public class ComputeServiceCommandCompletionInvalidator(
             await TryInvalidate(context, operation, command, operationItems, index).ConfigureAwait(false);
         }
         finally {
+            suppressRpcScope.Dispose();
             invalidateScope.Dispose();
             context.ChangeOperation(oldOperation);
+            activity?.Dispose();
         }
     }
 
@@ -118,5 +123,13 @@ public class ComputeServiceCommandCompletionInvalidator(
             activity.AddEvent(activityEvent);
         }
         return activity;
+    }
+
+    protected static RpcOutboundContext.Scope SuppressRpc()
+    {
+        var context = new RpcOutboundContext() {
+            Suppressor = static (method, _) => TaskExt.FromDefaultResult(method.UnwrappedReturnType),
+        };
+        return context.Activate();
     }
 }

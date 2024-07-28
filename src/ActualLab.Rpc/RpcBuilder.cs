@@ -168,11 +168,11 @@ public readonly struct RpcBuilder
     {
         mode = mode.Or(DefaultServiceMode);
         return mode switch {
-            RpcServiceMode.Local => AddLocal(serviceType, implementationType),
+            RpcServiceMode.Local => AddLocalService(serviceType, implementationType),
             RpcServiceMode.Client => AddClient(serviceType, name),
             RpcServiceMode.Server => AddServer(serviceType, implementationType, name),
-            RpcServiceMode.Distributed => AddDistributed(serviceType, implementationType, name),
-            RpcServiceMode.DistributedPair => AddDistributedPair(serviceType, implementationType, name),
+            RpcServiceMode.Distributed => AddDistributedService(serviceType, implementationType, name),
+            RpcServiceMode.DistributedPair => AddDistributedServicePair(serviceType, implementationType, name),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
     }
@@ -225,18 +225,18 @@ public readonly struct RpcBuilder
         return this;
     }
 
-    public RpcBuilder AddLocal<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>()
+    public RpcBuilder AddLocalService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>()
         where TService : class
-        => AddLocal(typeof(TService));
-    public RpcBuilder AddLocal<
+        => AddLocalService(typeof(TService));
+    public RpcBuilder AddLocalService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>()
         where TService : class
         where TImplementation : class, TService
-        => AddLocal(typeof(TService), typeof(TImplementation));
-    public RpcBuilder AddLocal([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType)
-        => AddLocal(serviceType, serviceType);
-    public RpcBuilder AddLocal(
+        => AddLocalService(typeof(TService), typeof(TImplementation));
+    public RpcBuilder AddLocalService([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType)
+        => AddLocalService(serviceType, serviceType);
+    public RpcBuilder AddLocalService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType)
     {
@@ -286,21 +286,21 @@ public readonly struct RpcBuilder
         // RPC:
         // - TService configured as server resolving to TImplementation
 
-        AddLocal(serviceType, implementationType);
+        AddLocalService(serviceType, implementationType);
         Service(serviceType).HasServer(implementationType).HasName(name);
         return this;
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddDistributed<
+    public RpcBuilder AddDistributedService<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
         (Symbol name = default)
         where TService : class
         where TImplementation : class, TService
-        => AddDistributed(typeof(TService), typeof(TImplementation), name);
+        => AddDistributedService(typeof(TService), typeof(TImplementation), name);
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddDistributed(
+    public RpcBuilder AddDistributedService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         Symbol name = default)
@@ -327,15 +327,15 @@ public readonly struct RpcBuilder
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddDistributedPair<
+    public RpcBuilder AddDistributedServicePair<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
         (Symbol name = default)
         where TService : class
         where TImplementation : class, TService
-        => AddDistributedPair(typeof(TService), typeof(TImplementation), name);
+        => AddDistributedServicePair(typeof(TService), typeof(TImplementation), name);
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcBuilder AddDistributedPair(
+    public RpcBuilder AddDistributedServicePair(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         Symbol name = default)
@@ -348,7 +348,7 @@ public readonly struct RpcBuilder
         // RPC:
         // - TService configured as server resolving to TImplementation, so incoming calls won't be routed
 
-        AddLocal(implementationType);
+        AddLocalService(implementationType);
         Services.AddSingleton(serviceType, c => {
             var hub = c.RpcHub();
             var localTarget = c.GetRequiredService(implementationType);

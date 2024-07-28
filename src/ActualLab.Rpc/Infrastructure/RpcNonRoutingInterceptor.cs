@@ -30,12 +30,19 @@ public class RpcNonRoutingInterceptor : RpcInterceptorBase
     {
         var rpcMethodDef = (RpcMethodDef)methodDef;
         return invocation => {
-            var context = invocation.Context as RpcOutboundContext ?? new();
+            Task<TUnwrapped> resultTask;
+            var context = invocation.Context as RpcOutboundContext ?? RpcOutboundContext.Current ?? new();
+            if (context.Suppressor is { } suppressor) {
+                resultTask = (Task<TUnwrapped>)suppressor.Invoke(rpcMethodDef, invocation);
+                return rpcMethodDef.WrapAsyncInvokerResultOfAsyncMethod(resultTask);
+            }
+
             var call = (RpcOutboundCall<TUnwrapped>?)context.PrepareCall(rpcMethodDef, invocation.Arguments);
             if (call == null)
                 throw RpcRerouteException.MustRerouteToLocal();
 
-            return rpcMethodDef.WrapAsyncInvokerResultAssumeAsync(call.Invoke(AssumeConnected));
+            resultTask = call.Invoke(AssumeConnected);
+            return rpcMethodDef.WrapAsyncInvokerResultOfAsyncMethod(resultTask);
         };
     }
 }

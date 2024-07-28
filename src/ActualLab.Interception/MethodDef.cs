@@ -128,7 +128,7 @@ public class MethodDef
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public object? WrapResultAssumeAsync<TUnwrapped>(TUnwrapped result)
+    public object? WrapResultOfAsyncMethod<TUnwrapped>(TUnwrapped result)
         => ReturnsTask
             ? Task.FromResult(result)
             : IsAsyncVoidMethod
@@ -136,7 +136,7 @@ public class MethodDef
                 : ValueTaskExt.FromResult(result);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public object? WrapAsyncInvokerResultAssumeAsync<TUnwrapped>(Task<TUnwrapped> resultTask)
+    public object? WrapAsyncInvokerResultOfAsyncMethod<TUnwrapped>(Task<TUnwrapped> resultTask)
         => ReturnsTask
             ? resultTask
             : IsAsyncVoidMethod

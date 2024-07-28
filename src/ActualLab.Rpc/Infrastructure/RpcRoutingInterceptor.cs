@@ -31,10 +31,15 @@ public class RpcRoutingInterceptor : RpcInterceptorBase
         var rpcMethodDef = (RpcMethodDef)methodDef;
         var localCallAsyncInvoker = methodDef.SelectAsyncInvoker<TUnwrapped>(initialInvocation.Proxy, LocalTarget);
         return invocation => {
-            var context = invocation.Context as RpcOutboundContext ?? new();
+            Task<TUnwrapped> resultTask;
+            var context = invocation.Context as RpcOutboundContext ?? RpcOutboundContext.Current ?? new();
+            if (context.Suppressor is { } suppressor) {
+                resultTask = (Task<TUnwrapped>)suppressor.Invoke(rpcMethodDef, invocation);
+                return rpcMethodDef.WrapAsyncInvokerResultOfAsyncMethod(resultTask);
+            }
+
             var call = (RpcOutboundCall<TUnwrapped>?)context.PrepareCall(rpcMethodDef, invocation.Arguments);
             var peer = context.Peer!;
-            Task<TUnwrapped> resultTask;
             if (peer.Ref.CanBeRerouted)
                 resultTask = InvokeWithRerouting(invocation, context, call, localCallAsyncInvoker);
             else if (call == null) { // Local call
@@ -46,7 +51,7 @@ public class RpcRoutingInterceptor : RpcInterceptorBase
             else
                 resultTask = call.Invoke(AssumeConnected);
 
-            return rpcMethodDef.WrapAsyncInvokerResultAssumeAsync(resultTask);
+            return rpcMethodDef.WrapAsyncInvokerResultOfAsyncMethod(resultTask);
         };
     }
 

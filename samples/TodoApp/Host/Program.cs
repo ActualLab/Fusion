@@ -170,7 +170,7 @@ void ConfigureServices()
 
     // ITodoBackend
     _ = hostKind switch {
-        HostKind.SingleServer => fusion.AddLocal<ITodoBackend, TodoBackend>(),
+        HostKind.SingleServer => fusion.AddLocalService<ITodoBackend, TodoBackend>(),
         HostKind.BackendServer => fusion.AddServer<ITodoBackend, TodoBackend>(),
         HostKind.ApiServer => fusion.AddClient<ITodoBackend>(),
         _ => throw new ArgumentOutOfRangeException()

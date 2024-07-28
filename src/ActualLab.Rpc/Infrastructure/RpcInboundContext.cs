@@ -4,13 +4,13 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+#pragma warning disable CA1721
+
 public class RpcInboundContext
 {
     private static readonly AsyncLocal<RpcInboundContext?> CurrentLocal = new();
 
-#pragma warning disable CA1721
     public static RpcInboundContext? Current => CurrentLocal.Value;
-#pragma warning restore CA1721
 
     public readonly RpcPeer Peer;
     public readonly RpcMessage Message;

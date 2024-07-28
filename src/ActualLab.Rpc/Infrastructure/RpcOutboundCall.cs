@@ -79,7 +79,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public void RegisterCacheKeyOnly()
     {
-        using var _ = Context.Activate();
+        using var _ = Context.Activate(); // CreateMessage may use it
         var message = CreateMessage(Id, MethodDef.AllowArgumentPolymorphism);
         Context.CacheInfoCapture?.CaptureKey(Context, message);
     }
@@ -87,8 +87,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public Task SendNoWait(bool allowPolymorphism, ChannelWriter<RpcMessage>? sender = null)
     {
-        // No "using (Context.Activate())" here: we assume NoWait calls
-        // don't require RpcOutboundContext.Current to serialize their arguments.
+        // NoWait calls don't require RpcOutboundContext.Current to serialize their arguments,
+        // so no Context.Activate() call here.
         var message = CreateMessage(Context.RelatedId, allowPolymorphism);
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
@@ -107,7 +107,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public Task SendRegistered(bool isFirstAttempt = true)
     {
         RpcMessage message;
-        var scope = Context.Activate();
+        var scope = Context.Activate(); // CreateMessage may use it
         try {
             var cacheInfoCapture = Context.CacheInfoCapture;
             var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;

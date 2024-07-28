@@ -51,12 +51,12 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
                 resultTask = localCallAsyncInvoker.Invoke(invocation);
             }
             else {
-                var context = invocation.Context as RpcOutboundContext ?? new();
+                var context = invocation.Context as RpcOutboundContext ?? RpcOutboundContext.Current ?? new();
                 context.Peer = peer; // We already know the peer, so let's skip RpcCallRouter call
                 invocation = invocation.With(context);
                 resultTask = remoteCallAsyncInvoker.Invoke(invocation);
             }
-            return rpcMethodDef.WrapAsyncInvokerResultAssumeAsync(resultTask);
+            return rpcMethodDef.WrapAsyncInvokerResultOfAsyncMethod(resultTask);
         };
     }
 
@@ -68,7 +68,7 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
         Invocation invocation,
         RpcPeer? peer)
     {
-        var context = invocation.Context as RpcOutboundContext ?? new();
+        var context = invocation.Context as RpcOutboundContext ?? RpcOutboundContext.Current ?? new();
         while (true) {
             peer ??= CallRouter.Invoke(methodDef, invocation.Arguments);
             try {
