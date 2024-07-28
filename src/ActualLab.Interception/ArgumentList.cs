@@ -1,15 +1,10 @@
+using System.Linq.Expressions;
 using System.Reflection.Emit;
 
 namespace ActualLab.Interception;
 
 public abstract partial record ArgumentList
 {
-    protected static readonly ConcurrentDictionary<
-        (Type, MethodInfo),
-        LazySlim<(Type, MethodInfo), Func<object, ArgumentList, object?>>> InvokerCache = new();
-
-    public static readonly ArgumentList Empty = new ArgumentList0();
-
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public abstract int Length { get; }
 
@@ -62,7 +57,7 @@ public abstract partial record ArgumentList
     public virtual ArgumentList Remove(int index)
         => throw new ArgumentOutOfRangeException(nameof(index));
 
-    public abstract Func<object, ArgumentList, object?> GetInvoker(MethodInfo method);
+    public abstract Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method);
 
     public abstract void Read(ArgumentListReader reader);
     public abstract void Write(ArgumentListWriter writer);
@@ -82,39 +77,67 @@ public sealed partial record ArgumentList0 : ArgumentList
 
     public override string ToString() => "()";
 
-    public override Func<object, ArgumentList, object?> GetInvoker(MethodInfo method)
-        => InvokerCache.GetOrAdd((GetType(), method), static key => {
-            var (listType, method1) = key;
-            if (method1.GetParameters().Length != 0)
-                throw new ArgumentOutOfRangeException(nameof(method));
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (GetType(), method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (listType, method1) = key;
+                if (method1.GetParameters().Length != 0)
+                    throw new ArgumentOutOfRangeException(nameof(method));
 
-            var declaringType = method1.DeclaringType!;
-            var m = new DynamicMethod("_Invoke",
-                typeof(object),
-                [typeof(object), typeof(ArgumentList)],
-                true);
-            var il = m.GetILGenerator();
+                var declaringType = method1.DeclaringType!;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    [typeof(object), typeof(ArgumentList)],
+                    true);
+                var il = m.GetILGenerator();
 
-            // Cast ArgumentList to its actual type
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, listType);
-            il.Emit(OpCodes.Pop);
+                // Cast ArgumentList to its actual type
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Pop);
 
-            // Unbox target
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
 
-            // Call method
-            il.Emit(OpCodes.Callvirt, method1);
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
 
-            // Box return type
-            if (method1.ReturnType == typeof(void))
-                il.Emit(OpCodes.Ldnull);
-            else if (method1.ReturnType.IsValueType)
-                il.Emit(OpCodes.Box, method1.ReturnType);
-            il.Emit(OpCodes.Ret);
-            return (Func<object, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
-        });
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expressions
+                var (listType, method1) = key;
+                if (method1.GetParameters().Length != 0)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(listType, "l");
+                var eBody = Expression.Block(
+                    new[] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(method1.IsStatic
+                                ? null
+                                : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
 
     public override void Read(ArgumentListReader reader)
     { }
@@ -127,7 +150,7 @@ public sealed partial record ArgumentList0 : ArgumentList
     public bool Equals(ArgumentList0? other)
         => !ReferenceEquals(other, null);
     public override bool Equals(ArgumentList? other, int skipIndex)
-        => other?.GetType() == typeof(ArgumentList0);
+        => ((Object?)other)?.GetType() == typeof(ArgumentList0);
 
     public override int GetHashCode() => 1;
     public override int GetHashCode(int skipIndex) => 1;

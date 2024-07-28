@@ -19,6 +19,12 @@
     <DefineConstants Condition="$(UseUnsafeAccessors)">$(DefineConstants);USE_UNSAFE_ACCESSORS</DefineConstants>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- UseDynamicMethods -->
+    <UseDynamicMethods Condition="'$(UseDynamicMethods)' == ''">true</UseDynamicMethods>
+    <DefineConstants Condition="$(UseDynamicMethods)">$(DefineConstants);USE_DYNAMIC_METHODS</DefineConstants>
+  </PropertyGroup>
+
   <!-- Suppressed warnings -->
   <PropertyGroup>
     <!-- [MA0009] Regular expressions should not be vulnerable to Denial of Service attacks -->

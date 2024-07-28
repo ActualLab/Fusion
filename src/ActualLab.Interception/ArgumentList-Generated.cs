@@ -1,7 +1,8 @@
-﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
+// ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable ArrangeConstructorOrDestructorBody
 using System.Diagnostics.CodeAnalysis;
+using System.Linq.Expressions;
 using System.Reflection.Emit;
 using ActualLab.Concurrency;
 using ActualLab.Internal;
@@ -247,46 +248,80 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
 
     // GetInvoker
 
-    public override Func<object, ArgumentList, object?> GetInvoker(MethodInfo method)
-        => InvokerCache.GetOrAdd((GetType(), method), static key => {
-            var (listType, method1) = key;
-            var parameters = method1.GetParameters();
-            if (parameters.Length != 1)
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[0].ParameterType != typeof(T0))
-                throw new ArgumentOutOfRangeException(nameof(method));
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (GetType(), method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 1)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
 
-            var declaringType = method1.DeclaringType!;
-            var m = new DynamicMethod("_Invoke",
-                typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
-                true);
-            var il = m.GetILGenerator();
+                var declaringType = method1.DeclaringType!;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
 
-            // Cast ArgumentList to its actual type
-            il.DeclareLocal(listType);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, listType);
-            il.Emit(OpCodes.Stloc_0);
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(listType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Stloc_0);
 
-            // Unbox target
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
 
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
 
-            // Call method
-            il.Emit(OpCodes.Callvirt, method1);
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
 
-            // Box return type
-            if (method1.ReturnType == typeof(void))
-                il.Emit(OpCodes.Ldnull);
-            else if (method1.ReturnType.IsValueType)
-                il.Emit(OpCodes.Box, method1.ReturnType);
-            il.Emit(OpCodes.Ret);
-            return (Func<object, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
-        });
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 1)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(listType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
@@ -544,50 +579,87 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
 
     // GetInvoker
 
-    public override Func<object, ArgumentList, object?> GetInvoker(MethodInfo method)
-        => InvokerCache.GetOrAdd((GetType(), method), static key => {
-            var (listType, method1) = key;
-            var parameters = method1.GetParameters();
-            if (parameters.Length != 2)
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[0].ParameterType != typeof(T0))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[1].ParameterType != typeof(T1))
-                throw new ArgumentOutOfRangeException(nameof(method));
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (GetType(), method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 2)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
 
-            var declaringType = method1.DeclaringType!;
-            var m = new DynamicMethod("_Invoke",
-                typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
-                true);
-            var il = m.GetILGenerator();
+                var declaringType = method1.DeclaringType!;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
 
-            // Cast ArgumentList to its actual type
-            il.DeclareLocal(listType);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, listType);
-            il.Emit(OpCodes.Stloc_0);
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(listType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Stloc_0);
 
-            // Unbox target
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
 
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
 
-            // Call method
-            il.Emit(OpCodes.Callvirt, method1);
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
 
-            // Box return type
-            if (method1.ReturnType == typeof(void))
-                il.Emit(OpCodes.Ldnull);
-            else if (method1.ReturnType.IsValueType)
-                il.Emit(OpCodes.Box, method1.ReturnType);
-            il.Emit(OpCodes.Ret);
-            return (Func<object, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
-        });
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 2)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(listType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                , Expression.PropertyOrField(vList, "Item1")
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
@@ -893,54 +965,94 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
 
     // GetInvoker
 
-    public override Func<object, ArgumentList, object?> GetInvoker(MethodInfo method)
-        => InvokerCache.GetOrAdd((GetType(), method), static key => {
-            var (listType, method1) = key;
-            var parameters = method1.GetParameters();
-            if (parameters.Length != 3)
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[0].ParameterType != typeof(T0))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[1].ParameterType != typeof(T1))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[2].ParameterType != typeof(T2))
-                throw new ArgumentOutOfRangeException(nameof(method));
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (GetType(), method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 3)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
 
-            var declaringType = method1.DeclaringType!;
-            var m = new DynamicMethod("_Invoke",
-                typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
-                true);
-            var il = m.GetILGenerator();
+                var declaringType = method1.DeclaringType!;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
 
-            // Cast ArgumentList to its actual type
-            il.DeclareLocal(listType);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, listType);
-            il.Emit(OpCodes.Stloc_0);
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(listType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Stloc_0);
 
-            // Unbox target
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
 
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
 
-            // Call method
-            il.Emit(OpCodes.Callvirt, method1);
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
 
-            // Box return type
-            if (method1.ReturnType == typeof(void))
-                il.Emit(OpCodes.Ldnull);
-            else if (method1.ReturnType.IsValueType)
-                il.Emit(OpCodes.Box, method1.ReturnType);
-            il.Emit(OpCodes.Ret);
-            return (Func<object, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
-        });
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 3)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(listType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                , Expression.PropertyOrField(vList, "Item1")
+                                , Expression.PropertyOrField(vList, "Item2")
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
@@ -1294,58 +1406,101 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
 
     // GetInvoker
 
-    public override Func<object, ArgumentList, object?> GetInvoker(MethodInfo method)
-        => InvokerCache.GetOrAdd((GetType(), method), static key => {
-            var (listType, method1) = key;
-            var parameters = method1.GetParameters();
-            if (parameters.Length != 4)
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[0].ParameterType != typeof(T0))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[1].ParameterType != typeof(T1))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[2].ParameterType != typeof(T2))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[3].ParameterType != typeof(T3))
-                throw new ArgumentOutOfRangeException(nameof(method));
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (GetType(), method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 4)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
 
-            var declaringType = method1.DeclaringType!;
-            var m = new DynamicMethod("_Invoke",
-                typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
-                true);
-            var il = m.GetILGenerator();
+                var declaringType = method1.DeclaringType!;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
 
-            // Cast ArgumentList to its actual type
-            il.DeclareLocal(listType);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, listType);
-            il.Emit(OpCodes.Stloc_0);
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(listType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Stloc_0);
 
-            // Unbox target
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
 
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
 
-            // Call method
-            il.Emit(OpCodes.Callvirt, method1);
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
 
-            // Box return type
-            if (method1.ReturnType == typeof(void))
-                il.Emit(OpCodes.Ldnull);
-            else if (method1.ReturnType.IsValueType)
-                il.Emit(OpCodes.Box, method1.ReturnType);
-            il.Emit(OpCodes.Ret);
-            return (Func<object, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
-        });
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 4)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(listType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                , Expression.PropertyOrField(vList, "Item1")
+                                , Expression.PropertyOrField(vList, "Item2")
+                                , Expression.PropertyOrField(vList, "Item3")
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
@@ -1747,62 +1902,108 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
 
     // GetInvoker
 
-    public override Func<object, ArgumentList, object?> GetInvoker(MethodInfo method)
-        => InvokerCache.GetOrAdd((GetType(), method), static key => {
-            var (listType, method1) = key;
-            var parameters = method1.GetParameters();
-            if (parameters.Length != 5)
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[0].ParameterType != typeof(T0))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[1].ParameterType != typeof(T1))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[2].ParameterType != typeof(T2))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[3].ParameterType != typeof(T3))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[4].ParameterType != typeof(T4))
-                throw new ArgumentOutOfRangeException(nameof(method));
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (GetType(), method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 5)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
 
-            var declaringType = method1.DeclaringType!;
-            var m = new DynamicMethod("_Invoke",
-                typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
-                true);
-            var il = m.GetILGenerator();
+                var declaringType = method1.DeclaringType!;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
 
-            // Cast ArgumentList to its actual type
-            il.DeclareLocal(listType);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, listType);
-            il.Emit(OpCodes.Stloc_0);
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(listType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Stloc_0);
 
-            // Unbox target
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
 
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
 
-            // Call method
-            il.Emit(OpCodes.Callvirt, method1);
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
 
-            // Box return type
-            if (method1.ReturnType == typeof(void))
-                il.Emit(OpCodes.Ldnull);
-            else if (method1.ReturnType.IsValueType)
-                il.Emit(OpCodes.Box, method1.ReturnType);
-            il.Emit(OpCodes.Ret);
-            return (Func<object, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
-        });
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 5)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(listType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                , Expression.PropertyOrField(vList, "Item1")
+                                , Expression.PropertyOrField(vList, "Item2")
+                                , Expression.PropertyOrField(vList, "Item3")
+                                , Expression.PropertyOrField(vList, "Item4")
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
@@ -2252,66 +2453,115 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
 
     // GetInvoker
 
-    public override Func<object, ArgumentList, object?> GetInvoker(MethodInfo method)
-        => InvokerCache.GetOrAdd((GetType(), method), static key => {
-            var (listType, method1) = key;
-            var parameters = method1.GetParameters();
-            if (parameters.Length != 6)
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[0].ParameterType != typeof(T0))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[1].ParameterType != typeof(T1))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[2].ParameterType != typeof(T2))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[3].ParameterType != typeof(T3))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[4].ParameterType != typeof(T4))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[5].ParameterType != typeof(T5))
-                throw new ArgumentOutOfRangeException(nameof(method));
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (GetType(), method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 6)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != typeof(T5))
+                    throw new ArgumentOutOfRangeException(nameof(method));
 
-            var declaringType = method1.DeclaringType!;
-            var m = new DynamicMethod("_Invoke",
-                typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
-                true);
-            var il = m.GetILGenerator();
+                var declaringType = method1.DeclaringType!;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
 
-            // Cast ArgumentList to its actual type
-            il.DeclareLocal(listType);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, listType);
-            il.Emit(OpCodes.Stloc_0);
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(listType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Stloc_0);
 
-            // Unbox target
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
 
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
 
-            // Call method
-            il.Emit(OpCodes.Callvirt, method1);
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
 
-            // Box return type
-            if (method1.ReturnType == typeof(void))
-                il.Emit(OpCodes.Ldnull);
-            else if (method1.ReturnType.IsValueType)
-                il.Emit(OpCodes.Box, method1.ReturnType);
-            il.Emit(OpCodes.Ret);
-            return (Func<object, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
-        });
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 6)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != typeof(T5))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(listType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                , Expression.PropertyOrField(vList, "Item1")
+                                , Expression.PropertyOrField(vList, "Item2")
+                                , Expression.PropertyOrField(vList, "Item3")
+                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.PropertyOrField(vList, "Item5")
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
@@ -2809,70 +3059,122 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
 
     // GetInvoker
 
-    public override Func<object, ArgumentList, object?> GetInvoker(MethodInfo method)
-        => InvokerCache.GetOrAdd((GetType(), method), static key => {
-            var (listType, method1) = key;
-            var parameters = method1.GetParameters();
-            if (parameters.Length != 7)
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[0].ParameterType != typeof(T0))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[1].ParameterType != typeof(T1))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[2].ParameterType != typeof(T2))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[3].ParameterType != typeof(T3))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[4].ParameterType != typeof(T4))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[5].ParameterType != typeof(T5))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[6].ParameterType != typeof(T6))
-                throw new ArgumentOutOfRangeException(nameof(method));
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (GetType(), method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 7)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != typeof(T5))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != typeof(T6))
+                    throw new ArgumentOutOfRangeException(nameof(method));
 
-            var declaringType = method1.DeclaringType!;
-            var m = new DynamicMethod("_Invoke",
-                typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
-                true);
-            var il = m.GetILGenerator();
+                var declaringType = method1.DeclaringType!;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
 
-            // Cast ArgumentList to its actual type
-            il.DeclareLocal(listType);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, listType);
-            il.Emit(OpCodes.Stloc_0);
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(listType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Stloc_0);
 
-            // Unbox target
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
 
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item6")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item6")!.GetGetMethod()!);
 
-            // Call method
-            il.Emit(OpCodes.Callvirt, method1);
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
 
-            // Box return type
-            if (method1.ReturnType == typeof(void))
-                il.Emit(OpCodes.Ldnull);
-            else if (method1.ReturnType.IsValueType)
-                il.Emit(OpCodes.Box, method1.ReturnType);
-            il.Emit(OpCodes.Ret);
-            return (Func<object, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
-        });
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 7)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != typeof(T5))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != typeof(T6))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(listType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                , Expression.PropertyOrField(vList, "Item1")
+                                , Expression.PropertyOrField(vList, "Item2")
+                                , Expression.PropertyOrField(vList, "Item3")
+                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.PropertyOrField(vList, "Item5")
+                                , Expression.PropertyOrField(vList, "Item6")
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
@@ -3418,74 +3720,129 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
 
     // GetInvoker
 
-    public override Func<object, ArgumentList, object?> GetInvoker(MethodInfo method)
-        => InvokerCache.GetOrAdd((GetType(), method), static key => {
-            var (listType, method1) = key;
-            var parameters = method1.GetParameters();
-            if (parameters.Length != 8)
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[0].ParameterType != typeof(T0))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[1].ParameterType != typeof(T1))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[2].ParameterType != typeof(T2))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[3].ParameterType != typeof(T3))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[4].ParameterType != typeof(T4))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[5].ParameterType != typeof(T5))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[6].ParameterType != typeof(T6))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[7].ParameterType != typeof(T7))
-                throw new ArgumentOutOfRangeException(nameof(method));
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (GetType(), method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 8)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != typeof(T5))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != typeof(T6))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != typeof(T7))
+                    throw new ArgumentOutOfRangeException(nameof(method));
 
-            var declaringType = method1.DeclaringType!;
-            var m = new DynamicMethod("_Invoke",
-                typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
-                true);
-            var il = m.GetILGenerator();
+                var declaringType = method1.DeclaringType!;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
 
-            // Cast ArgumentList to its actual type
-            il.DeclareLocal(listType);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, listType);
-            il.Emit(OpCodes.Stloc_0);
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(listType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Stloc_0);
 
-            // Unbox target
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
 
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item6")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item7")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item6")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item7")!.GetGetMethod()!);
 
-            // Call method
-            il.Emit(OpCodes.Callvirt, method1);
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
 
-            // Box return type
-            if (method1.ReturnType == typeof(void))
-                il.Emit(OpCodes.Ldnull);
-            else if (method1.ReturnType.IsValueType)
-                il.Emit(OpCodes.Box, method1.ReturnType);
-            il.Emit(OpCodes.Ret);
-            return (Func<object, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
-        });
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 8)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != typeof(T5))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != typeof(T6))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != typeof(T7))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(listType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                , Expression.PropertyOrField(vList, "Item1")
+                                , Expression.PropertyOrField(vList, "Item2")
+                                , Expression.PropertyOrField(vList, "Item3")
+                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.PropertyOrField(vList, "Item5")
+                                , Expression.PropertyOrField(vList, "Item6")
+                                , Expression.PropertyOrField(vList, "Item7")
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
@@ -4079,78 +4436,136 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8> : 
 
     // GetInvoker
 
-    public override Func<object, ArgumentList, object?> GetInvoker(MethodInfo method)
-        => InvokerCache.GetOrAdd((GetType(), method), static key => {
-            var (listType, method1) = key;
-            var parameters = method1.GetParameters();
-            if (parameters.Length != 9)
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[0].ParameterType != typeof(T0))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[1].ParameterType != typeof(T1))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[2].ParameterType != typeof(T2))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[3].ParameterType != typeof(T3))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[4].ParameterType != typeof(T4))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[5].ParameterType != typeof(T5))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[6].ParameterType != typeof(T6))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[7].ParameterType != typeof(T7))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[8].ParameterType != typeof(T8))
-                throw new ArgumentOutOfRangeException(nameof(method));
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (GetType(), method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 9)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != typeof(T5))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != typeof(T6))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != typeof(T7))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != typeof(T8))
+                    throw new ArgumentOutOfRangeException(nameof(method));
 
-            var declaringType = method1.DeclaringType!;
-            var m = new DynamicMethod("_Invoke",
-                typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
-                true);
-            var il = m.GetILGenerator();
+                var declaringType = method1.DeclaringType!;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
 
-            // Cast ArgumentList to its actual type
-            il.DeclareLocal(listType);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, listType);
-            il.Emit(OpCodes.Stloc_0);
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(listType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Stloc_0);
 
-            // Unbox target
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
 
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item6")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item7")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item8")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item6")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item7")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item8")!.GetGetMethod()!);
 
-            // Call method
-            il.Emit(OpCodes.Callvirt, method1);
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
 
-            // Box return type
-            if (method1.ReturnType == typeof(void))
-                il.Emit(OpCodes.Ldnull);
-            else if (method1.ReturnType.IsValueType)
-                il.Emit(OpCodes.Box, method1.ReturnType);
-            il.Emit(OpCodes.Ret);
-            return (Func<object, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
-        });
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 9)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != typeof(T5))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != typeof(T6))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != typeof(T7))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != typeof(T8))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(listType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                , Expression.PropertyOrField(vList, "Item1")
+                                , Expression.PropertyOrField(vList, "Item2")
+                                , Expression.PropertyOrField(vList, "Item3")
+                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.PropertyOrField(vList, "Item5")
+                                , Expression.PropertyOrField(vList, "Item6")
+                                , Expression.PropertyOrField(vList, "Item7")
+                                , Expression.PropertyOrField(vList, "Item8")
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
@@ -4766,82 +5181,143 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
 
     // GetInvoker
 
-    public override Func<object, ArgumentList, object?> GetInvoker(MethodInfo method)
-        => InvokerCache.GetOrAdd((GetType(), method), static key => {
-            var (listType, method1) = key;
-            var parameters = method1.GetParameters();
-            if (parameters.Length != 10)
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[0].ParameterType != typeof(T0))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[1].ParameterType != typeof(T1))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[2].ParameterType != typeof(T2))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[3].ParameterType != typeof(T3))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[4].ParameterType != typeof(T4))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[5].ParameterType != typeof(T5))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[6].ParameterType != typeof(T6))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[7].ParameterType != typeof(T7))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[8].ParameterType != typeof(T8))
-                throw new ArgumentOutOfRangeException(nameof(method));
-            if (parameters[9].ParameterType != typeof(T9))
-                throw new ArgumentOutOfRangeException(nameof(method));
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (GetType(), method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 10)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != typeof(T5))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != typeof(T6))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != typeof(T7))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != typeof(T8))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[9].ParameterType != typeof(T9))
+                    throw new ArgumentOutOfRangeException(nameof(method));
 
-            var declaringType = method1.DeclaringType!;
-            var m = new DynamicMethod("_Invoke",
-                typeof(object),
-                new [] { typeof(object), typeof(ArgumentList) },
-                true);
-            var il = m.GetILGenerator();
+                var declaringType = method1.DeclaringType!;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
 
-            // Cast ArgumentList to its actual type
-            il.DeclareLocal(listType);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, listType);
-            il.Emit(OpCodes.Stloc_0);
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(listType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Stloc_0);
 
-            // Unbox target
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
 
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item6")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item7")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item8")!.GetGetMethod()!);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Call, listType.GetProperty("Item9")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item6")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item7")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item8")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, listType.GetProperty("Item9")!.GetGetMethod()!);
 
-            // Call method
-            il.Emit(OpCodes.Callvirt, method1);
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
 
-            // Box return type
-            if (method1.ReturnType == typeof(void))
-                il.Emit(OpCodes.Ldnull);
-            else if (method1.ReturnType.IsValueType)
-                il.Emit(OpCodes.Box, method1.ReturnType);
-            il.Emit(OpCodes.Ret);
-            return (Func<object, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
-        });
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (listType, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 10)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != typeof(T0))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != typeof(T1))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != typeof(T2))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != typeof(T3))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != typeof(T4))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != typeof(T5))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != typeof(T6))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != typeof(T7))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != typeof(T8))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[9].ParameterType != typeof(T9))
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(listType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                , Expression.PropertyOrField(vList, "Item1")
+                                , Expression.PropertyOrField(vList, "Item2")
+                                , Expression.PropertyOrField(vList, "Item3")
+                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.PropertyOrField(vList, "Item5")
+                                , Expression.PropertyOrField(vList, "Item6")
+                                , Expression.PropertyOrField(vList, "Item7")
+                                , Expression.PropertyOrField(vList, "Item8")
+                                , Expression.PropertyOrField(vList, "Item9")
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
@@ -5025,3 +5501,4 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
         }
     }
 }
+

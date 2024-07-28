@@ -24,8 +24,8 @@ public class MiscInfoTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void DotNetCoreInfoTest()
     {
-        var version = RuntimeInfo.DotNetCore.Version;
-        var versionString = RuntimeInfo.DotNetCore.VersionString;
+        var version = RuntimeInfo.DotNet.Version;
+        var versionString = RuntimeInfo.DotNet.VersionString;
         if (version == null) {
 #if NET7_0
         versionString.Should().StartWith("7.");

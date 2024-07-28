@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Reflection.Emit;
 using ActualLab.Internal;
 
@@ -7,6 +8,15 @@ public static class MemberInfoExt
 {
     private static readonly ConcurrentDictionary<(MemberInfo, Type, bool), Delegate> GetterCache = new();
     private static readonly ConcurrentDictionary<(MemberInfo, Type, bool), Delegate> SetterCache = new();
+
+    public static Type ReturnType(this MemberInfo memberInfo)
+        => memberInfo switch {
+            PropertyInfo propertyInfo => propertyInfo.PropertyType,
+            FieldInfo fieldInfo => fieldInfo.FieldType,
+            MethodInfo methodInfo => methodInfo.ReturnType,
+            ConstructorInfo constructorInfo => constructorInfo.DeclaringType!,
+            _ => throw Errors.UnexpectedMemberType(memberInfo.ToString()!)
+        };
 
     public static Func<TType, TValue> GetGetter<TType, TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
@@ -46,7 +56,19 @@ public static class MemberInfoExt
         });
     }
 
-    private static Delegate CreateGetter(
+    private static Delegate CreateSetter(Type sourceType, MemberInfo propertyOrField, Type valueType)
+        => RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? CreateSetterDM(sourceType, propertyOrField, valueType)
+            : CreateSetterET(sourceType, propertyOrField, valueType);
+
+    private static Delegate CreateGetter(Type sourceType, MemberInfo propertyOrField, Type valueType)
+        => RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? CreateGetterDM(sourceType, propertyOrField, valueType)
+            : CreateGetterET(sourceType, propertyOrField, valueType);
+
+    // Dynamic methods-based codegen
+
+    private static Delegate CreateGetterDM(
         Type sourceType,
         MemberInfo propertyOrField,
         Type valueType)
@@ -89,7 +111,7 @@ public static class MemberInfoExt
         return m.CreateDelegate(funcType);
     }
 
-    private static Delegate CreateSetter(
+    private static Delegate CreateSetterDM(
         Type sourceType,
         MemberInfo propertyOrField,
         Type valueType)
@@ -163,5 +185,54 @@ public static class MemberInfoExt
         il.Emit(OpCodes.Castclass, toType);
         if (toType.IsValueType)
             il.Emit(OpCodes.Unbox_Any, toType);
+    }
+
+    // Expression trees-based codegen
+
+    private static Delegate CreateGetterET(
+        Type sourceType,
+        MemberInfo propertyOrField,
+        Type valueType)
+    {
+        var funcType = typeof(Func<,>).MakeGenericType(sourceType, valueType);
+        var declaringType = propertyOrField.DeclaringType!;
+        var pSource = Expression.Parameter(sourceType);
+        if (propertyOrField is PropertyInfo pi) {
+            var isStatic = pi.GetMethod!.IsStatic;
+            if (!isStatic && declaringType.IsAssignableFrom(sourceType) && valueType == pi.PropertyType)
+                return pi.GetMethod!.CreateDelegate(funcType);
+        }
+
+        return Expression
+            .Lambda(funcType,
+                ExpressionExt.MaybeConvert(
+                    ExpressionExt.PropertyOrField(pSource, propertyOrField),
+                    valueType),
+                [pSource])
+            .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+    }
+
+    private static Delegate CreateSetterET(
+        Type sourceType,
+        MemberInfo propertyOrField,
+        Type valueType)
+    {
+        var funcType = typeof(Action<,>).MakeGenericType(sourceType, valueType);
+        var declaringType = propertyOrField.DeclaringType!;
+        var pSource = Expression.Parameter(sourceType);
+        var pValue = Expression.Parameter(valueType);
+        if (propertyOrField is PropertyInfo pi) {
+            var isStatic = pi.SetMethod!.IsStatic;
+            if (!isStatic && declaringType.IsAssignableFrom(sourceType) && valueType == pi.PropertyType)
+                return pi.SetMethod!.CreateDelegate(funcType);
+        }
+
+        return Expression
+            .Lambda(funcType,
+                Expression.Assign(
+                    ExpressionExt.PropertyOrField(pSource, propertyOrField),
+                    ExpressionExt.MaybeConvert(pValue, propertyOrField.ReturnType())),
+                [pSource, pValue])
+            .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
     }
 }

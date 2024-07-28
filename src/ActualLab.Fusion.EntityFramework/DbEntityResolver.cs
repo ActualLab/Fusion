@@ -99,7 +99,8 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
             keyExtractor = Expression.Lambda<Func<TDbEntity, TKey>>(eBody, pEntity);
         }
         KeyExtractorExpression = keyExtractor;
-        KeyExtractor = keyExtractor.Compile();
+        KeyExtractor = keyExtractor
+            .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
         _batchProcessors = new();
 
 #pragma warning disable CA2214
@@ -210,7 +211,8 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         // Creating compiled query invoker
         var eExecuteCall = Expression.Call(Expression.Constant(query), mExecute, pDbContext, pKeys);
         return (Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>)Expression
-            .Lambda(eExecuteCall, pDbContext, pKeys).Compile();
+            .Lambda(eExecuteCall, pDbContext, pKeys)
+            .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
     }
 
     protected Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>> CreateCompiledEqualsQuery(int batchSize)
@@ -269,7 +271,8 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         var eAllKeys = Enumerable.Range(0, batchSize).Select(i => Expression.ArrayIndex(pAllKeys, Expression.Constant(i)));
         var eExecuteCall = Expression.Call(Expression.Constant(query), mExecute, eDbContext.Concat(eAllKeys));
         return (Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>)Expression
-            .Lambda(eExecuteCall, pDbContext, pAllKeys).Compile();
+            .Lambda(eExecuteCall, pDbContext, pAllKeys)
+            .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
     }
 
     protected BatchProcessor<TKey, TDbEntity?> GetBatchProcessor(DbShard shard)

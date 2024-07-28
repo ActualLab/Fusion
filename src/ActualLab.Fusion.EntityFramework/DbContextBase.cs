@@ -27,7 +27,7 @@ public abstract class DbContextBase : DbContext
         LeaseGetter = Expression.Lambda<Func<DbContext, DbContextLease>>(
             Expression.Field(pDbContext, fLease!),
             pDbContext
-        ).Compile();
+        ).Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
 
         var fDisposed = tDbContext.GetField("_disposed", BindingFlags.Instance | BindingFlags.NonPublic);
         DisposedSetter = Expression.Lambda<Func<DbContext, bool, bool>>(
@@ -35,7 +35,7 @@ public abstract class DbContextBase : DbContext
                 Expression.Field(pDbContext, fDisposed!),
                 pValue),
             pDbContext, pValue
-        ).Compile();
+        ).Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
     }
 #endif
 

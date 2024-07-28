@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Reflection.Emit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -101,21 +102,29 @@ public static class ComponentExt
     {
         var bfInstanceNonPublic = BindingFlags.Instance | BindingFlags.NonPublic;
         var tComponentBase = typeof(ComponentBase);
-        var tRenderHandle = typeof(RenderHandle);
-        var tRenderer = typeof(Renderer);
         var fInitialized = tComponentBase.GetField("_initialized", bfInstanceNonPublic)!;
-        var fRenderFragment = tComponentBase.GetField("_renderFragment", bfInstanceNonPublic)!;
         var fRenderHandle = tComponentBase.GetField("_renderHandle", bfInstanceNonPublic)!;
         var mStateHasChanged = tComponentBase.GetMethod("StateHasChanged", bfInstanceNonPublic)!;
-        var fComponentId = tRenderHandle.GetField("_componentId", bfInstanceNonPublic)!;
-        var fRenderer = tRenderHandle.GetField("_renderer", bfInstanceNonPublic)!;
-        var mGetOptionalComponentState = tRenderer.GetMethod("GetOptionalComponentState", bfInstanceNonPublic)!;
 
         IsInitializedGetter = fInitialized.GetGetter<ComponentBase, bool>();
         // RenderFragmentGetter = fRenderFragment.GetGetter<ComponentBase, RenderFragment>();
         // RenderFragmentSetter = fRenderFragment.GetSetter<ComponentBase, RenderFragment>();
         RenderHandleGetter = fRenderHandle.GetGetter<ComponentBase, RenderHandle>();
         StateHasChangedInvoker = (Action<ComponentBase>)mStateHasChanged.CreateDelegate(typeof(Action<ComponentBase>));
+
+        GetOptionalComponentStateGetter = RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? CreateOptionalComponentStateGetterDM()
+            : CreateOptionalComponentStateGetterET();
+    }
+
+    private static Func<RenderHandle, object?> CreateOptionalComponentStateGetterDM()
+    {
+        var bfInstanceNonPublic = BindingFlags.Instance | BindingFlags.NonPublic;
+        var tRenderHandle = typeof(RenderHandle);
+        var tRenderer = typeof(Renderer);
+        var fComponentId = tRenderHandle.GetField("_componentId", bfInstanceNonPublic)!;
+        var fRenderer = tRenderHandle.GetField("_renderer", bfInstanceNonPublic)!;
+        var mGetOptionalComponentState = tRenderer.GetMethod("GetOptionalComponentState", bfInstanceNonPublic)!;
 
         var m = new DynamicMethod("_GetOptionalComponentState", typeof(object), [typeof(RenderHandle)], true);
         var il = m.GetILGenerator();
@@ -125,7 +134,26 @@ public static class ComponentExt
         il.Emit(OpCodes.Ldfld, fComponentId);
         il.Emit(OpCodes.Callvirt, mGetOptionalComponentState);
         il.Emit(OpCodes.Ret);
-        GetOptionalComponentStateGetter = (Func<RenderHandle, object?>)m.CreateDelegate(typeof(Func<RenderHandle, object?>));
+        return (Func<RenderHandle, object?>)m.CreateDelegate(typeof(Func<RenderHandle, object?>));
+    }
+
+    private static Func<RenderHandle, object?> CreateOptionalComponentStateGetterET()
+    {
+        var bfInstanceNonPublic = BindingFlags.Instance | BindingFlags.NonPublic;
+        var tRenderHandle = typeof(RenderHandle);
+        var tRenderer = typeof(Renderer);
+        var fComponentId = tRenderHandle.GetField("_componentId", bfInstanceNonPublic)!;
+        var fRenderer = tRenderHandle.GetField("_renderer", bfInstanceNonPublic)!;
+        var mGetOptionalComponentState = tRenderer.GetMethod("GetOptionalComponentState", bfInstanceNonPublic)!;
+
+        var pRenderHandle = Expression.Parameter(tRenderHandle, "renderHandle");
+        var eBody = Expression.Call(
+            Expression.Field(pRenderHandle, fRenderer),
+            mGetOptionalComponentState,
+            Expression.Field(pRenderHandle, fComponentId));
+        return (Func<RenderHandle, object?>)Expression
+            .Lambda(typeof(Func<RenderHandle, object?>), eBody, pRenderHandle)
+            .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
     }
 #endif
 }

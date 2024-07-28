@@ -9,12 +9,12 @@ public static class RuntimeInfo
         public static readonly Symbol MachinePrefixedId = $"{Environment.MachineName}-{Id.Value}";
     }
 
-    public static class DotNetCore
+    public static class DotNet
     {
         public static readonly string? VersionString;
         public static readonly Version? Version;
 
-        static DotNetCore()
+        static DotNet()
         {
             var assembly = typeof(System.Runtime.GCSettings).GetTypeInfo().Assembly;
             var assemblyPath = assembly.Location.Split(

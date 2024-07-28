@@ -53,9 +53,7 @@ public sealed class RpcMethodDef : MethodDef
             throw new ArgumentOutOfRangeException(nameof(serviceType));
 
         Hub = service.Hub;
-        ArgumentListType = Parameters.Length == 0
-            ? ArgumentList.Types[0]
-            : ArgumentList.Types[Parameters.Length].MakeGenericType(ParameterTypes);
+        ArgumentListType = ArgumentList.FindType(ParameterTypes);
         HasObjectTypedArguments = ParameterTypes.Any(type => typeof(object) == type);
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);
         IsSystem = service.IsSystem;

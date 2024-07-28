@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <LangVersion>preview</LangVersion>
+        <AssemblyName>Samples.NativeAotSample</AssemblyName>
+        <RootNamespace>Samples.NativeAotSample</RootNamespace>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <PublishAot>true</PublishAot>
+        <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MemoryPack.Generator" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+</Project>

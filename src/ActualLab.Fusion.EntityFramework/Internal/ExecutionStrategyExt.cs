@@ -25,7 +25,7 @@ public static class ExecutionStrategyExt
             var eBody = Expression.Call(pStrategy, mShouldRetryOn, pError);
             ShouldRetryOnCached = (Func<ExecutionStrategy, Exception, bool>) Expression
                 .Lambda(eBody, pStrategy, pError)
-                .Compile();
+                .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
         }
 
 #if !NET6_0_OR_GREATER
