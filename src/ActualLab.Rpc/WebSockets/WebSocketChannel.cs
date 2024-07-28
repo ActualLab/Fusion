@@ -497,10 +497,10 @@ public sealed class WebSocketChannel<T> : Channel<T>
     public class MeterSet
     {
         public readonly ObservableCounter<long> ChannelCounter;
-        public readonly UpDownCounter<long> IncomingItemCounter;
-        public readonly UpDownCounter<long> OutgoingItemCounter;
-        public readonly UpDownCounter<long> IncomingFrameCounter;
-        public readonly UpDownCounter<long> OutgoingFrameCounter;
+        public readonly Counter<long> IncomingItemCounter;
+        public readonly Counter<long> OutgoingItemCounter;
+        public readonly Counter<long> IncomingFrameCounter;
+        public readonly Counter<long> OutgoingFrameCounter;
         public readonly Histogram<int> IncomingFrameSizeHistogram;
         public readonly Histogram<int> OutgoingFrameSizeHistogram;
         public long ChannelCount;
@@ -512,13 +512,13 @@ public sealed class WebSocketChannel<T> : Channel<T>
             ChannelCounter = m.CreateObservableCounter($"{ms}.count",
                 () => Interlocked.Read(ref ChannelCount),
                 null, "Number of WebSocketChannel instances.");
-            IncomingItemCounter = m.CreateUpDownCounter<long>($"{ms}.incoming.item.count",
+            IncomingItemCounter = m.CreateCounter<long>($"{ms}.incoming.item.count",
                 null, "Number of items received via WebSocketChannel.");
-            OutgoingItemCounter = m.CreateUpDownCounter<long>($"{ms}.outgoing.item.count",
+            OutgoingItemCounter = m.CreateCounter<long>($"{ms}.outgoing.item.count",
                 null, "Number of items sent via WebSocketChannel.");
-            IncomingFrameCounter = m.CreateUpDownCounter<long>($"{ms}.incoming.frame.count",
+            IncomingFrameCounter = m.CreateCounter<long>($"{ms}.incoming.frame.count",
                 null, "Number of frames received via WebSocketChannel.");
-            OutgoingFrameCounter = m.CreateUpDownCounter<long>($"{ms}.outgoing.frame.count",
+            OutgoingFrameCounter = m.CreateCounter<long>($"{ms}.outgoing.frame.count",
                 null, "Number of frames sent via WebSocketChannel.");
             IncomingFrameSizeHistogram = m.CreateHistogram<int>($"{ms}.incoming.frame.size",
                 "By", "WebSocketChannel's incoming frame size in bytes.");

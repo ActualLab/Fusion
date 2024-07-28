@@ -247,11 +247,11 @@ public sealed class ComputedRegistry : IDisposable
         public readonly ObservableCounter<long> CapacityCounter;
         public readonly ObservableCounter<long> NodeCounter;
         public readonly ObservableCounter<long> EdgeCounter;
-        public readonly UpDownCounter<long> PrunedKeyCount;
-        public readonly UpDownCounter<long> PrunedDisposedCount;
-        public readonly UpDownCounter<long> PrunedEdgeCount;
-        public readonly UpDownCounter<long> KeyPruneCount;
-        public readonly UpDownCounter<long> NodeEdgePruneCount;
+        public readonly Counter<long> PrunedKeyCount;
+        public readonly Counter<long> PrunedDisposedCount;
+        public readonly Counter<long> PrunedEdgeCount;
+        public readonly Counter<long> KeyPruneCount;
+        public readonly Counter<long> NodeEdgePruneCount;
         public readonly Histogram<double> KeyPruneDuration;
         public readonly Histogram<double> NodePruneDuration;
         public readonly Histogram<double> EdgePruneDuration;
@@ -273,16 +273,16 @@ public sealed class ComputedRegistry : IDisposable
                 () => Interlocked.Read(ref EdgeCount),
                 null, "Count of edges in Computed<T> dependency graph.");
 
-            PrunedKeyCount = m.CreateUpDownCounter<long>($"{ms}.pruned.key.count",
+            PrunedKeyCount = m.CreateCounter<long>($"{ms}.pruned.key.count",
                 null, "Count of pruned Computed<T> instances.");
-            PrunedDisposedCount = m.CreateUpDownCounter<long>($"{ms}.pruned.disposed.count",
+            PrunedDisposedCount = m.CreateCounter<long>($"{ms}.pruned.disposed.count",
                 null, "Count of pruned disposable Computed<T> instances.");
-            PrunedEdgeCount = m.CreateUpDownCounter<long>($"{ms}.pruned.edge.count",
+            PrunedEdgeCount = m.CreateCounter<long>($"{ms}.pruned.edge.count",
                 null, "Count of pruned edges in Computed<T> dependency graph.");
 
-            KeyPruneCount = m.CreateUpDownCounter<long>($"{ms}.prunes.key-cycle.count",
+            KeyPruneCount = m.CreateCounter<long>($"{ms}.prunes.key-cycle.count",
                 null, "Count of computed registry key prune cycles.");
-            NodeEdgePruneCount = m.CreateUpDownCounter<long>($"{ms}.prunes.node-edge-cycle.count",
+            NodeEdgePruneCount = m.CreateCounter<long>($"{ms}.prunes.node-edge-cycle.count",
                 null, "Count of computed registry node & edge prune cycles.");
             KeyPruneDuration = m.CreateHistogram<double>($"{ms}.prunes.key-cycle.duration",
                 "ms", "Duration of computed registry key prune cycle.");
