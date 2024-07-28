@@ -4,6 +4,8 @@ using ActualLab.Internal;
 
 namespace ActualLab.Reflection;
 
+#pragma warning disable IL2070
+
 public static class ActivatorExt
 {
     private static readonly ConcurrentDictionary<Type, bool> HasDefaultCtorCache = new();
@@ -23,9 +25,7 @@ public static class ActivatorExt
         if (type.IsValueType)
             return default!;
         var hasDefaultCtor = HasDefaultCtorCache.GetOrAdd(type,
-#pragma warning disable IL2070
             type1 => type1.GetConstructor(Type.EmptyTypes) != null);
-#pragma warning restore IL2070
         if (hasDefaultCtor)
             return (T)type.CreateInstance();
         if (failIfNoDefaultConstructor)
@@ -40,9 +40,7 @@ public static class ActivatorExt
             type,
             static tObject => {
                 var argTypes = Type.EmptyTypes;
-#pragma warning disable IL2070
                 var ctor = tObject.GetConstructor(argTypes);
-#pragma warning restore IL2070
                 if (ctor == null) return null;
 
                 var m = new DynamicMethod("_Create0", tObject, Type.EmptyTypes, true);
