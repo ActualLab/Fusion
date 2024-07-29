@@ -17,7 +17,8 @@ for (var i = 0; i < ArgumentList.Types.Length; i++) {
     var tArguments = Enumerable.Range(0, i).Select(_ => typeof(int)).ToArray();
     var t = ArgumentList.FindType(tArguments);
     var l = t.CreateInstance();
-    WriteLine($"{l}, {FuncExt.GetFuncType(tArguments, typeof(object)).GetName()}, {FuncExt.GetActionType(tArguments).GetName()}");
+    var lengthGetter = t.GetProperty("Length")!.GetGetter();
+    WriteLine($"{lengthGetter.Invoke(l)}: {l}, {FuncExt.GetFuncType(tArguments, typeof(object)).GetName()}, {FuncExt.GetActionType(tArguments).GetName()}");
 }
 
 public static class Invoker

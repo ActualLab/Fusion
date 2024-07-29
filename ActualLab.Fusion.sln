@@ -121,7 +121,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppHost", "samples\TodoApp\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceDefaults", "samples\TodoApp\ServiceDefaults\ServiceDefaults.csproj", "{E3C423C3-BB71-4258-9FEF-ACDE90FC5801}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NativeAotSample", "samples\NativeAotSample\NativeAotSample.csproj", "{5E615229-ECEA-4939-BC61-E17B44C6039F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NativeAot", "samples\NativeAot\NativeAot.csproj", "{5E615229-ECEA-4939-BC61-E17B44C6039F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
