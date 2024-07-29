@@ -1,3 +1,5 @@
+using System.Reflection.Emit;
+
 namespace ActualLab.Reflection;
 
 public enum RuntimeCodegenMode
@@ -9,11 +11,26 @@ public enum RuntimeCodegenMode
 
 public static class RuntimeCodegen
 {
-    public static RuntimeCodegenMode Mode { get; set; }
-#if USE_DYNAMIC_METHODS
-        = RuntimeFeature.IsDynamicCodeSupported
+    private static readonly LazySlim<RuntimeCodegenMode> DefaultModeLazy = new(static () => {
+#if NETSTANDARD2_0
+        try {
+            _ = new DynamicMethod("_IsDynamicCodeSupported", typeof(void), []);
+            return RuntimeCodegenMode.DynamicMethods;
+        }
+        catch {
+            return RuntimeCodegenMode.InterpretedExpressions;
+        }
+#else
+        return RuntimeFeature.IsDynamicCodeSupported
             ? RuntimeCodegenMode.DynamicMethods
             : RuntimeCodegenMode.InterpretedExpressions;
+#endif
+    });
+
+    public static RuntimeCodegenMode NativeMode => DefaultModeLazy.Value;
+    public static RuntimeCodegenMode Mode { get; set; }
+#if USE_DYNAMIC_METHODS
+        = NativeMode;
 #else
         = RuntimeCodegenMode.InterpretedExpressions;
 #endif
