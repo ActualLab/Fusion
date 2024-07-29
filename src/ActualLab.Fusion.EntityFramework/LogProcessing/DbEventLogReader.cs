@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
@@ -20,40 +21,51 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
 
     protected override async Task<int> ProcessBatch(DbShard shard, int batchSize, CancellationToken cancellationToken)
     {
-        using var _ = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
-        var dbContext = await DbHub.CreateDbContext(shard, readWrite: true, cancellationToken).ConfigureAwait(false);
-        await using var _1 = dbContext.ConfigureAwait(false);
-        var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        await using var _2 = tx.ConfigureAwait(false);
-        dbContext.EnableChangeTracking(false);
+        var activity = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
+        try {
+            var dbContext = await DbHub.CreateDbContext(shard, readWrite: true, cancellationToken)
+                .ConfigureAwait(false);
+            await using var _1 = dbContext.ConfigureAwait(false);
+            var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            await using var _2 = tx.ConfigureAwait(false);
+            dbContext.EnableChangeTracking(false);
 
-        var now = SystemClock.Now.ToDateTime();
-        var dbEntries = dbContext.Set<TDbEntry>();
-        var entries = await dbEntries.WithHints(LogKind.GetReadBatchQueryHints())
-            .Where(o => o.State == LogEntryState.New && o.DelayUntil < now)
-            .OrderBy(o => o.DelayUntil)
-            .Take(batchSize)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-        if (entries.Count == 0)
-            return 0;
+            var now = SystemClock.Now.ToDateTime();
+            var dbEntries = dbContext.Set<TDbEntry>();
+            var entries = await dbEntries.WithHints(LogKind.GetReadBatchQueryHints())
+                .Where(o => o.State == LogEntryState.New && o.DelayUntil < now)
+                .OrderBy(o => o.DelayUntil)
+                .Take(batchSize)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (entries.Count == 0)
+                return 0;
 
-        var logLevel = entries.Count == batchSize ? LogLevel.Warning : LogLevel.Debug;
-        // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-        Log.IfEnabled(logLevel)?.Log(logLevel,
-            $"{nameof(ProcessBatch)}[{{Shard}}]: got {{Count}}/{{BatchSize}} entries",
-            shard.Value, entries.Count, batchSize);
+            var logLevel = entries.Count == batchSize ? LogLevel.Warning : LogLevel.Debug;
+            // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+            Log.IfEnabled(logLevel)?.Log(logLevel,
+                $"{nameof(ProcessBatch)}[{{Shard}}]: got {{Count}}/{{BatchSize}} entries",
+                shard.Value, entries.Count, batchSize);
 
-        var results = await GetProcessTasks(shard, entries, cancellationToken)
-            .Collect(Settings.ConcurrencyLevel)
-            .ConfigureAwait(false);
+            var results = await GetProcessTasks(shard, entries, cancellationToken)
+                .Collect(Settings.ConcurrencyLevel)
+                .ConfigureAwait(false);
 
-        foreach (var (entry, isProcessed) in entries.Zip(results, static (entry, isProcessed) => (entry, isProcessed)))
-            if (isProcessed)
-                SetEntryState(dbEntries, entry, LogEntryState.Processed);
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
-        return entries.Count;
+            foreach (var (entry, isProcessed) in entries.Zip(results,
+                         static (entry, isProcessed) => (entry, isProcessed)))
+                if (isProcessed)
+                    SetEntryState(dbEntries, entry, LogEntryState.Processed);
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            return entries.Count;
+        }
+        catch (Exception e) {
+            activity?.MaybeSetError(e, cancellationToken);
+            throw;
+        }
+        finally {
+            activity?.Dispose();
+        }
     }
 
     protected virtual IEnumerable<Task<bool>> GetProcessTasks(

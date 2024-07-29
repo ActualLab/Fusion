@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Caching;
+using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Internal;
 using Cysharp.Text;
 using Errors = ActualLab.Internal.Errors;
@@ -17,8 +19,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public readonly RpcPeer Peer = context.Peer!;
     public readonly RpcCacheInfoCaptureMode CacheInfoCaptureMode = context.CacheInfoCapture?.CaptureMode ?? default;
     public abstract Task UntypedResultTask { get; }
-    public CancellationTokenRegistration CancellationHandler;
+
     public CpuTimestamp StartedAt;
+    public CancellationTokenRegistration CancellationHandler;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public static RpcOutboundCall? New(RpcOutboundContext context)
@@ -107,12 +110,14 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public Task SendRegistered(bool isFirstAttempt = true)
     {
         RpcMessage message;
-        var scope = Context.Activate(); // CreateMessage may use it
+        var context = Context;
+        var scope = context.Activate(); // CreateMessage may use it
         try {
-            var cacheInfoCapture = Context.CacheInfoCapture;
+            var cacheInfoCapture = context.CacheInfoCapture;
             var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
-            message = CreateMessage(Id, MethodDef.AllowArgumentPolymorphism, hash);
-            cacheInfoCapture?.CaptureKey(Context, message);
+            var activity = context.Trace?.Activity;
+            message = CreateMessage(Id, MethodDef.AllowArgumentPolymorphism, hash, activity);
+            cacheInfoCapture?.CaptureKey(context, message);
         }
         catch (Exception error) {
             SetError(error, context: null, assumeCancelled: isFirstAttempt);
@@ -127,13 +132,16 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public RpcMessage CreateMessage(long relatedId, bool allowPolymorphism, string? hash = null)
+    public RpcMessage CreateMessage(long relatedId, bool allowPolymorphism, string? hash = null, Activity? activity = null)
     {
         var arguments = Context.Arguments!;
         var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism);
         var headers = Context.Headers;
         if (hash != null)
-            headers = headers.With(RpcHeaderNames.Hash, hash);
+            headers = headers.With(new(RpcHeaderNames.Hash, hash));
+        if (activity != null)
+            headers = headers.InjectActivity(activity);
+
         return new RpcMessage(
             Context.CallTypeId, relatedId,
             MethodDef.Service.Name, MethodDef.Name,
@@ -146,7 +154,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var arguments = Context.Arguments!;
         var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism);
         var hash = Peer.HashProvider.Invoke(argumentData);
-        var headers = Context.Headers.With(RpcHeaderNames.Hash, hash);
+        var headers = Context.Headers.With(new(RpcHeaderNames.Hash, hash));
         var message = new RpcMessage(
             Context.CallTypeId, relatedId,
             MethodDef.Service.Name, MethodDef.Name,
@@ -175,6 +183,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     {
         if (Peer.OutboundCalls.Complete(this))
             CancellationHandler.Dispose();
+        Context.Trace?.Complete(this);
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]

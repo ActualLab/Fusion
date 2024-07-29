@@ -100,7 +100,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
         var divMethod = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
         var divTracer = (RpcDefaultCallTracer)divMethod.Tracer!;
-        divTracer.CallCounter.Should().NotBeNull();
+        divTracer.InboundCallCounter.Should().NotBeNull();
 
         (await client.Div(6, 2)).Should().Be(3);
         await Assert.ThrowsAsync<DivideByZeroException>(

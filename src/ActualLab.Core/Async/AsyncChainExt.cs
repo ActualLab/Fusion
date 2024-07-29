@@ -104,10 +104,20 @@ public static class AsyncChainExt
     {
         if (activityFactory == null)
             return asyncChain.LogError(log);
+
         return asyncChain with {
             Start = async cancellationToken => {
-                using var activity = activityFactory.Invoke();
-                await asyncChain.LogError(log).Start(cancellationToken).ConfigureAwait(false);
+                var activity = activityFactory.Invoke();
+                try {
+                    await asyncChain.LogError(log).Start(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception e) {
+                    activity?.MaybeSetError(e, cancellationToken);
+                    throw;
+                }
+                finally {
+                    activity?.Dispose();
+                }
             }
         };
     }

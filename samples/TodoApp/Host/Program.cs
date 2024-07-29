@@ -1,4 +1,5 @@
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using ActualLab.DependencyInjection;
@@ -39,6 +40,7 @@ using Templates.TodoApp.UI;
 #if !DEBUG
 Interceptor.Options.Defaults.IsValidationEnabled = false;
 #endif
+Activity.DefaultIdFormat = ActivityIdFormat.W3C;
 
 var builder = WebApplication.CreateBuilder();
 var env = builder.Environment;

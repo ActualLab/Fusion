@@ -299,12 +299,19 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         return batchProcessor;
     }
 
-    protected virtual Activity? StartProcessBatchActivity(DbShard shard, int batchSize)
-        => ActivitySource
+    protected virtual Activity? StartProcessBatchActivity(DbShard shard, int batchSize, int tryIndex)
+    {
+        var activity = ActivitySource
             .IfEnabled(Settings.UseActivitySource)
-            .StartActivity(GetType(), nameof(ProcessBatch))
-            .AddShardTags(shard)?
-            .AddTag("batchSize", batchSize.ToString(CultureInfo.InvariantCulture));
+            .StartActivity(GetType(), nameof(ProcessBatch));
+        if (activity == null)
+            return activity;
+
+        activity.AddShardTags(shard).AddTag("batchSize", batchSize.ToString(CultureInfo.InvariantCulture));
+        if (tryIndex > 0)
+            activity.AddTag("tryIndex", tryIndex);
+        return activity;
+    }
 
     protected virtual async Task ProcessBatch(
         DbShard shard,
@@ -315,7 +322,6 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         if (batchSize == 0)
             return;
 
-        using var activity = StartProcessBatchActivity(shard, batchSize);
         var query = Queries[batchSize];
         var tryIndex = 0;
         while (true) {
@@ -323,6 +329,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
             await using var _ = dbContext.ConfigureAwait(false);
 
             var keys = ArrayPool<TKey>.Shared.Rent(batchSize);
+            var activity = StartProcessBatchActivity(shard, batchSize, tryIndex);
             try {
                 var i = 0;
                 foreach (var item in batch)
@@ -358,7 +365,11 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
                 }
                 return;
             }
-            catch (Exception e) when (!cancellationToken.IsCancellationRequested) {
+            catch (Exception e) {
+                activity?.MaybeSetError(e, cancellationToken);
+                if (e.IsCancellationOf(cancellationToken))
+                    throw;
+
                 var transiency = TransiencyResolver.Invoke(e);
                 if (!transiency.IsTransient())
                     throw;
@@ -374,6 +385,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
                     await delay.Task.ConfigureAwait(false);
             }
             finally {
+                activity?.Dispose();
                 ArrayPool<TKey>.Shared.Return(keys);
             }
         }

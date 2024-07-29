@@ -7,9 +7,9 @@ public sealed class RpcOutboundMiddlewares(IServiceProvider services)
     public RpcOutboundMiddlewares? NullIfEmpty()
         => HasInstances ? this : null;
 
-    public void PrepareCall(RpcOutboundContext context)
+    public void OnPrepareCall(RpcOutboundContext context, bool isRerouted)
     {
         foreach (var m in Instances)
-            m.PrepareCall(context);
+            m.OnPrepareCall(context, isRerouted);
     }
 }

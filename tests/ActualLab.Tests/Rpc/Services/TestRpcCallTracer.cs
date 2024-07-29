@@ -14,12 +14,12 @@ public class TestRpcCallTracer(RpcMethodDef method) : RpcCallTracer(method)
     public long ExitCount => Interlocked.Read(ref _exitCount);
     public long ErrorCount => Interlocked.Read(ref _errorCount);
 
-    public override RpcCallTrace? TryStartTrace(RpcInboundCall call)
+    public override RpcInboundCallTrace? StartInboundTrace(RpcInboundCall call)
         => new Trace(this);
 
     // Nested types
 
-    private sealed class Trace : RpcCallTrace
+    private sealed class Trace : RpcInboundCallTrace
     {
         private readonly TestRpcCallTracer _tracer;
 

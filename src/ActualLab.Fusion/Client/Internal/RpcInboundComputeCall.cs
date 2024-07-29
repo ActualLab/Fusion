@@ -61,9 +61,11 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
 
             // 3. Retrieve Computed + update ResultHeaders
             computed = Computed;
-            if (computed != null)
+            if (computed != null) {
                 // '@' is required to make it compatible with pre-v7.2 versions
-                ResultHeaders = ResultHeaders.With(FusionRpcHeaderNames.Version, computed.Version.FormatVersion('@'));
+                var versionHeader = new RpcHeader(FusionRpcHeaderNames.Version, computed.Version.FormatVersion('@'));
+                ResultHeaders = ResultHeaders.With(versionHeader);
+            }
         }
 
         // 4. Actually run completion

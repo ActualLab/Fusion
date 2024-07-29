@@ -38,10 +38,6 @@ public static class RpcHeadersExt
         return newHeaders;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static RpcHeader[] With(this RpcHeader[]? headers, string name, string value)
-        => headers.With(new RpcHeader(name, value));
-
     public static RpcHeader[] With(this RpcHeader[]? headers, RpcHeader header)
     {
         if (headers == null || headers.Length == 0)
@@ -50,6 +46,18 @@ public static class RpcHeadersExt
         var newHeaders = new RpcHeader[headers.Length + 1];
         headers.CopyTo(newHeaders, 0);
         newHeaders[^1] = header;
+        return newHeaders;
+    }
+
+    public static RpcHeader[] With(this RpcHeader[]? headers, RpcHeader header1, RpcHeader header2)
+    {
+        if (headers == null || headers.Length == 0)
+            return [header1, header2];
+
+        var newHeaders = new RpcHeader[headers.Length + 2];
+        headers.CopyTo(newHeaders, 0);
+        newHeaders[^2] = header1;
+        newHeaders[^1] = header2;
         return newHeaders;
     }
 }

@@ -5,7 +5,7 @@ namespace ActualLab.Rpc.Diagnostics;
 public abstract class RpcCallTracer(RpcMethodDef method)
 {
     public readonly RpcMethodDef Method = method;
-    public Sampler Sampler { get; init; } = Sampler.Always;
 
-    public abstract RpcCallTrace? TryStartTrace(RpcInboundCall call);
+    public abstract RpcInboundCallTrace? StartInboundTrace(RpcInboundCall call);
+    public abstract RpcOutboundCallTrace? StartOutboundTrace(RpcOutboundCall call);
 }

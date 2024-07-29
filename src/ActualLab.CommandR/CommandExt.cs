@@ -6,7 +6,7 @@ namespace ActualLab.CommandR;
 public static class CommandExt
 {
     private static readonly ConcurrentDictionary<Type, Type> ResultTypeCache = new();
-    private static readonly ConcurrentDictionary<(Type, Symbol, string), string> OperationNameCache = new();
+    private static readonly ConcurrentDictionary<(Type, Symbol, string, string), string> OperationNameCache = new();
     private static readonly Type CommandWithResultType = typeof(ICommand<>);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -36,16 +36,16 @@ public static class CommandExt
         return result ?? throw Errors.CommandMustImplementICommandOfTResult(commandType);
     }
 
-    public static string GetOperationName(this ICommand command, string operation = "")
+    public static string GetOperationName(this ICommand command, string operation = "", string prefix = "cmd")
     {
         var type = command.GetType();
         var chainId = command is IEventCommand eventCommand
             ? eventCommand.ChainId
             : default;
-        return OperationNameCache.GetOrAdd((type, chainId, operation),
+        return OperationNameCache.GetOrAdd((type, chainId, operation, prefix),
             static key => {
-                var (type, chainId, operation) = key;
-                var result = "command." + DiagnosticsExt.FixName(type.NonProxyType().GetName());
+                var (type, chainId, operation, prefix) = key;
+                var result = prefix + "." + DiagnosticsExt.FixName(type.NonProxyType().GetName());
                 if (!chainId.IsEmpty)
                     result += $"-{DiagnosticsExt.FixName(chainId.Value)}";
                 if (!operation.IsNullOrEmpty())

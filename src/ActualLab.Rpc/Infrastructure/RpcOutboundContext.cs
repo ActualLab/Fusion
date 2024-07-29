@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Caching;
+using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -23,6 +24,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public long RelatedId;
     public RpcCacheInfoCapture? CacheInfoCapture;
     public Func<RpcMethodDef, Invocation, Task>? Suppressor;
+    public RpcOutboundCallTrace? Trace;
 
     public static RpcOutboundContext GetCurrent()
         => Current ?? throw Errors.NoCurrentRpcOutboundContext();
@@ -50,6 +52,27 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         => new(this, _current);
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
+    public RpcOutboundCall? PrepareNoWaitCall(RpcMethodDef methodDef, ArgumentList arguments)
+    {
+        if (MethodDef != methodDef) {
+            if (MethodDef != null)
+                throw ActualLab.Internal.Errors.AlreadyInvoked(nameof(PrepareCall));
+
+            // MethodDef, Arguments, CancellationToken
+            MethodDef = methodDef;
+            Arguments = arguments;
+            var ctIndex = methodDef.CancellationTokenIndex;
+            CancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
+        }
+
+        // Peer & Call
+        var hub = MethodDef.Hub;
+        Peer ??= hub.CallRouter.Invoke(methodDef, arguments);
+        Call = RpcOutboundCall.New(this);
+        return Call;
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcOutboundCall? PrepareCall(RpcMethodDef methodDef, ArgumentList arguments)
     {
         if (MethodDef != methodDef) {
@@ -73,8 +96,11 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
 
         Peer ??= hub.CallRouter.Invoke(methodDef, arguments);
         Call = RpcOutboundCall.New(this);
-        if (Call != null)
-            hub.OutboundMiddlewares.NullIfEmpty()?.PrepareCall(this);
+        if (Call != null) {
+            if (MethodDef.Tracer is { } tracer)
+                Trace ??= tracer.StartOutboundTrace(Call);
+            hub.OutboundMiddlewares.NullIfEmpty()?.OnPrepareCall(this, false);
+        }
         return Call;
     }
 
@@ -89,8 +115,10 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         var oldPeer = Peer;
         Peer = hub.CallRouter.Invoke(MethodDef, Arguments);
         Call = RpcOutboundCall.New(this);
-        if (Call != null)
-            hub.OutboundMiddlewares.NullIfEmpty()?.PrepareCall(this);
+        if (Call != null) {
+            // We don't start trace here, coz it's either started already, or was sampled out
+            hub.OutboundMiddlewares.NullIfEmpty()?.OnPrepareCall(this, true);
+        }
         if (ReferenceEquals(oldPeer, Peer))
             Peer.Log.LogWarning("The call {Call} is rerouted to the same peer {Peer}", Call, Peer);
         return Call;

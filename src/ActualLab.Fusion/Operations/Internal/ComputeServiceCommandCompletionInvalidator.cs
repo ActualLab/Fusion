@@ -63,6 +63,10 @@ public class ComputeServiceCommandCompletionInvalidator(
             }
             await TryInvalidate(context, operation, command, operationItems, index).ConfigureAwait(false);
         }
+        catch (Exception e) {
+            activity?.MaybeSetError(e, cancellationToken);
+            throw;
+        }
         finally {
             suppressRpcScope.Dispose();
             invalidateScope.Dispose();
@@ -115,7 +119,7 @@ public class ComputeServiceCommandCompletionInvalidator(
 
     protected virtual Activity? StartActivity(ICommand command)
     {
-        var operationName = command.GetOperationName("Invalidate");
+        var operationName = command.GetOperationName("", "-inv");
         var activity = ActivitySource.StartActivity(operationName);
         if (activity != null) {
             var tags = new ActivityTagsCollection { { "command", command.ToString() } };

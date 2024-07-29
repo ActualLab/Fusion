@@ -23,7 +23,7 @@ public abstract class RpcInboundCall : RpcCall
     public ArgumentList? Arguments;
     public abstract Task UntypedResultTask { get; }
     public RpcHeader[]? ResultHeaders;
-    public RpcCallTrace? Trace;
+    public RpcInboundCallTrace? Trace;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public static RpcInboundCall New(byte callTypeId, RpcInboundContext context, RpcMethodDef? methodDef)
@@ -137,8 +137,8 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             return Task.CompletedTask;
 
         var tracer = MethodDef.Tracer;
-        if (tracer != null && tracer.Sampler.Next())
-            Trace = tracer.TryStartTrace(this);
+        if (tracer != null)
+            Trace = tracer.StartInboundTrace(this);
         var inboundMiddlewares = Hub.InboundMiddlewares.NullIfEmpty();
         lock (Lock) {
             try {
@@ -199,7 +199,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
 
     protected async Task<TResult> InvokeTarget(RpcInboundMiddlewares middlewares)
     {
-        await middlewares.BeforeCall(this).ConfigureAwait(false);
+        await middlewares.OnBeforeCall(this).ConfigureAwait(false);
         Task<TResult> resultTask = null!;
         try {
             resultTask = InvokeTarget();
@@ -210,7 +210,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             throw;
         }
         finally {
-            await middlewares.AfterCall(this, resultTask).ConfigureAwait(false);
+            await middlewares.OnAfterCall(this, resultTask).ConfigureAwait(false);
         }
     }
 

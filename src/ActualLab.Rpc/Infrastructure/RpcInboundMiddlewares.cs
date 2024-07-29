@@ -7,7 +7,7 @@ public sealed class RpcInboundMiddlewares(IServiceProvider services)
     public RpcInboundMiddlewares? NullIfEmpty()
         => HasInstances ? this : null;
 
-    public async Task BeforeCall(RpcInboundCall call)
+    public async Task OnBeforeCall(RpcInboundCall call)
     {
         foreach (var m in Instances) {
             var task = m.OnBeforeCall(call);
@@ -16,7 +16,7 @@ public sealed class RpcInboundMiddlewares(IServiceProvider services)
         }
     }
 
-    public async Task AfterCall(RpcInboundCall call, Task resultTask)
+    public async Task OnAfterCall(RpcInboundCall call, Task resultTask)
     {
         foreach (var m in InstancesReversed) {
             var task = m.OnAfterCall(call, resultTask);

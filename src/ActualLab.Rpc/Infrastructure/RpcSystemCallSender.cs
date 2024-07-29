@@ -65,7 +65,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer);
-        var call = context.PrepareCall(HandshakeMethodDef, ArgumentList.New(handshake))!;
+        var call = context.PrepareNoWaitCall(HandshakeMethodDef, ArgumentList.New(handshake))!;
         return call.SendNoWait(false, sender);
     }
 
@@ -88,7 +88,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     {
         try {
             var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
-            var call = context.PrepareCall(OkMethodDef, ArgumentList.New(result))!;
+            var call = context.PrepareNoWaitCall(OkMethodDef, ArgumentList.New(result))!;
             var inboundHash = inboundCall.Context.Message.Headers.TryGet(RpcHeaderNames.Hash);
             if (inboundHash == null)
                 return call.SendNoWait(allowPolymorphism);
@@ -99,7 +99,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
                 : call.SendNoWait(message);
         }
         catch (Exception error) {
-            Log.LogError(error, "PrepareCall failed for call #{CallId}", inboundCall.Id);
+            Log.LogError(error, "Failed to send Ok response for call #{CallId}", inboundCall.Id);
             return Error(peer, inboundCall, error, headers);
         }
     }
@@ -127,7 +127,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         }
 
         var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
-        var call = context.PrepareCall(ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()))!;
+        var call = context.PrepareNoWaitCall(ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()))!;
         return call.SendNoWait(false);
     }
 
@@ -135,7 +135,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Cancel(RpcPeer peer, long callId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, callId, headers);
-        var call = context.PrepareCall(CancelMethodDef, ArgumentList.Empty)!;
+        var call = context.PrepareNoWaitCall(CancelMethodDef, ArgumentList.Empty)!;
         return call.SendNoWait(false);
     }
 
@@ -143,7 +143,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Match(RpcPeer peer, long callId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, callId, headers);
-        var call = context.PrepareCall(MatchMethodDef, ArgumentList.Empty)!;
+        var call = context.PrepareNoWaitCall(MatchMethodDef, ArgumentList.Empty)!;
         return call.SendNoWait(false);
     }
 
@@ -153,7 +153,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task KeepAlive(RpcPeer peer, long[] localIds, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, headers);
-        var call = context.PrepareCall(KeepAliveMethodDef, ArgumentList.New(localIds))!;
+        var call = context.PrepareNoWaitCall(KeepAliveMethodDef, ArgumentList.New(localIds))!;
         return call.SendNoWait(false);
     }
 
@@ -161,7 +161,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Disconnect(RpcPeer peer, long[] localIds, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, headers);
-        var call = context.PrepareCall(DisconnectMethodDef, ArgumentList.New(localIds))!;
+        var call = context.PrepareNoWaitCall(DisconnectMethodDef, ArgumentList.New(localIds))!;
         return call.SendNoWait(false);
     }
 
@@ -171,7 +171,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Ack(RpcPeer peer, long localId, long nextIndex, Guid hostId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers);
-        var call = context.PrepareCall(AckMethodDef, ArgumentList.New(nextIndex, hostId))!;
+        var call = context.PrepareNoWaitCall(AckMethodDef, ArgumentList.New(nextIndex, hostId))!;
         return call.SendNoWait(false);
     }
 
@@ -179,7 +179,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task AckEnd(RpcPeer peer, long localId, Guid hostId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers);
-        var call = context.PrepareCall(AckEndMethodDef, ArgumentList.New(hostId))!;
+        var call = context.PrepareNoWaitCall(AckEndMethodDef, ArgumentList.New(hostId))!;
         return call.SendNoWait(false);
     }
 
@@ -187,7 +187,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Item<TItem>(RpcPeer peer, long localId, long index, TItem item, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers);
-        var call = context.PrepareCall(ItemMethodDef, ArgumentList.New(index, item))!;
+        var call = context.PrepareNoWaitCall(ItemMethodDef, ArgumentList.New(index, item))!;
         return call.SendNoWait(true);
     }
 
@@ -195,7 +195,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Batch<TItem>(RpcPeer peer, long localId, long index, TItem[] items, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers);
-        var call = context.PrepareCall(BatchMethodDef, ArgumentList.New(index, items))!;
+        var call = context.PrepareNoWaitCall(BatchMethodDef, ArgumentList.New(index, items))!;
         return call.SendNoWait(true);
     }
 
@@ -203,7 +203,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task End(RpcPeer peer, long localId, long index, Exception? error, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers);
-        var call = context.PrepareCall(EndMethodDef, ArgumentList.New(index, error.ToExceptionInfo()))!;
+        var call = context.PrepareNoWaitCall(EndMethodDef, ArgumentList.New(index, error.ToExceptionInfo()))!;
         return call.SendNoWait(false);
     }
 }

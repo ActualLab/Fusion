@@ -52,13 +52,25 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
         var batchSize = Settings.BatchSize;
         while (true) {
             var maxLastSeenAt = (SystemClock.Now - Settings.MaxSessionAge).ToDateTime();
-            using var _ = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
-            var count = await Sessions.Trim(shard, maxLastSeenAt, batchSize, cancellationToken)
-                .ConfigureAwait(false);
-            if (count > 0)
-                DefaultLog?.Log(Settings.LogLevel, "Trim({Shard}) trimmed {Count} sessions", shard.Value, count);
-            if (count < batchSize)
-                break;
+            var activity = ActivitySource
+                .IfEnabled(Settings.UseActivitySource)
+                .StartActivity(GetType())
+                .AddShardTags(shard);
+            try {
+                var count = await Sessions.Trim(shard, maxLastSeenAt, batchSize, cancellationToken)
+                    .ConfigureAwait(false);
+                if (count > 0)
+                    DefaultLog?.Log(Settings.LogLevel, "Trim({Shard}) trimmed {Count} sessions", shard.Value, count);
+                if (count < batchSize)
+                    break;
+            }
+            catch (Exception e) {
+                activity?.MaybeSetError(e, cancellationToken);
+                throw;
+            }
+            finally {
+                activity?.Dispose();
+            }
         }
         await SystemClock.Delay(Settings.CheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
     }

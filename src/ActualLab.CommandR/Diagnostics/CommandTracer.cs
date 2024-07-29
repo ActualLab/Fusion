@@ -21,35 +21,30 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
     [CommandFilter(Priority = CommanderCommandHandlerPriority.CommandTracer)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
-        using var activity = StartActivity(command, context);
+        if (!ShouldTrace(command, context)) {
+            await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var activity = StartActivity(command, context);
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e) {
-            if (activity != null && Log.IsEnabled(ErrorLogLevel)) {
-                var message = context.IsOutermost ?
-                    "Outermost command failed: {Command}" :
-                    "Nested command failed: {Command}";
-                // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-                Log.Log(ErrorLogLevel, e, message, command);
-            }
+            if (activity == null)
+                throw;
+
+            activity.MaybeSetError(e, cancellationToken);
+            var message = context.IsOutermost ?
+                "Outermost command failed: {Command}" :
+                "Nested command failed: {Command}";
+            // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+            Log.IfEnabled(LogLevel.Error)?.Log(ErrorLogLevel, e, message, command);
+            throw;
         }
     }
 
-    protected virtual Activity? StartActivity(ICommand command, CommandContext context)
-    {
-        if (!ShouldTrace(command, context))
-            return null;
-
-        var operationName = command.GetOperationName();
-        var activity = ActivitySource.StartActivity(operationName);
-        if (activity != null) {
-            var tags = new ActivityTagsCollection { { "command", command.ToString() } };
-            var activityEvent = new ActivityEvent(operationName, tags: tags);
-            activity.AddEvent(activityEvent);
-        }
-        return activity;
-    }
+    // Protected methods
 
     protected virtual bool ShouldTrace(ICommand command, CommandContext context)
     {
@@ -64,5 +59,17 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
 
         // Trace the rest
         return true;
+    }
+
+    protected virtual Activity? StartActivity(ICommand command, CommandContext context)
+    {
+        var operationName = command.GetOperationName();
+        var activity = ActivitySource.StartActivity(operationName);
+        if (activity != null) {
+            var tags = new ActivityTagsCollection { { "command", command.ToString() } };
+            var activityEvent = new ActivityEvent(operationName, tags: tags);
+            activity.AddEvent(activityEvent);
+        }
+        return activity;
     }
 }

@@ -25,35 +25,44 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         if (nextIndexOpt is not { } nextIndex)
             return 0; // The log is empty
 
-        using var _ = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
-        var dbContext = await DbHub.CreateDbContext(shard, readWrite: true, cancellationToken).ConfigureAwait(false);
-        await using var _1 = dbContext.ConfigureAwait(false);
-        var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        await using var _2 = tx.ConfigureAwait(false);
-        dbContext.EnableChangeTracking(false);
+        var activity = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
+        try {
+            var dbContext = await DbHub.CreateDbContext(shard, readWrite: true, cancellationToken).ConfigureAwait(false);
+            await using var _1 = dbContext.ConfigureAwait(false);
+            var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            await using var _2 = tx.ConfigureAwait(false);
+            dbContext.EnableChangeTracking(false);
 
-        var dbEntries = dbContext.Set<TDbEntry>();
-        var entries = await dbEntries.WithHints(LogKind.GetReadBatchQueryHints())
-            // ReSharper disable once AccessToModifiedClosure
-            .Where(o => o.Index >= nextIndex)
-            .OrderBy(o => o.Index)
-            .Take(batchSize)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-        if (entries.Count == 0)
-            return 0;
+            var dbEntries = dbContext.Set<TDbEntry>();
+            var entries = await dbEntries.WithHints(LogKind.GetReadBatchQueryHints())
+                // ReSharper disable once AccessToModifiedClosure
+                .Where(o => o.Index >= nextIndex)
+                .OrderBy(o => o.Index)
+                .Take(batchSize)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (entries.Count == 0)
+                return 0;
 
-        var logLevel = entries.Count == batchSize ? LogLevel.Warning : LogLevel.Debug;
-        // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-        Log.IfEnabled(logLevel)?.Log(logLevel,
-            $"{nameof(ProcessBatch)}[{{Shard}}]: got {{Count}}/{{BatchSize}} log entries with Index >= {{LastIndex}}",
-            shard.Value, entries.Count, batchSize, nextIndex);
+            var logLevel = entries.Count == batchSize ? LogLevel.Warning : LogLevel.Debug;
+            // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+            Log.IfEnabled(logLevel)?.Log(logLevel,
+                $"{nameof(ProcessBatch)}[{{Shard}}]: got {{Count}}/{{BatchSize}} log entries with Index >= {{LastIndex}}",
+                shard.Value, entries.Count, batchSize, nextIndex);
 
-        await GetProcessTasks(shard, entries, nextIndex, cancellationToken)
-            .Collect(Settings.ConcurrencyLevel)
-            .ConfigureAwait(false);
-        NextIndexes[shard] = entries[^1].Index + 1;
-        return entries.Count;
+            await GetProcessTasks(shard, entries, nextIndex, cancellationToken)
+                .Collect(Settings.ConcurrencyLevel)
+                .ConfigureAwait(false);
+            NextIndexes[shard] = entries[^1].Index + 1;
+            return entries.Count;
+        }
+        catch (Exception e) {
+            activity?.MaybeSetError(e, cancellationToken);
+            throw;
+        }
+        finally {
+            activity?.Dispose();
+        }
     }
 
     protected virtual IEnumerable<Task> GetProcessTasks(

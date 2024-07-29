@@ -52,31 +52,40 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
         while (!cancellationToken.IsCancellationRequested) {
             await Task.Delay(Settings.StatisticsPeriod.Next(), cancellationToken).ConfigureAwait(false);
 
-            using var _ = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
-            var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
-            await using var _1 = dbContext.ConfigureAwait(false);
-            dbContext.EnableChangeTracking(false);
+            var activity = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
+            try {
+                var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
+                await using var _1 = dbContext.ConfigureAwait(false);
+                dbContext.EnableChangeTracking(false);
 
-            var now = Clocks.SystemClock.Now.ToDateTime();
-            var dbEntries = dbContext.Set<TDbEntry>().AsQueryable();
-            var queuedCount = await dbEntries
-                .CountAsync(o => o.State == LogEntryState.New && o.DelayUntil > now, cancellationToken)
-                .ConfigureAwait(false);
-            var pendingCount = await dbEntries
-                .CountAsync(o => o.State == LogEntryState.New && o.DelayUntil <= now, cancellationToken)
-                .ConfigureAwait(false);
-            var processedCount = await dbEntries
-                .CountAsync(o => o.State == LogEntryState.Processed, cancellationToken)
-                .ConfigureAwait(false);
-            var discardedCount = await dbEntries
-                .CountAsync(o => o.State == LogEntryState.Discarded, cancellationToken)
-                .ConfigureAwait(false);
+                var now = Clocks.SystemClock.Now.ToDateTime();
+                var dbEntries = dbContext.Set<TDbEntry>().AsQueryable();
+                var queuedCount = await dbEntries
+                    .CountAsync(o => o.State == LogEntryState.New && o.DelayUntil > now, cancellationToken)
+                    .ConfigureAwait(false);
+                var pendingCount = await dbEntries
+                    .CountAsync(o => o.State == LogEntryState.New && o.DelayUntil <= now, cancellationToken)
+                    .ConfigureAwait(false);
+                var processedCount = await dbEntries
+                    .CountAsync(o => o.State == LogEntryState.Processed, cancellationToken)
+                    .ConfigureAwait(false);
+                var discardedCount = await dbEntries
+                    .CountAsync(o => o.State == LogEntryState.Discarded, cancellationToken)
+                    .ConfigureAwait(false);
 
-            var totalCount = queuedCount + pendingCount + processedCount + discardedCount;
-            Log.LogInformation(
-                "Statistics: {QueuedCount} queued, {PendingCount} pending, {ProcessedCount} processed, " +
-                "{DiscardedCount} discarded out of {TotalCount} entries",
-                queuedCount, pendingCount, processedCount, discardedCount, totalCount);
+                var totalCount = queuedCount + pendingCount + processedCount + discardedCount;
+                Log.LogInformation(
+                    "Statistics: {QueuedCount} queued, {PendingCount} pending, {ProcessedCount} processed, " +
+                    "{DiscardedCount} discarded out of {TotalCount} entries",
+                    queuedCount, pendingCount, processedCount, discardedCount, totalCount);
+            }
+            catch (Exception e) {
+                activity?.MaybeSetError(e, cancellationToken);
+                throw;
+            }
+            finally {
+                activity?.Dispose();
+            }
         }
     }
 
@@ -84,34 +93,43 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
     {
         var minDelayUntil = SystemClock.Now.ToDateTime() - Settings.MaxEntryAge;
 
-        using var _ = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
-        var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
-        await using var _1 = dbContext.ConfigureAwait(false);
-        dbContext.EnableChangeTracking(false);
+        var activity = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
+        try {
+            var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
+            await using var _1 = dbContext.ConfigureAwait(false);
+            dbContext.EnableChangeTracking(false);
 
 #if NET7_0_OR_GREATER
-        return await dbContext.Set<TDbEntry>()
-            .Where(o => o.DelayUntil <= minDelayUntil)
-            .OrderBy(o => o.DelayUntil)
-            .Take(batchSize)
-            .ExecuteDeleteAsync(cancellationToken)
-            .ConfigureAwait(false);
+            return await dbContext.Set<TDbEntry>()
+                .Where(o => o.DelayUntil <= minDelayUntil)
+                .OrderBy(o => o.DelayUntil)
+                .Take(batchSize)
+                .ExecuteDeleteAsync(cancellationToken)
+                .ConfigureAwait(false);
 #else
-        var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        await using var _2 = tx.ConfigureAwait(false);
+            var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            await using var _2 = tx.ConfigureAwait(false);
 
-        var entries = await dbContext.Set<TDbEntry>(DbHintSet.UpdateSkipLocked)
-            .Where(o => o.DelayUntil <= minDelayUntil)
-            .OrderBy(o => o.DelayUntil)
-            .Take(batchSize)
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-        if (entries.Count == 0)
-            return 0;
+            var entries = await dbContext.Set<TDbEntry>(DbHintSet.UpdateSkipLocked)
+                .Where(o => o.DelayUntil <= minDelayUntil)
+                .OrderBy(o => o.DelayUntil)
+                .Take(batchSize)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            if (entries.Count == 0)
+                return 0;
 
-        dbContext.Set<TDbEntry>().RemoveRange(entries);
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
-        return entries.Count;
+            dbContext.Set<TDbEntry>().RemoveRange(entries);
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            return entries.Count;
 #endif
+        }
+        catch (Exception e) {
+            activity?.MaybeSetError(e, cancellationToken);
+            throw;
+        }
+        finally {
+            activity?.Dispose();
+        }
     }
 }
