@@ -12,9 +12,9 @@ public static class ActivityContextExt
         var traceParent = string.Create(55, activityContext, WriteTraceParentIntoSpan);
 #else
         var traceParent = string.Concat(
-            "00-", context.TraceId.ToHexString(),
-            "-", context.SpanId.ToHexString(),
-            (context.TraceFlags & ActivityTraceFlags.Recorded) != 0 ? "-01" : "-00");
+            "00-", activityContext.TraceId.ToHexString(),
+            "-", activityContext.SpanId.ToHexString(),
+            (activityContext.TraceFlags & ActivityTraceFlags.Recorded) != 0 ? "-01" : "-00");
 #endif
         var traceState = activityContext.TraceState ?? "";
         return (traceParent, traceState);

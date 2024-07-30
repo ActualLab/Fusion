@@ -25,6 +25,19 @@ public static class RpcActivityInjector
         }
         var traceState = headers.TryGet(RpcHeaderNames.W3CTraceState);
         // Log.LogWarning("TryExtract: {TraceParent} | {TraceState}", traceParent, traceState);
+#if NET7_0_OR_GREATER
         return ActivityContext.TryParse(traceParent, traceState, true, out activityContext);
+#else
+        if (!ActivityContext.TryParse(traceParent, traceState, out activityContext))
+            return false;
+
+        activityContext = new ActivityContext(
+            activityContext.TraceId,
+            activityContext.SpanId,
+            activityContext.TraceFlags,
+            activityContext.TraceState,
+            isRemote: true); // That's the only reason we recreate it
+        return true;
+#endif
     }
 }
