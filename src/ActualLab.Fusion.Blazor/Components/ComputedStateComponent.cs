@@ -44,25 +44,22 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
         var stateOptions = GetStateOptions();
         Func<CancellationToken, Task<TState>> computer =
             (Options & ComputedStateComponentOptions.SynchronizeComputeState) == 0
-                ? UnsynchronizedComputeState
+                ? ComputeState
                 : stateOptions.FlowExecutionContext && DispatcherInfo.IsExecutionContextFlowSupported(this)
                     ? SynchronizedComputeState
                     : SynchronizedComputeStateWithManualExecutionContextFlow;
         return (new ComputedStateComponentState<TState>(stateOptions, computer, Services), stateOptions);
 
-        Task<TState> UnsynchronizedComputeState(CancellationToken cancellationToken)
-            => ComputeState(cancellationToken);
-
         Task<TState> SynchronizedComputeState(CancellationToken cancellationToken)
             => this.GetDispatcher().InvokeAsync(() => ComputeState(cancellationToken));
 
-        Task<TState> SynchronizedComputeStateWithManualExecutionContextFlow(CancellationToken cancellationToken)
-        {
+        Task<TState> SynchronizedComputeStateWithManualExecutionContextFlow(CancellationToken cancellationToken) {
             var executionContext = ExecutionContext.Capture();
+            var dispatcher = this.GetDispatcher();
             var taskFactory = () => ComputeState(cancellationToken);
             return executionContext == null
-                ? this.GetDispatcher().InvokeAsync(taskFactory)
-                : this.GetDispatcher().InvokeAsync(() => ExecutionContextExt.Start(executionContext, taskFactory));
+                ? dispatcher.InvokeAsync(taskFactory)
+                : dispatcher.InvokeAsync(() => ExecutionContextExt.Start(executionContext, taskFactory));
         }
     }
 
