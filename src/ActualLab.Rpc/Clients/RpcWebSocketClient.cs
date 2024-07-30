@@ -70,7 +70,7 @@ public class RpcWebSocketClient(
         }
 
         public static WebSocketOwner DefaultWebSocketOwnerFactory(RpcWebSocketClient client, RpcClientPeer peer)
-            => new(peer.Ref.Key, new ClientWebSocket(), client.Services);
+            => new(peer.Ref.ToString(), new ClientWebSocket(), client.Services);
 
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public static WebSocketChannel<RpcMessage> DefaultWebSocketChannelFactory(
@@ -91,9 +91,13 @@ public class RpcWebSocketClient(
     public virtual async Task<RpcConnection> ConnectRemote(
         RpcClientPeer clientPeer, Uri? uri, CancellationToken cancellationToken)
     {
-        if (uri == null) // The expected behavior for null URI
+        if (uri == null) {
+            // The expected behavior for null URI is to wait indefinitely
+            Log.LogWarning("'{PeerRef}': No connection URL - waiting for peer termination", clientPeer.Ref);
             await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
 
+        // Log.LogInformation("'{PeerRef}': Connection URL: {Url}", clientPeer.Ref, uri);
         var hub = clientPeer.Hub;
         var connectCts = new CancellationTokenSource();
         var connectToken = connectCts.Token;

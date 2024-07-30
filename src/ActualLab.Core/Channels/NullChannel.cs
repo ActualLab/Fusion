@@ -10,7 +10,7 @@ public class NullChannel<T> : Channel<T>
         { }
 
         public override Task Completion
-            => TaskCompletionSourceExt.New<Unit>().Task; // Note that it returns unreferenced Task!
+            => TaskExt.NewNeverEndingUnreferenced();
 
         public override bool TryRead(out T item)
         {

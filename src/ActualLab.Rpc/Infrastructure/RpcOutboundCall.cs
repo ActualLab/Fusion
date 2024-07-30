@@ -140,7 +140,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (hash != null)
             headers = headers.With(new(RpcHeaderNames.Hash, hash));
         if (activity != null)
-            headers = RpcPropagationContext.Inject(headers, activity);
+            headers = RpcActivityInjector.Inject(headers, activity.Context);
 
         return new RpcMessage(
             Context.CallTypeId, relatedId,
@@ -181,8 +181,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public void Complete()
     {
-        if (Peer.OutboundCalls.Complete(this))
-            CancellationHandler.Dispose();
+        if (!Peer.OutboundCalls.Complete(this))
+            return;
+
+        CancellationHandler.Dispose();
         Context.Trace?.Complete(this);
     }
 

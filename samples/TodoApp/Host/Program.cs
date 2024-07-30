@@ -22,6 +22,7 @@ using ActualLab.Rpc.Server;
 using ActualLab.Rpc.Testing;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
+using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.Hosting.StaticWebAssets;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -110,25 +111,29 @@ void ConfigureServices()
     // DbContext & related services
     DbOperationScope.Options.DefaultIsolationLevel = IsolationLevel.RepeatableRead;
     services.AddDbContextServices<AppDbContext>(db => {
-        // Uncomment if you'll be using AddRedisOperationLogChangeTracking
+        // Uncomment if you'll be using AddRedisOperationLogWatcher
         // db.AddRedisDb("localhost", "Fusion.Samples.TodoApp");
         db.AddOperations(operations => {
             operations.ConfigureOperationLogReader(_ => new() {
-                // We use FileBasedDbOperationLogChangeTracking, so unconditional wake up period
+                // We use AddFileSystemOperationLogWatcher, so unconditional check period
                 // can be arbitrary long - all depends on the reliability of Notifier-Watcher chain.
                 CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
             });
             operations.ConfigureEventLogReader(_ => new() {
                 CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
             });
-            operations.AddFileSystemOperationLogWatcher();
+            operations.AddNpgsqlOperationLogWatcher();
             // operations.AddRedisOperationLogWatcher();
+            // operations.AddFileSystemOperationLogWatcher();
         });
         db.AddEntityResolver<string, DbTodo>();
 
         if (hostSettings.UseTenants) {
             db.AddSharding(sharding => {
-                sharding.AddShardRegistry(Enumerable.Range(0, hostSettings.TenantCount).Select(i => new DbShard($"tenant{i}")));
+                var tenantIndexes = hostSettings.TenantIndex is { } tenantIndex
+                    ? Enumerable.Range(tenantIndex, 1) // Serve just a single tenant
+                    : Enumerable.Range(0, hostSettings.TenantCount); // All tenants are served
+                sharding.AddShardRegistry(tenantIndexes.Select(i => new DbShard($"tenant{i}")));
                 sharding.AddTransientShardDbContextFactory(ConfigureShardDbContext);
             });
         }
@@ -155,7 +160,9 @@ void ConfigureServices()
     fusion.AddDbAuthService<AppDbContext, string>();
 
     if (hostSettings.UseTenants) {
-        var tenantTagExtractor = TenantExt.CreateTagExtractor(hostSettings.Tenant0Port, hostSettings.TenantCount, hostSettings.Port);
+        var tenantTagExtractor = hostSettings.TenantIndex is { } tenantIndex
+            ? _ => $"tenant{tenantIndex}"
+            : TenantExt.CreateTagExtractor(hostSettings.Tenant0Port, hostSettings.TenantCount, hostSettings.Port);
         fusionServer.ConfigureSessionMiddleware(c => new() {
             TagProvider = (session, httpContext) => session.WithTag(TenantExt.TagName, tenantTagExtractor.Invoke(httpContext)),
         });
@@ -230,6 +237,7 @@ void ConfigureServices()
     services.AddRazorComponents();
 #endif
     fusion.AddBlazor().AddAuthentication().AddPresenceReporter(); // Must follow services.AddServerSideBlazor()!
+    services.AddScoped<CircuitHandler, ActivityResetCircuitHandler>();
 }
 
 // ReSharper disable once VariableHidesOuterVariable

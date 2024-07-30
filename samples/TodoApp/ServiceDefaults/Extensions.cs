@@ -5,6 +5,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.ServiceDiscovery;
+using Npgsql;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -60,8 +61,8 @@ public static class Extensions
                 metrics.AddMeter("ActualLab.Fusion");
                 metrics.AddMeter("ActualLab.Fusion.EntityFramework");
             })
-            .WithTracing(tracing =>
-            {
+            .WithTracing(tracing => {
+                tracing.SetSampler(_ => new AlwaysOnSampler());
                 tracing.AddAspNetCoreInstrumentation()
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()
@@ -71,6 +72,9 @@ public static class Extensions
                 tracing.AddSource("ActualLab.CommandR");
                 tracing.AddSource("ActualLab.Fusion");
                 tracing.AddSource("ActualLab.Fusion.EntityFramework");
+                tracing.AddSource("Templates.TodoApp.UI");
+                // tracing.AddNpgsql();
+                // tracing.AddConsoleExporter();
             });
 
         builder.AddOpenTelemetryExporters();

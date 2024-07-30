@@ -155,6 +155,8 @@
     <PackageReference Update="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryVersion)" />
     <PackageReference Update="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryVersion)" />
     <PackageReference Update="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryVersion)" />
+    <PackageReference Update="OpenTelemetry.Exporter.Console" Version="$(OpenTelemetryVersion)" />
+    <PackageReference Update="Npgsql.OpenTelemetry" Version="8.0.3" /> <!-- Used only in TodoApp sample -->
 
     <!-- Aspire -->
     <PackageReference Update="Aspire.Hosting.AppHost" Version="8.1.0" />

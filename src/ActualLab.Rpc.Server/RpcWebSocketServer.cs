@@ -60,7 +60,7 @@ public class RpcWebSocketServer(
             var acceptWebSocketTask = context.WebSockets.AcceptWebSocketAsync();
 #endif
             webSocket = await acceptWebSocketTask.ConfigureAwait(false);
-            var webSocketOwner = new WebSocketOwner(peer.Ref.Key, webSocket, Services);
+            var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
             var channel = new WebSocketChannel<RpcMessage>(
                 Settings.WebSocketChannelOptions, webSocketOwner, cancellationToken) {
                 OwnsWebSocketOwner = false,

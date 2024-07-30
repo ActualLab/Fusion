@@ -28,9 +28,9 @@ public static partial class TaskExt
     // GC from collecting the awaiter in case nothing else "holds" it -
     // and assuming the task is really never ending, this is the right thing to do.
     public static Task NewNeverEndingUnreferenced()
-        => TaskCompletionSourceExt.New<Unit>().Task;
+        => AsyncTaskMethodBuilderExt.New<Unit>().Task;
     public static Task<T> NewNeverEndingUnreferenced<T>()
-        => TaskCompletionSourceExt.New<T>().Task;
+        => AsyncTaskMethodBuilderExt.New<T>().Task;
 
     // ToValueTask
 

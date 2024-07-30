@@ -1,12 +1,13 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using ActualLab.Rpc.Infrastructure;
-using OpenTelemetry;
 
 namespace ActualLab.Rpc.Diagnostics;
 
 public class RpcDefaultCallTracer : RpcCallTracer
 {
+    public readonly bool TraceInbound;
+    public readonly bool TraceOutbound;
     public readonly string InboundCallName;
     public readonly string OutboundCallName;
     public readonly ActivitySource ActivitySource;
@@ -15,8 +16,11 @@ public class RpcDefaultCallTracer : RpcCallTracer
     public readonly Counter<long> InboundCancellationCounter;
     public readonly Histogram<double> InboundDurationHistogram;
 
-    public RpcDefaultCallTracer(RpcMethodDef method) : base(method)
+    public RpcDefaultCallTracer(RpcMethodDef method, bool traceInbound = true, bool traceOutbound = true)
+        : base(method)
     {
+        TraceInbound = traceInbound;
+        TraceOutbound = traceOutbound;
         InboundCallName = $"in.{method.Service.Name.Value}/{method.Name.Value}";
         OutboundCallName = $"out.{method.Service.Name.Value}/{method.Name.Value}";
         ActivitySource = method.Hub.ActivitySource;
@@ -36,21 +40,23 @@ public class RpcDefaultCallTracer : RpcCallTracer
 
     public override RpcInboundCallTrace? StartInboundTrace(RpcInboundCall call)
     {
-        Activity? activity;
-        var propagationContext = RpcPropagationContext.Extract(call.Context.Message.Headers);
-        if (propagationContext == default)
-            activity = ActivitySource.StartActivity(InboundCallName, ActivityKind.Server);
-        else {
-            Baggage.Current = propagationContext.Baggage;
-            activity = ActivitySource.StartActivity(InboundCallName, ActivityKind.Server,
-                parentContext: propagationContext.ActivityContext,
-                links: [new ActivityLink(propagationContext.ActivityContext)]);
-        }
+        if (!TraceInbound)
+            return null;
+
+        var headers = call.Context.Message.Headers;
+        var activity = headers != null && RpcActivityInjector.TryExtract(headers, out var activityContext)
+            ? ActivitySource.StartActivity(InboundCallName, ActivityKind.Server,
+                parentContext: activityContext,
+                links: [new ActivityLink(activityContext)])
+            : ActivitySource.StartActivity(InboundCallName, ActivityKind.Server);
         return new RpcDefaultInboundCallTrace(this, activity);
     }
 
     public override RpcOutboundCallTrace? StartOutboundTrace(RpcOutboundCall call)
     {
+        if (!TraceOutbound)
+            return null;
+
         // Activity should never become Current
         var lastActivity = Activity.Current;
         var activity = ActivitySource.StartActivity(OutboundCallName, ActivityKind.Client);

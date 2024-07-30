@@ -7,6 +7,7 @@ public class HostSettings
     public bool IsAspireManaged { get; set; }
     public HostKind HostKind { get; set; } = HostKind.SingleServer;
     public bool UseTenants { get; set; } = true;
+    public int? TenantIndex { get; set; }
     public int TenantCount { get; set; } = 3;
     public int Tenant0Port { get; set; } = 5005;
     public int? Port { get; set; }

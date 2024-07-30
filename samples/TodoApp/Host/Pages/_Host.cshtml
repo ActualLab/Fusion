@@ -1,6 +1,7 @@
 ﻿@page "/"
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @namespace Templates.TodoApp.Host.Pages
+@using System.Diagnostics
 @using ActualLab.Fusion.Blazor
 @using Templates.TodoApp.UI
 @using ActualLab.Fusion.Server.Authentication
@@ -14,6 +15,7 @@
     var isServerSideBlazor = BlazorModeEndpoint.IsBlazorServer(HttpContext);
     var isCloseWindowRequest = ServerAuthHelper.IsCloseWindowRequest(HttpContext, out var closeWindowFlowName);
     Layout = null;
+    Activity.Current = null; // We don't want to "infect" Blazor circuit with it
 }
 
 <!DOCTYPE html>

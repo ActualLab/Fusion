@@ -32,7 +32,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcInboundMiddlewares InboundMiddlewares;
     internal readonly RpcOutboundMiddlewares OutboundMiddlewares;
     internal readonly RpcPeerFactory PeerFactory;
-    internal readonly RpcClientConnectionFactory ClientConnectionFactory;
     internal readonly RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer;
     internal readonly RpcPeerTerminalErrorDetector PeerTerminalErrorDetector;
     internal readonly RpcMethodTracerFactory MethodTracerFactory;
@@ -84,7 +83,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         InboundMiddlewares = services.GetRequiredService<RpcInboundMiddlewares>();
         OutboundMiddlewares = services.GetRequiredService<RpcOutboundMiddlewares>();
         PeerFactory = services.GetRequiredService<RpcPeerFactory>();
-        ClientConnectionFactory = services.GetRequiredService<RpcClientConnectionFactory>();
         ClientPeerReconnectDelayer = services.GetRequiredService<RpcClientPeerReconnectDelayer>();
         PeerTerminalErrorDetector = services.GetRequiredService<RpcPeerTerminalErrorDetector>();
         MethodTracerFactory = services.GetRequiredService<RpcMethodTracerFactory>();

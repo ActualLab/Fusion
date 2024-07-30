@@ -20,8 +20,6 @@ public delegate RpcPeer RpcPeerFactory(RpcHub hub, RpcPeerRef peerRef);
 public delegate RpcInboundContext RpcInboundContextFactory(
     RpcPeer peer, RpcMessage message, CancellationToken cancellationToken);
 public delegate bool RpcInboundCallFilter(RpcPeer peer, RpcMethodDef method);
-public delegate Task<RpcConnection> RpcClientConnectionFactory(
-    RpcClientPeer peer, CancellationToken cancellationToken);
 public delegate Task<RpcConnection> RpcServerConnectionFactory(
     RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties, CancellationToken cancellationToken);
 public delegate bool RpcPeerTerminalErrorDetector(Exception error);
@@ -102,11 +100,6 @@ public static class RpcDefaultDelegates
     public static RpcInboundCallFilter InboundCallFilter { get; set; } =
         static (peer, method) => !method.IsBackend || peer.Ref.IsBackend;
 
-    public static RpcClientConnectionFactory ClientConnectionFactory { get; set; } =
-#pragma warning disable IL2026
-        static (peer, cancellationToken) => peer.Hub.Client.Connect(peer, cancellationToken);
-#pragma warning restore IL2026
-
     public static RpcServerConnectionFactory ServerConnectionFactory { get; set; } =
         static (peer, channel, options, cancellationToken) => Task.FromResult(new RpcConnection(channel, options));
 
@@ -114,7 +107,7 @@ public static class RpcDefaultDelegates
         static error => error is RpcReconnectFailedException or RpcRerouteException;
 
     public static RpcMethodTracerFactory CallTracerFactory { get; set; } =
-        static method => new RpcDefaultCallTracer(method);
+        static method => new RpcDefaultCallTracer(method, traceOutbound: method.IsBackend);
 
     public static RpcCallLoggerFactory CallLoggerFactory { get; set; } =
         static (peer, filter, log, logLevel) => new RpcCallLogger(peer, filter, log, logLevel);

@@ -105,14 +105,14 @@ public static partial class ComputedExt
         if (computed.ConsistencyState == ConsistencyState.Invalidated)
             return Task.CompletedTask;
 
-        var tcs = TaskCompletionSourceExt.New<Unit>();
+        var tcs = AsyncTaskMethodBuilderExt.New();
         if (cancellationToken.CanBeCanceled) {
             cancellationToken.ThrowIfCancellationRequested();
             return new WhenInvalidatedClosure(tcs, computed, cancellationToken).Task;
         }
 
         // No way to cancel / unregister the handler here
-        computed.Invalidated += _ => tcs.TrySetResult(default);
+        computed.Invalidated += _ => tcs.TrySetResult();
         return tcs.Task;
     }
 
@@ -122,14 +122,14 @@ public static partial class ComputedExt
         if (computed.ConsistencyState == ConsistencyState.Invalidated)
             return Task.CompletedTask;
 
-        var tcs = TaskCompletionSourceExt.New<Unit>();
+        var tcs = AsyncTaskMethodBuilderExt.New();
         if (cancellationToken.CanBeCanceled) {
             cancellationToken.ThrowIfCancellationRequested();
             return new WhenInvalidatedClosure(tcs, computed, cancellationToken).Task;
         }
 
         // No way to cancel / unregister the handler here
-        computed.Invalidated += _ => tcs.TrySetResult(default);
+        computed.Invalidated += _ => tcs.TrySetResult();
         return tcs.Task;
     }
 

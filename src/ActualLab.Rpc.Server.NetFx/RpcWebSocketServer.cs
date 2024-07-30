@@ -80,7 +80,7 @@ public class RpcWebSocketServer(
             }
 
             webSocket = wsContext.WebSocket;
-            var webSocketOwner = new WebSocketOwner(peer.Ref.Key, webSocket, Services);
+            var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
             var channel = new WebSocketChannel<RpcMessage>(
                 Settings.WebSocketChannelOptions, webSocketOwner, cancellationToken) {
                 OwnsWebSocketOwner = false,

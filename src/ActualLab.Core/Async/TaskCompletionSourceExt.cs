@@ -30,25 +30,27 @@ public static partial class TaskCompletionSourceExt
 
     // WithXxx
 
-    public static TaskCompletionSource<T> WithResult<T>(this TaskCompletionSource<T> value, T result)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TaskCompletionSource<T> WithResult<T>(this TaskCompletionSource<T> target, T result)
     {
-        value.TrySetResult(result);
-        return value;
+        target.TrySetResult(result);
+        return target;
     }
 
-    public static TaskCompletionSource<T> WithException<T>(this TaskCompletionSource<T> value, Exception error)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TaskCompletionSource<T> WithException<T>(this TaskCompletionSource<T> target, Exception error)
     {
-        value.TrySetException(error);
-        return value;
+        target.TrySetException(error);
+        return target;
     }
 
-    public static TaskCompletionSource<T> WithCancellation<T>(this TaskCompletionSource<T> value, CancellationToken cancellationToken = default)
+    public static TaskCompletionSource<T> WithCancellation<T>(this TaskCompletionSource<T> target, CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)
-            value.TrySetCanceled(cancellationToken);
+            target.TrySetCanceled(cancellationToken);
         else
-            value.TrySetCanceled();
-        return value;
+            target.TrySetCanceled();
+        return target;
     }
 
     // (Try)SetFromTask

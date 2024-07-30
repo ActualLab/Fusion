@@ -87,7 +87,6 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.RerouteDelayer);
         services.AddSingleton(_ => RpcDefaultDelegates.InboundContextFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.PeerFactory);
-        services.AddSingleton(_ => RpcDefaultDelegates.ClientConnectionFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.ServerConnectionFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.PeerTerminalErrorDetector);
         services.AddSingleton(_ => RpcDefaultDelegates.CallTracerFactory);

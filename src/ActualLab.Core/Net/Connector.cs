@@ -207,9 +207,9 @@ public sealed class Connector<TConnection> : WorkerBase
         public Task<TConnection> ConnectionTask => ConnectionSource.Task;
 
         public static State New()
-            => new (TaskCompletionSourceExt.New<TConnection>());
+            => new(TaskCompletionSourceExt.New<TConnection>());
         public static State NewCancelled(CancellationToken cancellationToken)
-            => new (TaskCompletionSourceExt.New<TConnection>().WithCancellation(cancellationToken));
+            => new(TaskCompletionSourceExt.New<TConnection>().WithCancellation(cancellationToken));
 
         public void Dispose()
         {

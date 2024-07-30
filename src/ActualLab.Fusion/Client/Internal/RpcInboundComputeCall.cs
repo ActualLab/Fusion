@@ -47,6 +47,9 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
         Computed<TResult>? computed;
         CancellationToken stopCompletionToken;
         lock (Lock) {
+            // 0. Complete trace
+            CompleteTrace();
+
             // 1. Check if we even need to do any work here
             if (CancellationToken.IsCancellationRequested) {
                 Unregister();

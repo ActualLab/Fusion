@@ -18,8 +18,8 @@ public interface IRemoteComputed : IComputed, IMaybeCachedValue, IDisposable
 
 public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
 {
-    internal readonly TaskCompletionSource<RpcOutboundComputeCall<T>?> CallSource;
-    internal readonly TaskCompletionSource<Unit> SynchronizedSource;
+    internal readonly AsyncTaskMethodBuilder<RpcOutboundComputeCall<T>?> CallSource;
+    internal readonly AsyncTaskMethodBuilder SynchronizedSource;
 
     Task IRemoteComputed.WhenCallBound => CallSource.Task;
     public Task<RpcOutboundComputeCall<T>?> WhenCallBound => CallSource.Task;
@@ -34,9 +34,9 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         RpcCacheEntry? cacheEntry)
         : base(options, input, output, true, SkipComputedRegistration.Option)
     {
-        CallSource = TaskCompletionSourceExt.New<RpcOutboundComputeCall<T>?>();
+        CallSource = AsyncTaskMethodBuilderExt.New<RpcOutboundComputeCall<T>?>();
         CacheEntry = cacheEntry;
-        SynchronizedSource = TaskCompletionSourceExt.New<Unit>();
+        SynchronizedSource = AsyncTaskMethodBuilderExt.New();
         ComputedRegistry.Instance.Register(this);
         StartAutoInvalidation();
     }
@@ -50,7 +50,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         RpcOutboundComputeCall<T> call)
         : base(options, input, output, true, SkipComputedRegistration.Option)
     {
-        CallSource = TaskCompletionSourceExt.New<RpcOutboundComputeCall<T>?>().WithResult(call);
+        CallSource = AsyncTaskMethodBuilderExt.New<RpcOutboundComputeCall<T>?>().WithResult(call);
         CacheEntry = cacheEntry;
         SynchronizedSource = AlwaysSynchronized.Source;
         ComputedRegistry.Instance.Register(this);

@@ -26,8 +26,8 @@ public interface IStateSnapshot<T> : IStateSnapshot
 
 public class StateSnapshot<T> : IStateSnapshot<T>
 {
-    private TaskCompletionSource<Unit> WhenUpdatingSource { get; }
-    private TaskCompletionSource<Unit> WhenUpdatedSource { get; }
+    private AsyncTaskMethodBuilder WhenUpdatingSource { get; }
+    private AsyncTaskMethodBuilder WhenUpdatedSource { get; }
 
     public IState<T> State { get; }
     public Computed<T> Computed { get; }
@@ -46,8 +46,8 @@ public class StateSnapshot<T> : IStateSnapshot<T>
         State = state;
         Computed = computed;
         LastNonErrorComputed = computed;
-        WhenUpdatingSource = TaskCompletionSourceExt.New<Unit>();
-        WhenUpdatedSource = TaskCompletionSourceExt.New<Unit>();
+        WhenUpdatingSource = AsyncTaskMethodBuilderExt.New();
+        WhenUpdatedSource = AsyncTaskMethodBuilderExt.New();
         UpdateCount = 0;
         ErrorCount = 0;
         RetryCount = 0;
@@ -57,8 +57,8 @@ public class StateSnapshot<T> : IStateSnapshot<T>
     {
         State = prevSnapshot.State;
         Computed = computed;
-        WhenUpdatingSource = TaskCompletionSourceExt.New<Unit>();
-        WhenUpdatedSource = TaskCompletionSourceExt.New<Unit>();
+        WhenUpdatingSource = AsyncTaskMethodBuilderExt.New();
+        WhenUpdatedSource = AsyncTaskMethodBuilderExt.New();
         var error = computed.Error;
         if (error == null) {
             LastNonErrorComputed = computed;
@@ -93,11 +93,11 @@ public class StateSnapshot<T> : IStateSnapshot<T>
     public Task WhenUpdated() => WhenUpdatedSource.Task;
 
     protected internal void OnUpdating()
-        => WhenUpdatingSource.TrySetResult(default);
+        => WhenUpdatingSource.TrySetResult();
 
     protected internal void OnUpdated()
     {
-        WhenUpdatingSource.TrySetResult(default);
-        WhenUpdatedSource.TrySetResult(default);
+        WhenUpdatingSource.TrySetResult();
+        WhenUpdatedSource.TrySetResult();
     }
 }

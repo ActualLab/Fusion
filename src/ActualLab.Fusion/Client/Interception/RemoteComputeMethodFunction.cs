@@ -157,7 +157,7 @@ public class RemoteComputeMethodFunction<T>(
             input.MethodDef.ComputedOptions,
             input, result,
             cacheEntry, call!);
-        existing?.SynchronizedSource.TrySetResult(default);
+        existing?.SynchronizedSource.TrySetResult();
         return computed;
     }
 
@@ -273,7 +273,7 @@ public class RemoteComputeMethodFunction<T>(
         releaser.MarkLockedLocally();
         if (!cacheValue.IsNone && cachedComputed.CacheEntry is { } oldCacheEntry && cacheValue.HashOrDataEquals(oldCacheEntry.Value)) {
             // Existing cached entry is still intact
-            cachedComputed.SynchronizedSource.TrySetResult(default);
+            cachedComputed.SynchronizedSource.TrySetResult();
             return;
         }
 
@@ -286,7 +286,7 @@ public class RemoteComputeMethodFunction<T>(
             input, result,
             cacheEntry, call);
         computed.RenewTimeouts(true);
-        cachedComputed.SynchronizedSource.TrySetResult(default);
+        cachedComputed.SynchronizedSource.TrySetResult();
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

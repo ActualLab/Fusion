@@ -241,8 +241,15 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected virtual Task CompleteAndSendResult()
     {
-        var mustSendResult = !CancellationToken.IsCancellationRequested;
+        CompleteTrace();
         Unregister();
+        return CancellationToken.IsCancellationRequested
+            ? Task.CompletedTask
+            : SendResult();
+    }
+
+    protected void CompleteTrace()
+    {
         var durationMs = Context.CreatedAt.Elapsed.TotalMilliseconds;
         Trace?.Complete(this, durationMs);
         if (RpcMeters.ServerCallCounter.Enabled) {
@@ -251,9 +258,6 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
                 (ResultTask.IsCanceled ? RpcMeters.ServerCancellationCounter : RpcMeters.ServerErrorCounter).Add(1);
             RpcMeters.ServerDurationHistogram.Record(durationMs);
         }
-        return mustSendResult
-            ? SendResult()
-            : Task.CompletedTask;
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
