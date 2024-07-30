@@ -65,7 +65,7 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
                     break;
             }
             catch (Exception e) {
-                activity?.MaybeSetError(e, cancellationToken);
+                activity?.Finalize(e, cancellationToken);
                 throw;
             }
             finally {

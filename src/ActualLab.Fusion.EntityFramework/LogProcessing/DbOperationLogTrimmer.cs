@@ -73,7 +73,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
                 Log.LogInformation("Statistics: {TotalCount} entries, +{EntryRate} entries/s", totalCount, entryRate);
             }
             catch (Exception e) {
-                activity?.MaybeSetError(e, cancellationToken);
+                activity?.Finalize(e, cancellationToken);
                 throw;
             }
             finally {
@@ -124,7 +124,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
 #endif
         }
         catch (Exception e) {
-            activity?.MaybeSetError(e, cancellationToken);
+            activity?.Finalize(e, cancellationToken);
             throw;
         }
         finally {

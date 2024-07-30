@@ -80,7 +80,7 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
                     queuedCount, pendingCount, processedCount, discardedCount, totalCount);
             }
             catch (Exception e) {
-                activity?.MaybeSetError(e, cancellationToken);
+                activity?.Finalize(e, cancellationToken);
                 throw;
             }
             finally {
@@ -125,7 +125,7 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
 #endif
         }
         catch (Exception e) {
-            activity?.MaybeSetError(e, cancellationToken);
+            activity?.Finalize(e, cancellationToken);
             throw;
         }
         finally {

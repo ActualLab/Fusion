@@ -366,7 +366,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
                 return;
             }
             catch (Exception e) {
-                activity?.MaybeSetError(e, cancellationToken);
+                activity?.Finalize(e, cancellationToken);
                 if (e.IsCancellationOf(cancellationToken))
                     throw;
 

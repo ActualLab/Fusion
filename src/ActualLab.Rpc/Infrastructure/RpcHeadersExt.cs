@@ -38,26 +38,42 @@ public static class RpcHeadersExt
         return newHeaders;
     }
 
-    public static RpcHeader[] With(this RpcHeader[]? headers, RpcHeader header)
+    public static RpcHeader[] With(this RpcHeader[]? headers, RpcHeader newHeader)
     {
         if (headers == null || headers.Length == 0)
-            return [header];
+            return [newHeader];
 
-        var newHeaders = new RpcHeader[headers.Length + 1];
-        headers.CopyTo(newHeaders, 0);
-        newHeaders[^1] = header;
-        return newHeaders;
+        var result = new RpcHeader[headers.Length + 1];
+        headers.CopyTo(result, 0);
+        result[^1] = newHeader;
+        return result;
     }
 
-    public static RpcHeader[] With(this RpcHeader[]? headers, RpcHeader header1, RpcHeader header2)
+    public static RpcHeader[] With(this RpcHeader[]? headers, RpcHeader newHeader1, RpcHeader newHeader2)
     {
         if (headers == null || headers.Length == 0)
-            return [header1, header2];
+            return [newHeader1, newHeader2];
 
-        var newHeaders = new RpcHeader[headers.Length + 2];
-        headers.CopyTo(newHeaders, 0);
-        newHeaders[^2] = header1;
-        newHeaders[^1] = header2;
-        return newHeaders;
+        var result = new RpcHeader[headers.Length + 2];
+        headers.CopyTo(result, 0);
+        result[^2] = newHeader1;
+        result[^1] = newHeader2;
+        return result;
+    }
+
+    public static RpcHeader[]? WithMany(this RpcHeader[]? headers, IReadOnlyList<RpcHeader> newHeaders)
+    {
+        var newHeaderCount = newHeaders.Count;
+        if (newHeaderCount == 0)
+            return headers;
+
+        if (headers == null || (headers.Length is var headersLength && headersLength == 0))
+            return newHeaders.ToArray();
+
+        var result = new RpcHeader[headersLength + newHeaderCount];
+        headers.CopyTo(result, 0);
+        for (var i = 0; i < newHeaderCount; i++)
+            result[headersLength + i] = newHeaders[i];
+        return result;
     }
 }

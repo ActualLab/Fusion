@@ -60,7 +60,7 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
             return entries.Count;
         }
         catch (Exception e) {
-            activity?.MaybeSetError(e, cancellationToken);
+            activity?.Finalize(e, cancellationToken);
             throw;
         }
         finally {

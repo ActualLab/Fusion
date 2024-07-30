@@ -64,7 +64,7 @@ public class ComputeServiceCommandCompletionInvalidator(
             await TryInvalidate(context, operation, command, operationItems, index).ConfigureAwait(false);
         }
         catch (Exception e) {
-            activity?.MaybeSetError(e, cancellationToken);
+            activity?.Finalize(e, cancellationToken);
             throw;
         }
         finally {

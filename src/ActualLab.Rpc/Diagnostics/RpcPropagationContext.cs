@@ -1,11 +1,29 @@
 using System.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
+using OpenTelemetry;
+using OpenTelemetry.Context.Propagation;
 
 namespace ActualLab.Rpc.Diagnostics;
 
-public static class RpcHeaderActivityExt
+public static class RpcPropagationContext
 {
-    public static RpcHeader[]? InjectActivity(this RpcHeader[]? headers, Activity activity)
+    public static PropagationContext Extract(RpcHeader[]? headers)
+        => Propagators.DefaultTextMapPropagator
+            .Extract(default, headers,
+                static (headers, name) => headers.TryGet(name) is { } v ? [v] : []);
+
+    public static RpcHeader[]? Inject(RpcHeader[]? headers, Activity activity)
+    {
+        var propagationContext = new PropagationContext(activity.Context, Baggage.Current);
+        var newHeaders = new List<RpcHeader>();
+        Propagators.DefaultTextMapPropagator
+            .Inject(propagationContext, newHeaders,
+                static (headers, key, value) => headers.Add(new RpcHeader(key, value)));
+        return headers.WithMany(newHeaders);
+    }
+
+#if false // Old code
+    public static RpcHeader[]? InjectActivity(RpcHeader[]? headers, Activity activity)
     {
         if (activity.IdFormat == ActivityIdFormat.W3C)
             headers = headers.With(
@@ -17,7 +35,7 @@ public static class RpcHeaderActivityExt
         return headers;
     }
 
-    public static Activity ExtractActivity(this RpcHeader[]? headers, string operationName)
+    public static Activity ExtractActivity(RpcHeader[]? headers, string operationName)
     {
         var activity = new Activity(operationName);
         var parentId = headers.TryGet(RpcHeaderNames.W3CTraceParent)
@@ -34,4 +52,5 @@ public static class RpcHeaderActivityExt
         activity.Start();
         return activity;
     }
+#endif
 }

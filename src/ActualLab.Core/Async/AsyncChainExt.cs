@@ -112,7 +112,7 @@ public static class AsyncChainExt
                     await asyncChain.LogError(log).Start(cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception e) {
-                    activity?.MaybeSetError(e, cancellationToken);
+                    activity?.Finalize(e, cancellationToken);
                     throw;
                 }
                 finally {

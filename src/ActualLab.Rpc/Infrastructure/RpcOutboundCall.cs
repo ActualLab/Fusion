@@ -140,7 +140,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (hash != null)
             headers = headers.With(new(RpcHeaderNames.Hash, hash));
         if (activity != null)
-            headers = headers.InjectActivity(activity);
+            headers = RpcPropagationContext.Inject(headers, activity);
 
         return new RpcMessage(
             Context.CallTypeId, relatedId,

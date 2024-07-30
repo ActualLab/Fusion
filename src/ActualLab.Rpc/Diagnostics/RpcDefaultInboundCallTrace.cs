@@ -9,7 +9,7 @@ public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Acti
     public override void Complete(RpcInboundCall call, double durationMs)
     {
         if (Activity != null) {
-            Activity.MaybeSetError(call.UntypedResultTask, call.CancellationToken);
+            Activity.Finalize(call.UntypedResultTask, call.CancellationToken);
             Activity.Dispose();
         }
         if (!tracer.InboundCallCounter.Enabled)

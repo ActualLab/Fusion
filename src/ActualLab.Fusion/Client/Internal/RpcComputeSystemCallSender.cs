@@ -24,7 +24,7 @@ public sealed class RpcComputeSystemCallSender(IServiceProvider services)
     public Task Invalidate(RpcPeer peer, long callId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, callId, headers);
-        var call = context.PrepareNoWaitCall(InvalidateMethodDef, ArgumentList.Empty)!;
+        var call = context.PrepareCallForSendNoWait(InvalidateMethodDef, ArgumentList.Empty)!;
         return call.SendNoWait(false);
     }
 }

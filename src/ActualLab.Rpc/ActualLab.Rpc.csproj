@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="System.Net.WebSockets" />
     <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="OpenTelemetry.Api" />
   </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">

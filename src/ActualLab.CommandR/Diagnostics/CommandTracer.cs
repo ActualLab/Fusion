@@ -34,7 +34,7 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
             if (activity == null)
                 throw;
 
-            activity.MaybeSetError(e, cancellationToken);
+            activity.Finalize(e, cancellationToken);
             var message = context.IsOutermost ?
                 "Outermost command failed: {Command}" :
                 "Nested command failed: {Command}";

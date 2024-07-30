@@ -52,27 +52,6 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         => new(this, _current);
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcOutboundCall? PrepareNoWaitCall(RpcMethodDef methodDef, ArgumentList arguments)
-    {
-        if (MethodDef != methodDef) {
-            if (MethodDef != null)
-                throw ActualLab.Internal.Errors.AlreadyInvoked(nameof(PrepareCall));
-
-            // MethodDef, Arguments, CancellationToken
-            MethodDef = methodDef;
-            Arguments = arguments;
-            var ctIndex = methodDef.CancellationTokenIndex;
-            CancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
-        }
-
-        // Peer & Call
-        var hub = MethodDef.Hub;
-        Peer ??= hub.CallRouter.Invoke(methodDef, arguments);
-        Call = RpcOutboundCall.New(this);
-        return Call;
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcOutboundCall? PrepareCall(RpcMethodDef methodDef, ArgumentList arguments)
     {
         if (MethodDef != methodDef) {
@@ -101,6 +80,27 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
                 Trace ??= tracer.StartOutboundTrace(Call);
             hub.OutboundMiddlewares.NullIfEmpty()?.OnPrepareCall(this, false);
         }
+        return Call;
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
+    public RpcOutboundCall? PrepareCallForSendNoWait(RpcMethodDef methodDef, ArgumentList arguments)
+    {
+        if (MethodDef != methodDef) {
+            if (MethodDef != null)
+                throw ActualLab.Internal.Errors.AlreadyInvoked(nameof(PrepareCall));
+
+            // MethodDef, Arguments, CancellationToken
+            MethodDef = methodDef;
+            Arguments = arguments;
+            var ctIndex = methodDef.CancellationTokenIndex;
+            CancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
+        }
+
+        // Peer & Call
+        var hub = MethodDef.Hub;
+        Peer ??= hub.CallRouter.Invoke(methodDef, arguments);
+        Call = RpcOutboundCall.New(this);
         return Call;
     }
 

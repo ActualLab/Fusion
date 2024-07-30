@@ -1,16 +1,14 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Diagnostics;
 
 public static class ActivityExt
 {
-    [return: NotNullIfNotNull(nameof(activity))]
-    public static Activity MaybeSetError(this Activity activity, Task errorSource)
+    public static Activity Finalize(this Activity activity, Task errorSource)
     {
         try {
             var error = errorSource.ToResultSynchronously().Error;
-            return activity.MaybeSetError(error, detectCancellation: true);
+            return activity.Finalize(error, detectCancellation: true);
         }
         catch (Exception e) {
             // The task is not completed yet,
@@ -19,12 +17,11 @@ public static class ActivityExt
         }
     }
 
-    [return: NotNullIfNotNull(nameof(activity))]
-    public static Activity MaybeSetError(this Activity activity, Task errorSource, CancellationToken cancellationToken)
+    public static Activity Finalize(this Activity activity, Task errorSource, CancellationToken cancellationToken)
     {
         try {
             var error = errorSource.ToResultSynchronously().Error;
-            return activity.MaybeSetError(error, cancellationToken);
+            return activity.Finalize(error, cancellationToken);
         }
         catch (Exception e) {
             // The task is not completed yet,
@@ -33,28 +30,32 @@ public static class ActivityExt
         }
     }
 
-    [return: NotNullIfNotNull(nameof(activity))]
-    public static Activity MaybeSetError(this Activity activity, Exception? error, CancellationToken cancellationToken)
+    public static Activity Finalize(this Activity activity, Exception? error, CancellationToken cancellationToken)
     {
         if (error == null)
             return activity;
 
-        var description = error.IsCancellationOf(cancellationToken)
-            ? "Cancelled"
-            : $"{error.GetType().GetName()}: {error.Message}";
+        if (error.IsCancellationOf(cancellationToken)) {
+            activity.SetStatus(ActivityStatusCode.Ok, "Cancelled");
+            return activity;
+        }
+
+        var description = $"{error.GetType().GetName()}: {error.Message}";
         activity.SetStatus(ActivityStatusCode.Error, description);
         return activity;
     }
 
-    [return: NotNullIfNotNull(nameof(activity))]
-    public static Activity MaybeSetError(this Activity activity, Exception? error, bool detectCancellation = false)
+    public static Activity Finalize(this Activity activity, Exception? error, bool detectCancellation = false)
     {
         if (error == null)
             return activity;
 
-        var description = detectCancellation && error is OperationCanceledException
-            ? "Cancelled"
-            : $"{error.GetType().GetName()}: {error.Message}";
+        if (detectCancellation && error is OperationCanceledException) {
+            activity.SetStatus(ActivityStatusCode.Ok, "Cancelled");
+            return activity;
+        }
+
+        var description = $"{error.GetType().GetName()}: {error.Message}";
         activity.SetStatus(ActivityStatusCode.Error, description);
         return activity;
     }
