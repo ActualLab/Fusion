@@ -136,8 +136,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         if (existingCall != this) // Weird scenario: the
             return Task.CompletedTask;
 
-        var tracer = MethodDef.Tracer;
-        if (tracer != null)
+        if (MethodDef.Tracer is { } tracer)
             Trace = tracer.StartInboundTrace(this);
         var inboundMiddlewares = Hub.InboundMiddlewares.NullIfEmpty();
         lock (Lock) {
@@ -241,23 +240,14 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected virtual Task CompleteAndSendResult()
     {
-        CompleteTrace();
+        if (Trace is { } trace) {
+            trace.Complete(this);
+            Trace = null;
+        }
         Unregister();
         return CancellationToken.IsCancellationRequested
             ? Task.CompletedTask
             : SendResult();
-    }
-
-    protected void CompleteTrace()
-    {
-        var durationMs = Context.CreatedAt.Elapsed.TotalMilliseconds;
-        Trace?.Complete(this, durationMs);
-        if (RpcMeters.ServerCallCounter.Enabled) {
-            RpcMeters.ServerCallCounter.Add(1);
-            if (!ResultTask.IsCompletedSuccessfully())
-                (ResultTask.IsCanceled ? RpcMeters.ServerCancellationCounter : RpcMeters.ServerErrorCounter).Add(1);
-            RpcMeters.ServerDurationHistogram.Record(durationMs);
-        }
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]

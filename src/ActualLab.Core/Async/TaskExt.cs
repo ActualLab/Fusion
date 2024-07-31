@@ -50,6 +50,17 @@ public static partial class TaskExt
         }
     }
 
+    // GetResultKind
+
+    public static TaskResultKind GetResultKind(this Task task)
+    {
+        if (!task.IsCompleted)
+            return TaskResultKind.Incomplete;
+        if (task.IsCanceled)
+            return TaskResultKind.Cancellation;
+        return task.IsFaulted ? TaskResultKind.Error : TaskResultKind.Success;
+    }
+
     // GetBaseException
 
     public static Exception GetBaseException(this Task task)

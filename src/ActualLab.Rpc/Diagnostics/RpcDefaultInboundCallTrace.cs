@@ -6,19 +6,17 @@ namespace ActualLab.Rpc.Diagnostics;
 public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Activity? activity)
     : RpcInboundCallTrace(activity)
 {
-    public override void Complete(RpcInboundCall call, double durationMs)
+    public override void Complete(RpcInboundCall call)
     {
         if (Activity != null) {
             Activity.Finalize(call.UntypedResultTask, call.CancellationToken);
             Activity.Dispose();
         }
-        if (!tracer.InboundCallCounter.Enabled)
-            return;
 
-        tracer.InboundCallCounter.Add(1);
-        var resultTask = call.UntypedResultTask;
-        if (!resultTask.IsCompletedSuccessfully())
-            (resultTask.IsCanceled ? tracer.InboundCancellationCounter : tracer.InboundErrorCounter).Add(1);
-        tracer.InboundDurationHistogram.Record(durationMs);
+        var callStats = new RpcCallSummary(call);
+        if (tracer.InboundCallCounter.Enabled)
+            tracer.RegisterInboundCall(callStats);
+        if (RpcMeters.InboundCallCounter.Enabled)
+            RpcMeters.RegisterInboundCall(callStats);
     }
 }

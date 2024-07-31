@@ -23,7 +23,7 @@ public delegate bool RpcInboundCallFilter(RpcPeer peer, RpcMethodDef method);
 public delegate Task<RpcConnection> RpcServerConnectionFactory(
     RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties, CancellationToken cancellationToken);
 public delegate bool RpcPeerTerminalErrorDetector(Exception error);
-public delegate RpcCallTracer? RpcMethodTracerFactory(RpcMethodDef method);
+public delegate RpcCallTracer? RpcCallTracerFactory(RpcMethodDef method);
 public delegate RpcCallLogger RpcCallLoggerFactory(RpcPeer peer, RpcCallLoggerFilter filter, ILogger log, LogLevel logLevel);
 public delegate bool RpcCallLoggerFilter(RpcPeer peer, RpcCall call);
 
@@ -74,8 +74,11 @@ public static class RpcDefaultDelegates
 
     public static RpcHashProvider HashProvider { get; set; } =
         static data => {
+            // It's better to use more efficient hash function here, e.g. Blake3.
+            // We use SHA256 mainly to minimize the number of dependencies.
 #if NET5_0_OR_GREATER
-            var bytes = SHA256.HashData(data.Data.Span); // 32 bytes
+            var bytes = (Span<byte>)stackalloc byte[32]; // 32 bytes
+            SHA256.HashData(data.Data.Span, bytes);
             return Convert.ToBase64String(bytes[..18]); // 18 bytes -> 24 chars
 #else
             using var sha256 = SHA256.Create();
@@ -84,7 +87,8 @@ public static class RpcDefaultDelegates
 #endif
         };
 
-    public static RandomTimeSpan RerouteDelayerDelay { get; set; } = TimeSpan.FromMilliseconds(100).ToRandom(0.25);
+    public static RandomTimeSpan RerouteDelayerDelay { get; set; }
+        = TimeSpan.FromMilliseconds(100).ToRandom(0.25);
 
     public static RpcRerouteDelayer RerouteDelayer { get; set; } =
         static cancellationToken => Task.Delay(RerouteDelayerDelay.Next(), cancellationToken);
@@ -106,7 +110,7 @@ public static class RpcDefaultDelegates
     public static RpcPeerTerminalErrorDetector PeerTerminalErrorDetector { get; set; } =
         static error => error is RpcReconnectFailedException or RpcRerouteException;
 
-    public static RpcMethodTracerFactory CallTracerFactory { get; set; } =
+    public static RpcCallTracerFactory CallTracerFactory { get; set; } =
         static method => new RpcDefaultCallTracer(method, traceOutbound: method.IsBackend);
 
     public static RpcCallLoggerFactory CallLoggerFactory { get; set; } =

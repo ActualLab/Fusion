@@ -75,7 +75,7 @@ public sealed class RpcMethodDef : MethodDef
         if (!IsAsyncMethod)
             IsValid = false;
 
-        Tracer = Hub.MethodTracerFactory.Invoke(this);
+        Tracer = Hub.CallTracerFactory.Invoke(this);
         LegacyNames = new LegacyNames(Method
             .GetCustomAttributes<LegacyNameAttribute>(false)
             .Select(x => LegacyName.New(x, nameSuffix)));

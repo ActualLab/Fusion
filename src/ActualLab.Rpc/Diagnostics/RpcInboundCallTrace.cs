@@ -7,5 +7,5 @@ public abstract class RpcInboundCallTrace(Activity? activity)
 {
     public readonly Activity? Activity = activity;
 
-    public abstract void Complete(RpcInboundCall call, double durationMs);
+    public abstract void Complete(RpcInboundCall call);
 }

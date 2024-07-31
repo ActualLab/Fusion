@@ -5,10 +5,11 @@ namespace ActualLab.Rpc.Diagnostics;
 public static class RpcMeters
 {
     public static readonly Meter Meter;
-    public static readonly Counter<long> ServerCallCounter;
-    public static readonly Counter<long> ServerErrorCounter;
-    public static readonly Counter<long> ServerCancellationCounter;
-    public static readonly Histogram<double> ServerDurationHistogram;
+    public static readonly Counter<long> InboundCallCounter;
+    public static readonly Counter<long> InboundErrorCounter;
+    public static readonly Counter<long> InboundCancellationCounter;
+    public static readonly Counter<long> InboundIncompleteCounter;
+    public static readonly Histogram<double> InboundDurationHistogram;
 
     static RpcMeters()
     {
@@ -16,13 +17,33 @@ public static class RpcMeters
         var ms = "rpc";
         var server = $"{ms}.server";
         // See https://opentelemetry.io/docs/specs/semconv/rpc/rpc-metrics/
-        ServerCallCounter = m.CreateCounter<long>($"{server}.call.count",
-            null, "Count of incoming RPC calls.");
-        ServerErrorCounter = m.CreateCounter<long>($"{server}.error.count",
-            null, "Count of incoming RPC calls completed with an error.");
-        ServerCancellationCounter = m.CreateCounter<long>($"{server}.cancellation.count",
-            null, "Count of cancelled incoming RPC calls.");
-        ServerDurationHistogram = m.CreateHistogram<double>($"{server}.duration",
-            "ms", "Duration of incoming RPC calls.");
+        InboundCallCounter = m.CreateCounter<long>($"{server}.call.count",
+            null, "Count of inbound RPC calls.");
+        InboundErrorCounter = m.CreateCounter<long>($"{server}.error.count",
+            null, "Count of inbound RPC calls completed with an error.");
+        InboundCancellationCounter = m.CreateCounter<long>($"{server}.cancellation.count",
+            null, "Count of inbound RPC calls completed with cancellation.");
+        InboundIncompleteCounter = m.CreateCounter<long>($"{server}.incomplete.count",
+            null, "Count of incomplete inbound RPC calls.");
+        InboundDurationHistogram = m.CreateHistogram<double>($"{server}.duration",
+            "ms", "Duration of inbound RPC calls.");
+    }
+
+    public static void RegisterInboundCall(in RpcCallSummary callSummary)
+    {
+        InboundCallCounter.Add(1);
+        var resultKind = callSummary.ResultKind;
+        if (resultKind == TaskResultKind.Incomplete) {
+            InboundIncompleteCounter.Add(1);
+            return;
+        }
+        InboundDurationHistogram.Record(callSummary.DurationMs);
+        if (resultKind == TaskResultKind.Success)
+            return;
+
+        (resultKind == TaskResultKind.Cancellation
+            ? InboundCancellationCounter
+            : InboundErrorCounter
+            ).Add(1);
     }
 }

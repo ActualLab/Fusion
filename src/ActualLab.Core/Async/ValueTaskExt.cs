@@ -13,8 +13,24 @@ public static partial class ValueTaskExt
     public static ValueTask<T> FromResult<T>(T value) => new(value);
     public static ValueTask<T> FromException<T>(Exception error) => new(Task.FromException<T>(error));
 
-    public static T ResultOrThrow<T>(this ValueTask<T> task)
-        => task.IsCompleted ? task.Result : throw Errors.TaskIsNotCompleted();
+    public static TaskResultKind GetResultKind(this ValueTask task)
+    {
+        if (!task.IsCompleted)
+            return TaskResultKind.Incomplete;
+        if (task.IsCanceled)
+            return TaskResultKind.Cancellation;
+        return task.IsFaulted ? TaskResultKind.Error : TaskResultKind.Success;
+    }
+
+    public static TaskResultKind GetResultKind<T>(this ValueTask<T> task)
+    {
+        if (!task.IsCompleted)
+            return TaskResultKind.Incomplete;
+        if (task.IsCanceled)
+            return TaskResultKind.Cancellation;
+        return task.IsFaulted ? TaskResultKind.Error : TaskResultKind.Success;
+    }
+
 
     // ToResultSynchronously
 

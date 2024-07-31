@@ -70,7 +70,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     public async Task TraceTest()
     {
         await using var services = CreateServices(s => {
-            s.AddSingleton<RpcMethodTracerFactory>(method => new TestRpcCallTracer(method));
+            s.AddSingleton<RpcCallTracerFactory>(method => new TestRpcCallTracer(method));
         });
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
         var client = services.GetRequiredService<ITestRpcServiceClient>();

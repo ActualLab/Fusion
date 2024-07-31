@@ -14,6 +14,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
     public readonly Counter<long> InboundCallCounter;
     public readonly Counter<long> InboundErrorCounter;
     public readonly Counter<long> InboundCancellationCounter;
+    public readonly Counter<long> InboundIncompleteCounter;
     public readonly Histogram<double> InboundDurationHistogram;
 
     public RpcDefaultCallTracer(RpcMethodDef method, bool traceInbound = true, bool traceOutbound = true)
@@ -21,21 +22,23 @@ public class RpcDefaultCallTracer : RpcCallTracer
     {
         TraceInbound = traceInbound;
         TraceOutbound = traceOutbound;
-        InboundCallName = $"in.{method.Service.Name.Value}/{method.Name.Value}";
-        OutboundCallName = $"out.{method.Service.Name.Value}/{method.Name.Value}";
+        var fullMethodName = DiagnosticsExt.FixName($"{method.Service.Name.Value}/{method.Name.Value}");
+        InboundCallName = "in." + fullMethodName;
+        OutboundCallName = "out." + fullMethodName;
         ActivitySource = method.Hub.ActivitySource;
 
         var m = RpcMeters.Meter;
-        var fullMethodName = DiagnosticsExt.FixName($"{method.Service.Name.Value}.{method.Name.Value}");
         var ms = $"rpc.server.{fullMethodName}";
         InboundCallCounter = m.CreateCounter<long>($"{ms}.call.count",
-            null, $"Count of incoming calls of {fullMethodName}.");
+            null, $"Count of inbound {fullMethodName} calls.");
         InboundErrorCounter = m.CreateCounter<long>($"{ms}.error.count",
-            null, $"Count of incoming calls of {fullMethodName} completed with an error.");
+            null, $"Count of inbound {fullMethodName} calls completed with an error.");
         InboundCancellationCounter = m.CreateCounter<long>($"{ms}.cancellation.count",
-            null, $"Count of cancelled incoming calls  {fullMethodName}.");
+            null, $"Count of inbound {fullMethodName} calls completed with cancellation.");
+        InboundIncompleteCounter = m.CreateCounter<long>($"{ms}.incomplete.count",
+            null, $"Count of incomplete inbound {fullMethodName} calls.");
         InboundDurationHistogram = m.CreateHistogram<double>($"{ms}.call.duration",
-            "ms", $"Duration of incoming calls to {fullMethodName}.");
+            "ms", $"Duration of inbound {fullMethodName} calls.");
     }
 
     public override RpcInboundCallTrace? StartInboundTrace(RpcInboundCall call)
@@ -63,5 +66,23 @@ public class RpcDefaultCallTracer : RpcCallTracer
         if (lastActivity != activity)
             Activity.Current = lastActivity;
         return new RpcDefaultOutboundCallTrace(activity);
+    }
+
+    public void RegisterInboundCall(in RpcCallSummary callSummary)
+    {
+        InboundCallCounter.Add(1);
+        var resultKind = callSummary.ResultKind;
+        if (resultKind == TaskResultKind.Incomplete) {
+            InboundIncompleteCounter.Add(1);
+            return;
+        }
+        InboundDurationHistogram.Record(callSummary.DurationMs);
+        if (resultKind == TaskResultKind.Success)
+            return;
+
+        (resultKind == TaskResultKind.Cancellation
+                ? InboundCancellationCounter
+                : InboundErrorCounter
+            ).Add(1);
     }
 }
