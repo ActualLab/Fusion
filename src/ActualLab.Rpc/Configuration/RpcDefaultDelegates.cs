@@ -112,6 +112,7 @@ public static class RpcDefaultDelegates
 
     public static RpcCallTracerFactory CallTracerFactory { get; set; } =
         static method => new RpcDefaultCallTracer(method, traceOutbound: method.IsBackend);
+        // static method => null; // To completely disable tracing and meters in RPC
 
     public static RpcCallLoggerFactory CallLoggerFactory { get; set; } =
         static (peer, filter, log, logLevel) => new RpcCallLogger(peer, filter, log, logLevel);
