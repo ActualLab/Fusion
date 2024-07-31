@@ -508,7 +508,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public MeterSet()
         {
             var m = typeof(WebSocketChannel<T>).GetMeter();
-            var ms = $"rpc.websocket-channel.{typeof(T).GetName()}";
+            var ms = $"rpc.ws.{typeof(T).GetName()}-channel";
             ChannelCounter = m.CreateObservableCounter($"{ms}.count",
                 () => Interlocked.Read(ref ChannelCount),
                 null, "Number of WebSocketChannel instances.");
