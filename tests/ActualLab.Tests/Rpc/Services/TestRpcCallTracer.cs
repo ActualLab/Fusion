@@ -32,7 +32,7 @@ public class TestRpcCallTracer(RpcMethodDef method) : RpcCallTracer(method)
             Interlocked.Increment(ref _tracer._enterCount);
         }
 
-        public override void Complete(RpcInboundCall call, double durationMs)
+        public override void Complete(RpcInboundCall call)
         {
             Interlocked.Increment(ref _tracer._exitCount);
             if (!call.UntypedResultTask.IsCompletedSuccessfully())
