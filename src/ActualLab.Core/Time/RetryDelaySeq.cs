@@ -22,24 +22,9 @@ public partial record RetryDelaySeq(
     [DataMember, MemoryPackOrder(3)]
     public double Multiplier { get; init; } = DefaultMultiplier;
 
-    public virtual TimeSpan this[int failedTryCount] {
-        get {
-            if (Min <= TimeSpan.Zero)
-                throw new InvalidOperationException(
-                    $"{nameof(RetryDelaySeq)}.{nameof(Min)} must be greater than zero.");
-            if (failedTryCount <= 0)
-                return TimeSpan.Zero;
-            if (Multiplier <= 1d) // Fixed, i.e. no exponential component
-                return Min.ToRandom(Spread).Next().Positive();
-
-            try {
-                var multiplier = Math.Pow(Multiplier, failedTryCount - 1);
-                return TimeSpanExt.Min(Max, Min.MultiplyBy(multiplier)).ToRandom(Spread).Next().Positive();
-            }
-            catch (OverflowException) {
-                return Max;
-            }
-        }
+    public virtual TimeSpan this[int failureCount] {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => GetDelay(failureCount);
     }
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
@@ -49,6 +34,26 @@ public partial record RetryDelaySeq(
         double multiplier = DefaultMultiplier)
         : this(min, max, spread)
         => Multiplier = multiplier;
+
+    public virtual TimeSpan GetDelay(int failureCount)
+    {
+        if (Min <= TimeSpan.Zero)
+            throw new InvalidOperationException(
+                $"{nameof(RetryDelaySeq)}.{nameof(Min)} must be greater than zero.");
+
+        if (failureCount <= 0)
+            return TimeSpan.Zero;
+        if (Multiplier <= 1d) // Fixed, i.e. no exponential component
+            return Min.ToRandom(Spread).Next().Positive();
+
+        try {
+            var multiplier = Math.Pow(Multiplier, failureCount - 1);
+            return TimeSpanExt.Min(Max, Min.MultiplyBy(multiplier)).ToRandom(Spread).Next().Positive();
+        }
+        catch (OverflowException) {
+            return Max;
+        }
+    }
 
     public IEnumerable<TimeSpan> Delays(int start = 0, int count = int.MaxValue)
     {
