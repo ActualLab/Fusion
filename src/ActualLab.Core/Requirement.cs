@@ -7,8 +7,8 @@ namespace ActualLab;
 public abstract record Requirement
 {
     public abstract bool IsSatisfiedUntyped([NotNullWhen(true)] object? value);
-    public abstract void CheckUntyped([NotNull] object? value);
-    public abstract Exception GetErrorUntyped(object? value);
+    public abstract void CheckUntyped([NotNull] object? value, string? targetName = null);
+    public abstract Exception GetErrorUntyped(object? value, string? targetName = null);
 
     public static FuncRequirement<T> New<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
@@ -37,40 +37,44 @@ public abstract record Requirement<
                 if (_mustExist != null)
                     return _mustExist;
 
-                Requirement<T>? result;
+                Requirement<T>? mustExist;
                 if (typeof(IRequirementTarget).IsAssignableFrom(typeof(T))) {
                     var type = typeof(T);
-                    result = type
+                    var propertyValue = type
                         .GetField(MustExistFieldOrPropertyName, BindingFlags.Public | BindingFlags.Static)
-                        ?.GetValue(null) as Requirement<T>;
-                    result ??= type
+                        ?.GetValue(null);
+                    propertyValue ??= type
                         .GetProperty(MustExistFieldOrPropertyName, BindingFlags.Public | BindingFlags.Static)
-                        ?.GetValue(null) as Requirement<T>;
-                    result ??= MustExistRequirement<T>.Default;
-                    if (result is not IMustExistRequirement)
-                        throw Errors.InternalError("MustExist property or field must return MustExistRequirement.");
+                        ?.GetValue(null);
+                    mustExist = propertyValue as Requirement<T>;
+                    if (mustExist == null) {
+                        if (propertyValue != null)
+                            throw Errors.InternalError("MustExist property or field must return Requirement<T>.");
+
+                        mustExist = MustExistRequirement<T>.Default;
+                    }
                 }
                 else
-                    result = MustExistRequirement<T>.Default;
-                return _mustExist = result;
+                    mustExist = MustExistRequirement<T>.Default;
+                return _mustExist = mustExist;
             }
         }
     }
 
     public override bool IsSatisfiedUntyped([NotNullWhen(true)] object? value)
         => IsSatisfied((T?)value);
-    public override void CheckUntyped([NotNull] object? value)
-        => Check((T?)value);
-    public override Exception GetErrorUntyped(object? value)
-        => GetError((T?)value);
+    public override void CheckUntyped([NotNull] object? value, string? targetName = null)
+        => Check((T?)value, targetName);
+    public override Exception GetErrorUntyped(object? value, string? targetName = null)
+        => GetError((T?)value, targetName);
 
     public abstract bool IsSatisfied([NotNullWhen(true)] T? value);
-    public abstract Exception GetError(T? value);
+    public abstract Exception GetError(T? value, string? targetName = null);
 
-    public virtual void Check([NotNull] T? value)
+    public virtual void Check([NotNull] T? value, string? targetName = null)
     {
         if (!IsSatisfied(value))
-            throw GetError(value);
+            throw GetError(value, targetName);
     }
 
     public Requirement<T> And(Requirement<T> secondary)

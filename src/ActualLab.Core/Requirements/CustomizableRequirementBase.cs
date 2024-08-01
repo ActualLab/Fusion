@@ -8,6 +8,6 @@ public abstract record CustomizableRequirementBase<
 {
     public ExceptionBuilder ExceptionBuilder { get; init; }
 
-    public override Exception GetError(T? value)
-        => ExceptionBuilder.Build(value);
+    public override Exception GetError(T? value, string? targetName = null)
+        => ExceptionBuilder.Build(value, targetName);
 }

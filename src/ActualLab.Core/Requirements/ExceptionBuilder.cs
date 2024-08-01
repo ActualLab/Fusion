@@ -33,9 +33,9 @@ public readonly record struct ExceptionBuilder
     public static implicit operator ExceptionBuilder(Func<Exception> exceptionFactory)
         => new(null!, _ => exceptionFactory.Invoke());
 
-    public Exception Build<TValue>(TValue? value)
+    public Exception Build<TValue>(TValue? value, string? targetName = null)
     {
-        var targetName = TargetName.NullIfEmpty() ?? typeof(TValue?).GetName();
+        targetName ??= TargetName.NullIfEmpty() ?? typeof(TValue?).GetName();
         var message = MessageTemplate.NullIfEmpty() ?? DefaultMessageTemplate;
         var exception = ExceptionFactory switch {
             Func<string, Exception> messageBased => messageBased.Invoke(

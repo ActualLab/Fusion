@@ -9,13 +9,13 @@ public sealed record MustExistRequirement<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
     : CustomizableRequirementBase<T>, IMustExistRequirement
 {
-    private static readonly ExceptionBuilder StaticExceptionBuilder
+    public readonly ExceptionBuilder DefaultExceptionBuilder
         = new("'{0}' is not found.", typeof(T).GetName(), Errors.Constraint);
 
     public static readonly MustExistRequirement<T> Default = new();
 
     public MustExistRequirement()
-        => ExceptionBuilder = StaticExceptionBuilder;
+        => ExceptionBuilder = DefaultExceptionBuilder;
 
     public override bool IsSatisfied([NotNullWhen(true)] T? value)
         => MustExistRequirement.IsSatisfied(value);

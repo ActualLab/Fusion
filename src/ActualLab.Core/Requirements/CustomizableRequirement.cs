@@ -13,6 +13,6 @@ public record CustomizableRequirement<
     public override bool IsSatisfied([NotNullWhen(true)] T? value)
         => BaseRequirement.IsSatisfied(value);
 
-    public override Exception GetError(T? value)
-        => ExceptionBuilder.Build(value);
+    public override Exception GetError(T? value, string? targetName = null)
+        => ExceptionBuilder.Build(value, targetName);
 }

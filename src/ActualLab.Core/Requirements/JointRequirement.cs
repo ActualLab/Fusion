@@ -9,14 +9,14 @@ public record JointRequirement<
     public override bool IsSatisfied([NotNullWhen(true)] T? value)
         => Primary.IsSatisfied(value) && Secondary.IsSatisfied(value);
 
-    public override void Check([NotNull] T? value)
+    public override void Check([NotNull] T? value, string? targetName = null)
     {
-        Primary.Check(value);
-        Secondary.Check(value);
+        Primary.Check(value, targetName);
+        Secondary.Check(value, targetName);
     }
 
-    public override Exception GetError(T? value)
+    public override Exception GetError(T? value, string? targetName = null)
         => Primary.IsSatisfied(value)
-            ? Secondary.GetError(value)
-            : Primary.GetError(value);
+            ? Secondary.GetError(value, targetName)
+            : Primary.GetError(value, targetName);
 }
