@@ -9,8 +9,7 @@ public static class ComputedStateComponent
     private static readonly ConcurrentDictionary<Type, Func<Type, IComputedState.IOptions>> CreateDefaultStateOptionsCache = new();
 
     public static ComputedStateComponentOptions DefaultOptions { get; set; }
-        = ComputedStateComponentOptions.SynchronizeComputeState
-        | ComputedStateComponentOptions.StateIsParameterDependent;
+        = ComputedStateComponentOptions.RecomputeStateOnParameterChange;
     public static Func<Type, IComputedState.IOptions> DefaultStateOptionsFactory { get; set; } = CreateDefaultStateOptions;
 
     public static ComputedState<TState>.Options GetStateOptions<TState>(

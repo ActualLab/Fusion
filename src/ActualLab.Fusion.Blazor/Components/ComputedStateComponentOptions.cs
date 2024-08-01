@@ -1,8 +1,18 @@
+using ActualLab.OS;
+
 namespace ActualLab.Fusion.Blazor;
 
 [Flags]
 public enum ComputedStateComponentOptions
 {
-    SynchronizeComputeState = 0x1,
-    StateIsParameterDependent = 0x2,
+    ComputeStateOnThreadPool = 0x1,
+    RecomputeStateOnParameterChange = 0x2,
+    ShouldRenderInconsistentState = 0x4,
+}
+
+public static class ComputedStateComponentOptionsExt
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool CanComputeStateOnThreadPool(this ComputedStateComponentOptions options)
+        => HardwareInfo.IsSingleThreaded || (options & ComputedStateComponentOptions.ComputeStateOnThreadPool) != 0;
 }

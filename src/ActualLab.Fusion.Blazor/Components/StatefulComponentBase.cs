@@ -12,7 +12,6 @@ public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposa
     protected StateFactory StateFactory => _stateFactory ??= Services.StateFactory();
     protected abstract IState UntypedState { get; }
     protected Action<IState, StateEventKind> StateChanged { get; set; }
-    protected long RenderStateUpdateCount { get; set; } = -1;
 
     protected StatefulComponentBase()
     {
@@ -30,16 +29,6 @@ public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposa
         if (UntypedState is IDisposable d)
             d.Dispose();
         return default;
-    }
-
-    protected bool IsRenderStateChanged(IState renderState)
-    {
-        var renderStateUpdateCount = renderState.Snapshot.UpdateCount;
-        if (RenderStateUpdateCount == renderStateUpdateCount)
-            return false;
-
-        RenderStateUpdateCount = renderStateUpdateCount;
-        return true;
     }
 }
 

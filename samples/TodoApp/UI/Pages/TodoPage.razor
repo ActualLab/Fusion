@@ -79,9 +79,6 @@
     // in one of your top-level components.
     [CascadingParameter] protected Task<AuthState> AuthState { get; set; } = null!;
 
-    protected override bool ShouldRender()
-        => IsRenderStateChanged(State);
-
     protected override async Task<Model> ComputeState(CancellationToken cancellationToken)
     {
         Log.LogInformation("ComputeState: LoadedItemCount = {LoadedItemCount}", LoadedItemCount);

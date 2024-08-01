@@ -1,5 +1,3 @@
-using ActualLab.Fusion.Internal;
-
 namespace ActualLab.Fusion;
 
 public interface IStateSnapshot

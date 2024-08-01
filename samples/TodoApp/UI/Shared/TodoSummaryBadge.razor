@@ -1,4 +1,4 @@
-@inherits ComputedStateComponent<TodoSummary>
+@inherits ComputedRenderStateComponent<TodoSummary>
 @inject Session Session
 @inject ITodoService TodoService
 @inject ILogger<TodoSummaryBadge> Log
@@ -12,9 +12,6 @@
 <Badge Color="Color.Primary"><b>@summary.Count</b> total</Badge>
 
 @code {
-    protected override bool ShouldRender()
-        => IsRenderStateChanged(State);
-
     protected override Task<TodoSummary> ComputeState(CancellationToken cancellationToken)
         => TodoService.GetSummary(Session, cancellationToken);
 }

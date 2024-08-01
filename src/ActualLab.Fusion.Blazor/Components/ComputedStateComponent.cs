@@ -14,7 +14,7 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
         var parameterSetIndex = ParameterSetIndex;
         var task = base.SetParametersAsync(parameters);
         var mustRecompute =
-            (Options & ComputedStateComponentOptions.StateIsParameterDependent) != 0 // Requires recompute on parameter change
+            (Options & ComputedStateComponentOptions.RecomputeStateOnParameterChange) != 0 // Requires recompute on parameter change
             && parameterSetIndex != 0 // Not the very first call to SetParametersAsync
             && ParameterSetIndex != parameterSetIndex; // And parameters were changed
         if (!mustRecompute)
@@ -43,17 +43,17 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
         // https://github.com/servicetitan/Stl.Fusion/issues/202
         var stateOptions = GetStateOptions();
         Func<CancellationToken, Task<TState>> computer =
-            (Options & ComputedStateComponentOptions.SynchronizeComputeState) == 0
+            Options.CanComputeStateOnThreadPool()
                 ? ComputeState
                 : stateOptions.FlowExecutionContext && DispatcherInfo.IsExecutionContextFlowSupported(this)
-                    ? SynchronizedComputeState
-                    : SynchronizedComputeStateWithManualExecutionContextFlow;
+                    ? DispatchComputeState
+                    : DispatchComputeStateWithManualExecutionContextFlow;
         return (new ComputedStateComponentState<TState>(stateOptions, computer, Services), stateOptions);
 
-        Task<TState> SynchronizedComputeState(CancellationToken cancellationToken)
+        Task<TState> DispatchComputeState(CancellationToken cancellationToken)
             => this.GetDispatcher().InvokeAsync(() => ComputeState(cancellationToken));
 
-        Task<TState> SynchronizedComputeStateWithManualExecutionContextFlow(CancellationToken cancellationToken) {
+        Task<TState> DispatchComputeStateWithManualExecutionContextFlow(CancellationToken cancellationToken) {
             var executionContext = ExecutionContext.Capture();
             var dispatcher = this.GetDispatcher();
             var taskFactory = () => ComputeState(cancellationToken);
@@ -64,4 +64,12 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
     }
 
     protected abstract Task<TState> ComputeState(CancellationToken cancellationToken);
+
+    protected override bool ShouldRender()
+    {
+        if ((Options & ComputedStateComponentOptions.ShouldRenderInconsistentState) != 0)
+            return true;
+
+        return State.Computed.IsConsistent();
+    }
 }
