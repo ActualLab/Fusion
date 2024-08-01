@@ -122,9 +122,11 @@ void ConfigureServices()
             operations.ConfigureEventLogReader(_ => new() {
                 CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
             });
-            operations.AddNpgsqlOperationLogWatcher();
+            if (!hostSettings.UsePostgreSql.IsNullOrEmpty())
+                operations.AddNpgsqlOperationLogWatcher();
+            else
+                operations.AddFileSystemOperationLogWatcher();
             // operations.AddRedisOperationLogWatcher();
-            // operations.AddFileSystemOperationLogWatcher();
         });
         db.AddEntityResolver<string, DbTodo>();
 
