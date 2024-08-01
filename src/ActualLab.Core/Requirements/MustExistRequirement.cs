@@ -7,15 +7,17 @@ public interface IMustExistRequirement;
 
 public sealed record MustExistRequirement<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-    : CustomizableRequirementBase<T>, IMustExistRequirement
+    : Requirement<T>, IMustExistRequirement
 {
-    public static readonly MustExistRequirement<T> Default = new();
+    private static readonly string ErrorMessage = $"{typeof(T).GetName()} is required here.";
 
-    public MustExistRequirement()
-        => ExceptionBuilder = new("'{0}' is not found.", Errors.Constraint);
+    public static readonly MustExistRequirement<T> Default = new();
 
     public override bool IsSatisfied([NotNullWhen(true)] T? value)
         => MustExistRequirement.IsSatisfied(value);
+
+    public override Exception GetError(T? value)
+        => Errors.Constraint(ErrorMessage);
 }
 
 public static class MustExistRequirement

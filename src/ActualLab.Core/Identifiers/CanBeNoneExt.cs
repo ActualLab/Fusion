@@ -4,13 +4,6 @@ namespace ActualLab.Identifiers;
 
 public static class CanBeNoneExt
 {
-    public static T Require<T>(this T source)
-        where T : ICanBeNone
-        => source.Require(typeof(T).GetName());
-    public static T Require<T>(this T source, string name)
-        where T : ICanBeNone
-        => source.IsNone ? throw Errors.Constraint($"{name} is required here.") : source;
-
     public static T RequireNone<T>(this T source)
         where T : ICanBeNone
         => source.RequireNone(typeof(T).GetName());

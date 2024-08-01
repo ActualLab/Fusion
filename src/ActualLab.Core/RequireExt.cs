@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Requirements;
 
 namespace ActualLab;
 
@@ -8,68 +7,80 @@ namespace ActualLab;
 
 public static class RequireExt
 {
-    // Require w/ implicit MustExistRequirement
+    // Require w/ implicit MustExistRequirement for classes
 
     public static T Require<T>([NotNull] this T? target)
-        => MustExistRequirement.IsSatisfied(target)
-            ? target
-            : Requirement<T>.MustExist.Check(target);
+    {
+        var mustThrow = typeof(T).IsValueType
+            ? EqualityComparer<T>.Default.Equals(target, default)
+            : ReferenceEquals(target, null);
+#pragma warning disable CS8777 // Parameter must have a non-null value when exiting.
+        return mustThrow
+            ? throw Requirement<T>.MustExist.GetError(target)
+            : target!;
+#pragma warning restore CS8777 // Parameter must have a non-null value when exiting.
+    }
 
     public static async Task<T> Require<T>(this Task<T?> targetSource)
     {
         var target = await targetSource.ConfigureAwait(false);
-        return MustExistRequirement.IsSatisfied(target)
-            ? target
-            : Requirement<T>.MustExist.Check(target);
+        Requirement<T>.MustExist.Check(target);
+        return target;
     }
 
     public static async ValueTask<T> Require<T>(this ValueTask<T?> targetSource)
     {
         var target = await targetSource.ConfigureAwait(false);
-        return MustExistRequirement.IsSatisfied(target)
-            ? target
-            : Requirement<T>.MustExist.Check(target);
+        Requirement<T>.MustExist.Check(target);
+        return target;
     }
 
     // Require w/ explicit Requirement
 
-    public static T Require<T>([NotNull] this T? target, Requirement<T>? requirement)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static T Require<T>([NotNull] this T? target, Requirement<T> requirement)
     {
-        requirement ??= Requirement<T>.MustExist;
-        return requirement.Check(target);
+        requirement.Check(target);
+        return target;
     }
 
-    public static async Task<T> Require<T>(this Task<T?> targetSource, Requirement<T>? requirement)
+    public static async Task<T> Require<T>(this Task<T?> targetSource, Requirement<T> requirement)
     {
         var target = await targetSource.ConfigureAwait(false);
-        requirement ??= Requirement<T>.MustExist;
-        return requirement.Check(target);
+        requirement.Check(target);
+        return target;
     }
 
-    public static async ValueTask<T> Require<T>(this ValueTask<T?> targetSource, Requirement<T>? requirement)
+    public static async ValueTask<T> Require<T>(this ValueTask<T?> targetSource, Requirement<T> requirement)
     {
         var target = await targetSource.ConfigureAwait(false);
-        requirement ??= Requirement<T>.MustExist;
-        return requirement.Check(target);
+        requirement.Check(target);
+        return target;
     }
 
     // Require w/ requirement builder
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T Require<T>([NotNull] this T? target, Func<Requirement<T>> requirementBuilder)
         where T : IRequirementTarget
-        => requirementBuilder.Invoke().Check(target);
+    {
+        requirementBuilder.Invoke().Check(target);
+        return target;
+    }
 
     public static async Task<T> Require<T>(this Task<T?> targetSource, Func<Requirement<T>> requirementBuilder)
         where T : IRequirementTarget
     {
         var target = await targetSource.ConfigureAwait(false);
-        return requirementBuilder.Invoke().Check(target);
+        requirementBuilder.Invoke().Check(target);
+        return target;
     }
 
     public static async ValueTask<T> Require<T>(this ValueTask<T?> targetSource, Func<Requirement<T>> requirementBuilder)
         where T : IRequirementTarget
     {
         var target = await targetSource.ConfigureAwait(false);
-        return requirementBuilder.Invoke().Check(target);
+        requirementBuilder.Invoke().Check(target);
+        return target;
     }
 }

@@ -53,6 +53,15 @@ public readonly record struct LegacyName : ICanBeNone<LegacyName>
     public static implicit operator LegacyName(Version version)
         => new(Symbol.Empty, version);
 
+    // Equality
+
+    public bool Equals(LegacyName other)
+        => IsNone ? other.IsNone
+            : Name == other.Name && _maxVersion == other._maxVersion;
+
+    public override int GetHashCode()
+        => IsNone ? 0 : HashCode.Combine(Name, _maxVersion);
+
     // Nested types
 
     private sealed class MaxVersionRelationalComparer : IComparer<LegacyName>

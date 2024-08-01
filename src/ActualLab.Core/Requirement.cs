@@ -7,7 +7,8 @@ namespace ActualLab;
 public abstract record Requirement
 {
     public abstract bool IsSatisfiedUntyped([NotNullWhen(true)] object? value);
-    public abstract object CheckUntyped([NotNull] object? value);
+    public abstract void CheckUntyped([NotNull] object? value);
+    public abstract Exception GetErrorUntyped(object? value);
 
     public static FuncRequirement<T> New<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
@@ -58,11 +59,19 @@ public abstract record Requirement<
 
     public override bool IsSatisfiedUntyped([NotNullWhen(true)] object? value)
         => IsSatisfied((T?)value);
-    public override object CheckUntyped([NotNull] object? value)
-        => Check((T?)value)!;
+    public override void CheckUntyped([NotNull] object? value)
+        => Check((T?)value);
+    public override Exception GetErrorUntyped(object? value)
+        => GetError((T?)value);
 
     public abstract bool IsSatisfied([NotNullWhen(true)] T? value);
-    public abstract T Check([NotNull] T? value);
+    public abstract Exception GetError(T? value);
+
+    public virtual void Check([NotNull] T? value)
+    {
+        if (!IsSatisfied(value))
+            throw GetError(value);
+    }
 
     public Requirement<T> And(Requirement<T> secondary)
         => new JointRequirement<T>(this, secondary);

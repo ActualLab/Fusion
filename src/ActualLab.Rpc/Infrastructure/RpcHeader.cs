@@ -22,7 +22,8 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
     }
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public bool IsNone => ReferenceEquals(_name, null) && ReferenceEquals(_value, null);
+    public bool IsNone
+        => ReferenceEquals(_name, null) && ReferenceEquals(_value, null);
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
     public RpcHeader(string? name, string? value = "")
@@ -39,6 +40,9 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
         => new(Name, value);
 
     // Equality is based solely on header name
-    public bool Equals(RpcHeader other) => string.Equals(Name, other.Name, StringComparison.Ordinal);
-    public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Name);
+    public bool Equals(RpcHeader other)
+        => string.Equals(Name, other.Name, StringComparison.Ordinal);
+
+    public override int GetHashCode()
+        => StringComparer.Ordinal.GetHashCode(Name);
 }

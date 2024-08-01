@@ -182,7 +182,7 @@ public sealed class SymbolBenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
     private async Task Benchmark<T>(
         string title, int iterationCount, Func<T, int, CpuTimestamp> action,
         params T[] options)
-        where T: notnull
+        where T : notnull
     {
         Out.WriteLine($"{title}:");
         var maxOptionWidth = options.Select(o => o.ToString()!.Length).Max();

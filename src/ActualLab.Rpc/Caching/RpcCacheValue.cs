@@ -37,4 +37,14 @@ public readonly partial record struct RpcCacheValue(
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool DataEquals(RpcCacheValue other)
         => Data.DataEquals(other.Data);
+
+    // Equality
+
+    public bool Equals(RpcCacheValue other)
+        => IsNone
+            ? other.IsNone
+            : string.Equals(Hash, other.Hash, StringComparison.Ordinal) && Data.Equals(other.Data);
+
+    public override int GetHashCode()
+        => IsNone ? 0 : StringComparer.Ordinal.GetHashCode(Hash) + (397 * Data.GetHashCode());
 }

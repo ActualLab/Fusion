@@ -8,8 +8,6 @@ public abstract record CustomizableRequirementBase<
 {
     public ExceptionBuilder ExceptionBuilder { get; init; }
 
-    public override T Check([NotNull] T? value)
-        => IsSatisfied(value)
-            ? value
-            : throw ExceptionBuilder.Build(value);
+    public override Exception GetError(T? value)
+        => ExceptionBuilder.Build(value);
 }
