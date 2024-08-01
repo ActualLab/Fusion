@@ -14,10 +14,11 @@ public abstract class ComputedRenderStateComponent<TState> : ComputedStateCompon
         if (!IsRenderStateChanged())
             return false;
 
-        if ((Options & ComputedStateComponentOptions.ShouldRenderInconsistentState) != 0)
+        if (RenderState.Computed.IsConsistent())
             return true;
 
-        return State.Computed.IsConsistent();
+        // Inconsistent state is rare, so we make this check at last
+        return (Options & ComputedStateComponentOptions.ShouldRenderInconsistentState) != 0;
     }
 
     protected bool IsRenderStateChanged()
@@ -25,7 +26,7 @@ public abstract class ComputedRenderStateComponent<TState> : ComputedStateCompon
 
     protected bool IsRenderStateChanged(StateSnapshot<TState> renderState)
     {
-        if (_renderState == renderState)
+        if (ReferenceEquals(_renderState, renderState))
             return false;
 
         _renderState = renderState;

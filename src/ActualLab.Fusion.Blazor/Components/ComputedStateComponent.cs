@@ -67,9 +67,10 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
 
     protected override bool ShouldRender()
     {
-        if ((Options & ComputedStateComponentOptions.ShouldRenderInconsistentState) != 0)
+        if (State.Computed.IsConsistent())
             return true;
 
-        return State.Computed.IsConsistent();
+        // Inconsistent state is rare, so we make this check at last
+        return (Options & ComputedStateComponentOptions.ShouldRenderInconsistentState) != 0;
     }
 }
