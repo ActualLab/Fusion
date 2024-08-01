@@ -304,8 +304,8 @@ public readonly struct FusionBuilder
     {
         // ~ RpcBuilder.AddLocalService, but for Compute Service
 
-        if (!typeof(IComputeService).IsAssignableFrom(serviceType))
-            throw Errors.MustImplement<IComputeService>(serviceType, nameof(serviceType));
+        if (!typeof(IComputeService).IsAssignableFrom(implementationType))
+            throw Errors.MustImplement<IComputeService>(implementationType, nameof(serviceType));
         if (!serviceType.IsAssignableFrom(implementationType))
             throw Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
         if (!implementationType.IsClass)
@@ -334,6 +334,9 @@ public readonly struct FusionBuilder
         bool addCommandHandlers = true)
     {
         // ~ RpcBuilder.AddServer, but for Compute Service
+
+        if (!typeof(IComputeService).IsAssignableFrom(serviceType))
+            throw Errors.MustImplement<IComputeService>(serviceType, nameof(serviceType));
 
         AddComputeService(serviceType, implementationType, false);
         if (addCommandHandlers)
@@ -384,6 +387,9 @@ public readonly struct FusionBuilder
         bool addCommandHandlers = true)
     {
         // ~ RpcBuilder.AddDistributedServicePair, but for Compute Service
+
+        if (!typeof(IComputeService).IsAssignableFrom(serviceType))
+            throw Errors.MustImplement<IComputeService>(serviceType, nameof(serviceType));
 
         AddComputeService(implementationType, false);
         Services.AddSingleton(serviceType, c => {
