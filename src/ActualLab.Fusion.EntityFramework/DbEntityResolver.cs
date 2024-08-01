@@ -307,7 +307,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         if (activity == null)
             return activity;
 
-        activity.AddShardTags(shard).AddTag("batchSize", batchSize.ToString(CultureInfo.InvariantCulture));
+        activity.AddShardTags(shard)?.AddTag("batchSize", batchSize.ToString(CultureInfo.InvariantCulture));
         if (tryIndex > 0)
             activity.AddTag("tryIndex", tryIndex);
         return activity;
