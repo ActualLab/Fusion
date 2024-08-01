@@ -46,8 +46,8 @@ public static class Proxies
     public static Type? TryGetProxyType(Type baseType)
         => Cache.GetOrAdd(baseType, static type => {
             if (type.IsConstructedGenericType) {
-                var genericType = TryGetProxyType(type.GetGenericTypeDefinition());
-                return genericType?.MakeGenericType(type.GenericTypeArguments);
+                var genericProxyType = TryGetProxyType(type.GetGenericTypeDefinition());
+                return genericProxyType?.MakeGenericType(type.GenericTypeArguments);
             }
 
             var name = type.Name;
@@ -68,6 +68,7 @@ public static class Proxies
                 namePrefix,
                 "Proxy",
                 nameSuffix);
-            return type.Assembly.GetType(proxyTypeName);
+            var proxyType = type.Assembly.GetType(proxyTypeName);
+            return proxyType;
         });
 }
