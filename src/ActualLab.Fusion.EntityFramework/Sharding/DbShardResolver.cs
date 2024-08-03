@@ -12,29 +12,41 @@ public interface IDbShardResolver<TDbContext> : IDbShardResolver
     new IDbShardRegistry<TDbContext> ShardRegistry { get; }
 }
 
-public class DbShardResolver<TDbContext>(IServiceProvider services) : IDbShardResolver<TDbContext>
+public abstract class DbShardResolver(IServiceProvider services) : IDbShardResolver
+{
+    public static string DefaultSessionShardTag { get; set; } = "s";
+
+    public IServiceProvider Services { get; } = services;
+    public string SessionShardTag { get; init; } = DefaultSessionShardTag;
+
+    IDbShardRegistry IDbShardResolver.ShardRegistry => UntypedShardRegistry;
+    protected abstract IDbShardRegistry UntypedShardRegistry { get; }
+
+    public abstract DbShard Resolve(object source);
+}
+
+public class DbShardResolver<TDbContext>(IServiceProvider services)
+    : DbShardResolver(services), IDbShardResolver<TDbContext>
 {
     private IDbShardRegistry<TDbContext>? _shardRegistry;
 
-    public IServiceProvider Services { get; } = services;
-
-    IDbShardRegistry IDbShardResolver.ShardRegistry => ShardRegistry;
+    protected override IDbShardRegistry UntypedShardRegistry => ShardRegistry;
     public IDbShardRegistry<TDbContext> ShardRegistry
         => _shardRegistry ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
 
-    public virtual DbShard Resolve(object source)
+    public override DbShard Resolve(object source)
     {
         if (ShardRegistry.HasSingleShard)
             return default;
 
         switch (source) {
             case Session session:
-                return new DbShard(session.GetTag(Session.ShardTag));
+                return new DbShard(session.GetTag(SessionShardTag));
             case IHasShard hasShard:
                 return hasShard.Shard;
             case ICommand command:
                 if (command is ISessionCommand sessionCommand)
-                    return new DbShard(sessionCommand.Session.GetTag(Session.ShardTag));
+                    return new DbShard(sessionCommand.Session.GetTag(SessionShardTag));
                 return default;
             default:
                 return default;

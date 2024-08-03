@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq.Expressions;
+using ActualLab.Fusion.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using ActualLab.Fusion.EntityFramework.Internal;
@@ -53,7 +54,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
             Delays = RetryDelaySeq.Exp(0.125, 0.5, 0.1, 2),
             Limit = 3,
         };
-        public bool UseActivitySource { get; init; }
+        public bool IsTracingEnabled { get; init; }
     }
 
     // ReSharper disable once StaticMemberInGenericType
@@ -68,11 +69,9 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
     private ConcurrentDictionary<DbShard, BatchProcessor<TKey, TDbEntity?>>? _batchProcessors;
     private TransiencyResolver<TDbContext>? _transiencyResolver;
-    private ActivitySource? _activitySource;
 
     protected Options Settings { get; }
     protected Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>[] Queries { get; init; }
-    protected ActivitySource ActivitySource => _activitySource ??= GetType().GetActivitySource();
     protected bool UseContainsQuery { get; }
 
     public Func<TDbEntity, TKey> KeyExtractor { get; init; }
@@ -301,8 +300,8 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
     protected virtual Activity? StartProcessBatchActivity(DbShard shard, int batchSize, int tryIndex)
     {
-        var activity = ActivitySource
-            .IfEnabled(Settings.UseActivitySource)
+        var activity = FusionInstruments.ActivitySource
+            .IfEnabled(Settings.IsTracingEnabled)
             .StartActivity(GetType(), nameof(ProcessBatch));
         if (activity == null)
             return activity;

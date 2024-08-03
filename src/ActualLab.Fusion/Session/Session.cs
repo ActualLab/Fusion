@@ -16,7 +16,6 @@ public sealed partial class Session : IHasId<Symbol>,
     IHasToStringProducingJson
 {
     public static readonly Session Default = new("~");
-    public static readonly string ShardTag = "s";
     public static SessionFactory Factory { get; set; } = DefaultSessionFactory.New();
     public static SessionValidator Validator { get; set; } = session => !session.IsDefault();
 

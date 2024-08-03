@@ -5,14 +5,9 @@ namespace ActualLab.Async;
 public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDisposed
 {
     private volatile Task? _disposeTask;
-    private ActivitySource? _activitySource;
 
     protected CancellationTokenSource StopTokenSource { get; }
     protected object Lock => StopTokenSource;
-    protected ActivitySource ActivitySource {
-        get => _activitySource ??= GetType().GetActivitySource();
-        set => _activitySource = value ?? throw new ArgumentNullException(nameof(value));
-    }
 
     public CancellationToken StopToken { get; }
     public bool IsDisposed => _disposeTask != null;

@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
@@ -20,7 +21,7 @@ public abstract class DbSessionInfoTrimmer<TDbContext>(
         public RandomTimeSpan CheckPeriod { get; init; } =  TimeSpan.FromMinutes(15).ToRandom(0.25);
         public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(10));
         public LogLevel LogLevel { get; init; } = LogLevel.Information;
-        public bool UseActivitySource { get; init; }
+        public bool IsTracingEnabled { get; init; }
     }
 
     protected Options Settings { get; } = settings;
@@ -52,8 +53,8 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
         var batchSize = Settings.BatchSize;
         while (true) {
             var maxLastSeenAt = (SystemClock.Now - Settings.MaxSessionAge).ToDateTime();
-            var activity = ActivitySource
-                .IfEnabled(Settings.UseActivitySource)
+            var activity = FusionInstruments.ActivitySource
+                .IfEnabled(Settings.IsTracingEnabled)
                 .StartActivity(GetType())
                 .AddShardTags(shard);
             try {

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
+using ActualLab.Fusion.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
@@ -15,7 +16,6 @@ public class ComputeServiceCommandCompletionInvalidator(
         public LogLevel LogLevel { get; init; } = LogLevel.Debug;
     }
 
-    private ActivitySource? _activitySource;
     private CommandHandlerResolver? _commandHandlerResolver;
     private ILogger? _log;
 
@@ -23,7 +23,6 @@ public class ComputeServiceCommandCompletionInvalidator(
     protected Options Settings { get; } = settings;
     protected CommandHandlerResolver CommandHandlerResolver
         => _commandHandlerResolver ??= Services.GetRequiredService<CommandHandlerResolver>();
-    protected ActivitySource ActivitySource => _activitySource ??= typeof(ICommand).GetActivitySource();
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.ComputeServiceCommandCompletionInvalidator)]
@@ -119,7 +118,7 @@ public class ComputeServiceCommandCompletionInvalidator(
     protected virtual Activity? StartActivity(ICommand command)
     {
         var operationName = command.GetOperationName("", "-inv");
-        var activity = ActivitySource.StartActivity(operationName);
+        var activity = FusionInstruments.ActivitySource.StartActivity(operationName);
         if (activity != null) {
             var tags = new ActivityTagsCollection { { "command", command.ToString() } };
             var activityEvent = new ActivityEvent(operationName, tags: tags);

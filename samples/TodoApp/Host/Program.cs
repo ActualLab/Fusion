@@ -41,7 +41,9 @@ using Templates.TodoApp.UI;
 #if !DEBUG
 Interceptor.Options.Defaults.IsValidationEnabled = false;
 #endif
-Activity.DefaultIdFormat = ActivityIdFormat.W3C;
+// Actions below should be taken as early as possible:
+// Activity.DefaultIdFormat = ActivityIdFormat.W3C;
+DbShardResolver.DefaultSessionShardTag = TenantExt.SessionTag;
 
 var builder = WebApplication.CreateBuilder();
 var env = builder.Environment;
@@ -166,7 +168,7 @@ void ConfigureServices()
             ? _ => $"tenant{tenantIndex}"
             : TenantExt.CreateTagExtractor(hostSettings.Tenant0Port, hostSettings.TenantCount, hostSettings.Port);
         fusionServer.ConfigureSessionMiddleware(c => new() {
-            TagProvider = (session, httpContext) => session.WithTag(TenantExt.TagName, tenantTagExtractor.Invoke(httpContext)),
+            TagProvider = (session, httpContext) => session.WithTag(TenantExt.SessionTag, tenantTagExtractor.Invoke(httpContext)),
         });
     }
     fusionServer.ConfigureAuthEndpoint(_ => new() {

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Diagnostics;
 
@@ -25,9 +26,9 @@ public class RpcDefaultCallTracer : RpcCallTracer
         var fullMethodName = DiagnosticsExt.FixName($"{method.Service.Name.Value}/{method.Name.Value}");
         InboundCallName = "in." + fullMethodName;
         OutboundCallName = "out." + fullMethodName;
-        ActivitySource = method.Hub.ActivitySource;
+        ActivitySource = RpcInstruments.ActivitySource;
 
-        var m = RpcMeters.Meter;
+        var m = RpcInstruments.Meter;
         var ms = $"rpc.server.{fullMethodName}";
         InboundCallCounter = m.CreateCounter<long>($"{ms}.call.count",
             null, $"Count of inbound {fullMethodName} calls.");

@@ -1,19 +1,21 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
 namespace ActualLab.Rpc.Diagnostics;
 
-public static class RpcMeters
+public static class RpcInstruments
 {
-    public static readonly Meter Meter;
+    public static readonly ActivitySource ActivitySource = new(ThisAssembly.AssemblyName, ThisAssembly.AssemblyVersion);
+    public static readonly Meter Meter = new(ThisAssembly.AssemblyName, ThisAssembly.AssemblyVersion);
     public static readonly Counter<long> InboundCallCounter;
     public static readonly Counter<long> InboundErrorCounter;
     public static readonly Counter<long> InboundCancellationCounter;
     public static readonly Counter<long> InboundIncompleteCounter;
     public static readonly Histogram<double> InboundDurationHistogram;
 
-    static RpcMeters()
+    static RpcInstruments()
     {
-        var m = Meter = typeof(RpcHub).GetMeter();
+        var m = Meter;
         var ms = "rpc";
         var server = $"{ms}.server";
         // See https://opentelemetry.io/docs/specs/semconv/rpc/rpc-metrics/

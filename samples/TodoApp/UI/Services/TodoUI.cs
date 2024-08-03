@@ -7,7 +7,7 @@ namespace Templates.TodoApp.UI.Services;
 
 public class TodoUI(Session session, ITodoService todoService) : IComputeService, IDisposable, IHasIsDisposed
 {
-    private static readonly ActivitySource ActivitySource = typeof(TodoUI).GetActivitySource();
+    private static readonly ActivitySource ActivitySource = AppInstruments.ActivitySource;
     private volatile int _isDisposed;
 
     public Session Session { get; } = session;

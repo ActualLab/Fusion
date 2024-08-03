@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
@@ -45,6 +46,7 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
             }
             await SystemClock.Delay(Settings.CheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
         }
+        // ReSharper disable once FunctionNeverReturns
     }
 
     private async Task LogStatistics(DbShard shard, CancellationToken cancellationToken)
@@ -52,7 +54,10 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
         while (!cancellationToken.IsCancellationRequested) {
             await Task.Delay(Settings.StatisticsPeriod.Next(), cancellationToken).ConfigureAwait(false);
 
-            var activity = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
+            var activity = FusionInstruments.ActivitySource
+                .IfEnabled(Settings.IsTracingEnabled)
+                .StartActivity(GetType())
+                .AddShardTags(shard);
             try {
                 var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
                 await using var _1 = dbContext.ConfigureAwait(false);
@@ -93,7 +98,10 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
     {
         var minDelayUntil = SystemClock.Now.ToDateTime() - Settings.MaxEntryAge;
 
-        var activity = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
+        var activity = FusionInstruments.ActivitySource
+            .IfEnabled(Settings.IsTracingEnabled)
+            .StartActivity(GetType())
+            .AddShardTags(shard);
         try {
             var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
             await using var _1 = dbContext.ConfigureAwait(false);

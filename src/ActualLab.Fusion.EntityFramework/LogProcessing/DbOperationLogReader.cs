@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
@@ -25,7 +26,10 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         if (nextIndexOpt is not { } nextIndex)
             return 0; // The log is empty
 
-        var activity = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
+        var activity = FusionInstruments.ActivitySource
+            .IfEnabled(Settings.IsTracingEnabled)
+            .StartActivity(GetType())
+            .AddShardTags(shard);
         try {
             var dbContext = await DbHub.CreateDbContext(shard, readWrite: true, cancellationToken).ConfigureAwait(false);
             await using var _1 = dbContext.ConfigureAwait(false);

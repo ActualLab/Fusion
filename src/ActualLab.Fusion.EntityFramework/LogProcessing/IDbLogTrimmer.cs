@@ -17,5 +17,5 @@ public record DbLogTrimmerOptions
     public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(10));
     public RandomTimeSpan StatisticsPeriod { get; init; } = TimeSpan.FromHours(1).ToRandom(0.1);
     public LogLevel LogLevel { get; init; } = LogLevel.Information;
-    public bool UseActivitySource { get; init; }
+    public bool IsTracingEnabled { get; init; }
 }

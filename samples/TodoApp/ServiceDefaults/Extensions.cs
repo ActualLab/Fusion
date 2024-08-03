@@ -55,11 +55,10 @@ public static class Extensions
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation();
-                metrics.AddMeter("ActualLab.Core");
                 metrics.AddMeter("ActualLab.Rpc");
                 metrics.AddMeter("ActualLab.CommandR");
                 metrics.AddMeter("ActualLab.Fusion");
-                metrics.AddMeter("ActualLab.Fusion.EntityFramework");
+                metrics.AddMeter("Templates.TodoApp");
             })
             .WithTracing(tracing => {
                 tracing.SetSampler(_ => new AlwaysOnSampler());
@@ -67,12 +66,10 @@ public static class Extensions
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()
                     .AddHttpClientInstrumentation();
-                tracing.AddSource("ActualLab.Core");
                 tracing.AddSource("ActualLab.Rpc");
                 tracing.AddSource("ActualLab.CommandR");
                 tracing.AddSource("ActualLab.Fusion");
-                tracing.AddSource("ActualLab.Fusion.EntityFramework");
-                tracing.AddSource("Templates.TodoApp.UI");
+                tracing.AddSource("Templates.TodoApp");
                 // tracing.AddNpgsql();
                 // tracing.AddConsoleExporter();
             });

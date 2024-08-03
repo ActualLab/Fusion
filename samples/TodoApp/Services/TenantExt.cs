@@ -6,10 +6,10 @@ namespace Templates.TodoApp.Services;
 
 public static class TenantExt
 {
-    public const string TagName = "t";
+    public static readonly string SessionTag = "t";
 
     public static DbShard GetTenant(this Session session)
-        => DbShard.Parse(session.GetTag(TagName));
+        => DbShard.Parse(session.GetTag(SessionTag));
 
     public static DbShard GetTenant(this string folder)
     {

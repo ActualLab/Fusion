@@ -1,5 +1,6 @@
 using System.Diagnostics.Metrics;
 using ActualLab.Concurrency;
+using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
@@ -261,7 +262,7 @@ public sealed class ComputedRegistry : IDisposable
 
         public MeterSet()
         {
-            var m = typeof(ComputedRegistry).GetMeter();
+            var m = FusionInstruments.Meter;
             var ms = "computed.registry";
             CapacityCounter = m.CreateObservableCounter($"{ms}.capacity",
                 () => Interlocked.Read(ref Capacity),

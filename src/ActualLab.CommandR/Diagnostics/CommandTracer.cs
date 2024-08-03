@@ -5,11 +5,9 @@ namespace ActualLab.CommandR.Diagnostics;
 
 public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand>
 {
-    private ActivitySource? _activitySource;
     private ILogger? _log;
 
     protected IServiceProvider Services { get; } = services;
-    protected ActivitySource ActivitySource => _activitySource ??= typeof(ICommand).GetActivitySource();
 
     protected ILogger Log {
         get => _log ??= Services.LogFor(GetType());
@@ -64,7 +62,7 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
     protected virtual Activity? StartActivity(ICommand command, CommandContext context)
     {
         var operationName = command.GetOperationName();
-        var activity = ActivitySource.StartActivity(operationName);
+        var activity = CommanderInstruments.ActivitySource.StartActivity(operationName);
         if (activity != null) {
             var tags = new ActivityTagsCollection { { "command", command.ToString() } };
             var activityEvent = new ActivityEvent(operationName, tags: tags);

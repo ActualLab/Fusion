@@ -3,10 +3,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
 using Microsoft.Toolkit.HighPerformance;
-using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
+using ActualLab.Rpc.Diagnostics;
 using Errors = ActualLab.Rpc.Internal.Errors;
+using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.WebSockets;
 
@@ -507,7 +508,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
 
         public MeterSet()
         {
-            var m = typeof(WebSocketChannel<T>).GetMeter();
+            var m = RpcInstruments.Meter;
             var ms = $"rpc.ws.{typeof(T).GetName()}-channel";
             ChannelCounter = m.CreateObservableCounter($"{ms}.count",
                 () => Interlocked.Read(ref ChannelCount),

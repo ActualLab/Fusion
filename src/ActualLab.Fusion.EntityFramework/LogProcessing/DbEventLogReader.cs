@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using ActualLab.Fusion.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
@@ -21,7 +21,10 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
 
     protected override async Task<int> ProcessBatch(DbShard shard, int batchSize, CancellationToken cancellationToken)
     {
-        var activity = ActivitySource.IfEnabled(Settings.UseActivitySource).StartActivity(GetType()).AddShardTags(shard);
+        var activity = FusionInstruments.ActivitySource
+            .IfEnabled(Settings.IsTracingEnabled)
+            .StartActivity(GetType())
+            .AddShardTags(shard);
         try {
             var dbContext = await DbHub.CreateDbContext(shard, readWrite: true, cancellationToken)
                 .ConfigureAwait(false);

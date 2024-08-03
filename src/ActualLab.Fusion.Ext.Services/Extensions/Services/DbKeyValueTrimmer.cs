@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
@@ -15,6 +16,7 @@ public class DbKeyValueTrimmer<TDbContext, TDbKeyValue> : DbShardWorkerBase<TDbC
         public RandomTimeSpan CheckPeriod { get; init; } = TimeSpan.FromMinutes(15).ToRandom(0.1);
         public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
         public LogLevel LogLevel { get; init; } = LogLevel.Information;
+        public bool IsTracingEnabled { get; init; }
     }
 
     protected Options Settings { get; }
@@ -33,7 +35,7 @@ public class DbKeyValueTrimmer<TDbContext, TDbKeyValue> : DbShardWorkerBase<TDbC
     {
         var lastTrimCount = 0;
 
-        var activitySource = GetType().GetActivitySource();
+        var activitySource = FusionInstruments.ActivitySource.IfEnabled(Settings.IsTracingEnabled);
         var runChain = new AsyncChain($"Trim({shard})", async cancellationToken1 => {
             var dbContext = await DbHub.CreateDbContext(shard, true, cancellationToken1).ConfigureAwait(false);
             await using var _ = dbContext.ConfigureAwait(false);
