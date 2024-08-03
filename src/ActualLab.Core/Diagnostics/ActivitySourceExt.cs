@@ -4,8 +4,6 @@ namespace ActualLab.Diagnostics;
 
 public static class ActivitySourceExt
 {
-    public static readonly ActivitySource Unknown = new("unknown");
-
     public static ActivitySource? IfEnabled(this ActivitySource activitySource, bool isEnabled)
         => isEnabled ? activitySource : null;
 
