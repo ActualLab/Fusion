@@ -25,7 +25,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
     private ILogger? _log;
 
     public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
-    public Func<CpuTimestamp, int, Task>? WebSocketWriteDelayFactory { get; set; } = (_, _) => Task.Delay(1);
+    public RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
     public bool UseLogging { get; init; } = true;
     public bool UseTestClock { get; init; }
     public bool ExposeBackend { get; init; } = false;
@@ -121,20 +121,19 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
         var rpc = services.AddRpc();
         rpc.AddWebSocketClient(_ => RpcWebSocketClient.Options.Default with {
             HostUrlResolver = (_, _) => WebHost.ServerUri.ToString(),
-            WebSocketChannelFactory = (_, webSocketOwner, _) => {
-                var channelOptions = WebSocketChannel<RpcMessage>.Options.Default with {
-                    WriteDelayer = WebSocketWriteDelayFactory,
-                };
-                return new WebSocketChannel<RpcMessage>(channelOptions, webSocketOwner);
-            }
         });
         services.AddSingleton<RpcCallRouter>(_ => {
             return (method, arguments) => RpcPeerRef.GetDefaultPeerRef(ConnectionKind, method.IsBackend);
         });
+        services.AddSingleton<RpcWebSocketChannelOptionsProvider>(_ => {
+            return (_, _) => {
+                var options = WebSocketChannel<RpcMessage>.Options.Default;
+                return options with { FrameDelayerFactory = RpcFrameDelayerFactory };
+            };
+        });
         if (!isClient) {
             services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly) {
                 ExposeBackend = ExposeBackend,
-                WebSocketWriteDelayFactory = WebSocketWriteDelayFactory,
             });
         }
         else {

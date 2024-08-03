@@ -26,7 +26,6 @@ public class RpcWebSocketServer(
         public string BackendRequestPath { get; init; } = RpcWebSocketClient.Options.Default.BackendRequestPath;
         public string ClientIdParameterName { get; init; } = RpcWebSocketClient.Options.Default.ClientIdParameterName;
         public TimeSpan ChangeConnectionDelay { get; init; } = TimeSpan.FromSeconds(1);
-        public WebSocketChannel<RpcMessage>.Options WebSocketChannelOptions { get; init; } = WebSocketChannel<RpcMessage>.Options.Default;
     }
 
     public Options Settings { get; } = settings;
@@ -34,6 +33,8 @@ public class RpcWebSocketServer(
         = services.GetRequiredService<RpcWebSocketServerPeerRefFactory>();
     public RpcServerConnectionFactory ServerConnectionFactory { get; }
         = services.GetRequiredService<RpcServerConnectionFactory>();
+    public RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; }
+        = services.GetRequiredService<RpcWebSocketChannelOptionsProvider>();
 
     public HttpStatusCode Invoke(IOwinContext context, bool isBackend)
     {
@@ -80,15 +81,17 @@ public class RpcWebSocketServer(
             }
 
             webSocket = wsContext.WebSocket;
-            var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
-            var channel = new WebSocketChannel<RpcMessage>(
-                Settings.WebSocketChannelOptions, webSocketOwner, cancellationToken) {
-                OwnsWebSocketOwner = false,
-            };
             var properties = PropertyBag.Empty
                 .Set((RpcPeer)peer)
                 .Set(context)
                 .Set(webSocket);
+            var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
+            var webSocketChannelOptions = WebSocketChannelOptionsProvider.Invoke(peer, properties);
+            var channel = new WebSocketChannel<RpcMessage>(
+                webSocketChannelOptions, webSocketOwner, cancellationToken) {
+                OwnsWebSocketOwner = false,
+            };
+
             connection = await ServerConnectionFactory
                 .Invoke(peer, channel, properties, cancellationToken)
                 .ConfigureAwait(false);

@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc;
 
@@ -22,6 +23,8 @@ public delegate RpcInboundContext RpcInboundContextFactory(
 public delegate bool RpcInboundCallFilter(RpcPeer peer, RpcMethodDef method);
 public delegate Task<RpcConnection> RpcServerConnectionFactory(
     RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties, CancellationToken cancellationToken);
+public delegate WebSocketChannel<RpcMessage>.Options RpcWebSocketChannelOptionsProvider(
+    RpcPeer peer, PropertyBag properties);
 public delegate bool RpcPeerTerminalErrorDetector(Exception error);
 public delegate RpcCallTracer? RpcCallTracerFactory(RpcMethodDef method);
 public delegate RpcCallLogger RpcCallLoggerFactory(RpcPeer peer, RpcCallLoggerFilter filter, ILogger log, LogLevel logLevel);
@@ -106,6 +109,11 @@ public static class RpcDefaultDelegates
 
     public static RpcServerConnectionFactory ServerConnectionFactory { get; set; } =
         static (peer, channel, options, cancellationToken) => Task.FromResult(new RpcConnection(channel, options));
+
+    public static RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; set; } =
+        static (peer, properties) => WebSocketChannel<RpcMessage>.Options.Default with {
+            FrameDelayerFactory = RpcFrameDelayers.DefaultFactoryProvider.Invoke(peer, properties),
+        };
 
     public static RpcPeerTerminalErrorDetector PeerTerminalErrorDetector { get; set; } =
         static error => error is RpcReconnectFailedException or RpcRerouteException;

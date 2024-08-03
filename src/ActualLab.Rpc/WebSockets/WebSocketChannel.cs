@@ -23,7 +23,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public int ReadBufferSize { get; init; } = 16_000; // Rented ~just once, so it can be large
         public int RetainedBufferSize { get; init; } = 64_000; // Any buffer is released when it hits this size
         public int MaxItemSize { get; init; } = 130_000_000; // 130 MB;
-        public Func<CpuTimestamp, int, Task>? WriteDelayer { get; init; } = RpcDefaults.WebSocketWriteDelayer;
+        public RpcFrameDelayerFactory? FrameDelayerFactory { get; init; }
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public DualSerializer<T> Serializer { get; init; } = new();
         public BoundedChannelOptions ReadChannelOptions { get; init; } = new(128) {
@@ -62,7 +62,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
     public WebSocket WebSocket { get; }
     public readonly CancellationToken StopToken;
     public readonly DualSerializer<T> Serializer;
-    public readonly CpuTimestamp StartedAt = CpuTimestamp.Now;
     public readonly ILogger? Log;
     public readonly ILogger? ErrorLog;
     public readonly Task WhenReadCompleted;
@@ -185,9 +184,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
             var reader = _writeChannel.Reader;
             if (_defaultMessageType == WebSocketMessageType.Binary) {
                 // Binary -> we build frames
-                if (Settings.WriteDelayer is { } writeDelayer) {
+                if (Settings.FrameDelayerFactory?.Invoke() is { } frameDelayer) {
                     // There is a write delay -> we use more complex write logic
-                    await RunWriterWithWriteDelayer(reader, writeDelayer, cancellationToken).ConfigureAwait(false);
+                    await RunWriterWithFrameDelayer(reader, frameDelayer, cancellationToken).ConfigureAwait(false);
                     return;
                 }
 
@@ -216,12 +215,11 @@ public sealed class WebSocketChannel<T> : Channel<T>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    private async Task RunWriterWithWriteDelayer(
+    private async Task RunWriterWithFrameDelayer(
         ChannelReader<T> reader,
-        Func<CpuTimestamp, int, Task> writeDelayer,
+        RpcFrameDelayer frameDelayer,
         CancellationToken cancellationToken)
     {
-        var startedAt = StartedAt;
         Task? whenMustFlush = null; // null = no flush required / nothing to flush
         Task<bool>? waitToReadTask = null;
         while (true) {
@@ -272,7 +270,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             }
             if (whenMustFlush == null && _writeBuffer.WrittenCount > 0) {
                 // If we're here, the write flush isn't "planned" yet + there is some data to flush.
-                whenMustFlush = writeDelayer.Invoke(startedAt, _writeBuffer.WrittenCount);
+                whenMustFlush = frameDelayer.Invoke(_writeBuffer.WrittenCount);
             }
         }
         // Final write flush

@@ -14,18 +14,11 @@ public static class RpcDefaults
         set {
             if (value is not (RpcMode.Client or RpcMode.Server))
                 throw new ArgumentOutOfRangeException(nameof(value), value, null);
-            lock (Lock) {
+            lock (Lock)
                 _mode = value;
-                // Disabled for now due to possible perf. issues
-                var isServer = Mode is RpcMode.Server;
-                WebSocketWriteDelayer = isServer
-                    ? null
-                    : GetWriteDelayer(TimeSpan.FromSeconds(15));
-            }
         }
     }
 
-    public static Func<CpuTimestamp, int, Task>? WebSocketWriteDelayer { get; set; }
     public static Symbol ApiScope { get; set; } = "Api";
     public static Symbol BackendScope { get; set; } = "Backend";
     public static Version ApiVersion { get; set; } = new(1, 0);
@@ -50,11 +43,6 @@ public static class RpcDefaults
             return _backendPeerVersions;
         }
     }
-
-    public static Func<CpuTimestamp, int, Task> GetWriteDelayer(TimeSpan activityPeriod)
-        => (startedAt, bufferedCount) => startedAt.Elapsed > activityPeriod
-            ? Task.CompletedTask
-            : TaskExt.YieldDelay();
 
     // Type constructor
 

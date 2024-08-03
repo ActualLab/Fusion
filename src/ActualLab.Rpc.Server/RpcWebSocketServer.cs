@@ -21,7 +21,6 @@ public class RpcWebSocketServer(
         public string BackendRequestPath { get; init; } = RpcWebSocketClient.Options.Default.BackendRequestPath;
         public string ClientIdParameterName { get; init; } = RpcWebSocketClient.Options.Default.ClientIdParameterName;
         public TimeSpan ChangeConnectionDelay { get; init; } = TimeSpan.FromSeconds(1);
-        public WebSocketChannel<RpcMessage>.Options WebSocketChannelOptions { get; init; } = WebSocketChannel<RpcMessage>.Options.Default;
 #if NET6_0_OR_GREATER
         public Func<WebSocketAcceptContext> ConfigureWebSocket { get; init; } = () => new();
 #endif
@@ -32,6 +31,8 @@ public class RpcWebSocketServer(
         = services.GetRequiredService<RpcWebSocketServerPeerRefFactory>();
     public RpcServerConnectionFactory ServerConnectionFactory { get; }
         = services.GetRequiredService<RpcServerConnectionFactory>();
+    public RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; }
+        = services.GetRequiredService<RpcWebSocketChannelOptionsProvider>();
 
     public async Task Invoke(HttpContext context, bool isBackend)
     {
@@ -60,15 +61,16 @@ public class RpcWebSocketServer(
             var acceptWebSocketTask = context.WebSockets.AcceptWebSocketAsync();
 #endif
             webSocket = await acceptWebSocketTask.ConfigureAwait(false);
-            var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
-            var channel = new WebSocketChannel<RpcMessage>(
-                Settings.WebSocketChannelOptions, webSocketOwner, cancellationToken) {
-                OwnsWebSocketOwner = false,
-            };
             var properties = PropertyBag.Empty
                 .Set((RpcPeer)peer)
                 .Set(context)
                 .Set(webSocket);
+            var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
+            var webSocketChannelOptions = WebSocketChannelOptionsProvider.Invoke(peer, properties);
+            var channel = new WebSocketChannel<RpcMessage>(
+                webSocketChannelOptions, webSocketOwner, cancellationToken) {
+                OwnsWebSocketOwner = false,
+            };
             connection = await ServerConnectionFactory
                 .Invoke(peer, channel, properties, cancellationToken)
                 .ConfigureAwait(false);

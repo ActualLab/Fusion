@@ -27,16 +27,9 @@ public class RpcWebSocketClient(
         public string RequestPath { get; init; } = "/rpc/ws";
         public string BackendRequestPath { get; init; } = "/backend/rpc/ws";
         public string ClientIdParameterName { get; init; } = "clientId";
-#pragma warning disable IL2026
-        public Func<RpcWebSocketClient, WebSocketOwner, PropertyBag, WebSocketChannel<RpcMessage>>
-            WebSocketChannelFactory { get; init; } = DefaultWebSocketChannelFactory;
-#pragma warning restore IL2026
 
         public static string DefaultHostUrlResolver(RpcWebSocketClient client, RpcClientPeer peer)
             => peer.Ref.Key.Value;
-
-        public static bool DefaultLocalUriDetector(RpcWebSocketClient client, Uri uri)
-            => uri.IsDefaultPort && uri.Host.EndsWith(".localhost", StringComparison.Ordinal);
 
         public static Uri? DefaultConnectionUriResolver(RpcWebSocketClient client, RpcClientPeer peer)
         {
@@ -71,14 +64,11 @@ public class RpcWebSocketClient(
 
         public static WebSocketOwner DefaultWebSocketOwnerFactory(RpcWebSocketClient client, RpcClientPeer peer)
             => new(peer.Ref.ToString(), new ClientWebSocket(), client.Services);
-
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-        public static WebSocketChannel<RpcMessage> DefaultWebSocketChannelFactory(
-            RpcWebSocketClient client, WebSocketOwner webSocketOwner, PropertyBag properties)
-            => new(WebSocketChannel<RpcMessage>.Options.Default, webSocketOwner);
     }
 
     public Options Settings { get; } = settings;
+    public RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; }
+        = services.GetRequiredService<RpcWebSocketChannelOptionsProvider>();
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
@@ -138,7 +128,8 @@ public class RpcWebSocketClient(
             .Set(uri)
             .Set(webSocketOwner)
             .Set(webSocketOwner.WebSocket);
-        var channel = Settings.WebSocketChannelFactory.Invoke(this, webSocketOwner, properties);
+        var webSocketChannelOptions = WebSocketChannelOptionsProvider.Invoke(clientPeer, properties);
+        var channel = new WebSocketChannel<RpcMessage>(webSocketChannelOptions, webSocketOwner);
         return new RpcConnection(channel, properties);
     }
 }
