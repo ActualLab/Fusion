@@ -19,7 +19,7 @@ public static class RpcBuilderExt
         services.AddSingleton<RpcPeerFactory>(_ => (hub, peerRef)
             => peerRef.IsServer
                 ? new RpcServerPeer(hub, peerRef) {
-                    CloseTimeout = TimeSpan.FromSeconds(10),
+                    CloseTimeoutProvider = static _ => TimeSpan.FromSeconds(10),
                 }
                 : new RpcClientPeer(hub, peerRef)
         );

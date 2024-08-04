@@ -27,6 +27,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public RpcHub Hub { get; }
     public RpcPeerRef Ref { get; }
     public Guid Id { get; } = Guid.NewGuid();
+    public CpuTimestamp CreatedAt { get; } = CpuTimestamp.Now;
     public RpcPeerConnectionKind ConnectionKind { get; }
     public VersionSet Versions { get; init; }
     public RpcServerMethodResolver ServerMethodResolver { get; protected set; }

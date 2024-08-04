@@ -7,7 +7,7 @@ public class RpcServerPeer(RpcHub hub, RpcPeerRef @ref, VersionSet? versions = n
 {
     private volatile AsyncState<RpcConnection?> _nextConnection = new(null, true);
 
-    public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromMinutes(10);
+    public Func<RpcServerPeer, TimeSpan> CloseTimeoutProvider { get; init; } = static _ => TimeSpan.FromMinutes(10);
 
     public void SetConnection(RpcConnection connection)
     {
@@ -41,9 +41,10 @@ public class RpcServerPeer(RpcHub hub, RpcPeerRef @ref, VersionSet? versions = n
                 }
             }
             try {
+                var closeTimeout = CloseTimeoutProvider.Invoke(this);
                 await nextConnection
                     .When(x => x != null, cancellationToken)
-                    .WaitAsync(CloseTimeout, cancellationToken)
+                    .WaitAsync(closeTimeout, cancellationToken)
                     .ConfigureAwait(false);
             }
             catch (TimeoutException) {
