@@ -4,7 +4,7 @@ using ActualLab.Fusion.UI;
 
 namespace ActualLab.Fusion.Blazor.Authentication;
 
-public class AuthStateProvider : AuthenticationStateProvider, IDisposable
+public sealed class AuthStateProvider : AuthenticationStateProvider, IDisposable
 {
     public record Options
     {
@@ -14,25 +14,24 @@ public class AuthStateProvider : AuthenticationStateProvider, IDisposable
 
         public Options()
         {
-            var updateDelayer = FixedDelayer.NextTick;
+            var updateDelayer = FixedDelayer.NextTick; // Must be small, otherwise the auth delay will be percievable
             UpdateDelayer = updateDelayer with {
                 RetryDelays = updateDelayer.RetryDelays with { Max = TimeSpan.FromSeconds(10) },
             };
         }
     };
 
+    private readonly object _lock = new();
     private Session? _session;
-    private volatile IStateSnapshot<AuthState>? _cachedStateSnapshot;
-    private volatile Task<AuthenticationState>? _cachedStateValueTask;
+    private volatile Task<AuthState> _authStateTask;
+    private volatile Task<AuthenticationState> _authenticationStateTask;
 
-    // These properties are intentionally public -
-    // e.g. State is quite handy to consume in other compute methods or states
-    public ComputedState<AuthState> State { get; }
+    private IServiceProvider Services { get; }
+    private IAuth Auth { get; }
+    private ISessionResolver SessionResolver { get; }
+    private UIActionTracker UIActionTracker { get; }
 
-    protected IServiceProvider Services { get; }
-    protected IAuth Auth { get; }
-    protected ISessionResolver SessionResolver { get; }
-    protected UIActionTracker UIActionTracker { get; }
+    public ComputedState<AuthState> ComputedState { get; }
 
     public AuthStateProvider(Options settings, IServiceProvider services)
     {
@@ -41,47 +40,27 @@ public class AuthStateProvider : AuthenticationStateProvider, IDisposable
         Auth = services.GetRequiredService<IAuth>();
         UIActionTracker = services.UIActionTracker();
 
-        // ReSharper disable once VirtualMemberCallInConstructor
-#pragma warning disable CA2214
-        var stateOptions = GetStateOptions(settings);
-#pragma warning restore CA2214
-        State = services.StateFactory().NewComputed(stateOptions, ComputeState);
-    }
-
-    public void Dispose()
-        => State.Dispose();
-
-    public override Task<AuthenticationState> GetAuthenticationStateAsync()
-    {
-        // Simplest version of this method:
-        // return State.Update().AsTask().ContinueWith(t => (AuthenticationState) t.Result.LatestNonErrorValue);
-
-        // More performant version relying on task caching:
-        if (_cachedStateValueTask != null) {
-            if (!_cachedStateValueTask.IsCompleted)
-                return _cachedStateValueTask;
-            var snapshot = State.Snapshot;
-            if (_cachedStateSnapshot == snapshot && snapshot.Computed.IsConsistent())
-                return _cachedStateValueTask;
+        var initialAuthState = new AuthState();
+        lock (_lock) {
+            _authStateTask = Task.FromResult(initialAuthState);
+            _authenticationStateTask = Task.FromResult((AuthenticationState)initialAuthState);
         }
-
-        _cachedStateValueTask = State.Update().AsTask().ContinueWith(t => {
-            var snapshot = t.Result.Snapshot;
-            _cachedStateSnapshot = snapshot;
-            return (AuthenticationState) snapshot.LastNonErrorComputed.Value;
-        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Current);
-        return _cachedStateValueTask;
-    }
-
-    protected virtual ComputedState<AuthState>.Options GetStateOptions(Options settings)
-        => new() {
-            InitialValue = new(),
+        var stateOptions = new ComputedState<AuthState>.Options() {
+            InitialValue = initialAuthState,
             UpdateDelayer = settings.UpdateDelayer,
             EventConfigurator = state => state.AddEventHandler(StateEventKind.Updated, OnStateChanged),
             FlowExecutionContext = true, // To preserve current culture
         };
+        ComputedState = services.StateFactory().NewComputed(stateOptions, ComputeState);
+    }
 
-    protected virtual async Task<AuthState> ComputeState(CancellationToken cancellationToken)
+    public void Dispose()
+        => ComputedState.Dispose();
+
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
+        => _authenticationStateTask;
+
+    private async Task<AuthState> ComputeState(CancellationToken cancellationToken)
     {
         // We have to use ISessionResolver.GetSession() here
         _session ??= await SessionResolver.GetSession(cancellationToken).ConfigureAwait(false);
@@ -93,12 +72,21 @@ public class AuthStateProvider : AuthenticationStateProvider, IDisposable
         return new AuthState(user, isSignOutForced);
     }
 
-    protected virtual void OnStateChanged(IState<AuthState> state, StateEventKind eventKind)
+    private void OnStateChanged(IState<AuthState> state, StateEventKind eventKind)
         => _ = Task.Run(() => {
-            var authenticationStateTask = Task.FromResult((AuthenticationState)state.LastNonErrorValue);
-            NotifyAuthenticationStateChanged(authenticationStateTask);
+            Task<AuthState> authStateTask;
+            Task<AuthenticationState> authenticationStateTask;
+            lock (_lock) {
+                var authState = state.LastNonErrorValue;
+                var oldAuthState = _authStateTask.Result;
+                if (authState.IsIdenticalTo(oldAuthState))
+                    return;
 
-            var authStateTask = Task.FromResult(state.LastNonErrorValue);
+                authStateTask = _authStateTask = Task.FromResult(authState);
+                authenticationStateTask = _authenticationStateTask = Task.FromResult((AuthenticationState)authState);
+            }
+
+            NotifyAuthenticationStateChanged(authenticationStateTask);
             var clock = UIActionTracker.Clock;
             var action = new UIAction<AuthState>(new ChangeAuthStateUICommand(), clock, authStateTask, default);
             UIActionTracker.Register(action);
