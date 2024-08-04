@@ -38,13 +38,19 @@ public abstract class StatefulComponentBase<TState> : StatefulComponentBase
     protected TState State { get; private set; } = null!;
     protected override IState UntypedState => State;
 
-    protected override void OnInitialized()
+    public override Task SetParametersAsync(ParameterView parameters)
     {
+        var task = base.SetParametersAsync(parameters);
+        // If we're here:
+        // - Sync part of OnInitialized(Async) is completed
+        // - Sync part of OnParametersSet(Async) is completed
+        // - No error is thrown from sync part of that code
         if (!ReferenceEquals(State, null))
-            return;
+            return task;
 
         var (state, stateOptions) = CreateState();
         SetState(state, stateOptions);
+        return task;
     }
 
     protected virtual void SetState(

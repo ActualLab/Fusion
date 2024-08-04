@@ -12,25 +12,36 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
     public override Task SetParametersAsync(ParameterView parameters)
     {
         var parameterSetIndex = ParameterSetIndex;
-        var task = base.SetParametersAsync(parameters);
-        var mustRecompute =
-            (Options & ComputedStateComponentOptions.RecomputeStateOnParameterChange) != 0 // Requires recompute on parameter change
-            && parameterSetIndex != 0 // Not the very first call to SetParametersAsync
-            && ParameterSetIndex != parameterSetIndex; // And parameters were changed
-        if (!mustRecompute)
-            return task;
+        bool mustRecompute;
+        try {
+            var task = base.SetParametersAsync(parameters);
+            mustRecompute = (Options & ComputedStateComponentOptions.RecomputeStateOnParameterChange) != 0 // Requires recompute
+                && parameterSetIndex != 0 // Not the very first call to SetParametersAsync
+                && ParameterSetIndex != parameterSetIndex; // And parameters were changed
+            if (!mustRecompute)
+                return task;
 
-        if (task.IsCompletedSuccessfully) {
-            _ = State.Recompute();
-            return task;
+            if (task.IsCompletedSuccessfully) {
+                _ = State.Recompute();
+                return task;
+            }
+
+            return CompleteAsync(task);
+
+            async Task CompleteAsync(Task dependency) {
+                await dependency;
+                _ = State.Recompute();
+            }
         }
-
-        return CompleteAsync(task);
-
-        async Task CompleteAsync(Task dependency)
-        {
-            await dependency;
-            _ = State.Recompute();
+        catch {
+            // We can still conclude whether the parameters were changed or not.
+            // There is nothing to await - all we need is to (maybe) recompute & throw.
+            mustRecompute = (Options & ComputedStateComponentOptions.RecomputeStateOnParameterChange) != 0 // Requires recompute
+                && parameterSetIndex != 0 // Not the very first call to SetParametersAsync
+                && ParameterSetIndex != parameterSetIndex; // And parameters were changed
+            if (mustRecompute)
+                _ = State.Recompute();
+            throw;
         }
     }
 
