@@ -130,12 +130,23 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void RpcHandshakeSerialization()
     {
-        Test(new RpcHandshake(default, null, default, null));
-        Test(new RpcHandshake(new Guid(), new VersionSet(("Test", "1.0")), new Guid(), null));
+        Test(new RpcHandshake(default, null, default, 0));
+        Test(new RpcHandshake(default, null, default, 1));
+
+        var hs = new RpcHandshake(new Guid(), new VersionSet(("Test", "1.0")), new Guid(), 2);
+        Test(hs);
+
+        // Old RpcHandshake -> new RpcHandshake test
+        var ohs = new OldRpcHandshake(hs.RemotePeerId, hs.RemoteApiVersionSet, hs.RemoteHubId);
+        var v1 = MemoryPackSerialized.New(ohs);
+        var v2 = MemoryPackSerialized.New<RpcHandshake>(v1.Data);
+        hs = v2.Value;
+        var ohs1 = new OldRpcHandshake(hs.RemotePeerId, hs.RemoteApiVersionSet, hs.RemoteHubId);
+        ohs1.Should().Be(ohs);
 
         void Test(RpcHandshake h) {
             var hs = h.PassThroughAllSerializers();
-            hs.RemotePeerId.Should().Be(h.RemotePeerId);
+            hs.Should().Be(h);
         }
     }
 
