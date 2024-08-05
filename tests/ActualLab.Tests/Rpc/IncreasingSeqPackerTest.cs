@@ -2,7 +2,7 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Tests.Rpc;
 
-public class IncreasingSeqDeltaSerializerTest(ITestOutputHelper @out) : TestBase(@out)
+public class IncreasingSeqPackerTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
     public void Test()
@@ -16,8 +16,8 @@ public class IncreasingSeqDeltaSerializerTest(ITestOutputHelper @out) : TestBase
                 .ToArray();
             testedLengths.Add(seq.Length);
 
-            var data = IncreasingSeqDeltaSerializer.Serialize(seq);
-            var seq1 = IncreasingSeqDeltaSerializer.Deserialize(data);
+            var data = IncreasingSeqPacker.Serialize(seq);
+            var seq1 = IncreasingSeqPacker.Deserialize(data);
             seq1.Should().Equal(seq);
         }
         Out.WriteLine($"Tested lengths: {testedLengths.Order().ToDelimitedString()}");

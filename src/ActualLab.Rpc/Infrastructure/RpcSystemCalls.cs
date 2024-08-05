@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Internal;
 using Errors = ActualLab.Rpc.Internal.Errors;
+using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -9,8 +9,9 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public interface IRpcSystemCalls : IRpcSystemService
 {
-    // Handshake
+    // Handshake & Resume
     Task<RpcNoWait> Handshake(RpcHandshake handshake);
+    Task<RpcNoWait> Resume(byte[] remoteState);
 
     // Regular calls
     Task<RpcNoWait> Ok(object? result);
@@ -42,6 +43,15 @@ public class RpcSystemCalls(IServiceProvider services)
 
     public Task<RpcNoWait> Handshake(RpcHandshake handshake)
         => RpcNoWait.Tasks.Completed; // Does nothing: this call is processed inside RpcPeer.OnRun
+
+    public Task<RpcNoWait> Resume(byte[] remoteState)
+    {
+        var context = RpcInboundContext.GetCurrent();
+        var peer = context.Peer;
+        var resumeHandler = peer.ReplaceResumeHandler(null);
+        resumeHandler?.Invoke(remoteState);
+        return RpcNoWait.Tasks.Completed;
+    }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task<RpcNoWait> Ok(object? result)

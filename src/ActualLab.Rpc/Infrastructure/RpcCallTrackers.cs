@@ -51,7 +51,7 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
     }
 
     public byte[] GetData()
-        => IncreasingSeqDeltaSerializer.Serialize(Calls.Keys.Order());
+        => IncreasingSeqPacker.Serialize(Calls.Keys.Order());
 
     public bool Unregister(RpcInboundCall call)
         // NoWait should always return true here!

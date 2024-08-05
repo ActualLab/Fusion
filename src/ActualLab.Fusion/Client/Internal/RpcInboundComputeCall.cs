@@ -70,7 +70,7 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
             if (computed != null) {
                 // '@' is required to make it compatible with pre-v7.2 versions
                 var versionHeader = new RpcHeader(FusionRpcHeaderNames.Version, computed.Version.FormatVersion('@'));
-                ResultHeaders = ResultHeaders.With(versionHeader);
+                ResultHeaders = ResultHeaders.WithOrReplace(versionHeader);
             }
         }
 

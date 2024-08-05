@@ -20,9 +20,35 @@ public static class RpcHeadersExt
         return null;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static RpcHeader[] WithUnlessExists(this RpcHeader[]? headers, string name, string value)
-        => headers.WithUnlessExists(new RpcHeader(name, value));
+    public static bool TryReplace(this RpcHeader[]? headers, RpcHeader header)
+    {
+        if (headers == null || headers.Length == 0)
+            return false;
+
+        for (var index = 0; index < headers.Length; index++) {
+            var h = headers[index];
+            if (string.Equals(h.Name, header.Name, StringComparison.Ordinal)) {
+                headers[index] = header;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static RpcHeader[] WithOrReplace(this RpcHeader[]? headers, RpcHeader header)
+    {
+        if (headers == null || headers.Length == 0)
+            return [header];
+
+        if (headers.TryReplace(header))
+            return headers;
+
+        var newHeaders = new RpcHeader[headers.Length + 1];
+        headers.CopyTo(newHeaders, 0);
+        newHeaders[^1] = header;
+        return newHeaders;
+    }
 
     public static RpcHeader[] WithUnlessExists(this RpcHeader[]? headers, RpcHeader header)
     {

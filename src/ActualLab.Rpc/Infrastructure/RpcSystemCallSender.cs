@@ -11,6 +11,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     private IRpcSystemCalls? _client;
     private RpcServiceDef? _systemCallsServiceDef;
     private RpcMethodDef? _handshakeMethodDef;
+    private RpcMethodDef? _resumeMethodDef;
     private RpcMethodDef? _okMethodDef;
     private RpcMethodDef? _errorMethodDef;
     private RpcMethodDef? _cancelMethodDef;
@@ -30,6 +31,8 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         ??= Hub.ServiceRegistry.Get<IRpcSystemCalls>()!;
     public RpcMethodDef HandshakeMethodDef => _handshakeMethodDef
         ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Handshake)));
+    public RpcMethodDef ResumeMethodDef => _resumeMethodDef
+        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Resume)));
     public RpcMethodDef OkMethodDef => _okMethodDef
         ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Ok)));
     public RpcMethodDef ErrorMethodDef => _errorMethodDef
@@ -55,18 +58,25 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public RpcMethodDef EndMethodDef => _endMethodDef
         ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.End)));
 
-    // Handshake
+    // Handshake & Resume
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Handshake(
         RpcPeer peer,
         ChannelWriter<RpcMessage> sender, // Handshake is sent before exposing the Sender, so we pass it directly
-        RpcHandshake handshake,
-        RpcHeader[]? headers = null)
+        RpcHandshake handshake)
     {
         var context = new RpcOutboundContext(peer);
         var call = context.PrepareCallForSendNoWait(HandshakeMethodDef, ArgumentList.New(handshake))!;
         return call.SendNoWait(false, sender);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public Task Resume(RpcPeer peer, byte[] remoteState)
+    {
+        var context = new RpcOutboundContext(peer);
+        var call = context.PrepareCallForSendNoWait(ResumeMethodDef, ArgumentList.New(remoteState))!;
+        return call.SendNoWait(false);
     }
 
     // Regular calls
