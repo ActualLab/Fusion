@@ -89,6 +89,7 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.PeerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.ServerConnectionFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.WebSocketChannelOptionsProvider);
+        services.AddSingleton(_ => RpcDefaultDelegates.ServerPeerCloseTimeoutProvider);
         services.AddSingleton(_ => RpcDefaultDelegates.PeerTerminalErrorDetector);
         services.AddSingleton(_ => RpcDefaultDelegates.CallTracerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFactory);

@@ -25,6 +25,7 @@ public delegate Task<RpcConnection> RpcServerConnectionFactory(
     RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties, CancellationToken cancellationToken);
 public delegate WebSocketChannel<RpcMessage>.Options RpcWebSocketChannelOptionsProvider(
     RpcPeer peer, PropertyBag properties);
+public delegate TimeSpan RpcServerPeerCloseTimeoutProvider(RpcServerPeer peer);
 public delegate bool RpcPeerTerminalErrorDetector(Exception error);
 public delegate RpcCallTracer? RpcCallTracerFactory(RpcMethodDef method);
 public delegate RpcCallLogger RpcCallLoggerFactory(RpcPeer peer, RpcCallLoggerFilter filter, ILogger log, LogLevel logLevel);
@@ -113,6 +114,12 @@ public static class RpcDefaultDelegates
     public static RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; set; } =
         static (peer, properties) => WebSocketChannel<RpcMessage>.Options.Default with {
             FrameDelayerFactory = RpcFrameDelayers.DefaultFactoryProvider.Invoke(peer, properties),
+        };
+
+    public static RpcServerPeerCloseTimeoutProvider ServerPeerCloseTimeoutProvider { get; set; } =
+        static peer => {
+            var peerLifetime = peer.CreatedAt.Elapsed;
+            return (0.33 * peerLifetime).Clamp(TimeSpan.FromMinutes(3), TimeSpan.FromMinutes(15));
         };
 
     public static RpcPeerTerminalErrorDetector PeerTerminalErrorDetector { get; set; } =

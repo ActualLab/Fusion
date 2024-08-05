@@ -25,6 +25,7 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcOutboundMiddlewares OutboundMiddlewares => Hub.OutboundMiddlewares;
     public RpcPeerFactory PeerFactory => Hub.PeerFactory;
     public RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer => Hub.ClientPeerReconnectDelayer;
+    public RpcServerPeerCloseTimeoutProvider ServerPeerCloseTimeoutProvider => Hub.ServerPeerCloseTimeoutProvider;
     public RpcPeerTerminalErrorDetector PeerTerminalErrorDetector => Hub.PeerTerminalErrorDetector;
     public RpcCallTracerFactory CallTracerFactory => Hub.CallTracerFactory;
     public RpcCallLoggerFactory CallLoggerFactory => Hub.CallLoggerFactory;
