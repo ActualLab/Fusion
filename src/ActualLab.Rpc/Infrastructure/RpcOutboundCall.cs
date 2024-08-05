@@ -172,10 +172,12 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public abstract bool Cancel(CancellationToken cancellationToken);
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public virtual Task Reconnect(bool isPeerChanged, CancellationToken cancellationToken)
+    public virtual Task Reconnect(bool isPeerChanged, bool isKnownToRemotePeer, CancellationToken cancellationToken)
     {
         if (isPeerChanged)
             StartedAt = CpuTimestamp.Now;
+        if (isKnownToRemotePeer)
+            return Task.CompletedTask;
         return SendRegistered(false);
     }
 

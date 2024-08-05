@@ -25,4 +25,29 @@ public class BitsTest(ITestOutputHelper @out) : TestBase(@out)
             Bits.IsPowerOf2(xl).Should().Be(x == xl);
         }
     }
+
+    [Fact]
+    public void ReadWrite7BitEncodedTest()
+    {
+        Span<byte> buffer = stackalloc byte[10];
+
+        for (var shift = 0; shift < 64; shift++) {
+            var value = 1ul << shift;
+            Test(value - 1, buffer);
+            Test(value, buffer);
+            Test(value + 1, buffer);
+        }
+
+        void Test(ulong value, Span<byte> buffer) {
+            buffer.Clear();
+            var size = Bits.Write7BitEncoded(value, buffer);
+            size.Should().BeLessOrEqualTo(buffer.Length);
+            Out.WriteLine($"{value} -> {size} bytes");
+
+            var readBuffer = buffer[..size];
+            var readSize = Bits.Read7BitEncoded(readBuffer, out var readValue);
+            readValue.Should().Be(value);
+            readSize.Should().Be(size);
+        }
+    }
 }

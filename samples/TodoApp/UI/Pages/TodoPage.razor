@@ -1,9 +1,11 @@
 @page "/todo"
+@using ActualLab.Rpc
 @using Templates.TodoApp.UI.Services
 @inherits ComputedStateComponent<TodoPage.Model>
 @inject Session Session
 @inject TodoUI TodoUI
 @inject UICommander UICommander
+@inject RpcHub RpcHub
 @inject ILogger<TodoPage> Log
 
 @{
@@ -27,6 +29,7 @@
     <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => StateHasChanged()">StateHasChanged()</Button>
     <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => State.Invalidate()">State.Invalidate()</Button>
     <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => State.Recompute()">State.Recompute()</Button>
+    <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => RpcHub.GetPeer(RpcPeerRef.Default).Disconnect()">Disconnect</Button>
 </Div>
 
 <WhenException Exception="error" />

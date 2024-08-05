@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using ActualLab.OS;
+using ActualLab.Rpc.Internal;
+using Errors = ActualLab.Internal.Errors;
+using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -47,6 +49,9 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
         // and we should rarely land here, so we do this separately
         return Calls.GetOrAdd(call.Id, static (_, call1) => call1, call);
     }
+
+    public byte[] GetData()
+        => IncreasingSeqDeltaSerializer.Serialize(Calls.Keys.Order());
 
     public bool Unregister(RpcInboundCall call)
         // NoWait should always return true here!

@@ -4,7 +4,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace ActualLab.Mathematics;
 
-public static class Bits
+public static partial class Bits
 {
 #if !NET7_0_OR_GREATER
     private static readonly byte[] DeBruijnTrailingZeroCount = {

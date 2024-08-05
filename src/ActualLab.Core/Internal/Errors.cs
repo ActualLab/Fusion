@@ -150,4 +150,7 @@ public static class Errors
 #pragma warning disable IL2026 // We format string as JSON here, so no reflection needed
         => Format($"Invalid {target} format: {(value == null ? "null" : JsonFormatter.Format(value))}");
 #pragma warning restore IL2026
+
+    public static Exception Invalid7BitEncoded<TValue>()
+        => Format($"Invalid 7-bit encoded {typeof(TValue).GetName()}");
 }

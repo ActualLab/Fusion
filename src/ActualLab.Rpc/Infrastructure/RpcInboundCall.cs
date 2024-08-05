@@ -92,9 +92,6 @@ public abstract class RpcInboundCall : RpcCall
 
     // Protected methods
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    protected abstract Task StartCompletion();
-
     protected virtual bool Unregister()
     {
         if (!Context.Peer.InboundCalls.Unregister(this))
@@ -221,7 +218,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    protected override Task StartCompletion()
+    protected Task StartCompletion()
     {
         if (!ResultTask.IsCompleted)
             return StartCompletionAsync();

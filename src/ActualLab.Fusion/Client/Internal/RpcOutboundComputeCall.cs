@@ -27,14 +27,17 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
     public Task WhenInvalidated => WhenInvalidatedSource.Task;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override Task Reconnect(bool isPeerChanged, CancellationToken cancellationToken)
+    public override Task Reconnect(bool isPeerChanged, bool isKnownToRemotePeer, CancellationToken cancellationToken)
     {
         // ReSharper disable once InconsistentlySynchronizedField
-        if (!isPeerChanged || !ResultSource.Task.IsCompleted)
-            return base.Reconnect(isPeerChanged, cancellationToken);
+        if (isPeerChanged && ResultSource.Task.IsCompleted) {
+            // If we're here, we've got computed.Result from another peer,
+            // so the only reasonable action is to invalidate it now.
+            SetInvalidated(false);
+            return Task.CompletedTask;
+        }
 
-        SetInvalidated(false);
-        return Task.CompletedTask;
+        return base.Reconnect(isPeerChanged, isKnownToRemotePeer, cancellationToken);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
