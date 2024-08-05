@@ -25,7 +25,7 @@ public static class IncreasingSeqPacker
     {
         var result = new List<long>();
         var span = data.AsSpan();
-        var lastValue = 0l;
+        var lastValue = 0L;
         while (span.Length != 0) {
             var size = Bits.Read7BitEncoded(span, out var delta);
             span = span[size..];
