@@ -119,7 +119,7 @@ public static class RpcDefaultDelegates
     public static RpcServerPeerCloseTimeoutProvider ServerPeerCloseTimeoutProvider { get; set; } =
         static peer => {
             var peerLifetime = peer.CreatedAt.Elapsed;
-            return (0.33 * peerLifetime).Clamp(TimeSpan.FromMinutes(3), TimeSpan.FromMinutes(15));
+            return peerLifetime.MultiplyBy(0.33).Clamp(TimeSpan.FromMinutes(3), TimeSpan.FromMinutes(15));
         };
 
     public static RpcPeerTerminalErrorDetector PeerTerminalErrorDetector { get; set; } =

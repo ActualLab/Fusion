@@ -51,7 +51,11 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
     }
 
     public byte[] GetData()
+#if NET7_0_OR_GREATER
         => IncreasingSeqPacker.Serialize(Calls.Keys.Order());
+#else
+        => IncreasingSeqPacker.Serialize(Calls.Keys.OrderBy(x => x));
+#endif
 
     public bool Unregister(RpcInboundCall call)
         // NoWait should always return true here!
