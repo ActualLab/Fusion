@@ -5,7 +5,7 @@ public delegate RpcFrameDelayer? RpcFrameDelayerFactory();
 
 public static class RpcFrameDelayers
 {
-    public const int HandshakeFrameCount = 1; // Handshake frames are never delayed
+    public const int NoDelayFrameCount = 2; // Handshake + Reconnect frames are never delayed
     public static int DelayedFrameSize { get; set; } = 1024; // Only frames smaller than this are delayed
     public static int DefaultClientYieldCount { get; set; } = 1;
 
@@ -55,5 +55,5 @@ public static class RpcFrameDelayers
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool MustDelay(long frameIndex, int frameSize)
-        => frameSize < DelayedFrameSize || frameIndex < HandshakeFrameCount;
+        => frameSize < DelayedFrameSize || frameIndex < NoDelayFrameCount;
 }
