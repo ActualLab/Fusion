@@ -27,11 +27,13 @@ public static class Errors
     public static Exception HandshakeFailed()
         => new RpcException("Handshake failed.");
     public static Exception PeerChanged()
-        => new RpcException("Remote RpcPeer has been changed.");
+        => new RpcException("Remote peer has been changed.");
     public static Exception EndpointNotFound(string serviceName, string methodName)
         => new RpcException($"Endpoint not found: '{serviceName}.{methodName}'.");
     public static Exception MatchButNoCachedEntry()
         => new RpcException("The remote server responded with 'Match', but the outbound call has no cached entry.");
+    public static Exception TooLateToReconnect()
+        => new RpcException("Peer is already changed, too late for this reconnect round.");
 
     public static Exception NoCurrentRpcInboundContext()
         => new InvalidOperationException($"{nameof(RpcInboundContext)}.{nameof(RpcInboundContext.Current)} is unavailable.");

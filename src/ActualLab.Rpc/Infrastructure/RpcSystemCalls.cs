@@ -56,14 +56,14 @@ public class RpcSystemCalls(IServiceProvider services)
 
         var connectionState = peer.ConnectionState.Value;
         if (connectionState.Handshake is not { } handshake || handshake.Index != handshakeIndex)
-            return Task.FromResult(Array.Empty<byte>());
+            throw Errors.TooLateToReconnect();
 
         CancellationToken readerToken;
         try {
             readerToken = connectionState.ReaderTokenSource!.Token;
         }
         catch (ObjectDisposedException) {
-            return Task.FromResult(Array.Empty<byte>());
+            throw Errors.TooLateToReconnect();
         }
 
         var unknownCallIds = new HashSet<long>();
