@@ -138,48 +138,53 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     public async Task Reconnect(RpcHandshake handshake, bool isPeerChanged, CancellationToken cancellationToken)
     {
         try {
+            var calls = Calls.Values.ToList();
             if (isPeerChanged || handshake.ProtocolVersion < 1) {
-                await Resend(Calls.Values, cancellationToken).ConfigureAwait(false);
+                await Resend(calls).ConfigureAwait(false);
                 return;
             }
 
-            var completedStages = (
-                from call in Calls.Values
-                let reconnectStage = call.GetReconnectStage(false)
-                where reconnectStage.HasValue
-                group call.Id by reconnectStage.GetValueOrDefault()
-                into g
-                orderby g.Key
-                select g
-            ).ToDictionary(x => x.Key, IncreasingSeqCompressor.Serialize);
-            if (completedStages.Count == 0) {
-                // Nothing to resume via Reconnect method
-                await Resend(Calls.Values, cancellationToken).ConfigureAwait(false);
-                return;
-            }
-
-            Task<byte[]> reconnectTask;
-            using (var _ = new RpcOutboundContext(Peer).Activate())
-                reconnectTask =
-                    Peer.Hub.SystemCallSender.Client.Reconnect(handshake.Index, completedStages, cancellationToken);
-            var callsToResendData = await reconnectTask.ConfigureAwait(false);
-
-            var callsToResend = new List<RpcOutboundCall>();
-            foreach (var callId in IncreasingSeqCompressor.Deserialize(callsToResendData))
-                if (Calls.TryGetValue(callId, out var call))
-                    callsToResend.Add(call);
-            await Resend(callsToResend, cancellationToken).ConfigureAwait(false);
+            var failedCalls = await TryReconnect(calls).ConfigureAwait(false);
+            await Resend(failedCalls).ConfigureAwait(false);
         }
         catch {
             // Intended
         }
         return;
 
-        static async Task Resend(IEnumerable<RpcOutboundCall> calls, CancellationToken cancellationToken) {
+        async Task Resend(List<RpcOutboundCall> calls) {
             foreach (var call in calls) {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (call.GetReconnectStage(true) != null)
                     await call.SendRegistered(false).ConfigureAwait(false);
+            }
+        }
+
+        async Task<List<RpcOutboundCall>> TryReconnect(List<RpcOutboundCall> calls) {
+            try {
+                var completedStages = (
+                    from call in calls
+                    let reconnectStage = call.GetReconnectStage(false)
+                    where reconnectStage.HasValue
+                    group call.Id by reconnectStage.GetValueOrDefault()
+                    into g
+                    orderby g.Key
+                    select g
+                ).ToDictionary(x => x.Key, IncreasingSeqCompressor.Serialize);
+                if (completedStages.Count == 0)
+                    return calls;
+
+                Task<byte[]> reconnectTask;
+                using (var _ = new RpcOutboundContext(Peer).Activate())
+                    reconnectTask = Peer.Hub.SystemCallSender.Client
+                        .Reconnect(handshake.Index, completedStages, cancellationToken);
+                var failedCallData = await reconnectTask.ConfigureAwait(false);
+                var failedCallIds = IncreasingSeqCompressor.Deserialize(failedCallData).ToHashSet();
+                return calls.Where(x => failedCallIds.Contains(x.Id)).ToList();
+            }
+            catch {
+                // If something fails, we fall back to Resend for every call
+                return calls;
             }
         }
     }
