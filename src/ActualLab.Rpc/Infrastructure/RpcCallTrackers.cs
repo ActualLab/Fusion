@@ -50,13 +50,6 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
         return Calls.GetOrAdd(call.Id, static (_, call1) => call1, call);
     }
 
-    public byte[] GetData()
-#if NET7_0_OR_GREATER
-        => IncreasingSeqPacker.Serialize(Calls.Keys.Order());
-#else
-        => IncreasingSeqPacker.Serialize(Calls.Keys.OrderBy(x => x));
-#endif
-
     public bool Unregister(RpcInboundCall call)
         // NoWait should always return true here!
         => call.NoWait || Calls.TryRemove(call.Id, call);
@@ -108,8 +101,11 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
+    public async Task Maintain(RpcHandshake handshake, bool isPeerChanged, CancellationToken cancellationToken)
     {
+        await Reconnect(handshake, isPeerChanged, cancellationToken).ConfigureAwait(false);
+
+        // This loop aborts timed out calls every CallTimeoutCheckPeriod
         while (!cancellationToken.IsCancellationRequested) {
             foreach (var call in this) {
                 if (call.UntypedResultTask.IsCompleted)
@@ -148,6 +144,49 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 break;
 
             await Task.Delay(Limits.CallAbortCyclePeriod).ConfigureAwait(false);
+        }
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    private async Task Reconnect(RpcHandshake handshake, bool isPeerChanged, CancellationToken cancellationToken)
+    {
+        if (isPeerChanged || handshake.ProtocolVersion < 1) {
+            // New remote peer or a peer running pre-v1 RPC protocol version
+            await Resend(Calls.Values, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var completedStages = (
+            from call in Calls.Values
+            let reconnectStage = call.GetReconnectStage(isPeerChanged)
+            where reconnectStage.HasValue
+            group call.Id by reconnectStage.GetValueOrDefault() into g
+            orderby g.Key
+            select g
+            ).ToDictionary(x => x.Key, IncreasingSeqCompressor.Serialize);
+        if (completedStages.Count == 0) {
+            // Nothing to resume via Reconnect method
+            await Resend(Calls.Values, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        Task<byte[]> reconnectTask;
+        using (var _ = new RpcOutboundContext(Peer).Activate())
+            reconnectTask = Peer.Hub.SystemCallSender.Client.Reconnect(handshake.Index, completedStages, cancellationToken);
+        var callsToResendData = await reconnectTask.ConfigureAwait(false);
+
+        var callsToResend = new List<RpcOutboundCall>();
+        foreach (var callId in IncreasingSeqCompressor.Deserialize(callsToResendData))
+            if (Calls.TryGetValue(callId, out var call))
+                callsToResend.Add(call);
+        await Resend(callsToResend, cancellationToken).ConfigureAwait(false);
+
+        static async Task Resend(IEnumerable<RpcOutboundCall> calls, CancellationToken cancellationToken) {
+            foreach (var call in calls) {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (call.GetReconnectStage(true) != null)
+                    await call.SendRegistered(false).ConfigureAwait(false);
+            }
         }
     }
 }

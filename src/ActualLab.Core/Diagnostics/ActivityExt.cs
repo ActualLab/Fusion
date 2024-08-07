@@ -25,7 +25,7 @@ public static class ActivityExt
         }
         catch (Exception e) {
             // The task is not completed yet,
-            StaticLog.For(typeof(ActivatorExt)).LogError(e, "The provided task isn't completed yet");
+            StaticLog.For(typeof(ActivityExt)).LogError(e, "The provided task isn't completed yet");
             return activity;
         }
     }

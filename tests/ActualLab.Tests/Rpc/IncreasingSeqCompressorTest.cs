@@ -2,7 +2,7 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Tests.Rpc;
 
-public class IncreasingSeqPackerTest(ITestOutputHelper @out) : TestBase(@out)
+public class IncreasingSeqCompressorTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
     public void Test()
@@ -16,8 +16,8 @@ public class IncreasingSeqPackerTest(ITestOutputHelper @out) : TestBase(@out)
                 .ToArray();
             testedLengths.Add(seq.Length);
 
-            var data = IncreasingSeqPacker.Serialize(seq);
-            var seq1 = IncreasingSeqPacker.Deserialize(data);
+            var data = IncreasingSeqCompressor.Serialize(seq);
+            var seq1 = IncreasingSeqCompressor.Deserialize(data);
             seq1.Should().Equal(seq);
         }
         Out.WriteLine($"Tested lengths: {testedLengths.Order().ToDelimitedString()}");

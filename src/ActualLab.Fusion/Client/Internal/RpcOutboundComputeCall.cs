@@ -20,24 +20,38 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
     protected readonly TaskCompletionSource<Unit> WhenInvalidatedSource
         = TaskCompletionSourceExt.New<Unit>(); // Must not allow synchronous continuations!
 
-    protected override string DebugTypeName => "=>";
+    public override string DebugTypeName => "=>";
+    public override int CompletedStage
+        => UntypedResultTask.IsCompleted
+            ? WhenInvalidated.IsCompleted
+                ? RpcCallStage.Invalidated | RpcCallStage.Unregistered
+                : RpcCallStage.ResultReady
+            : 0;
 
     public string? ResultVersion { get; protected set; }
     // ReSharper disable once InconsistentlySynchronizedField
     public Task WhenInvalidated => WhenInvalidatedSource.Task;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override Task Reconnect(bool isPeerChanged, bool isKnownToRemotePeer, CancellationToken cancellationToken)
+    public override int? GetReconnectStage(bool isPeerChanged)
     {
-        // ReSharper disable once InconsistentlySynchronizedField
-        if (isPeerChanged && ResultSource.Task.IsCompleted) {
-            // If we're here, we've got computed.Result from another peer,
-            // so the only reasonable action is to invalidate it now.
-            SetInvalidated(false);
-            return Task.CompletedTask;
-        }
+        lock (Lock) {
+            var completedStage = CompletedStage;
+            if ((completedStage & RpcCallStage.Unregistered) != 0 || ServiceDef.Type == typeof(IRpcSystemCalls))
+                return null;
 
-        return base.Reconnect(isPeerChanged, isKnownToRemotePeer, cancellationToken);
+            if (!isPeerChanged)
+                return completedStage;
+
+            if (ResultTask.IsCompleted) {
+                // Result is originating from another peer, so the best we can do is to invalidate it.
+                SetInvalidated(false);
+                return null;
+            }
+
+            StartedAt = CpuTimestamp.Now;
+            return completedStage;
+        }
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -66,7 +80,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
                 return;
             }
 
-            Complete();
+            CompleteKeepRegistered();
             ResultVersion = resultVersion;
             if (context != null)
                 Context.CacheInfoCapture?.CaptureValue(context.Message);
@@ -96,7 +110,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
                 return;
             }
 
-            Complete();
+            CompleteKeepRegistered();
             ResultVersion = resultVersion;
             if (context != null)
                 Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
@@ -124,7 +138,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             }
 
             // Result was just set
-            Complete();
+            CompleteKeepRegistered();
             ResultVersion = resultVersion;
             Context.CacheInfoCapture?.CaptureValue(oce != null, error, cancellationToken);
             if (context == null) // Non-peer set
@@ -137,12 +151,12 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
     {
         // We always use Lock to update ResultSource in this type
         lock (Lock) {
-            var isCancelled = ResultSource.TrySetCanceled(cancellationToken);
-            if (isCancelled)
+            var isResultSet = ResultSource.TrySetCanceled(cancellationToken);
+            if (isResultSet)
                 Context.CacheInfoCapture?.CaptureValue(cancellationToken);
             WhenInvalidatedSource.TrySetResult(default);
             CompleteAndUnregister(notifyCancelled: true);
-            return isCancelled;
+            return isResultSet;
         }
     }
 

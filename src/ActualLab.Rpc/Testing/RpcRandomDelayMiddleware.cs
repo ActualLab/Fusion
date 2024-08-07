@@ -12,6 +12,6 @@ public class RpcRandomDelayMiddleware(IServiceProvider services) : RpcInboundMid
         var delay = DelayProvider is { } delayProvider
             ? delayProvider.Invoke(call)
             : Delay.Next();
-        return Task.Delay(delay, call.CancellationToken);
+        return Task.Delay(delay, call.CallCancelToken);
     }
 }

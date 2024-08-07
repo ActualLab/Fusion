@@ -14,7 +14,7 @@ public class RpcInboundContext
 
     public readonly RpcPeer Peer;
     public readonly RpcMessage Message;
-    public readonly CancellationToken CancellationToken;
+    public readonly CancellationToken PeerChangedToken;
     public readonly CpuTimestamp CreatedAt = CpuTimestamp.Now;
     public RpcInboundCall Call { get; protected init; }
 
@@ -22,18 +22,18 @@ public class RpcInboundContext
         => CurrentLocal.Value ?? throw Errors.NoCurrentRpcInboundContext();
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-    public RpcInboundContext(RpcPeer peer, RpcMessage message, CancellationToken cancellationToken)
-        : this(peer, message, cancellationToken, true)
+    public RpcInboundContext(RpcPeer peer, RpcMessage message, CancellationToken peerChangedToken)
+        : this(peer, message, peerChangedToken, true)
     { }
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
 #pragma warning disable CA1068
-    protected RpcInboundContext(RpcPeer peer, RpcMessage message, CancellationToken cancellationToken, bool initializeCall)
+    protected RpcInboundContext(RpcPeer peer, RpcMessage message, CancellationToken peerChangedToken, bool initializeCall)
 #pragma warning restore CA1068
     {
         Peer = peer;
         Message = message;
-        CancellationToken = cancellationToken;
+        PeerChangedToken = peerChangedToken;
         Call = initializeCall ? RpcInboundCall.New(message.CallTypeId, this, GetMethodDef()) : null!;
     }
 

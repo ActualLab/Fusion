@@ -9,9 +9,8 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     : RpcServiceBase(services)
 {
     private IRpcSystemCalls? _client;
-    private RpcServiceDef? _systemCallsServiceDef;
+    private RpcServiceDef? _serviceDef;
     private RpcMethodDef? _handshakeMethodDef;
-    private RpcMethodDef? _resumeMethodDef;
     private RpcMethodDef? _okMethodDef;
     private RpcMethodDef? _errorMethodDef;
     private RpcMethodDef? _cancelMethodDef;
@@ -27,38 +26,36 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
 
     public IRpcSystemCalls Client => _client
         ??= Services.GetRequiredService<IRpcSystemCalls>();
-    public RpcServiceDef SystemCallsServiceDef => _systemCallsServiceDef
+    public RpcServiceDef ServiceDef => _serviceDef
         ??= Hub.ServiceRegistry.Get<IRpcSystemCalls>()!;
     public RpcMethodDef HandshakeMethodDef => _handshakeMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Handshake)));
-    public RpcMethodDef ResumeMethodDef => _resumeMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Resume)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Handshake)));
     public RpcMethodDef OkMethodDef => _okMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Ok)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Ok)));
     public RpcMethodDef ErrorMethodDef => _errorMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Error)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Error)));
     public RpcMethodDef CancelMethodDef => _cancelMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Cancel)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Cancel)));
     public RpcMethodDef MatchMethodDef => _matchMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.M)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.M)));
     public RpcMethodDef NotFoundMethodDef => _notFoundMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.NotFound)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.NotFound)));
     public RpcMethodDef KeepAliveMethodDef => _keepAliveMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.KeepAlive)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.KeepAlive)));
     public RpcMethodDef DisconnectMethodDef => _disconnectMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Disconnect)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Disconnect)));
     public RpcMethodDef AckMethodDef => _ackMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Ack)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Ack)));
     public RpcMethodDef AckEndMethodDef => _ackEndMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.AckEnd)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.AckEnd)));
     public RpcMethodDef ItemMethodDef => _itemMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.I)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.I)));
     public RpcMethodDef BatchMethodDef => _batchMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.B)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.B)));
     public RpcMethodDef EndMethodDef => _endMethodDef
-        ??= SystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.End)));
+        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.End)));
 
-    // Handshake & Resume
+    // Handshake
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task Handshake(
@@ -69,14 +66,6 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         var context = new RpcOutboundContext(peer);
         var call = context.PrepareCallForSendNoWait(HandshakeMethodDef, ArgumentList.New(handshake))!;
         return call.SendNoWait(false, sender);
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public Task Resume(RpcPeer peer, byte[] remoteState)
-    {
-        var context = new RpcOutboundContext(peer);
-        var call = context.PrepareCallForSendNoWait(ResumeMethodDef, ArgumentList.New(remoteState))!;
-        return call.SendNoWait(false);
     }
 
     // Regular calls

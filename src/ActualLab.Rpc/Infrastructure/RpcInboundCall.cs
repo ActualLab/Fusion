@@ -6,23 +6,23 @@ using Cysharp.Text;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-#pragma warning disable MA0022
-#pragma warning disable RCS1210
-#pragma warning disable VSTHRD103
+#pragma warning disable RCS1210, MA0022, VSTHRD103
 
 public abstract class RpcInboundCall : RpcCall
 {
     private static readonly ConcurrentDictionary<(byte, Type), Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>> FactoryCache = new();
 
-    protected readonly CancellationTokenSource? CancellationTokenSource;
+    protected readonly CancellationTokenSource? CallCancelSource;
     protected ILogger Log => Context.Peer.Log;
-    protected override string DebugTypeName => "<-";
 
+    public override string DebugTypeName => "<-";
     public readonly RpcInboundContext Context;
-    public readonly CancellationToken CancellationToken;
+    public readonly CancellationToken CallCancelToken;
     public ArgumentList? Arguments;
-    public abstract Task UntypedResultTask { get; }
+    public abstract Task? UntypedResultTask { get; }
     public RpcHeader[]? ResultHeaders;
+    public virtual int CompletedStage => UntypedResultTask is { IsCompleted: true } ? 1 : 0;
+    public virtual string CompletedStageName => CompletedStage == 0 ? "" : "ResultReady";
     public RpcInboundCallTrace? Trace;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
@@ -52,12 +52,12 @@ public abstract class RpcInboundCall : RpcCall
     {
         Context = context;
         Id = NoWait ? 0 : context.Message.RelatedId;
-        var cancellationToken = Context.CancellationToken;
+        var peerChangedToken = Context.PeerChangedToken;
         if (NoWait)
-            CancellationToken = cancellationToken;
+            CallCancelToken = peerChangedToken;
         else {
-            CancellationTokenSource = cancellationToken.CreateLinkedTokenSource();
-            CancellationToken = CancellationTokenSource.Token;
+            CallCancelSource = peerChangedToken.CreateLinkedTokenSource();
+            CallCancelToken = CallCancelSource.Token;
         }
     }
 
@@ -74,7 +74,7 @@ public abstract class RpcInboundCall : RpcCall
                 ? Context.Peer.RemoteObjects.Get(relatedId)
                 : Context.Peer.OutboundCalls.Get(relatedId);
 
-        return ZString.Concat(
+        var result = ZString.Concat(
             DebugTypeName,
             MethodDef.IsStream ? " ~" : " #",
             relatedId,
@@ -83,21 +83,29 @@ public abstract class RpcInboundCall : RpcCall
             arguments,
             headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",
             relatedObject != null ? $" for {relatedObject}" : "");
+        var completedStageName = CompletedStageName;
+        if (!completedStageName.IsNullOrEmpty())
+            result += $": {completedStageName}";
+        return result;
     }
 
-    public abstract Task Run();
+    public abstract Task Process(CancellationToken cancellationToken);
+
+    public abstract Task? TryReprocess(int completedStage, CancellationToken cancellationToken);
 
     public void Cancel()
-        => CancellationTokenSource.CancelAndDisposeSilently();
+        => CallCancelSource.CancelAndDisposeSilently();
 
     // Protected methods
 
-    protected virtual bool Unregister()
+    protected bool Unregister()
     {
-        if (!Context.Peer.InboundCalls.Unregister(this))
-            return false; // Already completed or NoWait
+        lock (Lock) {
+            if (!Context.Peer.InboundCalls.Unregister(this))
+                return false; // Already completed or NoWait
 
-        CancellationTokenSource.DisposeSilently();
+            CallCancelSource.DisposeSilently();
+        }
         return true;
     }
 }
@@ -105,12 +113,12 @@ public abstract class RpcInboundCall : RpcCall
 public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
     : RpcInboundCall(context, methodDef)
 {
-    public Task<TResult> ResultTask { get; private set; } = null!;
-    public override Task UntypedResultTask => ResultTask;
+    public Task<TResult>? ResultTask { get; private set; } = null!;
+    public override Task? UntypedResultTask => ResultTask;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
 #pragma warning disable IL2046
-    public override Task Run()
+    public override Task Process(CancellationToken cancellationToken)
 #pragma warning restore IL2046
     {
         if (NoWait) {
@@ -122,7 +130,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
                 var peer = Context.Peer;
                 if (peer.CallLogger.IsLogged(this))
                     peer.CallLogger.LogInbound(this);
-                return InvokeTarget();
+                return InvokeTarget(); // NoWait calls must complete fast & be cheap, so cancellationToken isn't passed
             }
             catch (Exception error) {
                 return Task.FromException<TResult>(error);
@@ -130,14 +138,15 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         }
 
         var existingCall = Context.Peer.InboundCalls.GetOrRegister(this);
-        if (existingCall != this) // Weird scenario: the
-            return Task.CompletedTask;
+        if (existingCall != this && existingCall.TryReprocess(0, cancellationToken) is { } reprocessTask)
+            return reprocessTask;
 
-        if (MethodDef.Tracer is { } tracer)
-            Trace = tracer.StartInboundTrace(this);
         var inboundMiddlewares = Hub.InboundMiddlewares.NullIfEmpty();
         lock (Lock) {
             try {
+                if (MethodDef.Tracer is { } tracer)
+                    Trace = tracer.StartInboundTrace(this);
+
                 Arguments ??= DeserializeArguments();
                 if (Arguments == null)
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
@@ -155,11 +164,54 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             catch (Exception error) {
                 ResultTask = Task.FromException<TResult>(error);
             }
+
+            // This can be done outside the lock, but it's slightly faster to do it right here,
+            // coz the lock won't be re-acquired in case ResultTask is computed synchronously.
+            return ProcessStage1(cancellationToken);
         }
-        return StartCompletion();
+    }
+
+    public override Task? TryReprocess(int completedStage, CancellationToken cancellationToken)
+    {
+        lock (Lock) {
+            var existingCall = Context.Peer.InboundCalls.Get(Id);
+            if (existingCall != this || ResultTask == null)
+                return null;
+        }
+
+        return completedStage switch {
+            >= 1 => Task.CompletedTask,
+            _ => ProcessStage1(cancellationToken)
+        };
     }
 
     // Protected methods
+
+    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
+    protected virtual Task ProcessStage1(CancellationToken cancellationToken)
+    {
+        return ResultTask!.IsCompleted
+            ? Complete()
+            : CompleteAsync();
+
+        async Task CompleteAsync() {
+            await ResultTask!.SilentAwait(false);
+            await Complete().ConfigureAwait(false);
+        }
+
+        Task Complete() {
+            lock (Lock) {
+                if (Trace is { } trace) {
+                    trace.Complete(this);
+                    Trace = null;
+                }
+                Unregister();
+            }
+            return CallCancelToken.IsCancellationRequested
+                ? Task.CompletedTask
+                : SendResult();
+        }
+    }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected ArgumentList? DeserializeArguments()
@@ -188,7 +240,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         // Set CancellationToken
         var ctIndex = MethodDef.CancellationTokenIndex;
         if (ctIndex >= 0)
-            arguments.SetCancellationToken(ctIndex, CancellationToken);
+            arguments.SetCancellationToken(ctIndex, CallCancelToken);
 
         return arguments;
     }
@@ -218,54 +270,20 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    protected Task StartCompletion()
-    {
-        if (!ResultTask.IsCompleted)
-            return StartCompletionAsync();
-
-        _ = CompleteAndSendResult();
-        return Task.CompletedTask;
-
-        [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-        async Task StartCompletionAsync()
-        {
-            await ResultTask.SilentAwait(false);
-            _ = CompleteAndSendResult();
-        }
-    }
-
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    protected virtual Task CompleteAndSendResult()
-    {
-        if (Trace is { } trace) {
-            trace.Complete(this);
-            Trace = null;
-        }
-        Unregister();
-        return CancellationToken.IsCancellationRequested
-            ? Task.CompletedTask
-            : SendResult();
-    }
-
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected Task SendResult()
     {
-        var resultTask = ResultTask;
-        Result<TResult> result;
         var peer = Context.Peer;
-        if (!resultTask.IsCompleted)
+        Result<TResult> result;
+        if (ResultTask is not { IsCompleted: true } resultTask)
             result = InvocationIsStillInProgressErrorResult();
-        else if (resultTask.Exception is { } error) {
-            Log.IfEnabled(LogLevel.Error)
-                ?.LogError(error, "Remote call completed with an error: {Call}", this);
+        else if (resultTask.Exception is { } error)
             result = new Result<TResult>(default!, error.GetBaseException());
-        }
-        else if (resultTask.IsCanceled) {
-            // We log nothing here, coz RpcSystemCalls.Cancel already did this
-            result = new Result<TResult>(default!, new TaskCanceledException());
-        }
+        else if (resultTask.IsCanceled)
+            result = new Result<TResult>(default!, new TaskCanceledException()); // Technically it's covered by prev. "else if"
         else
             result = resultTask.Result;
+        if (result.Error is { } e and not OperationCanceledException)
+            Log.IfEnabled(LogLevel.Error)?.LogError(e, "Remote call completed with an error: {Call}", this);
 
         var systemCallSender = Hub.SystemCallSender;
         return systemCallSender.Complete(peer, this, result, MethodDef.AllowResultPolymorphism, ResultHeaders);

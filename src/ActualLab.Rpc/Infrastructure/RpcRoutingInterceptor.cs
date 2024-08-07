@@ -62,7 +62,7 @@ public class RpcRoutingInterceptor : RpcInterceptorBase
         RpcOutboundCall<T>? call,
         Func<Invocation, Task<T>>? localCallAsyncInvoker)
     {
-        var cancellationToken = context.CancellationToken;
+        var cancellationToken = context.CallCancelToken;
         while (true) {
             if (call == null)
                 return localCallAsyncInvoker != null

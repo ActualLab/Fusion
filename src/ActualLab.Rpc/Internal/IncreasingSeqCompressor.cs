@@ -2,7 +2,7 @@ using Microsoft.Toolkit.HighPerformance.Buffers;
 
 namespace ActualLab.Rpc.Internal;
 
-public static class IncreasingSeqPacker
+public static class IncreasingSeqCompressor
 {
     public static byte[] Serialize(IEnumerable<long> values)
     {

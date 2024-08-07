@@ -7,7 +7,7 @@ public abstract class RpcCall(RpcMethodDef methodDef)
         get => this;
     }
 
-    protected abstract string DebugTypeName { get; }
+    public abstract string DebugTypeName { get; }
 
     public readonly RpcMethodDef MethodDef = methodDef;
 

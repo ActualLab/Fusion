@@ -13,7 +13,7 @@ public sealed record RpcPeerConnectionState(
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsConnected()
-        => Connection != null;
+        => Handshake != null;
 
     // NextXxx
 

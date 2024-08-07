@@ -18,7 +18,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public RpcHeader[]? Headers = headers;
     public RpcMethodDef? MethodDef;
     public ArgumentList? Arguments;
-    public CancellationToken CancellationToken;
+    public CancellationToken CallCancelToken;
     public RpcOutboundCall? Call;
     public RpcPeer? Peer;
     public long RelatedId;
@@ -62,7 +62,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
             MethodDef = methodDef;
             Arguments = arguments;
             var ctIndex = methodDef.CancellationTokenIndex;
-            CancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
+            CallCancelToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
         }
 
         // Peer & Call
@@ -94,7 +94,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
             MethodDef = methodDef;
             Arguments = arguments;
             var ctIndex = methodDef.CancellationTokenIndex;
-            CancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
+            CallCancelToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
         }
 
         // Peer & Call

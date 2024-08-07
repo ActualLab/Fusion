@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
+using ActualLab.Rpc.Internal;
 using Errors = ActualLab.Rpc.Internal.Errors;
 using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
@@ -9,9 +10,10 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public interface IRpcSystemCalls : IRpcSystemService
 {
-    // Handshake & Resume
+    // Handshake & Reconnected
     Task<RpcNoWait> Handshake(RpcHandshake handshake);
-    Task<RpcNoWait> Resume(byte[] remoteState);
+    Task<byte[]> Reconnect(
+        int handshakeIndex, Dictionary<int, byte[]> completedStagesData, CancellationToken cancellationToken);
 
     // Regular calls
     Task<RpcNoWait> Ok(object? result);
@@ -44,13 +46,39 @@ public class RpcSystemCalls(IServiceProvider services)
     public Task<RpcNoWait> Handshake(RpcHandshake handshake)
         => RpcNoWait.Tasks.Completed; // Does nothing: this call is processed inside RpcPeer.OnRun
 
-    public Task<RpcNoWait> Resume(byte[] remoteState)
+    public Task<byte[]> Reconnect(
+        int handshakeIndex,
+        Dictionary<int, byte[]> completedStagesData,
+        CancellationToken cancellationToken)
     {
         var context = RpcInboundContext.GetCurrent();
         var peer = context.Peer;
-        var resumeHandler = peer.ReplaceResumeHandler(null);
-        resumeHandler?.Invoke(remoteState);
-        return RpcNoWait.Tasks.Completed;
+
+        var connectionState = peer.ConnectionState.Value;
+        if (connectionState.Handshake is not { } handshake || handshake.Index != handshakeIndex)
+            return Task.FromResult(Array.Empty<byte>());
+
+        CancellationToken readerToken;
+        try {
+            readerToken = connectionState.ReaderTokenSource!.Token;
+        }
+        catch (ObjectDisposedException) {
+            return Task.FromResult(Array.Empty<byte>());
+        }
+
+        var unknownCallIds = new HashSet<long>();
+        var inboundCalls = peer.InboundCalls;
+        foreach (var (completedStage, data) in completedStagesData) {
+            var callIds = IncreasingSeqCompressor.Deserialize(data);
+            foreach (var callId in callIds) {
+                var call = inboundCalls.Get(callId);
+                var reprocessTask = call?.TryReprocess(completedStage, readerToken);
+                if (reprocessTask == null)
+                    unknownCallIds.Add(callId);
+            }
+        }
+        var result = IncreasingSeqCompressor.Serialize(unknownCallIds.OrderBy(x => x));
+        return Task.FromResult(result);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

@@ -6,13 +6,17 @@ using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Client.Internal;
 
+#pragma warning disable RCS1210, MA0022
+
 public interface IRpcInboundComputeCall;
 
 public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInboundComputeCall
 {
-    private CancellationTokenSource? _stopCompletionSource;
-
-    protected override string DebugTypeName => "<=";
+    public override string DebugTypeName => "<=";
+    public override int CompletedStage
+        => UntypedResultTask is { IsCompleted: true } ? (Computed is { } c && c.IsInvalidated() ? 2 : 1) : 0;
+    public override string CompletedStageName
+        => CompletedStage switch { 0 => "", 1 => "ResultReady", _ => "Invalidated" };
 
     public Computed<TResult>? Computed { get; protected set; }
 
@@ -41,70 +45,64 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    protected override Task CompleteAndSendResult()
+    public override Task? TryReprocess(int completedStage, CancellationToken cancellationToken)
     {
-        Computed<TResult>? computed;
-        CancellationToken stopCompletionToken;
         lock (Lock) {
-            // 0. Complete trace
+            var existingCall = Context.Peer.InboundCalls.Get(Id);
+            if (existingCall != this || ResultTask == null)
+                return null;
+        }
+
+        return completedStage switch {
+            >= 2 => Task.CompletedTask,
+            1 => ProcessStage2(cancellationToken),
+            _ => ProcessStage1(cancellationToken)
+        };
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    protected override async Task ProcessStage1(CancellationToken cancellationToken)
+    {
+        await ResultTask!.SilentAwait(false);
+        lock (Lock) {
             if (Trace is { } trace) {
                 trace.Complete(this);
                 Trace = null;
             }
-
-            // 1. Check if we even need to do any work here
-            if (CancellationToken.IsCancellationRequested) {
-                Unregister();
-                return Task.CompletedTask;
-            }
-
-            // 2. Cancel already running completion first
-            _stopCompletionSource.CancelAndDisposeSilently();
-            var stopCompletionSource = CancellationToken.CreateLinkedTokenSource();
-            stopCompletionToken = stopCompletionSource.Token;
-            _stopCompletionSource = stopCompletionSource;
-
-            // 3. Retrieve Computed + update ResultHeaders
-            computed = Computed;
-            if (computed != null) {
+            if (Computed != null) {
                 // '@' is required to make it compatible with pre-v7.2 versions
-                var versionHeader = new RpcHeader(FusionRpcHeaderNames.Version, computed.Version.FormatVersion('@'));
+                var versionHeader = new RpcHeader(FusionRpcHeaderNames.Version, Computed.Version.FormatVersion('@'));
                 ResultHeaders = ResultHeaders.WithOrReplace(versionHeader);
             }
         }
-
-        // 4. Actually run completion
-        return CompleteAsync();
-
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-        async Task CompleteAsync() {
-            var mustUnregister = false;
-            try {
-                await SendResult().WaitAsync(stopCompletionToken).ConfigureAwait(false);
-                if (computed != null) {
-                    await computed.WhenInvalidated(stopCompletionToken).ConfigureAwait(false);
-                    await SendInvalidation().ConfigureAwait(false);
-                }
-                mustUnregister = true;
-            }
-            finally {
-                if (mustUnregister || CancellationToken.IsCancellationRequested)
-                    Unregister();
-            }
+        if (CallCancelToken.IsCancellationRequested) {
+            // The call is cancelled by remote party
+            Unregister();
+            return;
         }
+        await SendResult().ConfigureAwait(false);
+        await ProcessStage2(cancellationToken).ConfigureAwait(false);
     }
 
-    protected override bool Unregister()
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    protected async Task ProcessStage2(CancellationToken cancellationToken)
     {
-        lock (Lock) {
-            if (!Context.Peer.InboundCalls.Unregister(this))
-                return false; // Already completed or NoWait
-
-            CancellationTokenSource.DisposeSilently();
-            _stopCompletionSource.DisposeSilently();
+        try {
+            if (Computed is { } computed) {
+                using var commonCts = cancellationToken.LinkWith(CallCancelToken);
+                await computed.WhenInvalidated(commonCts.Token).ConfigureAwait(false);
+            }
+            else
+                await TickSource.Default.WhenNextTick()
+                    .ConfigureAwait(false); // A bit of extra delay in case there is no computed
         }
-        return true;
+        catch (OperationCanceledException) when (CallCancelToken.IsCancellationRequested) {
+            // The call is cancelled by remote party
+            Unregister();
+            return;
+        }
+        Unregister();
+        await SendInvalidation().ConfigureAwait(false);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

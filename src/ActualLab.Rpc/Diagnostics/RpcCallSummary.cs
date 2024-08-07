@@ -8,6 +8,8 @@ public readonly record struct RpcCallSummary(
     double DurationMs)
 {
     public RpcCallSummary(RpcInboundCall inboundCall)
-        : this(inboundCall.UntypedResultTask.GetResultKind(), inboundCall.Context.CreatedAt.Elapsed.TotalMilliseconds)
+        : this(
+            inboundCall.UntypedResultTask?.GetResultKind() ?? TaskResultKind.Incomplete,
+            inboundCall.Context.CreatedAt.Elapsed.TotalMilliseconds)
     { }
 }

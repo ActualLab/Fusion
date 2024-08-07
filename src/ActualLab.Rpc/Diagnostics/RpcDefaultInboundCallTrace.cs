@@ -9,7 +9,13 @@ public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Acti
     public override void Complete(RpcInboundCall call)
     {
         if (Activity != null) {
-            Activity.Finalize(call.UntypedResultTask, call.CancellationToken);
+            var untypedResultTask = call.UntypedResultTask;
+            if (untypedResultTask == null) {
+                StaticLog.For(typeof(RpcDefaultInboundCallTrace)).LogError("Call doesn't have ResultTask yet");
+                untypedResultTask = Task.CompletedTask;
+            }
+
+            Activity.Finalize(untypedResultTask, call.CallCancelToken);
             Activity.Dispose();
         }
 

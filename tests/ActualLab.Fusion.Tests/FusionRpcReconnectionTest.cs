@@ -45,7 +45,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         if (!TestRunnerInfo.IsBuildAgent())
             elapsed.TotalSeconds.Should().BeGreaterThan(0.1);
 
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         if (!TestRunnerInfo.IsBuildAgent())
             elapsed.TotalSeconds.Should().BeGreaterThan(0.1);
 
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Fact]
@@ -86,17 +86,21 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         var clientPeer = connection.ClientPeer;
         var client = services.GetRequiredService<IReconnectTester>();
 
-        var (delay, invDelay) = (200, 200);
+        var (delay, invDelay) = (200, 300);
         var task = client.Delay(delay, invDelay);
 
-        await connection.Reconnect(TimeSpan.FromSeconds(1));
-        // Inbound call is gone.
-        // Recovery is expected to simply repeat the call
+        await Task.Delay(100);
+        // The call is sent by now, so recovery is expected to reconnect the call
+        await connection.Reconnect(TimeSpan.FromMilliseconds(1));
 
-        (await task.WaitAsync(TimeSpan.FromSeconds(1 * waitMultiplier))).Should().Be((delay, invDelay));
+        // Recovery is expected to reconnect the call
+        var result = await task.WaitAsync(TimeSpan.FromSeconds(1 * waitMultiplier));
+        result.Should().Be((delay, invDelay));
+
+        // We've just got the result, so repeated call should resolve from cache
         var computed = await Computed
             .Capture(() => client.Delay(delay, invDelay))
-            .AsTask().WaitAsync(TimeSpan.FromSeconds(0.1)); // Should be instant
+            .AsTask().WaitAsync(TimeSpan.FromSeconds(0.1));
 
         var startedAt = CpuTimestamp.Now;
         await computed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1 * waitMultiplier));
@@ -104,7 +108,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         if (!TestRunnerInfo.IsBuildAgent())
             elapsed.TotalSeconds.Should().BeGreaterThan(0.1);
 
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Fact]
@@ -206,8 +210,8 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
             await connection.Connect().WaitAsync(timeout);
             await Delay(0.2); // Enough for invalidations to come through
 
-            await AssertNoCalls(connection.ClientPeer);
-            await AssertNoCalls(connection.ServerPeer);
+            await AssertNoCalls(connection.ClientPeer, Out);
+            await AssertNoCalls(connection.ServerPeer, Out);
             return callCount;
         }
         finally {

@@ -13,15 +13,20 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 {
     private static readonly ConcurrentDictionary<(byte, Type), Func<RpcOutboundContext, RpcOutboundCall>> FactoryCache = new();
 
-    protected override string DebugTypeName => "->";
+    public override string DebugTypeName => "->";
 
     public readonly RpcOutboundContext Context = context;
     public readonly RpcPeer Peer = context.Peer!;
     public readonly RpcCacheInfoCaptureMode CacheInfoCaptureMode = context.CacheInfoCapture?.CaptureMode ?? default;
     public abstract Task UntypedResultTask { get; }
+    public virtual int CompletedStage
+        => UntypedResultTask.IsCompleted
+            ? RpcCallStage.ResultReady | RpcCallStage.Unregistered
+            : 0;
+    public string CompletedStageName => RpcCallStage.GetName(CompletedStage);
 
     public CpuTimestamp StartedAt;
-    public CancellationTokenRegistration CancellationHandler;
+    public CancellationTokenRegistration CallCancelHandler;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public static RpcOutboundCall? New(RpcOutboundContext context)
@@ -54,7 +59,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         var isStream = methodDef?.IsStream == true;
         var relatedId = context.RelatedId;
-        return ZString.Concat(
+        var result = ZString.Concat(
             DebugTypeName,
             isStream ? " ~" : " #",
             relatedId != 0 ? relatedId : Id,
@@ -62,6 +67,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             methodDef?.FullName ?? "n/a",
             arguments?.ToString() ?? "(n/a)",
             headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
+        var completedStageName = CompletedStageName;
+        if (!completedStageName.IsNullOrEmpty())
+            result += $": {completedStageName}";
+        return result;
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
@@ -70,10 +79,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         Peer.OutboundCalls.Register(this);
         var sendTask = SendRegistered();
 
-        if (!UntypedResultTask.IsCompleted && CancellationHandler == default)
-            CancellationHandler = Context.CancellationToken.Register(static state => {
+        if (!UntypedResultTask.IsCompleted && CallCancelHandler == default)
+            CallCancelHandler = Context.CallCancelToken.Register(static state => {
                 var call = (RpcOutboundCall)state!;
-                call.Cancel(call.Context.CancellationToken);
+                call.Cancel(call.Context.CallCancelToken);
             }, this, useSynchronizationContext: false);
 
         return sendTask;
@@ -172,21 +181,25 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public abstract bool Cancel(CancellationToken cancellationToken);
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public virtual Task Reconnect(bool isPeerChanged, bool isKnownToRemotePeer, CancellationToken cancellationToken)
+    public virtual int? GetReconnectStage(bool isPeerChanged)
     {
-        if (isPeerChanged)
-            StartedAt = CpuTimestamp.Now;
-        if (isKnownToRemotePeer)
-            return Task.CompletedTask;
-        return SendRegistered(false);
+        lock (Lock) {
+            var completedStage = CompletedStage;
+            if ((completedStage & RpcCallStage.Unregistered) != 0 || ServiceDef.Type == typeof(IRpcSystemCalls))
+                return null;
+
+            if (isPeerChanged)
+                StartedAt = CpuTimestamp.Now;
+            return completedStage;
+        }
     }
 
-    public void Complete()
+    public void CompleteKeepRegistered()
     {
         if (!Peer.OutboundCalls.Complete(this))
             return;
 
-        CancellationHandler.Dispose();
+        CallCancelHandler.Dispose();
         Context.Trace?.Complete(this);
     }
 
@@ -195,10 +208,11 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     {
         if (NoWait)
             throw Errors.InternalError("This method should never be called for NoWait calls.");
+
         if (!Peer.OutboundCalls.Unregister(this))
             return; // Already unregistered
 
-        Complete();
+        CompleteKeepRegistered();
         if (notifyCancelled)
             NotifyCancelled();
     }
@@ -271,7 +285,7 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
 
         async Task<TResult> InvokeOnceConnectedAsync() {
             await Peer
-                .WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CancellationToken)
+                .WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CallCancelToken)
                 .ConfigureAwait(false);
             _ = RegisterAndSend();
             return await ResultTask.ConfigureAwait(false);
@@ -331,11 +345,11 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public override bool Cancel(CancellationToken cancellationToken)
     {
-        var isCancelled = ResultSource.TrySetCanceled(cancellationToken);
-        if (isCancelled) {
+        var isResultSet = ResultSource.TrySetCanceled(cancellationToken);
+        if (isResultSet) {
             CompleteAndUnregister(notifyCancelled: true);
             Context.CacheInfoCapture?.CaptureValue(cancellationToken);
         }
-        return isCancelled;
+        return isResultSet;
     }
 }

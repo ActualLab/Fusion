@@ -1,8 +1,8 @@
 using ActualLab.Generators;
-using ActualLab.Generators.Internal;
 using ActualLab.Rpc;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
+using Xunit.Sdk;
 
 namespace ActualLab.Tests;
 
@@ -46,15 +46,33 @@ public static class TestHelpers
 
     // Rpc
 
-    public static Task AssertNoCalls(RpcPeer peer)
-        => TestExt.When(() => {
-            peer.OutboundCalls.Count.Should().Be(0);
-            peer.InboundCalls.Count.Should().Be(0);
-        }, TimeSpan.FromSeconds(1));
+    public static async Task AssertNoCalls(RpcPeer peer, ITestOutputHelper? @out = null)
+    {
+        try {
+            await TestExt.When(() => {
+                peer.InboundCalls.Count.Should().Be(0);
+                peer.OutboundCalls.Count.Should().Be(0);
+            }, TimeSpan.FromSeconds(1));
+        }
+        catch (XunitException) {
+            @out?.WriteLine($"Inbound calls: {peer.InboundCalls.ToDelimitedString()}");
+            @out?.WriteLine($"Outbound calls: {peer.OutboundCalls.ToDelimitedString()}");
+            throw;
+        }
+    }
 
-    public static Task AssertNoObjects(RpcPeer peer)
-        => TestExt.When(() => {
-            peer.RemoteObjects.Count.Should().Be(0);
-            peer.SharedObjects.Count.Should().Be(0);
-        }, TimeSpan.FromSeconds(1));
+    public static async Task AssertNoObjects(RpcPeer peer, ITestOutputHelper? @out = null)
+    {
+        try {
+            await TestExt.When(() => {
+                peer.SharedObjects.Count.Should().Be(0);
+                peer.RemoteObjects.Count.Should().Be(0);
+            }, TimeSpan.FromSeconds(1));
+        }
+        catch (XunitException) {
+            @out?.WriteLine($"Shared objects: {peer.SharedObjects.ToDelimitedString()}");
+            @out?.WriteLine($"Remote objects: {peer.RemoteObjects.ToDelimitedString()}");
+            throw;
+        }
+    }
 }

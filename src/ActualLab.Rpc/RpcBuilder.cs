@@ -108,9 +108,10 @@ public readonly struct RpcBuilder
 
         // System services
         if (!Configuration.Services.ContainsKey(typeof(IRpcSystemCalls))) {
-            Service<IRpcSystemCalls>().HasServer<RpcSystemCalls>().HasName(RpcSystemCalls.Name);
             services.AddSingleton(c => new RpcSystemCalls(c));
             services.AddSingleton(c => new RpcSystemCallSender(c));
+            AddClient<IRpcSystemCalls>(RpcSystemCalls.Name);
+            Service<IRpcSystemCalls>().HasServer<RpcSystemCalls>();
         }
     }
 

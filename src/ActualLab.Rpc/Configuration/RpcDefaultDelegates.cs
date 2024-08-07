@@ -103,7 +103,7 @@ public static class RpcDefaultDelegates
             : new RpcClientPeer(hub, peerRef);
 
     public static RpcInboundContextFactory InboundContextFactory { get; set; } =
-        static (peer, message, cancellationToken) => new RpcInboundContext(peer, message, cancellationToken);
+        static (peer, message, peerChangedToken) => new RpcInboundContext(peer, message, peerChangedToken);
 
     public static RpcInboundCallFilter InboundCallFilter { get; set; } =
         static (peer, method) => !method.IsBackend || peer.Ref.IsBackend;
