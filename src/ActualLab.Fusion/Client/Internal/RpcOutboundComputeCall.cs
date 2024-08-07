@@ -40,11 +40,9 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             if ((completedStage & RpcCallStage.Unregistered) != 0 || ServiceDef.Type == typeof(IRpcSystemCalls))
                 return null;
 
-            if (!isPeerChanged)
-                return completedStage;
-
-            if (ResultTask.IsCompleted) {
-                // Result is originating from another peer, so the best we can do is to invalidate it.
+            if (isPeerChanged && completedStage != 0) {
+                // ResultTask is already set, but it originates from another peer.
+                // The best we can do is to invalidate it.
                 SetInvalidated(false);
                 return null;
             }

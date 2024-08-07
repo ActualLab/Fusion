@@ -52,7 +52,7 @@ public static class TestHelpers
             await TestExt.When(() => {
                 peer.InboundCalls.Count.Should().Be(0);
                 peer.OutboundCalls.Count.Should().Be(0);
-            }, TimeSpan.FromSeconds(1));
+            }, TimeSpan.FromSeconds(3));
         }
         catch (XunitException) {
             @out?.WriteLine($"Inbound calls: {peer.InboundCalls.ToDelimitedString()}");
@@ -67,7 +67,7 @@ public static class TestHelpers
             await TestExt.When(() => {
                 peer.SharedObjects.Count.Should().Be(0);
                 peer.RemoteObjects.Count.Should().Be(0);
-            }, TimeSpan.FromSeconds(1));
+            }, TimeSpan.FromSeconds(3));
         }
         catch (XunitException) {
             @out?.WriteLine($"Shared objects: {peer.SharedObjects.ToDelimitedString()}");

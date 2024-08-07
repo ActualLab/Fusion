@@ -10,4 +10,14 @@ public sealed partial record RpcHandshake(
     [property: DataMember(Order = 4), MemoryPackOrder(4)] int Index
 ) {
     public const int CurrentProtocolVersion = 1;
+
+    public RpcPeerChangeKind GetPeerChangeKind(RpcHandshake? lastHandshake)
+    {
+        if (lastHandshake == null)
+            return RpcPeerChangeKind.ChangedToVeryFirst;
+
+        return RemotePeerId == lastHandshake.RemotePeerId
+            ? RpcPeerChangeKind.Unchanged
+            : RpcPeerChangeKind.Changed;
+    }
 }

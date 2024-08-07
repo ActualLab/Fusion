@@ -35,7 +35,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
         await connection.Connect();
         (await task).Should().Be(delay);
 
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Fact]
@@ -104,8 +104,8 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
             await disruptorTask;
         }
 
-        await AssertNoCalls(connection.ClientPeer);
-        await AssertNoCalls(connection.ServerPeer);
+        await AssertNoCalls(connection.ClientPeer, Out);
+        await AssertNoCalls(connection.ServerPeer, Out);
         return callCount;
     }
 

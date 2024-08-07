@@ -51,13 +51,13 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
             var existingCall = Context.Peer.InboundCalls.Get(Id);
             if (existingCall != this || ResultTask == null)
                 return null;
-        }
 
-        return completedStage switch {
-            >= 2 => Task.CompletedTask,
-            1 => ProcessStage2(cancellationToken),
-            _ => ProcessStage1(cancellationToken)
-        };
+            return WhenProcessed = completedStage switch {
+                >= 2 => Task.CompletedTask,
+                1 => ProcessStage2(cancellationToken),
+                _ => ProcessStage1(cancellationToken)
+            };
+        }
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

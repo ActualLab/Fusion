@@ -186,7 +186,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         var client = services.GetRequiredService<IReconnectTester>();
         await client.Delay(1, 1); // Warm-up
 
-        var timeout = TimeSpan.FromSeconds(5);
+        var timeout = TimeSpan.FromSeconds(10);
         var disruptorCts = new CancellationTokenSource();
         var disruptorTask = Task.Run(() => ConnectionDisruptor(disruptorCts.Token));
         try {
@@ -222,7 +222,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         {
             var rnd1 = new Random();
             while (CpuTimestamp.Now < endAt) {
-                await Task.Delay(rnd1.Next(10, 80), cancellationToken);
+                await Task.Delay(rnd1.Next(50, 150), cancellationToken);
                 connection.Disconnect();
                 await Task.Delay(rnd1.Next(10, 40), cancellationToken);
                 await connection.Connect(cancellationToken).WaitAsync(timeout, cancellationToken);

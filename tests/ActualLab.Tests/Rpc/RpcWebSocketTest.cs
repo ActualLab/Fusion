@@ -44,7 +44,7 @@ public class RpcWebSocketTest : RpcTestBase
             () => client.Div(1, 0));
 
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class RpcWebSocketTest : RpcTestBase
             results[i].Should().Be((int?)i);
 
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class RpcWebSocketTest : RpcTestBase
             () => commander.Call(new HelloCommand("error")));
 
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class RpcWebSocketTest : RpcTestBase
             result.Should().Be("c");
         }, TimeSpan.FromSeconds(1));
 
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class RpcWebSocketTest : RpcTestBase
         var startedAt = CpuTimestamp.Now;
         await client.Delay(TimeSpan.FromMilliseconds(200));
         startedAt.Elapsed.TotalMilliseconds.Should().BeInRange(100, 500);
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
 
         {
             using var cts = new CancellationTokenSource(1);
@@ -123,7 +123,7 @@ public class RpcWebSocketTest : RpcTestBase
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 () => client.Delay(TimeSpan.FromHours(1), cts.Token));
             startedAt.Elapsed.TotalMilliseconds.Should().BeInRange(0, 500);
-            await AssertNoCalls(peer);
+            await AssertNoCalls(peer, Out);
         }
 
         {
@@ -132,7 +132,7 @@ public class RpcWebSocketTest : RpcTestBase
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 () => client.Delay(TimeSpan.FromHours(1), cts.Token));
             startedAt.Elapsed.TotalMilliseconds.Should().BeInRange(300, 1000);
-            await AssertNoCalls(peer);
+            await AssertNoCalls(peer, Out);
         }
     }
 
@@ -156,8 +156,8 @@ public class RpcWebSocketTest : RpcTestBase
         await Assert.ThrowsAnyAsync<Exception>(
             async () => await client.PolymorphResult(2));
 
-        await AssertNoCalls(clientPeer);
-        await AssertNoCalls(backendClientPeer);
+        await AssertNoCalls(clientPeer, Out);
+        await AssertNoCalls(backendClientPeer, Out);
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public class RpcWebSocketTest : RpcTestBase
             e.Message.Should().Contain("ITestRpcService");
         }
 
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
     }
 
     [Fact]
@@ -193,14 +193,14 @@ public class RpcWebSocketTest : RpcTestBase
         var expected1 = Enumerable.Range(0, 500).ToList();
         var stream1 = await client.StreamInt32(expected1.Count);
         (await stream1.ToListAsync()).Should().Equal(expected1);
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
 
         var expected2 = Enumerable.Range(0, 500)
             .Select(x => (x & 2) == 0 ? (ITuple)new Tuple<int>(x) : new Tuple<long>(x))
             .ToList();
         var stream2 = await client.StreamTuples(expected2.Count);
         (await stream2.ToListAsync()).Should().Equal(expected2);
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
 
         var stream3 = await client.StreamTuples(10, 5);
         (await stream3.Take(5).CountAsync()).Should().Be(5);
@@ -212,7 +212,7 @@ public class RpcWebSocketTest : RpcTestBase
         catch (Exception e) {
             e.Should().BeOfType<InvalidOperationException>();
         }
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
     }
 
     [Fact]
@@ -282,7 +282,7 @@ public class RpcWebSocketTest : RpcTestBase
             }, CancellationToken.None);
         }
         await Task.WhenAll(tasks);
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
     }
 
     [Theory]
@@ -307,7 +307,7 @@ public class RpcWebSocketTest : RpcTestBase
 
         var totalIterationCount = threadCount * iterationCount;
         Out.WriteLine($"{iterationCount}: {totalIterationCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
 
         async Task<TimeSpan> Run(int count)
         {
@@ -350,7 +350,7 @@ public class RpcWebSocketTest : RpcTestBase
 
         var totalItemCount = threadCount * itemCount;
         Out.WriteLine($"{itemCount}: {totalItemCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
-        await AssertNoCalls(peer);
+        await AssertNoCalls(peer, Out);
 
         async Task<TimeSpan> Run(int count)
         {

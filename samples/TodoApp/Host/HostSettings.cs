@@ -14,7 +14,7 @@ public class HostSettings
     public string BackendUrl { get; set; } = "";
 
     // DBs
-    public bool MustRecreateDb { get; set; } = false;
+    public bool MustRecreateDb { get; set; } = true;
     public string UsePostgreSql { get; set; } = "";
     // "Server=localhost;Database=fusion_todoapp_{0:StorageId};Port=5432;User Id=postgres;Password=postgres";
     public string UseSqlServer { get; set; } = "";

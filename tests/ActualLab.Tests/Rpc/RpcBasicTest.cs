@@ -84,7 +84,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         (await client.Div(6, 2)).Should().Be(3);
         await Assert.ThrowsAsync<DivideByZeroException>(
             () => client.Div(1, 0));
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
 
         divTracer.EnterCount.Should().Be(2);
         divTracer.ExitCount.Should().Be(2);
@@ -105,7 +105,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         (await client.Div(6, 2)).Should().Be(3);
         await Assert.ThrowsAsync<DivideByZeroException>(
             () => client.Div(1, 0));
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         (await client.Div(null, 2)).Should().Be(null);
         await Assert.ThrowsAsync<DivideByZeroException>(
             () => client.Div(1, 0));
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Fact]
@@ -141,14 +141,14 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await Assert.ThrowsAsync<TimeoutException>(
             () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(2))));
         await Delay(0.1);
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
 
         await connection.Connect();
         // NOTE: It won't throw under debugger due to debug mode timeouts
         await Assert.ThrowsAsync<TimeoutException>(
             () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(30))));
 
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
             result.Should().Be("c");
         }, TimeSpan.FromSeconds(1));
 
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var startedAt = CpuTimestamp.Now;
         await client.Delay(TimeSpan.FromMilliseconds(200));
         startedAt.Elapsed.TotalMilliseconds.Should().BeInRange(100, 500);
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
 
         {
             using var cts = new CancellationTokenSource(1);
@@ -195,7 +195,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 () => client.Delay(TimeSpan.FromHours(1), cts.Token));
             startedAt.Elapsed.TotalMilliseconds.Should().BeInRange(0, 500);
-            await AssertNoCalls(clientPeer);
+            await AssertNoCalls(clientPeer, Out);
         }
 
         {
@@ -204,7 +204,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 () => client.Delay(TimeSpan.FromHours(1), cts.Token));
             startedAt.Elapsed.TotalMilliseconds.Should().BeInRange(300, 1000);
-            await AssertNoCalls(clientPeer);
+            await AssertNoCalls(clientPeer, Out);
         }
     }
 
@@ -224,7 +224,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await Assert.ThrowsAnyAsync<Exception>(
             async () => await client.PolymorphResult(2));
 
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Fact]
@@ -239,7 +239,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         result.Error.Should().BeAssignableTo<OperationCanceledException>();
         var cancellationCount = await client.GetCancellationCount();
         cancellationCount.Should().Be(1);
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Fact]
@@ -277,7 +277,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
         var client = services.GetRequiredService<ITestRpcServiceClient>();
         await client.Div(1, 1);
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
 
         var startedAt = CpuTimestamp.Now;
         for (var i = iterationCount; i > 0; i--)
@@ -285,7 +285,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
                 Assert.Fail("Wrong result.");
         var elapsed = startedAt.Elapsed;
         Out.WriteLine($"{iterationCount}: {iterationCount / elapsed.TotalSeconds:F} ops/s");
-        await AssertNoCalls(clientPeer);
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Theory]

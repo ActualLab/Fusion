@@ -74,18 +74,14 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public Task RegisterAndSend()
+    public void Register()
     {
         Peer.OutboundCalls.Register(this);
-        var sendTask = SendRegistered();
-
-        if (!UntypedResultTask.IsCompleted && CallCancelHandler == default)
+        if (CallCancelHandler == default)
             CallCancelHandler = Context.CallCancelToken.Register(static state => {
                 var call = (RpcOutboundCall)state!;
                 call.Cancel(call.Context.CallCancelToken);
             }, this, useSynchronizationContext: false);
-
-        return sendTask;
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
@@ -137,7 +133,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Send(message);
+        return Peer.Send(message, Peer.Sender);
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
@@ -188,8 +184,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             if ((completedStage & RpcCallStage.Unregistered) != 0 || ServiceDef.Type == typeof(IRpcSystemCalls))
                 return null;
 
-            if (isPeerChanged)
-                StartedAt = CpuTimestamp.Now;
+            StartedAt = CpuTimestamp.Now;
             return completedStage;
         }
     }
@@ -272,22 +267,34 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     public Task<TResult> Invoke(bool assumeConnected)
     {
-        if (CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly)
+        if (CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly) {
             RegisterCacheKeyOnly();
-        else if (NoWait) // NoWait always means "send immediately, even if disconnected"
+            return ResultTask;
+        }
+
+        if (NoWait) {
+            // NoWait always means "send immediately, even if disconnected"
             _ = SendNoWait(MethodDef.AllowArgumentPolymorphism);
-        else if (assumeConnected || Peer.IsConnected(out _))
-            _ = RegisterAndSend(); // Fast path
-        else
-            return InvokeOnceConnectedAsync(); // Slow path
+            return ResultTask;
+        }
 
-        return ResultTask;
+        Register();
+        if (assumeConnected || Peer.IsConnected(out _)) {
+            _ = SendRegistered(); // Fast path
+            return ResultTask;
+        }
+        return CompleteAsync(); // Slow path
 
-        async Task<TResult> InvokeOnceConnectedAsync() {
-            await Peer
-                .WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CallCancelToken)
-                .ConfigureAwait(false);
-            _ = RegisterAndSend();
+        async Task<TResult> CompleteAsync() {
+            try {
+                await Peer
+                    .WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CallCancelToken)
+                    .ConfigureAwait(false);
+                _ = SendRegistered();
+            }
+            catch (Exception error) {
+                SetError(error, null);
+            }
             return await ResultTask.ConfigureAwait(false);
         }
     }

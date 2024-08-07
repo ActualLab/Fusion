@@ -23,6 +23,7 @@ public abstract class RpcInboundCall : RpcCall
     public RpcHeader[]? ResultHeaders;
     public virtual int CompletedStage => UntypedResultTask is { IsCompleted: true } ? 1 : 0;
     public virtual string CompletedStageName => CompletedStage == 0 ? "" : "ResultReady";
+    public Task? WhenProcessed;
     public RpcInboundCallTrace? Trace;
 
     [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
@@ -138,8 +139,10 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         }
 
         var existingCall = Context.Peer.InboundCalls.GetOrRegister(this);
-        if (existingCall != this && existingCall.TryReprocess(0, cancellationToken) is { } reprocessTask)
-            return reprocessTask;
+        if (existingCall != this)
+            return existingCall.TryReprocess(0, cancellationToken)
+                ?? existingCall.WhenProcessed
+                ?? Task.CompletedTask;
 
         var inboundMiddlewares = Hub.InboundMiddlewares.NullIfEmpty();
         lock (Lock) {
@@ -164,10 +167,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             catch (Exception error) {
                 ResultTask = Task.FromException<TResult>(error);
             }
-
-            // This can be done outside the lock, but it's slightly faster to do it right here,
-            // coz the lock won't be re-acquired in case ResultTask is computed synchronously.
-            return ProcessStage1(cancellationToken);
+            return WhenProcessed = ProcessStage1(cancellationToken);
         }
     }
 
@@ -177,12 +177,12 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             var existingCall = Context.Peer.InboundCalls.Get(Id);
             if (existingCall != this || ResultTask == null)
                 return null;
-        }
 
-        return completedStage switch {
-            >= 1 => Task.CompletedTask,
-            _ => ProcessStage1(cancellationToken)
-        };
+            return WhenProcessed = completedStage switch {
+                >= 1 => Task.CompletedTask,
+                _ => ProcessStage1(cancellationToken)
+            };
+        }
     }
 
     // Protected methods

@@ -54,7 +54,7 @@ public static class RpcDefaultDelegates
 
     public static RpcCallTimeoutsProvider CallTimeoutsProvider { get; set; } =
         method => {
-            if (Debugger.IsAttached)
+            if (RpcCallTimeouts.Defaults.IsDebugEnabled && Debugger.IsAttached)
                 return RpcCallTimeouts.Defaults.Debug;
 
             if (method.IsBackend)
