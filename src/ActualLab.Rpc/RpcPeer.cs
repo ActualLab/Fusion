@@ -21,7 +21,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     protected IServiceProvider Services => Hub.Services;
 
     protected internal ChannelWriter<RpcMessage>? Sender
-        => _sender ?? _connectionState.Value.Channel?.Writer; // _sender is set after _connectionState, so might be out of sync
+        => _sender ?? _connectionState.Value.Sender; // _sender is set after _connectionState, so might be out of sync
 
     protected internal RpcCallLogger CallLogger
         => _callLogger ??= Hub.CallLoggerFactory.Invoke(this, Hub.CallLoggerFilter, Log, CallLogLevel);
@@ -123,21 +123,37 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public bool IsConnected()
         => ConnectionState.Value.Handshake != null;
 
-    public bool IsConnected([NotNullWhen(true)] out RpcHandshake? handshake)
+    public bool IsConnected(
+        [NotNullWhen(true)] out RpcHandshake? handshake,
+        [NotNullWhen(true)] out ChannelWriter<RpcMessage>? sender)
     {
         var connectionState = ConnectionState.Value;
         handshake = connectionState.Handshake;
+        sender = connectionState.Sender;
         return handshake != null;
     }
 
-    public async Task<RpcHandshake> WhenConnected(CancellationToken cancellationToken = default)
+    public async Task<(RpcHandshake Handshake, ChannelWriter<RpcMessage> Sender)> WhenConnected(
+        CancellationToken cancellationToken = default)
     {
         var connectionState = ConnectionState;
         while (true) {
             try {
                 connectionState = await connectionState.WhenConnected(cancellationToken).ConfigureAwait(false);
-                if (connectionState.Value.Handshake is { } handshake && !connectionState.HasNext)
-                    return handshake;
+                var vConnectionState = connectionState.Value;
+                if (vConnectionState.Handshake is not { } handshake)
+                    continue;
+                if (vConnectionState.Sender is not { } sender)
+                    continue;
+
+                var spinWait = new SpinWait();
+                while (!connectionState.HasNext) {
+                    // Waiting for _sender assignment
+                    if (ReferenceEquals(sender, _sender))
+                        return (handshake, sender);
+
+                    spinWait.SpinOnce();
+                }
             }
             catch (RpcReconnectFailedException) {
                 if (Ref.IsRerouted)
@@ -147,13 +163,16 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
-    public Task<RpcHandshake> WhenConnected(TimeSpan timeout, CancellationToken cancellationToken = default)
+    public Task<(RpcHandshake Handshake, ChannelWriter<RpcMessage> Sender)> WhenConnected(
+        TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         return timeout == TimeSpan.MaxValue
             ? WhenConnected(cancellationToken)
             : WhenConnectedWithTimeout(this, timeout, cancellationToken);
 
-        static async Task<RpcHandshake> WhenConnectedWithTimeout(RpcPeer peer, TimeSpan timeout1, CancellationToken cancellationToken1) {
+        static async Task<(RpcHandshake Handshake, ChannelWriter<RpcMessage> Sender)> WhenConnectedWithTimeout(
+            RpcPeer peer, TimeSpan timeout1, CancellationToken cancellationToken1)
+        {
             using var timeoutCts = cancellationToken1.CreateLinkedTokenSource(timeout1);
             var timeoutToken = timeoutCts.Token;
             try {
@@ -432,11 +451,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             if (newState.ReaderTokenSource != oldState.ReaderTokenSource) {
                 // Cancel the old ReaderTokenSource
                 oldState.ReaderTokenSource.CancelAndDisposeSilently();
-                _sender = newState.Channel?.Writer;
+                _sender = newState.Sender;
             }
             if (newState.Connection != oldState.Connection) {
                 // Complete the old Channel
-                oldState.Channel?.Writer.TryComplete(newState.Error);
+                oldState.Sender?.TryComplete(newState.Error);
             }
             Monitor.Exit(Lock);
 

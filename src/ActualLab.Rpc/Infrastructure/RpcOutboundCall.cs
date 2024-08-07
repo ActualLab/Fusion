@@ -112,7 +112,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    public Task SendRegistered(bool isFirstAttempt = true)
+    public Task SendRegistered(bool isFirstAttempt, ChannelWriter<RpcMessage>? sender = null)
     {
         RpcMessage message;
         var context = Context;
@@ -133,7 +133,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Send(message, Peer.Sender);
+        return Peer.Send(message, sender);
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
@@ -279,18 +279,19 @@ public class RpcOutboundCall<TResult> : RpcOutboundCall
         }
 
         Register();
-        if (assumeConnected || Peer.IsConnected(out _)) {
-            _ = SendRegistered(); // Fast path
+        var sender = (ChannelWriter<RpcMessage>?)null;
+        if (assumeConnected || Peer.IsConnected(out _, out sender)) {
+            _ = SendRegistered(true, sender); // Fast path
             return ResultTask;
         }
         return CompleteAsync(); // Slow path
 
         async Task<TResult> CompleteAsync() {
             try {
-                await Peer
+                var (_, sender1) = await Peer
                     .WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CallCancelToken)
                     .ConfigureAwait(false);
-                _ = SendRegistered();
+                _ = SendRegistered(true, sender1);
             }
             catch (Exception error) {
                 SetError(error, null);

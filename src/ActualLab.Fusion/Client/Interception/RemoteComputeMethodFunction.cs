@@ -431,7 +431,7 @@ public class RemoteComputeMethodFunction<T>(
     protected Task WhenConnectedChecked(
         ComputeMethodInput input, RpcPeer peer, CancellationToken cancellationToken = default)
     {
-        if (peer.IsConnected(out var handshake))
+        if (peer.IsConnected(out var handshake, out _))
             return handshake.RemoteHubId == RpcHub.Id && input.Invocation.Proxy is not InterfaceProxy
                 ? Task.FromException(Errors.RemoteComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref))
                 : Task.CompletedTask;
@@ -441,7 +441,7 @@ public class RemoteComputeMethodFunction<T>(
         static async Task WhenConnectedCheckedAsync(
             ComputeMethodInput input, RpcPeer peer, RpcMethodDef methodDef, CancellationToken cancellationToken)
         {
-            var handshake = await peer
+            var (handshake, _) = await peer
                 .WhenConnected(methodDef.Timeouts.ConnectTimeout, cancellationToken)
                 .ConfigureAwait(false);
             if (handshake.RemoteHubId == methodDef.Hub.Id && input.Invocation.Proxy is not InterfaceProxy)
