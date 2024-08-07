@@ -9,14 +9,12 @@ namespace ActualLab.Rpc;
 
 public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 {
-    private static readonly HashSet<long> EmptyCallIdSet = new();
     public static LogLevel DefaultCallLogLevel { get; set; } = LogLevel.None;
 
     private AsyncState<RpcPeerConnectionState> _connectionState = new(RpcPeerConnectionState.Disconnected, true);
     private ChannelWriter<RpcMessage>? _sender;
     private bool _resetTryIndex;
     private volatile RpcPeerStopMode _stopMode;
-    private volatile Action<byte[]>? _reconnectedHandler;
     private RpcCallLogger? _callLogger;
     private ILogger? _log;
 
@@ -370,14 +368,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         // on every disconnect anyway.
         InboundCalls.Clear();
         Log.LogInformation("'{PeerRef}': {Action}", Ref, isStopped ? "Stopped" : "Peer changed");
-    }
-
-    protected internal Action<byte[]>? ReplaceReconnectedHandler(Action<byte[]>? newHandler) {
-        lock (Lock) {
-            var oldHandler = _reconnectedHandler;
-            _reconnectedHandler = newHandler;
-            return oldHandler;
-        }
     }
 
     protected RpcInboundContext? ProcessMessage(
