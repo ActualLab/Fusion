@@ -20,8 +20,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     protected IServiceProvider Services => Hub.Services;
 
-    protected internal ChannelWriter<RpcMessage>? Sender
-        => _sender ?? _connectionState.Value.Sender; // _sender is set after _connectionState, so might be out of sync
+    protected internal ChannelWriter<RpcMessage>? Sender {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _sender ?? _connectionState.Value.Sender; // _sender is set after _connectionState, so can be out of sync
+    }
 
     protected internal RpcCallLogger CallLogger
         => _callLogger ??= Hub.CallLoggerFactory.Invoke(this, Hub.CallLoggerFilter, Log, CallLogLevel);
