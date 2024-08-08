@@ -67,7 +67,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         Ref = @ref;
         ConnectionKind = @ref.GetConnectionKind(hub);
         Versions = versions ?? @ref.GetVersions();
-        FlowExecutionContext = false; // Important: otherwise peers may "inherit" Activity from RpcHub.GetPeer
 
         ServerMethodResolver = Hub.ServiceRegistry.DefaultServerMethodResolver;
         ArgumentSerializer = Hub.ArgumentSerializer;
