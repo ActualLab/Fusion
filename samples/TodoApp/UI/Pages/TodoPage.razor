@@ -32,7 +32,7 @@
     <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => RpcHub.GetPeer(RpcPeerRef.Default).Disconnect()">Disconnect</Button>
 </Div>
 
-<WhenException Exception="error" />
+<WhenException Exception="@error" />
 <Row>
     <Column ColumnSize="ColumnSize.Is6.OnDesktop.Is12.OnTablet">
         <Paragraph>

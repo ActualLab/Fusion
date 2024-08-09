@@ -14,7 +14,8 @@ public abstract class ComputedRenderStateComponent<TState> : ComputedStateCompon
         if (!IsRenderStateChanged())
             return false;
 
-        if (RenderState.Computed.IsConsistent())
+        var computed = RenderState.Computed;
+        if (computed.IsConsistent() || computed.HasError)
             return true;
 
         // Inconsistent state is rare, so we make this check at last

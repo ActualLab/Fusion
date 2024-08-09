@@ -78,7 +78,8 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
 
     protected override bool ShouldRender()
     {
-        if (State.Computed.IsConsistent())
+        var computed = State.Computed;
+        if (computed.IsConsistent() || computed.HasError)
             return true;
 
         // Inconsistent state is rare, so we make this check at last

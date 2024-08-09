@@ -335,7 +335,7 @@ public abstract class State<T> : ComputedInput,
                 if (delayTask == SpecialTasks.MustThrow)
                     throw;
                 if (delayTask == SpecialTasks.MustReturn)
-                    return computed;
+                    break;
                 await delayTask.ConfigureAwait(false);
             }
         }

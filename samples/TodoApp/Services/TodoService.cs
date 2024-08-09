@@ -25,7 +25,12 @@ public class TodoService(IAuth auth, ITodoBackend backend, ICommander commander)
     public virtual async Task<Todo?> Get(Session session, Ulid id, CancellationToken cancellationToken = default)
     {
         var folder = await GetFolder(session, cancellationToken);
-        return await backend.Get(folder, id, cancellationToken);
+        var todo = await backend.Get(folder, id, cancellationToken);
+#if false // Change to true to see how the error is processed in UI
+        if (todo?.Title.Contains("err") == true)
+            throw new InvalidOperationException("Error!");
+#endif
+        return todo;
     }
 
     public virtual async Task<Ulid[]> ListIds(Session session, int count, CancellationToken cancellationToken = default)

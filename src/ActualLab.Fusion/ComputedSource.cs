@@ -192,7 +192,7 @@ public class ComputedSource<T> : ComputedInput,
                 if (delayTask == SpecialTasks.MustThrow)
                     throw;
                 if (delayTask == SpecialTasks.MustReturn)
-                    return computed;
+                    break;
                 await delayTask.ConfigureAwait(false);
             }
         }
