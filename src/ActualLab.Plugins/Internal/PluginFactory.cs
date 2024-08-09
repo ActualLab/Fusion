@@ -14,6 +14,6 @@ public class PluginFactory(IServiceProvider services) : IPluginFactory
 #pragma warning disable IL2092
     public virtual object? Create(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type pluginType)
-        => Services.Activate(pluginType);
+        => Services.CreateInstance(pluginType);
 #pragma warning restore IL2092
 }

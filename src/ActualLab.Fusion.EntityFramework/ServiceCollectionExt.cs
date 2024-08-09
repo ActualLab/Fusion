@@ -32,7 +32,7 @@ public static class ServiceCollectionExt
         services.AddDbContext<TDbContext>(optionsAction, ServiceLifetime.Singleton, ServiceLifetime.Singleton);
         services.RemoveAll(x => x.ServiceType == typeof(TDbContext));
         services.AddSingleton<IDbContextFactory<TDbContext>>(
-            c => new FuncDbContextFactory<TDbContext>(() => c.Activate<TDbContext>()));
+            c => new FuncDbContextFactory<TDbContext>(() => c.CreateInstance<TDbContext>()));
         return services;
     }
 
@@ -46,7 +46,7 @@ public static class ServiceCollectionExt
                 continue;
 
             var newImplementationType = entityResolverGenericType.MakeGenericType(serviceType.GetGenericArguments());
-            descriptor.SetImplementationFactory(c => c.Activate(newImplementationType));
+            descriptor.SetImplementationFactory(c => c.CreateInstance(newImplementationType));
         }
         return services;
     }

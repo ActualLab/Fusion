@@ -14,7 +14,7 @@ public static class ServiceProviderExt
     {
         var proxyType = Proxies.GetProxyType<TBaseType>();
 #pragma warning disable IL2072
-        var proxy = (TBaseType)services.Activate(proxyType);
+        var proxy = (TBaseType)services.CreateInstance(proxyType);
 #pragma warning restore IL2072
         interceptor.BindTo(proxy, proxyTarget, initialize);
         return proxy;
@@ -27,7 +27,7 @@ public static class ServiceProviderExt
     {
         var proxyType = Proxies.GetProxyType(baseType);
 #pragma warning disable IL2072
-        var proxy = (IProxy)services.Activate(proxyType);
+        var proxy = (IProxy)services.CreateInstance(proxyType);
 #pragma warning restore IL2072
         interceptor.BindTo(proxy, proxyTarget, initialize);
         return proxy;

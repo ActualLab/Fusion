@@ -43,33 +43,33 @@ public static class ServiceProviderExt
     public static HostedServiceSet HostedServices(this IServiceProvider services)
         => new(services);
 
-    // GetOrActivate
+    // CreateInstance
 
-    public static T GetOrActivate<
+    public static T CreateInstance<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
         this IServiceProvider services, params object[] arguments)
-        => (T)services.GetOrActivate(typeof(T));
+        => (T) services.CreateInstance(typeof(T), arguments);
 
-    public static object GetOrActivate(
-        this IServiceProvider services,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
-        Type type,
-        params object[] arguments)
-        => services.GetService(type) ?? services.Activate(type);
-
-    // Activate
-
-    public static T Activate<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
-        this IServiceProvider services, params object[] arguments)
-        => (T) services.Activate(typeof(T), arguments);
-
-    public static object Activate(
+    public static object CreateInstance(
         this IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
         Type instanceType,
         params object[] arguments)
         => ActivatorUtilities.CreateInstance(services, instanceType, arguments);
+
+    // GetServiceOrCreateInstance
+
+    public static T GetServiceOrCreateInstance<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
+        this IServiceProvider services, params object[] arguments)
+        => (T)services.GetServiceOrCreateInstance(typeof(T));
+
+    public static object GetServiceOrCreateInstance(
+        this IServiceProvider services,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
+        Type type,
+        params object[] arguments)
+        => services.GetService(type) ?? services.CreateInstance(type);
 
     // GetRequiredMixedModeService
 

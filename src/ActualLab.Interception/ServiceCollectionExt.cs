@@ -55,9 +55,9 @@ public static class ServiceCollectionExt
         // All implementations converge here.
         services.Add(new ServiceDescriptor(factoryType, c => {
             var factoryProxyType = Proxies.GetProxyType(factoryType);
-            var interceptor = (Interceptor)c.GetOrActivate(interceptorType);
+            var interceptor = (Interceptor)c.GetServiceOrCreateInstance(interceptorType);
 #pragma warning disable IL2072
-            var proxy = (IProxy)c.GetOrActivate(factoryProxyType);
+            var proxy = (IProxy)c.GetServiceOrCreateInstance(factoryProxyType);
 #pragma warning restore IL2072
             interceptor.BindTo(proxy);
             return proxy;

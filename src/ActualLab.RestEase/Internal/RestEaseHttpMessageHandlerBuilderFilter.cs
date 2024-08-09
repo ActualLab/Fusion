@@ -7,7 +7,7 @@ public class RestEaseHttpMessageHandlerBuilderFilter : IHttpMessageHandlerBuilde
 {
     public Action<HttpMessageHandlerBuilder> Configure(Action<HttpMessageHandlerBuilder> next)
         => builder => {
-            var restEaseHttpMessageHandler = builder.Services.Activate<RestEaseHttpMessageHandler>();
+            var restEaseHttpMessageHandler = builder.Services.CreateInstance<RestEaseHttpMessageHandler>();
             // Run other builders first
             next(builder);
             builder.AdditionalHandlers.Insert(0, restEaseHttpMessageHandler);

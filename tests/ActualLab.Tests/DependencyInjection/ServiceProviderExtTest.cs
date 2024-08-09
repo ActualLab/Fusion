@@ -38,26 +38,26 @@ public class ServiceProviderExtTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void ActivateTest()
+    public void CreateInstanceTest()
     {
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddSingleton("S");
         var services = new DefaultServiceProviderFactory()
             .CreateServiceProvider(serviceCollection);
 
-        var a = services.Activate<A>();
+        var a = services.CreateInstance<A>();
         a.X.Should().Be("S");
         a.Y.Should().Be("S");
 
-        var b = services.Activate<B>();
+        var b = services.CreateInstance<B>();
         b.X.Should().Be("S");
         b.Y.Should().BeEmpty();
 
         ((Action) (() => {
-            var c = services.Activate<C>();
+            var c = services.CreateInstance<C>();
         })).Should().Throw<InvalidOperationException>();
 
-        var c = services.Activate<C>(1, 2);
+        var c = services.CreateInstance<C>(1, 2);
         c.X.Should().Be("1");
         c.Y.Should().Be("2");
     }
