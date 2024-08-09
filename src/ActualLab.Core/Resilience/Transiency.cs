@@ -13,7 +13,7 @@ public static class TransiencyExt
 {
     public static Transiency Or(this Transiency first, Transiency second)
         => first != Transiency.Unknown ? first : second;
-    public static Transiency Or(this Transiency first, Exception error, Func<Exception, Transiency> second)
+    public static Transiency Or(this Transiency first, Exception error, TransiencyResolver second)
         => first != Transiency.Unknown ? first : second.Invoke(error);
 
     public static bool MustRetry(this Transiency transiency, bool retryOnNonTransient = false)
