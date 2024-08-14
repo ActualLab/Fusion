@@ -3,7 +3,9 @@ using ActualLab.CommandR;
 using ActualLab.CommandR.Configuration;
 using ActualLab.DependencyInjection;
 using ActualLab.Fusion;
+using ActualLab.Generators;
 using ActualLab.Interception;
+using ActualLab.Mathematics;
 using ActualLab.Reflection;
 using ActualLab.Rpc;
 using ActualLab.Time;
@@ -21,8 +23,15 @@ var m2 = typeof(Invoker).GetMethod(nameof(Invoker.Format2), BindingFlags.Public 
 WriteLine(l0.GetInvoker(m0).Invoke(null, l0));
 WriteLine(l2.GetInvoker(m2).Invoke(null, l2));
 
+Type GetRandomType() => RandomShared.Next().PositiveModulo(5) switch {
+    0 => typeof(bool),
+    1 => typeof(int),
+    2 => typeof(int?),
+    3 => typeof(long),
+    _ => typeof(string),
+};
 for (var i = 0; i < ArgumentList.Types.Length; i++) {
-    var tArguments = Enumerable.Range(0, i).Select(_ => typeof(int)).ToArray();
+    var tArguments = Enumerable.Range(0, i).Select(_ => GetRandomType()).ToArray();
     var t = ArgumentList.FindType(tArguments);
     var l = t.CreateInstance();
     var lengthGetter = t.GetProperty("Length")!.GetGetter();
