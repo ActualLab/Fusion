@@ -26,7 +26,7 @@ public class TypedFactoryInterceptor : Interceptor
         return methodDef;
     }
 
-    protected override Func<Invocation, object?>? CreateHandler<
+    protected internal override Func<Invocation, object?>? CreateHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef)
     {

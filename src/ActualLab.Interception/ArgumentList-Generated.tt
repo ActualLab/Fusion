@@ -78,7 +78,7 @@ public abstract partial record ArgumentList
     public static ArgumentList<<#=argumentTypes#>> New<<#=argumentTypes#>>(<#=argumentDeclaration#>)
         => new(<#=argumentUsage#>);
 <# } #>
-<# for (var itemCount = maxItemCount + 1; itemCount <= maxNewOverloadsCount; itemCount++) {
+<# for (var itemCount = maxItemCount + 1; itemCount <= Math.Min(maxNewOverloadsCount, maxItemCount * 2); itemCount++) {
        var argumentTypes0 = ItemList("T{0}", maxItemCount);
        var argumentDeclaration0 = ItemList("T{0} item{0}", maxItemCount);
        var argumentUsage0 = ItemList("item{0}", maxItemCount);
@@ -87,8 +87,28 @@ public abstract partial record ArgumentList
        var argumentUsage1 = ItemList("item{0}", itemCount, maxItemCount);
 #>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentListPair<ArgumentList<<#=argumentTypes0#>>, ArgumentList<<#=argumentTypes1#>>> New<<#=argumentTypes0#>, <#=argumentTypes1#>>(<#=argumentDeclaration0#>, <#=argumentDeclaration1#>)
+    public static ArgumentListPair< ArgumentList<<#=argumentTypes0#>>, ArgumentList<<#=argumentTypes1#>> > New<<#=argumentTypes0#>, <#=argumentTypes1#>>(<#=argumentDeclaration0#>, <#=argumentDeclaration1#>)
         => new(new(<#=argumentUsage0#>), new(<#=argumentUsage1#>));
+<# } #>
+<# for (var itemCount = maxItemCount * 2 + 1; itemCount <= Math.Min(maxNewOverloadsCount, maxItemCount * 3); itemCount++) {
+       var argumentTypes0 = ItemList("T{0}", maxItemCount);
+       var argumentDeclaration0 = ItemList("T{0} item{0}", maxItemCount);
+       var argumentUsage0 = ItemList("item{0}", maxItemCount);
+       var argumentTypes1 = ItemList("T{0}", maxItemCount * 2, maxItemCount);
+       var argumentDeclaration1 = ItemList("T{0} item{0}", maxItemCount * 2, maxItemCount);
+       var argumentUsage1 = ItemList("item{0}", maxItemCount * 2, maxItemCount);
+       var argumentTypes2 = ItemList("T{0}", itemCount, maxItemCount * 2);
+       var argumentDeclaration2 = ItemList("T{0} item{0}", itemCount, maxItemCount * 2);
+       var argumentUsage2 = ItemList("item{0}", itemCount, maxItemCount * 2);
+#>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ArgumentListPair<
+        ArgumentList<<#=argumentTypes0#>>,
+        ArgumentListPair<
+            ArgumentList<<#=argumentTypes1#>>,
+            ArgumentList<<#=argumentTypes2#>>
+        >> New<<#=argumentTypes0#>, <#=argumentTypes1#>, <#=argumentTypes2#>>(<#=argumentDeclaration0#>, <#=argumentDeclaration1#>, <#=argumentDeclaration2#>)
+        => new(new(<#=argumentUsage0#>), new(new(<#=argumentUsage1#>), new(<#=argumentUsage2#>)));
 <# } #>
 
 <#

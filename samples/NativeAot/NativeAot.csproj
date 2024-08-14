@@ -15,14 +15,16 @@
     <TrimMode>full</TrimMode>
     <InvariantGlobalization>true</InvariantGlobalization>
     <OptimizationPreference>Size</OptimizationPreference>
-    <TrimmerSingleWarn>false</TrimmerSingleWarn>
-    <!--
+<!--    <TrimmerSingleWarn>false</TrimmerSingleWarn>-->
     <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>
     <IlcDisableReflection>false</IlcDisableReflection>
     <NativeDebugSymbols>false</NativeDebugSymbols>
     <StripSymbols>true</StripSymbols>
-    -->
   </PropertyGroup>
+
+  <ItemGroup>
+    <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MemoryPack.Generator" />

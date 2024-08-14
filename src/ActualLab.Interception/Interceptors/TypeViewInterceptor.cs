@@ -32,7 +32,7 @@ public class TypeViewInterceptor : Interceptor
             .Single(m => string.Equals(m.Name, nameof(CreateValueTaskConvertingHandler), StringComparison.Ordinal));
     }
 
-    protected override Func<Invocation, object?>? CreateHandler<
+    protected internal override Func<Invocation, object?>? CreateHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef)
     {

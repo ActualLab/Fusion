@@ -167,6 +167,19 @@ public class MethodDef
         return null;
     }
 
+    public virtual void CodeTouch<TUnwrapped>()
+    {
+        WrapResult<TUnwrapped>(default!);
+        WrapAsyncInvokerResult<TUnwrapped>(default!);
+        WrapResultOfAsyncMethod<TUnwrapped>(default!);
+        WrapAsyncInvokerResultOfAsyncMethod<TUnwrapped>(default!);
+        SelectAsyncInvoker<TUnwrapped>(null!);
+        GetAsyncInvoker<TUnwrapped>(null!);
+        CreateTargetAsyncInvoker<TUnwrapped>(null!);
+        CreateInterceptorAsyncInvoker<TUnwrapped>(null!);
+        CreateInterceptedAsyncInvoker<TUnwrapped>(null!);
+    }
+
     // Private methods
 
     private object? GetDefaultResult()

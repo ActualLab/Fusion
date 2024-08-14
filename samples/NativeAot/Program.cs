@@ -11,14 +11,15 @@ using ActualLab.Rpc;
 using ActualLab.Time;
 using MemoryPack;
 using Microsoft.Extensions.DependencyInjection;
+using Samples.NativeAot;
 using static System.Console;
 
 #pragma warning disable IL3050
 
 WriteLine($"RuntimeCodegen.Mode: {RuntimeCodegen.Mode}");
-var l0 = ArgumentList.New();
-var l2 = ArgumentList.New(1, "s");
-var l10 = ArgumentList.New(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+var l0 = ArgumentList.New().KeepCode();
+var l2 = ArgumentList.New(1, "s").KeepCode();
+var l10 = ArgumentList.New(0, 1, 2, 3, 4, 5, 6, 7, 8, 9).KeepCode();
 var m0 = typeof(Invoker).GetMethod(nameof(Invoker.Format0), BindingFlags.Public | BindingFlags.Static)!;
 var m2 = typeof(Invoker).GetMethod(nameof(Invoker.Format2), BindingFlags.Public | BindingFlags.Static)!;
 var m10 = typeof(Invoker).GetMethod(nameof(Invoker.Format10), BindingFlags.Public | BindingFlags.Static)!;
@@ -55,6 +56,7 @@ var services = new ServiceCollection()
 
 var client = services.GetRequiredService<ITestService>();
 for (var i = 0; i < 5; i++) {
+    Out.WriteLine("Calling GetTime()...");
     var now = await client.GetTime();
     Out.WriteLine($"GetTime() -> {now}");
     await TickSource.Default.WhenNextTick();
@@ -76,7 +78,7 @@ public static class Invoker
     public static string Format2(int i, string s)
         => $"Format2: {i}, {s}";
     public static string Format10(int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7, int i8, int i9)
-        => $"Format2: {i0}, {i1}, {i2}, {i3}, {i4}, {i5}, {i6}, {i7}, {i8}, {i9}";
+        => $"Format10: {i0}, {i1}, {i2}, {i3}, {i4}, {i5}, {i6}, {i7}, {i8}, {i9}";
 }
 
 public interface ITestService : IComputeService

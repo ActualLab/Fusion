@@ -137,9 +137,12 @@ public abstract class Interceptor : IHasServices
             return _ => methodDef.DefaultResult;
         }, (this, invocation));
 
+    public virtual void CodeTouch<TUnwrapped>()
+        => CreateHandler<TUnwrapped>(default, null!);
+
     // Protected methods
 
-    protected abstract Func<Invocation, object?>? CreateHandler<
+    protected internal abstract Func<Invocation, object?>? CreateHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef);
 

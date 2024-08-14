@@ -1,5 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
+using ActualLab.Internal;
 
 namespace ActualLab.Interception;
 
@@ -74,9 +76,13 @@ public abstract partial record ArgumentList
 
     public abstract Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method);
 
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract void Read(ArgumentListReader reader);
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract void Read(ArgumentListReader reader, int offset);
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract void Write(ArgumentListWriter writer);
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract void Write(ArgumentListWriter writer, int offset);
 
     // Equality
@@ -163,15 +169,19 @@ public sealed partial record ArgumentList0 : ArgumentListNative
 
     // Read & Write
 
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     { }
 
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader, int offset)
     { }
 
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     { }
 
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer, int offset)
     { }
 

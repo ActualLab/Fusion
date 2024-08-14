@@ -62,16 +62,16 @@ public abstract partial record ArgumentList
     public static ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> New<T0, T1, T2, T3, T4, T5, T6, T7>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7)
         => new(item0, item1, item2, item3, item4, item5, item6, item7);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentListPair<ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8>> New<T0, T1, T2, T3, T4, T5, T6, T7, T8>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8)
+    public static ArgumentListPair< ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8> > New<T0, T1, T2, T3, T4, T5, T6, T7, T8>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8)
         => new(new(item0, item1, item2, item3, item4, item5, item6, item7), new(item8));
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentListPair<ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8, T9>> New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9)
+    public static ArgumentListPair< ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8, T9> > New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9)
         => new(new(item0, item1, item2, item3, item4, item5, item6, item7), new(item8, item9));
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentListPair<ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8, T9, T10>> New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9, T10 item10)
+    public static ArgumentListPair< ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8, T9, T10> > New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9, T10 item10)
         => new(new(item0, item1, item2, item3, item4, item5, item6, item7), new(item8, item9, item10));
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentListPair<ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8, T9, T10, T11>> New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9, T10 item10, T11 item11)
+    public static ArgumentListPair< ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8, T9, T10, T11> > New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9, T10 item10, T11 item11)
         => new(new(item0, item1, item2, item3, item4, item5, item6, item7), new(item8, item9, item10, item11));
 
     public virtual T Get0<T>() => throw new IndexOutOfRangeException();
