@@ -1,4 +1,6 @@
+using System.Linq.Expressions;
 using System.Reflection.Emit;
+using ActualLab.OS;
 
 namespace ActualLab.Collections;
 
@@ -6,7 +8,7 @@ public static class ConcurrentDictionaryExt
 {
     public static int GetCapacity<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> source)
         where TKey : notnull
-        => Cache<TKey, TValue>.CapacityReader(source);
+        => Cache<TKey, TValue>.CapacityReader.Invoke(source);
 
     // GetOrAdd with LazySlim
 
@@ -117,16 +119,29 @@ public static class ConcurrentDictionaryExt
                 .GetProperty("Length", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
 #pragma warning restore IL2075
 
-            var m = new DynamicMethod("_CapacityReader",
-                typeof(int), [typeof(ConcurrentDictionary<TKey, TValue>)],
-                true);
-            var il = m.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, fTables);
-            il.Emit(OpCodes.Ldfld, fBuckets);
-            il.Emit(OpCodes.Callvirt, pLength.GetMethod!);
-            il.Emit(OpCodes.Ret);
-            CapacityReader = (Func<ConcurrentDictionary<TKey, TValue>, int>)m.CreateDelegate(typeof(Func<ConcurrentDictionary<TKey, TValue>, int>));
+            if (RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods) {
+                var m = new DynamicMethod("_CapacityReader",
+                    typeof(int), [typeof(ConcurrentDictionary<TKey, TValue>)],
+                    true);
+                var il = m.GetILGenerator();
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldfld, fTables);
+                il.Emit(OpCodes.Ldfld, fBuckets);
+                il.Emit(OpCodes.Callvirt, pLength.GetMethod!);
+                il.Emit(OpCodes.Ret);
+                CapacityReader = (Func<ConcurrentDictionary<TKey, TValue>, int>)m.CreateDelegate(typeof(Func<ConcurrentDictionary<TKey, TValue>, int>));
+            }
+            else {
+                var pSource = Expression.Parameter(typeof(ConcurrentDictionary<TKey, TValue>));
+                var eBody = Expression.Property(
+                    Expression.Field(
+                        Expression.Field(pSource, fTables),
+                        fBuckets),
+                    pLength);
+                CapacityReader = Expression
+                    .Lambda<Func<ConcurrentDictionary<TKey, TValue>, int>>(eBody, pSource)
+                    .Compile();
+            }
         }
     }
 }
