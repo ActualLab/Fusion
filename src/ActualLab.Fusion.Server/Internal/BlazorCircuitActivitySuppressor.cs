@@ -24,9 +24,11 @@ public class BlazorCircuitActivitySuppressor : CircuitHandler
         return Task.CompletedTask;
     }
 
+#if NET8_0_OR_GREATER
     public override Func<CircuitInboundActivityContext, Task> CreateInboundActivityHandler(Func<CircuitInboundActivityContext, Task> next)
         => async context => {
             Activity.Current = null;
             await next.Invoke(context).ConfigureAwait(false);
         };
+#endif
 }

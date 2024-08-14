@@ -29,8 +29,9 @@ abstract partial record ArgumentList
                     : listType.MakeGenericType(argumentTypes);
             }
 
-            var t0 = GetListType(argumentTypes[..NativeTypeCount]); // Definitely native
-            var t1 = GetListType(argumentTypes[NativeTypeCount..]); // Native or pair
+            var span = argumentTypes.AsSpan();
+            var t0 = GetListType(span[..NativeTypeCount].ToArray()); // Definitely native
+            var t1 = GetListType(span[NativeTypeCount..].ToArray()); // Native or pair
             return typeof(ArgumentListPair<,>).MakeGenericType(t0, t1);
         });
 
