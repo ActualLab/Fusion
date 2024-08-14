@@ -11,6 +11,10 @@ public abstract partial record ArgumentList
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New()
         => Empty;
+    public static ArgumentListPair NewPair(Type listType, ArgumentListNative head, ArgumentList tail)
+        => (ArgumentListPair)listType.CreateInstance((head, tail));
+
+    public abstract ArgumentList Duplicate();
 
     public virtual object?[] ToArray() => [];
     public virtual object?[] ToArray(int skipIndex) => [];
@@ -54,13 +58,26 @@ public abstract partial record ArgumentList
             ? New(item)
             : throw new ArgumentOutOfRangeException(nameof(index));
 
+    public ArgumentList InsertUntyped(int index, Type itemType, object value)
+    {
+        var func = InsertUntypedCache.GetOrAdd(
+            itemType,
+            static key => (Func<ArgumentList, int, object?, ArgumentList>)InsertUntypedImplMethod
+                .MakeGenericMethod(key)
+                .CreateDelegate(typeof(Func<ArgumentList, int, object?, ArgumentList>))
+            );
+        return func.Invoke(this, index, value);
+    }
+
     public virtual ArgumentList Remove(int index)
         => throw new ArgumentOutOfRangeException(nameof(index));
 
     public abstract Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method);
 
     public abstract void Read(ArgumentListReader reader);
+    public abstract void Read(ArgumentListReader reader, int offset);
     public abstract void Write(ArgumentListWriter writer);
+    public abstract void Write(ArgumentListWriter writer, int offset);
 
     // Equality
 
@@ -68,14 +85,19 @@ public abstract partial record ArgumentList
     public abstract int GetHashCode(int skipIndex);
 }
 
+public abstract record ArgumentListNative : ArgumentList;
+
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial record ArgumentList0 : ArgumentList
+public sealed partial record ArgumentList0 : ArgumentListNative
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember]
     public override int Length => 0;
 
     public override string ToString() => "()";
+
+    public override ArgumentList Duplicate()
+        => new ArgumentList0();
 
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
@@ -139,10 +161,18 @@ public sealed partial record ArgumentList0 : ArgumentList
             }
         );
 
+    // Read & Write
+
     public override void Read(ArgumentListReader reader)
     { }
 
+    public override void Read(ArgumentListReader reader, int offset)
+    { }
+
     public override void Write(ArgumentListWriter writer)
+    { }
+
+    public override void Write(ArgumentListWriter writer, int offset)
     { }
 
     // Equality
@@ -150,7 +180,7 @@ public sealed partial record ArgumentList0 : ArgumentList
     public bool Equals(ArgumentList0? other)
         => !ReferenceEquals(other, null);
     public override bool Equals(ArgumentList? other, int skipIndex)
-        => ((Object?)other)?.GetType() == typeof(ArgumentList0);
+        => other?.GetType() == typeof(ArgumentList0);
 
     public override int GetHashCode() => 1;
     public override int GetHashCode(int skipIndex) => 1;

@@ -9,18 +9,19 @@
 <#@ import namespace="System.Xml.Linq" #>
 <#@ import namespace="System.Linq" #>
 <#
-    const int maxItemCount = 10;
+    const int maxItemCount = 8;
+    const int maxNewOverloadsCount = 12;
 
-    IEnumerable<int> AllBut(int count, int exceptIndex)
+    IEnumerable<int> AllBut(int count, int exceptIndex, int startIndex = 0)
     {
-        for (var i = 0; i < count; i++)
+        for (var i = startIndex; i < count; i++)
             if (i != exceptIndex)
                 yield return i;
     }
 
-    IEnumerable<int?> AllAnd(int count, int insertIndex)
+    IEnumerable<int?> AllAnd(int count, int insertIndex, int startIndex = 0)
     {
-        for (var i = 0; i < count; i++) {
+        for (var i = startIndex; i < count; i++) {
             if (i == insertIndex)
                 yield return null;
             yield return i;
@@ -28,14 +29,14 @@
         }
     }
 
-    string ItemList(string format, int count)
-        => RemoveList(format, count, -1);
+    string ItemList(string format, int count, int startIndex = 0)
+        => RemoveList(format, count, -1, startIndex);
 
-    string RemoveList(string format, int count, int index)
-        => string.Join(", ", AllBut(count, index).Select(i => string.Format(format, i)));
+    string RemoveList(string format, int count, int exceptIndex, int startIndex = 0)
+        => string.Join(", ", AllBut(count, exceptIndex, startIndex).Select(i => string.Format(format, i)));
 
-    string InsertList(string format, int count, int index, string replacement)
-        => string.Join(", ", AllAnd(count, index).Select(i => i.HasValue ? string.Format(format, i) : replacement));
+    string InsertList(string format, int count, int insertIndex, string replacement, int startIndex = 0)
+        => string.Join(", ", AllAnd(count, insertIndex, startIndex).Select(i => i.HasValue ? string.Format(format, i) : replacement));
 #>
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable MemberCanBePrivate.Global
@@ -43,7 +44,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
-using ActualLab.Concurrency;
 using ActualLab.Internal;
 
 namespace ActualLab.Interception;
@@ -54,13 +54,14 @@ namespace ActualLab.Interception;
 
 public abstract partial record ArgumentList
 {
+    public const int NativeTypeCount = <#=maxItemCount#>;
 #if NET5_0_OR_GREATER
 <# for (var itemCount = 1; itemCount <= maxItemCount; itemCount++) {
 #>
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList<<#=ItemList("", itemCount)#>>))]
 <# } #>
 #endif
-    public static readonly ImmutableArray<Type> Types = ImmutableArray.Create(new [] {
+    public static readonly ImmutableArray<Type> NativeTypes = ImmutableArray.Create(new [] {
         typeof(ArgumentList0),
 <# for (var itemCount = 1; itemCount <= maxItemCount; itemCount++) {
 #>
@@ -75,7 +76,19 @@ public abstract partial record ArgumentList
 #>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList<<#=argumentTypes#>> New<<#=argumentTypes#>>(<#=argumentDeclaration#>)
-        => new (<#=argumentUsage#>);
+        => new(<#=argumentUsage#>);
+<# } #>
+<# for (var itemCount = maxItemCount + 1; itemCount <= maxNewOverloadsCount; itemCount++) {
+       var argumentTypes0 = ItemList("T{0}", maxItemCount);
+       var argumentDeclaration0 = ItemList("T{0} item{0}", maxItemCount);
+       var argumentUsage0 = ItemList("item{0}", maxItemCount);
+       var argumentTypes1 = ItemList("T{0}", itemCount, maxItemCount);
+       var argumentDeclaration1 = ItemList("T{0} item{0}", itemCount, maxItemCount);
+       var argumentUsage1 = ItemList("item{0}", itemCount, maxItemCount);
+#>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ArgumentListPair<ArgumentList<<#=argumentTypes0#>>, ArgumentList<<#=argumentTypes1#>>> New<<#=argumentTypes0#>, <#=argumentTypes1#>>(<#=argumentDeclaration0#>, <#=argumentDeclaration1#>)
+        => new(new(<#=argumentUsage0#>), new(<#=argumentUsage1#>));
 <# } #>
 
 <#
@@ -91,7 +104,7 @@ public abstract partial record ArgumentList
        var argumentTypes = ItemList("T{0}", itemCount);
        var arguments = ItemList("T{0} item{0}", itemCount);
 #>
-public abstract record ArgumentList<#=itemCount#> : ArgumentList
+public abstract record ArgumentList<#=itemCount#> : ArgumentListNative
 {
     protected static Type?[] CreateNonDefaultItemTypes()
         => new Type?[<#=itemCount#>];
@@ -138,6 +151,11 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
 #>
     }
 
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentList<<#=argumentTypes#>>(<# Write(ItemList("Item{0}", itemCount)); #>);
+
     // ToString & ToArray
 
     public override string ToString()
@@ -173,7 +191,8 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
 
     // GetNonDefaultItemTypes
 
-    public override Type?[]? GetNonDefaultItemTypes() {
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
         var itemTypes = (Type?[]?)null;
         Type? itemType;
 <#
@@ -239,12 +258,12 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
 
     // Set
 
-    public override void Set<T>(int index, T value)
+    public override void Set<T>(int index, T item)
     {
         switch (index) {
 <# for (var t = 0; t < itemCount; t++) { #>
         case <#=t#>:
-            _item<#=t#> = value is T<#=t#> item<#=t#> ? item<#=t#> : default!;
+            _item<#=t#> = item is T<#=t#> item<#=t#> ? item<#=t#> : default!;
             break;
 <# } #>
         default:
@@ -252,12 +271,12 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
         }
     }
 
-    public override void SetUntyped(int index, object? value)
+    public override void SetUntyped(int index, object? item)
     {
         switch (index) {
 <# for (var t = 0; t < itemCount; t++) { #>
         case <#=t#>:
-            _item<#=t#> = value is T<#=t#> item<#=t#> ? item<#=t#> : default!;
+            _item<#=t#> = item is T<#=t#> item<#=t#> ? item<#=t#> : default!;
             break;
 <# } #>
         default:
@@ -294,9 +313,6 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
     // Insert
 
     public override ArgumentList Insert<T>(int index, T item)
-<# if (itemCount == maxItemCount) { #>
-        => throw new ArgumentOutOfRangeException(nameof(index));
-<# } else { #>
         => index switch {
 <# for (var t = 0; t < itemCount; t++) { #>
             <#=t#> => New(<# Write(InsertList("Item{0}", itemCount, t, "item")); #>),
@@ -304,12 +320,8 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
             <#=itemCount#> => New(<# Write(ItemList("Item{0}", itemCount)); #>, item),
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
-<# }#>
 
     public override ArgumentList InsertCancellationToken(int index, CancellationToken item)
-<# if (itemCount == maxItemCount) { #>
-        => throw new ArgumentOutOfRangeException(nameof(index));
-<# } else { #>
         => index switch {
 <# for (var t = 0; t < itemCount; t++) { #>
             <#=t#> => New(<# Write(InsertList("Item{0}", itemCount, t, "item")); #>),
@@ -317,7 +329,6 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
             <#=itemCount#> => New(<# Write(ItemList("Item{0}", itemCount)); #>, item),
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
-<# }#>
 
     // Remove
 
@@ -414,6 +425,8 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
             }
         );
 
+    // Read & Write
+
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
@@ -426,6 +439,17 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader, int offset)
+    {
+<# for (var t = 0; t < itemCount; t++) { #>
+        if (typeof(T<#=t#>).IsValueType)
+            reader.OnStruct(_item<#=t#>, offset + <#=t#>);
+        else
+            reader.OnObject(typeof(T<#=t#>), _item<#=t#>, offset + <#=t#>);
+<# } #>
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
 <# for (var t = 0; t < itemCount; t++) { #>
@@ -433,6 +457,18 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
             _item<#=t#> = writer.OnStruct<T<#=t#>>(<#=t#>);
         else
             _item<#=t#> = (T<#=t#>)writer.OnObject(typeof(T<#=t#>), <#=t#>)!;
+<# } #>
+    }
+
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer, int offset)
+    {
+<# for (var t = 0; t < itemCount; t++) { #>
+        if (typeof(T<#=t#>).IsValueType)
+            _item<#=t#> = writer.OnStruct<T<#=t#>>(offset + <#=t#>);
+        else
+            _item<#=t#> = (T<#=t#>)writer.OnObject(typeof(T<#=t#>), offset + <#=t#>)!;
 <# } #>
     }
 

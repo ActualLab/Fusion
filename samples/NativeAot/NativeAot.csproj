@@ -12,8 +12,10 @@
   <PropertyGroup>
     <IsPublishable>true</IsPublishable>
     <PublishAot>true</PublishAot>
+    <TrimMode>full</TrimMode>
     <InvariantGlobalization>true</InvariantGlobalization>
     <OptimizationPreference>Size</OptimizationPreference>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
     <!--
     <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>
     <IlcDisableReflection>false</IlcDisableReflection>

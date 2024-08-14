@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 
-namespace Templates.TodoApp.Services;
+namespace ActualLab.Fusion.Server.Internal;
 
 // Blazor Circuit "inherits" Activity.Current from an HTTP request associated with its
 // WebSocket or HTTP connection, and this long-living activity becomes parent of
@@ -10,7 +10,7 @@ namespace Templates.TodoApp.Services;
 // - https://github.com/dotnet/aspnetcore/issues/29846
 //
 // This circuit handler resets it for any inbound activity.
-public class ActivityResetCircuitHandler : CircuitHandler
+public class BlazorCircuitActivitySuppressor : CircuitHandler
 {
     public override Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
     {

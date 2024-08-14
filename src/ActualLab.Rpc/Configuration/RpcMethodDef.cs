@@ -53,7 +53,7 @@ public sealed class RpcMethodDef : MethodDef
             throw new ArgumentOutOfRangeException(nameof(serviceType));
 
         Hub = service.Hub;
-        ArgumentListType = ArgumentList.FindType(ParameterTypes);
+        ArgumentListType = ArgumentList.GetListType(ParameterTypes);
         HasObjectTypedArguments = ParameterTypes.Any(type => typeof(object) == type);
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);
         IsSystem = service.IsSystem;
@@ -67,7 +67,7 @@ public sealed class RpcMethodDef : MethodDef
 
 #pragma warning disable IL2055, IL2072
         ArgumentListFactory = (Func<ArgumentList>)ArgumentListType.GetConstructorDelegate()!;
-        ResultListFactory = (Func<ArgumentList>)ArgumentList.Types[1]
+        ResultListFactory = (Func<ArgumentList>)ArgumentList.NativeTypes[1]
             .MakeGenericType(UnwrappedReturnType)
             .GetConstructorDelegate()!;
 #pragma warning restore IL2055, IL2072

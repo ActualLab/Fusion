@@ -1,6 +1,5 @@
 using System.Reflection;
 using ActualLab.Interception;
-using ActualLab.OS;
 using ActualLab.Reflection;
 
 namespace ActualLab.Tests.Reflection;
@@ -22,9 +21,9 @@ public class MiscTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void CreateInstanceTest()
     {
-        for (var i = 0; i < ArgumentList.Types.Length; i++) {
+        for (var i = 0; i < ArgumentList.NativeTypeCount * 3; i++) {
             var tArguments = Enumerable.Range(0, i).Select(_ => typeof(int)).ToArray();
-            var t = ArgumentList.FindType(tArguments);
+            var t = ArgumentList.GetListType(tArguments);
             var l = (ArgumentList)t.CreateInstance();
             l.Length.Should().Be(i);
         }

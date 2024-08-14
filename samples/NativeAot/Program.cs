@@ -18,10 +18,13 @@ using static System.Console;
 WriteLine($"RuntimeCodegen.Mode: {RuntimeCodegen.Mode}");
 var l0 = ArgumentList.New();
 var l2 = ArgumentList.New(1, "s");
+var l10 = ArgumentList.New(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 var m0 = typeof(Invoker).GetMethod(nameof(Invoker.Format0), BindingFlags.Public | BindingFlags.Static)!;
 var m2 = typeof(Invoker).GetMethod(nameof(Invoker.Format2), BindingFlags.Public | BindingFlags.Static)!;
+var m10 = typeof(Invoker).GetMethod(nameof(Invoker.Format10), BindingFlags.Public | BindingFlags.Static)!;
 WriteLine(l0.GetInvoker(m0).Invoke(null, l0));
 WriteLine(l2.GetInvoker(m2).Invoke(null, l2));
+WriteLine(l10.GetInvoker(m10).Invoke(null, l10));
 
 Type GetRandomType() => RandomShared.Next().PositiveModulo(5) switch {
     0 => typeof(bool),
@@ -30,9 +33,9 @@ Type GetRandomType() => RandomShared.Next().PositiveModulo(5) switch {
     3 => typeof(long),
     _ => typeof(string),
 };
-for (var i = 0; i < ArgumentList.Types.Length; i++) {
+for (var i = 0; i < ArgumentList.NativeTypeCount + 2; i++) {
     var tArguments = Enumerable.Range(0, i).Select(_ => GetRandomType()).ToArray();
-    var t = ArgumentList.FindType(tArguments);
+    var t = ArgumentList.GetListType(tArguments);
     var l = t.CreateInstance();
     var lengthGetter = t.GetProperty("Length")!.GetGetter();
     WriteLine($"{lengthGetter.Invoke(l)}: {l}, {FuncExt.GetFuncType(tArguments, typeof(object)).GetName()}, {FuncExt.GetActionType(tArguments).GetName()}");
@@ -70,8 +73,10 @@ public static class Invoker
 {
     public static string Format0()
         => "Format0";
-    public static string Format2(int a1, string a2)
-        => $"Format2: {a1}, {a2}";
+    public static string Format2(int i, string s)
+        => $"Format2: {i}, {s}";
+    public static string Format10(int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7, int i8, int i9)
+        => $"Format2: {i0}, {i1}, {i2}, {i3}, {i4}, {i5}, {i6}, {i7}, {i8}, {i9}";
 }
 
 public interface ITestService : IComputeService

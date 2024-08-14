@@ -349,7 +349,7 @@ public class RemoteComputeMethodFunction<T>(
         var ctIndex = input.MethodDef.CancellationTokenIndex;
         if (ctIndex >= 0 && invocation.Arguments.GetCancellationToken(ctIndex) != cancellationToken) {
             // Fixing invocation: set CancellationToken + Context
-            var arguments = invocation.Arguments with { }; // Cloning
+            var arguments = invocation.Arguments.Duplicate();
             arguments.SetCancellationToken(ctIndex, cancellationToken);
             invocation = invocation.With(arguments, context);
         }
