@@ -12,7 +12,7 @@ public static class RequireExt
     public static T Require<T>([NotNull] this T? target, string? targetName = null)
     {
         var mustThrow = typeof(T).IsValueType
-            ? EqualityComparer<T>.Default.Equals(target, default)
+            ? EqualityComparer<T>.Default.Equals(target!, default!)
             : ReferenceEquals(target, null);
 #pragma warning disable CS8777 // Parameter must have a non-null value when exiting.
         return mustThrow

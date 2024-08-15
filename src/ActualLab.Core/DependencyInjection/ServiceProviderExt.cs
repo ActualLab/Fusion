@@ -86,7 +86,7 @@ public static class ServiceProviderExt
 
     // Nested types
 
-    private class EmptyServiceProvider : IServiceProvider
+    private sealed class EmptyServiceProvider : IServiceProvider
     {
         public object? GetService(Type serviceType)
             => serviceType == typeof(IServiceProvider) ? this : null;

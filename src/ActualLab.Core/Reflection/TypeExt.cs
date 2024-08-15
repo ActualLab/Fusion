@@ -28,6 +28,7 @@ public static partial class TypeExt
     private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), Symbol>> ToIdentifierNameCache = new();
     private static readonly ConcurrentDictionary<Type, LazySlim<Type, Symbol>> ToSymbolCache = new();
     private static readonly ConcurrentDictionary<Type, Type?> GetTaskOrValueTaskTypeCache = new();
+    private static readonly ConcurrentDictionary<Type, object?> DefaultValueCache = new();
     private static Func<Type, Type> _nonProxyTypeResolver = DefaultNonProxyTypeResolver;
 
     public static readonly string SymbolPrefix = "@";
@@ -38,6 +39,20 @@ public static partial class TypeExt
             _nonProxyTypeResolver = value;
             NonProxyTypeCache.Clear();
         }
+    }
+
+    public static object? GetDefaultValue(this Type type)
+    {
+        if (!type.IsValueType)
+            return null;
+
+        return DefaultValueCache.GetOrAdd(type, static type => {
+#if !NETSTANDARD2_0
+            return RuntimeHelpers.GetUninitializedObject(type);
+#else
+            return FormatterServices.GetUninitializedObject(type);
+#endif
+        });
     }
 
     public static Type NonProxyType(this Type type)

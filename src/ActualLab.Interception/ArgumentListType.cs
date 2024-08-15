@@ -48,11 +48,8 @@ public sealed class ArgumentListType
 
         SimpleItemCount = ItemCount - GenericItemCount;
         DefaultValues = new object?[ItemCount];
-        for (var i = 0; i < ItemCount; i++) {
-            var t = ItemTypes[i];
-            if (t.IsValueType)
-                DefaultValues[i] = RuntimeHelpers.GetUninitializedObject(t);
-        }
+        for (var i = 0; i < ItemCount; i++)
+            DefaultValues[i] = ItemTypes[i].GetDefaultValue();
         if (SimpleItemCount == 0)
             Factory = (Func<ArgumentList>)ListType.GetConstructorDelegate()!;
         else {

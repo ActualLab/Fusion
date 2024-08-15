@@ -6,6 +6,20 @@ namespace ActualLab.Tests.Async;
 public class TaskExtTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
+    public void FromDefaultResultTest()
+    {
+        // Task
+        ((Task<int>)TaskExt.FromDefaultResult(typeof(int))).Result.Should().Be(0);
+        ((Task<bool>)TaskExt.FromDefaultResult(typeof(bool))).Result.Should().BeFalse();
+        ((Task<string>)TaskExt.FromDefaultResult(typeof(string))).Result.Should().BeNull();
+
+        // ValueTask
+        ((ValueTask<int>)ValueTaskExt.FromDefaultResult(typeof(int))).Result.Should().Be(0);
+        ((ValueTask<bool>)ValueTaskExt.FromDefaultResult(typeof(bool))).Result.Should().BeFalse();
+        ((ValueTask<string>)ValueTaskExt.FromDefaultResult(typeof(string))).Result.Should().BeNull();
+    }
+
+    [Fact]
     public async Task ToResultTest()
     {
         using var cts = new CancellationTokenSource(200);

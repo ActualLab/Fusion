@@ -12,7 +12,7 @@ public class IncreasingSeqCompressorTest(ITestOutputHelper @out) : TestBase(@out
         for (var i = 0; i < 1000; i++) {
             var seq = Enumerable.Range(0, rnd.Next(20))
                 .Select(_ => (long)rnd.Next(100))
-                .Order()
+                .OrderBy(x => x)
                 .ToArray();
             testedLengths.Add(seq.Length);
 
@@ -20,6 +20,6 @@ public class IncreasingSeqCompressorTest(ITestOutputHelper @out) : TestBase(@out
             var seq1 = IncreasingSeqCompressor.Deserialize(data);
             seq1.Should().Equal(seq);
         }
-        Out.WriteLine($"Tested lengths: {testedLengths.Order().ToDelimitedString()}");
+        Out.WriteLine($"Tested lengths: {testedLengths.OrderBy(x => x).ToDelimitedString()}");
     }
 }

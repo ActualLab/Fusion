@@ -50,7 +50,9 @@ public static class CoarseClockHelper
         Start = Moment.Now;
         StartEpochOffsetTicks = Start.EpochOffset.Ticks;
         Stopwatch = Stopwatch.StartNew();
-        Interlocked.Exchange(ref _state, new State());
+        var state = new State();
+        _state = state; // Just to suppress .NET Standard warning
+        Interlocked.Exchange(ref _state, state);
         var interval = TimeSpan.FromSeconds(1.0 / Frequency);
         Timer = NonCapturingTimer.Create(Update, null!, interval, interval);
     }
