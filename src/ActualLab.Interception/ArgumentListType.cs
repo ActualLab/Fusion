@@ -6,6 +6,7 @@ public sealed class ArgumentListType
 {
     private static readonly ConcurrentDictionary<SequenceEqualityBox.ForArray<Type>, ArgumentListType> GenericDefCache = new();
     private static readonly ConcurrentDictionary<SequenceEqualityBox.ForArray<Type>, ArgumentListType> SimpleDefCache = new();
+    private string? _toString;
 
     public readonly Type ListType;
     public readonly Type[] ItemTypes;
@@ -58,6 +59,19 @@ public sealed class ArgumentListType
             var factory = (Func<ArgumentListType, ArgumentList>)ListType.GetConstructorDelegate(typeof(ArgumentListType))!;
             Factory = () => factory.Invoke(this);
         }
+    }
+
+    public override string ToString()
+    {
+        if (_toString != null)
+            return _toString;
+
+        var s = $"[<{ItemTypes.Select(x => x.GetName()).ToDelimitedString()}>]";
+        var suffix = SimpleItemCount == 0 ? "g"
+            : GenericItemCount == 0 ? "s"
+            : $"g{GenericItemCount}s{SimpleItemCount}";
+        _toString = s + suffix;
+        return _toString;
     }
 
     public object? CastItem(int index, object? value)

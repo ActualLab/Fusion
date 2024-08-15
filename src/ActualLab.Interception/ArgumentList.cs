@@ -6,6 +6,8 @@ using ActualLab.OS;
 
 namespace ActualLab.Interception;
 
+#pragma warning disable CA1721
+
 public abstract partial record ArgumentList
 {
     protected static readonly ConcurrentDictionary<

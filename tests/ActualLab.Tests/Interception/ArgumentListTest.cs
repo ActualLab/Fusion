@@ -10,9 +10,10 @@ public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
     [InlineData(false)]
     public void BasicTest(bool useGenerics)
     {
-        for (var length = 0; length <= ArgumentList.MaxGenericItemCount; length++) {
+        for (var length = 0; length <= ArgumentList.MaxItemCount; length++) {
             var itemTypes = Enumerable.Range(0, length).Select(_ => typeof(int)).ToArray();
             var listDef = ArgumentListType.Get(useGenerics, itemTypes);
+            Out.WriteLine(listDef.ToString());
             var list = listDef.Factory.Invoke();
             Test(length, list);
         }
