@@ -27,6 +27,7 @@ WriteLine(l0.GetInvoker(m0).Invoke(null, l0));
 WriteLine(l2.GetInvoker(m2).Invoke(null, l2));
 WriteLine(l10.GetInvoker(m10).Invoke(null, l10));
 
+/*
 Type GetRandomType() => RandomShared.Next().PositiveModulo(5) switch {
     0 => typeof(bool),
     1 => typeof(int),
@@ -34,13 +35,14 @@ Type GetRandomType() => RandomShared.Next().PositiveModulo(5) switch {
     3 => typeof(long),
     _ => typeof(string),
 };
-for (var i = 0; i < ArgumentList.NativeTypeCount + 2; i++) {
+for (var i = 0; i <= ArgumentList.MaxItemCount; i++) {
     var tArguments = Enumerable.Range(0, i).Select(_ => GetRandomType()).ToArray();
-    var t = ArgumentList.GetListType(tArguments);
-    var l = t.CreateInstance();
-    var lengthGetter = t.GetProperty("Length")!.GetGetter();
+    var t = ArgumentListType.Get(tArguments);
+    var l = t.Factory();
+    var lengthGetter = t.ListType.GetProperty("Length")!.GetGetter();
     WriteLine($"{lengthGetter.Invoke(l)}: {l}, {FuncExt.GetFuncType(tArguments, typeof(object)).GetName()}, {FuncExt.GetActionType(tArguments).GetName()}");
 }
+*/
 
 var services = new ServiceCollection()
     .AddFusion(fusion => {
