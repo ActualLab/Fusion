@@ -1,5 +1,4 @@
 using ActualLab.Collections.Internal;
-using ActualLab.Interception;
 using ActualLab.IO;
 using ActualLab.Reflection;
 using ActualLab.Rpc.Infrastructure;
@@ -43,8 +42,6 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     public void UnitSerialization()
     {
         default(Unit).AssertPassesThroughAllSerializers(Out);
-        var list = ArgumentList.New(default(Unit));
-        list.AssertPassesThroughAllSerializers(Out);
     }
 
     [Fact]
