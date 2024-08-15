@@ -14,6 +14,7 @@ public static class GenerationHelpers
     public const string ProxyIgnoreAttributeName = $"{InterceptionNs}.ProxyIgnoreAttribute";
     public const string ProxyClassSuffix = "Proxy";
     public const string ProxyNamespaceSuffix = "ActualLabProxies";
+    public const int MaxGenericArgumentListItemCount = 5;
 
     // Types
     public static readonly IdentifierNameSyntax ProxyInterfaceTypeName = IdentifierName($"{InterceptionGns}.IProxy");
@@ -21,7 +22,7 @@ public static class GenerationHelpers
     public static readonly IdentifierNameSyntax InterceptorTypeName = IdentifierName($"{InterceptionGns}.Interceptor");
     public static readonly IdentifierNameSyntax ProxyHelperTypeName = IdentifierName($"{InterceptionInternalGns}.ProxyHelper");
     public static readonly IdentifierNameSyntax ArgumentListTypeName = IdentifierName($"{InterceptionGns}.ArgumentList");
-    public static readonly GenericNameSyntax ArgumentListGenericTypeName = GenericName(ArgumentListTypeName.Identifier.Text);
+    public static readonly IdentifierNameSyntax ArgumentList0TypeName = IdentifierName($"{InterceptionGns}.ArgumentList0");
     public static readonly IdentifierNameSyntax InvocationTypeName = IdentifierName($"{InterceptionGns}.Invocation");
     public static readonly IdentifierNameSyntax ErrorsTypeName = IdentifierName($"{InterceptionInternalGns}.Errors");
     public static readonly TypeSyntax NullableMethodInfoType = NullableType(typeof(MethodInfo).ToTypeRef());
@@ -41,6 +42,21 @@ public static class GenerationHelpers
     public static readonly IdentifierNameSyntax InvocationVarName = IdentifierName("invocation");
 
     // Helpers
+
+    public static NameSyntax GetArgumentListSTypeName(int itemCount)
+        => itemCount == 0
+            ? ArgumentList0TypeName
+            : IdentifierName($"{InterceptionGns}.ArgumentListS{itemCount}");
+
+    public static NameSyntax GetArgumentListGTypeName(params TypeSyntax[] itemTypes)
+    {
+        if (itemTypes.Length == 0)
+            return ArgumentList0TypeName;
+
+        var genericArgTypes = itemTypes.Take(MaxGenericArgumentListItemCount);
+        return GenericName($"{InterceptionGns}.ArgumentListG{itemTypes.Length}")
+            .WithTypeArgumentList(TypeArgumentList(CommaSeparatedList(genericArgTypes)));
+    }
 
     public static ObjectCreationExpressionSyntax NewExpression(TypeSyntax type, params ExpressionSyntax[] arguments)
         => ObjectCreationExpression(type)
@@ -95,6 +111,26 @@ public static class GenerationHelpers
                 .WithVariables(SingletonSeparatedList(
                     VariableDeclarator(name)
                         .WithInitializer(EqualsValueClause(initializer)))));
+
+    public static StatementSyntax IfHasTypeStatement(
+        ExpressionSyntax expression,
+        TypeSyntax typeSyntax,
+        SyntaxToken varIdentifier,
+        StatementSyntax trueStatement,
+        StatementSyntax? falseStatement = null)
+        => IfStatement(
+            IsPatternExpression(
+                expression,
+                DeclarationPattern(
+                    typeSyntax,
+                    SingleVariableDesignation(varIdentifier))),
+            trueStatement,
+            falseStatement != null ? ElseClause(falseStatement) : null);
+
+    public static StatementSyntax AlwaysReturnStatement(bool returnsVoid, ExpressionSyntax expression)
+        => !returnsVoid
+            ? ReturnStatement(expression)
+            : Block(ExpressionStatement(expression), ReturnStatement());
 
     public static StatementSyntax MaybeReturnStatement(bool mustReturn, ExpressionSyntax expression)
         => mustReturn

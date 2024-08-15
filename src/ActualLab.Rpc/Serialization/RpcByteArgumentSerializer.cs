@@ -39,7 +39,8 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
 
     // ItemSerializer + its variants
 
-    private abstract class ItemSerializer(IByteSerializer serializer, IBufferWriter<byte> buffer) : ArgumentListReader
+    private abstract class ItemSerializer(IByteSerializer serializer, IBufferWriter<byte> buffer)
+        : ArgumentListReader
     {
         protected readonly IByteSerializer Serializer = serializer;
         protected readonly IBufferWriter<byte> Buffer = buffer;
@@ -56,8 +57,23 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
         : ItemSerializer(serializer, buffer)
     {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-        public override void OnObject(Type type, object? item, int index)
+        public override void OnClass(Type type, object? item, int index)
         {
+            var itemType = item?.GetType() ?? type;
+            var typeRef = itemType == type ? default : new TypeRef(itemType).WithoutAssemblyVersions();
+            Serializer.Write(Buffer, typeRef);
+            Serializer.Write(Buffer, item, itemType);
+        }
+
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override void OnAny(Type type, object? item, int index)
+        {
+            if (type.IsValueType) {
+                if (type != typeof(CancellationToken))
+                    Serializer.Write(Buffer, item, type);
+                return;
+            }
+
             var itemType = item?.GetType() ?? type;
             var typeRef = itemType == type ? default : new TypeRef(itemType).WithoutAssemblyVersions();
             Serializer.Write(Buffer, typeRef);
@@ -69,8 +85,21 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
         : ItemSerializer(serializer, buffer)
     {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-        public override void OnObject(Type type, object? item, int index)
+        public override void OnClass(Type type, object? item, int index)
         {
+            Serializer.Write(Buffer, default(TypeRef));
+            Serializer.Write(Buffer, item, type);
+        }
+
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override void OnAny(Type type, object? item, int index)
+        {
+            if (type.IsValueType) {
+                if (type != typeof(CancellationToken))
+                    Serializer.Write(Buffer, item, type);
+                return;
+            }
+
             Serializer.Write(Buffer, default(TypeRef));
             Serializer.Write(Buffer, item, type);
         }
@@ -78,7 +107,8 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
 
     // ItemDeserializer + its variants
 
-    private abstract class ItemDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data) : ArgumentListWriter
+    private abstract class ItemDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
+        : ArgumentListWriter
     {
         protected readonly IByteSerializer Serializer = serializer;
         protected ReadOnlyMemory<byte> Data = data;
@@ -94,8 +124,24 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
         : ItemDeserializer(serializer, data)
     {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-        public override object? OnObject(Type type, int index)
+        public override object? OnClass(Type type, int index)
         {
+            var typeRef = Serializer.Read<TypeRef>(ref Data);
+            var itemType = typeRef == default ? type : typeRef.Resolve();
+            if (itemType != type && !type.IsAssignableFrom(itemType))
+                throw Errors.CannotDeserializeUnexpectedPolymorphicArgumentType(type, itemType);
+
+            return Serializer.Read(ref Data, itemType);
+        }
+
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override object? OnAny(Type type, int index, object? defaultValue)
+        {
+            if (type.IsValueType)
+                return type == typeof(CancellationToken)
+                    ? defaultValue
+                    : Serializer.Read(ref Data, type);
+
             var typeRef = Serializer.Read<TypeRef>(ref Data);
             var itemType = typeRef == default ? type : typeRef.Resolve();
             if (itemType != type && !type.IsAssignableFrom(itemType))
@@ -109,11 +155,24 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
         : ItemDeserializer(serializer, data)
     {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-        public override object? OnObject(Type type, int index)
+        public override object? OnClass(Type type, int index)
         {
             var typeRef = Serializer.Read<TypeRef>(ref Data);
-            var itemType = typeRef == default ? type : typeRef.Resolve();
-            if (itemType != type)
+            if (typeRef != default && typeRef.Resolve() is var itemType && itemType != type)
+                throw Errors.CannotDeserializeUnexpectedArgumentType(type, itemType);
+
+            return Serializer.Read(ref Data, type);
+        }
+
+        public override object? OnAny(Type type, int index, object? defaultValue)
+        {
+            if (type.IsValueType)
+                return type == typeof(CancellationToken)
+                    ? defaultValue
+                    : Serializer.Read(ref Data, type);
+
+            var typeRef = Serializer.Read<TypeRef>(ref Data);
+            if (typeRef != default && typeRef.Resolve() is var itemType && itemType != type)
                 throw Errors.CannotDeserializeUnexpectedArgumentType(type, itemType);
 
             return Serializer.Read(ref Data, type);

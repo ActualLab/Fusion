@@ -53,9 +53,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var headers = context.Headers.OrEmpty();
         var arguments = context.Arguments;
         var methodDef = context.MethodDef;
-        var ctIndex = methodDef?.CancellationTokenIndex ?? -1;
-        if (ctIndex >= 0)
-            arguments = arguments?.Remove(ctIndex);
 
         var isStream = methodDef?.IsStream == true;
         var relatedId = context.RelatedId;

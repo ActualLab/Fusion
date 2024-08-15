@@ -280,7 +280,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                                     .ConfigureAwait(false);
                                 var message = await reader.ReadAsync(handshakeToken).ConfigureAwait(false);
                                 var handshakeContext = ProcessMessage(message, handshakeToken, handshakeToken);
-                                var remoteHandshake = (handshakeContext?.Call.Arguments as ArgumentList<RpcHandshake>)?.Item0;
+                                var remoteHandshake = handshakeContext?.Call.Arguments?.GetUntyped(0) as RpcHandshake;
                                 return remoteHandshake ?? throw Errors.HandshakeFailed();
                             }, handshakeToken)
                             .WaitAsync(handshakeToken)

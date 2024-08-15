@@ -2,19 +2,23 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
 using ActualLab.Internal;
+using ActualLab.OS;
 
 namespace ActualLab.Interception;
 
 public abstract partial record ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public abstract int Length { get; }
+    protected static readonly ConcurrentDictionary<
+        (ArgumentListType, MethodInfo),
+        LazySlim<(ArgumentListType, MethodInfo), Func<object?, ArgumentList, object?>>> InvokerCache = new();
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentList New()
-        => Empty;
-    public static ArgumentListPair NewPair(Type listType, ArgumentListNative head, ArgumentList tail)
-        => (ArgumentListPair)listType.CreateInstance((head, tail));
+    public static readonly bool AllowGenerics
+        = RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods && !OSInfo.IsAnyClient;
+
+    public static readonly ArgumentList Empty = new ArgumentList0();
+
+    public abstract ArgumentListType Type { get; }
+    public abstract int Length { get; }
 
     public abstract ArgumentList Duplicate();
 
@@ -49,41 +53,12 @@ public abstract partial record ArgumentList
     public virtual void SetFrom(ArgumentList other)
     { }
 
-    public virtual ArgumentList Insert<T>(int index, T item)
-        => index == 0
-            ? New(item)
-            : throw new ArgumentOutOfRangeException(nameof(index));
-
-    // Virtual non-generic method for frequent operation
-    public virtual ArgumentList InsertCancellationToken(int index, CancellationToken item)
-        => index == 0
-            ? New(item)
-            : throw new ArgumentOutOfRangeException(nameof(index));
-
-    public ArgumentList InsertUntyped(int index, Type itemType, object value)
-    {
-        var func = InsertUntypedCache.GetOrAdd(
-            itemType,
-            static key => (Func<ArgumentList, int, object?, ArgumentList>)InsertUntypedImplMethod
-                .MakeGenericMethod(key)
-                .CreateDelegate(typeof(Func<ArgumentList, int, object?, ArgumentList>))
-            );
-        return func.Invoke(this, index, value);
-    }
-
-    public virtual ArgumentList Remove(int index)
-        => throw new ArgumentOutOfRangeException(nameof(index));
-
     public abstract Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method);
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract void Read(ArgumentListReader reader);
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public abstract void Read(ArgumentListReader reader, int offset);
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract void Write(ArgumentListWriter writer);
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public abstract void Write(ArgumentListWriter writer, int offset);
 
     // Equality
 
@@ -91,14 +66,14 @@ public abstract partial record ArgumentList
     public abstract int GetHashCode(int skipIndex);
 }
 
-public abstract record ArgumentListNative : ArgumentList;
-
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial record ArgumentList0 : ArgumentListNative
+public sealed record ArgumentList0 : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember]
+    private static ArgumentListType? _cachedType;
+    // ReSharper disable once InconsistentNaming
+    private static ArgumentListType _type => _cachedType ??= ArgumentListType.Get(false);
+
     public override int Length => 0;
+    public override ArgumentListType Type => _cachedType ??= ArgumentListType.Get(false);
 
     public override string ToString() => "()";
 
@@ -107,10 +82,10 @@ public sealed partial record ArgumentList0 : ArgumentListNative
 
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
-            (GetType(), method),
+            (_type, method),
             RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? static key => { // Dynamic methods
-                var (listType, method1) = key;
+                var (def, method1) = key;
                 if (method1.GetParameters().Length != 0)
                     throw new ArgumentOutOfRangeException(nameof(method));
 
@@ -123,7 +98,7 @@ public sealed partial record ArgumentList0 : ArgumentListNative
 
                 // Cast ArgumentList to its actual type
                 il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Castclass, def.ListType);
                 il.Emit(OpCodes.Pop);
 
                 // Unbox target
@@ -144,17 +119,17 @@ public sealed partial record ArgumentList0 : ArgumentListNative
                 return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
             }
             : static key => { // Expressions
-                var (listType, method1) = key;
+                var (def, method1) = key;
                 if (method1.GetParameters().Length != 0)
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var pSource = Expression.Parameter(typeof(object), "source");
                 var pList = Expression.Parameter(typeof(ArgumentList), "list");
-                var vList = Expression.Variable(listType, "l");
+                var vList = Expression.Variable(def.ListType, "l");
                 var eBody = Expression.Block(
                     new[] { vList },
                     [
-                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        Expression.Assign(vList, Expression.Convert(pList, def.ListType)),
                         ExpressionExt.ConvertToObject(
                             Expression.Call(method1.IsStatic
                                 ? null
@@ -174,15 +149,7 @@ public sealed partial record ArgumentList0 : ArgumentListNative
     { }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Read(ArgumentListReader reader, int offset)
-    { }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
-    { }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Write(ArgumentListWriter writer, int offset)
     { }
 
     // Equality

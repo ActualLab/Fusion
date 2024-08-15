@@ -207,7 +207,7 @@ public class RpcSystemCalls(IServiceProvider services)
                 return false;
 
             var outboundMethodDef = outboundCall.MethodDef;
-            arguments = outboundMethodDef.ResultListFactory.Invoke();
+            arguments = outboundMethodDef.ResultListType.Factory.Invoke();
             allowPolymorphism = outboundMethodDef.AllowResultPolymorphism;
             return true;
         }

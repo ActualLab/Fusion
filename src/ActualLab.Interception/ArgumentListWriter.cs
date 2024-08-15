@@ -8,5 +8,7 @@ public abstract class ArgumentListWriter
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract T OnStruct<T>(int index);
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public abstract object? OnObject(Type type, int index);
+    public abstract object? OnClass(Type type, int index);
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public abstract object? OnAny(Type type, int index, object? defaultValue);
 }

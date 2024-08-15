@@ -27,10 +27,9 @@ public sealed class RpcMethodDef : MethodDef
 
     public new readonly Symbol FullName;
 
-    public readonly Type ArgumentListType;
+    public readonly ArgumentListType ArgumentListType;
+    public readonly ArgumentListType ResultListType;
     public readonly bool HasObjectTypedArguments;
-    public readonly Func<ArgumentList> ArgumentListFactory;
-    public readonly Func<ArgumentList> ResultListFactory;
     public readonly bool NoWait;
     public readonly bool IsSystem;
     public readonly bool IsBackend;
@@ -53,7 +52,8 @@ public sealed class RpcMethodDef : MethodDef
             throw new ArgumentOutOfRangeException(nameof(serviceType));
 
         Hub = service.Hub;
-        ArgumentListType = ArgumentList.GetListType(ParameterTypes);
+        ArgumentListType = ArgumentListType.Get(ParameterTypes);
+        ResultListType = ArgumentListType.Get(UnwrappedReturnType);
         HasObjectTypedArguments = ParameterTypes.Any(type => typeof(object) == type);
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);
         IsSystem = service.IsSystem;
@@ -64,13 +64,6 @@ public sealed class RpcMethodDef : MethodDef
         var nameSuffix = $":{ParameterTypes.Length}";
         Name = Method.Name + nameSuffix;
         AllowResultPolymorphism = AllowArgumentPolymorphism = IsSystem || IsBackend;
-
-#pragma warning disable IL2055, IL2072
-        ArgumentListFactory = (Func<ArgumentList>)ArgumentListType.GetConstructorDelegate()!;
-        ResultListFactory = (Func<ArgumentList>)ArgumentList.NativeTypes[1]
-            .MakeGenericType(UnwrappedReturnType)
-            .GetConstructorDelegate()!;
-#pragma warning restore IL2055, IL2072
 
         if (!IsAsyncMethod)
             IsValid = false;

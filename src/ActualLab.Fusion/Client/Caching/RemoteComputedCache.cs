@@ -79,7 +79,7 @@ public abstract class RemoteComputedCache : RpcServiceBase, IRemoteComputedCache
             }
 
             DefaultLog?.Log(Settings.LogLevel, "[?] {Key} -> hit", key);
-            var resultList = methodDef.ResultListFactory.Invoke();
+            var resultList = methodDef.ResultListType.Factory.Invoke();
             ArgumentSerializer.Deserialize(ref resultList, methodDef.AllowResultPolymorphism, entry.Data);
             return new RpcCacheEntry<T>(key, entry, resultList.Get0<T>());
         }

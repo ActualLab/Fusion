@@ -14,65 +14,110 @@ namespace ActualLab.Interception;
 
 public abstract partial record ArgumentList
 {
-    public const int NativeTypeCount = 8;
+    public const int MaxItemCount = 10;
+    public const int MaxGenericItemCount = 5;
+
 #if NET5_0_OR_GREATER
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList<, >))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList<, , >))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList<, , , >))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList<, , , , >))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList<, , , , , >))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList<, , , , , , >))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList<, , , , , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS1))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG1<>))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS2))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG2<, >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS3))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG3<, , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS4))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG4<, , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS5))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG5<, , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS6))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG6<, , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS7))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG7<, , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS8))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG8<, , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS9))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG9<, , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS10))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG10<, , , , >))]
 #endif
-    public static readonly ImmutableArray<Type> NativeTypes = ImmutableArray.Create(new [] {
+    public static readonly ImmutableArray<Type> SimpleTypes = ImmutableArray.Create(new [] {
         typeof(ArgumentList0),
-        typeof(ArgumentList<>),
-        typeof(ArgumentList<, >),
-        typeof(ArgumentList<, , >),
-        typeof(ArgumentList<, , , >),
-        typeof(ArgumentList<, , , , >),
-        typeof(ArgumentList<, , , , , >),
-        typeof(ArgumentList<, , , , , , >),
-        typeof(ArgumentList<, , , , , , , >),
+        typeof(ArgumentListS1),
+        typeof(ArgumentListS2),
+        typeof(ArgumentListS3),
+        typeof(ArgumentListS4),
+        typeof(ArgumentListS5),
+        typeof(ArgumentListS6),
+        typeof(ArgumentListS7),
+        typeof(ArgumentListS8),
+        typeof(ArgumentListS9),
+        typeof(ArgumentListS10),
+    });
+    public static readonly ImmutableArray<Type> GenericTypes = ImmutableArray.Create(new [] {
+        typeof(ArgumentList0),
+        typeof(ArgumentListG1<>),
+        typeof(ArgumentListG2<, >),
+        typeof(ArgumentListG3<, , >),
+        typeof(ArgumentListG4<, , , >),
+        typeof(ArgumentListG5<, , , , >),
+        typeof(ArgumentListG6<, , , , >),
+        typeof(ArgumentListG7<, , , , >),
+        typeof(ArgumentListG8<, , , , >),
+        typeof(ArgumentListG9<, , , , >),
+        typeof(ArgumentListG10<, , , , >),
     });
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentList<T0> New<T0>(T0 item0)
-        => new(item0);
+    public static ArgumentList New() => Empty;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentList<T0, T1> New<T0, T1>(T0 item0, T1 item1)
-        => new(item0, item1);
+    public static ArgumentList New<T0>(T0 item0)
+        => AllowGenerics
+            ? new ArgumentListG1<T0>(item0)
+            : new ArgumentListS1(ArgumentListType.Get(typeof(T0)), item0);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentList<T0, T1, T2> New<T0, T1, T2>(T0 item0, T1 item1, T2 item2)
-        => new(item0, item1, item2);
+    public static ArgumentList New<T0, T1>(T0 item0, T1 item1)
+        => AllowGenerics
+            ? new ArgumentListG2<T0, T1>(item0, item1)
+            : new ArgumentListS2(ArgumentListType.Get(typeof(T0), typeof(T1)), item0, item1);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentList<T0, T1, T2, T3> New<T0, T1, T2, T3>(T0 item0, T1 item1, T2 item2, T3 item3)
-        => new(item0, item1, item2, item3);
+    public static ArgumentList New<T0, T1, T2>(T0 item0, T1 item1, T2 item2)
+        => AllowGenerics
+            ? new ArgumentListG3<T0, T1, T2>(item0, item1, item2)
+            : new ArgumentListS3(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2)), item0, item1, item2);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentList<T0, T1, T2, T3, T4> New<T0, T1, T2, T3, T4>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4)
-        => new(item0, item1, item2, item3, item4);
+    public static ArgumentList New<T0, T1, T2, T3>(T0 item0, T1 item1, T2 item2, T3 item3)
+        => AllowGenerics
+            ? new ArgumentListG4<T0, T1, T2, T3>(item0, item1, item2, item3)
+            : new ArgumentListS4(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3)), item0, item1, item2, item3);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentList<T0, T1, T2, T3, T4, T5> New<T0, T1, T2, T3, T4, T5>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5)
-        => new(item0, item1, item2, item3, item4, item5);
+    public static ArgumentList New<T0, T1, T2, T3, T4>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4)
+        => AllowGenerics
+            ? new ArgumentListG5<T0, T1, T2, T3, T4>(item0, item1, item2, item3, item4)
+            : new ArgumentListS5(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4)), item0, item1, item2, item3, item4);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentList<T0, T1, T2, T3, T4, T5, T6> New<T0, T1, T2, T3, T4, T5, T6>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6)
-        => new(item0, item1, item2, item3, item4, item5, item6);
+    public static ArgumentList New<T0, T1, T2, T3, T4, T5>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5)
+        => AllowGenerics
+            ? new ArgumentListG6<T0, T1, T2, T3, T4>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5)), item0, item1, item2, item3, item4, item5)
+            : new ArgumentListS6(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5)), item0, item1, item2, item3, item4, item5);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> New<T0, T1, T2, T3, T4, T5, T6, T7>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7)
-        => new(item0, item1, item2, item3, item4, item5, item6, item7);
+    public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6)
+        => AllowGenerics
+            ? new ArgumentListG7<T0, T1, T2, T3, T4>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6)), item0, item1, item2, item3, item4, item5, item6)
+            : new ArgumentListS7(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6)), item0, item1, item2, item3, item4, item5, item6);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentListPair< ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8> > New<T0, T1, T2, T3, T4, T5, T6, T7, T8>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8)
-        => new(new(item0, item1, item2, item3, item4, item5, item6, item7), new(item8));
+    public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6, T7>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7)
+        => AllowGenerics
+            ? new ArgumentListG8<T0, T1, T2, T3, T4>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7)), item0, item1, item2, item3, item4, item5, item6, item7)
+            : new ArgumentListS8(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7)), item0, item1, item2, item3, item4, item5, item6, item7);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentListPair< ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8, T9> > New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9)
-        => new(new(item0, item1, item2, item3, item4, item5, item6, item7), new(item8, item9));
+    public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6, T7, T8>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8)
+        => AllowGenerics
+            ? new ArgumentListG9<T0, T1, T2, T3, T4>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8)), item0, item1, item2, item3, item4, item5, item6, item7, item8)
+            : new ArgumentListS9(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8)), item0, item1, item2, item3, item4, item5, item6, item7, item8);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentListPair< ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8, T9, T10> > New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9, T10 item10)
-        => new(new(item0, item1, item2, item3, item4, item5, item6, item7), new(item8, item9, item10));
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentListPair< ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>, ArgumentList<T8, T9, T10, T11> > New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9, T10 item10, T11 item11)
-        => new(new(item0, item1, item2, item3, item4, item5, item6, item7), new(item8, item9, item10, item11));
+    public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9)
+        => AllowGenerics
+            ? new ArgumentListG10<T0, T1, T2, T3, T4>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9)), item0, item1, item2, item3, item4, item5, item6, item7, item8, item9)
+            : new ArgumentListS10(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9)), item0, item1, item2, item3, item4, item5, item6, item7, item8, item9);
 
     public virtual T Get0<T>() => throw new IndexOutOfRangeException();
     public virtual T Get1<T>() => throw new IndexOutOfRangeException();
@@ -82,35 +127,43 @@ public abstract partial record ArgumentList
     public virtual T Get5<T>() => throw new IndexOutOfRangeException();
     public virtual T Get6<T>() => throw new IndexOutOfRangeException();
     public virtual T Get7<T>() => throw new IndexOutOfRangeException();
+    public virtual T Get8<T>() => throw new IndexOutOfRangeException();
+    public virtual T Get9<T>() => throw new IndexOutOfRangeException();
 }
 
-public abstract record ArgumentList1 : ArgumentListNative
+public abstract record ArgumentList1 : ArgumentList
 {
-    protected static Type?[] CreateNonDefaultItemTypes()
-        => new Type?[1];
-
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => 1;
+
+    protected static Type?[] CreateNonDefaultItemTypes()
+        => new Type?[1];
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial record ArgumentList<T0> : ArgumentList1
+public sealed record ArgumentListG1<T0> : ArgumentList1
 {
+    private static ArgumentListType? _cachedType;
+    // ReSharper disable once InconsistentNaming
+    private static ArgumentListType _type => _cachedType ??= ArgumentListType.Get(typeof(T0));
+
     private T0 _item0;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
-    public T0 Item0 { get => _item0; init => _item0 = value; }
+    public override ArgumentListType Type => _type;
+
+    public T0 Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
 
     // Constructors
 
-    public ArgumentList()
+    public ArgumentListG1()
     {
         _item0 = default!;
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public ArgumentList(T0 item0)
+    public ArgumentListG1(T0 item0)
     {
         _item0 = item0;
     }
@@ -118,7 +171,7 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentList<T0>(Item0);
+        => new ArgumentListG1<T0>(Item0);
 
     // ToString & ToArray
 
@@ -225,48 +278,30 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
 
     public override void SetFrom(ArgumentList other)
     {
-        _item0 = other.Get0<T0>();
+        if (other is ArgumentListG1<T0> vOther) {
+            _item0 = vOther._item0;
+        }
+        else {
+            _item0 = other.Get0<T0>();
+        }
     }
-
-    // Insert
-
-    public override ArgumentList Insert<T>(int index, T item)
-        => index switch {
-            0 => New(item, Item0),
-            1 => New(Item0, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    public override ArgumentList InsertCancellationToken(int index, CancellationToken item)
-        => index switch {
-            0 => New(item, Item0),
-            1 => New(Item0, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    // Remove
-
-    public override ArgumentList Remove(int index)
-        => index switch {
-            0 => New(),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
 
     // GetInvoker
 
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
-            (GetType(), method),
+            (_type, method),
             RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? static key => { // Dynamic methods
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 1)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
                 var m = new DynamicMethod("_Invoke",
                     typeof(object),
                     new [] { typeof(object), typeof(ArgumentList) },
@@ -274,9 +309,9 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
                 var il = m.GetILGenerator();
 
                 // Cast ArgumentList to its actual type
-                il.DeclareLocal(listType);
+                il.DeclareLocal(type.ListType);
                 il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Castclass, type.ListType);
                 il.Emit(OpCodes.Stloc_0);
 
                 // Unbox target
@@ -286,7 +321,7 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
 
                 // Call method
                 il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
@@ -300,20 +335,20 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
                 return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
             }
             : static key => { // Expression trees
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 1)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var pSource = Expression.Parameter(typeof(object), "source");
                 var pList = Expression.Parameter(typeof(ArgumentList), "list");
-                var vList = Expression.Variable(listType, "l");
+                var vList = Expression.Variable(type.ListType, "l");
                 var eBody = Expression.Block(
                     new [] { vList },
                     [
-                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
                         ExpressionExt.ConvertToObject(
                             Expression.Call(
                                 method1.IsStatic
@@ -337,16 +372,7 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
         if (typeof(T0).IsValueType)
             reader.OnStruct(_item0, 0);
         else
-            reader.OnObject(typeof(T0), _item0, 0);
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Read(ArgumentListReader reader, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            reader.OnStruct(_item0, offset + 0);
-        else
-            reader.OnObject(typeof(T0), _item0, offset + 0);
+            reader.OnClass(typeof(T0), _item0, 0);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -355,22 +381,12 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
         if (typeof(T0).IsValueType)
             _item0 = writer.OnStruct<T0>(0);
         else
-            _item0 = (T0)writer.OnObject(typeof(T0), 0)!;
-    }
-
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Write(ArgumentListWriter writer, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            _item0 = writer.OnStruct<T0>(offset + 0);
-        else
-            _item0 = (T0)writer.OnObject(typeof(T0), offset + 0)!;
+            _item0 = (T0)writer.OnClass(typeof(T0), 0)!;
     }
 
     // Equality
 
-    public bool Equals(ArgumentList<T0>? other)
+    public bool Equals(ArgumentListG1<T0>? other)
     {
         if (other == null)
             return false;
@@ -382,7 +398,7 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentList<T0> vOther)
+        if (other is not ArgumentListG1<T0> vOther)
             return false;
 
         if (skipIndex != 0 && !EqualityComparer<T0>.Default.Equals(Item0, vOther.Item0))
@@ -393,7 +409,8 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
     public override int GetHashCode()
     {
         unchecked {
-            var hashCode = EqualityComparer<T0>.Default.GetHashCode(Item0!);
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
             return hashCode;
         }
     }
@@ -401,43 +418,340 @@ public sealed partial record ArgumentList<T0> : ArgumentList1
     public override int GetHashCode(int skipIndex)
     {
         unchecked {
-            var hashCode = skipIndex == 0 ? 0 : EqualityComparer<T0>.Default.GetHashCode(Item0!);
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
             return hashCode;
         }
     }
 }
 
-public abstract record ArgumentList2 : ArgumentListNative
+public sealed record ArgumentListS1 : ArgumentList1
 {
-    protected static Type?[] CreateNonDefaultItemTypes()
-        => new Type?[2];
+    private readonly ArgumentListType _type;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public override int Length => 2;
-}
+    private object? _item0;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial record ArgumentList<T0, T1> : ArgumentList2
-{
-    private T0 _item0;
-    private T1 _item1;
+    public override ArgumentListType Type => _type;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
-    public T0 Item0 { get => _item0; init => _item0 = value; }
-    [DataMember(Order = 1), MemoryPackOrder(1)]
-    public T1 Item1 { get => _item1; init => _item1 = value; }
+    public object? Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
 
     // Constructors
 
-    public ArgumentList()
+    public ArgumentListS1(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = defaultValues[0];
+    }
+
+    public ArgumentListS1(ArgumentListType type, object? item0)
+    {
+        _type = type;
+        _item0 = item0;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListS1(_type, Item0);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex == 0
+            ? Array.Empty<object?>()
+            : throw new ArgumentOutOfRangeException(nameof(skipIndex));
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        expectedItemType = _type.ItemTypes[0];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => _type.ItemTypes[0],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListS1 vOther) {
+            _item0 = vOther._item0;
+        }
+        else {
+            _item0 = _type.CastItem(0, other.GetUntyped(0));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 1)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                itemType = type.ItemTypes[0];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 1)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item0"), type.ItemTypes[0])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        reader.OnAny(itemTypes[0], _item0, 0);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        _item0 = writer.OnAny(itemTypes[0], 0, defaultValues[0]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListS1? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListS1 vOther)
+            return false;
+
+        if (skipIndex != 0 && !Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
+}
+
+public abstract record ArgumentList2 : ArgumentList
+{
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public override int Length => 2;
+
+    protected static Type?[] CreateNonDefaultItemTypes()
+        => new Type?[2];
+}
+
+public sealed record ArgumentListG2<T0, T1> : ArgumentList2
+{
+    private static ArgumentListType? _cachedType;
+    // ReSharper disable once InconsistentNaming
+    private static ArgumentListType _type => _cachedType ??= ArgumentListType.Get(typeof(T0), typeof(T1));
+
+    private T0 _item0;
+    private T1 _item1;
+
+    public override ArgumentListType Type => _type;
+
+    public T0 Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public T1 Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListG2()
     {
         _item0 = default!;
         _item1 = default!;
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public ArgumentList(T0 item0, T1 item1)
+    public ArgumentListG2(T0 item0, T1 item1)
     {
         _item0 = item0;
         _item1 = item1;
@@ -446,7 +760,7 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentList<T0, T1>(Item0, Item1);
+        => new ArgumentListG2<T0, T1>(Item0, Item1);
 
     // ToString & ToArray
 
@@ -579,54 +893,34 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
 
     public override void SetFrom(ArgumentList other)
     {
-        _item0 = other.Get0<T0>();
-        _item1 = other.Get1<T1>();
+        if (other is ArgumentListG2<T0, T1> vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+        }
+        else {
+            _item0 = other.Get0<T0>();
+            _item1 = other.Get1<T1>();
+        }
     }
-
-    // Insert
-
-    public override ArgumentList Insert<T>(int index, T item)
-        => index switch {
-            0 => New(item, Item0, Item1),
-            1 => New(Item0, item, Item1),
-            2 => New(Item0, Item1, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    public override ArgumentList InsertCancellationToken(int index, CancellationToken item)
-        => index switch {
-            0 => New(item, Item0, Item1),
-            1 => New(Item0, item, Item1),
-            2 => New(Item0, Item1, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    // Remove
-
-    public override ArgumentList Remove(int index)
-        => index switch {
-            0 => New(Item1),
-            1 => New(Item0),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
 
     // GetInvoker
 
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
-            (GetType(), method),
+            (_type, method),
             RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? static key => { // Dynamic methods
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 2)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
                 var m = new DynamicMethod("_Invoke",
                     typeof(object),
                     new [] { typeof(object), typeof(ArgumentList) },
@@ -634,9 +928,9 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
                 var il = m.GetILGenerator();
 
                 // Cast ArgumentList to its actual type
-                il.DeclareLocal(listType);
+                il.DeclareLocal(type.ListType);
                 il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Castclass, type.ListType);
                 il.Emit(OpCodes.Stloc_0);
 
                 // Unbox target
@@ -646,9 +940,9 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
 
                 // Call method
                 il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
@@ -662,22 +956,22 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
                 return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
             }
             : static key => { // Expression trees
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 2)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var pSource = Expression.Parameter(typeof(object), "source");
                 var pList = Expression.Parameter(typeof(ArgumentList), "list");
-                var vList = Expression.Variable(listType, "l");
+                var vList = Expression.Variable(type.ListType, "l");
                 var eBody = Expression.Block(
                     new [] { vList },
                     [
-                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
                         ExpressionExt.ConvertToObject(
                             Expression.Call(
                                 method1.IsStatic
@@ -702,24 +996,11 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
         if (typeof(T0).IsValueType)
             reader.OnStruct(_item0, 0);
         else
-            reader.OnObject(typeof(T0), _item0, 0);
+            reader.OnClass(typeof(T0), _item0, 0);
         if (typeof(T1).IsValueType)
             reader.OnStruct(_item1, 1);
         else
-            reader.OnObject(typeof(T1), _item1, 1);
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Read(ArgumentListReader reader, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            reader.OnStruct(_item0, offset + 0);
-        else
-            reader.OnObject(typeof(T0), _item0, offset + 0);
-        if (typeof(T1).IsValueType)
-            reader.OnStruct(_item1, offset + 1);
-        else
-            reader.OnObject(typeof(T1), _item1, offset + 1);
+            reader.OnClass(typeof(T1), _item1, 1);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -728,30 +1009,16 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
         if (typeof(T0).IsValueType)
             _item0 = writer.OnStruct<T0>(0);
         else
-            _item0 = (T0)writer.OnObject(typeof(T0), 0)!;
+            _item0 = (T0)writer.OnClass(typeof(T0), 0)!;
         if (typeof(T1).IsValueType)
             _item1 = writer.OnStruct<T1>(1);
         else
-            _item1 = (T1)writer.OnObject(typeof(T1), 1)!;
-    }
-
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Write(ArgumentListWriter writer, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            _item0 = writer.OnStruct<T0>(offset + 0);
-        else
-            _item0 = (T0)writer.OnObject(typeof(T0), offset + 0)!;
-        if (typeof(T1).IsValueType)
-            _item1 = writer.OnStruct<T1>(offset + 1);
-        else
-            _item1 = (T1)writer.OnObject(typeof(T1), offset + 1)!;
+            _item1 = (T1)writer.OnClass(typeof(T1), 1)!;
     }
 
     // Equality
 
-    public bool Equals(ArgumentList<T0, T1>? other)
+    public bool Equals(ArgumentListG2<T0, T1>? other)
     {
         if (other == null)
             return false;
@@ -765,7 +1032,7 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentList<T0, T1> vOther)
+        if (other is not ArgumentListG2<T0, T1> vOther)
             return false;
 
         if (skipIndex != 1 && !EqualityComparer<T1>.Default.Equals(Item1, vOther.Item1))
@@ -778,8 +1045,10 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
     public override int GetHashCode()
     {
         unchecked {
-            var hashCode = EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + EqualityComparer<T1>.Default.GetHashCode(Item1!);
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
             return hashCode;
         }
     }
@@ -787,48 +1056,405 @@ public sealed partial record ArgumentList<T0, T1> : ArgumentList2
     public override int GetHashCode(int skipIndex)
     {
         unchecked {
-            var hashCode = skipIndex == 0 ? 0 : EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + (skipIndex == 1 ? 0 : EqualityComparer<T1>.Default.GetHashCode(Item1!));
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
             return hashCode;
         }
     }
 }
 
-public abstract record ArgumentList3 : ArgumentListNative
+public sealed record ArgumentListS2 : ArgumentList2
 {
-    protected static Type?[] CreateNonDefaultItemTypes()
-        => new Type?[3];
+    private readonly ArgumentListType _type;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public override int Length => 3;
+    private object? _item0;
+    private object? _item1;
+
+    public override ArgumentListType Type => _type;
+
+    public object? Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public object? Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListS2(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = defaultValues[0];
+        _item1 = defaultValues[1];
+    }
+
+    public ArgumentListS2(ArgumentListType type, object? item0, object? item1)
+    {
+        _type = type;
+        _item0 = item0;
+        _item1 = item1;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListS2(_type, Item0, Item1);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(", ");
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0, Item1 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex switch {
+            0 => new object?[] { Item1 },
+            1 => new object?[] { Item0 },
+            _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
+        };
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        expectedItemType = _type.ItemTypes[0];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[1];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item1?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[1] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => _type.ItemTypes[0],
+            1 => _type.ItemTypes[1],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+    public override T Get1<T>() => Item1 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            1 => Item1 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            1 => Item1,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            1 => Item1 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListS2 vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+        }
+        else {
+            _item0 = _type.CastItem(0, other.GetUntyped(0));
+            _item1 = _type.CastItem(1, other.GetUntyped(1));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 2)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                itemType = type.ItemTypes[0];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
+                itemType = type.ItemTypes[1];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 2)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item0"), type.ItemTypes[0])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item1"), type.ItemTypes[1])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        reader.OnAny(itemTypes[0], _item0, 0);
+        reader.OnAny(itemTypes[1], _item1, 1);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        _item0 = writer.OnAny(itemTypes[0], 0, defaultValues[0]);
+        _item1 = writer.OnAny(itemTypes[1], 1, defaultValues[1]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListS2? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item1, other.Item1))
+            return false;
+        if (!Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListS2 vOther)
+            return false;
+
+        if (skipIndex != 1 && !Equals(Item1, vOther.Item1))
+            return false;
+        if (skipIndex != 0 && !Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
+public abstract record ArgumentList3 : ArgumentList
 {
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public override int Length => 3;
+
+    protected static Type?[] CreateNonDefaultItemTypes()
+        => new Type?[3];
+}
+
+public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
+{
+    private static ArgumentListType? _cachedType;
+    // ReSharper disable once InconsistentNaming
+    private static ArgumentListType _type => _cachedType ??= ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2));
+
     private T0 _item0;
     private T1 _item1;
     private T2 _item2;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
-    public T0 Item0 { get => _item0; init => _item0 = value; }
-    [DataMember(Order = 1), MemoryPackOrder(1)]
-    public T1 Item1 { get => _item1; init => _item1 = value; }
-    [DataMember(Order = 2), MemoryPackOrder(2)]
-    public T2 Item2 { get => _item2; init => _item2 = value; }
+    public override ArgumentListType Type => _type;
+
+    public T0 Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public T1 Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public T2 Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
 
     // Constructors
 
-    public ArgumentList()
+    public ArgumentListG3()
     {
         _item0 = default!;
         _item1 = default!;
         _item2 = default!;
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public ArgumentList(T0 item0, T1 item1, T2 item2)
+    public ArgumentListG3(T0 item0, T1 item1, T2 item2)
     {
         _item0 = item0;
         _item1 = item1;
@@ -838,7 +1464,7 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentList<T0, T1, T2>(Item0, Item1, Item2);
+        => new ArgumentListG3<T0, T1, T2>(Item0, Item1, Item2);
 
     // ToString & ToArray
 
@@ -996,60 +1622,38 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
 
     public override void SetFrom(ArgumentList other)
     {
-        _item0 = other.Get0<T0>();
-        _item1 = other.Get1<T1>();
-        _item2 = other.Get2<T2>();
+        if (other is ArgumentListG3<T0, T1, T2> vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+        }
+        else {
+            _item0 = other.Get0<T0>();
+            _item1 = other.Get1<T1>();
+            _item2 = other.Get2<T2>();
+        }
     }
-
-    // Insert
-
-    public override ArgumentList Insert<T>(int index, T item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2),
-            1 => New(Item0, item, Item1, Item2),
-            2 => New(Item0, Item1, item, Item2),
-            3 => New(Item0, Item1, Item2, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    public override ArgumentList InsertCancellationToken(int index, CancellationToken item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2),
-            1 => New(Item0, item, Item1, Item2),
-            2 => New(Item0, Item1, item, Item2),
-            3 => New(Item0, Item1, Item2, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    // Remove
-
-    public override ArgumentList Remove(int index)
-        => index switch {
-            0 => New(Item1, Item2),
-            1 => New(Item0, Item2),
-            2 => New(Item0, Item1),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
 
     // GetInvoker
 
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
-            (GetType(), method),
+            (_type, method),
             RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? static key => { // Dynamic methods
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 3)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
                 var m = new DynamicMethod("_Invoke",
                     typeof(object),
                     new [] { typeof(object), typeof(ArgumentList) },
@@ -1057,9 +1661,9 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
                 var il = m.GetILGenerator();
 
                 // Cast ArgumentList to its actual type
-                il.DeclareLocal(listType);
+                il.DeclareLocal(type.ListType);
                 il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Castclass, type.ListType);
                 il.Emit(OpCodes.Stloc_0);
 
                 // Unbox target
@@ -1069,11 +1673,11 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
 
                 // Call method
                 il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
@@ -1087,24 +1691,24 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
                 return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
             }
             : static key => { // Expression trees
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 3)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var pSource = Expression.Parameter(typeof(object), "source");
                 var pList = Expression.Parameter(typeof(ArgumentList), "list");
-                var vList = Expression.Variable(listType, "l");
+                var vList = Expression.Variable(type.ListType, "l");
                 var eBody = Expression.Block(
                     new [] { vList },
                     [
-                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
                         ExpressionExt.ConvertToObject(
                             Expression.Call(
                                 method1.IsStatic
@@ -1130,32 +1734,15 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
         if (typeof(T0).IsValueType)
             reader.OnStruct(_item0, 0);
         else
-            reader.OnObject(typeof(T0), _item0, 0);
+            reader.OnClass(typeof(T0), _item0, 0);
         if (typeof(T1).IsValueType)
             reader.OnStruct(_item1, 1);
         else
-            reader.OnObject(typeof(T1), _item1, 1);
+            reader.OnClass(typeof(T1), _item1, 1);
         if (typeof(T2).IsValueType)
             reader.OnStruct(_item2, 2);
         else
-            reader.OnObject(typeof(T2), _item2, 2);
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Read(ArgumentListReader reader, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            reader.OnStruct(_item0, offset + 0);
-        else
-            reader.OnObject(typeof(T0), _item0, offset + 0);
-        if (typeof(T1).IsValueType)
-            reader.OnStruct(_item1, offset + 1);
-        else
-            reader.OnObject(typeof(T1), _item1, offset + 1);
-        if (typeof(T2).IsValueType)
-            reader.OnStruct(_item2, offset + 2);
-        else
-            reader.OnObject(typeof(T2), _item2, offset + 2);
+            reader.OnClass(typeof(T2), _item2, 2);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -1164,38 +1751,20 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
         if (typeof(T0).IsValueType)
             _item0 = writer.OnStruct<T0>(0);
         else
-            _item0 = (T0)writer.OnObject(typeof(T0), 0)!;
+            _item0 = (T0)writer.OnClass(typeof(T0), 0)!;
         if (typeof(T1).IsValueType)
             _item1 = writer.OnStruct<T1>(1);
         else
-            _item1 = (T1)writer.OnObject(typeof(T1), 1)!;
+            _item1 = (T1)writer.OnClass(typeof(T1), 1)!;
         if (typeof(T2).IsValueType)
             _item2 = writer.OnStruct<T2>(2);
         else
-            _item2 = (T2)writer.OnObject(typeof(T2), 2)!;
-    }
-
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Write(ArgumentListWriter writer, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            _item0 = writer.OnStruct<T0>(offset + 0);
-        else
-            _item0 = (T0)writer.OnObject(typeof(T0), offset + 0)!;
-        if (typeof(T1).IsValueType)
-            _item1 = writer.OnStruct<T1>(offset + 1);
-        else
-            _item1 = (T1)writer.OnObject(typeof(T1), offset + 1)!;
-        if (typeof(T2).IsValueType)
-            _item2 = writer.OnStruct<T2>(offset + 2);
-        else
-            _item2 = (T2)writer.OnObject(typeof(T2), offset + 2)!;
+            _item2 = (T2)writer.OnClass(typeof(T2), 2)!;
     }
 
     // Equality
 
-    public bool Equals(ArgumentList<T0, T1, T2>? other)
+    public bool Equals(ArgumentListG3<T0, T1, T2>? other)
     {
         if (other == null)
             return false;
@@ -1211,7 +1780,7 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentList<T0, T1, T2> vOther)
+        if (other is not ArgumentListG3<T0, T1, T2> vOther)
             return false;
 
         if (skipIndex != 2 && !EqualityComparer<T2>.Default.Equals(Item2, vOther.Item2))
@@ -1226,9 +1795,12 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
     public override int GetHashCode()
     {
         unchecked {
-            var hashCode = EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + EqualityComparer<T1>.Default.GetHashCode(Item1!);
-            hashCode = 397*hashCode + EqualityComparer<T2>.Default.GetHashCode(Item2!);
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
             return hashCode;
         }
     }
@@ -1236,44 +1808,461 @@ public sealed partial record ArgumentList<T0, T1, T2> : ArgumentList3
     public override int GetHashCode(int skipIndex)
     {
         unchecked {
-            var hashCode = skipIndex == 0 ? 0 : EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + (skipIndex == 1 ? 0 : EqualityComparer<T1>.Default.GetHashCode(Item1!));
-            hashCode = 397*hashCode + (skipIndex == 2 ? 0 : EqualityComparer<T2>.Default.GetHashCode(Item2!));
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
             return hashCode;
         }
     }
 }
 
-public abstract record ArgumentList4 : ArgumentListNative
+public sealed record ArgumentListS3 : ArgumentList3
 {
-    protected static Type?[] CreateNonDefaultItemTypes()
-        => new Type?[4];
+    private readonly ArgumentListType _type;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public override int Length => 4;
+    private object? _item0;
+    private object? _item1;
+    private object? _item2;
+
+    public override ArgumentListType Type => _type;
+
+    public object? Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public object? Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public object? Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListS3(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = defaultValues[0];
+        _item1 = defaultValues[1];
+        _item2 = defaultValues[2];
+    }
+
+    public ArgumentListS3(ArgumentListType type, object? item0, object? item1, object? item2)
+    {
+        _type = type;
+        _item0 = item0;
+        _item1 = item1;
+        _item2 = item2;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListS3(_type, Item0, Item1, Item2);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(", ");
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
+        sb.Append(", ");
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0, Item1, Item2 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex switch {
+            0 => new object?[] { Item1, Item2 },
+            1 => new object?[] { Item0, Item2 },
+            2 => new object?[] { Item0, Item1 },
+            _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
+        };
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        expectedItemType = _type.ItemTypes[0];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[1];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item1?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[1] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[2];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item2?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[2] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => _type.ItemTypes[0],
+            1 => _type.ItemTypes[1],
+            2 => _type.ItemTypes[2],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+    public override T Get1<T>() => Item1 is T value ? value : default!;
+    public override T Get2<T>() => Item2 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            1 => Item1 is T value ? value : default!,
+            2 => Item2 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            1 => Item1,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            2 => Item2,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            1 => Item1 is CancellationToken value ? value : default!,
+            2 => Item2 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListS3 vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+        }
+        else {
+            _item0 = _type.CastItem(0, other.GetUntyped(0));
+            _item1 = _type.CastItem(1, other.GetUntyped(1));
+            _item2 = _type.CastItem(2, other.GetUntyped(2));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 3)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                itemType = type.ItemTypes[0];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
+                itemType = type.ItemTypes[1];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
+                itemType = type.ItemTypes[2];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 3)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item0"), type.ItemTypes[0])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item1"), type.ItemTypes[1])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item2"), type.ItemTypes[2])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        reader.OnAny(itemTypes[0], _item0, 0);
+        reader.OnAny(itemTypes[1], _item1, 1);
+        reader.OnAny(itemTypes[2], _item2, 2);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        _item0 = writer.OnAny(itemTypes[0], 0, defaultValues[0]);
+        _item1 = writer.OnAny(itemTypes[1], 1, defaultValues[1]);
+        _item2 = writer.OnAny(itemTypes[2], 2, defaultValues[2]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListS3? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item2, other.Item2))
+            return false;
+        if (!Equals(Item1, other.Item1))
+            return false;
+        if (!Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListS3 vOther)
+            return false;
+
+        if (skipIndex != 2 && !Equals(Item2, vOther.Item2))
+            return false;
+        if (skipIndex != 1 && !Equals(Item1, vOther.Item1))
+            return false;
+        if (skipIndex != 0 && !Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
+public abstract record ArgumentList4 : ArgumentList
 {
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public override int Length => 4;
+
+    protected static Type?[] CreateNonDefaultItemTypes()
+        => new Type?[4];
+}
+
+public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
+{
+    private static ArgumentListType? _cachedType;
+    // ReSharper disable once InconsistentNaming
+    private static ArgumentListType _type => _cachedType ??= ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3));
+
     private T0 _item0;
     private T1 _item1;
     private T2 _item2;
     private T3 _item3;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
-    public T0 Item0 { get => _item0; init => _item0 = value; }
-    [DataMember(Order = 1), MemoryPackOrder(1)]
-    public T1 Item1 { get => _item1; init => _item1 = value; }
-    [DataMember(Order = 2), MemoryPackOrder(2)]
-    public T2 Item2 { get => _item2; init => _item2 = value; }
-    [DataMember(Order = 3), MemoryPackOrder(3)]
-    public T3 Item3 { get => _item3; init => _item3 = value; }
+    public override ArgumentListType Type => _type;
+
+    public T0 Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public T1 Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public T2 Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public T3 Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
 
     // Constructors
 
-    public ArgumentList()
+    public ArgumentListG4()
     {
         _item0 = default!;
         _item1 = default!;
@@ -1281,8 +2270,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
         _item3 = default!;
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public ArgumentList(T0 item0, T1 item1, T2 item2, T3 item3)
+    public ArgumentListG4(T0 item0, T1 item1, T2 item2, T3 item3)
     {
         _item0 = item0;
         _item1 = item1;
@@ -1293,7 +2281,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentList<T0, T1, T2, T3>(Item0, Item1, Item2, Item3);
+        => new ArgumentListG4<T0, T1, T2, T3>(Item0, Item1, Item2, Item3);
 
     // ToString & ToArray
 
@@ -1476,66 +2464,42 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
 
     public override void SetFrom(ArgumentList other)
     {
-        _item0 = other.Get0<T0>();
-        _item1 = other.Get1<T1>();
-        _item2 = other.Get2<T2>();
-        _item3 = other.Get3<T3>();
+        if (other is ArgumentListG4<T0, T1, T2, T3> vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+        }
+        else {
+            _item0 = other.Get0<T0>();
+            _item1 = other.Get1<T1>();
+            _item2 = other.Get2<T2>();
+            _item3 = other.Get3<T3>();
+        }
     }
-
-    // Insert
-
-    public override ArgumentList Insert<T>(int index, T item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2, Item3),
-            1 => New(Item0, item, Item1, Item2, Item3),
-            2 => New(Item0, Item1, item, Item2, Item3),
-            3 => New(Item0, Item1, Item2, item, Item3),
-            4 => New(Item0, Item1, Item2, Item3, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    public override ArgumentList InsertCancellationToken(int index, CancellationToken item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2, Item3),
-            1 => New(Item0, item, Item1, Item2, Item3),
-            2 => New(Item0, Item1, item, Item2, Item3),
-            3 => New(Item0, Item1, Item2, item, Item3),
-            4 => New(Item0, Item1, Item2, Item3, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    // Remove
-
-    public override ArgumentList Remove(int index)
-        => index switch {
-            0 => New(Item1, Item2, Item3),
-            1 => New(Item0, Item2, Item3),
-            2 => New(Item0, Item1, Item3),
-            3 => New(Item0, Item1, Item2),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
 
     // GetInvoker
 
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
-            (GetType(), method),
+            (_type, method),
             RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? static key => { // Dynamic methods
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 4)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[3].ParameterType != typeof(T3))
+                if (parameters[3].ParameterType != type.ItemTypes[3])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
                 var m = new DynamicMethod("_Invoke",
                     typeof(object),
                     new [] { typeof(object), typeof(ArgumentList) },
@@ -1543,9 +2507,9 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
                 var il = m.GetILGenerator();
 
                 // Cast ArgumentList to its actual type
-                il.DeclareLocal(listType);
+                il.DeclareLocal(type.ListType);
                 il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Castclass, type.ListType);
                 il.Emit(OpCodes.Stloc_0);
 
                 // Unbox target
@@ -1555,13 +2519,13 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
 
                 // Call method
                 il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
@@ -1575,26 +2539,26 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
                 return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
             }
             : static key => { // Expression trees
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 4)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[3].ParameterType != typeof(T3))
+                if (parameters[3].ParameterType != type.ItemTypes[3])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var pSource = Expression.Parameter(typeof(object), "source");
                 var pList = Expression.Parameter(typeof(ArgumentList), "list");
-                var vList = Expression.Variable(listType, "l");
+                var vList = Expression.Variable(type.ListType, "l");
                 var eBody = Expression.Block(
                     new [] { vList },
                     [
-                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
                         ExpressionExt.ConvertToObject(
                             Expression.Call(
                                 method1.IsStatic
@@ -1621,40 +2585,19 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
         if (typeof(T0).IsValueType)
             reader.OnStruct(_item0, 0);
         else
-            reader.OnObject(typeof(T0), _item0, 0);
+            reader.OnClass(typeof(T0), _item0, 0);
         if (typeof(T1).IsValueType)
             reader.OnStruct(_item1, 1);
         else
-            reader.OnObject(typeof(T1), _item1, 1);
+            reader.OnClass(typeof(T1), _item1, 1);
         if (typeof(T2).IsValueType)
             reader.OnStruct(_item2, 2);
         else
-            reader.OnObject(typeof(T2), _item2, 2);
+            reader.OnClass(typeof(T2), _item2, 2);
         if (typeof(T3).IsValueType)
             reader.OnStruct(_item3, 3);
         else
-            reader.OnObject(typeof(T3), _item3, 3);
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Read(ArgumentListReader reader, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            reader.OnStruct(_item0, offset + 0);
-        else
-            reader.OnObject(typeof(T0), _item0, offset + 0);
-        if (typeof(T1).IsValueType)
-            reader.OnStruct(_item1, offset + 1);
-        else
-            reader.OnObject(typeof(T1), _item1, offset + 1);
-        if (typeof(T2).IsValueType)
-            reader.OnStruct(_item2, offset + 2);
-        else
-            reader.OnObject(typeof(T2), _item2, offset + 2);
-        if (typeof(T3).IsValueType)
-            reader.OnStruct(_item3, offset + 3);
-        else
-            reader.OnObject(typeof(T3), _item3, offset + 3);
+            reader.OnClass(typeof(T3), _item3, 3);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -1663,46 +2606,24 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
         if (typeof(T0).IsValueType)
             _item0 = writer.OnStruct<T0>(0);
         else
-            _item0 = (T0)writer.OnObject(typeof(T0), 0)!;
+            _item0 = (T0)writer.OnClass(typeof(T0), 0)!;
         if (typeof(T1).IsValueType)
             _item1 = writer.OnStruct<T1>(1);
         else
-            _item1 = (T1)writer.OnObject(typeof(T1), 1)!;
+            _item1 = (T1)writer.OnClass(typeof(T1), 1)!;
         if (typeof(T2).IsValueType)
             _item2 = writer.OnStruct<T2>(2);
         else
-            _item2 = (T2)writer.OnObject(typeof(T2), 2)!;
+            _item2 = (T2)writer.OnClass(typeof(T2), 2)!;
         if (typeof(T3).IsValueType)
             _item3 = writer.OnStruct<T3>(3);
         else
-            _item3 = (T3)writer.OnObject(typeof(T3), 3)!;
-    }
-
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Write(ArgumentListWriter writer, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            _item0 = writer.OnStruct<T0>(offset + 0);
-        else
-            _item0 = (T0)writer.OnObject(typeof(T0), offset + 0)!;
-        if (typeof(T1).IsValueType)
-            _item1 = writer.OnStruct<T1>(offset + 1);
-        else
-            _item1 = (T1)writer.OnObject(typeof(T1), offset + 1)!;
-        if (typeof(T2).IsValueType)
-            _item2 = writer.OnStruct<T2>(offset + 2);
-        else
-            _item2 = (T2)writer.OnObject(typeof(T2), offset + 2)!;
-        if (typeof(T3).IsValueType)
-            _item3 = writer.OnStruct<T3>(offset + 3);
-        else
-            _item3 = (T3)writer.OnObject(typeof(T3), offset + 3)!;
+            _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
     }
 
     // Equality
 
-    public bool Equals(ArgumentList<T0, T1, T2, T3>? other)
+    public bool Equals(ArgumentListG4<T0, T1, T2, T3>? other)
     {
         if (other == null)
             return false;
@@ -1720,7 +2641,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentList<T0, T1, T2, T3> vOther)
+        if (other is not ArgumentListG4<T0, T1, T2, T3> vOther)
             return false;
 
         if (skipIndex != 3 && !EqualityComparer<T3>.Default.Equals(Item3, vOther.Item3))
@@ -1737,10 +2658,14 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
     public override int GetHashCode()
     {
         unchecked {
-            var hashCode = EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + EqualityComparer<T1>.Default.GetHashCode(Item1!);
-            hashCode = 397*hashCode + EqualityComparer<T2>.Default.GetHashCode(Item2!);
-            hashCode = 397*hashCode + EqualityComparer<T3>.Default.GetHashCode(Item3!);
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
             return hashCode;
         }
     }
@@ -1748,48 +2673,524 @@ public sealed partial record ArgumentList<T0, T1, T2, T3> : ArgumentList4
     public override int GetHashCode(int skipIndex)
     {
         unchecked {
-            var hashCode = skipIndex == 0 ? 0 : EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + (skipIndex == 1 ? 0 : EqualityComparer<T1>.Default.GetHashCode(Item1!));
-            hashCode = 397*hashCode + (skipIndex == 2 ? 0 : EqualityComparer<T2>.Default.GetHashCode(Item2!));
-            hashCode = 397*hashCode + (skipIndex == 3 ? 0 : EqualityComparer<T3>.Default.GetHashCode(Item3!));
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
             return hashCode;
         }
     }
 }
 
-public abstract record ArgumentList5 : ArgumentListNative
+public sealed record ArgumentListS4 : ArgumentList4
 {
-    protected static Type?[] CreateNonDefaultItemTypes()
-        => new Type?[5];
+    private readonly ArgumentListType _type;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public override int Length => 5;
+    private object? _item0;
+    private object? _item1;
+    private object? _item2;
+    private object? _item3;
+
+    public override ArgumentListType Type => _type;
+
+    public object? Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public object? Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public object? Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public object? Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListS4(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = defaultValues[0];
+        _item1 = defaultValues[1];
+        _item2 = defaultValues[2];
+        _item3 = defaultValues[3];
+    }
+
+    public ArgumentListS4(ArgumentListType type, object? item0, object? item1, object? item2, object? item3)
+    {
+        _type = type;
+        _item0 = item0;
+        _item1 = item1;
+        _item2 = item2;
+        _item3 = item3;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListS4(_type, Item0, Item1, Item2, Item3);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(", ");
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
+        sb.Append(", ");
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
+        sb.Append(", ");
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0, Item1, Item2, Item3 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex switch {
+            0 => new object?[] { Item1, Item2, Item3 },
+            1 => new object?[] { Item0, Item2, Item3 },
+            2 => new object?[] { Item0, Item1, Item3 },
+            3 => new object?[] { Item0, Item1, Item2 },
+            _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
+        };
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        expectedItemType = _type.ItemTypes[0];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[1];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item1?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[1] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[2];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item2?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[2] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[3];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item3?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[3] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => _type.ItemTypes[0],
+            1 => _type.ItemTypes[1],
+            2 => _type.ItemTypes[2],
+            3 => _type.ItemTypes[3],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+    public override T Get1<T>() => Item1 is T value ? value : default!;
+    public override T Get2<T>() => Item2 is T value ? value : default!;
+    public override T Get3<T>() => Item3 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            1 => Item1 is T value ? value : default!,
+            2 => Item2 is T value ? value : default!,
+            3 => Item3 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            1 => Item1,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            2 => Item2,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            3 => Item3,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            1 => Item1 is CancellationToken value ? value : default!,
+            2 => Item2 is CancellationToken value ? value : default!,
+            3 => Item3 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListS4 vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+        }
+        else {
+            _item0 = _type.CastItem(0, other.GetUntyped(0));
+            _item1 = _type.CastItem(1, other.GetUntyped(1));
+            _item2 = _type.CastItem(2, other.GetUntyped(2));
+            _item3 = _type.CastItem(3, other.GetUntyped(3));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 4)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                itemType = type.ItemTypes[0];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
+                itemType = type.ItemTypes[1];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
+                itemType = type.ItemTypes[2];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
+                itemType = type.ItemTypes[3];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 4)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item0"), type.ItemTypes[0])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item1"), type.ItemTypes[1])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item2"), type.ItemTypes[2])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item3"), type.ItemTypes[3])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        reader.OnAny(itemTypes[0], _item0, 0);
+        reader.OnAny(itemTypes[1], _item1, 1);
+        reader.OnAny(itemTypes[2], _item2, 2);
+        reader.OnAny(itemTypes[3], _item3, 3);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        _item0 = writer.OnAny(itemTypes[0], 0, defaultValues[0]);
+        _item1 = writer.OnAny(itemTypes[1], 1, defaultValues[1]);
+        _item2 = writer.OnAny(itemTypes[2], 2, defaultValues[2]);
+        _item3 = writer.OnAny(itemTypes[3], 3, defaultValues[3]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListS4? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item3, other.Item3))
+            return false;
+        if (!Equals(Item2, other.Item2))
+            return false;
+        if (!Equals(Item1, other.Item1))
+            return false;
+        if (!Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListS4 vOther)
+            return false;
+
+        if (skipIndex != 3 && !Equals(Item3, vOther.Item3))
+            return false;
+        if (skipIndex != 2 && !Equals(Item2, vOther.Item2))
+            return false;
+        if (skipIndex != 1 && !Equals(Item1, vOther.Item1))
+            return false;
+        if (skipIndex != 0 && !Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
+public abstract record ArgumentList5 : ArgumentList
 {
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public override int Length => 5;
+
+    protected static Type?[] CreateNonDefaultItemTypes()
+        => new Type?[5];
+}
+
+public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
+{
+    private static ArgumentListType? _cachedType;
+    // ReSharper disable once InconsistentNaming
+    private static ArgumentListType _type => _cachedType ??= ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+
     private T0 _item0;
     private T1 _item1;
     private T2 _item2;
     private T3 _item3;
     private T4 _item4;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
-    public T0 Item0 { get => _item0; init => _item0 = value; }
-    [DataMember(Order = 1), MemoryPackOrder(1)]
-    public T1 Item1 { get => _item1; init => _item1 = value; }
-    [DataMember(Order = 2), MemoryPackOrder(2)]
-    public T2 Item2 { get => _item2; init => _item2 = value; }
-    [DataMember(Order = 3), MemoryPackOrder(3)]
-    public T3 Item3 { get => _item3; init => _item3 = value; }
-    [DataMember(Order = 4), MemoryPackOrder(4)]
-    public T4 Item4 { get => _item4; init => _item4 = value; }
+    public override ArgumentListType Type => _type;
+
+    public T0 Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public T1 Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public T2 Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public T3 Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public T4 Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
 
     // Constructors
 
-    public ArgumentList()
+    public ArgumentListG5()
     {
         _item0 = default!;
         _item1 = default!;
@@ -1798,8 +3199,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
         _item4 = default!;
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public ArgumentList(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4)
+    public ArgumentListG5(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4)
     {
         _item0 = item0;
         _item1 = item1;
@@ -1811,7 +3211,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentList<T0, T1, T2, T3, T4>(Item0, Item1, Item2, Item3, Item4);
+        => new ArgumentListG5<T0, T1, T2, T3, T4>(Item0, Item1, Item2, Item3, Item4);
 
     // ToString & ToArray
 
@@ -2019,72 +3419,46 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
 
     public override void SetFrom(ArgumentList other)
     {
-        _item0 = other.Get0<T0>();
-        _item1 = other.Get1<T1>();
-        _item2 = other.Get2<T2>();
-        _item3 = other.Get3<T3>();
-        _item4 = other.Get4<T4>();
+        if (other is ArgumentListG5<T0, T1, T2, T3, T4> vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+        }
+        else {
+            _item0 = other.Get0<T0>();
+            _item1 = other.Get1<T1>();
+            _item2 = other.Get2<T2>();
+            _item3 = other.Get3<T3>();
+            _item4 = other.Get4<T4>();
+        }
     }
-
-    // Insert
-
-    public override ArgumentList Insert<T>(int index, T item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2, Item3, Item4),
-            1 => New(Item0, item, Item1, Item2, Item3, Item4),
-            2 => New(Item0, Item1, item, Item2, Item3, Item4),
-            3 => New(Item0, Item1, Item2, item, Item3, Item4),
-            4 => New(Item0, Item1, Item2, Item3, item, Item4),
-            5 => New(Item0, Item1, Item2, Item3, Item4, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    public override ArgumentList InsertCancellationToken(int index, CancellationToken item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2, Item3, Item4),
-            1 => New(Item0, item, Item1, Item2, Item3, Item4),
-            2 => New(Item0, Item1, item, Item2, Item3, Item4),
-            3 => New(Item0, Item1, Item2, item, Item3, Item4),
-            4 => New(Item0, Item1, Item2, Item3, item, Item4),
-            5 => New(Item0, Item1, Item2, Item3, Item4, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    // Remove
-
-    public override ArgumentList Remove(int index)
-        => index switch {
-            0 => New(Item1, Item2, Item3, Item4),
-            1 => New(Item0, Item2, Item3, Item4),
-            2 => New(Item0, Item1, Item3, Item4),
-            3 => New(Item0, Item1, Item2, Item4),
-            4 => New(Item0, Item1, Item2, Item3),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
 
     // GetInvoker
 
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
-            (GetType(), method),
+            (_type, method),
             RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? static key => { // Dynamic methods
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 5)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[3].ParameterType != typeof(T3))
+                if (parameters[3].ParameterType != type.ItemTypes[3])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[4].ParameterType != typeof(T4))
+                if (parameters[4].ParameterType != type.ItemTypes[4])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
                 var m = new DynamicMethod("_Invoke",
                     typeof(object),
                     new [] { typeof(object), typeof(ArgumentList) },
@@ -2092,9 +3466,9 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
                 var il = m.GetILGenerator();
 
                 // Cast ArgumentList to its actual type
-                il.DeclareLocal(listType);
+                il.DeclareLocal(type.ListType);
                 il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Castclass, type.ListType);
                 il.Emit(OpCodes.Stloc_0);
 
                 // Unbox target
@@ -2104,15 +3478,15 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
 
                 // Call method
                 il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
@@ -2126,28 +3500,28 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
                 return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
             }
             : static key => { // Expression trees
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 5)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[3].ParameterType != typeof(T3))
+                if (parameters[3].ParameterType != type.ItemTypes[3])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[4].ParameterType != typeof(T4))
+                if (parameters[4].ParameterType != type.ItemTypes[4])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var pSource = Expression.Parameter(typeof(object), "source");
                 var pList = Expression.Parameter(typeof(ArgumentList), "list");
-                var vList = Expression.Variable(listType, "l");
+                var vList = Expression.Variable(type.ListType, "l");
                 var eBody = Expression.Block(
                     new [] { vList },
                     [
-                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
                         ExpressionExt.ConvertToObject(
                             Expression.Call(
                                 method1.IsStatic
@@ -2175,48 +3549,23 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
         if (typeof(T0).IsValueType)
             reader.OnStruct(_item0, 0);
         else
-            reader.OnObject(typeof(T0), _item0, 0);
+            reader.OnClass(typeof(T0), _item0, 0);
         if (typeof(T1).IsValueType)
             reader.OnStruct(_item1, 1);
         else
-            reader.OnObject(typeof(T1), _item1, 1);
+            reader.OnClass(typeof(T1), _item1, 1);
         if (typeof(T2).IsValueType)
             reader.OnStruct(_item2, 2);
         else
-            reader.OnObject(typeof(T2), _item2, 2);
+            reader.OnClass(typeof(T2), _item2, 2);
         if (typeof(T3).IsValueType)
             reader.OnStruct(_item3, 3);
         else
-            reader.OnObject(typeof(T3), _item3, 3);
+            reader.OnClass(typeof(T3), _item3, 3);
         if (typeof(T4).IsValueType)
             reader.OnStruct(_item4, 4);
         else
-            reader.OnObject(typeof(T4), _item4, 4);
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Read(ArgumentListReader reader, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            reader.OnStruct(_item0, offset + 0);
-        else
-            reader.OnObject(typeof(T0), _item0, offset + 0);
-        if (typeof(T1).IsValueType)
-            reader.OnStruct(_item1, offset + 1);
-        else
-            reader.OnObject(typeof(T1), _item1, offset + 1);
-        if (typeof(T2).IsValueType)
-            reader.OnStruct(_item2, offset + 2);
-        else
-            reader.OnObject(typeof(T2), _item2, offset + 2);
-        if (typeof(T3).IsValueType)
-            reader.OnStruct(_item3, offset + 3);
-        else
-            reader.OnObject(typeof(T3), _item3, offset + 3);
-        if (typeof(T4).IsValueType)
-            reader.OnStruct(_item4, offset + 4);
-        else
-            reader.OnObject(typeof(T4), _item4, offset + 4);
+            reader.OnClass(typeof(T4), _item4, 4);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -2225,54 +3574,28 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
         if (typeof(T0).IsValueType)
             _item0 = writer.OnStruct<T0>(0);
         else
-            _item0 = (T0)writer.OnObject(typeof(T0), 0)!;
+            _item0 = (T0)writer.OnClass(typeof(T0), 0)!;
         if (typeof(T1).IsValueType)
             _item1 = writer.OnStruct<T1>(1);
         else
-            _item1 = (T1)writer.OnObject(typeof(T1), 1)!;
+            _item1 = (T1)writer.OnClass(typeof(T1), 1)!;
         if (typeof(T2).IsValueType)
             _item2 = writer.OnStruct<T2>(2);
         else
-            _item2 = (T2)writer.OnObject(typeof(T2), 2)!;
+            _item2 = (T2)writer.OnClass(typeof(T2), 2)!;
         if (typeof(T3).IsValueType)
             _item3 = writer.OnStruct<T3>(3);
         else
-            _item3 = (T3)writer.OnObject(typeof(T3), 3)!;
+            _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
         if (typeof(T4).IsValueType)
             _item4 = writer.OnStruct<T4>(4);
         else
-            _item4 = (T4)writer.OnObject(typeof(T4), 4)!;
-    }
-
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Write(ArgumentListWriter writer, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            _item0 = writer.OnStruct<T0>(offset + 0);
-        else
-            _item0 = (T0)writer.OnObject(typeof(T0), offset + 0)!;
-        if (typeof(T1).IsValueType)
-            _item1 = writer.OnStruct<T1>(offset + 1);
-        else
-            _item1 = (T1)writer.OnObject(typeof(T1), offset + 1)!;
-        if (typeof(T2).IsValueType)
-            _item2 = writer.OnStruct<T2>(offset + 2);
-        else
-            _item2 = (T2)writer.OnObject(typeof(T2), offset + 2)!;
-        if (typeof(T3).IsValueType)
-            _item3 = writer.OnStruct<T3>(offset + 3);
-        else
-            _item3 = (T3)writer.OnObject(typeof(T3), offset + 3)!;
-        if (typeof(T4).IsValueType)
-            _item4 = writer.OnStruct<T4>(offset + 4);
-        else
-            _item4 = (T4)writer.OnObject(typeof(T4), offset + 4)!;
+            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
     }
 
     // Equality
 
-    public bool Equals(ArgumentList<T0, T1, T2, T3, T4>? other)
+    public bool Equals(ArgumentListG5<T0, T1, T2, T3, T4>? other)
     {
         if (other == null)
             return false;
@@ -2292,7 +3615,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentList<T0, T1, T2, T3, T4> vOther)
+        if (other is not ArgumentListG5<T0, T1, T2, T3, T4> vOther)
             return false;
 
         if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
@@ -2311,11 +3634,16 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
     public override int GetHashCode()
     {
         unchecked {
-            var hashCode = EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + EqualityComparer<T1>.Default.GetHashCode(Item1!);
-            hashCode = 397*hashCode + EqualityComparer<T2>.Default.GetHashCode(Item2!);
-            hashCode = 397*hashCode + EqualityComparer<T3>.Default.GetHashCode(Item3!);
-            hashCode = 397*hashCode + EqualityComparer<T4>.Default.GetHashCode(Item4!);
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
             return hashCode;
         }
     }
@@ -2323,64 +3651,599 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4> : ArgumentList5
     public override int GetHashCode(int skipIndex)
     {
         unchecked {
-            var hashCode = skipIndex == 0 ? 0 : EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + (skipIndex == 1 ? 0 : EqualityComparer<T1>.Default.GetHashCode(Item1!));
-            hashCode = 397*hashCode + (skipIndex == 2 ? 0 : EqualityComparer<T2>.Default.GetHashCode(Item2!));
-            hashCode = 397*hashCode + (skipIndex == 3 ? 0 : EqualityComparer<T3>.Default.GetHashCode(Item3!));
-            hashCode = 397*hashCode + (skipIndex == 4 ? 0 : EqualityComparer<T4>.Default.GetHashCode(Item4!));
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
             return hashCode;
         }
     }
 }
 
-public abstract record ArgumentList6 : ArgumentListNative
+public sealed record ArgumentListS5 : ArgumentList5
 {
-    protected static Type?[] CreateNonDefaultItemTypes()
-        => new Type?[6];
+    private readonly ArgumentListType _type;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public override int Length => 6;
+    private object? _item0;
+    private object? _item1;
+    private object? _item2;
+    private object? _item3;
+    private object? _item4;
+
+    public override ArgumentListType Type => _type;
+
+    public object? Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public object? Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public object? Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public object? Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public object? Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListS5(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = defaultValues[0];
+        _item1 = defaultValues[1];
+        _item2 = defaultValues[2];
+        _item3 = defaultValues[3];
+        _item4 = defaultValues[4];
+    }
+
+    public ArgumentListS5(ArgumentListType type, object? item0, object? item1, object? item2, object? item3, object? item4)
+    {
+        _type = type;
+        _item0 = item0;
+        _item1 = item1;
+        _item2 = item2;
+        _item3 = item3;
+        _item4 = item4;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListS5(_type, Item0, Item1, Item2, Item3, Item4);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(", ");
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
+        sb.Append(", ");
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
+        sb.Append(", ");
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
+        sb.Append(", ");
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0, Item1, Item2, Item3, Item4 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex switch {
+            0 => new object?[] { Item1, Item2, Item3, Item4 },
+            1 => new object?[] { Item0, Item2, Item3, Item4 },
+            2 => new object?[] { Item0, Item1, Item3, Item4 },
+            3 => new object?[] { Item0, Item1, Item2, Item4 },
+            4 => new object?[] { Item0, Item1, Item2, Item3 },
+            _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
+        };
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        expectedItemType = _type.ItemTypes[0];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[1];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item1?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[1] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[2];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item2?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[2] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[3];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item3?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[3] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item4?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[4] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => _type.ItemTypes[0],
+            1 => _type.ItemTypes[1],
+            2 => _type.ItemTypes[2],
+            3 => _type.ItemTypes[3],
+            4 => _type.ItemTypes[4],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+    public override T Get1<T>() => Item1 is T value ? value : default!;
+    public override T Get2<T>() => Item2 is T value ? value : default!;
+    public override T Get3<T>() => Item3 is T value ? value : default!;
+    public override T Get4<T>() => Item4 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            1 => Item1 is T value ? value : default!,
+            2 => Item2 is T value ? value : default!,
+            3 => Item3 is T value ? value : default!,
+            4 => Item4 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            1 => Item1,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            2 => Item2,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            3 => Item3,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            4 => Item4,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            1 => Item1 is CancellationToken value ? value : default!,
+            2 => Item2 is CancellationToken value ? value : default!,
+            3 => Item3 is CancellationToken value ? value : default!,
+            4 => Item4 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListS5 vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+        }
+        else {
+            _item0 = _type.CastItem(0, other.GetUntyped(0));
+            _item1 = _type.CastItem(1, other.GetUntyped(1));
+            _item2 = _type.CastItem(2, other.GetUntyped(2));
+            _item3 = _type.CastItem(3, other.GetUntyped(3));
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 5)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                itemType = type.ItemTypes[0];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
+                itemType = type.ItemTypes[1];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
+                itemType = type.ItemTypes[2];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
+                itemType = type.ItemTypes[3];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 5)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item0"), type.ItemTypes[0])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item1"), type.ItemTypes[1])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item2"), type.ItemTypes[2])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item3"), type.ItemTypes[3])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        reader.OnAny(itemTypes[0], _item0, 0);
+        reader.OnAny(itemTypes[1], _item1, 1);
+        reader.OnAny(itemTypes[2], _item2, 2);
+        reader.OnAny(itemTypes[3], _item3, 3);
+        reader.OnAny(itemTypes[4], _item4, 4);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        _item0 = writer.OnAny(itemTypes[0], 0, defaultValues[0]);
+        _item1 = writer.OnAny(itemTypes[1], 1, defaultValues[1]);
+        _item2 = writer.OnAny(itemTypes[2], 2, defaultValues[2]);
+        _item3 = writer.OnAny(itemTypes[3], 3, defaultValues[3]);
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListS5? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item4, other.Item4))
+            return false;
+        if (!Equals(Item3, other.Item3))
+            return false;
+        if (!Equals(Item2, other.Item2))
+            return false;
+        if (!Equals(Item1, other.Item1))
+            return false;
+        if (!Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListS5 vOther)
+            return false;
+
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
+            return false;
+        if (skipIndex != 3 && !Equals(Item3, vOther.Item3))
+            return false;
+        if (skipIndex != 2 && !Equals(Item2, vOther.Item2))
+            return false;
+        if (skipIndex != 1 && !Equals(Item1, vOther.Item1))
+            return false;
+        if (skipIndex != 0 && !Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList6
+public abstract record ArgumentList6 : ArgumentList
 {
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public override int Length => 6;
+
+    protected static Type?[] CreateNonDefaultItemTypes()
+        => new Type?[6];
+}
+
+public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
+{
+    private readonly ArgumentListType _type;
+
     private T0 _item0;
     private T1 _item1;
     private T2 _item2;
     private T3 _item3;
     private T4 _item4;
-    private T5 _item5;
+    private object? _item5;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
-    public T0 Item0 { get => _item0; init => _item0 = value; }
-    [DataMember(Order = 1), MemoryPackOrder(1)]
-    public T1 Item1 { get => _item1; init => _item1 = value; }
-    [DataMember(Order = 2), MemoryPackOrder(2)]
-    public T2 Item2 { get => _item2; init => _item2 = value; }
-    [DataMember(Order = 3), MemoryPackOrder(3)]
-    public T3 Item3 { get => _item3; init => _item3 = value; }
-    [DataMember(Order = 4), MemoryPackOrder(4)]
-    public T4 Item4 { get => _item4; init => _item4 = value; }
-    [DataMember(Order = 5), MemoryPackOrder(5)]
-    public T5 Item5 { get => _item5; init => _item5 = value; }
+    public override ArgumentListType Type => _type;
+
+    public T0 Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public T1 Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public T2 Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public T3 Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public T4 Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
+    public object? Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+        init => _item5 = value;
+    }
 
     // Constructors
 
-    public ArgumentList()
+    public ArgumentListG6(ArgumentListType type)
     {
+        _type = type;
+        var defaultValues = type.DefaultValues;
         _item0 = default!;
         _item1 = default!;
         _item2 = default!;
         _item3 = default!;
         _item4 = default!;
-        _item5 = default!;
+        _item5 = defaultValues[5];
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public ArgumentList(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5)
+    public ArgumentListG6(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, object? item5)
     {
+        _type = type;
         _item0 = item0;
         _item1 = item1;
         _item2 = item2;
@@ -2392,7 +4255,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentList<T0, T1, T2, T3, T4, T5>(Item0, Item1, Item2, Item3, Item4, Item5);
+        => new ArgumentListG6<T0, T1, T2, T3, T4>(_type, Item0, Item1, Item2, Item3, Item4, Item5);
 
     // ToString & ToArray
 
@@ -2435,6 +4298,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
     {
         var itemTypes = (Type?[]?)null;
         Type? itemType;
+        Type? expectedItemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
             if (itemType != null && itemType != typeof(T0)) {
@@ -2470,9 +4334,10 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
                 itemTypes[4] = itemType;
             }
         }
-        if (!typeof(T5).IsValueType) {
+        expectedItemType = _type.ItemTypes[5];
+        if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != typeof(T5)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
@@ -2489,7 +4354,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
             2 => typeof(T2),
             3 => typeof(T3),
             4 => typeof(T4),
-            5 => typeof(T5),
+            5 => _type.ItemTypes[5],
             _ => null,
         };
 
@@ -2562,7 +4427,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
             _item4 = item is T4 item4 ? item4 : default!;
             break;
         case 5:
-            _item5 = item is T5 item5 ? item5 : default!;
+            _item5 = _type.CastItem(5, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -2588,7 +4453,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
             _item4 = item is T4 item4 ? item4 : default!;
             break;
         case 5:
-            _item5 = item is T5 item5 ? item5 : default!;
+            _item5 = _type.CastItem(5, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -2614,7 +4479,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
             _item4 = item is T4 item4 ? item4 : default!;
             break;
         case 5:
-            _item5 = item is T5 item5 ? item5 : default!;
+            _item5 = _type.CastItem(5, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -2625,78 +4490,50 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
 
     public override void SetFrom(ArgumentList other)
     {
-        _item0 = other.Get0<T0>();
-        _item1 = other.Get1<T1>();
-        _item2 = other.Get2<T2>();
-        _item3 = other.Get3<T3>();
-        _item4 = other.Get4<T4>();
-        _item5 = other.Get5<T5>();
+        if (other is ArgumentListG6<T0, T1, T2, T3, T4> vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+            _item5 = vOther._item5;
+        }
+        else {
+            _item0 = other.Get0<T0>();
+            _item1 = other.Get1<T1>();
+            _item2 = other.Get2<T2>();
+            _item3 = other.Get3<T3>();
+            _item4 = other.Get4<T4>();
+            _item5 = _type.CastItem(5, other.GetUntyped(5));
+        }
     }
-
-    // Insert
-
-    public override ArgumentList Insert<T>(int index, T item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2, Item3, Item4, Item5),
-            1 => New(Item0, item, Item1, Item2, Item3, Item4, Item5),
-            2 => New(Item0, Item1, item, Item2, Item3, Item4, Item5),
-            3 => New(Item0, Item1, Item2, item, Item3, Item4, Item5),
-            4 => New(Item0, Item1, Item2, Item3, item, Item4, Item5),
-            5 => New(Item0, Item1, Item2, Item3, Item4, item, Item5),
-            6 => New(Item0, Item1, Item2, Item3, Item4, Item5, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    public override ArgumentList InsertCancellationToken(int index, CancellationToken item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2, Item3, Item4, Item5),
-            1 => New(Item0, item, Item1, Item2, Item3, Item4, Item5),
-            2 => New(Item0, Item1, item, Item2, Item3, Item4, Item5),
-            3 => New(Item0, Item1, Item2, item, Item3, Item4, Item5),
-            4 => New(Item0, Item1, Item2, Item3, item, Item4, Item5),
-            5 => New(Item0, Item1, Item2, Item3, Item4, item, Item5),
-            6 => New(Item0, Item1, Item2, Item3, Item4, Item5, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    // Remove
-
-    public override ArgumentList Remove(int index)
-        => index switch {
-            0 => New(Item1, Item2, Item3, Item4, Item5),
-            1 => New(Item0, Item2, Item3, Item4, Item5),
-            2 => New(Item0, Item1, Item3, Item4, Item5),
-            3 => New(Item0, Item1, Item2, Item4, Item5),
-            4 => New(Item0, Item1, Item2, Item3, Item5),
-            5 => New(Item0, Item1, Item2, Item3, Item4),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
 
     // GetInvoker
 
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
-            (GetType(), method),
+            (_type, method),
             RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? static key => { // Dynamic methods
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 6)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[3].ParameterType != typeof(T3))
+                if (parameters[3].ParameterType != type.ItemTypes[3])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[4].ParameterType != typeof(T4))
+                if (parameters[4].ParameterType != type.ItemTypes[4])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[5].ParameterType != typeof(T5))
+                if (parameters[5].ParameterType != type.ItemTypes[5])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
                 var m = new DynamicMethod("_Invoke",
                     typeof(object),
                     new [] { typeof(object), typeof(ArgumentList) },
@@ -2704,9 +4541,9 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
                 var il = m.GetILGenerator();
 
                 // Cast ArgumentList to its actual type
-                il.DeclareLocal(listType);
+                il.DeclareLocal(type.ListType);
                 il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Castclass, type.ListType);
                 il.Emit(OpCodes.Stloc_0);
 
                 // Unbox target
@@ -2716,17 +4553,19 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
+                itemType = type.ItemTypes[5];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
                 il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
@@ -2740,30 +4579,30 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
                 return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
             }
             : static key => { // Expression trees
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 6)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[3].ParameterType != typeof(T3))
+                if (parameters[3].ParameterType != type.ItemTypes[3])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[4].ParameterType != typeof(T4))
+                if (parameters[4].ParameterType != type.ItemTypes[4])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[5].ParameterType != typeof(T5))
+                if (parameters[5].ParameterType != type.ItemTypes[5])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var pSource = Expression.Parameter(typeof(object), "source");
                 var pList = Expression.Parameter(typeof(ArgumentList), "list");
-                var vList = Expression.Variable(listType, "l");
+                var vList = Expression.Variable(type.ListType, "l");
                 var eBody = Expression.Block(
                     new [] { vList },
                     [
-                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
                         ExpressionExt.ConvertToObject(
                             Expression.Call(
                                 method1.IsStatic
@@ -2775,7 +4614,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
                                 , Expression.PropertyOrField(vList, "Item2")
                                 , Expression.PropertyOrField(vList, "Item3")
                                 , Expression.PropertyOrField(vList, "Item4")
-                                , Expression.PropertyOrField(vList, "Item5")
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
                                 ))
                     ]);
                 return (Func<object?, ArgumentList, object?>)Expression
@@ -2789,128 +4628,66 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
+        var itemTypes = _type.ItemTypes;
         if (typeof(T0).IsValueType)
             reader.OnStruct(_item0, 0);
         else
-            reader.OnObject(typeof(T0), _item0, 0);
+            reader.OnClass(typeof(T0), _item0, 0);
         if (typeof(T1).IsValueType)
             reader.OnStruct(_item1, 1);
         else
-            reader.OnObject(typeof(T1), _item1, 1);
+            reader.OnClass(typeof(T1), _item1, 1);
         if (typeof(T2).IsValueType)
             reader.OnStruct(_item2, 2);
         else
-            reader.OnObject(typeof(T2), _item2, 2);
+            reader.OnClass(typeof(T2), _item2, 2);
         if (typeof(T3).IsValueType)
             reader.OnStruct(_item3, 3);
         else
-            reader.OnObject(typeof(T3), _item3, 3);
+            reader.OnClass(typeof(T3), _item3, 3);
         if (typeof(T4).IsValueType)
             reader.OnStruct(_item4, 4);
         else
-            reader.OnObject(typeof(T4), _item4, 4);
-        if (typeof(T5).IsValueType)
-            reader.OnStruct(_item5, 5);
-        else
-            reader.OnObject(typeof(T5), _item5, 5);
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Read(ArgumentListReader reader, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            reader.OnStruct(_item0, offset + 0);
-        else
-            reader.OnObject(typeof(T0), _item0, offset + 0);
-        if (typeof(T1).IsValueType)
-            reader.OnStruct(_item1, offset + 1);
-        else
-            reader.OnObject(typeof(T1), _item1, offset + 1);
-        if (typeof(T2).IsValueType)
-            reader.OnStruct(_item2, offset + 2);
-        else
-            reader.OnObject(typeof(T2), _item2, offset + 2);
-        if (typeof(T3).IsValueType)
-            reader.OnStruct(_item3, offset + 3);
-        else
-            reader.OnObject(typeof(T3), _item3, offset + 3);
-        if (typeof(T4).IsValueType)
-            reader.OnStruct(_item4, offset + 4);
-        else
-            reader.OnObject(typeof(T4), _item4, offset + 4);
-        if (typeof(T5).IsValueType)
-            reader.OnStruct(_item5, offset + 5);
-        else
-            reader.OnObject(typeof(T5), _item5, offset + 5);
+            reader.OnClass(typeof(T4), _item4, 4);
+        reader.OnAny(itemTypes[5], _item5, 5);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
         if (typeof(T0).IsValueType)
             _item0 = writer.OnStruct<T0>(0);
         else
-            _item0 = (T0)writer.OnObject(typeof(T0), 0)!;
+            _item0 = (T0)writer.OnClass(typeof(T0), 0)!;
         if (typeof(T1).IsValueType)
             _item1 = writer.OnStruct<T1>(1);
         else
-            _item1 = (T1)writer.OnObject(typeof(T1), 1)!;
+            _item1 = (T1)writer.OnClass(typeof(T1), 1)!;
         if (typeof(T2).IsValueType)
             _item2 = writer.OnStruct<T2>(2);
         else
-            _item2 = (T2)writer.OnObject(typeof(T2), 2)!;
+            _item2 = (T2)writer.OnClass(typeof(T2), 2)!;
         if (typeof(T3).IsValueType)
             _item3 = writer.OnStruct<T3>(3);
         else
-            _item3 = (T3)writer.OnObject(typeof(T3), 3)!;
+            _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
         if (typeof(T4).IsValueType)
             _item4 = writer.OnStruct<T4>(4);
         else
-            _item4 = (T4)writer.OnObject(typeof(T4), 4)!;
-        if (typeof(T5).IsValueType)
-            _item5 = writer.OnStruct<T5>(5);
-        else
-            _item5 = (T5)writer.OnObject(typeof(T5), 5)!;
-    }
-
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Write(ArgumentListWriter writer, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            _item0 = writer.OnStruct<T0>(offset + 0);
-        else
-            _item0 = (T0)writer.OnObject(typeof(T0), offset + 0)!;
-        if (typeof(T1).IsValueType)
-            _item1 = writer.OnStruct<T1>(offset + 1);
-        else
-            _item1 = (T1)writer.OnObject(typeof(T1), offset + 1)!;
-        if (typeof(T2).IsValueType)
-            _item2 = writer.OnStruct<T2>(offset + 2);
-        else
-            _item2 = (T2)writer.OnObject(typeof(T2), offset + 2)!;
-        if (typeof(T3).IsValueType)
-            _item3 = writer.OnStruct<T3>(offset + 3);
-        else
-            _item3 = (T3)writer.OnObject(typeof(T3), offset + 3)!;
-        if (typeof(T4).IsValueType)
-            _item4 = writer.OnStruct<T4>(offset + 4);
-        else
-            _item4 = (T4)writer.OnObject(typeof(T4), offset + 4)!;
-        if (typeof(T5).IsValueType)
-            _item5 = writer.OnStruct<T5>(offset + 5);
-        else
-            _item5 = (T5)writer.OnObject(typeof(T5), offset + 5)!;
+            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
+        _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
     }
 
     // Equality
 
-    public bool Equals(ArgumentList<T0, T1, T2, T3, T4, T5>? other)
+    public bool Equals(ArgumentListG6<T0, T1, T2, T3, T4>? other)
     {
         if (other == null)
             return false;
 
-        if (!EqualityComparer<T5>.Default.Equals(Item5, other.Item5))
+        if (!Equals(Item5, other.Item5))
             return false;
         if (!EqualityComparer<T4>.Default.Equals(Item4, other.Item4))
             return false;
@@ -2927,10 +4704,10 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentList<T0, T1, T2, T3, T4, T5> vOther)
+        if (other is not ArgumentListG6<T0, T1, T2, T3, T4> vOther)
             return false;
 
-        if (skipIndex != 5 && !EqualityComparer<T5>.Default.Equals(Item5, vOther.Item5))
+        if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
             return false;
         if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
             return false;
@@ -2948,12 +4725,18 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
     public override int GetHashCode()
     {
         unchecked {
-            var hashCode = EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + EqualityComparer<T1>.Default.GetHashCode(Item1!);
-            hashCode = 397*hashCode + EqualityComparer<T2>.Default.GetHashCode(Item2!);
-            hashCode = 397*hashCode + EqualityComparer<T3>.Default.GetHashCode(Item3!);
-            hashCode = 397*hashCode + EqualityComparer<T4>.Default.GetHashCode(Item4!);
-            hashCode = 397*hashCode + EqualityComparer<T5>.Default.GetHashCode(Item5!);
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item5 is { } item5 ? item5.GetHashCode() : 0);
             return hashCode;
         }
     }
@@ -2961,69 +4744,663 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5> : ArgumentList
     public override int GetHashCode(int skipIndex)
     {
         unchecked {
-            var hashCode = skipIndex == 0 ? 0 : EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + (skipIndex == 1 ? 0 : EqualityComparer<T1>.Default.GetHashCode(Item1!));
-            hashCode = 397*hashCode + (skipIndex == 2 ? 0 : EqualityComparer<T2>.Default.GetHashCode(Item2!));
-            hashCode = 397*hashCode + (skipIndex == 3 ? 0 : EqualityComparer<T3>.Default.GetHashCode(Item3!));
-            hashCode = 397*hashCode + (skipIndex == 4 ? 0 : EqualityComparer<T4>.Default.GetHashCode(Item4!));
-            hashCode = 397*hashCode + (skipIndex == 5 ? 0 : EqualityComparer<T5>.Default.GetHashCode(Item5!));
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
             return hashCode;
         }
     }
 }
 
-public abstract record ArgumentList7 : ArgumentListNative
+public sealed record ArgumentListS6 : ArgumentList6
 {
-    protected static Type?[] CreateNonDefaultItemTypes()
-        => new Type?[7];
+    private readonly ArgumentListType _type;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public override int Length => 7;
+    private object? _item0;
+    private object? _item1;
+    private object? _item2;
+    private object? _item3;
+    private object? _item4;
+    private object? _item5;
+
+    public override ArgumentListType Type => _type;
+
+    public object? Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public object? Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public object? Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public object? Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public object? Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
+    public object? Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+        init => _item5 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListS6(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = defaultValues[0];
+        _item1 = defaultValues[1];
+        _item2 = defaultValues[2];
+        _item3 = defaultValues[3];
+        _item4 = defaultValues[4];
+        _item5 = defaultValues[5];
+    }
+
+    public ArgumentListS6(ArgumentListType type, object? item0, object? item1, object? item2, object? item3, object? item4, object? item5)
+    {
+        _type = type;
+        _item0 = item0;
+        _item1 = item1;
+        _item2 = item2;
+        _item3 = item3;
+        _item4 = item4;
+        _item5 = item5;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListS6(_type, Item0, Item1, Item2, Item3, Item4, Item5);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(", ");
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
+        sb.Append(", ");
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
+        sb.Append(", ");
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
+        sb.Append(", ");
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
+        sb.Append(", ");
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex switch {
+            0 => new object?[] { Item1, Item2, Item3, Item4, Item5 },
+            1 => new object?[] { Item0, Item2, Item3, Item4, Item5 },
+            2 => new object?[] { Item0, Item1, Item3, Item4, Item5 },
+            3 => new object?[] { Item0, Item1, Item2, Item4, Item5 },
+            4 => new object?[] { Item0, Item1, Item2, Item3, Item5 },
+            5 => new object?[] { Item0, Item1, Item2, Item3, Item4 },
+            _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
+        };
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        expectedItemType = _type.ItemTypes[0];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[1];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item1?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[1] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[2];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item2?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[2] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[3];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item3?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[3] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item4?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[4] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[5];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item5?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[5] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => _type.ItemTypes[0],
+            1 => _type.ItemTypes[1],
+            2 => _type.ItemTypes[2],
+            3 => _type.ItemTypes[3],
+            4 => _type.ItemTypes[4],
+            5 => _type.ItemTypes[5],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+    public override T Get1<T>() => Item1 is T value ? value : default!;
+    public override T Get2<T>() => Item2 is T value ? value : default!;
+    public override T Get3<T>() => Item3 is T value ? value : default!;
+    public override T Get4<T>() => Item4 is T value ? value : default!;
+    public override T Get5<T>() => Item5 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            1 => Item1 is T value ? value : default!,
+            2 => Item2 is T value ? value : default!,
+            3 => Item3 is T value ? value : default!,
+            4 => Item4 is T value ? value : default!,
+            5 => Item5 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            1 => Item1,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            2 => Item2,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            3 => Item3,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            4 => Item4,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            5 => Item5,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            1 => Item1 is CancellationToken value ? value : default!,
+            2 => Item2 is CancellationToken value ? value : default!,
+            3 => Item3 is CancellationToken value ? value : default!,
+            4 => Item4 is CancellationToken value ? value : default!,
+            5 => Item5 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListS6 vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+            _item5 = vOther._item5;
+        }
+        else {
+            _item0 = _type.CastItem(0, other.GetUntyped(0));
+            _item1 = _type.CastItem(1, other.GetUntyped(1));
+            _item2 = _type.CastItem(2, other.GetUntyped(2));
+            _item3 = _type.CastItem(3, other.GetUntyped(3));
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
+            _item5 = _type.CastItem(5, other.GetUntyped(5));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 6)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                itemType = type.ItemTypes[0];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
+                itemType = type.ItemTypes[1];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
+                itemType = type.ItemTypes[2];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
+                itemType = type.ItemTypes[3];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
+                itemType = type.ItemTypes[5];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 6)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item0"), type.ItemTypes[0])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item1"), type.ItemTypes[1])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item2"), type.ItemTypes[2])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item3"), type.ItemTypes[3])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        reader.OnAny(itemTypes[0], _item0, 0);
+        reader.OnAny(itemTypes[1], _item1, 1);
+        reader.OnAny(itemTypes[2], _item2, 2);
+        reader.OnAny(itemTypes[3], _item3, 3);
+        reader.OnAny(itemTypes[4], _item4, 4);
+        reader.OnAny(itemTypes[5], _item5, 5);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        _item0 = writer.OnAny(itemTypes[0], 0, defaultValues[0]);
+        _item1 = writer.OnAny(itemTypes[1], 1, defaultValues[1]);
+        _item2 = writer.OnAny(itemTypes[2], 2, defaultValues[2]);
+        _item3 = writer.OnAny(itemTypes[3], 3, defaultValues[3]);
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
+        _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListS6? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item5, other.Item5))
+            return false;
+        if (!Equals(Item4, other.Item4))
+            return false;
+        if (!Equals(Item3, other.Item3))
+            return false;
+        if (!Equals(Item2, other.Item2))
+            return false;
+        if (!Equals(Item1, other.Item1))
+            return false;
+        if (!Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListS6 vOther)
+            return false;
+
+        if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
+            return false;
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
+            return false;
+        if (skipIndex != 3 && !Equals(Item3, vOther.Item3))
+            return false;
+        if (skipIndex != 2 && !Equals(Item2, vOther.Item2))
+            return false;
+        if (skipIndex != 1 && !Equals(Item1, vOther.Item1))
+            return false;
+        if (skipIndex != 0 && !Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item5 is { } item5 ? item5.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : ArgumentList7
+public abstract record ArgumentList7 : ArgumentList
 {
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public override int Length => 7;
+
+    protected static Type?[] CreateNonDefaultItemTypes()
+        => new Type?[7];
+}
+
+public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
+{
+    private readonly ArgumentListType _type;
+
     private T0 _item0;
     private T1 _item1;
     private T2 _item2;
     private T3 _item3;
     private T4 _item4;
-    private T5 _item5;
-    private T6 _item6;
+    private object? _item5;
+    private object? _item6;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
-    public T0 Item0 { get => _item0; init => _item0 = value; }
-    [DataMember(Order = 1), MemoryPackOrder(1)]
-    public T1 Item1 { get => _item1; init => _item1 = value; }
-    [DataMember(Order = 2), MemoryPackOrder(2)]
-    public T2 Item2 { get => _item2; init => _item2 = value; }
-    [DataMember(Order = 3), MemoryPackOrder(3)]
-    public T3 Item3 { get => _item3; init => _item3 = value; }
-    [DataMember(Order = 4), MemoryPackOrder(4)]
-    public T4 Item4 { get => _item4; init => _item4 = value; }
-    [DataMember(Order = 5), MemoryPackOrder(5)]
-    public T5 Item5 { get => _item5; init => _item5 = value; }
-    [DataMember(Order = 6), MemoryPackOrder(6)]
-    public T6 Item6 { get => _item6; init => _item6 = value; }
+    public override ArgumentListType Type => _type;
+
+    public T0 Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public T1 Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public T2 Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public T3 Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public T4 Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
+    public object? Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+        init => _item5 = value;
+    }
+    public object? Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+        init => _item6 = value;
+    }
 
     // Constructors
 
-    public ArgumentList()
+    public ArgumentListG7(ArgumentListType type)
     {
+        _type = type;
+        var defaultValues = type.DefaultValues;
         _item0 = default!;
         _item1 = default!;
         _item2 = default!;
         _item3 = default!;
         _item4 = default!;
-        _item5 = default!;
-        _item6 = default!;
+        _item5 = defaultValues[5];
+        _item6 = defaultValues[6];
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public ArgumentList(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6)
+    public ArgumentListG7(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, object? item5, object? item6)
     {
+        _type = type;
         _item0 = item0;
         _item1 = item1;
         _item2 = item2;
@@ -3036,7 +5413,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentList<T0, T1, T2, T3, T4, T5, T6>(Item0, Item1, Item2, Item3, Item4, Item5, Item6);
+        => new ArgumentListG7<T0, T1, T2, T3, T4>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6);
 
     // ToString & ToArray
 
@@ -3082,6 +5459,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
     {
         var itemTypes = (Type?[]?)null;
         Type? itemType;
+        Type? expectedItemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
             if (itemType != null && itemType != typeof(T0)) {
@@ -3117,16 +5495,18 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
                 itemTypes[4] = itemType;
             }
         }
-        if (!typeof(T5).IsValueType) {
+        expectedItemType = _type.ItemTypes[5];
+        if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != typeof(T5)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
         }
-        if (!typeof(T6).IsValueType) {
+        expectedItemType = _type.ItemTypes[6];
+        if (!expectedItemType.IsValueType) {
             itemType = _item6?.GetType();
-            if (itemType != null && itemType != typeof(T6)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[6] = itemType;
             }
@@ -3143,8 +5523,8 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
             2 => typeof(T2),
             3 => typeof(T3),
             4 => typeof(T4),
-            5 => typeof(T5),
-            6 => typeof(T6),
+            5 => _type.ItemTypes[5],
+            6 => _type.ItemTypes[6],
             _ => null,
         };
 
@@ -3222,10 +5602,10 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
             _item4 = item is T4 item4 ? item4 : default!;
             break;
         case 5:
-            _item5 = item is T5 item5 ? item5 : default!;
+            _item5 = _type.CastItem(5, item);
             break;
         case 6:
-            _item6 = item is T6 item6 ? item6 : default!;
+            _item6 = _type.CastItem(6, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -3251,10 +5631,10 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
             _item4 = item is T4 item4 ? item4 : default!;
             break;
         case 5:
-            _item5 = item is T5 item5 ? item5 : default!;
+            _item5 = _type.CastItem(5, item);
             break;
         case 6:
-            _item6 = item is T6 item6 ? item6 : default!;
+            _item6 = _type.CastItem(6, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -3280,10 +5660,10 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
             _item4 = item is T4 item4 ? item4 : default!;
             break;
         case 5:
-            _item5 = item is T5 item5 ? item5 : default!;
+            _item5 = _type.CastItem(5, item);
             break;
         case 6:
-            _item6 = item is T6 item6 ? item6 : default!;
+            _item6 = _type.CastItem(6, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -3294,84 +5674,54 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
 
     public override void SetFrom(ArgumentList other)
     {
-        _item0 = other.Get0<T0>();
-        _item1 = other.Get1<T1>();
-        _item2 = other.Get2<T2>();
-        _item3 = other.Get3<T3>();
-        _item4 = other.Get4<T4>();
-        _item5 = other.Get5<T5>();
-        _item6 = other.Get6<T6>();
+        if (other is ArgumentListG7<T0, T1, T2, T3, T4> vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+            _item5 = vOther._item5;
+            _item6 = vOther._item6;
+        }
+        else {
+            _item0 = other.Get0<T0>();
+            _item1 = other.Get1<T1>();
+            _item2 = other.Get2<T2>();
+            _item3 = other.Get3<T3>();
+            _item4 = other.Get4<T4>();
+            _item5 = _type.CastItem(5, other.GetUntyped(5));
+            _item6 = _type.CastItem(6, other.GetUntyped(6));
+        }
     }
-
-    // Insert
-
-    public override ArgumentList Insert<T>(int index, T item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2, Item3, Item4, Item5, Item6),
-            1 => New(Item0, item, Item1, Item2, Item3, Item4, Item5, Item6),
-            2 => New(Item0, Item1, item, Item2, Item3, Item4, Item5, Item6),
-            3 => New(Item0, Item1, Item2, item, Item3, Item4, Item5, Item6),
-            4 => New(Item0, Item1, Item2, Item3, item, Item4, Item5, Item6),
-            5 => New(Item0, Item1, Item2, Item3, Item4, item, Item5, Item6),
-            6 => New(Item0, Item1, Item2, Item3, Item4, Item5, item, Item6),
-            7 => New(Item0, Item1, Item2, Item3, Item4, Item5, Item6, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    public override ArgumentList InsertCancellationToken(int index, CancellationToken item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2, Item3, Item4, Item5, Item6),
-            1 => New(Item0, item, Item1, Item2, Item3, Item4, Item5, Item6),
-            2 => New(Item0, Item1, item, Item2, Item3, Item4, Item5, Item6),
-            3 => New(Item0, Item1, Item2, item, Item3, Item4, Item5, Item6),
-            4 => New(Item0, Item1, Item2, Item3, item, Item4, Item5, Item6),
-            5 => New(Item0, Item1, Item2, Item3, Item4, item, Item5, Item6),
-            6 => New(Item0, Item1, Item2, Item3, Item4, Item5, item, Item6),
-            7 => New(Item0, Item1, Item2, Item3, Item4, Item5, Item6, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    // Remove
-
-    public override ArgumentList Remove(int index)
-        => index switch {
-            0 => New(Item1, Item2, Item3, Item4, Item5, Item6),
-            1 => New(Item0, Item2, Item3, Item4, Item5, Item6),
-            2 => New(Item0, Item1, Item3, Item4, Item5, Item6),
-            3 => New(Item0, Item1, Item2, Item4, Item5, Item6),
-            4 => New(Item0, Item1, Item2, Item3, Item5, Item6),
-            5 => New(Item0, Item1, Item2, Item3, Item4, Item6),
-            6 => New(Item0, Item1, Item2, Item3, Item4, Item5),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
 
     // GetInvoker
 
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
-            (GetType(), method),
+            (_type, method),
             RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? static key => { // Dynamic methods
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 7)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[3].ParameterType != typeof(T3))
+                if (parameters[3].ParameterType != type.ItemTypes[3])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[4].ParameterType != typeof(T4))
+                if (parameters[4].ParameterType != type.ItemTypes[4])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[5].ParameterType != typeof(T5))
+                if (parameters[5].ParameterType != type.ItemTypes[5])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[6].ParameterType != typeof(T6))
+                if (parameters[6].ParameterType != type.ItemTypes[6])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
                 var m = new DynamicMethod("_Invoke",
                     typeof(object),
                     new [] { typeof(object), typeof(ArgumentList) },
@@ -3379,9 +5729,9 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
                 var il = m.GetILGenerator();
 
                 // Cast ArgumentList to its actual type
-                il.DeclareLocal(listType);
+                il.DeclareLocal(type.ListType);
                 il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Castclass, type.ListType);
                 il.Emit(OpCodes.Stloc_0);
 
                 // Unbox target
@@ -3391,19 +5741,23 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
+                itemType = type.ItemTypes[5];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item6")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item6")!.GetGetMethod()!);
+                itemType = type.ItemTypes[6];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
                 il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
@@ -3417,32 +5771,32 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
                 return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
             }
             : static key => { // Expression trees
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 7)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[3].ParameterType != typeof(T3))
+                if (parameters[3].ParameterType != type.ItemTypes[3])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[4].ParameterType != typeof(T4))
+                if (parameters[4].ParameterType != type.ItemTypes[4])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[5].ParameterType != typeof(T5))
+                if (parameters[5].ParameterType != type.ItemTypes[5])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[6].ParameterType != typeof(T6))
+                if (parameters[6].ParameterType != type.ItemTypes[6])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var pSource = Expression.Parameter(typeof(object), "source");
                 var pList = Expression.Parameter(typeof(ArgumentList), "list");
-                var vList = Expression.Variable(listType, "l");
+                var vList = Expression.Variable(type.ListType, "l");
                 var eBody = Expression.Block(
                     new [] { vList },
                     [
-                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
                         ExpressionExt.ConvertToObject(
                             Expression.Call(
                                 method1.IsStatic
@@ -3454,8 +5808,8 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
                                 , Expression.PropertyOrField(vList, "Item2")
                                 , Expression.PropertyOrField(vList, "Item3")
                                 , Expression.PropertyOrField(vList, "Item4")
-                                , Expression.PropertyOrField(vList, "Item5")
-                                , Expression.PropertyOrField(vList, "Item6")
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
                                 ))
                     ]);
                 return (Func<object?, ArgumentList, object?>)Expression
@@ -3469,146 +5823,70 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
+        var itemTypes = _type.ItemTypes;
         if (typeof(T0).IsValueType)
             reader.OnStruct(_item0, 0);
         else
-            reader.OnObject(typeof(T0), _item0, 0);
+            reader.OnClass(typeof(T0), _item0, 0);
         if (typeof(T1).IsValueType)
             reader.OnStruct(_item1, 1);
         else
-            reader.OnObject(typeof(T1), _item1, 1);
+            reader.OnClass(typeof(T1), _item1, 1);
         if (typeof(T2).IsValueType)
             reader.OnStruct(_item2, 2);
         else
-            reader.OnObject(typeof(T2), _item2, 2);
+            reader.OnClass(typeof(T2), _item2, 2);
         if (typeof(T3).IsValueType)
             reader.OnStruct(_item3, 3);
         else
-            reader.OnObject(typeof(T3), _item3, 3);
+            reader.OnClass(typeof(T3), _item3, 3);
         if (typeof(T4).IsValueType)
             reader.OnStruct(_item4, 4);
         else
-            reader.OnObject(typeof(T4), _item4, 4);
-        if (typeof(T5).IsValueType)
-            reader.OnStruct(_item5, 5);
-        else
-            reader.OnObject(typeof(T5), _item5, 5);
-        if (typeof(T6).IsValueType)
-            reader.OnStruct(_item6, 6);
-        else
-            reader.OnObject(typeof(T6), _item6, 6);
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Read(ArgumentListReader reader, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            reader.OnStruct(_item0, offset + 0);
-        else
-            reader.OnObject(typeof(T0), _item0, offset + 0);
-        if (typeof(T1).IsValueType)
-            reader.OnStruct(_item1, offset + 1);
-        else
-            reader.OnObject(typeof(T1), _item1, offset + 1);
-        if (typeof(T2).IsValueType)
-            reader.OnStruct(_item2, offset + 2);
-        else
-            reader.OnObject(typeof(T2), _item2, offset + 2);
-        if (typeof(T3).IsValueType)
-            reader.OnStruct(_item3, offset + 3);
-        else
-            reader.OnObject(typeof(T3), _item3, offset + 3);
-        if (typeof(T4).IsValueType)
-            reader.OnStruct(_item4, offset + 4);
-        else
-            reader.OnObject(typeof(T4), _item4, offset + 4);
-        if (typeof(T5).IsValueType)
-            reader.OnStruct(_item5, offset + 5);
-        else
-            reader.OnObject(typeof(T5), _item5, offset + 5);
-        if (typeof(T6).IsValueType)
-            reader.OnStruct(_item6, offset + 6);
-        else
-            reader.OnObject(typeof(T6), _item6, offset + 6);
+            reader.OnClass(typeof(T4), _item4, 4);
+        reader.OnAny(itemTypes[5], _item5, 5);
+        reader.OnAny(itemTypes[6], _item6, 6);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
         if (typeof(T0).IsValueType)
             _item0 = writer.OnStruct<T0>(0);
         else
-            _item0 = (T0)writer.OnObject(typeof(T0), 0)!;
+            _item0 = (T0)writer.OnClass(typeof(T0), 0)!;
         if (typeof(T1).IsValueType)
             _item1 = writer.OnStruct<T1>(1);
         else
-            _item1 = (T1)writer.OnObject(typeof(T1), 1)!;
+            _item1 = (T1)writer.OnClass(typeof(T1), 1)!;
         if (typeof(T2).IsValueType)
             _item2 = writer.OnStruct<T2>(2);
         else
-            _item2 = (T2)writer.OnObject(typeof(T2), 2)!;
+            _item2 = (T2)writer.OnClass(typeof(T2), 2)!;
         if (typeof(T3).IsValueType)
             _item3 = writer.OnStruct<T3>(3);
         else
-            _item3 = (T3)writer.OnObject(typeof(T3), 3)!;
+            _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
         if (typeof(T4).IsValueType)
             _item4 = writer.OnStruct<T4>(4);
         else
-            _item4 = (T4)writer.OnObject(typeof(T4), 4)!;
-        if (typeof(T5).IsValueType)
-            _item5 = writer.OnStruct<T5>(5);
-        else
-            _item5 = (T5)writer.OnObject(typeof(T5), 5)!;
-        if (typeof(T6).IsValueType)
-            _item6 = writer.OnStruct<T6>(6);
-        else
-            _item6 = (T6)writer.OnObject(typeof(T6), 6)!;
-    }
-
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Write(ArgumentListWriter writer, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            _item0 = writer.OnStruct<T0>(offset + 0);
-        else
-            _item0 = (T0)writer.OnObject(typeof(T0), offset + 0)!;
-        if (typeof(T1).IsValueType)
-            _item1 = writer.OnStruct<T1>(offset + 1);
-        else
-            _item1 = (T1)writer.OnObject(typeof(T1), offset + 1)!;
-        if (typeof(T2).IsValueType)
-            _item2 = writer.OnStruct<T2>(offset + 2);
-        else
-            _item2 = (T2)writer.OnObject(typeof(T2), offset + 2)!;
-        if (typeof(T3).IsValueType)
-            _item3 = writer.OnStruct<T3>(offset + 3);
-        else
-            _item3 = (T3)writer.OnObject(typeof(T3), offset + 3)!;
-        if (typeof(T4).IsValueType)
-            _item4 = writer.OnStruct<T4>(offset + 4);
-        else
-            _item4 = (T4)writer.OnObject(typeof(T4), offset + 4)!;
-        if (typeof(T5).IsValueType)
-            _item5 = writer.OnStruct<T5>(offset + 5);
-        else
-            _item5 = (T5)writer.OnObject(typeof(T5), offset + 5)!;
-        if (typeof(T6).IsValueType)
-            _item6 = writer.OnStruct<T6>(offset + 6);
-        else
-            _item6 = (T6)writer.OnObject(typeof(T6), offset + 6)!;
+            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
+        _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
+        _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
     }
 
     // Equality
 
-    public bool Equals(ArgumentList<T0, T1, T2, T3, T4, T5, T6>? other)
+    public bool Equals(ArgumentListG7<T0, T1, T2, T3, T4>? other)
     {
         if (other == null)
             return false;
 
-        if (!EqualityComparer<T6>.Default.Equals(Item6, other.Item6))
+        if (!Equals(Item6, other.Item6))
             return false;
-        if (!EqualityComparer<T5>.Default.Equals(Item5, other.Item5))
+        if (!Equals(Item5, other.Item5))
             return false;
         if (!EqualityComparer<T4>.Default.Equals(Item4, other.Item4))
             return false;
@@ -3625,12 +5903,12 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentList<T0, T1, T2, T3, T4, T5, T6> vOther)
+        if (other is not ArgumentListG7<T0, T1, T2, T3, T4> vOther)
             return false;
 
-        if (skipIndex != 6 && !EqualityComparer<T6>.Default.Equals(Item6, vOther.Item6))
+        if (skipIndex != 6 && !Equals(Item6, vOther.Item6))
             return false;
-        if (skipIndex != 5 && !EqualityComparer<T5>.Default.Equals(Item5, vOther.Item5))
+        if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
             return false;
         if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
             return false;
@@ -3648,13 +5926,20 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
     public override int GetHashCode()
     {
         unchecked {
-            var hashCode = EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + EqualityComparer<T1>.Default.GetHashCode(Item1!);
-            hashCode = 397*hashCode + EqualityComparer<T2>.Default.GetHashCode(Item2!);
-            hashCode = 397*hashCode + EqualityComparer<T3>.Default.GetHashCode(Item3!);
-            hashCode = 397*hashCode + EqualityComparer<T4>.Default.GetHashCode(Item4!);
-            hashCode = 397*hashCode + EqualityComparer<T5>.Default.GetHashCode(Item5!);
-            hashCode = 397*hashCode + EqualityComparer<T6>.Default.GetHashCode(Item6!);
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item5 is { } item5 ? item5.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item6 is { } item6 ? item6.GetHashCode() : 0);
             return hashCode;
         }
     }
@@ -3662,74 +5947,727 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6> : Argument
     public override int GetHashCode(int skipIndex)
     {
         unchecked {
-            var hashCode = skipIndex == 0 ? 0 : EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + (skipIndex == 1 ? 0 : EqualityComparer<T1>.Default.GetHashCode(Item1!));
-            hashCode = 397*hashCode + (skipIndex == 2 ? 0 : EqualityComparer<T2>.Default.GetHashCode(Item2!));
-            hashCode = 397*hashCode + (skipIndex == 3 ? 0 : EqualityComparer<T3>.Default.GetHashCode(Item3!));
-            hashCode = 397*hashCode + (skipIndex == 4 ? 0 : EqualityComparer<T4>.Default.GetHashCode(Item4!));
-            hashCode = 397*hashCode + (skipIndex == 5 ? 0 : EqualityComparer<T5>.Default.GetHashCode(Item5!));
-            hashCode = 397*hashCode + (skipIndex == 6 ? 0 : EqualityComparer<T6>.Default.GetHashCode(Item6!));
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
             return hashCode;
         }
     }
 }
 
-public abstract record ArgumentList8 : ArgumentListNative
+public sealed record ArgumentListS7 : ArgumentList7
 {
-    protected static Type?[] CreateNonDefaultItemTypes()
-        => new Type?[8];
+    private readonly ArgumentListType _type;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public override int Length => 8;
+    private object? _item0;
+    private object? _item1;
+    private object? _item2;
+    private object? _item3;
+    private object? _item4;
+    private object? _item5;
+    private object? _item6;
+
+    public override ArgumentListType Type => _type;
+
+    public object? Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public object? Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public object? Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public object? Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public object? Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
+    public object? Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+        init => _item5 = value;
+    }
+    public object? Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+        init => _item6 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListS7(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = defaultValues[0];
+        _item1 = defaultValues[1];
+        _item2 = defaultValues[2];
+        _item3 = defaultValues[3];
+        _item4 = defaultValues[4];
+        _item5 = defaultValues[5];
+        _item6 = defaultValues[6];
+    }
+
+    public ArgumentListS7(ArgumentListType type, object? item0, object? item1, object? item2, object? item3, object? item4, object? item5, object? item6)
+    {
+        _type = type;
+        _item0 = item0;
+        _item1 = item1;
+        _item2 = item2;
+        _item3 = item3;
+        _item4 = item4;
+        _item5 = item5;
+        _item6 = item6;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListS7(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(", ");
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
+        sb.Append(", ");
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
+        sb.Append(", ");
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
+        sb.Append(", ");
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
+        sb.Append(", ");
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
+        sb.Append(", ");
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex switch {
+            0 => new object?[] { Item1, Item2, Item3, Item4, Item5, Item6 },
+            1 => new object?[] { Item0, Item2, Item3, Item4, Item5, Item6 },
+            2 => new object?[] { Item0, Item1, Item3, Item4, Item5, Item6 },
+            3 => new object?[] { Item0, Item1, Item2, Item4, Item5, Item6 },
+            4 => new object?[] { Item0, Item1, Item2, Item3, Item5, Item6 },
+            5 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item6 },
+            6 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5 },
+            _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
+        };
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        expectedItemType = _type.ItemTypes[0];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[1];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item1?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[1] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[2];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item2?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[2] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[3];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item3?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[3] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item4?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[4] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[5];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item5?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[5] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[6];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item6?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[6] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => _type.ItemTypes[0],
+            1 => _type.ItemTypes[1],
+            2 => _type.ItemTypes[2],
+            3 => _type.ItemTypes[3],
+            4 => _type.ItemTypes[4],
+            5 => _type.ItemTypes[5],
+            6 => _type.ItemTypes[6],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+    public override T Get1<T>() => Item1 is T value ? value : default!;
+    public override T Get2<T>() => Item2 is T value ? value : default!;
+    public override T Get3<T>() => Item3 is T value ? value : default!;
+    public override T Get4<T>() => Item4 is T value ? value : default!;
+    public override T Get5<T>() => Item5 is T value ? value : default!;
+    public override T Get6<T>() => Item6 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            1 => Item1 is T value ? value : default!,
+            2 => Item2 is T value ? value : default!,
+            3 => Item3 is T value ? value : default!,
+            4 => Item4 is T value ? value : default!,
+            5 => Item5 is T value ? value : default!,
+            6 => Item6 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            1 => Item1,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            2 => Item2,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            3 => Item3,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            4 => Item4,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            5 => Item5,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            6 => Item6,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            1 => Item1 is CancellationToken value ? value : default!,
+            2 => Item2 is CancellationToken value ? value : default!,
+            3 => Item3 is CancellationToken value ? value : default!,
+            4 => Item4 is CancellationToken value ? value : default!,
+            5 => Item5 is CancellationToken value ? value : default!,
+            6 => Item6 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListS7 vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+            _item5 = vOther._item5;
+            _item6 = vOther._item6;
+        }
+        else {
+            _item0 = _type.CastItem(0, other.GetUntyped(0));
+            _item1 = _type.CastItem(1, other.GetUntyped(1));
+            _item2 = _type.CastItem(2, other.GetUntyped(2));
+            _item3 = _type.CastItem(3, other.GetUntyped(3));
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
+            _item5 = _type.CastItem(5, other.GetUntyped(5));
+            _item6 = _type.CastItem(6, other.GetUntyped(6));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 7)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                itemType = type.ItemTypes[0];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
+                itemType = type.ItemTypes[1];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
+                itemType = type.ItemTypes[2];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
+                itemType = type.ItemTypes[3];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
+                itemType = type.ItemTypes[5];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item6")!.GetGetMethod()!);
+                itemType = type.ItemTypes[6];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 7)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item0"), type.ItemTypes[0])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item1"), type.ItemTypes[1])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item2"), type.ItemTypes[2])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item3"), type.ItemTypes[3])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        reader.OnAny(itemTypes[0], _item0, 0);
+        reader.OnAny(itemTypes[1], _item1, 1);
+        reader.OnAny(itemTypes[2], _item2, 2);
+        reader.OnAny(itemTypes[3], _item3, 3);
+        reader.OnAny(itemTypes[4], _item4, 4);
+        reader.OnAny(itemTypes[5], _item5, 5);
+        reader.OnAny(itemTypes[6], _item6, 6);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        _item0 = writer.OnAny(itemTypes[0], 0, defaultValues[0]);
+        _item1 = writer.OnAny(itemTypes[1], 1, defaultValues[1]);
+        _item2 = writer.OnAny(itemTypes[2], 2, defaultValues[2]);
+        _item3 = writer.OnAny(itemTypes[3], 3, defaultValues[3]);
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
+        _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
+        _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListS7? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item6, other.Item6))
+            return false;
+        if (!Equals(Item5, other.Item5))
+            return false;
+        if (!Equals(Item4, other.Item4))
+            return false;
+        if (!Equals(Item3, other.Item3))
+            return false;
+        if (!Equals(Item2, other.Item2))
+            return false;
+        if (!Equals(Item1, other.Item1))
+            return false;
+        if (!Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListS7 vOther)
+            return false;
+
+        if (skipIndex != 6 && !Equals(Item6, vOther.Item6))
+            return false;
+        if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
+            return false;
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
+            return false;
+        if (skipIndex != 3 && !Equals(Item3, vOther.Item3))
+            return false;
+        if (skipIndex != 2 && !Equals(Item2, vOther.Item2))
+            return false;
+        if (skipIndex != 1 && !Equals(Item1, vOther.Item1))
+            return false;
+        if (skipIndex != 0 && !Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item5 is { } item5 ? item5.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item6 is { } item6 ? item6.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : ArgumentList8
+public abstract record ArgumentList8 : ArgumentList
 {
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public override int Length => 8;
+
+    protected static Type?[] CreateNonDefaultItemTypes()
+        => new Type?[8];
+}
+
+public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
+{
+    private readonly ArgumentListType _type;
+
     private T0 _item0;
     private T1 _item1;
     private T2 _item2;
     private T3 _item3;
     private T4 _item4;
-    private T5 _item5;
-    private T6 _item6;
-    private T7 _item7;
+    private object? _item5;
+    private object? _item6;
+    private object? _item7;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
-    public T0 Item0 { get => _item0; init => _item0 = value; }
-    [DataMember(Order = 1), MemoryPackOrder(1)]
-    public T1 Item1 { get => _item1; init => _item1 = value; }
-    [DataMember(Order = 2), MemoryPackOrder(2)]
-    public T2 Item2 { get => _item2; init => _item2 = value; }
-    [DataMember(Order = 3), MemoryPackOrder(3)]
-    public T3 Item3 { get => _item3; init => _item3 = value; }
-    [DataMember(Order = 4), MemoryPackOrder(4)]
-    public T4 Item4 { get => _item4; init => _item4 = value; }
-    [DataMember(Order = 5), MemoryPackOrder(5)]
-    public T5 Item5 { get => _item5; init => _item5 = value; }
-    [DataMember(Order = 6), MemoryPackOrder(6)]
-    public T6 Item6 { get => _item6; init => _item6 = value; }
-    [DataMember(Order = 7), MemoryPackOrder(7)]
-    public T7 Item7 { get => _item7; init => _item7 = value; }
+    public override ArgumentListType Type => _type;
+
+    public T0 Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public T1 Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public T2 Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public T3 Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public T4 Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
+    public object? Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+        init => _item5 = value;
+    }
+    public object? Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+        init => _item6 = value;
+    }
+    public object? Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+        init => _item7 = value;
+    }
 
     // Constructors
 
-    public ArgumentList()
+    public ArgumentListG8(ArgumentListType type)
     {
+        _type = type;
+        var defaultValues = type.DefaultValues;
         _item0 = default!;
         _item1 = default!;
         _item2 = default!;
         _item3 = default!;
         _item4 = default!;
-        _item5 = default!;
-        _item6 = default!;
-        _item7 = default!;
+        _item5 = defaultValues[5];
+        _item6 = defaultValues[6];
+        _item7 = defaultValues[7];
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public ArgumentList(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7)
+    public ArgumentListG8(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, object? item5, object? item6, object? item7)
     {
+        _type = type;
         _item0 = item0;
         _item1 = item1;
         _item2 = item2;
@@ -3743,7 +6681,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>(Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7);
+        => new ArgumentListG8<T0, T1, T2, T3, T4>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7);
 
     // ToString & ToArray
 
@@ -3792,6 +6730,7 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
     {
         var itemTypes = (Type?[]?)null;
         Type? itemType;
+        Type? expectedItemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
             if (itemType != null && itemType != typeof(T0)) {
@@ -3827,23 +6766,26 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
                 itemTypes[4] = itemType;
             }
         }
-        if (!typeof(T5).IsValueType) {
+        expectedItemType = _type.ItemTypes[5];
+        if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != typeof(T5)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
         }
-        if (!typeof(T6).IsValueType) {
+        expectedItemType = _type.ItemTypes[6];
+        if (!expectedItemType.IsValueType) {
             itemType = _item6?.GetType();
-            if (itemType != null && itemType != typeof(T6)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[6] = itemType;
             }
         }
-        if (!typeof(T7).IsValueType) {
+        expectedItemType = _type.ItemTypes[7];
+        if (!expectedItemType.IsValueType) {
             itemType = _item7?.GetType();
-            if (itemType != null && itemType != typeof(T7)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[7] = itemType;
             }
@@ -3860,9 +6802,9 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
             2 => typeof(T2),
             3 => typeof(T3),
             4 => typeof(T4),
-            5 => typeof(T5),
-            6 => typeof(T6),
-            7 => typeof(T7),
+            5 => _type.ItemTypes[5],
+            6 => _type.ItemTypes[6],
+            7 => _type.ItemTypes[7],
             _ => null,
         };
 
@@ -3945,13 +6887,13 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
             _item4 = item is T4 item4 ? item4 : default!;
             break;
         case 5:
-            _item5 = item is T5 item5 ? item5 : default!;
+            _item5 = _type.CastItem(5, item);
             break;
         case 6:
-            _item6 = item is T6 item6 ? item6 : default!;
+            _item6 = _type.CastItem(6, item);
             break;
         case 7:
-            _item7 = item is T7 item7 ? item7 : default!;
+            _item7 = _type.CastItem(7, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -3977,13 +6919,13 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
             _item4 = item is T4 item4 ? item4 : default!;
             break;
         case 5:
-            _item5 = item is T5 item5 ? item5 : default!;
+            _item5 = _type.CastItem(5, item);
             break;
         case 6:
-            _item6 = item is T6 item6 ? item6 : default!;
+            _item6 = _type.CastItem(6, item);
             break;
         case 7:
-            _item7 = item is T7 item7 ? item7 : default!;
+            _item7 = _type.CastItem(7, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -4009,13 +6951,13 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
             _item4 = item is T4 item4 ? item4 : default!;
             break;
         case 5:
-            _item5 = item is T5 item5 ? item5 : default!;
+            _item5 = _type.CastItem(5, item);
             break;
         case 6:
-            _item6 = item is T6 item6 ? item6 : default!;
+            _item6 = _type.CastItem(6, item);
             break;
         case 7:
-            _item7 = item is T7 item7 ? item7 : default!;
+            _item7 = _type.CastItem(7, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -4026,90 +6968,58 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
 
     public override void SetFrom(ArgumentList other)
     {
-        _item0 = other.Get0<T0>();
-        _item1 = other.Get1<T1>();
-        _item2 = other.Get2<T2>();
-        _item3 = other.Get3<T3>();
-        _item4 = other.Get4<T4>();
-        _item5 = other.Get5<T5>();
-        _item6 = other.Get6<T6>();
-        _item7 = other.Get7<T7>();
+        if (other is ArgumentListG8<T0, T1, T2, T3, T4> vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+            _item5 = vOther._item5;
+            _item6 = vOther._item6;
+            _item7 = vOther._item7;
+        }
+        else {
+            _item0 = other.Get0<T0>();
+            _item1 = other.Get1<T1>();
+            _item2 = other.Get2<T2>();
+            _item3 = other.Get3<T3>();
+            _item4 = other.Get4<T4>();
+            _item5 = _type.CastItem(5, other.GetUntyped(5));
+            _item6 = _type.CastItem(6, other.GetUntyped(6));
+            _item7 = _type.CastItem(7, other.GetUntyped(7));
+        }
     }
-
-    // Insert
-
-    public override ArgumentList Insert<T>(int index, T item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7),
-            1 => New(Item0, item, Item1, Item2, Item3, Item4, Item5, Item6, Item7),
-            2 => New(Item0, Item1, item, Item2, Item3, Item4, Item5, Item6, Item7),
-            3 => New(Item0, Item1, Item2, item, Item3, Item4, Item5, Item6, Item7),
-            4 => New(Item0, Item1, Item2, Item3, item, Item4, Item5, Item6, Item7),
-            5 => New(Item0, Item1, Item2, Item3, Item4, item, Item5, Item6, Item7),
-            6 => New(Item0, Item1, Item2, Item3, Item4, Item5, item, Item6, Item7),
-            7 => New(Item0, Item1, Item2, Item3, Item4, Item5, Item6, item, Item7),
-            8 => New(Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    public override ArgumentList InsertCancellationToken(int index, CancellationToken item)
-        => index switch {
-            0 => New(item, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7),
-            1 => New(Item0, item, Item1, Item2, Item3, Item4, Item5, Item6, Item7),
-            2 => New(Item0, Item1, item, Item2, Item3, Item4, Item5, Item6, Item7),
-            3 => New(Item0, Item1, Item2, item, Item3, Item4, Item5, Item6, Item7),
-            4 => New(Item0, Item1, Item2, Item3, item, Item4, Item5, Item6, Item7),
-            5 => New(Item0, Item1, Item2, Item3, Item4, item, Item5, Item6, Item7),
-            6 => New(Item0, Item1, Item2, Item3, Item4, Item5, item, Item6, Item7),
-            7 => New(Item0, Item1, Item2, Item3, Item4, Item5, Item6, item, Item7),
-            8 => New(Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    // Remove
-
-    public override ArgumentList Remove(int index)
-        => index switch {
-            0 => New(Item1, Item2, Item3, Item4, Item5, Item6, Item7),
-            1 => New(Item0, Item2, Item3, Item4, Item5, Item6, Item7),
-            2 => New(Item0, Item1, Item3, Item4, Item5, Item6, Item7),
-            3 => New(Item0, Item1, Item2, Item4, Item5, Item6, Item7),
-            4 => New(Item0, Item1, Item2, Item3, Item5, Item6, Item7),
-            5 => New(Item0, Item1, Item2, Item3, Item4, Item6, Item7),
-            6 => New(Item0, Item1, Item2, Item3, Item4, Item5, Item7),
-            7 => New(Item0, Item1, Item2, Item3, Item4, Item5, Item6),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
 
     // GetInvoker
 
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
-            (GetType(), method),
+            (_type, method),
             RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? static key => { // Dynamic methods
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 8)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[3].ParameterType != typeof(T3))
+                if (parameters[3].ParameterType != type.ItemTypes[3])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[4].ParameterType != typeof(T4))
+                if (parameters[4].ParameterType != type.ItemTypes[4])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[5].ParameterType != typeof(T5))
+                if (parameters[5].ParameterType != type.ItemTypes[5])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[6].ParameterType != typeof(T6))
+                if (parameters[6].ParameterType != type.ItemTypes[6])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[7].ParameterType != typeof(T7))
+                if (parameters[7].ParameterType != type.ItemTypes[7])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
                 var m = new DynamicMethod("_Invoke",
                     typeof(object),
                     new [] { typeof(object), typeof(ArgumentList) },
@@ -4117,9 +7027,9 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
                 var il = m.GetILGenerator();
 
                 // Cast ArgumentList to its actual type
-                il.DeclareLocal(listType);
+                il.DeclareLocal(type.ListType);
                 il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Castclass, type.ListType);
                 il.Emit(OpCodes.Stloc_0);
 
                 // Unbox target
@@ -4129,21 +7039,27 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item5")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
+                itemType = type.ItemTypes[5];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item6")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item6")!.GetGetMethod()!);
+                itemType = type.ItemTypes[6];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item7")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item7")!.GetGetMethod()!);
+                itemType = type.ItemTypes[7];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
                 il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
@@ -4157,34 +7073,34 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
                 return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
             }
             : static key => { // Expression trees
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != 8)
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[0].ParameterType != typeof(T0))
+                if (parameters[0].ParameterType != type.ItemTypes[0])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[1].ParameterType != typeof(T1))
+                if (parameters[1].ParameterType != type.ItemTypes[1])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[2].ParameterType != typeof(T2))
+                if (parameters[2].ParameterType != type.ItemTypes[2])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[3].ParameterType != typeof(T3))
+                if (parameters[3].ParameterType != type.ItemTypes[3])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[4].ParameterType != typeof(T4))
+                if (parameters[4].ParameterType != type.ItemTypes[4])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[5].ParameterType != typeof(T5))
+                if (parameters[5].ParameterType != type.ItemTypes[5])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[6].ParameterType != typeof(T6))
+                if (parameters[6].ParameterType != type.ItemTypes[6])
                     throw new ArgumentOutOfRangeException(nameof(method));
-                if (parameters[7].ParameterType != typeof(T7))
+                if (parameters[7].ParameterType != type.ItemTypes[7])
                     throw new ArgumentOutOfRangeException(nameof(method));
 
                 var pSource = Expression.Parameter(typeof(object), "source");
                 var pList = Expression.Parameter(typeof(ArgumentList), "list");
-                var vList = Expression.Variable(listType, "l");
+                var vList = Expression.Variable(type.ListType, "l");
                 var eBody = Expression.Block(
                     new [] { vList },
                     [
-                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
                         ExpressionExt.ConvertToObject(
                             Expression.Call(
                                 method1.IsStatic
@@ -4196,9 +7112,9 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
                                 , Expression.PropertyOrField(vList, "Item2")
                                 , Expression.PropertyOrField(vList, "Item3")
                                 , Expression.PropertyOrField(vList, "Item4")
-                                , Expression.PropertyOrField(vList, "Item5")
-                                , Expression.PropertyOrField(vList, "Item6")
-                                , Expression.PropertyOrField(vList, "Item7")
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item7"), type.ItemTypes[7])
                                 ))
                     ]);
                 return (Func<object?, ArgumentList, object?>)Expression
@@ -4212,164 +7128,74 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
+        var itemTypes = _type.ItemTypes;
         if (typeof(T0).IsValueType)
             reader.OnStruct(_item0, 0);
         else
-            reader.OnObject(typeof(T0), _item0, 0);
+            reader.OnClass(typeof(T0), _item0, 0);
         if (typeof(T1).IsValueType)
             reader.OnStruct(_item1, 1);
         else
-            reader.OnObject(typeof(T1), _item1, 1);
+            reader.OnClass(typeof(T1), _item1, 1);
         if (typeof(T2).IsValueType)
             reader.OnStruct(_item2, 2);
         else
-            reader.OnObject(typeof(T2), _item2, 2);
+            reader.OnClass(typeof(T2), _item2, 2);
         if (typeof(T3).IsValueType)
             reader.OnStruct(_item3, 3);
         else
-            reader.OnObject(typeof(T3), _item3, 3);
+            reader.OnClass(typeof(T3), _item3, 3);
         if (typeof(T4).IsValueType)
             reader.OnStruct(_item4, 4);
         else
-            reader.OnObject(typeof(T4), _item4, 4);
-        if (typeof(T5).IsValueType)
-            reader.OnStruct(_item5, 5);
-        else
-            reader.OnObject(typeof(T5), _item5, 5);
-        if (typeof(T6).IsValueType)
-            reader.OnStruct(_item6, 6);
-        else
-            reader.OnObject(typeof(T6), _item6, 6);
-        if (typeof(T7).IsValueType)
-            reader.OnStruct(_item7, 7);
-        else
-            reader.OnObject(typeof(T7), _item7, 7);
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Read(ArgumentListReader reader, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            reader.OnStruct(_item0, offset + 0);
-        else
-            reader.OnObject(typeof(T0), _item0, offset + 0);
-        if (typeof(T1).IsValueType)
-            reader.OnStruct(_item1, offset + 1);
-        else
-            reader.OnObject(typeof(T1), _item1, offset + 1);
-        if (typeof(T2).IsValueType)
-            reader.OnStruct(_item2, offset + 2);
-        else
-            reader.OnObject(typeof(T2), _item2, offset + 2);
-        if (typeof(T3).IsValueType)
-            reader.OnStruct(_item3, offset + 3);
-        else
-            reader.OnObject(typeof(T3), _item3, offset + 3);
-        if (typeof(T4).IsValueType)
-            reader.OnStruct(_item4, offset + 4);
-        else
-            reader.OnObject(typeof(T4), _item4, offset + 4);
-        if (typeof(T5).IsValueType)
-            reader.OnStruct(_item5, offset + 5);
-        else
-            reader.OnObject(typeof(T5), _item5, offset + 5);
-        if (typeof(T6).IsValueType)
-            reader.OnStruct(_item6, offset + 6);
-        else
-            reader.OnObject(typeof(T6), _item6, offset + 6);
-        if (typeof(T7).IsValueType)
-            reader.OnStruct(_item7, offset + 7);
-        else
-            reader.OnObject(typeof(T7), _item7, offset + 7);
+            reader.OnClass(typeof(T4), _item4, 4);
+        reader.OnAny(itemTypes[5], _item5, 5);
+        reader.OnAny(itemTypes[6], _item6, 6);
+        reader.OnAny(itemTypes[7], _item7, 7);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
         if (typeof(T0).IsValueType)
             _item0 = writer.OnStruct<T0>(0);
         else
-            _item0 = (T0)writer.OnObject(typeof(T0), 0)!;
+            _item0 = (T0)writer.OnClass(typeof(T0), 0)!;
         if (typeof(T1).IsValueType)
             _item1 = writer.OnStruct<T1>(1);
         else
-            _item1 = (T1)writer.OnObject(typeof(T1), 1)!;
+            _item1 = (T1)writer.OnClass(typeof(T1), 1)!;
         if (typeof(T2).IsValueType)
             _item2 = writer.OnStruct<T2>(2);
         else
-            _item2 = (T2)writer.OnObject(typeof(T2), 2)!;
+            _item2 = (T2)writer.OnClass(typeof(T2), 2)!;
         if (typeof(T3).IsValueType)
             _item3 = writer.OnStruct<T3>(3);
         else
-            _item3 = (T3)writer.OnObject(typeof(T3), 3)!;
+            _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
         if (typeof(T4).IsValueType)
             _item4 = writer.OnStruct<T4>(4);
         else
-            _item4 = (T4)writer.OnObject(typeof(T4), 4)!;
-        if (typeof(T5).IsValueType)
-            _item5 = writer.OnStruct<T5>(5);
-        else
-            _item5 = (T5)writer.OnObject(typeof(T5), 5)!;
-        if (typeof(T6).IsValueType)
-            _item6 = writer.OnStruct<T6>(6);
-        else
-            _item6 = (T6)writer.OnObject(typeof(T6), 6)!;
-        if (typeof(T7).IsValueType)
-            _item7 = writer.OnStruct<T7>(7);
-        else
-            _item7 = (T7)writer.OnObject(typeof(T7), 7)!;
-    }
-
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Write(ArgumentListWriter writer, int offset)
-    {
-        if (typeof(T0).IsValueType)
-            _item0 = writer.OnStruct<T0>(offset + 0);
-        else
-            _item0 = (T0)writer.OnObject(typeof(T0), offset + 0)!;
-        if (typeof(T1).IsValueType)
-            _item1 = writer.OnStruct<T1>(offset + 1);
-        else
-            _item1 = (T1)writer.OnObject(typeof(T1), offset + 1)!;
-        if (typeof(T2).IsValueType)
-            _item2 = writer.OnStruct<T2>(offset + 2);
-        else
-            _item2 = (T2)writer.OnObject(typeof(T2), offset + 2)!;
-        if (typeof(T3).IsValueType)
-            _item3 = writer.OnStruct<T3>(offset + 3);
-        else
-            _item3 = (T3)writer.OnObject(typeof(T3), offset + 3)!;
-        if (typeof(T4).IsValueType)
-            _item4 = writer.OnStruct<T4>(offset + 4);
-        else
-            _item4 = (T4)writer.OnObject(typeof(T4), offset + 4)!;
-        if (typeof(T5).IsValueType)
-            _item5 = writer.OnStruct<T5>(offset + 5);
-        else
-            _item5 = (T5)writer.OnObject(typeof(T5), offset + 5)!;
-        if (typeof(T6).IsValueType)
-            _item6 = writer.OnStruct<T6>(offset + 6);
-        else
-            _item6 = (T6)writer.OnObject(typeof(T6), offset + 6)!;
-        if (typeof(T7).IsValueType)
-            _item7 = writer.OnStruct<T7>(offset + 7);
-        else
-            _item7 = (T7)writer.OnObject(typeof(T7), offset + 7)!;
+            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
+        _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
+        _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
+        _item7 = writer.OnAny(itemTypes[7], 7, defaultValues[7]);
     }
 
     // Equality
 
-    public bool Equals(ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7>? other)
+    public bool Equals(ArgumentListG8<T0, T1, T2, T3, T4>? other)
     {
         if (other == null)
             return false;
 
-        if (!EqualityComparer<T7>.Default.Equals(Item7, other.Item7))
+        if (!Equals(Item7, other.Item7))
             return false;
-        if (!EqualityComparer<T6>.Default.Equals(Item6, other.Item6))
+        if (!Equals(Item6, other.Item6))
             return false;
-        if (!EqualityComparer<T5>.Default.Equals(Item5, other.Item5))
+        if (!Equals(Item5, other.Item5))
             return false;
         if (!EqualityComparer<T4>.Default.Equals(Item4, other.Item4))
             return false;
@@ -4386,14 +7212,14 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> vOther)
+        if (other is not ArgumentListG8<T0, T1, T2, T3, T4> vOther)
             return false;
 
-        if (skipIndex != 7 && !EqualityComparer<T7>.Default.Equals(Item7, vOther.Item7))
+        if (skipIndex != 7 && !Equals(Item7, vOther.Item7))
             return false;
-        if (skipIndex != 6 && !EqualityComparer<T6>.Default.Equals(Item6, vOther.Item6))
+        if (skipIndex != 6 && !Equals(Item6, vOther.Item6))
             return false;
-        if (skipIndex != 5 && !EqualityComparer<T5>.Default.Equals(Item5, vOther.Item5))
+        if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
             return false;
         if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
             return false;
@@ -4411,14 +7237,22 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
     public override int GetHashCode()
     {
         unchecked {
-            var hashCode = EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + EqualityComparer<T1>.Default.GetHashCode(Item1!);
-            hashCode = 397*hashCode + EqualityComparer<T2>.Default.GetHashCode(Item2!);
-            hashCode = 397*hashCode + EqualityComparer<T3>.Default.GetHashCode(Item3!);
-            hashCode = 397*hashCode + EqualityComparer<T4>.Default.GetHashCode(Item4!);
-            hashCode = 397*hashCode + EqualityComparer<T5>.Default.GetHashCode(Item5!);
-            hashCode = 397*hashCode + EqualityComparer<T6>.Default.GetHashCode(Item6!);
-            hashCode = 397*hashCode + EqualityComparer<T7>.Default.GetHashCode(Item7!);
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item5 is { } item5 ? item5.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item6 is { } item6 ? item6.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item7 is { } item7 ? item7.GetHashCode() : 0);
             return hashCode;
         }
     }
@@ -4426,14 +7260,3765 @@ public sealed partial record ArgumentList<T0, T1, T2, T3, T4, T5, T6, T7> : Argu
     public override int GetHashCode(int skipIndex)
     {
         unchecked {
-            var hashCode = skipIndex == 0 ? 0 : EqualityComparer<T0>.Default.GetHashCode(Item0!);
-            hashCode = 397*hashCode + (skipIndex == 1 ? 0 : EqualityComparer<T1>.Default.GetHashCode(Item1!));
-            hashCode = 397*hashCode + (skipIndex == 2 ? 0 : EqualityComparer<T2>.Default.GetHashCode(Item2!));
-            hashCode = 397*hashCode + (skipIndex == 3 ? 0 : EqualityComparer<T3>.Default.GetHashCode(Item3!));
-            hashCode = 397*hashCode + (skipIndex == 4 ? 0 : EqualityComparer<T4>.Default.GetHashCode(Item4!));
-            hashCode = 397*hashCode + (skipIndex == 5 ? 0 : EqualityComparer<T5>.Default.GetHashCode(Item5!));
-            hashCode = 397*hashCode + (skipIndex == 6 ? 0 : EqualityComparer<T6>.Default.GetHashCode(Item6!));
-            hashCode = 397*hashCode + (skipIndex == 7 ? 0 : EqualityComparer<T7>.Default.GetHashCode(Item7!));
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
+}
+
+public sealed record ArgumentListS8 : ArgumentList8
+{
+    private readonly ArgumentListType _type;
+
+    private object? _item0;
+    private object? _item1;
+    private object? _item2;
+    private object? _item3;
+    private object? _item4;
+    private object? _item5;
+    private object? _item6;
+    private object? _item7;
+
+    public override ArgumentListType Type => _type;
+
+    public object? Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public object? Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public object? Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public object? Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public object? Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
+    public object? Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+        init => _item5 = value;
+    }
+    public object? Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+        init => _item6 = value;
+    }
+    public object? Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+        init => _item7 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListS8(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = defaultValues[0];
+        _item1 = defaultValues[1];
+        _item2 = defaultValues[2];
+        _item3 = defaultValues[3];
+        _item4 = defaultValues[4];
+        _item5 = defaultValues[5];
+        _item6 = defaultValues[6];
+        _item7 = defaultValues[7];
+    }
+
+    public ArgumentListS8(ArgumentListType type, object? item0, object? item1, object? item2, object? item3, object? item4, object? item5, object? item6, object? item7)
+    {
+        _type = type;
+        _item0 = item0;
+        _item1 = item1;
+        _item2 = item2;
+        _item3 = item3;
+        _item4 = item4;
+        _item5 = item5;
+        _item6 = item6;
+        _item7 = item7;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListS8(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(", ");
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
+        sb.Append(", ");
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
+        sb.Append(", ");
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
+        sb.Append(", ");
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
+        sb.Append(", ");
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
+        sb.Append(", ");
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
+        sb.Append(", ");
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex switch {
+            0 => new object?[] { Item1, Item2, Item3, Item4, Item5, Item6, Item7 },
+            1 => new object?[] { Item0, Item2, Item3, Item4, Item5, Item6, Item7 },
+            2 => new object?[] { Item0, Item1, Item3, Item4, Item5, Item6, Item7 },
+            3 => new object?[] { Item0, Item1, Item2, Item4, Item5, Item6, Item7 },
+            4 => new object?[] { Item0, Item1, Item2, Item3, Item5, Item6, Item7 },
+            5 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item6, Item7 },
+            6 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item7 },
+            7 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6 },
+            _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
+        };
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        expectedItemType = _type.ItemTypes[0];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[1];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item1?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[1] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[2];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item2?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[2] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[3];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item3?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[3] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item4?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[4] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[5];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item5?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[5] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[6];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item6?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[6] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[7];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item7?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[7] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => _type.ItemTypes[0],
+            1 => _type.ItemTypes[1],
+            2 => _type.ItemTypes[2],
+            3 => _type.ItemTypes[3],
+            4 => _type.ItemTypes[4],
+            5 => _type.ItemTypes[5],
+            6 => _type.ItemTypes[6],
+            7 => _type.ItemTypes[7],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+    public override T Get1<T>() => Item1 is T value ? value : default!;
+    public override T Get2<T>() => Item2 is T value ? value : default!;
+    public override T Get3<T>() => Item3 is T value ? value : default!;
+    public override T Get4<T>() => Item4 is T value ? value : default!;
+    public override T Get5<T>() => Item5 is T value ? value : default!;
+    public override T Get6<T>() => Item6 is T value ? value : default!;
+    public override T Get7<T>() => Item7 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            1 => Item1 is T value ? value : default!,
+            2 => Item2 is T value ? value : default!,
+            3 => Item3 is T value ? value : default!,
+            4 => Item4 is T value ? value : default!,
+            5 => Item5 is T value ? value : default!,
+            6 => Item6 is T value ? value : default!,
+            7 => Item7 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            1 => Item1,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            2 => Item2,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            3 => Item3,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            4 => Item4,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            5 => Item5,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            6 => Item6,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            7 => Item7,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            1 => Item1 is CancellationToken value ? value : default!,
+            2 => Item2 is CancellationToken value ? value : default!,
+            3 => Item3 is CancellationToken value ? value : default!,
+            4 => Item4 is CancellationToken value ? value : default!,
+            5 => Item5 is CancellationToken value ? value : default!,
+            6 => Item6 is CancellationToken value ? value : default!,
+            7 => Item7 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListS8 vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+            _item5 = vOther._item5;
+            _item6 = vOther._item6;
+            _item7 = vOther._item7;
+        }
+        else {
+            _item0 = _type.CastItem(0, other.GetUntyped(0));
+            _item1 = _type.CastItem(1, other.GetUntyped(1));
+            _item2 = _type.CastItem(2, other.GetUntyped(2));
+            _item3 = _type.CastItem(3, other.GetUntyped(3));
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
+            _item5 = _type.CastItem(5, other.GetUntyped(5));
+            _item6 = _type.CastItem(6, other.GetUntyped(6));
+            _item7 = _type.CastItem(7, other.GetUntyped(7));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 8)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != type.ItemTypes[7])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                itemType = type.ItemTypes[0];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
+                itemType = type.ItemTypes[1];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
+                itemType = type.ItemTypes[2];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
+                itemType = type.ItemTypes[3];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
+                itemType = type.ItemTypes[5];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item6")!.GetGetMethod()!);
+                itemType = type.ItemTypes[6];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item7")!.GetGetMethod()!);
+                itemType = type.ItemTypes[7];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 8)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != type.ItemTypes[7])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item0"), type.ItemTypes[0])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item1"), type.ItemTypes[1])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item2"), type.ItemTypes[2])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item3"), type.ItemTypes[3])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item7"), type.ItemTypes[7])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        reader.OnAny(itemTypes[0], _item0, 0);
+        reader.OnAny(itemTypes[1], _item1, 1);
+        reader.OnAny(itemTypes[2], _item2, 2);
+        reader.OnAny(itemTypes[3], _item3, 3);
+        reader.OnAny(itemTypes[4], _item4, 4);
+        reader.OnAny(itemTypes[5], _item5, 5);
+        reader.OnAny(itemTypes[6], _item6, 6);
+        reader.OnAny(itemTypes[7], _item7, 7);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        _item0 = writer.OnAny(itemTypes[0], 0, defaultValues[0]);
+        _item1 = writer.OnAny(itemTypes[1], 1, defaultValues[1]);
+        _item2 = writer.OnAny(itemTypes[2], 2, defaultValues[2]);
+        _item3 = writer.OnAny(itemTypes[3], 3, defaultValues[3]);
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
+        _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
+        _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
+        _item7 = writer.OnAny(itemTypes[7], 7, defaultValues[7]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListS8? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item7, other.Item7))
+            return false;
+        if (!Equals(Item6, other.Item6))
+            return false;
+        if (!Equals(Item5, other.Item5))
+            return false;
+        if (!Equals(Item4, other.Item4))
+            return false;
+        if (!Equals(Item3, other.Item3))
+            return false;
+        if (!Equals(Item2, other.Item2))
+            return false;
+        if (!Equals(Item1, other.Item1))
+            return false;
+        if (!Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListS8 vOther)
+            return false;
+
+        if (skipIndex != 7 && !Equals(Item7, vOther.Item7))
+            return false;
+        if (skipIndex != 6 && !Equals(Item6, vOther.Item6))
+            return false;
+        if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
+            return false;
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
+            return false;
+        if (skipIndex != 3 && !Equals(Item3, vOther.Item3))
+            return false;
+        if (skipIndex != 2 && !Equals(Item2, vOther.Item2))
+            return false;
+        if (skipIndex != 1 && !Equals(Item1, vOther.Item1))
+            return false;
+        if (skipIndex != 0 && !Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item5 is { } item5 ? item5.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item6 is { } item6 ? item6.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item7 is { } item7 ? item7.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
+}
+
+public abstract record ArgumentList9 : ArgumentList
+{
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public override int Length => 9;
+
+    protected static Type?[] CreateNonDefaultItemTypes()
+        => new Type?[9];
+}
+
+public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
+{
+    private readonly ArgumentListType _type;
+
+    private T0 _item0;
+    private T1 _item1;
+    private T2 _item2;
+    private T3 _item3;
+    private T4 _item4;
+    private object? _item5;
+    private object? _item6;
+    private object? _item7;
+    private object? _item8;
+
+    public override ArgumentListType Type => _type;
+
+    public T0 Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public T1 Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public T2 Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public T3 Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public T4 Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
+    public object? Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+        init => _item5 = value;
+    }
+    public object? Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+        init => _item6 = value;
+    }
+    public object? Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+        init => _item7 = value;
+    }
+    public object? Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+        init => _item8 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListG9(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = default!;
+        _item1 = default!;
+        _item2 = default!;
+        _item3 = default!;
+        _item4 = default!;
+        _item5 = defaultValues[5];
+        _item6 = defaultValues[6];
+        _item7 = defaultValues[7];
+        _item8 = defaultValues[8];
+    }
+
+    public ArgumentListG9(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, object? item5, object? item6, object? item7, object? item8)
+    {
+        _type = type;
+        _item0 = item0;
+        _item1 = item1;
+        _item2 = item2;
+        _item3 = item3;
+        _item4 = item4;
+        _item5 = item5;
+        _item6 = item6;
+        _item7 = item7;
+        _item8 = item8;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListG9<T0, T1, T2, T3, T4>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(", ");
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
+        sb.Append(", ");
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
+        sb.Append(", ");
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
+        sb.Append(", ");
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
+        sb.Append(", ");
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
+        sb.Append(", ");
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
+        sb.Append(", ");
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
+        sb.Append(", ");
+        sb.Append(Item8 is CancellationToken ct8 ? ct8.Format() : Item8);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex switch {
+            0 => new object?[] { Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8 },
+            1 => new object?[] { Item0, Item2, Item3, Item4, Item5, Item6, Item7, Item8 },
+            2 => new object?[] { Item0, Item1, Item3, Item4, Item5, Item6, Item7, Item8 },
+            3 => new object?[] { Item0, Item1, Item2, Item4, Item5, Item6, Item7, Item8 },
+            4 => new object?[] { Item0, Item1, Item2, Item3, Item5, Item6, Item7, Item8 },
+            5 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item6, Item7, Item8 },
+            6 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item7, Item8 },
+            7 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item8 },
+            8 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7 },
+            _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
+        };
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        if (!typeof(T0).IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != typeof(T0)) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        if (!typeof(T1).IsValueType) {
+            itemType = _item1?.GetType();
+            if (itemType != null && itemType != typeof(T1)) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[1] = itemType;
+            }
+        }
+        if (!typeof(T2).IsValueType) {
+            itemType = _item2?.GetType();
+            if (itemType != null && itemType != typeof(T2)) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[2] = itemType;
+            }
+        }
+        if (!typeof(T3).IsValueType) {
+            itemType = _item3?.GetType();
+            if (itemType != null && itemType != typeof(T3)) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[3] = itemType;
+            }
+        }
+        if (!typeof(T4).IsValueType) {
+            itemType = _item4?.GetType();
+            if (itemType != null && itemType != typeof(T4)) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[4] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[5];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item5?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[5] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[6];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item6?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[6] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[7];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item7?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[7] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[8];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item8?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[8] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => typeof(T0),
+            1 => typeof(T1),
+            2 => typeof(T2),
+            3 => typeof(T3),
+            4 => typeof(T4),
+            5 => _type.ItemTypes[5],
+            6 => _type.ItemTypes[6],
+            7 => _type.ItemTypes[7],
+            8 => _type.ItemTypes[8],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+    public override T Get1<T>() => Item1 is T value ? value : default!;
+    public override T Get2<T>() => Item2 is T value ? value : default!;
+    public override T Get3<T>() => Item3 is T value ? value : default!;
+    public override T Get4<T>() => Item4 is T value ? value : default!;
+    public override T Get5<T>() => Item5 is T value ? value : default!;
+    public override T Get6<T>() => Item6 is T value ? value : default!;
+    public override T Get7<T>() => Item7 is T value ? value : default!;
+    public override T Get8<T>() => Item8 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            1 => Item1 is T value ? value : default!,
+            2 => Item2 is T value ? value : default!,
+            3 => Item3 is T value ? value : default!,
+            4 => Item4 is T value ? value : default!,
+            5 => Item5 is T value ? value : default!,
+            6 => Item6 is T value ? value : default!,
+            7 => Item7 is T value ? value : default!,
+            8 => Item8 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            1 => Item1,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            2 => Item2,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            3 => Item3,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            4 => Item4,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            5 => Item5,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            6 => Item6,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            7 => Item7,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            8 => Item8,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            1 => Item1 is CancellationToken value ? value : default!,
+            2 => Item2 is CancellationToken value ? value : default!,
+            3 => Item3 is CancellationToken value ? value : default!,
+            4 => Item4 is CancellationToken value ? value : default!,
+            5 => Item5 is CancellationToken value ? value : default!,
+            6 => Item6 is CancellationToken value ? value : default!,
+            7 => Item7 is CancellationToken value ? value : default!,
+            8 => Item8 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = item is T0 item0 ? item0 : default!;
+            break;
+        case 1:
+            _item1 = item is T1 item1 ? item1 : default!;
+            break;
+        case 2:
+            _item2 = item is T2 item2 ? item2 : default!;
+            break;
+        case 3:
+            _item3 = item is T3 item3 ? item3 : default!;
+            break;
+        case 4:
+            _item4 = item is T4 item4 ? item4 : default!;
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = item is T0 item0 ? item0 : default!;
+            break;
+        case 1:
+            _item1 = item is T1 item1 ? item1 : default!;
+            break;
+        case 2:
+            _item2 = item is T2 item2 ? item2 : default!;
+            break;
+        case 3:
+            _item3 = item is T3 item3 ? item3 : default!;
+            break;
+        case 4:
+            _item4 = item is T4 item4 ? item4 : default!;
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = item is T0 item0 ? item0 : default!;
+            break;
+        case 1:
+            _item1 = item is T1 item1 ? item1 : default!;
+            break;
+        case 2:
+            _item2 = item is T2 item2 ? item2 : default!;
+            break;
+        case 3:
+            _item3 = item is T3 item3 ? item3 : default!;
+            break;
+        case 4:
+            _item4 = item is T4 item4 ? item4 : default!;
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListG9<T0, T1, T2, T3, T4> vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+            _item5 = vOther._item5;
+            _item6 = vOther._item6;
+            _item7 = vOther._item7;
+            _item8 = vOther._item8;
+        }
+        else {
+            _item0 = other.Get0<T0>();
+            _item1 = other.Get1<T1>();
+            _item2 = other.Get2<T2>();
+            _item3 = other.Get3<T3>();
+            _item4 = other.Get4<T4>();
+            _item5 = _type.CastItem(5, other.GetUntyped(5));
+            _item6 = _type.CastItem(6, other.GetUntyped(6));
+            _item7 = _type.CastItem(7, other.GetUntyped(7));
+            _item8 = _type.CastItem(8, other.GetUntyped(8));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 9)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != type.ItemTypes[7])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != type.ItemTypes[8])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
+                itemType = type.ItemTypes[5];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item6")!.GetGetMethod()!);
+                itemType = type.ItemTypes[6];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item7")!.GetGetMethod()!);
+                itemType = type.ItemTypes[7];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item8")!.GetGetMethod()!);
+                itemType = type.ItemTypes[8];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 9)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != type.ItemTypes[7])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != type.ItemTypes[8])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                , Expression.PropertyOrField(vList, "Item1")
+                                , Expression.PropertyOrField(vList, "Item2")
+                                , Expression.PropertyOrField(vList, "Item3")
+                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item7"), type.ItemTypes[7])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item8"), type.ItemTypes[8])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        if (typeof(T0).IsValueType)
+            reader.OnStruct(_item0, 0);
+        else
+            reader.OnClass(typeof(T0), _item0, 0);
+        if (typeof(T1).IsValueType)
+            reader.OnStruct(_item1, 1);
+        else
+            reader.OnClass(typeof(T1), _item1, 1);
+        if (typeof(T2).IsValueType)
+            reader.OnStruct(_item2, 2);
+        else
+            reader.OnClass(typeof(T2), _item2, 2);
+        if (typeof(T3).IsValueType)
+            reader.OnStruct(_item3, 3);
+        else
+            reader.OnClass(typeof(T3), _item3, 3);
+        if (typeof(T4).IsValueType)
+            reader.OnStruct(_item4, 4);
+        else
+            reader.OnClass(typeof(T4), _item4, 4);
+        reader.OnAny(itemTypes[5], _item5, 5);
+        reader.OnAny(itemTypes[6], _item6, 6);
+        reader.OnAny(itemTypes[7], _item7, 7);
+        reader.OnAny(itemTypes[8], _item8, 8);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        if (typeof(T0).IsValueType)
+            _item0 = writer.OnStruct<T0>(0);
+        else
+            _item0 = (T0)writer.OnClass(typeof(T0), 0)!;
+        if (typeof(T1).IsValueType)
+            _item1 = writer.OnStruct<T1>(1);
+        else
+            _item1 = (T1)writer.OnClass(typeof(T1), 1)!;
+        if (typeof(T2).IsValueType)
+            _item2 = writer.OnStruct<T2>(2);
+        else
+            _item2 = (T2)writer.OnClass(typeof(T2), 2)!;
+        if (typeof(T3).IsValueType)
+            _item3 = writer.OnStruct<T3>(3);
+        else
+            _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
+        if (typeof(T4).IsValueType)
+            _item4 = writer.OnStruct<T4>(4);
+        else
+            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
+        _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
+        _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
+        _item7 = writer.OnAny(itemTypes[7], 7, defaultValues[7]);
+        _item8 = writer.OnAny(itemTypes[8], 8, defaultValues[8]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListG9<T0, T1, T2, T3, T4>? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item8, other.Item8))
+            return false;
+        if (!Equals(Item7, other.Item7))
+            return false;
+        if (!Equals(Item6, other.Item6))
+            return false;
+        if (!Equals(Item5, other.Item5))
+            return false;
+        if (!EqualityComparer<T4>.Default.Equals(Item4, other.Item4))
+            return false;
+        if (!EqualityComparer<T3>.Default.Equals(Item3, other.Item3))
+            return false;
+        if (!EqualityComparer<T2>.Default.Equals(Item2, other.Item2))
+            return false;
+        if (!EqualityComparer<T1>.Default.Equals(Item1, other.Item1))
+            return false;
+        if (!EqualityComparer<T0>.Default.Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListG9<T0, T1, T2, T3, T4> vOther)
+            return false;
+
+        if (skipIndex != 8 && !Equals(Item8, vOther.Item8))
+            return false;
+        if (skipIndex != 7 && !Equals(Item7, vOther.Item7))
+            return false;
+        if (skipIndex != 6 && !Equals(Item6, vOther.Item6))
+            return false;
+        if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
+            return false;
+        if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
+            return false;
+        if (skipIndex != 3 && !EqualityComparer<T3>.Default.Equals(Item3, vOther.Item3))
+            return false;
+        if (skipIndex != 2 && !EqualityComparer<T2>.Default.Equals(Item2, vOther.Item2))
+            return false;
+        if (skipIndex != 1 && !EqualityComparer<T1>.Default.Equals(Item1, vOther.Item1))
+            return false;
+        if (skipIndex != 0 && !EqualityComparer<T0>.Default.Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item5 is { } item5 ? item5.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item6 is { } item6 ? item6.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item7 is { } item7 ? item7.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item8 is { } item8 ? item8.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 8 ? 0 : (Item8 is { } item8 ? item8.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
+}
+
+public sealed record ArgumentListS9 : ArgumentList9
+{
+    private readonly ArgumentListType _type;
+
+    private object? _item0;
+    private object? _item1;
+    private object? _item2;
+    private object? _item3;
+    private object? _item4;
+    private object? _item5;
+    private object? _item6;
+    private object? _item7;
+    private object? _item8;
+
+    public override ArgumentListType Type => _type;
+
+    public object? Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public object? Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public object? Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public object? Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public object? Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
+    public object? Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+        init => _item5 = value;
+    }
+    public object? Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+        init => _item6 = value;
+    }
+    public object? Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+        init => _item7 = value;
+    }
+    public object? Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+        init => _item8 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListS9(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = defaultValues[0];
+        _item1 = defaultValues[1];
+        _item2 = defaultValues[2];
+        _item3 = defaultValues[3];
+        _item4 = defaultValues[4];
+        _item5 = defaultValues[5];
+        _item6 = defaultValues[6];
+        _item7 = defaultValues[7];
+        _item8 = defaultValues[8];
+    }
+
+    public ArgumentListS9(ArgumentListType type, object? item0, object? item1, object? item2, object? item3, object? item4, object? item5, object? item6, object? item7, object? item8)
+    {
+        _type = type;
+        _item0 = item0;
+        _item1 = item1;
+        _item2 = item2;
+        _item3 = item3;
+        _item4 = item4;
+        _item5 = item5;
+        _item6 = item6;
+        _item7 = item7;
+        _item8 = item8;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListS9(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(", ");
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
+        sb.Append(", ");
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
+        sb.Append(", ");
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
+        sb.Append(", ");
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
+        sb.Append(", ");
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
+        sb.Append(", ");
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
+        sb.Append(", ");
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
+        sb.Append(", ");
+        sb.Append(Item8 is CancellationToken ct8 ? ct8.Format() : Item8);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex switch {
+            0 => new object?[] { Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8 },
+            1 => new object?[] { Item0, Item2, Item3, Item4, Item5, Item6, Item7, Item8 },
+            2 => new object?[] { Item0, Item1, Item3, Item4, Item5, Item6, Item7, Item8 },
+            3 => new object?[] { Item0, Item1, Item2, Item4, Item5, Item6, Item7, Item8 },
+            4 => new object?[] { Item0, Item1, Item2, Item3, Item5, Item6, Item7, Item8 },
+            5 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item6, Item7, Item8 },
+            6 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item7, Item8 },
+            7 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item8 },
+            8 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7 },
+            _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
+        };
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        expectedItemType = _type.ItemTypes[0];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[1];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item1?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[1] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[2];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item2?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[2] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[3];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item3?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[3] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item4?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[4] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[5];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item5?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[5] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[6];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item6?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[6] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[7];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item7?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[7] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[8];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item8?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[8] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => _type.ItemTypes[0],
+            1 => _type.ItemTypes[1],
+            2 => _type.ItemTypes[2],
+            3 => _type.ItemTypes[3],
+            4 => _type.ItemTypes[4],
+            5 => _type.ItemTypes[5],
+            6 => _type.ItemTypes[6],
+            7 => _type.ItemTypes[7],
+            8 => _type.ItemTypes[8],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+    public override T Get1<T>() => Item1 is T value ? value : default!;
+    public override T Get2<T>() => Item2 is T value ? value : default!;
+    public override T Get3<T>() => Item3 is T value ? value : default!;
+    public override T Get4<T>() => Item4 is T value ? value : default!;
+    public override T Get5<T>() => Item5 is T value ? value : default!;
+    public override T Get6<T>() => Item6 is T value ? value : default!;
+    public override T Get7<T>() => Item7 is T value ? value : default!;
+    public override T Get8<T>() => Item8 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            1 => Item1 is T value ? value : default!,
+            2 => Item2 is T value ? value : default!,
+            3 => Item3 is T value ? value : default!,
+            4 => Item4 is T value ? value : default!,
+            5 => Item5 is T value ? value : default!,
+            6 => Item6 is T value ? value : default!,
+            7 => Item7 is T value ? value : default!,
+            8 => Item8 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            1 => Item1,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            2 => Item2,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            3 => Item3,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            4 => Item4,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            5 => Item5,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            6 => Item6,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            7 => Item7,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            8 => Item8,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            1 => Item1 is CancellationToken value ? value : default!,
+            2 => Item2 is CancellationToken value ? value : default!,
+            3 => Item3 is CancellationToken value ? value : default!,
+            4 => Item4 is CancellationToken value ? value : default!,
+            5 => Item5 is CancellationToken value ? value : default!,
+            6 => Item6 is CancellationToken value ? value : default!,
+            7 => Item7 is CancellationToken value ? value : default!,
+            8 => Item8 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListS9 vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+            _item5 = vOther._item5;
+            _item6 = vOther._item6;
+            _item7 = vOther._item7;
+            _item8 = vOther._item8;
+        }
+        else {
+            _item0 = _type.CastItem(0, other.GetUntyped(0));
+            _item1 = _type.CastItem(1, other.GetUntyped(1));
+            _item2 = _type.CastItem(2, other.GetUntyped(2));
+            _item3 = _type.CastItem(3, other.GetUntyped(3));
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
+            _item5 = _type.CastItem(5, other.GetUntyped(5));
+            _item6 = _type.CastItem(6, other.GetUntyped(6));
+            _item7 = _type.CastItem(7, other.GetUntyped(7));
+            _item8 = _type.CastItem(8, other.GetUntyped(8));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 9)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != type.ItemTypes[7])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != type.ItemTypes[8])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                itemType = type.ItemTypes[0];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
+                itemType = type.ItemTypes[1];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
+                itemType = type.ItemTypes[2];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
+                itemType = type.ItemTypes[3];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
+                itemType = type.ItemTypes[5];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item6")!.GetGetMethod()!);
+                itemType = type.ItemTypes[6];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item7")!.GetGetMethod()!);
+                itemType = type.ItemTypes[7];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item8")!.GetGetMethod()!);
+                itemType = type.ItemTypes[8];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 9)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != type.ItemTypes[7])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != type.ItemTypes[8])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item0"), type.ItemTypes[0])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item1"), type.ItemTypes[1])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item2"), type.ItemTypes[2])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item3"), type.ItemTypes[3])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item7"), type.ItemTypes[7])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item8"), type.ItemTypes[8])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        reader.OnAny(itemTypes[0], _item0, 0);
+        reader.OnAny(itemTypes[1], _item1, 1);
+        reader.OnAny(itemTypes[2], _item2, 2);
+        reader.OnAny(itemTypes[3], _item3, 3);
+        reader.OnAny(itemTypes[4], _item4, 4);
+        reader.OnAny(itemTypes[5], _item5, 5);
+        reader.OnAny(itemTypes[6], _item6, 6);
+        reader.OnAny(itemTypes[7], _item7, 7);
+        reader.OnAny(itemTypes[8], _item8, 8);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        _item0 = writer.OnAny(itemTypes[0], 0, defaultValues[0]);
+        _item1 = writer.OnAny(itemTypes[1], 1, defaultValues[1]);
+        _item2 = writer.OnAny(itemTypes[2], 2, defaultValues[2]);
+        _item3 = writer.OnAny(itemTypes[3], 3, defaultValues[3]);
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
+        _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
+        _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
+        _item7 = writer.OnAny(itemTypes[7], 7, defaultValues[7]);
+        _item8 = writer.OnAny(itemTypes[8], 8, defaultValues[8]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListS9? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item8, other.Item8))
+            return false;
+        if (!Equals(Item7, other.Item7))
+            return false;
+        if (!Equals(Item6, other.Item6))
+            return false;
+        if (!Equals(Item5, other.Item5))
+            return false;
+        if (!Equals(Item4, other.Item4))
+            return false;
+        if (!Equals(Item3, other.Item3))
+            return false;
+        if (!Equals(Item2, other.Item2))
+            return false;
+        if (!Equals(Item1, other.Item1))
+            return false;
+        if (!Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListS9 vOther)
+            return false;
+
+        if (skipIndex != 8 && !Equals(Item8, vOther.Item8))
+            return false;
+        if (skipIndex != 7 && !Equals(Item7, vOther.Item7))
+            return false;
+        if (skipIndex != 6 && !Equals(Item6, vOther.Item6))
+            return false;
+        if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
+            return false;
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
+            return false;
+        if (skipIndex != 3 && !Equals(Item3, vOther.Item3))
+            return false;
+        if (skipIndex != 2 && !Equals(Item2, vOther.Item2))
+            return false;
+        if (skipIndex != 1 && !Equals(Item1, vOther.Item1))
+            return false;
+        if (skipIndex != 0 && !Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item5 is { } item5 ? item5.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item6 is { } item6 ? item6.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item7 is { } item7 ? item7.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item8 is { } item8 ? item8.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 8 ? 0 : (Item8 is { } item8 ? item8.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
+}
+
+public abstract record ArgumentList10 : ArgumentList
+{
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public override int Length => 10;
+
+    protected static Type?[] CreateNonDefaultItemTypes()
+        => new Type?[10];
+}
+
+public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
+{
+    private readonly ArgumentListType _type;
+
+    private T0 _item0;
+    private T1 _item1;
+    private T2 _item2;
+    private T3 _item3;
+    private T4 _item4;
+    private object? _item5;
+    private object? _item6;
+    private object? _item7;
+    private object? _item8;
+    private object? _item9;
+
+    public override ArgumentListType Type => _type;
+
+    public T0 Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public T1 Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public T2 Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public T3 Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public T4 Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
+    public object? Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+        init => _item5 = value;
+    }
+    public object? Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+        init => _item6 = value;
+    }
+    public object? Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+        init => _item7 = value;
+    }
+    public object? Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+        init => _item8 = value;
+    }
+    public object? Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item9;
+        init => _item9 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListG10(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = default!;
+        _item1 = default!;
+        _item2 = default!;
+        _item3 = default!;
+        _item4 = default!;
+        _item5 = defaultValues[5];
+        _item6 = defaultValues[6];
+        _item7 = defaultValues[7];
+        _item8 = defaultValues[8];
+        _item9 = defaultValues[9];
+    }
+
+    public ArgumentListG10(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, object? item5, object? item6, object? item7, object? item8, object? item9)
+    {
+        _type = type;
+        _item0 = item0;
+        _item1 = item1;
+        _item2 = item2;
+        _item3 = item3;
+        _item4 = item4;
+        _item5 = item5;
+        _item6 = item6;
+        _item7 = item7;
+        _item8 = item8;
+        _item9 = item9;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListG10<T0, T1, T2, T3, T4>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8, Item9);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(", ");
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
+        sb.Append(", ");
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
+        sb.Append(", ");
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
+        sb.Append(", ");
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
+        sb.Append(", ");
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
+        sb.Append(", ");
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
+        sb.Append(", ");
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
+        sb.Append(", ");
+        sb.Append(Item8 is CancellationToken ct8 ? ct8.Format() : Item8);
+        sb.Append(", ");
+        sb.Append(Item9 is CancellationToken ct9 ? ct9.Format() : Item9);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8, Item9 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex switch {
+            0 => new object?[] { Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8, Item9 },
+            1 => new object?[] { Item0, Item2, Item3, Item4, Item5, Item6, Item7, Item8, Item9 },
+            2 => new object?[] { Item0, Item1, Item3, Item4, Item5, Item6, Item7, Item8, Item9 },
+            3 => new object?[] { Item0, Item1, Item2, Item4, Item5, Item6, Item7, Item8, Item9 },
+            4 => new object?[] { Item0, Item1, Item2, Item3, Item5, Item6, Item7, Item8, Item9 },
+            5 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item6, Item7, Item8, Item9 },
+            6 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item7, Item8, Item9 },
+            7 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item8, Item9 },
+            8 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item9 },
+            9 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8 },
+            _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
+        };
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        if (!typeof(T0).IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != typeof(T0)) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        if (!typeof(T1).IsValueType) {
+            itemType = _item1?.GetType();
+            if (itemType != null && itemType != typeof(T1)) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[1] = itemType;
+            }
+        }
+        if (!typeof(T2).IsValueType) {
+            itemType = _item2?.GetType();
+            if (itemType != null && itemType != typeof(T2)) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[2] = itemType;
+            }
+        }
+        if (!typeof(T3).IsValueType) {
+            itemType = _item3?.GetType();
+            if (itemType != null && itemType != typeof(T3)) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[3] = itemType;
+            }
+        }
+        if (!typeof(T4).IsValueType) {
+            itemType = _item4?.GetType();
+            if (itemType != null && itemType != typeof(T4)) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[4] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[5];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item5?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[5] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[6];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item6?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[6] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[7];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item7?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[7] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[8];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item8?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[8] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[9];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item9?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[9] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => typeof(T0),
+            1 => typeof(T1),
+            2 => typeof(T2),
+            3 => typeof(T3),
+            4 => typeof(T4),
+            5 => _type.ItemTypes[5],
+            6 => _type.ItemTypes[6],
+            7 => _type.ItemTypes[7],
+            8 => _type.ItemTypes[8],
+            9 => _type.ItemTypes[9],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+    public override T Get1<T>() => Item1 is T value ? value : default!;
+    public override T Get2<T>() => Item2 is T value ? value : default!;
+    public override T Get3<T>() => Item3 is T value ? value : default!;
+    public override T Get4<T>() => Item4 is T value ? value : default!;
+    public override T Get5<T>() => Item5 is T value ? value : default!;
+    public override T Get6<T>() => Item6 is T value ? value : default!;
+    public override T Get7<T>() => Item7 is T value ? value : default!;
+    public override T Get8<T>() => Item8 is T value ? value : default!;
+    public override T Get9<T>() => Item9 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            1 => Item1 is T value ? value : default!,
+            2 => Item2 is T value ? value : default!,
+            3 => Item3 is T value ? value : default!,
+            4 => Item4 is T value ? value : default!,
+            5 => Item5 is T value ? value : default!,
+            6 => Item6 is T value ? value : default!,
+            7 => Item7 is T value ? value : default!,
+            8 => Item8 is T value ? value : default!,
+            9 => Item9 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            1 => Item1,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            2 => Item2,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            3 => Item3,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            4 => Item4,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            5 => Item5,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            6 => Item6,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            7 => Item7,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            8 => Item8,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            9 => Item9,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            1 => Item1 is CancellationToken value ? value : default!,
+            2 => Item2 is CancellationToken value ? value : default!,
+            3 => Item3 is CancellationToken value ? value : default!,
+            4 => Item4 is CancellationToken value ? value : default!,
+            5 => Item5 is CancellationToken value ? value : default!,
+            6 => Item6 is CancellationToken value ? value : default!,
+            7 => Item7 is CancellationToken value ? value : default!,
+            8 => Item8 is CancellationToken value ? value : default!,
+            9 => Item9 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = item is T0 item0 ? item0 : default!;
+            break;
+        case 1:
+            _item1 = item is T1 item1 ? item1 : default!;
+            break;
+        case 2:
+            _item2 = item is T2 item2 ? item2 : default!;
+            break;
+        case 3:
+            _item3 = item is T3 item3 ? item3 : default!;
+            break;
+        case 4:
+            _item4 = item is T4 item4 ? item4 : default!;
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        case 9:
+            _item9 = _type.CastItem(9, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = item is T0 item0 ? item0 : default!;
+            break;
+        case 1:
+            _item1 = item is T1 item1 ? item1 : default!;
+            break;
+        case 2:
+            _item2 = item is T2 item2 ? item2 : default!;
+            break;
+        case 3:
+            _item3 = item is T3 item3 ? item3 : default!;
+            break;
+        case 4:
+            _item4 = item is T4 item4 ? item4 : default!;
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        case 9:
+            _item9 = _type.CastItem(9, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = item is T0 item0 ? item0 : default!;
+            break;
+        case 1:
+            _item1 = item is T1 item1 ? item1 : default!;
+            break;
+        case 2:
+            _item2 = item is T2 item2 ? item2 : default!;
+            break;
+        case 3:
+            _item3 = item is T3 item3 ? item3 : default!;
+            break;
+        case 4:
+            _item4 = item is T4 item4 ? item4 : default!;
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        case 9:
+            _item9 = _type.CastItem(9, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListG10<T0, T1, T2, T3, T4> vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+            _item5 = vOther._item5;
+            _item6 = vOther._item6;
+            _item7 = vOther._item7;
+            _item8 = vOther._item8;
+            _item9 = vOther._item9;
+        }
+        else {
+            _item0 = other.Get0<T0>();
+            _item1 = other.Get1<T1>();
+            _item2 = other.Get2<T2>();
+            _item3 = other.Get3<T3>();
+            _item4 = other.Get4<T4>();
+            _item5 = _type.CastItem(5, other.GetUntyped(5));
+            _item6 = _type.CastItem(6, other.GetUntyped(6));
+            _item7 = _type.CastItem(7, other.GetUntyped(7));
+            _item8 = _type.CastItem(8, other.GetUntyped(8));
+            _item9 = _type.CastItem(9, other.GetUntyped(9));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 10)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != type.ItemTypes[7])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != type.ItemTypes[8])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[9].ParameterType != type.ItemTypes[9])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
+                itemType = type.ItemTypes[5];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item6")!.GetGetMethod()!);
+                itemType = type.ItemTypes[6];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item7")!.GetGetMethod()!);
+                itemType = type.ItemTypes[7];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item8")!.GetGetMethod()!);
+                itemType = type.ItemTypes[8];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item9")!.GetGetMethod()!);
+                itemType = type.ItemTypes[9];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 10)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != type.ItemTypes[7])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != type.ItemTypes[8])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[9].ParameterType != type.ItemTypes[9])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.PropertyOrField(vList, "Item0")
+                                , Expression.PropertyOrField(vList, "Item1")
+                                , Expression.PropertyOrField(vList, "Item2")
+                                , Expression.PropertyOrField(vList, "Item3")
+                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item7"), type.ItemTypes[7])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item8"), type.ItemTypes[8])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item9"), type.ItemTypes[9])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        if (typeof(T0).IsValueType)
+            reader.OnStruct(_item0, 0);
+        else
+            reader.OnClass(typeof(T0), _item0, 0);
+        if (typeof(T1).IsValueType)
+            reader.OnStruct(_item1, 1);
+        else
+            reader.OnClass(typeof(T1), _item1, 1);
+        if (typeof(T2).IsValueType)
+            reader.OnStruct(_item2, 2);
+        else
+            reader.OnClass(typeof(T2), _item2, 2);
+        if (typeof(T3).IsValueType)
+            reader.OnStruct(_item3, 3);
+        else
+            reader.OnClass(typeof(T3), _item3, 3);
+        if (typeof(T4).IsValueType)
+            reader.OnStruct(_item4, 4);
+        else
+            reader.OnClass(typeof(T4), _item4, 4);
+        reader.OnAny(itemTypes[5], _item5, 5);
+        reader.OnAny(itemTypes[6], _item6, 6);
+        reader.OnAny(itemTypes[7], _item7, 7);
+        reader.OnAny(itemTypes[8], _item8, 8);
+        reader.OnAny(itemTypes[9], _item9, 9);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        if (typeof(T0).IsValueType)
+            _item0 = writer.OnStruct<T0>(0);
+        else
+            _item0 = (T0)writer.OnClass(typeof(T0), 0)!;
+        if (typeof(T1).IsValueType)
+            _item1 = writer.OnStruct<T1>(1);
+        else
+            _item1 = (T1)writer.OnClass(typeof(T1), 1)!;
+        if (typeof(T2).IsValueType)
+            _item2 = writer.OnStruct<T2>(2);
+        else
+            _item2 = (T2)writer.OnClass(typeof(T2), 2)!;
+        if (typeof(T3).IsValueType)
+            _item3 = writer.OnStruct<T3>(3);
+        else
+            _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
+        if (typeof(T4).IsValueType)
+            _item4 = writer.OnStruct<T4>(4);
+        else
+            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
+        _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
+        _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
+        _item7 = writer.OnAny(itemTypes[7], 7, defaultValues[7]);
+        _item8 = writer.OnAny(itemTypes[8], 8, defaultValues[8]);
+        _item9 = writer.OnAny(itemTypes[9], 9, defaultValues[9]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListG10<T0, T1, T2, T3, T4>? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item9, other.Item9))
+            return false;
+        if (!Equals(Item8, other.Item8))
+            return false;
+        if (!Equals(Item7, other.Item7))
+            return false;
+        if (!Equals(Item6, other.Item6))
+            return false;
+        if (!Equals(Item5, other.Item5))
+            return false;
+        if (!EqualityComparer<T4>.Default.Equals(Item4, other.Item4))
+            return false;
+        if (!EqualityComparer<T3>.Default.Equals(Item3, other.Item3))
+            return false;
+        if (!EqualityComparer<T2>.Default.Equals(Item2, other.Item2))
+            return false;
+        if (!EqualityComparer<T1>.Default.Equals(Item1, other.Item1))
+            return false;
+        if (!EqualityComparer<T0>.Default.Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListG10<T0, T1, T2, T3, T4> vOther)
+            return false;
+
+        if (skipIndex != 9 && !Equals(Item9, vOther.Item9))
+            return false;
+        if (skipIndex != 8 && !Equals(Item8, vOther.Item8))
+            return false;
+        if (skipIndex != 7 && !Equals(Item7, vOther.Item7))
+            return false;
+        if (skipIndex != 6 && !Equals(Item6, vOther.Item6))
+            return false;
+        if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
+            return false;
+        if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
+            return false;
+        if (skipIndex != 3 && !EqualityComparer<T3>.Default.Equals(Item3, vOther.Item3))
+            return false;
+        if (skipIndex != 2 && !EqualityComparer<T2>.Default.Equals(Item2, vOther.Item2))
+            return false;
+        if (skipIndex != 1 && !EqualityComparer<T1>.Default.Equals(Item1, vOther.Item1))
+            return false;
+        if (skipIndex != 0 && !EqualityComparer<T0>.Default.Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item5 is { } item5 ? item5.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item6 is { } item6 ? item6.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item7 is { } item7 ? item7.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item8 is { } item8 ? item8.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item9 is { } item9 ? item9.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 8 ? 0 : (Item8 is { } item8 ? item8.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 9 ? 0 : (Item9 is { } item9 ? item9.GetHashCode() : 0));
+            return hashCode;
+        }
+    }
+}
+
+public sealed record ArgumentListS10 : ArgumentList10
+{
+    private readonly ArgumentListType _type;
+
+    private object? _item0;
+    private object? _item1;
+    private object? _item2;
+    private object? _item3;
+    private object? _item4;
+    private object? _item5;
+    private object? _item6;
+    private object? _item7;
+    private object? _item8;
+    private object? _item9;
+
+    public override ArgumentListType Type => _type;
+
+    public object? Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+        init => _item0 = value;
+    }
+    public object? Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+        init => _item1 = value;
+    }
+    public object? Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+        init => _item2 = value;
+    }
+    public object? Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+        init => _item3 = value;
+    }
+    public object? Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+        init => _item4 = value;
+    }
+    public object? Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+        init => _item5 = value;
+    }
+    public object? Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+        init => _item6 = value;
+    }
+    public object? Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+        init => _item7 = value;
+    }
+    public object? Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+        init => _item8 = value;
+    }
+    public object? Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item9;
+        init => _item9 = value;
+    }
+
+    // Constructors
+
+    public ArgumentListS10(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+        _item0 = defaultValues[0];
+        _item1 = defaultValues[1];
+        _item2 = defaultValues[2];
+        _item3 = defaultValues[3];
+        _item4 = defaultValues[4];
+        _item5 = defaultValues[5];
+        _item6 = defaultValues[6];
+        _item7 = defaultValues[7];
+        _item8 = defaultValues[8];
+        _item9 = defaultValues[9];
+    }
+
+    public ArgumentListS10(ArgumentListType type, object? item0, object? item1, object? item2, object? item3, object? item4, object? item5, object? item6, object? item7, object? item8, object? item9)
+    {
+        _type = type;
+        _item0 = item0;
+        _item1 = item1;
+        _item2 = item2;
+        _item3 = item3;
+        _item4 = item4;
+        _item5 = item5;
+        _item6 = item6;
+        _item7 = item7;
+        _item8 = item8;
+        _item9 = item9;
+    }
+
+    // Duplicate
+
+    public override ArgumentList Duplicate()
+        => new ArgumentListS10(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8, Item9);
+
+    // ToString & ToArray
+
+    public override string ToString()
+    {
+        var sb = StringBuilderExt.Acquire();
+        sb.Append('(');
+        sb.Append(Item0 is CancellationToken ct0 ? ct0.Format() : Item0);
+        sb.Append(", ");
+        sb.Append(Item1 is CancellationToken ct1 ? ct1.Format() : Item1);
+        sb.Append(", ");
+        sb.Append(Item2 is CancellationToken ct2 ? ct2.Format() : Item2);
+        sb.Append(", ");
+        sb.Append(Item3 is CancellationToken ct3 ? ct3.Format() : Item3);
+        sb.Append(", ");
+        sb.Append(Item4 is CancellationToken ct4 ? ct4.Format() : Item4);
+        sb.Append(", ");
+        sb.Append(Item5 is CancellationToken ct5 ? ct5.Format() : Item5);
+        sb.Append(", ");
+        sb.Append(Item6 is CancellationToken ct6 ? ct6.Format() : Item6);
+        sb.Append(", ");
+        sb.Append(Item7 is CancellationToken ct7 ? ct7.Format() : Item7);
+        sb.Append(", ");
+        sb.Append(Item8 is CancellationToken ct8 ? ct8.Format() : Item8);
+        sb.Append(", ");
+        sb.Append(Item9 is CancellationToken ct9 ? ct9.Format() : Item9);
+        sb.Append(')');
+        return sb.ToStringAndRelease();
+    }
+
+    public override object?[] ToArray()
+        => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8, Item9 };
+
+    public override object?[] ToArray(int skipIndex)
+        => skipIndex switch {
+            0 => new object?[] { Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8, Item9 },
+            1 => new object?[] { Item0, Item2, Item3, Item4, Item5, Item6, Item7, Item8, Item9 },
+            2 => new object?[] { Item0, Item1, Item3, Item4, Item5, Item6, Item7, Item8, Item9 },
+            3 => new object?[] { Item0, Item1, Item2, Item4, Item5, Item6, Item7, Item8, Item9 },
+            4 => new object?[] { Item0, Item1, Item2, Item3, Item5, Item6, Item7, Item8, Item9 },
+            5 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item6, Item7, Item8, Item9 },
+            6 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item7, Item8, Item9 },
+            7 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item8, Item9 },
+            8 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item9 },
+            9 => new object?[] { Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8 },
+            _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
+        };
+
+    // GetNonDefaultItemTypes
+
+    public override Type?[]? GetNonDefaultItemTypes()
+    {
+        var itemTypes = (Type?[]?)null;
+        Type? itemType;
+        Type? expectedItemType;
+        expectedItemType = _type.ItemTypes[0];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item0?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[0] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[1];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item1?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[1] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[2];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item2?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[2] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[3];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item3?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[3] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item4?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[4] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[5];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item5?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[5] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[6];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item6?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[6] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[7];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item7?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[7] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[8];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item8?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[8] = itemType;
+            }
+        }
+        expectedItemType = _type.ItemTypes[9];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item9?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[9] = itemType;
+            }
+        }
+        return itemTypes;
+    }
+
+    // GetType
+
+    public override Type? GetType(int index)
+        => index switch {
+            0 => _type.ItemTypes[0],
+            1 => _type.ItemTypes[1],
+            2 => _type.ItemTypes[2],
+            3 => _type.ItemTypes[3],
+            4 => _type.ItemTypes[4],
+            5 => _type.ItemTypes[5],
+            6 => _type.ItemTypes[6],
+            7 => _type.ItemTypes[7],
+            8 => _type.ItemTypes[8],
+            9 => _type.ItemTypes[9],
+            _ => null,
+        };
+
+    // Get
+
+    public override T Get0<T>() => Item0 is T value ? value : default!;
+    public override T Get1<T>() => Item1 is T value ? value : default!;
+    public override T Get2<T>() => Item2 is T value ? value : default!;
+    public override T Get3<T>() => Item3 is T value ? value : default!;
+    public override T Get4<T>() => Item4 is T value ? value : default!;
+    public override T Get5<T>() => Item5 is T value ? value : default!;
+    public override T Get6<T>() => Item6 is T value ? value : default!;
+    public override T Get7<T>() => Item7 is T value ? value : default!;
+    public override T Get8<T>() => Item8 is T value ? value : default!;
+    public override T Get9<T>() => Item9 is T value ? value : default!;
+
+    public override T Get<T>(int index)
+        => index switch {
+            0 => Item0 is T value ? value : default!,
+            1 => Item1 is T value ? value : default!,
+            2 => Item2 is T value ? value : default!,
+            3 => Item3 is T value ? value : default!,
+            4 => Item4 is T value ? value : default!,
+            5 => Item5 is T value ? value : default!,
+            6 => Item6 is T value ? value : default!,
+            7 => Item7 is T value ? value : default!,
+            8 => Item8 is T value ? value : default!,
+            9 => Item9 is T value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override object? GetUntyped(int index)
+        => index switch {
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            0 => Item0,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            1 => Item1,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            2 => Item2,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            3 => Item3,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            4 => Item4,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            5 => Item5,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            6 => Item6,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            7 => Item7,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            8 => Item8,
+            // ReSharper disable once HeapView.PossibleBoxingAllocation
+            9 => Item9,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    public override CancellationToken GetCancellationToken(int index)
+        => index switch {
+            0 => Item0 is CancellationToken value ? value : default!,
+            1 => Item1 is CancellationToken value ? value : default!,
+            2 => Item2 is CancellationToken value ? value : default!,
+            3 => Item3 is CancellationToken value ? value : default!,
+            4 => Item4 is CancellationToken value ? value : default!,
+            5 => Item5 is CancellationToken value ? value : default!,
+            6 => Item6 is CancellationToken value ? value : default!,
+            7 => Item7 is CancellationToken value ? value : default!,
+            8 => Item8 is CancellationToken value ? value : default!,
+            9 => Item9 is CancellationToken value ? value : default!,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+
+    // Set
+
+    public override void Set<T>(int index, T item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        case 9:
+            _item9 = _type.CastItem(9, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetUntyped(int index, object? item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        case 9:
+            _item9 = _type.CastItem(9, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    public override void SetCancellationToken(int index, CancellationToken item)
+    {
+        switch (index) {
+        case 0:
+            _item0 = _type.CastItem(0, item);
+            break;
+        case 1:
+            _item1 = _type.CastItem(1, item);
+            break;
+        case 2:
+            _item2 = _type.CastItem(2, item);
+            break;
+        case 3:
+            _item3 = _type.CastItem(3, item);
+            break;
+        case 4:
+            _item4 = _type.CastItem(4, item);
+            break;
+        case 5:
+            _item5 = _type.CastItem(5, item);
+            break;
+        case 6:
+            _item6 = _type.CastItem(6, item);
+            break;
+        case 7:
+            _item7 = _type.CastItem(7, item);
+            break;
+        case 8:
+            _item8 = _type.CastItem(8, item);
+            break;
+        case 9:
+            _item9 = _type.CastItem(9, item);
+            break;
+        default:
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+    }
+
+    // SetFrom
+
+    public override void SetFrom(ArgumentList other)
+    {
+        if (other is ArgumentListS10 vOther) {
+            _item0 = vOther._item0;
+            _item1 = vOther._item1;
+            _item2 = vOther._item2;
+            _item3 = vOther._item3;
+            _item4 = vOther._item4;
+            _item5 = vOther._item5;
+            _item6 = vOther._item6;
+            _item7 = vOther._item7;
+            _item8 = vOther._item8;
+            _item9 = vOther._item9;
+        }
+        else {
+            _item0 = _type.CastItem(0, other.GetUntyped(0));
+            _item1 = _type.CastItem(1, other.GetUntyped(1));
+            _item2 = _type.CastItem(2, other.GetUntyped(2));
+            _item3 = _type.CastItem(3, other.GetUntyped(3));
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
+            _item5 = _type.CastItem(5, other.GetUntyped(5));
+            _item6 = _type.CastItem(6, other.GetUntyped(6));
+            _item7 = _type.CastItem(7, other.GetUntyped(7));
+            _item8 = _type.CastItem(8, other.GetUntyped(8));
+            _item9 = _type.CastItem(9, other.GetUntyped(9));
+        }
+    }
+
+    // GetInvoker
+
+    public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerCache.GetOrAdd(
+            (_type, method),
+            RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? static key => { // Dynamic methods
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 10)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != type.ItemTypes[7])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != type.ItemTypes[8])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[9].ParameterType != type.ItemTypes[9])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
+                var m = new DynamicMethod("_Invoke",
+                    typeof(object),
+                    new [] { typeof(object), typeof(ArgumentList) },
+                    true);
+                var il = m.GetILGenerator();
+
+                // Cast ArgumentList to its actual type
+                il.DeclareLocal(type.ListType);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Castclass, type.ListType);
+                il.Emit(OpCodes.Stloc_0);
+
+                // Unbox target
+                if (!method1.IsStatic) {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                }
+
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
+                itemType = type.ItemTypes[0];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
+                itemType = type.ItemTypes[1];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
+                itemType = type.ItemTypes[2];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
+                itemType = type.ItemTypes[3];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
+                itemType = type.ItemTypes[5];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item6")!.GetGetMethod()!);
+                itemType = type.ItemTypes[6];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item7")!.GetGetMethod()!);
+                itemType = type.ItemTypes[7];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item8")!.GetGetMethod()!);
+                itemType = type.ItemTypes[8];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item9")!.GetGetMethod()!);
+                itemType = type.ItemTypes[9];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+
+                // Call method
+                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+
+                // Box return type
+                if (method1.ReturnType == typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                else if (method1.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method1.ReturnType);
+                il.Emit(OpCodes.Ret);
+                return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
+            }
+            : static key => { // Expression trees
+                var (type, method1) = key;
+                var parameters = method1.GetParameters();
+                if (parameters.Length != 10)
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[0].ParameterType != type.ItemTypes[0])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[1].ParameterType != type.ItemTypes[1])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[2].ParameterType != type.ItemTypes[2])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[3].ParameterType != type.ItemTypes[3])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[4].ParameterType != type.ItemTypes[4])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[5].ParameterType != type.ItemTypes[5])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[6].ParameterType != type.ItemTypes[6])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[7].ParameterType != type.ItemTypes[7])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[8].ParameterType != type.ItemTypes[8])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+                if (parameters[9].ParameterType != type.ItemTypes[9])
+                    throw new ArgumentOutOfRangeException(nameof(method));
+
+                var pSource = Expression.Parameter(typeof(object), "source");
+                var pList = Expression.Parameter(typeof(ArgumentList), "list");
+                var vList = Expression.Variable(type.ListType, "l");
+                var eBody = Expression.Block(
+                    new [] { vList },
+                    [
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
+                        ExpressionExt.ConvertToObject(
+                            Expression.Call(
+                                method1.IsStatic
+                                    ? null
+                                    : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
+                                method1
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item0"), type.ItemTypes[0])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item1"), type.ItemTypes[1])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item2"), type.ItemTypes[2])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item3"), type.ItemTypes[3])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item7"), type.ItemTypes[7])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item8"), type.ItemTypes[8])
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item9"), type.ItemTypes[9])
+                                ))
+                    ]);
+                return (Func<object?, ArgumentList, object?>)Expression
+                    .Lambda(eBody, pSource, pList)
+                    .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
+            }
+        );
+
+    // Read & Write
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Read(ArgumentListReader reader)
+    {
+        var itemTypes = _type.ItemTypes;
+        reader.OnAny(itemTypes[0], _item0, 0);
+        reader.OnAny(itemTypes[1], _item1, 1);
+        reader.OnAny(itemTypes[2], _item2, 2);
+        reader.OnAny(itemTypes[3], _item3, 3);
+        reader.OnAny(itemTypes[4], _item4, 4);
+        reader.OnAny(itemTypes[5], _item5, 5);
+        reader.OnAny(itemTypes[6], _item6, 6);
+        reader.OnAny(itemTypes[7], _item7, 7);
+        reader.OnAny(itemTypes[8], _item8, 8);
+        reader.OnAny(itemTypes[9], _item9, 9);
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    public override void Write(ArgumentListWriter writer)
+    {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+        _item0 = writer.OnAny(itemTypes[0], 0, defaultValues[0]);
+        _item1 = writer.OnAny(itemTypes[1], 1, defaultValues[1]);
+        _item2 = writer.OnAny(itemTypes[2], 2, defaultValues[2]);
+        _item3 = writer.OnAny(itemTypes[3], 3, defaultValues[3]);
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
+        _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
+        _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
+        _item7 = writer.OnAny(itemTypes[7], 7, defaultValues[7]);
+        _item8 = writer.OnAny(itemTypes[8], 8, defaultValues[8]);
+        _item9 = writer.OnAny(itemTypes[9], 9, defaultValues[9]);
+    }
+
+    // Equality
+
+    public bool Equals(ArgumentListS10? other)
+    {
+        if (other == null)
+            return false;
+
+        if (!Equals(Item9, other.Item9))
+            return false;
+        if (!Equals(Item8, other.Item8))
+            return false;
+        if (!Equals(Item7, other.Item7))
+            return false;
+        if (!Equals(Item6, other.Item6))
+            return false;
+        if (!Equals(Item5, other.Item5))
+            return false;
+        if (!Equals(Item4, other.Item4))
+            return false;
+        if (!Equals(Item3, other.Item3))
+            return false;
+        if (!Equals(Item2, other.Item2))
+            return false;
+        if (!Equals(Item1, other.Item1))
+            return false;
+        if (!Equals(Item0, other.Item0))
+            return false;
+        return true;
+    }
+
+    public override bool Equals(ArgumentList? other, int skipIndex)
+    {
+        if (other is not ArgumentListS10 vOther)
+            return false;
+
+        if (skipIndex != 9 && !Equals(Item9, vOther.Item9))
+            return false;
+        if (skipIndex != 8 && !Equals(Item8, vOther.Item8))
+            return false;
+        if (skipIndex != 7 && !Equals(Item7, vOther.Item7))
+            return false;
+        if (skipIndex != 6 && !Equals(Item6, vOther.Item6))
+            return false;
+        if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
+            return false;
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
+            return false;
+        if (skipIndex != 3 && !Equals(Item3, vOther.Item3))
+            return false;
+        if (skipIndex != 2 && !Equals(Item2, vOther.Item2))
+            return false;
+        if (skipIndex != 1 && !Equals(Item1, vOther.Item1))
+            return false;
+        if (skipIndex != 0 && !Equals(Item0, vOther.Item0))
+            return false;
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked {
+            var hashCode =
+                (Item0 is { } item0 ? item0.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item1 is { } item1 ? item1.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item2 is { } item2 ? item2.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item3 is { } item3 ? item3.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item4 is { } item4 ? item4.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item5 is { } item5 ? item5.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item6 is { } item6 ? item6.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item7 is { } item7 ? item7.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item8 is { } item8 ? item8.GetHashCode() : 0);
+            hashCode = 397*hashCode +
+                (Item9 is { } item9 ? item9.GetHashCode() : 0);
+            return hashCode;
+        }
+    }
+
+    public override int GetHashCode(int skipIndex)
+    {
+        unchecked {
+            var hashCode =
+                (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 8 ? 0 : (Item8 is { } item8 ? item8.GetHashCode() : 0));
+            hashCode = 397*hashCode +
+                (skipIndex == 9 ? 0 : (Item9 is { } item9 ? item9.GetHashCode() : 0));
             return hashCode;
         }
     }

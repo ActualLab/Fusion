@@ -8,9 +8,10 @@
 <#@ import namespace="System.Collections.Generic" #>
 <#@ import namespace="System.Xml.Linq" #>
 <#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
 <#
-    const int maxItemCount = 8;
-    const int maxNewOverloadsCount = 12;
+    const int maxItemCount = 10;
+    const int maxGenericItemCount = 5;
 
     IEnumerable<int> AllBut(int count, int exceptIndex, int startIndex = 0)
     {
@@ -37,6 +38,12 @@
 
     string InsertList(string format, int count, int insertIndex, string replacement, int startIndex = 0)
         => string.Join(", ", AllAnd(count, insertIndex, startIndex).Select(i => i.HasValue ? string.Format(format, i) : replacement));
+
+    string SimpleTypeName(int c)
+        => c == 0 ? "ArgumentList0" : $"ArgumentListS{c}";
+
+    string GenericTypeName(int c, bool useParameters = false)
+        => c == 0 ? "ArgumentList0" : $"ArgumentListG{c}<{ItemList(useParameters ? "T{0}": "", Math.Min(c, maxGenericItemCount))}>";
 #>
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable MemberCanBePrivate.Global
@@ -54,61 +61,42 @@ namespace ActualLab.Interception;
 
 public abstract partial record ArgumentList
 {
-    public const int NativeTypeCount = <#=maxItemCount#>;
+    public const int MaxItemCount = <#=maxItemCount#>;
+    public const int MaxGenericItemCount = <#=maxGenericItemCount#>;
+
 #if NET5_0_OR_GREATER
 <# for (var itemCount = 1; itemCount <= maxItemCount; itemCount++) {
 #>
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList<<#=ItemList("", itemCount)#>>))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(<#=SimpleTypeName(itemCount)#>))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(<#=GenericTypeName(itemCount)#>))]
 <# } #>
 #endif
-    public static readonly ImmutableArray<Type> NativeTypes = ImmutableArray.Create(new [] {
-        typeof(ArgumentList0),
-<# for (var itemCount = 1; itemCount <= maxItemCount; itemCount++) {
+    public static readonly ImmutableArray<Type> SimpleTypes = ImmutableArray.Create(new [] {
+<# for (var itemCount = 0; itemCount <= maxItemCount; itemCount++) {
 #>
-        typeof(ArgumentList<<#=ItemList("", itemCount)#>>),
+        typeof(<#=SimpleTypeName(itemCount)#>),
+<# } #>
+    });
+    public static readonly ImmutableArray<Type> GenericTypes = ImmutableArray.Create(new [] {
+<# for (var itemCount = 0; itemCount <= maxItemCount; itemCount++) {
+#>
+        typeof(<#=GenericTypeName(itemCount)#>),
 <# } #>
     });
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ArgumentList New() => Empty;
 <# for (var itemCount = 1; itemCount <= maxItemCount; itemCount++) {
-    var argumentTypes = ItemList("T{0}", itemCount);
-    var argumentDeclaration = ItemList("T{0} item{0}", itemCount);
-    var argumentUsage = ItemList("item{0}", itemCount);
+    var itemTypes = ItemList("T{0}", itemCount);
+    var itemDefs = ItemList("T{0} item{0}", itemCount);
+    var items = ItemList("item{0}", itemCount);
+    var argListDefPrefix = $"ArgumentListType.Get({ItemList("typeof(T{0})", itemCount)}), ";
 #>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentList<<#=argumentTypes#>> New<<#=argumentTypes#>>(<#=argumentDeclaration#>)
-        => new(<#=argumentUsage#>);
-<# } #>
-<# for (var itemCount = maxItemCount + 1; itemCount <= Math.Min(maxNewOverloadsCount, maxItemCount * 2); itemCount++) {
-       var argumentTypes0 = ItemList("T{0}", maxItemCount);
-       var argumentDeclaration0 = ItemList("T{0} item{0}", maxItemCount);
-       var argumentUsage0 = ItemList("item{0}", maxItemCount);
-       var argumentTypes1 = ItemList("T{0}", itemCount, maxItemCount);
-       var argumentDeclaration1 = ItemList("T{0} item{0}", itemCount, maxItemCount);
-       var argumentUsage1 = ItemList("item{0}", itemCount, maxItemCount);
-#>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentListPair< ArgumentList<<#=argumentTypes0#>>, ArgumentList<<#=argumentTypes1#>> > New<<#=argumentTypes0#>, <#=argumentTypes1#>>(<#=argumentDeclaration0#>, <#=argumentDeclaration1#>)
-        => new(new(<#=argumentUsage0#>), new(<#=argumentUsage1#>));
-<# } #>
-<# for (var itemCount = maxItemCount * 2 + 1; itemCount <= Math.Min(maxNewOverloadsCount, maxItemCount * 3); itemCount++) {
-       var argumentTypes0 = ItemList("T{0}", maxItemCount);
-       var argumentDeclaration0 = ItemList("T{0} item{0}", maxItemCount);
-       var argumentUsage0 = ItemList("item{0}", maxItemCount);
-       var argumentTypes1 = ItemList("T{0}", maxItemCount * 2, maxItemCount);
-       var argumentDeclaration1 = ItemList("T{0} item{0}", maxItemCount * 2, maxItemCount);
-       var argumentUsage1 = ItemList("item{0}", maxItemCount * 2, maxItemCount);
-       var argumentTypes2 = ItemList("T{0}", itemCount, maxItemCount * 2);
-       var argumentDeclaration2 = ItemList("T{0} item{0}", itemCount, maxItemCount * 2);
-       var argumentUsage2 = ItemList("item{0}", itemCount, maxItemCount * 2);
-#>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArgumentListPair<
-        ArgumentList<<#=argumentTypes0#>>,
-        ArgumentListPair<
-            ArgumentList<<#=argumentTypes1#>>,
-            ArgumentList<<#=argumentTypes2#>>
-        >> New<<#=argumentTypes0#>, <#=argumentTypes1#>, <#=argumentTypes2#>>(<#=argumentDeclaration0#>, <#=argumentDeclaration1#>, <#=argumentDeclaration2#>)
-        => new(new(<#=argumentUsage0#>), new(new(<#=argumentUsage1#>), new(<#=argumentUsage2#>)));
+    public static ArgumentList New<<#=itemTypes#>>(<#=itemDefs#>)
+        => AllowGenerics
+            ? new <#=GenericTypeName(itemCount, true)#>(<#=itemCount > maxGenericItemCount ? argListDefPrefix : ""#><#=items#>)
+            : new <#=SimpleTypeName(itemCount)#>(<#=argListDefPrefix#><#=items#>);
 <# } #>
 
 <#
@@ -121,60 +109,109 @@ public abstract partial record ArgumentList
 }
 
 <# for (var itemCount = 1; itemCount <= maxItemCount; itemCount++) {
-       var argumentTypes = ItemList("T{0}", itemCount);
-       var arguments = ItemList("T{0} item{0}", itemCount);
 #>
-public abstract record ArgumentList<#=itemCount#> : ArgumentListNative
+public abstract record ArgumentList<#=itemCount#> : ArgumentList
 {
-    protected static Type?[] CreateNonDefaultItemTypes()
-        => new Type?[<#=itemCount#>];
-
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public override int Length => <#=itemCount#>;
+
+    protected static Type?[] CreateNonDefaultItemTypes()
+        => new Type?[<#=itemCount#>];
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=itemCount#>
+<# for (var mode = 0; mode < 2; mode++) {
+       var useGenerics = mode == 0;
+       var genericItemCount = useGenerics ? Math.Min(itemCount, maxGenericItemCount) : 0;
+       var simpleItemCount = itemCount - genericItemCount;
+       var genericArguments = genericItemCount == 0 ? ""
+           : "<" + ItemList("T{0}", genericItemCount) + ">";
+       var sb = new StringBuilder();
+       sb.Append(ItemList("T{0} item{0}", genericItemCount));
+       if (simpleItemCount > 0) {
+           if (sb.Length != 0)
+               sb.Append(", ");
+           sb.Append(ItemList("object? item{0}", itemCount, genericItemCount));
+       }
+       var itemDefs = sb.ToString();
+       var constructorName = useGenerics
+           ? $"ArgumentListG{itemCount}"
+           : SimpleTypeName(itemCount);
+       var className = useGenerics
+           ? constructorName + genericArguments
+           : constructorName;
+
+       string TypeOf(int i) => i < genericItemCount ? $"T{i}" : "object?";
+#>
+public sealed record <#=className#> : ArgumentList<#=itemCount#>
 {
-<# for (var t = 0; t < itemCount; t++) { #>
-    private T<#=t#> _item<#=t#>;
+<# if (simpleItemCount == 0) { #>
+    private static ArgumentListType? _cachedType;
+    // ReSharper disable once InconsistentNaming
+    private static ArgumentListType _type => _cachedType ??= ArgumentListType.Get(<#=ItemList("typeof(T{0})", genericItemCount)#>);
+<# } else { #>
+    private readonly ArgumentListType _type;
 <# } #>
 
 <# for (var t = 0; t < itemCount; t++) { #>
-    [DataMember(Order = <#=t#>), MemoryPackOrder(<#=t#>)]
-    public T<#=t#> Item<#=t#> { get => _item<#=t#>; init => _item<#=t#> = value; }
+    private <#=TypeOf(t)#> _item<#=t#>;
+<# } #>
+
+    public override ArgumentListType Type => _type;
+
+<# for (var t = 0; t < itemCount; t++) { #>
+    public <#=TypeOf(t)#> Item<#=t#> {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item<#=t#>;
+        init => _item<#=t#> = value;
+    }
 <# } #>
 
     // Constructors
 
-    public ArgumentList()
+<# if (simpleItemCount == 0) { #>
+    public <#=constructorName#>()
     {
-<#
-    for (var t = 0; t < itemCount; t++) {
-#>
+<# for (var t = 0; t < itemCount; t++) { #>
         _item<#=t#> = default!;
-<#
-    }
-#>
+<# } #>
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public ArgumentList(<#=arguments#>)
+    public <#=constructorName#>(<#=itemDefs#>)
     {
-<#
-    for (var t = 0; t < itemCount; t++) {
-#>
+<# for (var t = 0; t < itemCount; t++) { #>
         _item<#=t#> = item<#=t#>;
-<#
+<# } #>
     }
-#>
+<# } else { #>
+    public <#=constructorName#>(ArgumentListType type)
+    {
+        _type = type;
+        var defaultValues = type.DefaultValues;
+<# for (var t = 0; t < genericItemCount; t++) { #>
+        _item<#=t#> = default!;
+<# } #>
+<# for (var t = genericItemCount; t < itemCount; t++) { #>
+        _item<#=t#> = defaultValues[<#=t#>];
+<# } #>
     }
+
+    public <#=constructorName#>(ArgumentListType type, <#=itemDefs#>)
+    {
+        _type = type;
+<# for (var t = 0; t < itemCount; t++) { #>
+        _item<#=t#> = item<#=t#>;
+<# } #>
+    }
+<# } #>
 
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentList<<#=argumentTypes#>>(<# Write(ItemList("Item{0}", itemCount)); #>);
+<# if (simpleItemCount == 0) { #>
+        => new <#=className#>(<#= ItemList("Item{0}", itemCount) #>);
+<# } else { #>
+        => new <#=className#>(_type, <#= ItemList("Item{0}", itemCount) #>);
+<# } #>
 
     // ToString & ToArray
 
@@ -193,7 +230,7 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
     }
 
     public override object?[] ToArray()
-        => new object?[] { <# Write(ItemList("Item{0}", itemCount)); #> };
+        => new object?[] { <#= ItemList("Item{0}", itemCount) #> };
 
     public override object?[] ToArray(int skipIndex)
 <# if (itemCount == 1) { #>
@@ -203,7 +240,7 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
 <# } else { #>
         => skipIndex switch {
 <# for (var t = 0; t < itemCount; t++) { #>
-            <#=t#> => new object?[] { <# Write(RemoveList("Item{0}", itemCount, t)); #> },
+            <#=t#> => new object?[] { <#= RemoveList("Item{0}", itemCount, t) #> },
 <# } #>
             _ => throw new ArgumentOutOfRangeException(nameof(skipIndex))
         };
@@ -215,9 +252,13 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
     {
         var itemTypes = (Type?[]?)null;
         Type? itemType;
+<# if (simpleItemCount != 0) { #>
+        Type? expectedItemType;
+<# } #>
 <#
     for (var t = 0; t < itemCount; t++) {
 #>
+<# if (t < genericItemCount) { #>
         if (!typeof(T<#=t#>).IsValueType) {
             itemType = _item<#=t#>?.GetType();
             if (itemType != null && itemType != typeof(T<#=t#>)) {
@@ -225,6 +266,16 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
                 itemTypes[<#=t#>] = itemType;
             }
         }
+<# } else { #>
+        expectedItemType = _type.ItemTypes[<#=t#>];
+        if (!expectedItemType.IsValueType) {
+            itemType = _item<#=t#>?.GetType();
+            if (itemType != null && itemType != expectedItemType) {
+                itemTypes ??= CreateNonDefaultItemTypes();
+                itemTypes[<#=t#>] = itemType;
+            }
+        }
+<# } #>
 <#
     }
 #>
@@ -236,7 +287,11 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
     public override Type? GetType(int index)
         => index switch {
 <# for (var t = 0; t < itemCount; t++) { #>
+<# if (t < genericItemCount) { #>
             <#=t#> => typeof(T<#=t#>),
+<# } else { #>
+            <#=t#> => _type.ItemTypes[<#=t#>],
+<# } #>
 <# } #>
             _ => null,
         };
@@ -283,7 +338,11 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
         switch (index) {
 <# for (var t = 0; t < itemCount; t++) { #>
         case <#=t#>:
+<# if (t < genericItemCount) { #>
             _item<#=t#> = item is T<#=t#> item<#=t#> ? item<#=t#> : default!;
+<# } else { #>
+            _item<#=t#> = _type.CastItem(<#=t#>, item);
+<# } #>
             break;
 <# } #>
         default:
@@ -296,7 +355,11 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
         switch (index) {
 <# for (var t = 0; t < itemCount; t++) { #>
         case <#=t#>:
+<# if (t < genericItemCount) { #>
             _item<#=t#> = item is T<#=t#> item<#=t#> ? item<#=t#> : default!;
+<# } else { #>
+            _item<#=t#> = _type.CastItem(<#=t#>, item);
+<# } #>
             break;
 <# } #>
         default:
@@ -309,7 +372,11 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
         switch (index) {
 <# for (var t = 0; t < itemCount; t++) { #>
         case <#=t#>:
+<# if (t < genericItemCount) { #>
             _item<#=t#> = item is T<#=t#> item<#=t#> ? item<#=t#> : default!;
+<# } else { #>
+            _item<#=t#> = _type.CastItem(<#=t#>, item);
+<# } #>
             break;
 <# } #>
         default:
@@ -321,62 +388,40 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
 
     public override void SetFrom(ArgumentList other)
     {
-<#
-    for (var t = 0; t < itemCount; t++) {
-#>
-        _item<#=t#> = other.Get<#=t#><T<#=t#>>();
-<#
-    }
-#>
-    }
-
-    // Insert
-
-    public override ArgumentList Insert<T>(int index, T item)
-        => index switch {
+        if (other is <#=className#> vOther) {
 <# for (var t = 0; t < itemCount; t++) { #>
-            <#=t#> => New(<# Write(InsertList("Item{0}", itemCount, t, "item")); #>),
-<# }#>
-            <#=itemCount#> => New(<# Write(ItemList("Item{0}", itemCount)); #>, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    public override ArgumentList InsertCancellationToken(int index, CancellationToken item)
-        => index switch {
-<# for (var t = 0; t < itemCount; t++) { #>
-            <#=t#> => New(<# Write(InsertList("Item{0}", itemCount, t, "item")); #>),
-<# }#>
-            <#=itemCount#> => New(<# Write(ItemList("Item{0}", itemCount)); #>, item),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-    // Remove
-
-    public override ArgumentList Remove(int index)
-        => index switch {
-<# for (var t = 0; t < itemCount; t++) { #>
-            <#=t#> => New(<# Write(RemoveList("Item{0}", itemCount, t)); #>),
+            _item<#=t#> = vOther._item<#=t#>;
 <# } #>
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
+        }
+        else {
+<# for (var t = 0; t < itemCount; t++) { #>
+<# if (t < genericItemCount) { #>
+            _item<#=t#> = other.Get<#=t#><T<#=t#>>();
+<# } else { #>
+            _item<#=t#> = _type.CastItem(<#=t#>, other.GetUntyped(<#=t#>));
+<# } #>
+<# } #>
+        }
+    }
 
     // GetInvoker
 
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
-            (GetType(), method),
+            (_type, method),
             RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? static key => { // Dynamic methods
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != <#=itemCount#>)
                     throw new ArgumentOutOfRangeException(nameof(method));
 <# for (var t = 0; t < itemCount; t++) { #>
-                if (parameters[<#=t#>].ParameterType != typeof(T<#=t#>))
+                if (parameters[<#=t#>].ParameterType != type.ItemTypes[<#=t#>])
                     throw new ArgumentOutOfRangeException(nameof(method));
 <# } #>
 
                 var declaringType = method1.DeclaringType!;
+                var itemType = (Type?)null;
                 var m = new DynamicMethod("_Invoke",
                     typeof(object),
                     new [] { typeof(object), typeof(ArgumentList) },
@@ -384,9 +429,9 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
                 var il = m.GetILGenerator();
 
                 // Cast ArgumentList to its actual type
-                il.DeclareLocal(listType);
+                il.DeclareLocal(type.ListType);
                 il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Castclass, listType);
+                il.Emit(OpCodes.Castclass, type.ListType);
                 il.Emit(OpCodes.Stloc_0);
 
                 // Unbox target
@@ -397,7 +442,11 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
 
 <# for (var t = 0; t < itemCount; t++) { #>
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, listType.GetProperty("Item<#=t#>")!.GetGetMethod()!);
+                il.Emit(OpCodes.Call, type.ListType.GetProperty("Item<#=t#>")!.GetGetMethod()!);
+<# if (t >= genericItemCount) { #>
+                itemType = type.ItemTypes[<#=t#>];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+<# } #>
 <# } #>
 
                 // Call method
@@ -412,22 +461,22 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
                 return (Func<object?, ArgumentList, object?>)m.CreateDelegate(typeof(Func<object, ArgumentList, object?>));
             }
             : static key => { // Expression trees
-                var (listType, method1) = key;
+                var (type, method1) = key;
                 var parameters = method1.GetParameters();
                 if (parameters.Length != <#=itemCount#>)
                     throw new ArgumentOutOfRangeException(nameof(method));
 <# for (var t = 0; t < itemCount; t++) { #>
-                if (parameters[<#=t#>].ParameterType != typeof(T<#=t#>))
+                if (parameters[<#=t#>].ParameterType != type.ItemTypes[<#=t#>])
                     throw new ArgumentOutOfRangeException(nameof(method));
 <# } #>
 
                 var pSource = Expression.Parameter(typeof(object), "source");
                 var pList = Expression.Parameter(typeof(ArgumentList), "list");
-                var vList = Expression.Variable(listType, "l");
+                var vList = Expression.Variable(type.ListType, "l");
                 var eBody = Expression.Block(
                     new [] { vList },
                     [
-                        Expression.Assign(vList, Expression.Convert(pList, listType)),
+                        Expression.Assign(vList, Expression.Convert(pList, type.ListType)),
                         ExpressionExt.ConvertToObject(
                             Expression.Call(
                                 method1.IsStatic
@@ -435,7 +484,11 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
                                     : ExpressionExt.MaybeConvert(pSource, method1.DeclaringType!),
                                 method1
 <# for (var t = 0; t < itemCount; t++) { #>
+<# if (t < genericItemCount) { #>
                                 , Expression.PropertyOrField(vList, "Item<#=t#>")
+<# } else { #>
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item<#=t#>"), type.ItemTypes[<#=t#>])
+<# } #>
 <# } #>
                                 ))
                     ]);
@@ -450,70 +503,72 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
+<# if (simpleItemCount != 0) { #>
+        var itemTypes = _type.ItemTypes;
+<# } #>
 <# for (var t = 0; t < itemCount; t++) { #>
+<# if (t < genericItemCount) { #>
         if (typeof(T<#=t#>).IsValueType)
             reader.OnStruct(_item<#=t#>, <#=t#>);
         else
-            reader.OnObject(typeof(T<#=t#>), _item<#=t#>, <#=t#>);
+            reader.OnClass(typeof(T<#=t#>), _item<#=t#>, <#=t#>);
+<# } else { #>
+        reader.OnAny(itemTypes[<#=t#>], _item<#=t#>, <#=t#>);
 <# } #>
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Read(ArgumentListReader reader, int offset)
-    {
-<# for (var t = 0; t < itemCount; t++) { #>
-        if (typeof(T<#=t#>).IsValueType)
-            reader.OnStruct(_item<#=t#>, offset + <#=t#>);
-        else
-            reader.OnObject(typeof(T<#=t#>), _item<#=t#>, offset + <#=t#>);
 <# } #>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
+<# if (simpleItemCount != 0) { #>
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
+<# } #>
 <# for (var t = 0; t < itemCount; t++) { #>
+<# if (t < genericItemCount) { #>
         if (typeof(T<#=t#>).IsValueType)
             _item<#=t#> = writer.OnStruct<T<#=t#>>(<#=t#>);
         else
-            _item<#=t#> = (T<#=t#>)writer.OnObject(typeof(T<#=t#>), <#=t#>)!;
+            _item<#=t#> = (T<#=t#>)writer.OnClass(typeof(T<#=t#>), <#=t#>)!;
+<# } else { #>
+        _item<#=t#> = writer.OnAny(itemTypes[<#=t#>], <#=t#>, defaultValues[<#=t#>]);
 <# } #>
-    }
-
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Write(ArgumentListWriter writer, int offset)
-    {
-<# for (var t = 0; t < itemCount; t++) { #>
-        if (typeof(T<#=t#>).IsValueType)
-            _item<#=t#> = writer.OnStruct<T<#=t#>>(offset + <#=t#>);
-        else
-            _item<#=t#> = (T<#=t#>)writer.OnObject(typeof(T<#=t#>), offset + <#=t#>)!;
 <# } #>
     }
 
     // Equality
 
-    public bool Equals(ArgumentList<<#=argumentTypes#>>? other)
+    public bool Equals(<#=className#>? other)
     {
         if (other == null)
             return false;
 
 <# for (var t = itemCount - 1; t >= 0; t--) { #>
+<# if (t < genericItemCount) { #>
         if (!EqualityComparer<T<#=t#>>.Default.Equals(Item<#=t#>, other.Item<#=t#>))
             return false;
+<# } else { #>
+        if (!Equals(Item<#=t#>, other.Item<#=t#>))
+            return false;
+<# } #>
 <# } #>
         return true;
     }
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentList<<#=argumentTypes#>> vOther)
+        if (other is not <#=className#> vOther)
             return false;
 
 <# for (var t = itemCount - 1; t >= 0; t--) { #>
+<# if (t < genericItemCount) { #>
         if (skipIndex != <#=t#> && !EqualityComparer<T<#=t#>>.Default.Equals(Item<#=t#>, vOther.Item<#=t#>))
             return false;
+<# } else { #>
+        if (skipIndex != <#=t#> && !Equals(Item<#=t#>, vOther.Item<#=t#>))
+            return false;
+<# } #>
 <# } #>
         return true;
     }
@@ -521,9 +576,13 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
     public override int GetHashCode()
     {
         unchecked {
-            var hashCode = EqualityComparer<T0>.Default.GetHashCode(Item0!);
-<# for (var t = 1; t < itemCount; t++) { #>
-            hashCode = 397*hashCode + EqualityComparer<T<#=t#>>.Default.GetHashCode(Item<#=t#>!);
+<# for (var t = 0; t < itemCount; t++) { #>
+<# if (t == 0) { #>
+            var hashCode =
+<# } else { #>
+            hashCode = 397*hashCode +
+<# } #>
+                (Item<#=t#> is { } item<#=t#> ? item<#=t#>.GetHashCode() : 0);
 <# } #>
             return hashCode;
         }
@@ -532,13 +591,18 @@ public sealed partial record ArgumentList<<#=argumentTypes#>> : ArgumentList<#=i
     public override int GetHashCode(int skipIndex)
     {
         unchecked {
-            var hashCode = skipIndex == 0 ? 0 : EqualityComparer<T0>.Default.GetHashCode(Item0!);
-<# for (var t = 1; t < itemCount; t++) { #>
-            hashCode = 397*hashCode + (skipIndex == <#=t#> ? 0 : EqualityComparer<T<#=t#>>.Default.GetHashCode(Item<#=t#>!));
+<# for (var t = 0; t < itemCount; t++) { #>
+<# if (t == 0) { #>
+            var hashCode =
+<# } else { #>
+            hashCode = 397*hashCode +
+<# } #>
+                (skipIndex == <#=t#> ? 0 : (Item<#=t#> is { } item<#=t#> ? item<#=t#>.GetHashCode() : 0));
 <# } #>
             return hashCode;
         }
     }
 }
 
+<# } #>
 <# } #>

@@ -407,48 +407,51 @@ public class ProxyTypeGenerator
 
     private SimpleLambdaExpressionSyntax CreateInterceptedLambda(IMethodSymbol method, ParameterListSyntax parameters)
     {
-        var typedArgsVarGenericArguments = parameters.Parameters.Select(p => p.Type!).ToArray();
-
-        var typeArgsVariableType =
-                typedArgsVarGenericArguments.Length == 0
-                ? (NameSyntax) ArgumentListTypeName
-                : ArgumentListGenericTypeName
-                    .WithTypeArgumentList(TypeArgumentList(CommaSeparatedList(typedArgsVarGenericArguments)));
-
+        var returnTypeRef = method.ReturnType.ToTypeRef();
+        var isVoidMethod = returnTypeRef.IsVoid();
+        var argTypes = parameters.Parameters.Select(p => p.Type!).ToArray();
+        var argListGType = GetArgumentListGTypeName(argTypes);
+        var argListSType = GetArgumentListSTypeName(argTypes.Length);
         var args = IdentifierName("args");
-        var typedArgs = IdentifierName("typedArgs");
-        var proxyTargetCallArguments = new List<ArgumentSyntax>();
-        for (var i = 0; i < parameters.Parameters.Count; i++) {
-            var argumentList = IdentifierName("Item" + i);
-            proxyTargetCallArguments.Add(Argument(
+        var ga = IdentifierName("ga");
+        var sa = IdentifierName("sa");
+
+        var statements = new List<StatementSyntax>();
+        if (argTypes.Length != 0)
+            statements.Add(
+                IfHasTypeStatement(args, argListGType, ga.Identifier,
+                    AlwaysReturnStatement(isVoidMethod, ProxyOrBaseCall(true, ga))));
+        statements.Add(VarStatement(sa.Identifier, CastExpression(argListSType, args)));
+        statements.Add(AlwaysReturnStatement(isVoidMethod, ProxyOrBaseCall(false, sa)));
+        return SimpleLambdaExpression(Parameter(args.Identifier))
+            .WithBlock(Block(List(statements)));
+
+        ExpressionSyntax ProxyOrBaseCall(bool useGenerics, NameSyntax argListVar) {
+            var callArgs = new List<ArgumentSyntax>();
+            for (var i = 0; i < parameters.Parameters.Count; i++) {
+                var expr = (ExpressionSyntax)MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    argListVar,
+                    IdentifierName("Item" + i));
+                if (!useGenerics || i >= MaxGenericArgumentListItemCount)
+                    expr = CastExpression(argTypes[i], expr);
+                callArgs.Add(Argument(expr));
+            }
+
+            var callTarget = IsInterfaceProxy
+                ? (ExpressionSyntax)ParenthesizedExpression(
+                    SuppressNullWarning(
+                        CastExpression(TypeDef.ToTypeRef(), ProxyTargetPropertyName)))
+                : BaseExpression();
+            var call = InvocationExpression(
                 MemberAccessExpression(
                     SyntaxKind.SimpleMemberAccessExpression,
-                    typedArgs,
-                    argumentList)));
+                    callTarget,
+                    IdentifierName(method.Name)),
+                ArgumentList(CommaSeparatedList(callArgs))
+            );
+            return call;
         }
-
-        var baseOrProxyTargetCall = IsInterfaceProxy
-            ? (ExpressionSyntax)ParenthesizedExpression(
-                SuppressNullWarning(
-                    CastExpression(TypeDef.ToTypeRef(), ProxyTargetPropertyName)))
-            : BaseExpression();
-        var baseInvocation = InvocationExpression(
-            MemberAccessExpression(
-                SyntaxKind.SimpleMemberAccessExpression,
-                baseOrProxyTargetCall,
-                IdentifierName(method.Name)),
-            ArgumentList(CommaSeparatedList(proxyTargetCallArguments))
-        );
-
-        var returnTypeRef = method.ReturnType.ToTypeRef();
-        var baseInvocationBlock = Block(
-            VarStatement(typedArgs.Identifier, CastExpression(typeArgsVariableType, args)),
-            MaybeReturnStatement(
-                !returnTypeRef.IsVoid(),
-                baseInvocation));
-
-        return SimpleLambdaExpression(Parameter(args.Identifier))
-            .WithBlock(baseInvocationBlock);
     }
 
     private static InvocationExpressionSyntax CreateArgumentList(params ArgumentSyntax[] newArgumentListParams)

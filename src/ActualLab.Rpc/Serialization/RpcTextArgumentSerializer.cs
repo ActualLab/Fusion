@@ -56,8 +56,15 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer serializer) : RpcA
         }
 
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-        public override void OnObject(Type type, object? item, int index)
+        public override void OnClass(Type type, object? item, int index)
             => items.Add(serializer.Write(item, type));
+
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override void OnAny(Type type, object? item, int index)
+        {
+            if (type != typeof(CancellationToken))
+                items.Add(serializer.Write(item, type));
+        }
     }
 
     private sealed class ItemDeserializer(ITextSerializer serializer, List<string> items) : ArgumentListWriter
@@ -69,7 +76,13 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer serializer) : RpcA
                 : serializer.Read<T>(items[index]);
 
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-        public override object? OnObject(Type type, int index)
+        public override object? OnClass(Type type, int index)
             => serializer.Read(items[index], type);
+
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override object? OnAny(Type type, int index, object? defaultValue)
+            => type == typeof(CancellationToken)
+                ? defaultValue
+                : serializer.Read(items[index], type);
     }
 }

@@ -92,8 +92,10 @@ public class AltClassProxy
     {
         var intercepted = _cachedIntercepted ??= args =>
         {
-            var typedArgs = (ArgumentList<int, CancellationToken>)args;
-            return Method2Base(typedArgs.Item0, typedArgs.Item1);
+            if (args is ArgumentListG2<int, CancellationToken> ga)
+                return Method2Base(ga.Item0, ga.Item1);
+            var sa = (ArgumentListS2)args;
+            return Method2Base((int)sa.Item0!, (CancellationToken)sa.Item1!);
         };
         var invocation = new Invocation(this, _cachedMethodInfo!,
             ArgumentList.New(x, cancellationToken),

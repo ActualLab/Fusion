@@ -221,7 +221,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         var argumentSerializer = peer.ArgumentSerializer;
         var arguments = message.Arguments;
         if (arguments == null) {
-            arguments = MethodDef.ArgumentListFactory.Invoke();
+            arguments = MethodDef.ArgumentListType.Factory.Invoke();
             var allowPolymorphism = MethodDef.AllowArgumentPolymorphism;
             if (!MethodDef.HasObjectTypedArguments)
                 argumentSerializer.Deserialize(ref arguments, allowPolymorphism, message.ArgumentData);

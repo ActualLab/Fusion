@@ -1,22 +1,23 @@
 using System.Reflection;
 using ActualLab.Interception;
-using ActualLab.Reflection;
 
 namespace ActualLab.Tests.Interception;
 
 public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
 {
-    [Fact]
-    public void BasicTest()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void BasicTest(bool useGenerics)
     {
-        for (var length = 0; length < ArgumentList.NativeTypeCount * 3; length++) {
+        for (var length = 0; length <= ArgumentList.MaxGenericItemCount; length++) {
             var itemTypes = Enumerable.Range(0, length).Select(_ => typeof(int)).ToArray();
-            var list = (ArgumentList)ArgumentList.GetListType(itemTypes).CreateInstance();
+            var listDef = ArgumentListType.Get(useGenerics, itemTypes);
+            var list = listDef.Factory.Invoke();
             Test(length, list);
         }
 
-        void Test(int length, ArgumentList l0)
-        {
+        void Test(int length, ArgumentList l0) {
             var cts = new CancellationTokenSource();
             l0.Length.Should().Be(length);
             var l1 = l0.Duplicate();
@@ -31,23 +32,6 @@ public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
                 l1.Get<int>(i).Should().Be(i);
             }
 
-            for (var i = 0; i <= length; i++) {
-                // Insert test
-                var l2 = l1.Insert(i, "s");
-                l2.Length.Should().Be(length + 1);
-                l2.Get<string>(i).Should().Be("s");
-                Out.WriteLine(l2.ToString());
-                var l3 = l2.Remove(i);
-                l3.Should().Be(l1);
-
-                // InsertCancellationToken test
-                l2 = l1.InsertCancellationToken(i, cts.Token);
-                l2.Length.Should().Be(length + 1);
-                l2.Get<CancellationToken>(i).Should().Be(cts.Token);
-                l3 = l2.Remove(i);
-                l3.Should().Be(l1);
-            }
-
             var method = GetType().GetMethod($"Format{length}", BindingFlags.Static | BindingFlags.NonPublic);
             if (method != null) {
                 var invoker = l1.GetInvoker(method);
@@ -58,8 +42,10 @@ public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
         }
     }
 
-    [Fact]
-    public void InvokerTest()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void InvokerTest1(bool useGenerics)
     {
         var type = GetType();
         var bindingFlags = BindingFlags.Instance | BindingFlags.NonPublic;
@@ -70,7 +56,8 @@ public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
         Assert.Throws<ArgumentOutOfRangeException>(
             () => l.GetInvoker(type.GetMethod(nameof(VoidMethod1), bindingFlags)!));
 
-        l = ArgumentList.New(1);
+        l = ArgumentListType.Get(useGenerics, typeof(int)).Factory();
+        l.Set(0, 1);
         r = l.GetInvoker(type.GetMethod(nameof(VoidMethod1), bindingFlags)!).Invoke(this, l);
         r.Should().BeNull();
         Assert.Throws<ArgumentOutOfRangeException>(
@@ -81,12 +68,48 @@ public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
         Assert.Throws<ArgumentOutOfRangeException>(
             () => l.GetInvoker(type.GetMethod(nameof(VoidMethod0), bindingFlags)!));
 
-        l = ArgumentList.New(2, 3);
+        l = ArgumentListType.Get(useGenerics, typeof(int), typeof(int)).Factory();
+        l.Set(0, 2);
+        l.Set(1, 3);
         r = l.GetInvoker(type.GetMethod(nameof(ValueTaskMethod2), bindingFlags)!).Invoke(this, l);
         r.Should().BeOfType<ValueTask<int>>().Which.AsTask().Result.Should().Be(6);
         Assert.Throws<ArgumentOutOfRangeException>(
             () => l.GetInvoker(type.GetMethod(nameof(TaskMethod1), bindingFlags)!));
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void InvokerTest2(bool useGenerics)
+    {
+        var l0 = ArgumentListType.Get(useGenerics).Factory();
+        var l2 = ArgumentListType.Get(useGenerics, typeof(int), typeof(string)).Factory();
+        l2.Set(0, 1);
+        l2.Set(1, "s");
+        var m0 = typeof(Invoker).GetMethod(nameof(Invoker.Format0), BindingFlags.Public | BindingFlags.Static)!;
+        var m2 = typeof(Invoker).GetMethod(nameof(Invoker.Format2), BindingFlags.Public | BindingFlags.Static)!;
+        l0.GetInvoker(m0).Invoke(null, l0).Should().Be("");
+        l2.GetInvoker(m2).Invoke(null, l2).Should().Be("1, s");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CreateInstanceTest(bool useGenerics)
+    {
+        for (var i = 0; i <= ArgumentList.MaxItemCount; i++) {
+            var itemTypes = Enumerable.Range(0, i).Select(_ => typeof(int)).ToArray();
+
+            var def = ArgumentListType.Get(useGenerics, itemTypes);
+            def.ItemTypes.Should().Equal(itemTypes);
+
+            var l = def.Factory.Invoke();
+            l.Length.Should().Be(i);
+            l.Type.Should().BeSameAs(def);
+        }
+    }
+
+    // Private methods
 
     private static string Format0()
         => "()";
@@ -135,5 +158,15 @@ public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
     {
         Out.WriteLine($"{nameof(ValueTaskMethod2)}({x}, {y})");
         return new ValueTask<int>(x * y);
+    }
+
+    // Nested types
+
+    public static class Invoker
+    {
+        public static string Format0()
+            => "";
+        public static string Format2(int a1, string a2)
+            => $"{a1}, {a2}";
     }
 }
