@@ -217,7 +217,7 @@ public class RemoteComputeMethodFunction<T>(
     {
         // 0. Await for RPC call delay
         var delayTask = Caching.RemoteComputedCache.UpdateDelayer?.Invoke(input, peer);
-        if (delayTask is { IsCompletedSuccessfully: false })
+        if (delayTask != null && delayTask.IsCompletedSuccessfully())
             await delayTask.ConfigureAwait(false);
 
         // 1. Await for the connection
