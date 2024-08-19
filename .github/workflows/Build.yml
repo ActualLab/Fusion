@@ -10,27 +10,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # Avoid shallow clone for Nerdbank.GitVersioning
           fetch-depth: 0
+
+      - run: "echo 'SemVer2: ${{ steps.nbgv.outputs.SemVer2 }}'"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: csharp/global.json
+
+      - name: Install WASM tools
+        run: dotnet workload install wasm-tools
 
       - uses: dotnet/nbgv@master
         id: nbgv
         with:
           setAllVars: true
           setCommonVars: true
-
-      - run: "echo 'SemVer2: ${{ steps.nbgv.outputs.SemVer2 }}'"
-
-      - name: Setup .NET 8.0
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '8.0.8'
-          dotnet-quality: 'ga'
-
-      - name: Install WASM tools
-        run: dotnet workload install wasm-tools
 
       - name: Restore NuGet Packages & Tools
         run: dotnet run --project build -c Release --no-launch-profile -- restore restore-tools
