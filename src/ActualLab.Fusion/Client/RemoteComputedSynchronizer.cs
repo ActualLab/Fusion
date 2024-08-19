@@ -13,8 +13,7 @@ public record RemoteComputedSynchronizer : IRemoteComputedSynchronizer
     private static readonly AsyncLocal<IRemoteComputedSynchronizer?> CurrentLocal = new();
 
     public static readonly IRemoteComputedSynchronizer? None = null;
-    public static IRemoteComputedSynchronizer Default { get; set; }
-        = new RemoteComputedSynchronizer();
+    public static IRemoteComputedSynchronizer Default { get; set; } = new RemoteComputedSynchronizer();
 
     public static IRemoteComputedSynchronizer? Current {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
