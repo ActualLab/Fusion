@@ -73,7 +73,8 @@ public class ComputeServiceInterceptor : Interceptor
             }
             finally {
                 if (cancellationToken.CanBeCanceled)
-                    // We don't want memory leaks + unexpected cancellation later
+                    // ComputedInput is stored in ComputeRegistry, so we remove CancellationToken there
+                    // to prevent memory leaks + possible unexpected cancellations on .Update calls.
                     arguments.SetCancellationToken(ctIndex, default);
             }
         }

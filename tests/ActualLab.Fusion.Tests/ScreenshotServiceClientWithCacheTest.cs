@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Client;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Tests.Services;

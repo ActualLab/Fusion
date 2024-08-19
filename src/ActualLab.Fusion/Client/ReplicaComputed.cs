@@ -1,7 +1,7 @@
 using ActualLab.Fusion.Interception;
 using ActualLab.Internal;
 
-namespace ActualLab.Fusion.Client.Interception;
+namespace ActualLab.Fusion.Client;
 
 public interface IReplicaComputed
 {

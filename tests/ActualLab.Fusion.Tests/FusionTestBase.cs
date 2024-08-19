@@ -26,6 +26,9 @@ public abstract class FusionTestBase : RpcTestBase
 {
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
 
+    private readonly object _lock = new();
+    private IRemoteComputedCache? _remoteComputedCache;
+
     public FusionTestDbType DbType { get; set; } = TestRunnerInfo.IsBuildAgent()
         ? FusionTestDbType.InMemory
         : FusionTestDbType.Sqlite;
@@ -105,8 +108,12 @@ public abstract class FusionTestBase : RpcTestBase
                     ? new RpcServerPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
                     : new RpcClientPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel });
             if (UseRemoteComputedCache)
-                fusion.AddSharedRemoteComputedCache<InMemoryRemoteComputedCache, InMemoryRemoteComputedCache.Options>(
-                    _ => InMemoryRemoteComputedCache.Options.Default);
+                services.AddSingleton(c => {
+                    lock (_lock) {
+                        return _remoteComputedCache ??=
+                            new InMemoryRemoteComputedCache(InMemoryRemoteComputedCache.Options.Default, c);
+                    }
+                });
             fusion.AddClient<ITimeService>();
             fusion.AddClient<IUserService>();
             fusion.AddClient<IScreenshotService>();

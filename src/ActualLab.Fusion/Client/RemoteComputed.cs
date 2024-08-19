@@ -6,7 +6,7 @@ using ActualLab.Fusion.Internal;
 using ActualLab.Rpc.Caching;
 using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
-namespace ActualLab.Fusion.Client.Interception;
+namespace ActualLab.Fusion.Client;
 
 #pragma warning disable VSTHRD104, MA0055
 

@@ -1,5 +1,5 @@
+using ActualLab.Fusion.Client;
 using ActualLab.Fusion.Client.Caching;
-using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Tests.Services;
 
 namespace ActualLab.Fusion.Tests;
@@ -28,17 +28,16 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
 
         await kv.Set("1", "a");
 
-        var c1 = await GetComputed(kv1, "1");
+        var c1 = await GetComputed(kv1, "1"); // Nothing is cached yet -> RPC call
         c1.Value.Should().Be("a");
-        c1.WhenSynchronized.IsCompleted.Should().BeTrue();
-
+        c1.WhenSynchronized.IsCompleted.Should().BeTrue(); // Cache has 'Get("1")' entry now
         await Assert.ThrowsAnyAsync<TimeoutException>(() =>
             c1.WhenInvalidated().WaitAsync(smallTimeout));
 
-        var c2 = await GetComputed(kv2, "1");
+        var c2 = await GetComputed(kv2, "1"); // Cached version fetched
         c2.Value.Should().Be("a");
         c2.WhenSynchronized.IsCompleted.Should().BeFalse();
-        await c2.WhenSynchronized();
+        await c2.WhenSynchronized(); // Synced
         c2.WhenSynchronized.IsCompleted.Should().BeTrue();
         c2 = await GetComputed(kv2, "1");
         c2.WhenSynchronized.IsCompleted.Should().BeTrue();
@@ -46,6 +45,59 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
         await kv.Set("1", "a");
         await c1.WhenInvalidated().WaitAsync(timeout);
         await c2.WhenInvalidated().WaitAsync(timeout);
+    }
+
+    [Theory]
+    [InlineData(false, false, 0d)]
+    [InlineData(false, true, 0d)]
+    [InlineData(true, false, 0d)]
+    [InlineData(true, true, 0d)]
+    [InlineData(false, false, 3d)]
+    [InlineData(false, true, 3d)]
+    [InlineData(true, false, 3d)]
+    [InlineData(true, true, 3d)]
+    [InlineData(false, false, null)]
+    [InlineData(false, true, null)]
+    [InlineData(true, false, null)]
+    [InlineData(true, true, null)]
+    public async Task RemoteComputeContextTest(bool waitForConnection, bool syncIfDisconnected, double? timeout)
+    {
+        await using var serving = await WebHost.Serve();
+        await Delay(0.25);
+        var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
+        await cache.WhenInitialized;
+
+        var clientServices2 = CreateServices(true);
+        await using var _ = clientServices2 as IAsyncDisposable;
+
+        var kv = WebServices.GetRequiredService<IKeyValueService<string>>();
+        var kv1 = ClientServices.GetRequiredService<IKeyValueService<string>>();
+        var kv2 = clientServices2.GetRequiredService<IKeyValueService<string>>();
+
+        await kv.Set("1", "a");
+        var c1 = await GetComputed(kv1, "1"); // Nothing is cached yet -> RPC call
+        c1.Value.Should().Be("a");
+        c1.WhenSynchronized.IsCompleted.Should().BeTrue(); // Cache has 'Get("1")' entry now
+        await Task.Delay(TimeSpan.FromSeconds(0.1));
+
+        if (waitForConnection)
+            await kv2.Set("2", "b");
+
+        var synchronizer = new RemoteComputedSynchronizer() {
+            UseWhenDisconnected = syncIfDisconnected
+        };
+        if (timeout is { } vTimeout)
+            synchronizer = synchronizer with {
+                TimeoutFactory = vTimeout <= 0
+                    ? (_, _) => Task.CompletedTask
+                    : (_, ct) => Task.Delay(TimeSpan.FromSeconds(vTimeout), ct)
+            };
+        var willBeSynchronized = timeout != 0 && (waitForConnection || syncIfDisconnected);
+        using (synchronizer.Activate()) {
+            var c2 = await GetComputed(kv2, "1");
+            c2.Value.Should().Be("a");
+            c2.WhenSynchronized.IsCompleted.Should().Be(willBeSynchronized);
+        }
     }
 
     [Fact]

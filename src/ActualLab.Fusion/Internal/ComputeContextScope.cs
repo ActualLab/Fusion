@@ -11,14 +11,14 @@ public readonly struct ComputeContextScope : IDisposable
     {
         _oldContext = ComputeContext.Current;
         Context = context;
-        if (_oldContext != context)
+        if (!ReferenceEquals(_oldContext, context))
             ComputeContext.Current = context;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose()
     {
-        if (_oldContext != Context)
+        if (!ReferenceEquals(_oldContext, Context))
             ComputeContext.Current = _oldContext;
     }
 }

@@ -13,11 +13,7 @@ public sealed class ComputeContext
     public static ComputeContext Current {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => CurrentLocal.Value ?? None;
-        internal set {
-            if (value == None)
-                value = null!;
-            CurrentLocal.Value = value;
-        }
+        internal set => CurrentLocal.Value = ReferenceEquals(value, None) ? null : value;
     }
 
     public readonly CallOptions CallOptions;

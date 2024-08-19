@@ -14,6 +14,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     private IEnumerable<RpcPeerTracker>? _peerTrackers;
     private RpcSystemCallSender? _systemCallSender;
     private RpcClient? _client;
+    private RpcClientPeer? _defaultPeer;
     private RpcClientPeer? _loopbackPeer;
     private RpcClientPeer? _localPeer;
 
@@ -52,6 +53,9 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public RpcInternalServices InternalServices;
     public RpcLimits Limits { get; }
     public MomentClock Clock { get; }
+
+    // Most useful peers are cached
+    public RpcClientPeer DefaultPeer => _defaultPeer ??= (RpcClientPeer)GetPeer(RpcPeerRef.Default);
     public RpcClientPeer LoopbackPeer => _loopbackPeer ??= (RpcClientPeer)GetPeer(RpcPeerRef.Loopback);
     public RpcClientPeer LocalPeer => _localPeer ??= (RpcClientPeer)GetPeer(RpcPeerRef.Local);
 

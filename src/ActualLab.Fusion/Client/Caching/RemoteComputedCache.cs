@@ -8,7 +8,7 @@ using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Fusion.Client.Caching;
 
-public abstract class RemoteComputedCache : RpcServiceBase, IRemoteComputedCache
+public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteComputedCache
 {
     public static RpcCacheKey VersionKey { get; set; } = new("", "Version", TextOrBytes.EmptyBytes);
 

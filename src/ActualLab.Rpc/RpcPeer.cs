@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;

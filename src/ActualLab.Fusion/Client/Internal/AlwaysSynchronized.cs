@@ -1,4 +1,4 @@
-namespace ActualLab.Fusion.Client.Interception;
+namespace ActualLab.Fusion.Client.Internal;
 
 internal static class AlwaysSynchronized
 {

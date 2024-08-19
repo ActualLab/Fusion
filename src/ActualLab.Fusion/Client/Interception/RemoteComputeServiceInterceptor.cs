@@ -47,10 +47,57 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
     {
         var computeMethodDef = (ComputeMethodDef)methodDef;
         var rpcMethodDef = RpcServiceDef.GetOrFindMethod(initialInvocation.Method);
-        var function = rpcMethodDef == null
-            ? new ComputeMethodFunction<TUnwrapped>(computeMethodDef, Hub) // No RpcMethodDef -> it's a local call
-            : new RemoteComputeMethodFunction<TUnwrapped>(computeMethodDef, rpcMethodDef, Hub, LocalTarget);
-        return CreateHandler(function);
+        if (rpcMethodDef == null) // Proxy is a Distributed service & non-RPC method is called
+            return ComputeServiceInterceptor.CreateHandler(new ComputeMethodFunction<TUnwrapped>(computeMethodDef, Hub));
+
+        var function = new RemoteComputeMethodFunction<TUnwrapped>(computeMethodDef, rpcMethodDef, Hub, LocalTarget);
+        var ctIndex = computeMethodDef.CancellationTokenIndex;
+        return Handler;
+
+        object? Handler(Invocation invocation) {
+            var input = new ComputeMethodInput(function, computeMethodDef, invocation);
+            var arguments = invocation.Arguments;
+            var cancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
+            try {
+                // Inlined:
+                // var task = function.InvokeAndStrip(input, ComputeContext.Current, cancellationToken);
+                var context = ComputeContext.Current;
+                var computed = ComputedRegistry.Instance.Get(input) as Computed<TUnwrapped>; // = input.GetExistingComputed()
+                var synchronizer = RemoteComputedSynchronizer.Current;
+                var task = !ReferenceEquals(synchronizer, null) && (context.CallOptions & CallOptions.GetExisting) == 0
+                    ? UseOrComputeWithSynchronizer()
+                    : ComputedImpl.TryUseExisting(computed, context)
+                        ? ComputedImpl.StripToTask(computed, context)
+                        : function.TryRecompute(input, context, cancellationToken);
+                // ReSharper disable once HeapView.BoxingAllocation
+                return computeMethodDef.ReturnsValueTask ? new ValueTask<TUnwrapped>(task) : task;
+
+                async Task<TUnwrapped> UseOrComputeWithSynchronizer() {
+                    // If we're here, (context.CallOptions & CallOptions.GetExisting) == 0,
+                    // which means that only CallOptions.Capture can be used.
+
+                    if (computed == null || !computed.IsConsistent())
+                        computed = await function.TryRecomputeForSyncAwaiter(input, cancellationToken).ConfigureAwait(false);
+                    var whenSynchronized = synchronizer.WhenSynchronized(computed, cancellationToken);
+                    if (!whenSynchronized.IsCompletedSuccessfully()) {
+                        await whenSynchronized.ConfigureAwait(false);
+                        if (!computed.IsConsistent())
+                            computed = await computed.Update(cancellationToken).ConfigureAwait(false);
+                    }
+
+                    // Note that until this moment UseNew(...) wasn't called for computed!
+                    ComputedImpl.UseNew(computed, context);
+                    return computed.Value;
+                }
+            }
+            finally {
+                if (cancellationToken.CanBeCanceled)
+                    // ComputedInput is stored in ComputeRegistry, so we remove CancellationToken there
+                    // to prevent memory leaks + possible unexpected cancellations on .Update calls.
+                    arguments.SetCancellationToken(ctIndex, default);
+            }
+
+        }
     }
 
     protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)

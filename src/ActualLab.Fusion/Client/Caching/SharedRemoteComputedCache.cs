@@ -10,6 +10,7 @@ public class SharedRemoteComputedCache : IRemoteComputedCache
     public Task WhenInitialized => Instance.WhenInitialized;
 
     public SharedRemoteComputedCache(Func<RemoteComputedCache> instanceFactory)
+        // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
         => Instance ??= instanceFactory.Invoke();
 
     public ValueTask<RpcCacheEntry<T>?> Get<T>(
