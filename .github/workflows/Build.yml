@@ -22,8 +22,8 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Install WASM tools
-        run: dotnet workload install wasm-tools
+      - name: Install .NET workloads
+        run: dotnet workload install wasm-tools aspire
 
       - uses: dotnet/nbgv@master
         id: nbgv
