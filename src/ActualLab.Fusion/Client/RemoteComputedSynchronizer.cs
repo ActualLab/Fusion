@@ -22,7 +22,7 @@ public record RemoteComputedSynchronizer : IRemoteComputedSynchronizer
         internal set => CurrentLocal.Value = value;
     }
 
-    public bool UseWhenDisconnected { get; init; } // by default, it isn't used when disconnected
+    public bool UseWhenDisconnected { get; init; } // = Unused when disconnected by default!
     public Func<IRemoteComputed, RpcPeer> PeerResolver { get; init; } =
         static c => c.Input.Function.Hub.RpcHub.DefaultPeer;
     public Func<IRemoteComputed, CancellationToken, Task>? TimeoutFactory { get; init; }
