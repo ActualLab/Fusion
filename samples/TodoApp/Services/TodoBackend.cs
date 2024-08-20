@@ -78,7 +78,7 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         await using var dbContext = await DbHub.CreateDbContext(tenant, cancellationToken);
 
         var keys = await dbContext.Todos
-            .OrderBy(x => x.Key)
+            .OrderBy(x => x.Key) // We want 100% stable order here
             .Select(x => x.Key)
             .Take(limit)
             .ToListAsync(cancellationToken);
