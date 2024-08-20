@@ -29,6 +29,15 @@ public static class EnumerableExt
         return result;
     }
 
+    public static TTarget[] ToArray<TSource, TTarget>(this IEnumerable<TSource> source, int length, Func<TSource, TTarget> selector)
+    {
+        var result = new TTarget[length];
+        var i = 0;
+        foreach (var item in source)
+            result[i++] = selector.Invoke(item);
+        return result;
+    }
+
     // SkipNullItems
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
