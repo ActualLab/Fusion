@@ -29,7 +29,8 @@ public static class EnumerableExt
         return result;
     }
 
-    public static TTarget[] ToArray<TSource, TTarget>(this IEnumerable<TSource> source, int length, Func<TSource, TTarget> selector)
+    public static TTarget[] ToArray<TSource, TTarget>(
+        this IEnumerable<TSource> source, int length, Func<TSource, TTarget> selector)
     {
         var result = new TTarget[length];
         var i = 0;
