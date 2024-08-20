@@ -14,9 +14,7 @@
                             @onclick="InvertDone" />
         </AddonLabel>
     </Addon>
-    <TextEdit TextChanged="@(new EventCallback<string>(null, UpdateTitle))"
-              ChangeTextOnKeyPress="false"
-              Text="@Value.Title"/>
+    <TextEdit TextChanged="@(new EventCallback<string>(null, UpdateTitle))" Text="@Value.Title" Debounce="true" />
     <Addon AddonType="AddonType.End">
         <Button Clicked="Remove" Color="Color.Warning">
             <Blazorise.Icon Name="FontAwesomeIcons.Minus"/>

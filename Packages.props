@@ -195,6 +195,7 @@
     <PackageReference Update="ActualLab.Fusion.EntityFramework" Version="$(FusionVersion)" />
     <PackageReference Update="ActualLab.Fusion.Ext.Contracts" Version="$(FusionVersion)" />
     <PackageReference Update="ActualLab.Fusion.Ext.Services" Version="$(FusionVersion)" />
+    <PackageReference Update="Blazored.LocalStorage" Version="4.5.0" />
 
     <!-- Build time only -->
     <PackageReference Update="ActualLab.Core" Version="$(FusionVersion)" />

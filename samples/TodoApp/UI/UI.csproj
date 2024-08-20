@@ -31,6 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Blazored.LocalStorage" />
     <PackageReference Include="Blazorise" />
     <PackageReference Include="Blazorise.Bootstrap5" />
     <PackageReference Include="Blazorise.DataGrid" />

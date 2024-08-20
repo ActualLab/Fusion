@@ -9,6 +9,7 @@ using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.UI;
 using ActualLab.OS;
 using ActualLab.Rpc;
+using Blazored.LocalStorage;
 using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
 using Templates.TodoApp.Abstractions;
@@ -31,13 +32,20 @@ public static class StartupHelper
 
         // Fusion services
         var fusion = services.AddFusion();
-        fusion.AddInMemoryRemoteComputedCache(_ => new() { LogLevel = LogLevel.Information });
         fusion.AddAuthClient();
         fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
 
         // RPC clients
         fusion.AddClient<ITodoService>();
         fusion.Rpc.AddClient<IRpcExampleService>();
+
+        // LocalStorageRemoteComputedCache as IRemoteComputedCache
+        services.AddBlazoredLocalStorageAsSingleton();
+        services.AddSingleton(_ => LocalStorageRemoteComputedCache.Options.Default);
+        services.AddSingleton(c => {
+            var options = c.GetRequiredService<LocalStorageRemoteComputedCache.Options>();
+            return (IRemoteComputedCache)new LocalStorageRemoteComputedCache(options, c);
+        });
 
         ConfigureSharedServices(services, HostKind.Client, builder.HostEnvironment.BaseAddress);
     }
@@ -68,8 +76,6 @@ public static class StartupHelper
             services.AddBlazorise(options => options.Immediate = true)
                 .AddBootstrap5Providers()
                 .AddFontAwesomeIcons();
-        }
-        else {
         }
 
         // Diagnostics
