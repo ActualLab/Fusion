@@ -84,6 +84,14 @@ public readonly partial struct DbShard : ISymbolIdentifier<DbShard>
     public static bool operator ==(DbShard left, DbShard right) => left.Equals(right);
     public static bool operator !=(DbShard left, DbShard right) => !left.Equals(right);
 
+    // Comparison
+
+    public int CompareTo(DbShard other) => string.CompareOrdinal(Id.Value, other.Id.Value);
+    public static bool operator <(DbShard left, DbShard right) => left.CompareTo(right) < 0;
+    public static bool operator <=(DbShard left, DbShard right) => left.CompareTo(right) <= 0;
+    public static bool operator >(DbShard left, DbShard right) => left.CompareTo(right) > 0;
+    public static bool operator >=(DbShard left, DbShard right) => left.CompareTo(right) >= 0;
+
     // Parsing
 
     public static DbShard Parse(string? s)
@@ -96,4 +104,5 @@ public readonly partial struct DbShard : ISymbolIdentifier<DbShard>
         result = new DbShard(s, AssumeValid.Option);
         return result.IsSpecial || Validator.Invoke(result);
     }
+
 }
