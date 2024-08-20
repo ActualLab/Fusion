@@ -25,7 +25,7 @@ public static class ArrayExt
 
     // Nested types
 
-    private class SortKeyComparer<T, TSortKey>(
+    private sealed class SortKeyComparer<T, TSortKey>(
         Func<T, TSortKey> sortKeySelector,
         IComparer<TSortKey> comparer
         ) : IComparer<T>

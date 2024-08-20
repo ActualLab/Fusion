@@ -11,7 +11,7 @@ public partial record struct PropertyBagItem(
     [property: DataMember(Order = 1), MemoryPackOrder(1)] TypeDecoratingUniSerialized<object> Serialized
     ) : IComparable<PropertyBagItem>
 {
-    public static IComparer<PropertyBagItem> Comparer { get; } = new KeyRelationalComparer();
+    public static readonly IComparer<PropertyBagItem> Comparer = new ComparerImpl();
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public object Value => Serialized.Value;
@@ -65,7 +65,7 @@ public partial record struct PropertyBagItem(
 
     // Nested types
 
-    private sealed class KeyRelationalComparer : IComparer<PropertyBagItem>
+    private sealed class ComparerImpl : IComparer<PropertyBagItem>
     {
         public int Compare(PropertyBagItem x, PropertyBagItem y)
             => string.CompareOrdinal(x.Key.Value, y.Key.Value);
