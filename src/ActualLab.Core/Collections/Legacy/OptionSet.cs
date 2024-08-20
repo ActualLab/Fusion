@@ -23,7 +23,7 @@ public sealed partial class OptionSet
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     [JsonPropertyName(nameof(Items)), Newtonsoft.Json.JsonIgnore]
-    public Dictionary<string, NewtonsoftJsonSerialized<object>> JsonCompatibleItems
+    public IDictionary<string, NewtonsoftJsonSerialized<object>> JsonCompatibleItems
         => OptionSetHelper.ToNewtonsoftJsonCompatible(Items);
 
     public object? this[Symbol key] {
@@ -53,7 +53,7 @@ public sealed partial class OptionSet
         => _items = items ?? ImmutableDictionary<Symbol, object>.Empty;
 
     [JsonConstructor, MemoryPackConstructor]
-    public OptionSet(Dictionary<string, NewtonsoftJsonSerialized<object>>? jsonCompatibleItems)
+    public OptionSet(IDictionary<string, NewtonsoftJsonSerialized<object>>? jsonCompatibleItems)
         : this(jsonCompatibleItems?.ToImmutableDictionary(p => (Symbol)p.Key, p => p.Value.Value))
     { }
 

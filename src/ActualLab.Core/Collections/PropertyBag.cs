@@ -72,10 +72,10 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
     { }
 
     [MemoryPackConstructor, JsonConstructor, Newtonsoft.Json.JsonConstructor]
-    public PropertyBag(params PropertyBagItem[]? rawItems)
+    public PropertyBag(PropertyBagItem[]? rawItems)
     {
         if (rawItems != null && rawItems.Length != 0)
-            _items = rawItems;
+            _items = rawItems.SortInPlace(PropertyBagItem.Comparer);
     }
 
     public override string ToString()
@@ -175,6 +175,7 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
             index = items.Length - 1;
         }
         items[index] = item;
+        items.SortInPlace(PropertyBagItem.Comparer);
         return new PropertyBag(items);
     }
 
@@ -196,7 +197,7 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
                 else
                     buffer.Add(item);
             }
-            return new PropertyBag(buffer.ToArray());
+            return new PropertyBag(buffer.ToArray().SortInPlace(PropertyBagItem.Comparer));
         }
         finally {
             buffer.Release();
@@ -225,6 +226,7 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
         var items = new PropertyBagItem[_items.Length - 1];
         _items.AsSpan(0, index).CopyTo(items.AsSpan());
         _items.AsSpan(index + 1).CopyTo(items.AsSpan(index));
+        items.SortInPlace(PropertyBagItem.Comparer);
         return new PropertyBag(items);
     }
 

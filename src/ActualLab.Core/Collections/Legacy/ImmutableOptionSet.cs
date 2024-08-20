@@ -28,7 +28,7 @@ public readonly partial record struct ImmutableOptionSet
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     [JsonPropertyName(nameof(Items)), Newtonsoft.Json.JsonIgnore]
-    public Dictionary<string, NewtonsoftJsonSerialized<object>> JsonCompatibleItems
+    public IDictionary<string, NewtonsoftJsonSerialized<object>> JsonCompatibleItems
         => OptionSetHelper.ToNewtonsoftJsonCompatible(Items);
 
     // ReSharper disable once CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
@@ -40,7 +40,7 @@ public readonly partial record struct ImmutableOptionSet
         => _items = items;
 
     [JsonConstructor, MemoryPackConstructor]
-    public ImmutableOptionSet(Dictionary<string, NewtonsoftJsonSerialized<object>>? jsonCompatibleItems)
+    public ImmutableOptionSet(IDictionary<string, NewtonsoftJsonSerialized<object>>? jsonCompatibleItems)
         => _items = jsonCompatibleItems?.ToImmutableDictionary(p => (Symbol) p.Key, p => p.Value.Value);
 
     public override string ToString()

@@ -15,10 +15,12 @@ internal static class OptionSetHelper
             : $"{count} items: [ {args} ]";
     }
 
-    public static Dictionary<string, NewtonsoftJsonSerialized<object>> ToNewtonsoftJsonCompatible(
+    public static IDictionary<string, NewtonsoftJsonSerialized<object>> ToNewtonsoftJsonCompatible(
         IReadOnlyDictionary<Symbol, object> items)
-        => items.ToDictionary(
-            p => p.Key.Value,
-            p => NewtonsoftJsonSerialized.New(p.Value),
-            StringComparer.Ordinal);
+    {
+        var result = new SortedDictionary<string, NewtonsoftJsonSerialized<object>>(StringComparer.Ordinal);
+        foreach (var (key, value) in items)
+            result.Add(key.Value, NewtonsoftJsonSerialized.New(value));
+        return result;
+    }
 }

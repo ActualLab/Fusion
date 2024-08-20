@@ -1,5 +1,7 @@
 namespace ActualLab.Collections.Internal;
 
+#pragma warning disable CA1036 // Implement <, <=, etc.
+
 [StructLayout(LayoutKind.Auto)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
@@ -7,7 +9,10 @@ namespace ActualLab.Collections.Internal;
 public partial record struct PropertyBagItem(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] Symbol Key,
     [property: DataMember(Order = 1), MemoryPackOrder(1)] TypeDecoratingUniSerialized<object> Serialized
-) {
+    ) : IComparable<PropertyBagItem>
+{
+    public static IComparer<PropertyBagItem> Comparer { get; } = new KeyRelationalComparer();
+
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public object Value => Serialized.Value;
 
@@ -53,4 +58,16 @@ public partial record struct PropertyBagItem(
     // Equality - relies only on Key property
     public readonly bool Equals(PropertyBagItem other) => Key.Equals(other.Key);
     public override readonly int GetHashCode() => Key.GetHashCode();
+
+    // CompareTo
+    public int CompareTo(PropertyBagItem other)
+        => string.CompareOrdinal(Key.Value, other.Key.Value);
+
+    // Nested types
+
+    private sealed class KeyRelationalComparer : IComparer<PropertyBagItem>
+    {
+        public int Compare(PropertyBagItem x, PropertyBagItem y)
+            => string.CompareOrdinal(x.Key.Value, y.Key.Value);
+    }
 }
