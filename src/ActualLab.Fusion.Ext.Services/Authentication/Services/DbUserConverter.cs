@@ -47,8 +47,8 @@ public class DbUserConverter<TDbContext, TDbUser, TDbUserId>(IServiceProvider se
             Id = DbUserIdHandler.Format(source.Id),
             Version = source.Version,
             Name = source.Name,
-            Claims = source.Claims,
-            Identities = source.Identities.ToImmutableDictionary(
+            Claims = source.Claims.ToApiMap(),
+            Identities = source.Identities.ToApiMap(
                 ui => new UserIdentity(ui.Id),
                 ui => ui.Secret)
         };

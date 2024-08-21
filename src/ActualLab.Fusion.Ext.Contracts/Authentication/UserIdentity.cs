@@ -1,12 +1,15 @@
 namespace ActualLab.Fusion.Authentication;
 
+#pragma warning disable CA1036
+
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
 public readonly partial record struct UserIdentity(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] Symbol Id
-) {
+    ) : IComparable<UserIdentity>
+{
     private static readonly ListFormat IdFormat = ListFormat.SlashSeparated;
 
     public static readonly UserIdentity None;
@@ -47,6 +50,11 @@ public readonly partial record struct UserIdentity(
 
     public bool Equals(UserIdentity other) => Id.Equals(other.Id);
     public override int GetHashCode() => Id.HashCode;
+
+    // Comparison
+
+    public int CompareTo(UserIdentity other)
+        => string.CompareOrdinal(Id.Value, other.Id.Value);
 
     // Private methods
 

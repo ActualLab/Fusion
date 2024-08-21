@@ -68,7 +68,7 @@ public class ComputedStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         c.IsConsistent().Should().BeTrue();
         c.Error!.Message.Should().Be("3");
 
-        await Task.Delay(c.Options.TransientErrorInvalidationDelay.Multiply(2));
+        await Task.Delay(c.Options.TransientErrorInvalidationDelay.MultiplyBy(2));
         if (errorTransiency.IsTransient()) {
             c.IsConsistent().Should().BeFalse();
             (await s.Use()).Should().Be(4);

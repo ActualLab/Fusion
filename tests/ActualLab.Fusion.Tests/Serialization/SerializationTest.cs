@@ -4,7 +4,7 @@ using ActualLab.Fusion.Tests.Services;
 using ActualLab.Generators;
 using User = ActualLab.Fusion.Authentication.User;
 
-namespace ActualLab.Fusion.Tests;
+namespace ActualLab.Fusion.Tests.Serialization;
 
 public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
 {
@@ -18,23 +18,33 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void UserSerialization()
     {
-        void AssertEquals(User some, User expected) {
-            some.Id.Should().Be(expected.Id);
-            some.Name.Should().Be(expected.Name);
-            some.Version.Should().Be(expected.Version);
-            some.Claims.Should().BeEquivalentTo(expected.Claims);
-            some.Identities.Should().BeEquivalentTo(expected.Identities);
-        }
-
         var user = new User("b", "bob");
-        AssertEquals(user.PassThroughAllSerializers(Out), user);
+        AssertEqual(user.PassThroughAllSerializers(Out), user);
 
         user = new User("b", "bob") { Version = 3 }
             .WithClaim("email1", "bob1@bob.bom")
             .WithClaim("email2", "bob2@bob.bom")
             .WithIdentity("google/1", "s")
             .WithIdentity("google/2", "q");
-        AssertEquals(user.PassThroughAllSerializers(Out), user);
+        AssertEqual(user.PassThroughAllSerializers(Out), user);
+    }
+
+    [Fact]
+    public void OldUserSerialization()
+    {
+        var oldUser = new OldUser("b", "bob");
+        var newUser = oldUser.AssertPassesThroughAllSerializers<OldUser, User>(AssertEqual, Out);
+        newUser.Claims.Count.Should().Be(0);
+        newUser.Identities.Count.Should().Be(0);
+
+        oldUser = new OldUser("b", "bob") { Version = 3 }
+            .WithClaim("email1", "bob1@bob.bom")
+            .WithClaim("email2", "bob2@bob.bom")
+            .WithIdentity("google/1", "s")
+            .WithIdentity("google/2", "q");
+        newUser = oldUser.AssertPassesThroughAllSerializers<OldUser, User>(AssertEqual, Out);
+        newUser.Claims.Count.Should().Be(2);
+        newUser.Identities.Count.Should().Be(2);
     }
 
     [Fact]
@@ -118,10 +128,25 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         }
     }
 
+    private static User ToNewUser(OldUser user)
+        => new(user.Id, user.Name, user.Version, user.Claims.ToApiMap(), user.JsonCompatibleIdentities.ToApiMap());
+
     private static void AssertEqual(ImmutableOptionSet a, ImmutableOptionSet b)
     {
         b.Items.Count.Should().Be(a.Items.Count);
         foreach (var (key, item) in b.Items)
             item.Should().Be(a[key]);
     }
+
+    private static void AssertEqual(User some, User expected)
+    {
+        some.Id.Should().Be(expected.Id);
+        some.Name.Should().Be(expected.Name);
+        some.Version.Should().Be(expected.Version);
+        some.Claims.Should().BeEquivalentTo(expected.Claims);
+        some.Identities.Should().BeEquivalentTo(expected.Identities);
+    }
+
+    private static void AssertEqual(User user, OldUser expected)
+        => AssertEqual(user, ToNewUser(expected));
 }

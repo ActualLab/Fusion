@@ -58,7 +58,7 @@ public class DbUserRepo<TDbContext, TDbUser, TDbUserId>(
             Id = id,
             Version = VersionGenerator.NextVersion(),
             Name = user.Name,
-            Claims = user.Claims,
+            Claims = user.Claims.ToImmutableDictionary(),
         };
         dbContext.Add(dbUser);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

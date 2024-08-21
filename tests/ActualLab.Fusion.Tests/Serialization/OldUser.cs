@@ -1,21 +1,23 @@
 using System.Globalization;
 using System.Security;
 using System.Security.Claims;
+using System.Text.Json.Serialization;
+using ActualLab.Fusion.Authentication;
 using ActualLab.Requirements;
 using ActualLab.Versioning;
 
-namespace ActualLab.Fusion.Authentication;
+namespace ActualLab.Fusion.Tests.Serialization;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarget
+public partial record OldUser : IHasId<Symbol>, IHasVersion<long>, IRequirementTarget
 {
     public static string GuestName { get; set; } = "Guest";
-    public static Requirement<User> MustExist { get; set; }
-        = new MustExistRequirement<User>().With("You must sign-in to perform this action.", m => new SecurityException(m));
-    public static Requirement<User> MustBeAuthenticated { get; set; }
+    public static Requirement<OldUser> MustExist { get; set; }
+        = new MustExistRequirement<OldUser>().With("You must sign-in to perform this action.", m => new SecurityException(m));
+    public static Requirement<OldUser> MustBeAuthenticated { get; set; }
         = Requirement.New(
-            (User? u) => u?.IsAuthenticated() ?? false,
+            (OldUser? u) => u?.IsAuthenticated() ?? false,
             new("User is not authenticated.", m => new SecurityException(m)));
 
     private Lazy<ClaimsPrincipal>? _claimsPrincipalLazy;
@@ -27,50 +29,50 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
     [DataMember, MemoryPackOrder(2)]
     public long Version { get; init; }
     [DataMember, MemoryPackOrder(3)]
-    public ApiMap<string, string> Claims { get; init; }
+    public ImmutableDictionary<string, string> Claims { get; init; }
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public ApiMap<UserIdentity, string> Identities { get; init; }
+    public ImmutableDictionary<UserIdentity, string> Identities { get; init; }
 
     // Computed properties
 
     [DataMember(Name = nameof(Identities)), MemoryPackOrder(4)]
     [JsonPropertyName(nameof(Identities)),  Newtonsoft.Json.JsonProperty(nameof(Identities))]
-    public ApiMap<string, string> JsonCompatibleIdentities {
-        get => Identities.UnorderedItems.ToApiMap(p => p.Key.Id.Value, p => p.Value, StringComparer.Ordinal);
-        init => Identities = value.ToApiMap(p => new UserIdentity(p.Key), p => p.Value);
+    public Dictionary<string, string> JsonCompatibleIdentities {
+        get => Identities.ToDictionary(p => p.Key.Id.Value, p => p.Value, StringComparer.Ordinal);
+        init => Identities = value.ToImmutableDictionary(p => new UserIdentity(p.Key), p => p.Value);
     }
 
-    public static User NewGuest(string? name = null)
+    public static OldUser NewGuest(string? name = null)
         => new(name ?? GuestName);
 
-    public User(string name) : this(Symbol.Empty, name) { }
-    public User(Symbol id, string name)
+    public OldUser(string name) : this(Symbol.Empty, name) { }
+    public OldUser(Symbol id, string name)
     {
         Id = id;
         Name = name;
-        Claims = ApiMap<string, string>.Empty;
-        Identities = ApiMap<UserIdentity, string>.Empty;
+        Claims = ImmutableDictionary<string, string>.Empty;
+        Identities = ImmutableDictionary<UserIdentity, string>.Empty;
     }
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public User(
+    public OldUser(
         Symbol id,
         string name,
         long version,
-        ApiMap<string, string> claims,
-        ApiMap<string, string> jsonCompatibleIdentities)
+        ImmutableDictionary<string, string> claims,
+        Dictionary<string, string> jsonCompatibleIdentities)
     {
         Id = id;
         Name = name;
         Version = version;
         Claims = claims;
-        Identities = ApiMap<UserIdentity, string>.Empty;
+        Identities = ImmutableDictionary<UserIdentity, string>.Empty;
         JsonCompatibleIdentities = jsonCompatibleIdentities;
     }
 
     // Record copy constructor.
     // Overriden to ensure _claimsPrincipalLazy is recreated.
-    protected User(User other)
+    protected OldUser(OldUser other)
     {
         Id = other.Id;
         Version = other.Version;
@@ -80,10 +82,10 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
         _claimsPrincipalLazy = new(CreateClaimsPrincipal);
     }
 
-    public User WithClaim(string name, string value)
-        => this with { Claims = Claims.With(name, value) };
-    public User WithIdentity(UserIdentity identity, string secret = "")
-        => this with { Identities = Identities.With(identity, secret) };
+    public OldUser WithClaim(string name, string value)
+        => this with { Claims = Claims.SetItem(name, value) };
+    public OldUser WithIdentity(UserIdentity identity, string secret = "")
+        => this with { Identities = Identities.SetItem(identity, secret) };
 
     public bool IsAuthenticated()
         => !Id.IsEmpty;
@@ -92,14 +94,13 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
     public virtual bool IsInRole(string role)
         => Claims.ContainsKey($"{ClaimTypes.Role}/{role}");
 
-    public virtual User ToClientSideUser()
+    public virtual OldUser ToClientSideUser()
     {
         if (Identities.IsEmpty)
             return this;
-
-        var maskedIdentities = ApiMap<UserIdentity, string>.Empty;
+        var maskedIdentities = ImmutableDictionary<UserIdentity, string>.Empty;
         foreach (var (id, _) in Identities)
-            maskedIdentities.Add((id.Schema, "<hidden>"), "");
+            maskedIdentities = maskedIdentities.Add((id.Schema, "<hidden>"), "");
         return this with { Identities = maskedIdentities };
     }
 
@@ -108,7 +109,7 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
 
     // Equality is changed back to reference-based
 
-    public virtual bool Equals(User? other) => ReferenceEquals(this, other);
+    public virtual bool Equals(OldUser? other) => ReferenceEquals(this, other);
     public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 
     // Protected methods
