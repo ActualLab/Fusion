@@ -34,6 +34,9 @@ public class RemoteComputeMethodFunction<T>(
     RpcMethodDef IRemoteComputeMethodFunction.RpcMethodDef => RpcMethodDef;
     object? IRemoteComputeMethodFunction.LocalTarget => LocalTarget;
 
+    protected readonly LogLevel ExistingCacheEntryUpdateLogLevel =
+        hub.RemoteComputeServiceInterceptorOptions.ExistingCacheEntryUpdateLogLevel;
+
     public readonly RpcHub RpcHub = hub.RpcHub;
     public readonly RpcMethodDef RpcMethodDef = rpcMethodDef;
     public readonly RpcSafeCallRouter RpcCallRouter = hub.RpcHub.InternalServices.CallRouter;
@@ -140,8 +143,9 @@ public class RemoteComputeMethodFunction<T>(
         if (!whenConnected.IsCompletedSuccessfully()) // Slow path
             await whenConnected.ConfigureAwait(false);
 
+        var existingCacheEntry = existing?.CacheEntry;
         var cacheInfoCapture = cache != null
-            ? new RpcCacheInfoCapture(RpcCacheEntry.RequestHash)
+            ? new RpcCacheInfoCapture(existingCacheEntry ?? RpcCacheEntry.RequestHash)
             : null;
         var (result, call) = await SendRpcCall(input, peer, cacheInfoCapture, cancellationToken).ConfigureAwait(false);
         if (result.Error is OperationCanceledException e) // Also handles RpcRerouteException
@@ -151,7 +155,15 @@ public class RemoteComputeMethodFunction<T>(
         if (cacheInfoCapture != null && cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueSource)) {
             // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
             var cacheValue = (await cacheValueSource.Task.ResultAwait(false)).ValueOrDefault; // None if error
-            cacheEntry = UpdateCache(cache!, cacheKey, cacheValue, result.ValueOrDefault!);
+
+            if (existingCacheEntry == null)
+                cacheEntry = UpdateCache(cache!, cacheKey, cacheValue, result.ValueOrDefault!);
+            else {
+                if (!cacheValue.IsNone && cacheValue.HashOrDataEquals(existingCacheEntry.Value))
+                    cacheEntry = existingCacheEntry; // Existing cached entry is still intact
+                else
+                    cacheEntry = UpdateCache(cache!, cacheKey, cacheValue, result.ValueOrDefault!, input);
+            }
         }
 
         var computed = new RemoteComputed<T>(
@@ -234,8 +246,8 @@ public class RemoteComputeMethodFunction<T>(
         }
 
         // 2. Send the RPC call
-        var cacheInfoCapture = new RpcCacheInfoCapture(
-            cachedComputed.CacheEntry ?? RpcCacheEntry.RequestHash);
+        var existingCacheEntry = cachedComputed.CacheEntry;
+        var cacheInfoCapture = new RpcCacheInfoCapture(existingCacheEntry ?? RpcCacheEntry.RequestHash);
         var (result, call) = await SendRpcCall(input, peer, cacheInfoCapture, default).ConfigureAwait(false);
         if (call == null || result.Error is RpcRerouteException) {
             await InvalidateToReroute(cachedComputed, result.Error).ConfigureAwait(false);
@@ -277,14 +289,19 @@ public class RemoteComputeMethodFunction<T>(
             return; // Since the call was bound to cachedComputed, it's properly cancelled already
 
         releaser.MarkLockedLocally();
-        if (!cacheValue.IsNone && cachedComputed.CacheEntry is { } oldCacheEntry && cacheValue.HashOrDataEquals(oldCacheEntry.Value)) {
-            // Existing cached entry is still intact
-            cachedComputed.SynchronizedSource.TrySetResult();
-            return;
-        }
 
-        // 7. Now, let's update cache entry
-        var cacheEntry = UpdateCache(cache, cacheKey, cacheValue, result.ValueOrDefault!);
+        // 7. Update cache
+        RpcCacheEntry? cacheEntry;
+        if (existingCacheEntry == null)
+            cacheEntry = UpdateCache(cache, cacheKey, cacheValue, result.ValueOrDefault!);
+        else {
+            if (!cacheValue.IsNone && cacheValue.HashOrDataEquals(existingCacheEntry.Value)) {
+                // Existing cached entry is still intact
+                cachedComputed.SynchronizedSource.TrySetResult();
+                return;
+            }
+            cacheEntry = UpdateCache(cache, cacheKey, cacheValue, result.ValueOrDefault!, input);
+        }
 
         // 8. Create the new computed - it invalidates the cached one upon registering
         var computed = new RemoteComputed<T>(
@@ -405,14 +422,15 @@ public class RemoteComputeMethodFunction<T>(
         }
     }
 
-    protected static RpcCacheEntry? UpdateCache(
+    protected RpcCacheEntry? UpdateCache(
         IRemoteComputedCache cache,
-        RpcCacheKey? key,
+        RpcCacheKey key,
         RpcCacheValue value,
-        T deserializedValue)
+        T deserializedValue,
+        ComputedInput? input = null)
     {
-        if (key == null)
-            return null;
+        if (input != null && Log.IfEnabled(ExistingCacheEntryUpdateLogLevel) is { } updateLog)
+            updateLog.Log(ExistingCacheEntryUpdateLogLevel, "Updating cache entry: {Input}", input);
 
         if (value.IsNone) {
             cache.Remove(key); // Error -> wipe cache entry

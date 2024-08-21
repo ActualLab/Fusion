@@ -12,6 +12,8 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
     public new record Options : ComputeServiceInterceptor.Options
     {
         public static new Options Default { get; set; } = new();
+
+        public LogLevel ExistingCacheEntryUpdateLogLevel { get; init; } = LogLevel.None;
     }
 
     public readonly RpcServiceDef RpcServiceDef;
