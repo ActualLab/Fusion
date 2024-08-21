@@ -30,7 +30,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void OldUserSerialization()
+    public void OldToNewUserSerialization()
     {
         var oldUser = new OldUser("b", "bob");
         var newUser = oldUser.AssertPassesThroughAllSerializers<OldUser, User>(AssertEqual, Out);
@@ -45,6 +45,24 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         newUser = oldUser.AssertPassesThroughAllSerializers<OldUser, User>(AssertEqual, Out);
         newUser.Claims.Count.Should().Be(2);
         newUser.Identities.Count.Should().Be(2);
+    }
+
+    [Fact]
+    public void NewToOldUserSerialization()
+    {
+        var newUser = new User("b", "bob");
+        var oldUser = newUser.AssertPassesThroughAllSerializers<User, OldUser>(AssertEqual, Out);
+        oldUser.Claims.Count.Should().Be(0);
+        oldUser.Identities.Count.Should().Be(0);
+
+        newUser = new User("b", "bob") { Version = 3 }
+            .WithClaim("email1", "bob1@bob.bom")
+            .WithClaim("email2", "bob2@bob.bom")
+            .WithIdentity("google/1", "s")
+            .WithIdentity("google/2", "q");
+        oldUser = newUser.AssertPassesThroughAllSerializers<User, OldUser>(AssertEqual, Out);
+        oldUser.Claims.Count.Should().Be(2);
+        oldUser.Identities.Count.Should().Be(2);
     }
 
     [Fact]
@@ -149,4 +167,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
 
     private static void AssertEqual(User user, OldUser expected)
         => AssertEqual(user, ToNewUser(expected));
+
+    private static void AssertEqual(OldUser user, User expected)
+        => AssertEqual(ToNewUser(user), expected);
 }
