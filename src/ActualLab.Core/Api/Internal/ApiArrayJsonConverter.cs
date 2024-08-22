@@ -1,4 +1,4 @@
-namespace ActualLab.Collections.Internal;
+namespace ActualLab.Api.Internal;
 
 #pragma warning disable IL2026
 

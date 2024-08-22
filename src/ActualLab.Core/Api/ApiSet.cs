@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace ActualLab.Collections;
+namespace ActualLab.Api;
 
 public static class ApiSet
 {

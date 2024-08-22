@@ -1,5 +1,6 @@
 namespace ActualLab.Time;
 
+[StructLayout(LayoutKind.Auto)]
 public readonly record struct ClockTimeout(
     MomentClock Clock,
     TimeSpan Duration)

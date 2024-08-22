@@ -1,4 +1,4 @@
-namespace ActualLab.Tests.Collections;
+namespace ActualLab.Tests.Api;
 
 public class ApiXxxSerializationTest(ITestOutputHelper @out) : TestBase(@out)
 {
@@ -63,6 +63,32 @@ public class ApiXxxSerializationTest(ITestOutputHelper @out) : TestBase(@out)
             var s = c.PassThroughAllSerializers(Out);
             s.Count.Should().Be(s.Count);
             s.Should().BeSubsetOf(c);
+        }
+    }
+
+    [Fact]
+    public void ApiNullableTest()
+    {
+        Test(0);
+        Test(10);
+        Test(0L);
+        Test(10L);
+
+        void Test<T>(T value)
+            where T : struct
+        {
+            ApiNullable<T>.None.AssertPassesThroughAllSerializers(Out)
+                .IsNone.Should().BeTrue();
+            ApiNullable4<T>.None.AssertPassesThroughAllSerializers(Out)
+                .IsNone.Should().BeTrue();
+            ApiNullable8<T>.None.AssertPassesThroughAllSerializers(Out)
+                .IsNone.Should().BeTrue();
+            ApiNullable.Some(value).AssertPassesThroughAllSerializers(Out)
+                .IsSome(out _).Should().BeTrue();
+            ApiNullable4.Some(value).AssertPassesThroughAllSerializers(Out)
+                .IsSome(out _).Should().BeTrue();
+            ApiNullable8.Some(value).AssertPassesThroughAllSerializers(Out)
+                .IsSome(out _).Should().BeTrue();
         }
     }
 }

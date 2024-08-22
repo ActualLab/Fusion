@@ -1,4 +1,4 @@
-namespace ActualLab.Tests.Collections;
+namespace ActualLab.Tests.Api;
 
 public class ApiArrayTest(ITestOutputHelper @out) : TestBase(@out)
 {

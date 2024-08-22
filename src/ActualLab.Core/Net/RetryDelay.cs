@@ -1,5 +1,6 @@
 namespace ActualLab.Net;
 
+[StructLayout(LayoutKind.Auto)]
 public readonly record struct RetryDelay(
     Task Task,
     Moment EndsAt, // Relative to CpuClock.Now

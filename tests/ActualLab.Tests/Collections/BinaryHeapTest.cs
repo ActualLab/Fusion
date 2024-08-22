@@ -7,8 +7,8 @@ public class BinaryHeapTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var heap = new BinaryHeap<int, int>();
         heap.Count.Should().Be(0);
-        heap.PeekMin().IsNone().Should().BeTrue();
-        heap.ExtractMin().IsNone().Should().BeTrue();
+        heap.PeekMin().IsNone.Should().BeTrue();
+        heap.ExtractMin().IsNone.Should().BeTrue();
         Assert.Empty(heap);
     }
 

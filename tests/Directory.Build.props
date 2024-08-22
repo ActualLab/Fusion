@@ -104,6 +104,7 @@
     <Using Include="System.Runtime.Serialization" />
     <Using Include="System.Threading.Channels" />
     <Using Include="ActualLab" />
+    <Using Include="ActualLab.Api" />
     <Using Include="ActualLab.Async" />
     <Using Include="ActualLab.Channels" />
     <Using Include="ActualLab.Collections" />

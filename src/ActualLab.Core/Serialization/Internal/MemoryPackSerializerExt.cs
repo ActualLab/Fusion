@@ -41,7 +41,9 @@ public static class MemoryPackSerializerExt
 
     // Nested types
 
+    [StructLayout(LayoutKind.Auto)]
     public readonly record struct ReaderStateSnapshot(MemoryPackReaderOptionalState? ReaderState);
+    [StructLayout(LayoutKind.Auto)]
     public readonly record struct WriterStateSnapshot(MemoryPackWriterOptionalState? WriterState, object? State);
 
 #else
@@ -60,7 +62,9 @@ public static class MemoryPackSerializerExt
 
     // Nested types
 
+    [StructLayout(LayoutKind.Auto)]
     public readonly record struct ReaderStateSnapshot;
+    [StructLayout(LayoutKind.Auto)]
     public readonly record struct WriterStateSnapshot;
 
 #endif

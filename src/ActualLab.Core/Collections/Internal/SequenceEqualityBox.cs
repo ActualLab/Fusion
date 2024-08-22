@@ -2,6 +2,7 @@ namespace ActualLab.Collections.Internal;
 
 public static class SequenceEqualityBox
 {
+    [StructLayout(LayoutKind.Auto)]
     public readonly record struct ForArray<T>(T[] Source)
     {
         public bool Equals(ForArray<T> other)
@@ -29,6 +30,7 @@ public static class SequenceEqualityBox
         }
     }
 
+    [StructLayout(LayoutKind.Auto)]
     public readonly record struct ForMemory<T>(ReadOnlyMemory<T> Source)
     {
         public bool Equals(ForMemory<T> other)
@@ -58,6 +60,7 @@ public static class SequenceEqualityBox
         }
     }
 
+    [StructLayout(LayoutKind.Auto)]
     public readonly record struct ForList<T>(IReadOnlyList<T> Source)
     {
         public bool Equals(ForList<T> other)

@@ -2,7 +2,7 @@ using ActualLab.Mathematics.Internal;
 
 namespace ActualLab.Mathematics;
 
-[StructLayout(LayoutKind.Sequential)] // Important!
+[StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct Tile<T>

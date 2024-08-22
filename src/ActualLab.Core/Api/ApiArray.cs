@@ -1,7 +1,7 @@
 using System.Globalization;
-using ActualLab.Collections.Internal;
+using ActualLab.Api.Internal;
 
-namespace ActualLab.Collections;
+namespace ActualLab.Api;
 
 public static class ApiArray
 {
@@ -20,6 +20,7 @@ public static class ApiArray
 
 #pragma warning disable MA0084
 
+[StructLayout(LayoutKind.Auto)]
 [CollectionBuilder(typeof(ApiArray), "New")]
 [JsonConverter(typeof(ApiArrayJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(ApiArrayNewtonsoftJsonConverter))]

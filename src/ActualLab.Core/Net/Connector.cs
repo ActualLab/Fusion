@@ -199,6 +199,7 @@ public sealed class Connector<TConnection> : WorkerBase
 
     // Nested types
 
+    [StructLayout(LayoutKind.Auto)]
     private readonly record struct State(
         TaskCompletionSource<TConnection> ConnectionSource,
         Exception? LastError = null,

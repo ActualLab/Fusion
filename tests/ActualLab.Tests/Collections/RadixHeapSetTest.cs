@@ -8,7 +8,7 @@ public class RadixHeapSetTest(ITestOutputHelper @out) : TestBase(@out)
         var heap = new RadixHeapSet<int>();
         heap.Count.Should().Be(0);
         heap.MinPriority.Should().Be(0);
-        heap.ExtractMin().IsNone().Should().BeTrue();
+        heap.ExtractMin().IsNone.Should().BeTrue();
         Assert.Empty(heap);
     }
 
@@ -49,7 +49,7 @@ public class RadixHeapSetTest(ITestOutputHelper @out) : TestBase(@out)
                 var min = heap.PeekMin();
                 var minSet = heap.PeekMinSet();
                 if (sortedItems.Count == 0) {
-                    min.IsNone().Should().BeTrue();
+                    min.IsNone.Should().BeTrue();
                     minSet.Count.Should().Be(0);
                 } else {
                     min.Value.Priority.Should().Be(sortedItems[0]);

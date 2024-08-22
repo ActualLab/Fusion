@@ -26,7 +26,7 @@ public partial record PageRef<TKey>(
     ) : PageRef
 {
     public override string ToString()
-        => After.IsNone()
+        => After.IsNone
             ? Count.ToString(CultureInfo.InvariantCulture)
 #pragma warning disable IL2026
             : SystemJsonSerializer.Default.Write(this, GetType());

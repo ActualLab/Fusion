@@ -3,7 +3,7 @@ using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
 
-[StructLayout(LayoutKind.Sequential)] // Important!
+[StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [JsonConverter(typeof(Base64EncodedJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(Base64EncodedNewtonsoftJsonConverter))]

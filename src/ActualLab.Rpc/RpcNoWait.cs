@@ -1,6 +1,6 @@
 namespace ActualLab.Rpc;
 
-[StructLayout(LayoutKind.Sequential)] // Important!
+[StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public readonly partial struct RpcNoWait
 {

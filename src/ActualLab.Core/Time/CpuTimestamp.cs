@@ -3,6 +3,7 @@ using Cysharp.Text;
 
 namespace ActualLab.Time;
 
+[StructLayout(LayoutKind.Auto)]
 public readonly record struct CpuTimestamp(long Value) : IComparable<CpuTimestamp>
 {
     private static readonly Func<long> QueryPerformanceCounter;

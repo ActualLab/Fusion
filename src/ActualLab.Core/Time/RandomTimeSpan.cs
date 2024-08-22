@@ -2,7 +2,7 @@ using ActualLab.Generators;
 
 namespace ActualLab.Time;
 
-[StructLayout(LayoutKind.Sequential)] // Important!
+[StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor]

@@ -4,6 +4,8 @@ using ActualLab.Time.Internal;
 
 namespace ActualLab.Time;
 
+[StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
+// [StructLayout(LayoutKind.Auto)]
 [DataContract]
 [JsonConverter(typeof(MomentJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(MomentNewtonsoftJsonConverter))]

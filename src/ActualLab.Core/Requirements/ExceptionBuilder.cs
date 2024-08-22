@@ -2,6 +2,7 @@ using System.Globalization;
 
 namespace ActualLab.Requirements;
 
+[StructLayout(LayoutKind.Auto)]
 public readonly record struct ExceptionBuilder
 {
     public static Func<string, Exception> DefaultExceptionFactory { get; set; }

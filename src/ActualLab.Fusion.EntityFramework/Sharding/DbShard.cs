@@ -5,12 +5,12 @@ using ActualLab.Internal;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+[StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [JsonConverter(typeof(SymbolIdentifierJsonConverter<DbShard>))]
 [Newtonsoft.Json.JsonConverter(typeof(SymbolIdentifierNewtonsoftJsonConverter<DbShard>))]
 [TypeConverter(typeof(SymbolIdentifierTypeConverter<DbShard>))]
 [ParameterComparer(typeof(ByValueParameterComparer))]
-[StructLayout(LayoutKind.Auto)]
 public readonly partial struct DbShard : ISymbolIdentifier<DbShard>
 {
     private static ILogger? _log;

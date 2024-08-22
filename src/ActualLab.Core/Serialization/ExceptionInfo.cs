@@ -4,6 +4,7 @@ using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
+[StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 {

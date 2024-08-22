@@ -1,5 +1,6 @@
 namespace ActualLab.Net;
 
+[StructLayout(LayoutKind.Auto)]
 public readonly record struct RetryDelayLogger(
     string Action,
     string? Tag,

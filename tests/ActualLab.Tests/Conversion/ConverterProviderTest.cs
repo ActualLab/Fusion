@@ -78,7 +78,7 @@ public class ConverterProviderTest(ITestOutputHelper @out) : TestBase(@out)
         var c1 = c.From<string>().To<LikeBool>().ThrowIfUnavailable();
         c1.Convert("true").Value.Should().BeTrue();
         c1.Convert("false").Value.Should().BeFalse();
-        c1.TryConvert("_").IsNone().Should().BeTrue();
+        c1.TryConvert("_").IsNone.Should().BeTrue();
         Assert.Throws<InvalidOperationException>(() => c1.Convert("_"));
 
         var c2 = c.From<LikeBool>().To<bool>().ThrowIfUnavailable();
@@ -93,7 +93,7 @@ public class ConverterProviderTest(ITestOutputHelper @out) : TestBase(@out)
         var c1 = c.From<string>().To<LikeBool2>().ThrowIfUnavailable();
         c1.Convert("true").Value.Should().BeTrue();
         c1.Convert("false").Value.Should().BeFalse();
-        c1.TryConvert("_").IsNone().Should().BeTrue();
+        c1.TryConvert("_").IsNone.Should().BeTrue();
         Assert.Throws<FormatException>(() => c1.Convert("_"));
 
         var c2 = c.From<LikeBool2>().To<bool>().ThrowIfUnavailable();
@@ -108,7 +108,7 @@ public class ConverterProviderTest(ITestOutputHelper @out) : TestBase(@out)
         var c1 = c.From<int>().To<bool>().ThrowIfUnavailable();
         c1.Convert(1).Should().BeTrue();
         c1.Convert(0).Should().BeFalse();
-        c1.TryConvert(10).IsNone().Should().BeTrue();
+        c1.TryConvert(10).IsNone.Should().BeTrue();
         Assert.Throws<InvalidOperationException>(() => c1.Convert(10));
     }
 
@@ -119,7 +119,7 @@ public class ConverterProviderTest(ITestOutputHelper @out) : TestBase(@out)
         var c1 = c.From<long>().To<int>().ThrowIfUnavailable();
         c1.Convert(1).Should().Be(1);
         c1.Convert(0).Should().Be(0);
-        c1.TryConvert(long.MaxValue).IsNone().Should().BeTrue();
+        c1.TryConvert(long.MaxValue).IsNone.Should().BeTrue();
         Assert.Throws<OverflowException>(() => c1.Convert(long.MaxValue));
     }
 

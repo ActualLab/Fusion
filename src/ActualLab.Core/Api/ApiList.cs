@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace ActualLab.Collections;
+namespace ActualLab.Api;
 
 [DataContract, MemoryPackable(GenerateType.Collection)]
 public sealed partial class ApiList<T> : List<T>

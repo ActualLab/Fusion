@@ -64,6 +64,8 @@ public static class Errors
 
     public static Exception OptionIsNone()
         => new InvalidOperationException("Option is None.");
+    public static Exception IsNone<T>()
+        => new InvalidOperationException($"{typeof(T).GetName()} is None.");
 
     public static Exception TaskIsNotCompleted()
         => new InvalidOperationException("Task is expected to be completed at this point, but it's not.");

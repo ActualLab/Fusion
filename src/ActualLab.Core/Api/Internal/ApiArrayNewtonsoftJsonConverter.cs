@@ -2,7 +2,7 @@ using Newtonsoft.Json;
 using JsonConverter = Newtonsoft.Json.JsonConverter;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
-namespace ActualLab.Collections.Internal;
+namespace ActualLab.Api.Internal;
 
 #pragma warning disable IL2026, CA1812
 

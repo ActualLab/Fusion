@@ -10,7 +10,7 @@ namespace ActualLab.Mathematics;
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
-[StructLayout(LayoutKind.Sequential)] // Important!
+[StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct Range<T> : IEquatable<Range<T>>
