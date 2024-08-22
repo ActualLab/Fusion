@@ -1,3 +1,5 @@
+using Cysharp.Text;
+
 namespace ActualLab.Rpc.Caching;
 
 [StructLayout(LayoutKind.Auto)]
@@ -24,8 +26,15 @@ public readonly partial record struct RpcCacheValue(
     }
 
     public override string ToString()
-        => IsNone ? "(none)"
-            : $"({Data}, Hash=`{Hash}`)";
+        => IsNone ? "[ none ]"
+            : Hash.IsNullOrEmpty()
+                ? Data.ToString()
+                : ZString.Concat(Data.ToString(), "-Hash=", Hash);
+    public string ToString(int maxDataLength)
+        => IsNone ? "[ none ]"
+            : Hash.IsNullOrEmpty()
+                ? Data.ToString(maxDataLength)
+                : ZString.Concat(Data.ToString(maxDataLength), "-Hash=", Hash);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool HashOrDataEquals(RpcCacheValue other)

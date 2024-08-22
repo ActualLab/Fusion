@@ -34,8 +34,9 @@ public class RemoteComputeMethodFunction<T>(
     RpcMethodDef IRemoteComputeMethodFunction.RpcMethodDef => RpcMethodDef;
     object? IRemoteComputeMethodFunction.LocalTarget => LocalTarget;
 
-    protected readonly LogLevel ExistingCacheEntryUpdateLogLevel =
-        hub.RemoteComputeServiceInterceptorOptions.ExistingCacheEntryUpdateLogLevel;
+    protected ILogger CacheLog => hub.RemoteComputedCacheLog;
+    protected readonly (LogLevel LogLevel, int MaxDataLength) LogCacheEntryUpdateSettings =
+        hub.RemoteComputeServiceInterceptorOptions.LogCacheEntryUpdateSettings;
 
     public readonly RpcHub RpcHub = hub.RpcHub;
     public readonly RpcMethodDef RpcMethodDef = rpcMethodDef;
@@ -162,7 +163,7 @@ public class RemoteComputeMethodFunction<T>(
                 if (!cacheValue.IsNone && cacheValue.HashOrDataEquals(existingCacheEntry.Value))
                     cacheEntry = existingCacheEntry; // Existing cached entry is still intact
                 else
-                    cacheEntry = UpdateCache(cache!, cacheKey, cacheValue, result.ValueOrDefault!, input);
+                    cacheEntry = UpdateCache(cache!, cacheKey, cacheValue, result.ValueOrDefault!, existing);
             }
         }
 
@@ -300,7 +301,7 @@ public class RemoteComputeMethodFunction<T>(
                 cachedComputed.SynchronizedSource.TrySetResult();
                 return;
             }
-            cacheEntry = UpdateCache(cache, cacheKey, cacheValue, result.ValueOrDefault!, input);
+            cacheEntry = UpdateCache(cache, cacheKey, cacheValue, result.ValueOrDefault!, cachedComputed);
         }
 
         // 8. Create the new computed - it invalidates the cached one upon registering
@@ -427,10 +428,16 @@ public class RemoteComputeMethodFunction<T>(
         RpcCacheKey key,
         RpcCacheValue value,
         T deserializedValue,
-        ComputedInput? input = null)
+        RemoteComputed<T>? existing = null)
     {
-        if (input != null && Log.IfEnabled(ExistingCacheEntryUpdateLogLevel) is { } updateLog)
-            updateLog.Log(ExistingCacheEntryUpdateLogLevel, "Updating cache entry: {Input}", input);
+        var updateLogLevel = LogCacheEntryUpdateSettings.LogLevel;
+        if (existing != null && CacheLog.IfEnabled(updateLogLevel) is { } cacheLog) {
+            if (LogCacheEntryUpdateSettings.MaxDataLength is var maxDataLength and > 0)
+                cacheLog.Log(updateLogLevel, "Entry update: {Input}, value: {OldValue} -> {NewValue}",
+                    existing.Input, existing.CacheEntry!.Value.ToString(maxDataLength), value.ToString(maxDataLength));
+            else
+                cacheLog.Log(updateLogLevel, "Entry update: {Input}", existing.Input);
+        }
 
         if (value.IsNone) {
             cache.Remove(key); // Error -> wipe cache entry

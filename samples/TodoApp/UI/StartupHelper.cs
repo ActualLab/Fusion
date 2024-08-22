@@ -29,9 +29,10 @@ public static class StartupHelper
         builder.Logging.AddFilter(typeof(InMemoryRemoteComputedCache).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(RpcHub).Namespace, LogLevel.Debug);
         builder.Logging.AddFilter(typeof(CommandHandlerResolver).Namespace, LogLevel.Debug);
+        builder.Logging.AddFilter(typeof(IRemoteComputedCache).Namespace, LogLevel.Debug);
 #if DEBUG // Log cache entry updates in debug mode to see if our serialization results are identical for the same output
         RemoteComputeServiceInterceptor.Options.Default = new() {
-            ExistingCacheEntryUpdateLogLevel = LogLevel.Warning,
+            LogCacheEntryUpdateSettings = (LogLevel.Warning, int.MaxValue),
         };
 #endif
 

@@ -15,6 +15,7 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
     private readonly LazySlim<IServiceProvider, IRemoteComputedCache?> _remoteComputedCacheLazy
         = new(services, c => c.GetService<IRemoteComputedCache>());
     private ComputeServiceInterceptor? _computeServiceInterceptor;
+    private ILogger? _remoteComputedCacheLog;
 
     internal readonly RemoteComputeServiceInterceptor.Options RemoteComputeServiceInterceptorOptions
         = services.GetRequiredService<RemoteComputeServiceInterceptor.Options>();
@@ -24,6 +25,7 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
     public CommanderHub CommanderHub { get; } = services.Commander().Hub;
     public MomentClockSet Clocks { get; } = services.Clocks();
     public IRemoteComputedCache? RemoteComputedCache => _remoteComputedCacheLazy.Value;
+    public ILogger RemoteComputedCacheLog => _remoteComputedCacheLog ??= Services.LogFor<IRemoteComputedCache>();
 
     public ComputedOptionsProvider ComputedOptionsProvider { get; }
         = services.GetRequiredService<ComputedOptionsProvider>();

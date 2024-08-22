@@ -13,7 +13,7 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
     {
         public static new Options Default { get; set; } = new();
 
-        public LogLevel ExistingCacheEntryUpdateLogLevel { get; init; } = LogLevel.None;
+        public (LogLevel LogLevel, int MaxDataLength) LogCacheEntryUpdateSettings { get; init; } = (LogLevel.None, 0);
     }
 
     public readonly RpcServiceDef RpcServiceDef;
