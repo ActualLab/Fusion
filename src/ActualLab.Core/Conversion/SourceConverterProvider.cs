@@ -25,6 +25,7 @@ public abstract class SourceConverterProvider<TSource> : ISourceConverterProvide
 
     public abstract Converter<TSource> To(Type targetType);
 
+    // ReSharper disable once ConvertConstructorToMemberInitializers
     protected SourceConverterProvider()
         => SourceType = typeof(TSource);
 }

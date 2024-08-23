@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using ActualLab.Internal;
+using ActualLab.Conversion;
 
 namespace ActualLab.Api;
 
@@ -9,15 +9,19 @@ namespace ActualLab.Api;
 public static class ApiNullable8
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ApiNullable8<T> None<T>() where T : struct => default;
+    public static ApiNullable8<T> Null<T>() where T : struct => default;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ApiNullable8<T> Some<T>(T value) where T : struct => new(value);
+    public static ApiNullable8<T> Value<T>(T value) where T : struct => new(value);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ApiNullable8<T> From<T>(T? value) where T : struct => new(value);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ApiNullable<T> From<T>(Option<T> value)
+        where T : struct
+        => value.IsSome(out var v) ? new(true, v) : default;
 }
 
 /// <summary>
-/// Like <see cref="Nullable&lt;T&gt;"/>, but 1-byte aligned.
+/// Like <see cref="Nullable&lt;T&gt;"/>, but with 8-byte HasValue.
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -25,10 +29,14 @@ public static class ApiNullable8
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 public readonly partial struct ApiNullable8<T>
-    : IOption, ICanBeNone<ApiNullable8<T>>, IEquatable<ApiNullable8<T>>, IComparable<ApiNullable8<T>>
+    : IEquatable<ApiNullable8<T>>, IComparable<ApiNullable8<T>>,
+        IConvertibleTo<T?>, IConvertibleTo<Option<T>>
     where T : struct
 {
-    public static ApiNullable8<T> None => default;
+    public static readonly ApiNullable8<T> Null;
+
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    private string DebugValue => ToString();
 
     [Obsolete("This member exists solely to make serialization work. Don't use it!")]
     [DataMember(Order = 0), MemoryPackOrder(0), JsonIgnore, Newtonsoft.Json.JsonIgnore]
@@ -38,9 +46,7 @@ public readonly partial struct ApiNullable8<T>
     public T ValueOrDefault { get; }
 
     [JsonInclude, Newtonsoft.Json.JsonProperty, MemoryPackIgnore]
-    public T? Nullable => HasValue ? (T?)ValueOrDefault : default;
-
-    // Computed properties
+    public T? Value => HasValue ? (T?)ValueOrDefault : default;
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public bool HasValue {
@@ -48,29 +54,21 @@ public readonly partial struct ApiNullable8<T>
         get => RawHasValue != 0;
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public T Value {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { AssertHasValue(); return ValueOrDefault; }
-    }
-
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public bool IsNone {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => !HasValue;
-    }
-
-    // ReSharper disable once HeapView.BoxingAllocation
-    object IOption.Value => Value;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    private string DebugValue => ToString();
+    // Constructors
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ApiNullable8(T? nullable)
+    public ApiNullable8(T? value)
     {
-        RawHasValue = nullable.HasValue ? 1 : 0;
-        ValueOrDefault = nullable.GetValueOrDefault();
+        RawHasValue = value.HasValue ? 1 : 0;
+        ValueOrDefault = value.GetValueOrDefault();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ApiNullable8(bool hasValue, T value)
+    {
+        RawHasValue = hasValue ? 1 : 0;
+        ValueOrDefault = value;
     }
 
     [MemoryPackConstructor]
@@ -82,9 +80,11 @@ public readonly partial struct ApiNullable8<T>
         ValueOrDefault = valueOrDefault;
     }
 
+    // Conversion
+
 #pragma warning disable CS8603 // Possible null reference return.
     public override string ToString()
-        => HasValue ? ValueOrDefault.ToString() : "";
+        => Value.ToString();
 #pragma warning restore CS8603 // Possible null reference return.
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -94,10 +94,8 @@ public readonly partial struct ApiNullable8<T>
         value = ValueOrDefault;
     }
 
-    // Useful methods
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsSome(out T value)
+    public bool IsValue(out T value)
     {
         value = ValueOrDefault;
         return HasValue;
@@ -106,6 +104,9 @@ public readonly partial struct ApiNullable8<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Option<T> ToOption()
         => HasValue ? new Option<T>(true, ValueOrDefault) : default;
+
+    T? IConvertibleTo<T?>.Convert() => Value;
+    Option<T> IConvertibleTo<Option<T>>.Convert() => ToOption();
 
     // Equality
 
@@ -133,19 +134,10 @@ public readonly partial struct ApiNullable8<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator ApiNullable8<T>(T? source) => new(source);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator T?(ApiNullable8<T> source) => source.Nullable;
+    public static implicit operator T?(ApiNullable8<T> source) => source.Value;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(ApiNullable8<T> left, ApiNullable8<T> right) => left.Equals(right);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator !=(ApiNullable8<T> left, ApiNullable8<T> right) => !left.Equals(right);
-
-    // Private helpers
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AssertHasValue()
-    {
-        if (!HasValue)
-            throw Errors.IsNone<ApiNullable8<T>>();
-    }
 }
