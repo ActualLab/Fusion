@@ -1,6 +1,6 @@
 namespace ActualLab.Api;
 
-public static class NullableExt
+public static class ApiNullableExt
 {
     public static ApiNullable<T> ToApiNullable<T>(this T? value)
         where T : struct

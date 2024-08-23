@@ -64,6 +64,8 @@ public static class Errors
 
     public static Exception OptionIsNone()
         => new InvalidOperationException("Option is None.");
+    public static Exception ApiOptionIsNone()
+        => new InvalidOperationException("ApiOption is None.");
     public static Exception IsNone<T>()
         => new InvalidOperationException($"{typeof(T).GetName()} is None.");
 

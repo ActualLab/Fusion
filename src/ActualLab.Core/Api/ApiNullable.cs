@@ -21,7 +21,7 @@ public static class ApiNullable
 }
 
 /// <summary>
-/// Like <see cref="Nullable&lt;T&gt;"/>, but with 1-byte HasValue.
+/// Like <see cref="Nullable{T}"/>, but with 1-byte HasValue.
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -45,7 +45,7 @@ public readonly partial struct ApiNullable<T>
     public T ValueOrDefault { get; }
 
     [JsonInclude, Newtonsoft.Json.JsonProperty, MemoryPackIgnore]
-    public T? Value => HasValue ? (T?)ValueOrDefault : default;
+    public T? Value => HasValue ? ValueOrDefault : null;
 
     // Constructors
 

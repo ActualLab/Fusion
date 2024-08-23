@@ -3,64 +3,46 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
 using ActualLab.Internal;
 
-namespace ActualLab;
-
-/// <summary>
-/// Helper methods related to <see cref="Option{T}"/> type.
-/// </summary>
-public static class Option
-{
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Option<T> None<T>() => default;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Option<T> Some<T>(T value) => new(true, value);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Option<T> FromClass<T>(T? value)
-        where T : class
-        => ReferenceEquals(value, null)
-            ? default
-            : new Option<T>(true, value);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Option<T> FromNullable<T>(T? value)
-        where T : struct
-        => value.HasValue
-            ? new Option<T>(true, value.GetValueOrDefault())
-            : default;
-}
-
-/// <summary>
-/// Describes an optional value ("option" or "maybe"-like type).
-/// </summary>
-public interface IOption
-{
-    /// <summary>
-    /// Indicates whether an option has <see cref="Value"/>.
-    /// </summary>
-    bool HasValue { get; }
-    /// <summary>
-    /// Retrieves option's value. Throws <see cref="InvalidOperationException"/> in case option doesn't have one.
-    /// </summary>
-    object? Value { get; }
-}
+namespace ActualLab.Api;
 
 #pragma warning disable CA1036
 
-[StructLayout(LayoutKind.Auto)] // Important!
+public static class ApiOption
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ApiOption<T> None<T>() => default;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ApiOption<T> Some<T>(T value) => new(true, value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ApiOption<T> FromClass<T>(T? value)
+        where T : class
+        => ReferenceEquals(value, null)
+            ? default
+            : new ApiOption<T>(true, value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ApiOption<T> FromNullable<T>(T? value)
+        where T : struct
+        => value.HasValue
+            ? new ApiOption<T>(true, value.GetValueOrDefault())
+            : default;
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-public readonly partial struct Option<T>(bool hasValue, T? valueOrDefault)
-    : IOption, ICanBeNone<Option<T>>, IEquatable<Option<T>>, IComparable<Option<T>>, IConvertibleTo<ApiOption<T>>
+public readonly partial struct ApiOption<T>(bool hasValue, T valueOrDefault)
+    : IOption, ICanBeNone<ApiOption<T>>, IEquatable<ApiOption<T>>, IComparable<ApiOption<T>>, IConvertibleTo<Option<T>>
 {
     /// <summary>
     /// Returns an option of type <typeparamref name="T"/> with no value.
     /// </summary>
-    public static Option<T> None => default;
+    public static ApiOption<T> None => default;
 
     /// <inheritdoc />
     [DataMember(Order = 0), MemoryPackOrder(0)]
@@ -114,38 +96,38 @@ public readonly partial struct Option<T>(bool hasValue, T? valueOrDefault)
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Option<TCast?> CastAs<TCast>()
+    public ApiOption<TCast?> CastAs<TCast>()
         where TCast : class
-        => HasValue ? new Option<TCast?>(true, ValueOrDefault as TCast) : default;
+        => HasValue ? new ApiOption<TCast?>(true, ValueOrDefault as TCast) : default;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Option<TCast> Cast<TCast>()
+    public ApiOption<TCast> Cast<TCast>()
     {
         if (!HasValue)
             return default;
         if (ValueOrDefault is TCast value)
-            return new Option<TCast>(true, value);
+            return new ApiOption<TCast>(true, value);
         throw new InvalidCastException();
     }
 
-    public Option<T> ToApiOption() => new(HasValue, ValueOrDefault);
-    ApiOption<T> IConvertibleTo<ApiOption<T>>.Convert() => new(HasValue, ValueOrDefault);
+    public Option<T> ToOption() => new(HasValue, ValueOrDefault);
+    Option<T> IConvertibleTo<Option<T>>.Convert() => new(HasValue, ValueOrDefault);
 
     // Equality
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool Equals(Option<T> other)
+    public bool Equals(ApiOption<T> other)
         => HasValue
             ? other.HasValue && EqualityComparer<T>.Default.Equals(ValueOrDefault!, other.ValueOrDefault!)
             : !other.HasValue;
     public override bool Equals(object? obj)
-        => obj is Option<T> other && Equals(other);
+        => obj is ApiOption<T> other && Equals(other);
     public override int GetHashCode()
         => HasValue ? ValueOrDefault?.GetHashCode() ?? 0 : int.MinValue;
 
     // Comparison
 
-    public int CompareTo(Option<T> other)
+    public int CompareTo(ApiOption<T> other)
         => HasValue
             ? other.HasValue ? Comparer<T>.Default.Compare(ValueOrDefault, other.ValueOrDefault) : 1
             : other.HasValue ? -1 : 0;
@@ -153,14 +135,18 @@ public readonly partial struct Option<T>(bool hasValue, T? valueOrDefault)
     // Operators
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator Option<T>(T source) => new(true, source);
+    public static implicit operator ApiOption<T>(T source) => new(true, source);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator Option<T>((bool HasValue, T Value) source) => new(source.HasValue, source.Value);
+    public static implicit operator ApiOption<T>((bool HasValue, T Value) source) => new(source.HasValue, source.Value);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator ApiOption<T>(Option<T> source) => new(source.HasValue, source.ValueOrDefault);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Option<T>(ApiOption<T> source) => new(source.HasValue, source.ValueOrDefault);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool operator ==(Option<T> left, Option<T> right) => left.Equals(right);
+    public static bool operator ==(ApiOption<T> left, ApiOption<T> right) => left.Equals(right);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool operator !=(Option<T> left, Option<T> right) => !left.Equals(right);
+    public static bool operator !=(ApiOption<T> left, ApiOption<T> right) => !left.Equals(right);
 
     // Private helpers
 
@@ -168,6 +154,6 @@ public readonly partial struct Option<T>(bool hasValue, T? valueOrDefault)
     private void AssertHasValue()
     {
         if (!HasValue)
-            throw Errors.OptionIsNone();
+            throw Errors.ApiOptionIsNone();
     }
 }
