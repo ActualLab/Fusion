@@ -5,14 +5,14 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Tests.Serialization;
 
-#if NETCOREAPP3_1_OR_GREATER
+#if NET6_0_OR_GREATER
 
 public class SizeTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Theory]
     [InlineData(typeof(bool), 1)]
     [InlineData(typeof(Moment), 8)]
-    [InlineData(typeof(Moment?), 16, 9)]
+    [InlineData(typeof(Moment?), 16)]
     [InlineData(typeof(Option<Moment>), 16)]
     [InlineData(typeof(ApiNullable<Moment>), 9)]
     [InlineData(typeof(ApiNullable8<Moment>), 16)]
@@ -25,7 +25,7 @@ public class SizeTest(ITestOutputHelper @out) : TestBase(@out)
     [InlineData(typeof(long?), 16)]
     [InlineData(typeof(Option<long>), 16)]
     [InlineData(typeof(Guid?), 20)]
-    [InlineData(typeof(Option<Guid>), 24, 20)]
+    [InlineData(typeof(Option<Guid>), 20)]
     [InlineData(typeof(Unit), 1)]
     [InlineData(typeof(Unit?), 2)]
     [InlineData(typeof(Option<Unit>), 2)]
@@ -33,23 +33,20 @@ public class SizeTest(ITestOutputHelper @out) : TestBase(@out)
     [InlineData(typeof(RpcNoWait?), 2)]
     [InlineData(typeof(Option<RpcNoWait>), 2)]
     [InlineData(typeof(RpcObjectId), 24)]
-    public void BasicTest(Type type, int size, int? altSize = null)
+    public void BasicTest(Type type, int size)
     {
         var testMethod = GetType().GetMethod(nameof(Test), BindingFlags.Instance | BindingFlags.NonPublic)!;
-        testMethod.MakeGenericMethod(type).Invoke(this, [size, altSize]);
+        testMethod.MakeGenericMethod(type).Invoke(this, [size]);
     }
 
-    private void Test<T>(int expectedSize, int? expectedAltSize)
+    private void Test<T>(int expectedSize)
     {
         var size = Unsafe.SizeOf<T>();
-        Out.WriteLine($"Size of {typeof(T).GetName()} = {size}");
         if (size == expectedSize)
             return;
 
-        if (expectedAltSize is { } v)
-            size.Should().Be(v);
-        else
-            size.Should().Be(expectedSize);
+        Out.WriteLine($"Size of {typeof(T).GetName()} = {size} (expected: {expectedSize})");
+        size.Should().Be(expectedSize);
     }
 }
 

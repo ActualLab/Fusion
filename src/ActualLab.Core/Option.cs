@@ -48,7 +48,7 @@ public interface IOption
 
 #pragma warning disable CA1036
 
-[StructLayout(LayoutKind.Auto)] // Important!
+[StructLayout(LayoutKind.Sequential)] // Important! Pack = 0 -> Pack = Max(sizeof(bool), sizeof(Value))
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]

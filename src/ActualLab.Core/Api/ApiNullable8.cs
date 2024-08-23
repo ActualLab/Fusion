@@ -24,7 +24,7 @@ public static class ApiNullable8
 /// Like <see cref="Nullable{T}"/>, but with 8-byte HasValue.
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
-[StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
+[StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]

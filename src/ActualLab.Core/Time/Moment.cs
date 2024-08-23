@@ -4,7 +4,7 @@ using ActualLab.Time.Internal;
 
 namespace ActualLab.Time;
 
-[StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
+[StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
 // [StructLayout(LayoutKind.Auto)]
 [DataContract]
 [JsonConverter(typeof(MomentJsonConverter))]
