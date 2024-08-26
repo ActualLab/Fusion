@@ -73,8 +73,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity) :
     /// <inheritdoc/>
     public void Dispose()
     {
-        var array = Interlocked.Exchange(ref _array, null!);
-        if (array != null)
+        if (Interlocked.Exchange(ref _array, null!) is { } array)
             pool.Return(array);
     }
 
@@ -121,10 +120,10 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity) :
         ReplaceBuffer(capacity);
     }
 
-    public void Reset(int capacity, int retainedCapacity)
+    public void Reset(int capacity, int maxCapacity)
     {
         _index = 0;
-        if (_array.Length > retainedCapacity)
+        if (_array.Length > maxCapacity)
             ReplaceBuffer(capacity);
     }
 

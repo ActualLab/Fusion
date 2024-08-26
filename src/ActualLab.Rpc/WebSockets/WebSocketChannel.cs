@@ -19,9 +19,10 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public static readonly Options Default = new();
 
         public int WriteFrameSize { get; init; } = 1450 * 3; // 1500 is the default MTU
-        public int WriteBufferSize { get; init; } = 16_000; // Rented ~just once, so it can be large
-        public int ReadBufferSize { get; init; } = 16_000; // Rented ~just once, so it can be large
-        public int RetainedBufferSize { get; init; } = 64_000; // Any buffer is released when it hits this size
+        public int WriteBufferSize { get; init; } = 16_384; // Rented ~just once, so it can be large
+        public int ReadBufferSize { get; init; } = 32_768; // Rented ~just once, so it can be large
+        public int RetainedBufferSize { get; init; } = 65_536; // Read buffer is released when it hits this size
+        public int BufferResetPeriod { get; init; } = 64;
         public int MaxItemSize { get; init; } = 130_000_000; // 130 MB;
         public RpcFrameDelayerFactory? FrameDelayerFactory { get; init; }
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
@@ -49,7 +50,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private ArrayPoolBuffer<byte> _writeBuffer;
     private readonly int _writeFrameSize;
     private readonly int _writeBufferSize;
-    private readonly int _releaseBufferSize;
+    private readonly int _retainedBufferSize;
+    private readonly int _bufferResetPeriod;
     private readonly int _maxItemSize;
     private readonly IByteSerializer<T> _byteSerializer;
     private readonly ITextSerializer<T> _textSerializer;
@@ -93,7 +95,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
 
         _writeFrameSize = settings.WriteFrameSize;
         _writeBufferSize = settings.WriteBufferSize;
-        _releaseBufferSize = settings.RetainedBufferSize;
+        _retainedBufferSize = settings.RetainedBufferSize;
+        _bufferResetPeriod = settings.BufferResetPeriod;
         _maxItemSize = settings.MaxItemSize;
         _byteSerializer = settings.Serializer.ByteSerializer;
         _textSerializer = settings.Serializer.TextSerializer;
@@ -308,7 +311,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             _writeBuffer.Reset();
         }
         finally {
-            if (_writeBuffer.WrittenCount == 0 && _writeBuffer.Capacity > _releaseBufferSize) {
+            if (_writeBuffer.WrittenCount == 0 && _writeBuffer.Capacity > _retainedBufferSize) {
                 _writeBuffer.Dispose();
                 _writeBuffer = new ArrayPoolBuffer<byte>(_writeBufferSize);
             }
@@ -322,6 +325,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         var readBuffer = ArrayPool<byte>.Shared.Rent(readBufferSize);
         var byteBuffer = new ArrayPoolBuffer<byte>();
         var textBuffer = new ArrayPoolBuffer<byte>();
+        var bufferResetCounter = _bufferResetPeriod;
         try {
             while (true) {
                 T value;
@@ -345,7 +349,13 @@ public sealed class WebSocketChannel<T> : Channel<T>
                                 if (TryDeserializeBytes(ref buffer, out value))
                                     yield return value;
 
-                            byteBuffer.Reset(readBufferSize, _releaseBufferSize);
+
+                            if (--bufferResetCounter != 0)
+                                byteBuffer.Reset();
+                            else {
+                                bufferResetCounter = _bufferResetPeriod;
+                                byteBuffer.Reset(readBufferSize, _retainedBufferSize);
+                            }
                         }
                     }
                     continue;
@@ -361,7 +371,12 @@ public sealed class WebSocketChannel<T> : Channel<T>
                             if (TryDeserializeText(textBuffer.WrittenMemory, out value))
                                 yield return value;
 
-                            textBuffer.Reset(readBufferSize, _releaseBufferSize);
+                            if (--bufferResetCounter != 0)
+                                textBuffer.Reset();
+                            else {
+                                bufferResetCounter = _bufferResetPeriod;
+                                textBuffer.Reset(readBufferSize, _retainedBufferSize);
+                            }
                         }
                     }
                     break;
