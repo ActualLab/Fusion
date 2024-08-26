@@ -5,6 +5,7 @@ using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Server;
+using Microsoft.AspNetCore.Builder;
 using static System.Console;
 
 #pragma warning disable ASP0000
