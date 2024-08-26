@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="latest" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  -->
 
   <PropertyGroup>
     <BaseIntermediateOutputPath>$(SolutionDir)artifacts\obj\$(MSBuildProjectName)</BaseIntermediateOutputPath>
@@ -21,5 +23,40 @@
     <!-- CA2007: Consider calling ConfigureAwait on the awaited task -->
     <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <UseFusion>true</UseFusion>
+    <UseFusion Condition="$(Project.Contains('HelloRpc'))">false</UseFusion>
+  </PropertyGroup>
+
+  <!-- Global usings -->
+  <ItemGroup>
+    <Using Include="System" />
+    <Using Include="System.Collections" />
+    <Using Include="System.Collections.Immutable" />
+    <Using Include="System.Collections.Concurrent" />
+    <Using Include="System.Collections.Generic" />
+    <Using Include="System.Linq" />
+    <Using Include="System.Reactive" /> <!-- Mainly for Unit type -->
+    <Using Include="System.Text" />
+    <Using Include="System.Threading" />
+    <Using Include="System.Threading.Tasks" />
+    <Using Include="System.Threading.Channels" />
+    <Using Include="ActualLab" />
+    <Using Include="ActualLab.Async" />
+    <Using Include="ActualLab.Collections" />
+    <Using Condition="$(UseFusion)" Include="ActualLab.CommandR" />
+    <Using Condition="$(UseFusion)" Include="ActualLab.CommandR.Configuration" />
+    <Using Condition="$(UseFusion)" Include="ActualLab.CommandR.Commands" />
+    <Using Condition="$(UseFusion)" Include="ActualLab.Fusion" />
+    <Using Condition="$(UseFusion)" Include="ActualLab.Fusion.Operations" />
+    <Using Include="ActualLab.Reflection" />
+    <Using Include="ActualLab.Serialization" />
+    <Using Include="ActualLab.Text" />
+    <Using Include="ActualLab.Time" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Microsoft.Extensions.Logging" />
+    <Using Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
 
 </Project>

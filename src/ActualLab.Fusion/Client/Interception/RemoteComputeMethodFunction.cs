@@ -34,9 +34,9 @@ public class RemoteComputeMethodFunction<T>(
     RpcMethodDef IRemoteComputeMethodFunction.RpcMethodDef => RpcMethodDef;
     object? IRemoteComputeMethodFunction.LocalTarget => LocalTarget;
 
-    protected ILogger CacheLog => hub.RemoteComputedCacheLog;
     protected readonly (LogLevel LogLevel, int MaxDataLength) LogCacheEntryUpdateSettings =
         hub.RemoteComputeServiceInterceptorOptions.LogCacheEntryUpdateSettings;
+    protected ILogger CacheLog => Hub.RemoteComputedCacheLog;
 
     public readonly RpcHub RpcHub = hub.RpcHub;
     public readonly RpcMethodDef RpcMethodDef = rpcMethodDef;

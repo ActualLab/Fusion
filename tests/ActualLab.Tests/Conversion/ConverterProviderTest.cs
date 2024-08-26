@@ -66,8 +66,8 @@ public class ConverterProviderTest(ITestOutputHelper @out) : TestBase(@out)
         c1.TryConvert("false").Should().Be(Option.Some(false));
         c1.TryConvert("_").Should().Be(Option.None<bool>());
 
-        c1.TryConvertUntyped("true").Should().Be(Option.Some<object>(true));
-        c1.TryConvertUntyped("_").Should().Be(Option.None<object>());
+        c1.TryConvertUntyped("true").Should().Be(Option.Some<object?>(true));
+        c1.TryConvertUntyped("_").Should().Be(Option.None<object?>());
         Assert.Throws<InvalidOperationException>(() => c1.Convert("_"));
     }
 
