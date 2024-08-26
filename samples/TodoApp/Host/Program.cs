@@ -251,7 +251,7 @@ void ConfigureShardDbContext(IServiceProvider services, DbShard shard, DbContext
     }
     else {
         var appTempDir = FilePath.GetApplicationTempDirectory("", true);
-        var dbPath = (appTempDir & "App_{0:StorageId}.db").Value.Interpolate(shard);
+        var dbPath = (appTempDir & "TodoApp_v1_{0:StorageId}.db").Value.Interpolate(shard);
         db.UseSqlite($"Data Source={dbPath}");
     }
     if (env.IsDevelopment())

@@ -23,7 +23,7 @@ public static class AppDb
             }
             else {
                 var appTempDir = FilePath.GetApplicationTempDirectory("", true);
-                var dbPath = appTempDir & "HelloCart.db";
+                var dbPath = appTempDir & "HelloCart_v1.db";
                 db.UseSqlite($"Data Source={dbPath}");
             }
             db.EnableSensitiveDataLogging();
