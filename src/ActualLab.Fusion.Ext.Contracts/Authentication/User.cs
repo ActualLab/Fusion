@@ -99,7 +99,7 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
 
         var maskedIdentities = ApiMap<UserIdentity, string>.Empty;
         foreach (var (id, _) in Identities)
-            maskedIdentities.Add((id.Schema, "<hidden>"), "");
+            maskedIdentities.TryAdd((id.Schema, "<hidden>"), "");
         return this with { Identities = maskedIdentities };
     }
 
