@@ -1,5 +1,3 @@
-using ActualLab.Fusion.Operations.Internal;
-
 namespace Samples.HelloCart.V1;
 
 public class InMemoryCartService(IProductService products) : ICartService

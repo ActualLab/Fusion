@@ -1,6 +1,3 @@
-
-using ActualLab.Fusion;
-
 namespace Samples.MeshRpc.Services;
 
 public static class CounterStorage

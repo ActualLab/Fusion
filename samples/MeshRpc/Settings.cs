@@ -1,5 +1,4 @@
 using ActualLab.Diagnostics;
-using ActualLab.Time;
 
 namespace Samples.MeshRpc;
 

@@ -1,5 +1,4 @@
 using System.Runtime.Serialization;
-using ActualLab.Text;
 using MemoryPack;
 
 namespace Samples.MeshRpc;

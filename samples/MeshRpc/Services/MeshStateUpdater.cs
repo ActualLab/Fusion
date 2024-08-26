@@ -1,4 +1,3 @@
-using ActualLab.Async;
 using ActualLab.Rpc;
 
 namespace Samples.MeshRpc.Services;
