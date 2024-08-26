@@ -1,5 +1,5 @@
 using ActualLab.Fusion.UI;
-using Templates.TodoApp.Abstractions;
+using Samples.TodoApp.Abstractions;
 using static System.Console;
 
 Write("Enter SessionId to use: ");

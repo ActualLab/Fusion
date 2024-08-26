@@ -1,6 +1,6 @@
-using Templates.TodoApp.Abstractions;
+using Samples.TodoApp.Abstractions;
 
-namespace Templates.TodoApp.Services;
+namespace Samples.TodoApp.Services;
 
 public class TodoService(IAuth auth, ITodoBackend backend, ICommander commander) : ITodoService
 {

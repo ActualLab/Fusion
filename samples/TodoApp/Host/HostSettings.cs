@@ -1,6 +1,6 @@
-using Templates.TodoApp.Abstractions;
+using Samples.TodoApp.Abstractions;
 
-namespace Templates.TodoApp.Host;
+namespace Samples.TodoApp.Host;
 
 public class HostSettings
 {

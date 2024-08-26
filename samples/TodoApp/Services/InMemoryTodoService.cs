@@ -1,6 +1,6 @@
-﻿using Templates.TodoApp.Abstractions;
+﻿using Samples.TodoApp.Abstractions;
 
-namespace Templates.TodoApp.Services;
+namespace Samples.TodoApp.Services;
 
 #pragma warning disable 1998
 

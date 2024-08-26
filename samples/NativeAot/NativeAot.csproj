@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
     <AssemblyName>Samples.NativeAot</AssemblyName>
     <RootNamespace>Samples.NativeAot</RootNamespace>
   </PropertyGroup>
@@ -26,15 +23,15 @@
     <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="MemoryPack.Generator" />
-  </ItemGroup>
-
+  <!-- Fusion packages -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
   </ItemGroup>
+
+  <!-- Source generators -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="MemoryPack.Generator" />
   </ItemGroup>
 
 </Project>

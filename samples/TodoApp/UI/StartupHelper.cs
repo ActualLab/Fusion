@@ -12,10 +12,10 @@ using ActualLab.Rpc;
 using Blazored.LocalStorage;
 using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
-using Templates.TodoApp.Abstractions;
-using Templates.TodoApp.UI.Services;
+using Samples.TodoApp.Abstractions;
+using Samples.TodoApp.UI.Services;
 
-namespace Templates.TodoApp.UI;
+namespace Samples.TodoApp.UI;
 
 #pragma warning disable IL2026
 

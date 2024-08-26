@@ -9,6 +9,8 @@
     <IsPublishable>false</IsPublishable>
     <TargetFramework>net8.0</TargetFramework>
     <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <!-- Warnings - they're lowered for the simplicity here -->

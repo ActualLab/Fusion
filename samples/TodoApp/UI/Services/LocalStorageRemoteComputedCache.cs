@@ -5,7 +5,7 @@ using Blazored.LocalStorage;
 using Cysharp.Text;
 using MemoryPack;
 
-namespace Templates.TodoApp.UI.Services;
+namespace Samples.TodoApp.UI.Services;
 
 public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
 {

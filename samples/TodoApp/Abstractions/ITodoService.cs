@@ -2,7 +2,7 @@ using System.Runtime.Serialization;
 using MemoryPack;
 using ActualLab.Fusion.Blazor;
 
-namespace Templates.TodoApp.Abstractions;
+namespace Samples.TodoApp.Abstractions;
 
 public interface ITodoService : IComputeService
 {

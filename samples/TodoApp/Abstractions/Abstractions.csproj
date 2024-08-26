@@ -1,21 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Templates.TodoApp.Abstractions</RootNamespace>
-    <AssemblyName>Templates.TodoApp.Abstractions</AssemblyName>
+    <RootNamespace>Samples.TodoApp.Abstractions</RootNamespace>
+    <AssemblyName>Samples.TodoApp.Abstractions</AssemblyName>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
-    <PackageReference Include="MemoryPack.Generator" />
-  </ItemGroup>
-
+  <!-- Fusion packages -->
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\ActualLab.Fusion\ActualLab.Fusion.csproj" />
     <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Ext.Contracts\ActualLab.Fusion.Ext.Contracts.csproj" />
   </ItemGroup>
+
+  <!-- Other packages -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+  </ItemGroup>
+
+  <!-- Source generators -->
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="MemoryPack.Generator" />
   </ItemGroup>
 
 </Project>

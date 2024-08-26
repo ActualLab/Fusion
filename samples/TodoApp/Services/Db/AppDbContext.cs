@@ -3,7 +3,7 @@ using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.EntityFramework.Operations;
 
-namespace Templates.TodoApp.Services.Db;
+namespace Samples.TodoApp.Services.Db;
 
 public class AppDbContext(DbContextOptions options) : DbContextBase(options)
 {

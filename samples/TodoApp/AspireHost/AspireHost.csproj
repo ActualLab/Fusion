@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Templates.TodoApp.AspireHost</RootNamespace>
-    <AssemblyName>Templates.TodoApp.AspireHost</AssemblyName>
+    <RootNamespace>Samples.TodoApp.AspireHost</RootNamespace>
+    <AssemblyName>Samples.TodoApp.AspireHost</AssemblyName>
     <IsAspireHost>true</IsAspireHost>
     <UserSecretsId>7039dcb7-bd79-4568-a2ae-0b7662dd6f4e</UserSecretsId>
   </PropertyGroup>

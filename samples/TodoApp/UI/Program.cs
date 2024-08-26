@@ -1,7 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
-namespace Templates.TodoApp.UI;
+namespace Samples.TodoApp.UI;
 
 public class Program
 {

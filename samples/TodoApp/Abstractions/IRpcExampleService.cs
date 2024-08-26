@@ -1,7 +1,7 @@
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 
-namespace Templates.TodoApp.Abstractions;
+namespace Samples.TodoApp.Abstractions;
 
 public interface IRpcExampleService : IRpcService
 {

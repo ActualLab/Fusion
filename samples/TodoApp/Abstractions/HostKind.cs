@@ -1,4 +1,4 @@
-namespace Templates.TodoApp.Abstractions;
+namespace Samples.TodoApp.Abstractions;
 
 public enum HostKind
 {

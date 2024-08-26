@@ -2,7 +2,7 @@ using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Server.Middlewares;
 using Microsoft.AspNetCore.Http;
 
-namespace Templates.TodoApp.Services;
+namespace Samples.TodoApp.Services;
 
 public static class TenantExt
 {

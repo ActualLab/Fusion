@@ -1,9 +1,9 @@
 using ActualLab.Fusion.EntityFramework;
 using Microsoft.EntityFrameworkCore;
-using Templates.TodoApp.Abstractions;
-using Templates.TodoApp.Services.Db;
+using Samples.TodoApp.Abstractions;
+using Samples.TodoApp.Services.Db;
 
-namespace Templates.TodoApp.Services;
+namespace Samples.TodoApp.Services;
 
 public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext>(services), ITodoBackend
 {

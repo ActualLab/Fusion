@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Templates.TodoApp</RootNamespace>
-    <AssemblyName>Templates.TodoApp.ServiceDefaults</AssemblyName>
+    <RootNamespace>Samples.TodoApp</RootNamespace>
+    <AssemblyName>Samples.TodoApp.ServiceDefaults</AssemblyName>
     <IsAspireSharedProject>true</IsAspireSharedProject>
   </PropertyGroup>
 

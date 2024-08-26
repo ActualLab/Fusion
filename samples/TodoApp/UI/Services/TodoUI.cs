@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using ActualLab.DependencyInjection;
 using ActualLab.Diagnostics;
-using Templates.TodoApp.Abstractions;
+using Samples.TodoApp.Abstractions;
 
-namespace Templates.TodoApp.UI.Services;
+namespace Samples.TodoApp.UI.Services;
 
 public class TodoUI(Session session, ITodoService todoService) : IComputeService, IDisposable, IHasIsDisposed
 {

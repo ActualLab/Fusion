@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Templates.TodoApp.Abstractions;
+using Samples.TodoApp.Abstractions;
 
-namespace Templates.TodoApp.Services.Db;
+namespace Samples.TodoApp.Services.Db;
 
 [Table("Todos")]
 public class DbTodo

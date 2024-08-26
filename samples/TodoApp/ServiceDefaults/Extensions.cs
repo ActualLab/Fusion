@@ -10,7 +10,7 @@ using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
-namespace Templates.TodoApp;
+namespace Samples.TodoApp;
 
 // Adds common .NET Aspire services: service discovery, resilience, health checks, and OpenTelemetry.
 // This project should be referenced by each service project in your solution.
@@ -58,7 +58,7 @@ public static class Extensions
                 metrics.AddMeter("ActualLab.Rpc");
                 metrics.AddMeter("ActualLab.CommandR");
                 metrics.AddMeter("ActualLab.Fusion");
-                metrics.AddMeter("Templates.TodoApp");
+                metrics.AddMeter("Samples.TodoApp");
             })
             .WithTracing(tracing => {
                 tracing.SetSampler(_ => new AlwaysOnSampler());
@@ -69,7 +69,7 @@ public static class Extensions
                 tracing.AddSource("ActualLab.Rpc");
                 tracing.AddSource("ActualLab.CommandR");
                 tracing.AddSource("ActualLab.Fusion");
-                tracing.AddSource("Templates.TodoApp");
+                tracing.AddSource("Samples.TodoApp");
                 // tracing.AddNpgsql();
                 // tracing.AddConsoleExporter();
             });

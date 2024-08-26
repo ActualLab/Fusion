@@ -1,8 +1,8 @@
 using System.Runtime.Serialization;
 using MemoryPack;
-using Templates.TodoApp.Abstractions;
+using Samples.TodoApp.Abstractions;
 
-namespace Templates.TodoApp.Services;
+namespace Samples.TodoApp.Services;
 
 public interface ITodoBackend : IComputeService
 {

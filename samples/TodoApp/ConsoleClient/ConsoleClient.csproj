@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Templates.TodoApp.ConsoleClient</RootNamespace>
-    <AssemblyName>Templates.TodoApp.ConsoleClient</AssemblyName>
+    <RootNamespace>Samples.TodoApp.ConsoleClient</RootNamespace>
+    <AssemblyName>Samples.TodoApp.ConsoleClient</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
