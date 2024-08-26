@@ -9,10 +9,28 @@
     <OutputPath>$(SolutionDir)artifacts\samples\$(MSBuildProjectName)</OutputPath>
     <IsPackable>false</IsPackable>
     <IsPublishable>false</IsPublishable>
+  </PropertyGroup>
+
+  <!-- Useful defaults -->
+  <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled> -->
+  </PropertyGroup>
+
+  <!-- Disable some warnings -->
+  <PropertyGroup>
+    <!--
+    IL2026: Using member 'AddFusion' which has 'RequiresUnreferencedCodeAttribute' can break functionality when trimming...
+    BL0007: Component parameter '...' should be auto property
+    VSTHRD200: Missing "Async" suffix warning
+    NETSDK1206: Found version-specific or distribution-specific runtime identifier(s): alpine-arm, alpine-arm64, alpine-x64. Affected libraries: SQLitePCLRaw.lib.e_sqlite3. In .NET 8.0 and higher, assets for version-specific and distribution-specific runtime identifiers will not be found by default. See https://aka.ms/dotnet/rid-usage for details.
+    OCL0039: The initial value of the property 'Samples.RpcBenchmark.ClientCommand.Workers' will not be included in the usage help because it is not a literal expression, enum value, constant, or property. Consider changing the initializer, or use CommandLineArgumentAttribute.DefaultValue as an alternative. https://www.ookii.org/Link/CommandLineGeneratorError#ocl0039
+    -->
+    <NoWarn>IL2026;BL0007;VSTHRD200;NETSDK1206;OCL0039;$(NoWarn)</NoWarn>
   </PropertyGroup>
 
   <!-- Warnings - they're lowered for the simplicity here -->
