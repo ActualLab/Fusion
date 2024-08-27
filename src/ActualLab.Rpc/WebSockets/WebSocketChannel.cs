@@ -19,8 +19,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public static readonly Options Default = new();
 
         public int WriteFrameSize { get; init; } = 1450 * 3; // 1500 is the default MTU
-        public int WriteBufferSize { get; init; } = 16_384; // Rented ~just once, so it can be large
-        public int ReadBufferSize { get; init; } = 32_768; // Rented ~just once, so it can be large
+        public int MinWriteBufferSize { get; init; } = 16_384; // Rented ~just once, so it can be large
+        public int MinReadBufferSize { get; init; } = 32_768; // Rented ~just once, so it can be large
         public int RetainedBufferSize { get; init; } = 65_536; // Read buffer is released when it hits this size
         public int BufferResetPeriod { get; init; } = 64;
         public int MaxItemSize { get; init; } = 130_000_000; // 130 MB;
@@ -57,6 +57,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private readonly ITextSerializer<T> _textSerializer;
     private readonly WebSocketMessageType _defaultMessageType;
     private readonly MeterSet _meters = StaticMeters;
+    private int _readBufferResetCounter;
+    private int _writeBufferResetCounter;
 
     public bool OwnsWebSocketOwner { get; init; } = true;
     public Options Settings { get; }
@@ -94,7 +96,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         StopToken = _stopCts.Token;
 
         _writeFrameSize = settings.WriteFrameSize;
-        _writeBufferSize = settings.WriteBufferSize;
+        _writeBufferSize = settings.MinWriteBufferSize;
         _retainedBufferSize = settings.RetainedBufferSize;
         _bufferResetPeriod = settings.BufferResetPeriod;
         _maxItemSize = settings.MaxItemSize;
@@ -103,7 +105,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         _defaultMessageType = Serializer.DefaultFormat == DataFormat.Text
             ? WebSocketMessageType.Text
             : WebSocketMessageType.Binary;
-        _writeBuffer = new ArrayPoolBuffer<byte>(settings.WriteBufferSize);
+        _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize);
 
         _readChannel = Channel.CreateBounded<T>(settings.ReadChannelOptions);
         _writeChannel = Channel.CreateBounded<T>(settings.WriteChannelOptions);
@@ -282,115 +284,82 @@ public sealed class WebSocketChannel<T> : Channel<T>
 
     private async ValueTask FlushWriteBuffer(bool completely, CancellationToken cancellationToken)
     {
-        try {
-            if (_writeBuffer.WrittenCount == 0)
-                return;
+        if (_writeBuffer.WrittenCount == 0)
+            return;
 
-            var memory = _writeBuffer.WrittenMemory;
-            for (var start = 0; start < memory.Length; start += _writeFrameSize) {
-                var length = Math.Min(_writeFrameSize, memory.Length - start);
-                // length is always > 0 below
-                var end = start + length;
-                var part = memory[start..end];
-                if (length < _writeFrameSize && !completely) {
-                    if (start == 0)
-                        return; // Nothing to copy
-
+        var memory = _writeBuffer.WrittenMemory;
+        for (var start = 0; start < memory.Length; start += _writeFrameSize) {
+            var length = Math.Min(_writeFrameSize, memory.Length - start);
+            // length is always > 0 below
+            var end = start + length;
+            var part = memory[start..end];
+            if (length < _writeFrameSize && !completely) {
+                // Copy part into the beginning of _writeBuffer
+                if (start != 0)
                     part.CopyTo(MemoryMarshal.AsMemory(memory));
-                    _writeBuffer.Index = length;
-                    return;
-                }
-                var isEndOfMessage = end == memory.Length;
+                _writeBuffer.Index = length;
+                return;
+            }
+            var isEndOfMessage = end == memory.Length;
 
-                await WebSocket
-                    .SendAsync(part, _defaultMessageType, isEndOfMessage, cancellationToken)
-                    .ConfigureAwait(false);
-                _meters.OutgoingFrameCounter.Add(1);
-                _meters.OutgoingFrameSizeHistogram.Record(part.Length);
-            }
+            await WebSocket
+                .SendAsync(part, _defaultMessageType, isEndOfMessage, cancellationToken)
+                .ConfigureAwait(false);
+            _meters.OutgoingFrameCounter.Add(1);
+            _meters.OutgoingFrameSizeHistogram.Record(part.Length);
+        }
+
+        if (MustReset(ref _writeBufferResetCounter))
+            _writeBuffer.Reset(_writeBufferSize, _retainedBufferSize);
+        else
             _writeBuffer.Reset();
-        }
-        finally {
-            if (_writeBuffer.WrittenCount == 0 && _writeBuffer.Capacity > _retainedBufferSize) {
-                _writeBuffer.Dispose();
-                _writeBuffer = new ArrayPoolBuffer<byte>(_writeBufferSize);
-            }
-        }
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async IAsyncEnumerable<T> ReadAll([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var readBufferSize = Settings.ReadBufferSize;
-        var readBuffer = ArrayPool<byte>.Shared.Rent(readBufferSize);
-        var byteBuffer = new ArrayPoolBuffer<byte>();
-        var textBuffer = new ArrayPoolBuffer<byte>();
-        var bufferResetCounter = _bufferResetPeriod;
+        var minReadBufferSize = Settings.MinReadBufferSize;
+        var readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize);
+        var messageType = (WebSocketMessageType?)null;
         try {
             while (true) {
                 T value;
-                var r = await WebSocket.ReceiveAsync(readBuffer, cancellationToken).ConfigureAwait(false);
+                var readMemory = readBuffer.GetMemory(minReadBufferSize);
+                var r = await WebSocket.ReceiveAsync(readMemory, cancellationToken).ConfigureAwait(false);
+                if (r.MessageType == WebSocketMessageType.Close)
+                    yield break;
+
+                if (!messageType.HasValue)
+                    messageType = r.MessageType;
+                else if (r.MessageType != messageType.GetValueOrDefault())
+                    throw Errors.InvalidWebSocketMessageType(r.MessageType, messageType.GetValueOrDefault());
+
+                readBuffer.Advance(r.Count);
                 _meters.IncomingFrameCounter.Add(1);
                 _meters.IncomingFrameSizeHistogram.Record(r.Count);
-                switch (r.MessageType) {
-                case WebSocketMessageType.Binary:
-                    if (r.EndOfMessage && byteBuffer.WrittenCount == 0) {
-                        // No-copy deserialization
-                        var buffer = new ReadOnlyMemory<byte>(readBuffer, 0, r.Count);
-                        while (buffer.Length != 0)
-                            if (TryDeserializeBytes(ref buffer, out value))
-                                yield return value;
-                    }
-                    else {
-                        byteBuffer.Write(new ReadOnlySpan<byte>(readBuffer, 0, r.Count));
-                        if (r.EndOfMessage) {
-                            var buffer = byteBuffer.WrittenMemory;
-                            while (buffer.Length != 0)
-                                if (TryDeserializeBytes(ref buffer, out value))
-                                    yield return value;
-
-
-                            if (--bufferResetCounter != 0)
-                                byteBuffer.Reset();
-                            else {
-                                bufferResetCounter = _bufferResetPeriod;
-                                byteBuffer.Reset(readBufferSize, _retainedBufferSize);
-                            }
-                        }
-                    }
+                if (!r.EndOfMessage)
                     continue;
-                case WebSocketMessageType.Text:
-                    if (r.EndOfMessage && textBuffer.WrittenCount == 0) {
-                        // No-copy deserialization
-                        if (TryDeserializeText(readBuffer, out value))
-                            yield return value;
-                    }
-                    else {
-                        textBuffer.Write(new ReadOnlySpan<byte>(readBuffer, 0, r.Count));
-                        if (r.EndOfMessage) {
-                            if (TryDeserializeText(textBuffer.WrittenMemory, out value))
-                                yield return value;
 
-                            if (--bufferResetCounter != 0)
-                                textBuffer.Reset();
-                            else {
-                                bufferResetCounter = _bufferResetPeriod;
-                                textBuffer.Reset(readBufferSize, _retainedBufferSize);
-                            }
-                        }
-                    }
-                    break;
-                case WebSocketMessageType.Close:
-                    yield break;
-                default:
-                    throw Errors.UnsupportedWebSocketMessageKind();
+                var buffer = readBuffer.WrittenMemory;
+                if (r.MessageType == WebSocketMessageType.Binary) {
+                    while (buffer.Length != 0)
+                        if (TryDeserializeBytes(ref buffer, out value))
+                            yield return value;
                 }
+                else {
+                    // WebSocketMessageType.Text
+                    if (TryDeserializeText(buffer, out value))
+                        yield return value;
+                }
+
+                if (MustReset(ref _readBufferResetCounter))
+                    readBuffer.Reset(minReadBufferSize, _retainedBufferSize);
+                else
+                    readBuffer.Reset();
             }
         }
         finally {
-            byteBuffer.Dispose();
-            textBuffer.Dispose();
-            ArrayPool<byte>.Shared.Return(readBuffer);
+            readBuffer.Dispose();
         }
     }
 
@@ -504,6 +473,16 @@ public sealed class WebSocketChannel<T> : Channel<T>
             value = default!;
             return false;
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool MustReset(ref int counter)
+    {
+        if (++counter < _bufferResetPeriod)
+            return false;
+
+        counter = 0;
+        return true;
     }
 
     // Nested types

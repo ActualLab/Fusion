@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net8.0;net7.0;net6.0;net5.0;netcoreapp3.1</TargetFrameworks>
+    <!--
+    <TargetFrameworks Condition="$(UseMultitargeting)">net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;net48;net471</TargetFrameworks>
+    -->
+    <TargetFramework Condition="!$(UseMultitargeting)">net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Performance-related settings -->
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
+    <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
+    <TieredPGO>true</TieredPGO>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Fusion.Tests\ActualLab.Fusion.Tests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Remove="xunit.runner.visualstudio" />
+    <PackageReference Remove="Microsoft.NET.Test.Sdk" />
+  </ItemGroup>
+
+</Project>

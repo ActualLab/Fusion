@@ -1,6 +1,4 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-using ActualLab.Fusion.Tests;
+﻿using ActualLab.Fusion.Tests;
 using ActualLab.Reflection;
 
 if (HasSwitch("PostgreSql") || HasSwitch("npgsql") || HasSwitchAll())

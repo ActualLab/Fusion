@@ -20,6 +20,8 @@ public interface ITestRpcService : ICommandService
     Task<int?> Add(int? a, int b);
     Task<TimeSpan> Delay(TimeSpan duration, CancellationToken cancellationToken = default);
     Task<int> GetCancellationCount();
+    Task<byte[]> GetBytes(int count);
+    Task<ReadOnlyMemory<byte>> GetMemory(int count);
 
     Task<string> GetVersion();
 
@@ -82,6 +84,12 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
 
     public virtual Task<int> GetCancellationCount()
         => Task.FromResult(_cancellationCount);
+
+    public virtual Task<byte[]> GetBytes(int count)
+        => Task.FromResult(new byte[count]);
+
+    public virtual Task<ReadOnlyMemory<byte>> GetMemory(int count)
+        => Task.FromResult((ReadOnlyMemory<byte>)new byte[count].AsMemory());
 
     public virtual Task<string> GetVersion()
         => Task.FromResult("1.0");

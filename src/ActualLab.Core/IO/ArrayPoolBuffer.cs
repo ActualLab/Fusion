@@ -13,6 +13,8 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity) :
     private T[] _array = pool.Rent(RoundCapacity(initialCapacity));
     private int _index;
 
+    public bool MustClear { get; init; } = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
+
     /// <inheritdoc/>
     Memory<T> IMemoryOwner<T>.Memory => MemoryMarshal.AsMemory(WrittenMemory);
 
@@ -74,7 +76,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity) :
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _array, null!) is { } array)
-            pool.Return(array);
+            pool.Return(array, MustClear);
     }
 
     /// <inheritdoc/>
@@ -150,7 +152,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity) :
     private void ReplaceBuffer(int capacity)
     {
         capacity = RoundCapacity(capacity);
-        pool.Return(_array);
+        pool.Return(_array, MustClear);
         _array = pool.Rent(capacity);
     }
 

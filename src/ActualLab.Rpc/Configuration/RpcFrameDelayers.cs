@@ -16,7 +16,7 @@ public static class RpcFrameDelayers
                 return null;
 
             return peerRef.IsServer
-                ? static () => NextTick() // Server waits for the next tick to compose larger frames
+                ? static () => NextTick() // Server awaits the next tick to compose larger frames
                 : static () => Yield(DefaultClientYieldCount); // Client yields to compose larger frames
         };
 
