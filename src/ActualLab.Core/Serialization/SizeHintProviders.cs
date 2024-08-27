@@ -6,14 +6,14 @@ public static class SizeHintProviders
 {
     private static readonly ConcurrentDictionary<Type, Delegate> Registry = new();
 
-    public static readonly int ArrayExtra = 8;
+    public static readonly int ArrayExtra = 8; // Size in bytes
 
     static SizeHintProviders()
     {
-        Register<byte[]>(x => ArrayExtra + x.Length);
-        Register<string>(x => ArrayExtra + (2 * x.Length));
-        Register<ReadOnlyMemory<byte>>(x => ArrayExtra + x.Length);
-        Register<ReadOnlyMemory<char>>(x => ArrayExtra + (2 * x.Length));
+        Register<byte[]?>(static x => ArrayExtra + x?.Length ?? 0);
+        Register<string?>(static x => ArrayExtra + (2 * x?.Length ?? 0));
+        Register<ReadOnlyMemory<byte>?>(static x => ArrayExtra + x?.Length ?? 0);
+        Register<ReadOnlyMemory<char>?>(static x => ArrayExtra + (2 * x?.Length ?? 0));
     }
 
     public static void Register<T>(Func<T, int> provider)
