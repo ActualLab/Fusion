@@ -325,7 +325,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
             while (true) {
                 T value;
                 var readMemory = readBuffer.GetMemory(minReadBufferSize);
-                var r = await WebSocket.ReceiveAsync(readMemory, cancellationToken).ConfigureAwait(false);
+                var arraySegment = new ArraySegment<byte>(readBuffer.Array, readBuffer.WrittenCount, readMemory.Length);
+                var r = await WebSocket.ReceiveAsync(arraySegment, cancellationToken).ConfigureAwait(false);
                 if (r.MessageType == WebSocketMessageType.Close)
                     yield break;
 

@@ -13,7 +13,13 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity) :
     private T[] _array = pool.Rent(RoundCapacity(initialCapacity));
     private int _index;
 
-    public bool MustClear { get; init; } = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
+    public bool MustClear { get; init; }
+#if !NETSTANDARD2_0
+        = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
+#else
+        = true; // Not sure what's a better way to do this
+#endif
+    public T[] Array => _array;
 
     /// <inheritdoc/>
     Memory<T> IMemoryOwner<T>.Memory => MemoryMarshal.AsMemory(WrittenMemory);
