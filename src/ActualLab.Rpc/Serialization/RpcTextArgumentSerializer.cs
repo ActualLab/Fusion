@@ -11,7 +11,7 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer serializer) : RpcA
     private readonly ITextSerializer _polymorphicSerializer = new TypeDecoratingTextSerializer(serializer);
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override TextOrBytes Serialize(ArgumentList arguments, bool allowPolymorphism)
+    public override TextOrBytes Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
     {
         if (arguments.Length == 0)
             return TextOrBytes.EmptyText;

@@ -10,17 +10,23 @@ namespace ActualLab.Rpc.Serialization;
 public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcArgumentSerializer
 {
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override TextOrBytes Serialize(ArgumentList arguments, bool allowPolymorphism)
+    public override TextOrBytes Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
     {
         if (arguments.Length == 0)
             return TextOrBytes.EmptyBytes;
 
-        using var buffer = new ArrayPoolBuffer<byte>(256);
-        var itemSerializer = allowPolymorphism
-            ? (ItemSerializer)new ItemPolymorphicSerializer(serializer, buffer)
-            : new ItemNonPolymorphicSerializer(serializer, buffer);
-        arguments.Read(itemSerializer);
-        return new TextOrBytes(buffer.WrittenSpan.ToArray()); // That's why we retain the last buffer
+        var buffer = new ArrayPoolBuffer<byte>(128 + Math.Min(128, sizeHint));
+        try {
+            var itemSerializer = allowPolymorphism
+                ? (ItemSerializer)new ItemPolymorphicSerializer(serializer, buffer)
+                : new ItemNonPolymorphicSerializer(serializer, buffer);
+            arguments.Read(itemSerializer);
+            return new TextOrBytes(buffer.WrittenMemory); // That's why we retain the last buffer
+        }
+        catch {
+            buffer.Dispose();
+            throw;
+        }
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

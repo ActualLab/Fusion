@@ -45,6 +45,7 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
 
 public sealed class RpcSharedStream<T> : RpcSharedStream
 {
+    private readonly Func<T, int>? _sizeHintProvider = SizeHintProviders.Get<T>();
     private readonly RpcSystemCallSender _systemCallSender;
     private readonly Channel<(long NextIndex, bool MustReset)> _acks = Channel.CreateUnbounded<(long, bool)>(
         new() {
@@ -228,7 +229,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
     {
         // Debug.WriteLine($"{Id}: <- #{index} (ack @ {ackIndex})");
         if (item.IsValue(out var value))
-            return _systemCallSender.Item(Peer, Id.LocalId, index, value);
+            return _systemCallSender.Item(Peer, Id.LocalId, index, value, _sizeHintProvider?.Invoke(value) ?? 0);
 
         var error = ReferenceEquals(item.Error, NoMoreItemTag) ? null : item.Error;
         return _systemCallSender.End(Peer, Id.LocalId, index, error);
@@ -251,6 +252,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
     {
         private const int BatchSize = 256;
 
+        private readonly Func<T, int>? _sizeHintProvider = stream._sizeHintProvider;
         private readonly bool _isPolymorphic = !(typeof(T).IsValueType || typeof(T).IsSealed);
         private readonly List<T> _items = new(BatchSize / 4); // Our chance to fully fill the batch is low
         private Type? _itemType;
@@ -295,7 +297,12 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                     ? (T[])Array.CreateInstance(_itemType ?? typeof(T), count)
                     : new T[count];
                 _items.CopyTo(items);
-                var result = stream._systemCallSender.Batch(stream.Peer, stream.Id.LocalId, nextIndex - count, items);
+                var sizeHint = 0;
+                if (_sizeHintProvider != null)
+                    foreach (var item in items)
+                        sizeHint += _sizeHintProvider.Invoke(item);
+                var result = stream._systemCallSender.Batch(
+                    stream.Peer, stream.Id.LocalId, nextIndex - count, items, sizeHint);
                 _items.Clear();
                 _itemType = null;
                 return result;
