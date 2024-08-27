@@ -297,7 +297,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 // Copy part into the beginning of _writeBuffer
                 if (start != 0)
                     part.CopyTo(MemoryMarshal.AsMemory(memory));
-                _writeBuffer.Index = length;
+                _writeBuffer.Position = length;
                 return;
             }
             var isEndOfMessage = end == memory.Length;
@@ -416,7 +416,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             return true;
         }
         catch (Exception e) {
-            buffer.Index = startOffset;
+            buffer.Position = startOffset;
             ErrorLog?.LogError(e,
                 "Couldn't serialize the value of type '{Type}'",
                 value?.GetType().FullName ?? "null");
