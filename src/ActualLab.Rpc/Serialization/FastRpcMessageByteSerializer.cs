@@ -6,16 +6,16 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Serialization;
 
-public sealed class FastRpcMessageByteSerializer(IByteSerializer serializer, int maxInefficiencyFactor = 4)
+public sealed class FastRpcMessageByteSerializer(IByteSerializer baseSerializer, bool allowProjection = false)
     : IProjectingByteSerializer<RpcMessage>
 {
-    public bool AllowProjection { get; init; } = false;
+    public bool AllowProjection { get; init; } = allowProjection;
     public int MinProjectionSize { get; init; } = 8192;
-    public int MaxInefficiencyFactor { get; init; } = maxInefficiencyFactor;
+    public int MaxInefficiencyFactor { get; init; } = 4;
 
     public RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
     {
-        var message = serializer.Read<FastRpcMessage>(data, out readLength);
+        var message = baseSerializer.Read<FastRpcMessage>(data, out readLength);
         var span = data.Span[readLength..];
         if (span.Length < 4)
             throw Errors.InvalidSerializedDataFormat();
@@ -38,7 +38,7 @@ public sealed class FastRpcMessageByteSerializer(IByteSerializer serializer, int
 
     public RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength)
     {
-        var message = serializer.Read<FastRpcMessage>(data, out readLength);
+        var message = baseSerializer.Read<FastRpcMessage>(data, out readLength);
         var span = data.Span[readLength..];
         if (span.Length < 4)
             throw Errors.InvalidSerializedDataFormat();
@@ -55,7 +55,7 @@ public sealed class FastRpcMessageByteSerializer(IByteSerializer serializer, int
 
     public void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
     {
-        serializer.Write(bufferWriter, new FastRpcMessage(value));
+        baseSerializer.Write(bufferWriter, new FastRpcMessage(value));
         var argumentData = value.ArgumentData.Data;
         var argumentDataLength = argumentData.Length + 4;
         var span = bufferWriter.GetSpan(argumentDataLength);

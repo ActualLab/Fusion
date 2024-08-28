@@ -27,6 +27,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
 
     public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
     public RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
+    public bool UseMessagePackSerializer { get; init; } = false;
     public bool UseFastRpcByteSerializer { get; init; } = false;
     public bool ExposeBackend { get; init; } = false;
     public bool UseTestClock { get; init; }
@@ -130,11 +131,15 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
         services.AddSingleton<RpcWebSocketChannelOptionsProvider>(_ => {
             return (_, _) => {
                 var options = WebSocketChannel<RpcMessage>.Options.Default;
+                var baseSerializer = UseMessagePackSerializer
+                    ? (IByteSerializer)MessagePackByteSerializer.Default
+                    : MemoryPackByteSerializer.Default;
+                var serializer = UseFastRpcByteSerializer
+                    ? new FastRpcMessageByteSerializer(baseSerializer, allowProjection: true)
+                    : ByteSerializer.Default.ToTyped<RpcMessage>();
                 return options with {
                     FrameDelayerFactory = RpcFrameDelayerFactory,
-                    Serializer = UseFastRpcByteSerializer
-                        ? new FastRpcMessageByteSerializer(ByteSerializer.Default) { AllowProjection = true }
-                        : ByteSerializer.Default.ToTyped<RpcMessage>(),
+                    Serializer = serializer,
                 };
             };
         });
