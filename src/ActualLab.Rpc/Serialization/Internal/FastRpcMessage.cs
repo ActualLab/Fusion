@@ -23,6 +23,7 @@ public readonly partial struct FastRpcMessage
     [DataMember(Order = 5), MemoryPackOrder(5)]
     public readonly RpcHeader[]? Headers;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public FastRpcMessage(RpcMessage source)
     {
         CallTypeId = source.CallTypeId;
@@ -32,6 +33,7 @@ public readonly partial struct FastRpcMessage
         Headers = source.Headers;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
     // ReSharper disable once ConvertToPrimaryConstructor
     public FastRpcMessage(
@@ -48,6 +50,7 @@ public readonly partial struct FastRpcMessage
         Headers = headers;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcMessage ToRpcMessage(TextOrBytes argumentData)
         => new(CallTypeId, RelatedId, Service, Method, argumentData, Headers);
 }

@@ -6,16 +6,16 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Serialization;
 
-public class FastRpcMessageByteSerializer(IByteSerializer serializer, int maxInefficiencyFactor = 4)
+public sealed class FastRpcMessageByteSerializer(IByteSerializer serializer, int maxInefficiencyFactor = 4)
     : IProjectingByteSerializer<RpcMessage>
 {
-    public readonly IByteSerializer Serializer = serializer;
-    public readonly int MinProjectionSize = 8192;
-    public readonly int MaxInefficiencyFactor = maxInefficiencyFactor;
+    public bool AllowProjection { get; init; } = false;
+    public int MinProjectionSize { get; init; } = 8192;
+    public int MaxInefficiencyFactor { get; init; } = maxInefficiencyFactor;
 
     public RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
     {
-        var message = Serializer.Read<FastRpcMessage>(data, out readLength);
+        var message = serializer.Read<FastRpcMessage>(data, out readLength);
         var span = data.Span[readLength..];
         if (span.Length < 4)
             throw Errors.InvalidSerializedDataFormat();
@@ -30,7 +30,7 @@ public class FastRpcMessageByteSerializer(IByteSerializer serializer, int maxIne
         readLength += argumentDataLength;
 
         var argumentData = data[argumentDataStart..readLength];
-        isProjection = argumentData.Length >= MinProjectionSize && CanUseProjection(argumentData);
+        isProjection = AllowProjection && argumentData.Length >= MinProjectionSize && IsProjectable(argumentData);
         return message.ToRpcMessage(isProjection
             ? new TextOrBytes(DataFormat.Bytes, argumentData)
             : new TextOrBytes(DataFormat.Bytes, argumentData.ToArray()));
@@ -38,7 +38,7 @@ public class FastRpcMessageByteSerializer(IByteSerializer serializer, int maxIne
 
     public RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength)
     {
-        var message = Serializer.Read<FastRpcMessage>(data, out readLength);
+        var message = serializer.Read<FastRpcMessage>(data, out readLength);
         var span = data.Span[readLength..];
         if (span.Length < 4)
             throw Errors.InvalidSerializedDataFormat();
@@ -55,7 +55,7 @@ public class FastRpcMessageByteSerializer(IByteSerializer serializer, int maxIne
 
     public void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
     {
-        Serializer.Write(bufferWriter, new FastRpcMessage(value));
+        serializer.Write(bufferWriter, new FastRpcMessage(value));
         var argumentData = value.ArgumentData.Data;
         var argumentDataLength = argumentData.Length + 4;
         var span = bufferWriter.GetSpan(argumentDataLength);
@@ -66,7 +66,7 @@ public class FastRpcMessageByteSerializer(IByteSerializer serializer, int maxIne
 
     // Private methods
 
-    public bool CanUseProjection(ReadOnlyMemory<byte> data)
+    public bool IsProjectable(ReadOnlyMemory<byte> data)
     {
 #if !NETSTANDARD2_0
         return MemoryMarshal.TryGetArray(data, out var segment)

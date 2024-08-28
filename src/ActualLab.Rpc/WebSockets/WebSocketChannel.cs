@@ -87,17 +87,20 @@ public sealed class WebSocketChannel<T> : Channel<T>
         Settings = settings;
         WebSocketOwner = webSocketOwner;
         WebSocket = webSocketOwner.WebSocket;
+        _stopCts = cancellationToken.CreateLinkedTokenSource();
+        StopToken = _stopCts.Token;
+
         TextSerializer = settings.Serializer as ITextSerializer<T>; // ITextSerializer<T> is also IByteSerializer<T>
         ByteSerializer = TextSerializer == null ? settings.Serializer : null;
         ProjectingByteSerializer = ByteSerializer as IProjectingByteSerializer<T>;
+        if (ProjectingByteSerializer is { AllowProjection: false })
+            ProjectingByteSerializer = null;
         (DataFormat, MessageType) = TextSerializer != null
             ? (DataFormat.Text, WebSocketMessageType.Text)
             : (DataFormat.Bytes, WebSocketMessageType.Binary);
+
         Log = webSocketOwner.Services.LogFor(GetType());
         ErrorLog = Log.IfEnabled(LogLevel.Error);
-
-        _stopCts = cancellationToken.CreateLinkedTokenSource();
-        StopToken = _stopCts.Token;
 
         _writeFrameSize = settings.WriteFrameSize;
         _writeBufferSize = settings.MinWriteBufferSize;

@@ -133,7 +133,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
                 return options with {
                     FrameDelayerFactory = RpcFrameDelayerFactory,
                     Serializer = UseFastRpcByteSerializer
-                        ? new FastRpcMessageByteSerializer(ByteSerializer.Default)
+                        ? new FastRpcMessageByteSerializer(ByteSerializer.Default) { AllowProjection = true }
                         : ByteSerializer.Default.ToTyped<RpcMessage>(),
                 };
             };
