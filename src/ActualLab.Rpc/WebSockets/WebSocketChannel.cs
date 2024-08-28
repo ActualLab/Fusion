@@ -47,6 +47,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private readonly Channel<T> _writeChannel;
     private readonly ArrayPoolBuffer<byte> _writeBuffer;
     private readonly int _writeFrameSize;
+    private readonly int _writeBufferSize;
     private readonly int _retainedBufferSize;
     private readonly int _bufferResetPeriod;
     private readonly int _maxItemSize;
@@ -102,8 +103,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         ErrorLog = Log.IfEnabled(LogLevel.Error);
 
         _writeFrameSize = settings.WriteFrameSize;
-        if (_writeFrameSize <= 0)
-            throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.WriteFrameSize)} must be positive.");
+        _writeBufferSize = settings.MinWriteBufferSize;
         _retainedBufferSize = settings.RetainedBufferSize;
         _bufferResetPeriod = settings.BufferResetPeriod;
         _maxItemSize = settings.MaxItemSize;
@@ -205,10 +205,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false)) {
                     while (reader.TryRead(out var item)) {
                         if (TrySerializeBytes(item, _writeBuffer) && _writeBuffer.WrittenCount >= _writeFrameSize)
-                            await FlushWriteBuffer(cancellationToken).ConfigureAwait(false);
+                            await FlushWriteBuffer(false, cancellationToken).ConfigureAwait(false);
                     }
-                    if (_writeBuffer.WrittenCount != 0)
-                        await FlushWriteBuffer(cancellationToken).ConfigureAwait(false);
+                    await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
                 }
             }
             else {
@@ -216,7 +215,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false)) {
                     while (reader.TryRead(out var item)) {
                         if (TrySerializeText(item, _writeBuffer))
-                            await FlushWriteBuffer(cancellationToken).ConfigureAwait(false);
+                            await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
                     }
                 }
             }
@@ -243,8 +242,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 if (whenMustFlush.IsCompleted) {
                     // Flush is required right now.
                     // We aren't going to check WaitToReadAsync, coz most likely it's going to await.
-                    if (_writeBuffer.WrittenCount != 0)
-                        await FlushWriteBuffer(cancellationToken).ConfigureAwait(false);
+                    if (_writeBuffer.WrittenCount > 0)
+                        await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
                     whenMustFlush = null;
                 }
                 else {
@@ -275,7 +274,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                     continue; // Nothing is written
 
                 if (_writeBuffer.WrittenCount >= _writeFrameSize) {
-                    await FlushWriteBuffer(cancellationToken).ConfigureAwait(false);
+                    await FlushWriteBuffer(false, cancellationToken).ConfigureAwait(false);
                     // We just "crossed" _writeFrameSize boundary, so the flush we just made
                     // flushed everything except maybe the most recent item.
                     // We can safely "declare" that if any flush was expected before that moment,
@@ -289,24 +288,39 @@ public sealed class WebSocketChannel<T> : Channel<T>
             }
         }
         // Final write flush
-        await FlushWriteBuffer(cancellationToken).ConfigureAwait(false);
+        await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private async ValueTask FlushWriteBuffer(CancellationToken cancellationToken)
+    private async ValueTask FlushWriteBuffer(bool completely, CancellationToken cancellationToken)
     {
-        var message = _writeBuffer.WrittenMemory;
-        if (message.Length == 0)
+        if (_writeBuffer.WrittenCount == 0)
             return;
 
-        await WebSocket
-            .SendAsync(message, MessageType, true, cancellationToken)
-            .ConfigureAwait(false);
-        _meters.OutgoingFrameCounter.Add(1);
-        _meters.OutgoingFrameSizeHistogram.Record(message.Length);
+        var memory = _writeBuffer.WrittenMemory;
+        for (var start = 0; start < memory.Length; start += _writeFrameSize) {
+            var length = Math.Min(_writeFrameSize, memory.Length - start);
+            // length is always > 0 below
+            var end = start + length;
+            var part = memory[start..end];
+            if (length < _writeFrameSize && !completely) {
+                // Copy part into the beginning of _writeBuffer
+                if (start != 0)
+                    part.CopyTo(MemoryMarshal.AsMemory(memory));
+                _writeBuffer.Position = length;
+                return;
+            }
+            var isEndOfMessage = end == memory.Length;
+
+            await WebSocket
+                .SendAsync(part, MessageType, isEndOfMessage, cancellationToken)
+                .ConfigureAwait(false);
+            _meters.OutgoingFrameCounter.Add(1);
+            _meters.OutgoingFrameSizeHistogram.Record(part.Length);
+        }
 
         if (MustReset(ref _writeBufferResetCounter))
-            _writeBuffer.Reset(Settings.MinWriteBufferSize, _retainedBufferSize);
+            _writeBuffer.Reset(_writeBufferSize, _retainedBufferSize);
         else
             _writeBuffer.Reset();
     }
