@@ -16,7 +16,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         public static readonly Options Default = new();
 
-        public int WriteFrameSize { get; init; } = 1450 * 3; // 1500 is the default MTU
+        public int WriteFrameSize { get; init; } = 15_000; // The min. MTU is 1500, we don't want to buffer way more
         public int MinWriteBufferSize { get; init; } = 16_384; // Rented ~just once, so it can be large
         public int MinReadBufferSize { get; init; } = 16_384; // Rented ~just once, so it can be large
         public int RetainedBufferSize { get; init; } = 65_536; // Read buffer is released when it hits this size
@@ -47,7 +47,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private readonly Channel<T> _writeChannel;
     private readonly ArrayPoolBuffer<byte> _writeBuffer;
     private readonly int _writeFrameSize;
-    private readonly int _writeBufferSize;
     private readonly int _retainedBufferSize;
     private readonly int _bufferResetPeriod;
     private readonly int _maxItemSize;
@@ -103,7 +102,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
         ErrorLog = Log.IfEnabled(LogLevel.Error);
 
         _writeFrameSize = settings.WriteFrameSize;
-        _writeBufferSize = settings.MinWriteBufferSize;
+        if (_writeFrameSize <= 0)
+            throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.WriteFrameSize)} must be positive.");
         _retainedBufferSize = settings.RetainedBufferSize;
         _bufferResetPeriod = settings.BufferResetPeriod;
         _maxItemSize = settings.MaxItemSize;
@@ -320,7 +320,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
 
         if (MustReset(ref _writeBufferResetCounter))
-            _writeBuffer.Reset(_writeBufferSize, _retainedBufferSize);
+            _writeBuffer.Reset(Settings.MinWriteBufferSize, _retainedBufferSize);
         else
             _writeBuffer.Reset();
     }
