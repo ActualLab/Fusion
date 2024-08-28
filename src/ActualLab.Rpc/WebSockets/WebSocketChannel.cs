@@ -1,8 +1,6 @@
-using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
-using Microsoft.Toolkit.HighPerformance;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Diagnostics;
@@ -26,7 +24,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public int MaxItemSize { get; init; } = 130_000_000; // 130 MB;
         public RpcFrameDelayerFactory? FrameDelayerFactory { get; init; }
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
-        public DualSerializer<T> Serializer { get; init; } = new();
+        public IByteSerializer<T> Serializer { get; init; } = ActualLab.Serialization.ByteSerializer.Default.ToTyped<T>();
         public BoundedChannelOptions ReadChannelOptions { get; init; } = new(128) {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
@@ -47,15 +45,12 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private volatile CancellationTokenSource? _stopCts;
     private readonly Channel<T> _readChannel;
     private readonly Channel<T> _writeChannel;
-    private ArrayPoolBuffer<byte> _writeBuffer;
+    private readonly ArrayPoolBuffer<byte> _writeBuffer;
     private readonly int _writeFrameSize;
     private readonly int _writeBufferSize;
     private readonly int _retainedBufferSize;
     private readonly int _bufferResetPeriod;
     private readonly int _maxItemSize;
-    private readonly IByteSerializer<T> _byteSerializer;
-    private readonly ITextSerializer<T> _textSerializer;
-    private readonly WebSocketMessageType _defaultMessageType;
     private readonly MeterSet _meters = StaticMeters;
     private int _readBufferResetCounter;
     private int _writeBufferResetCounter;
@@ -65,7 +60,10 @@ public sealed class WebSocketChannel<T> : Channel<T>
     public WebSocketOwner WebSocketOwner { get; }
     public WebSocket WebSocket { get; }
     public readonly CancellationToken StopToken;
-    public readonly DualSerializer<T> Serializer;
+    public readonly IByteSerializer<T> ByteSerializer;
+    public readonly ITextSerializer<T>? TextSerializer;
+    public readonly DataFormat DataFormat;
+    public readonly WebSocketMessageType MessageType;
     public readonly ILogger? Log;
     public readonly ILogger? ErrorLog;
     public readonly Task WhenReadCompleted;
@@ -88,7 +86,11 @@ public sealed class WebSocketChannel<T> : Channel<T>
         Settings = settings;
         WebSocketOwner = webSocketOwner;
         WebSocket = webSocketOwner.WebSocket;
-        Serializer = settings.Serializer;
+        ByteSerializer = settings.Serializer;
+        TextSerializer = settings.Serializer as ITextSerializer<T>; // ITextSerializer<T> is also IByteSerializer<T>
+        (DataFormat, MessageType) = TextSerializer != null
+            ? (DataFormat.Text, WebSocketMessageType.Text)
+            : (DataFormat.Bytes, WebSocketMessageType.Binary);
         Log = webSocketOwner.Services.LogFor(GetType());
         ErrorLog = Log.IfEnabled(LogLevel.Error);
 
@@ -100,11 +102,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         _retainedBufferSize = settings.RetainedBufferSize;
         _bufferResetPeriod = settings.BufferResetPeriod;
         _maxItemSize = settings.MaxItemSize;
-        _byteSerializer = settings.Serializer.ByteSerializer;
-        _textSerializer = settings.Serializer.TextSerializer;
-        _defaultMessageType = Serializer.DefaultFormat == DataFormat.Text
-            ? WebSocketMessageType.Text
-            : WebSocketMessageType.Binary;
         _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize);
 
         _readChannel = Channel.CreateBounded<T>(settings.ReadChannelOptions);
@@ -187,7 +184,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         try {
             var reader = _writeChannel.Reader;
-            if (_defaultMessageType == WebSocketMessageType.Binary) {
+            if (DataFormat == DataFormat.Bytes) {
                 // Binary -> we build frames
                 if (Settings.FrameDelayerFactory?.Invoke() is { } frameDelayer) {
                     // There is a write delay -> we use more complex write logic
@@ -198,7 +195,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 // Simpler logic for no write delay case
                 while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false)) {
                     while (reader.TryRead(out var item)) {
-                        if (TrySerialize(item, _writeBuffer) && _writeBuffer.WrittenCount >= _writeFrameSize)
+                        if (TrySerializeBytes(item, _writeBuffer) && _writeBuffer.WrittenCount >= _writeFrameSize)
                             await FlushWriteBuffer(false, cancellationToken).ConfigureAwait(false);
                     }
                     await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
@@ -208,7 +205,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 // Text -> no frames
                 while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false)) {
                     while (reader.TryRead(out var item)) {
-                        if (TrySerialize(item, _writeBuffer))
+                        if (TrySerializeText(item, _writeBuffer))
                             await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
                     }
                 }
@@ -227,6 +224,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         Task? whenMustFlush = null; // null = no flush required / nothing to flush
         Task<bool>? waitToReadTask = null;
+        Func<T, ArrayPoolBuffer<byte>, bool> trySerialize = DataFormat == DataFormat.Text
+            ? TrySerializeText
+            : TrySerializeBytes;
         while (true) {
             // When we are here, the sync read part is completed, so WaitToReadAsync will likely await.
             if (whenMustFlush != null) {
@@ -261,7 +261,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 break; // Reading is done
 
             while (reader.TryRead(out var item)) {
-                if (!TrySerialize(item, _writeBuffer))
+                if (!trySerialize.Invoke(item, _writeBuffer))
                     continue; // Nothing is written
 
                 if (_writeBuffer.WrittenCount >= _writeFrameSize) {
@@ -282,6 +282,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     private async ValueTask FlushWriteBuffer(bool completely, CancellationToken cancellationToken)
     {
         if (_writeBuffer.WrittenCount == 0)
@@ -303,7 +304,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             var isEndOfMessage = end == memory.Length;
 
             await WebSocket
-                .SendAsync(part, _defaultMessageType, isEndOfMessage, cancellationToken)
+                .SendAsync(part, MessageType, isEndOfMessage, cancellationToken)
                 .ConfigureAwait(false);
             _meters.OutgoingFrameCounter.Add(1);
             _meters.OutgoingFrameSizeHistogram.Record(part.Length);
@@ -320,7 +321,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         var minReadBufferSize = Settings.MinReadBufferSize;
         var readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize);
-        var messageType = (WebSocketMessageType?)null;
         try {
             while (true) {
                 T value;
@@ -329,11 +329,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 var r = await WebSocket.ReceiveAsync(arraySegment, cancellationToken).ConfigureAwait(false);
                 if (r.MessageType == WebSocketMessageType.Close)
                     yield break;
-
-                if (!messageType.HasValue)
-                    messageType = r.MessageType;
-                else if (r.MessageType != messageType.GetValueOrDefault())
-                    throw Errors.InvalidWebSocketMessageType(r.MessageType, messageType.GetValueOrDefault());
+                if (r.MessageType != MessageType)
+                    throw Errors.InvalidWebSocketMessageType(r.MessageType, MessageType);
 
                 readBuffer.Advance(r.Count);
                 _meters.IncomingFrameCounter.Add(1);
@@ -388,31 +385,23 @@ public sealed class WebSocketChannel<T> : Channel<T>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    private bool TrySerialize(T value, ArrayPoolBuffer<byte> buffer)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private bool TrySerializeBytes(T value, ArrayPoolBuffer<byte> buffer)
     {
         _meters.OutgoingItemCounter.Add(1);
         var startOffset = buffer.WrittenCount;
         try {
-            int size;
-            if (_defaultMessageType == WebSocketMessageType.Text) {
-                _textSerializer.Write(buffer, value);
-                size = buffer.WrittenCount - startOffset;
-                if (size > _maxItemSize)
-                    throw Errors.ItemSizeExceedsTheLimit();
-            }
-            else {
-                buffer.GetSpan(MinMessageSize);
-                buffer.Advance(4);
-                _byteSerializer.Write(buffer, value);
-                size = buffer.WrittenCount - startOffset;
-                buffer.WrittenSpan.WriteUnchecked(startOffset, size);
-                if (size > _maxItemSize)
-                    throw Errors.ItemSizeExceedsTheLimit();
+            buffer.GetSpan(MinMessageSize);
+            buffer.Advance(4);
+            ByteSerializer.Write(buffer, value);
+            var size = buffer.WrittenCount - startOffset;
+            buffer.WrittenSpan.WriteUnchecked(startOffset, size);
+            if (size > _maxItemSize)
+                throw Errors.ItemSizeExceedsTheLimit();
 
-                // Log?.LogInformation("Wrote: {Value}", value);
-                // Log?.LogInformation("Data({Size}): {Data}",
-                //     size - 4, new Base64Encoded(buffer.WrittenMemory[(startOffset + 4)..].ToArray()).Encode());
-            }
+            // Log?.LogInformation("Wrote: {Value}", value);
+            // Log?.LogInformation("Data({Size}): {Data}",
+            //     size - 4, new Base64Encoded(buffer.WrittenMemory[(startOffset + 4)..].ToArray()).Encode());
             return true;
         }
         catch (Exception e) {
@@ -425,6 +414,29 @@ public sealed class WebSocketChannel<T> : Channel<T>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private bool TrySerializeText(T value, ArrayPoolBuffer<byte> buffer)
+    {
+        _meters.OutgoingItemCounter.Add(1);
+        var startOffset = buffer.WrittenCount;
+        try {
+            TextSerializer!.Write(buffer, value);
+            var size = buffer.WrittenCount - startOffset;
+            if (size > _maxItemSize)
+                throw Errors.ItemSizeExceedsTheLimit();
+            return true;
+        }
+        catch (Exception e) {
+            buffer.Position = startOffset;
+            ErrorLog?.LogError(e,
+                "Couldn't serialize the value of type '{Type}'",
+                value?.GetType().FullName ?? "null");
+            return false;
+        }
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    [MethodImpl(MethodImplOptions.NoInlining)]
     private bool TryDeserializeBytes(ref ReadOnlyMemory<byte> bytes, out T value)
     {
         _meters.IncomingItemCounter.Add(1);
@@ -439,7 +451,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 throw Errors.ItemSizeExceedsTheLimit();
 
             var data = bytes[sizeof(int)..size];
-            value = _byteSerializer.Read(data, out int readSize);
+            value = ByteSerializer.Read(data, out int readSize);
             if (readSize != size - 4)
                 throw Errors.InvalidItemSize();
 
@@ -459,6 +471,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    [MethodImpl(MethodImplOptions.NoInlining)]
     private bool TryDeserializeText(ReadOnlyMemory<byte> bytes, out T value)
     {
         _meters.IncomingItemCounter.Add(1);
@@ -466,7 +479,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             if (bytes.Length > _maxItemSize)
                 throw Errors.ItemSizeExceedsTheLimit();
 
-            value = _textSerializer.Read(bytes);
+            value = TextSerializer!.Read(bytes);
             return true;
         }
         catch (Exception e) {
