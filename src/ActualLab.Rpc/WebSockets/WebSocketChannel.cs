@@ -207,7 +207,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
                         if (TrySerializeBytes(item, _writeBuffer) && _writeBuffer.WrittenCount >= _writeFrameSize)
                             await FlushWriteBuffer(false, cancellationToken).ConfigureAwait(false);
                     }
-                    await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
+                    // Final flush before await
+                    if (_writeBuffer.WrittenCount != 0)
+                        await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
                 }
             }
             else {
@@ -242,7 +244,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 if (whenMustFlush.IsCompleted) {
                     // Flush is required right now.
                     // We aren't going to check WaitToReadAsync, coz most likely it's going to await.
-                    if (_writeBuffer.WrittenCount > 0)
+                    if (_writeBuffer.WrittenCount != 0)
                         await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
                     whenMustFlush = null;
                 }
@@ -294,10 +296,10 @@ public sealed class WebSocketChannel<T> : Channel<T>
     [MethodImpl(MethodImplOptions.NoInlining)]
     private async ValueTask FlushWriteBuffer(bool completely, CancellationToken cancellationToken)
     {
-        if (_writeBuffer.WrittenCount == 0)
+        var memory = _writeBuffer.WrittenMemory;
+        if (memory.Length == 0)
             return;
 
-        var memory = _writeBuffer.WrittenMemory;
         for (var start = 0; start < memory.Length; start += _writeFrameSize) {
             var length = Math.Min(_writeFrameSize, memory.Length - start);
             // length is always > 0 below
