@@ -12,10 +12,11 @@ public enum DataFormat
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[method: MemoryPackConstructor]
 public readonly partial record struct TextOrBytes(
     [property: DataMember(Order = 0), MemoryPackOrder(0)]
     DataFormat Format,
-    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, DataMember(Order = 1), MemoryPackOrder(1)]
     ReadOnlyMemory<byte> Data
 ) {
     public static readonly TextOrBytes EmptyBytes = new(DataFormat.Bytes, default!);
@@ -24,8 +25,9 @@ public readonly partial record struct TextOrBytes(
     private readonly byte[]? _data; // This field is used solely to avoid .ToArray() calls in Bytes property
 
     // Computed properties
-    [DataMember(Order = 1), MemoryPackOrder(1)]
-    public byte[] Bytes => _data ?? Data.ToArray();
+    [MemoryPackIgnore]
+    public byte[] Bytes => _data ?? GetBytes();
+
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public bool IsEmpty => Data.Length == 0;
 
@@ -39,7 +41,7 @@ public readonly partial record struct TextOrBytes(
     public TextOrBytes(ReadOnlyMemory<byte> bytes)
         : this(DataFormat.Bytes, bytes) { }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor]
     public TextOrBytes(DataFormat format, byte[] bytes)
         : this(format, bytes.AsMemory()) { }
 
@@ -98,4 +100,18 @@ public readonly partial record struct TextOrBytes(
 
     public bool DataEquals(TextOrBytes other)
         => Data.Span.SequenceEqual(other.Data.Span);
+
+    // Private methods
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private byte[] GetBytes()
+    {
+#if !NETSTANDARD2_0
+        if (MemoryMarshal.TryGetArray(Data, out var segment)
+            && segment.Array is { } bytes
+            && bytes.Length == Data.Length)
+            return bytes;
+#endif
+        return Data.ToArray();
+    }
 }
