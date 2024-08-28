@@ -10,9 +10,15 @@ public readonly partial struct FastRpcMessage
     public readonly byte CallTypeId;
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public readonly long RelatedId;
-    [DataMember(Order = 2), MemoryPackOrder(2), Utf16StringFormatter]
+    [DataMember(Order = 2), MemoryPackOrder(2)]
+#if !NETSTANDARD2_0
+    [Utf16StringFormatter]
+#endif
     public readonly string Service;
-    [DataMember(Order = 3), MemoryPackOrder(3), Utf16StringFormatter]
+    [DataMember(Order = 3), MemoryPackOrder(3)]
+#if !NETSTANDARD2_0
+    [Utf16StringFormatter]
+#endif
     public readonly string Method;
     [DataMember(Order = 5), MemoryPackOrder(5)]
     public readonly RpcHeader[]? Headers;

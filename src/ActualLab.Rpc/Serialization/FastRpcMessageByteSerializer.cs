@@ -6,7 +6,7 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Serialization;
 
-public class ProjectingRpcMessageByteSerializer(IByteSerializer serializer, int maxInefficiencyFactor = 4)
+public class FastRpcMessageByteSerializer(IByteSerializer serializer, int maxInefficiencyFactor = 4)
     : IProjectingByteSerializer<RpcMessage>
 {
     public readonly IByteSerializer Serializer = serializer;
