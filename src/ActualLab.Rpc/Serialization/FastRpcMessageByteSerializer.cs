@@ -10,6 +10,7 @@ public class FastRpcMessageByteSerializer(IByteSerializer serializer, int maxIne
     : IProjectingByteSerializer<RpcMessage>
 {
     public readonly IByteSerializer Serializer = serializer;
+    public readonly int MinProjectionSize = 8192;
     public readonly int MaxInefficiencyFactor = maxInefficiencyFactor;
 
     public RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
@@ -27,13 +28,9 @@ public class FastRpcMessageByteSerializer(IByteSerializer serializer, int maxIne
 
         var argumentDataStart = readLength + 4;
         readLength += argumentDataLength;
-        if (argumentDataLength == 4) {
-            isProjection = false;
-            return message.ToRpcMessage(TextOrBytes.EmptyBytes);
-        }
 
         var argumentData = data[argumentDataStart..readLength];
-        isProjection = CanUseProjection(argumentData);
+        isProjection = argumentData.Length >= MinProjectionSize && CanUseProjection(argumentData);
         return message.ToRpcMessage(isProjection
             ? new TextOrBytes(DataFormat.Bytes, argumentData)
             : new TextOrBytes(DataFormat.Bytes, argumentData.ToArray()));

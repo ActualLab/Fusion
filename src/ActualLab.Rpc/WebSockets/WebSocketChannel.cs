@@ -18,7 +18,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
 
         public int WriteFrameSize { get; init; } = 1450 * 3; // 1500 is the default MTU
         public int MinWriteBufferSize { get; init; } = 16_384; // Rented ~just once, so it can be large
-        public int MinReadBufferSize { get; init; } = 32_768; // Rented ~just once, so it can be large
+        public int MinReadBufferSize { get; init; } = 16_384; // Rented ~just once, so it can be large
         public int RetainedBufferSize { get; init; } = 65_536; // Read buffer is released when it hits this size
         public int BufferResetPeriod { get; init; } = 64;
         public int MaxItemSize { get; init; } = 130_000_000; // 130 MB;
