@@ -20,3 +20,8 @@ public interface IByteSerializer<T>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     void Write(IBufferWriter<byte> bufferWriter, T value);
 }
+
+public interface IProjectingByteSerializer<T> : IByteSerializer<T>
+{
+    public T Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection);
+}

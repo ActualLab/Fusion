@@ -10,6 +10,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     {
         ExposeBackend = true;
         RpcFrameDelayerFactory = null;
+        UseProjectingRpcByteSerializer = true;
     }
 
     protected override void ConfigureServices(IServiceCollection services, bool isClient)

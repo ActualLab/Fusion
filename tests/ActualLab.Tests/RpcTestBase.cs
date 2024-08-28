@@ -4,6 +4,7 @@ using ActualLab.RestEase;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Serialization;
 using ActualLab.Rpc.WebSockets;
 using ActualLab.Testing.Collections;
 using ActualLab.Time.Testing;
@@ -26,9 +27,10 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
 
     public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
     public RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
-    public bool UseLogging { get; init; } = true;
-    public bool UseTestClock { get; init; }
+    public bool UseProjectingRpcByteSerializer { get; init; } = false;
     public bool ExposeBackend { get; init; } = false;
+    public bool UseTestClock { get; init; }
+    public bool UseLogging { get; init; } = true;
     public bool IsLogEnabled { get; init; } = true;
 
     public IServiceProvider Services => _services ??= CreateServices();
@@ -128,7 +130,12 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
         services.AddSingleton<RpcWebSocketChannelOptionsProvider>(_ => {
             return (_, _) => {
                 var options = WebSocketChannel<RpcMessage>.Options.Default;
-                return options with { FrameDelayerFactory = RpcFrameDelayerFactory };
+                return options with {
+                    FrameDelayerFactory = RpcFrameDelayerFactory,
+                    Serializer = UseProjectingRpcByteSerializer
+                        ? new ProjectingRpcMessageByteSerializer(ByteSerializer.Default)
+                        : ByteSerializer.Default.ToTyped<RpcMessage>(),
+                };
             };
         });
         if (!isClient) {

@@ -58,6 +58,8 @@ public static class Errors
     public static Exception CannotDeserializeUnexpectedPolymorphicArgumentType(Type expectedType, Type actualType)
         => new SerializationException($"Cannot deserialize polymorphic argument type: " +
             $"expected '{expectedType.GetName()}' or its descendant, got '{actualType.GetName()}'.");
+    public static Exception InvalidSerializedDataFormat()
+        => new SerializationException("Invalid serialized data format.");
 
     public static Exception ConnectTimeout(RpcPeerRef peerRef, TimeSpan? timeout = null)
         => ConnectTimeout(peerRef.GetRemotePartyName());

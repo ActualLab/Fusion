@@ -60,8 +60,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
     public WebSocketOwner WebSocketOwner { get; }
     public WebSocket WebSocket { get; }
     public readonly CancellationToken StopToken;
-    public readonly IByteSerializer<T> ByteSerializer;
     public readonly ITextSerializer<T>? TextSerializer;
+    public readonly IByteSerializer<T>? ByteSerializer;
+    public readonly IProjectingByteSerializer<T>? ProjectingByteSerializer;
     public readonly DataFormat DataFormat;
     public readonly WebSocketMessageType MessageType;
     public readonly ILogger? Log;
@@ -86,8 +87,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
         Settings = settings;
         WebSocketOwner = webSocketOwner;
         WebSocket = webSocketOwner.WebSocket;
-        ByteSerializer = settings.Serializer;
         TextSerializer = settings.Serializer as ITextSerializer<T>; // ITextSerializer<T> is also IByteSerializer<T>
+        ByteSerializer = TextSerializer == null ? settings.Serializer : null;
+        ProjectingByteSerializer = ByteSerializer as IProjectingByteSerializer<T>;
         (DataFormat, MessageType) = TextSerializer != null
             ? (DataFormat.Text, WebSocketMessageType.Text)
             : (DataFormat.Bytes, WebSocketMessageType.Binary);
@@ -157,7 +159,11 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         var writer = _readChannel.Writer;
         try {
-            await foreach (var item in ReadAll(cancellationToken).ConfigureAwait(false)) {
+            var items = ProjectingByteSerializer != null
+                ? ReadAllProjecting(cancellationToken)
+                : ReadAll(cancellationToken);
+            // ReSharper disable once UseCancellationTokenForIAsyncEnumerable
+            await foreach (var item in items.ConfigureAwait(false)) {
                 while (!writer.TryWrite(item))
                     if (!await writer.WaitToWriteAsync(cancellationToken).ConfigureAwait(false)) {
                         // This is a normal closure in most of the cases,
@@ -224,9 +230,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         Task? whenMustFlush = null; // null = no flush required / nothing to flush
         Task<bool>? waitToReadTask = null;
-        Func<T, ArrayPoolBuffer<byte>, bool> trySerialize = DataFormat == DataFormat.Text
-            ? TrySerializeText
-            : TrySerializeBytes;
+        Func<T, ArrayPoolBuffer<byte>, bool> trySerialize = DataFormat == DataFormat.Bytes
+            ? TrySerializeBytes
+            : TrySerializeText;
         while (true) {
             // When we are here, the sync read part is completed, so WaitToReadAsync will likely await.
             if (whenMustFlush != null) {
@@ -339,18 +345,60 @@ public sealed class WebSocketChannel<T> : Channel<T>
                     continue;
 
                 var buffer = readBuffer.WrittenMemory;
-                if (r.MessageType == WebSocketMessageType.Binary) {
+                if (DataFormat == DataFormat.Bytes) {
                     while (buffer.Length != 0)
                         if (TryDeserializeBytes(ref buffer, out value))
                             yield return value;
                 }
                 else {
-                    // WebSocketMessageType.Text
                     if (TryDeserializeText(buffer, out value))
                         yield return value;
                 }
 
                 if (MustReset(ref _readBufferResetCounter))
+                    readBuffer.Reset(minReadBufferSize, _retainedBufferSize);
+                else
+                    readBuffer.Reset();
+            }
+        }
+        finally {
+            readBuffer.Dispose();
+        }
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    private async IAsyncEnumerable<T> ReadAllProjecting([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var minReadBufferSize = Settings.MinReadBufferSize;
+        var readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize);
+        try {
+            while (true) {
+                var readMemory = readBuffer.GetMemory(minReadBufferSize);
+                var arraySegment = new ArraySegment<byte>(readBuffer.Array, readBuffer.WrittenCount, readMemory.Length);
+                var r = await WebSocket.ReceiveAsync(arraySegment, cancellationToken).ConfigureAwait(false);
+                if (r.MessageType == WebSocketMessageType.Close)
+                    yield break;
+                if (r.MessageType != MessageType)
+                    throw Errors.InvalidWebSocketMessageType(r.MessageType, MessageType);
+
+                readBuffer.Advance(r.Count);
+                _meters.IncomingFrameCounter.Add(1);
+                _meters.IncomingFrameSizeHistogram.Record(r.Count);
+                if (!r.EndOfMessage)
+                    continue;
+
+                var buffer = readBuffer.WrittenMemory;
+                var gotProjection = false;
+                while (buffer.Length != 0) {
+                    if (TryProjectingDeserializeBytes(ref buffer, out var value, out var isProjection))
+                        yield return value;
+
+                    gotProjection |= isProjection;
+                }
+
+                if (gotProjection)
+                    readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize);
+                else if (MustReset(ref _readBufferResetCounter))
                     readBuffer.Reset(minReadBufferSize, _retainedBufferSize);
                 else
                     readBuffer.Reset();
@@ -393,7 +441,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         try {
             buffer.GetSpan(MinMessageSize);
             buffer.Advance(4);
-            ByteSerializer.Write(buffer, value);
+            ByteSerializer!.Write(buffer, value);
             var size = buffer.WrittenCount - startOffset;
             buffer.WrittenSpan.WriteUnchecked(startOffset, size);
             if (size > _maxItemSize)
@@ -451,7 +499,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 throw Errors.ItemSizeExceedsTheLimit();
 
             var data = bytes[sizeof(int)..size];
-            value = ByteSerializer.Read(data, out int readSize);
+            value = ByteSerializer!.Read(data, out int readSize);
             if (readSize != size - 4)
                 throw Errors.InvalidItemSize();
 
@@ -466,6 +514,42 @@ public sealed class WebSocketChannel<T> : Channel<T>
             ErrorLog?.LogError(e, "Couldn't deserialize: {Data}", new TextOrBytes(DataFormat.Bytes, bytes));
             value = default!;
             bytes = isSizeValid ? bytes[size..] : default;
+            return false;
+        }
+    }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private bool TryProjectingDeserializeBytes(ref ReadOnlyMemory<byte> bytes, out T value, out bool isProjection)
+    {
+        _meters.IncomingItemCounter.Add(1);
+        int size = 0;
+        bool isSizeValid = false;
+        try {
+            size = bytes.Span.ReadUnchecked<int>();
+            isSizeValid = size > 0 && size <= bytes.Length;
+            if (!isSizeValid)
+                throw Errors.InvalidItemSize();
+            if (size > _maxItemSize)
+                throw Errors.ItemSizeExceedsTheLimit();
+
+            var data = bytes[sizeof(int)..size];
+            value = ProjectingByteSerializer!.Read(data, out int readSize, out isProjection);
+            if (readSize != size - 4)
+                throw Errors.InvalidItemSize();
+
+            // Log?.LogInformation("Read: {Value}", value);
+            // Log?.LogInformation("Data({Size}): {Data}",
+            //     readSize, new Base64Encoded(data.ToArray()).Encode());
+
+            bytes = bytes[size..];
+            return true;
+        }
+        catch (Exception e) {
+            ErrorLog?.LogError(e, "Couldn't deserialize: {Data}", new TextOrBytes(DataFormat.Bytes, bytes));
+            value = default!;
+            bytes = isSizeValid ? bytes[size..] : default;
+            isProjection = false;
             return false;
         }
     }
