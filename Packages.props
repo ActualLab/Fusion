@@ -159,7 +159,7 @@
     <PackageReference Update="Npgsql.OpenTelemetry" Version="8.0.3" /> <!-- Used only in TodoApp sample -->
 
     <!-- Aspire -->
-    <PackageReference Update="Aspire.Hosting.AppHost" Version="8.1.0" />
+    <PackageReference Update="Aspire.Hosting.AppHost" Version="8.2.0" />
     <PackageReference Update="Microsoft.Extensions.Http.Resilience" Version="8.6.0" />
     <PackageReference Update="Microsoft.Extensions.ServiceDiscovery" Version="8.0.2" />
 
