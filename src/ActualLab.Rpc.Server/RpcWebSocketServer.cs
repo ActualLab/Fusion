@@ -20,7 +20,7 @@ public class RpcWebSocketServer(
         public string RequestPath { get; init; } = RpcWebSocketClient.Options.Default.RequestPath;
         public string BackendRequestPath { get; init; } = RpcWebSocketClient.Options.Default.BackendRequestPath;
         public string ClientIdParameterName { get; init; } = RpcWebSocketClient.Options.Default.ClientIdParameterName;
-        public TimeSpan ChangeConnectionDelay { get; init; } = TimeSpan.FromSeconds(1);
+        public TimeSpan ChangeConnectionDelay { get; init; } = TimeSpan.FromSeconds(0.5);
 #if NET6_0_OR_GREATER
         public Func<WebSocketAcceptContext> ConfigureWebSocket { get; init; } = () => new();
 #endif
@@ -47,12 +47,6 @@ public class RpcWebSocketServer(
         try {
             var peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
             var peer = Hub.GetServerPeer(peerRef);
-            if (peer.IsConnected()) {
-                var delay = Settings.ChangeConnectionDelay;
-                Log.LogWarning("{Peer} is already connected, will change its connection in {Delay}...",
-                    peer, delay.ToShortString());
-                await peer.Hub.Clock.Delay(delay, cancellationToken).ConfigureAwait(false);
-            }
 
 #if NET6_0_OR_GREATER
             var webSocketAcceptContext = Settings.ConfigureWebSocket.Invoke();
@@ -74,6 +68,13 @@ public class RpcWebSocketServer(
             connection = await ServerConnectionFactory
                 .Invoke(peer, channel, properties, cancellationToken)
                 .ConfigureAwait(false);
+
+            if (peer.IsConnected()) {
+                var delay = Settings.ChangeConnectionDelay;
+                Log.LogWarning("{Peer} is already connected, will change its connection in {Delay}...",
+                    peer, delay.ToShortString());
+                await peer.Hub.Clock.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
             peer.SetConnection(connection);
             await channel.WhenClosed.ConfigureAwait(false);
         }
