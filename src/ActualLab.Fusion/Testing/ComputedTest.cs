@@ -4,21 +4,13 @@ namespace ActualLab.Fusion.Testing;
 
 public static class ComputedTest
 {
-    private static LazySlim<IServiceProvider> _defaultServices = new(
-        () => new ServiceCollection().AddFusion().Services.BuildServiceProvider());
-
     public static TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
-    public static IServiceProvider DefaultServices {
-        get => _defaultServices.Value;
-        set => _defaultServices = new LazySlim<IServiceProvider>(value);
-    }
-
     public static Task When(Func<CancellationToken, Task> assertion, TimeSpan? timeout = null)
-        => When(DefaultServices, assertion, timeout);
+        => When(Computed.DefaultServices, assertion, timeout);
 
     public static Task<T> When<T>(Func<CancellationToken, Task<T>> assertion, TimeSpan? timeout = null)
-        => When(DefaultServices, assertion, timeout);
+        => When(Computed.DefaultServices, assertion, timeout);
 
     public static async Task When(
         IServiceProvider services,

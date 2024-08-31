@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
@@ -6,7 +7,15 @@ namespace ActualLab.Fusion;
 
 public partial class Computed
 {
+    private static LazySlim<IServiceProvider> _defaultServices = new(
+        () => new ServiceCollection().AddFusion().AddFusionTime().Services.BuildServiceProvider());
+
     public static TimeSpan PreciseInvalidationDelayThreshold { get; set; } = TimeSpan.FromSeconds(1);
+
+    public static IServiceProvider DefaultServices {
+        get => _defaultServices.Value;
+        set => _defaultServices = new LazySlim<IServiceProvider>(value);
+    }
 
     // Current & GetCurrent
 
@@ -38,6 +47,32 @@ public partial class Computed
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComputeContextScope BeginCaptureExisting()
         => new(new ComputeContext(CallOptions.Capture | CallOptions.GetExisting));
+
+    // New
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Computed<T> New<T>(
+        Func<CancellationToken, ValueTask<T>> compute)
+        => new ComputedSource<T>(DefaultServices, (_, ct) => compute.Invoke(ct)).Computed;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Computed<T> New<T>(
+        Result<T> initialOutput,
+        Func<CancellationToken, ValueTask<T>> compute)
+        => new ComputedSource<T>(DefaultServices, initialOutput, (_, ct) => compute.Invoke(ct)).Computed;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Computed<T> New<T>(
+        IServiceProvider services,
+        Func<CancellationToken, ValueTask<T>> compute)
+        => new ComputedSource<T>(services, (_, ct) => compute.Invoke(ct)).Computed;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Computed<T> New<T>(
+        IServiceProvider services,
+        Result<T> initialOutput,
+        Func<CancellationToken, ValueTask<T>> compute)
+        => new ComputedSource<T>(services, initialOutput, (_, ct) => compute.Invoke(ct)).Computed;
 
     // TryCapture
 

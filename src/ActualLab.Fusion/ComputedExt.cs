@@ -215,6 +215,40 @@ public static partial class ComputedExt
         }
     }
 
+    // When w/ computedTask
+
+    public static Task<Computed<T>> When<T>(
+        this ValueTask<Computed<T>> computedTask,
+        Func<T, bool> predicate,
+        CancellationToken cancellationToken = default)
+        => computedTask.When(predicate, FixedDelayer.NextTick, cancellationToken);
+
+    public static async Task<Computed<T>> When<T>(
+        this ValueTask<Computed<T>> computedTask,
+        Func<T, bool> predicate,
+        IUpdateDelayer updateDelayer,
+        CancellationToken cancellationToken = default)
+    {
+        var computed = await computedTask.ConfigureAwait(false);
+        return await computed.When(predicate, updateDelayer, cancellationToken).ConfigureAwait(false);
+    }
+
+    public static Task<Computed<T>> When<T>(
+        this ValueTask<Computed<T>> computedTask,
+        Func<T, Exception?, bool> predicate,
+        CancellationToken cancellationToken = default)
+        => computedTask.When(predicate, FixedDelayer.NextTick, cancellationToken);
+
+    public static async Task<Computed<T>> When<T>(
+        this ValueTask<Computed<T>> computedTask,
+        Func<T, Exception?, bool> predicate,
+        IUpdateDelayer updateDelayer,
+        CancellationToken cancellationToken = default)
+    {
+        var computed = await computedTask.ConfigureAwait(false);
+        return await computed.When(predicate, updateDelayer, cancellationToken).ConfigureAwait(false);
+    }
+
     // Changes
 
     public static IAsyncEnumerable<Computed<T>> Changes<T>(
