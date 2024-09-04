@@ -25,7 +25,7 @@
     </BarDropdownToggle>
     <BarDropdownMenu>
         @foreach (var (name, displayName) in unusedAuthSchemas) {
-            <BarDropdownItem Color="Color.Primary" Clicked="@(_ => ClientAuthHelper.SignIn(name))">
+            <BarDropdownItem Clicked="@(_ => ClientAuthHelper.SignIn(name))">
                 <Blazorise.Icon Name="@signInIconName" />
                 @(string.Format(signInOrAddFormat, displayName))
             </BarDropdownItem>

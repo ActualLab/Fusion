@@ -26,7 +26,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Ensures the library will be packaged as a source generator with `dotnet pack` -->
-    <None Include="$(OutputPath)\netstandard2.0\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(OutputPath.TrimEnd('\').TrimEnd('/'))_netstandard2.0/$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>

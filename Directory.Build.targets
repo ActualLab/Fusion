@@ -1,11 +1,5 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <PropertyGroup>
-    <EnablePackageVersionOverride>true</EnablePackageVersionOverride>
-  </PropertyGroup>
-
-  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.1.3" />
-
   <!-- Disable NBGV cloud logic -->
   <Target Name="GetBuildVersion_CloudBuildVersionVars" />
   <Target Name="SetCloudBuildVersionVars" />

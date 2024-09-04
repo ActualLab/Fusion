@@ -66,6 +66,7 @@ public sealed class FastRpcMessageByteSerializer(IByteSerializer baseSerializer,
 
     // Private methods
 
+#pragma warning disable CA1822
     public bool IsProjectable(ReadOnlyMemory<byte> data)
     {
 #if !NETSTANDARD2_0
@@ -76,4 +77,5 @@ public sealed class FastRpcMessageByteSerializer(IByteSerializer baseSerializer,
         return false;
 #endif
     }
+#pragma warning restore CA1822
 }

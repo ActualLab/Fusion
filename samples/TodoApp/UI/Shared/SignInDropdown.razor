@@ -16,7 +16,7 @@
     </DropdownToggle>
     <DropdownMenu>
         @foreach (var (name, displayName) in unusedAuthSchemas) {
-            <DropdownItem Color="Color.Primary" Clicked="@(_ => ClientAuthHelper.SignIn(name))">
+            <DropdownItem Clicked="@(_ => ClientAuthHelper.SignIn(name))">
                 With @displayName
             </DropdownItem>
         }

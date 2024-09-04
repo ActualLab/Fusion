@@ -9,10 +9,9 @@
     <IsServerSideOnly>true</IsServerSideOnly>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
-
   <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" VersionOverride="$(EntityFrameworkCoreNpgsqlVersion7)" />
   </ItemGroup>
@@ -28,10 +27,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ActualLab.Fusion.EntityFramework\ActualLab.Fusion.EntityFramework.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Operations\" />
   </ItemGroup>
 
 </Project>

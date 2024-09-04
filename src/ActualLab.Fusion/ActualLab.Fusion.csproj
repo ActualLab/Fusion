@@ -11,14 +11,13 @@
     --></Description>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Text.Json" />
-  </ItemGroup>
-
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
     <PackageReference Include="MemoryPack.Generator" />
   </ItemGroup>
 
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
     <PackageReference Include="System.Text.Json" VersionOverride="$(SystemXxxVersion7)" />
   </ItemGroup>

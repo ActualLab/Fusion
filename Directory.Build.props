@@ -1,51 +1,12 @@
 <Project ToolsVersion="latest" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Key properties -->
   <PropertyGroup>
     <RepoRoot>$([MSBuild]::EnsureTrailingSlash('$(MSBuildThisFileDirectory)'))</RepoRoot>
     <SolutionDir Condition="$(SolutionDir) == ''">$(RepoRoot)</SolutionDir>
     <Authors>Actual Chat, Inc.</Authors>
     <Company>Actual Chat, Inc.</Company>
-    <Copyright>Copyright Actual Chat, Inc., ServiceTitan, Inc.</Copyright>
-    <PackageProjectUrl>https://github.com/ActualLab/Fusion</PackageProjectUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/ActualLab/Fusion</RepositoryUrl>
-    <PackageTags>actual_chat actual_lab actual_lab_fusion</PackageTags>
-    <Description>A part of Actual Chat, Inc. Library.</Description>
-    <NoLogo>true</NoLogo>
-    <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
-    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
-    <!--
-    <ApplicationIcon>$(MSBuildThisFileDirectory)\docs\img\Logo128.jpg</ApplicationIcon>
-    -->
-    <PackageIconUrl>https://github.com/ActualLab/Fusion/master/docs/img/Logo128.jpg</PackageIconUrl>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <NoPackageAnalysis>false</NoPackageAnalysis>
-    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    <OutputPath>$(RepoRoot)artifacts\</OutputPath>
-    <PackageOutputPath>$(RepoRoot)artifacts\nupkg</PackageOutputPath>
-    <DefaultLanguage>en-US</DefaultLanguage>
-    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    <!-- Embedded not recommended yet for libs and nupkg, track this in https://github.com/dotnet/sdk/issues/2679 -->
-    <!-- Also embedded doesn't work with dotnet pack without nuspec or IncludeBuildOutput = false -->
-    <DebugType>portable</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <GenerateFullPaths Condition="'$(TERM_PROGRAM)' == 'vscode'">true</GenerateFullPaths>
-
-    <!-- Defaults for .csproj -->
-    <OutputType>Library</OutputType>
-    <LangVersion>preview</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Features>strict</Features>
-    <!-- Codegen & trimming options -->
-    <IsTrimmable>false</IsTrimmable>
-    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
-    <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
+    <Copyright>Copyright Alex Yakunin, Actual Chat, Inc., ServiceTitan, Inc.</Copyright>
   </PropertyGroup>
 
   <!-- Multitargeting -->
@@ -69,6 +30,58 @@
     <IsServerSideProject Condition="'$(ProjectKind)' == 'Tests'">true</IsServerSideProject>
   </PropertyGroup>
 
+  <!-- Output paths -->
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath>$(RepoRoot)artifacts</ArtifactsPath>
+    <PackageOutputPath>$(RepoRoot)artifacts\nupkg</PackageOutputPath>
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <!-- Defaults for .csproj -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Features>strict</Features>
+  </PropertyGroup>
+
+  <!-- Codegen & trimming options -->
+  <PropertyGroup>
+    <IsTrimmable>false</IsTrimmable>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+    <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
+  </PropertyGroup>
+
+  <!-- Packaging -->
+  <PropertyGroup>
+    <PackageProjectUrl>https://github.com/ActualLab/Fusion</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/ActualLab/Fusion</RepositoryUrl>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion</PackageTags>
+    <Description>A part of Actual Chat, Inc. library.</Description>
+    <!--
+    <ApplicationIcon>$(MSBuildThisFileDirectory)\docs\img\Logo128.jpg</ApplicationIcon>
+    -->
+    <PackageIconUrl>https://github.com/ActualLab/Fusion/master/docs/img/Logo128.jpg</PackageIconUrl>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoPackageAnalysis>false</NoPackageAnalysis>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- Embedded not recommended yet for libs and nupkg, track this in https://github.com/dotnet/sdk/issues/2679 -->
+    <!-- Also embedded doesn't work with dotnet pack without nuspec or IncludeBuildOutput = false -->
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <GenerateFullPaths Condition="'$(TERM_PROGRAM)' == 'vscode'">true</GenerateFullPaths>
+  </PropertyGroup>
+
   <!-- Analyzers & warnings -->
   <PropertyGroup Condition="$(IsServerSideProject) and '$(TargetFramework)' != 'netstandard2.0'">
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
@@ -77,15 +90,19 @@
     <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
   </PropertyGroup>
   <PropertyGroup>
+    <NoLogo>true</NoLogo>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
     <AnalysisLevel>preview</AnalysisLevel>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
     <WarningLevel>4</WarningLevel>
     <!-- NuGet & libraries / frameworks -->
+    <!-- NU1603: Approximate best match for X was resolved -->
     <!-- NU5048: The 'PackageIconUrl'/'iconUrl' element is deprecated -->
     <!-- NU5105: The package version uses SemVer 2.0.0 or components of SemVer 1.0.0 that are not supported on legacy clients -->
     <!-- NETSDK1138: The target framework 'net5.0' is out of support. -->
-    <NoWarn>$(NoWarn);NU5048;NU5105;NETSDK1138</NoWarn>
+    <NoWarn>$(NoWarn);NU1603;NU1902;NU1904;NU5048;NU5105;NETSDK1138</NoWarn>
     <!-- C# -->
     <!-- CA1062: Validate arguments of public methods -->
     <!-- CS1591: Missing XML comment for publicly visible type or member -->

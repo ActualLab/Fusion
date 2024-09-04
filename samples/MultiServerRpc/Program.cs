@@ -96,11 +96,11 @@ async Task RunClient()
             foreach (var message in messages)
                 WriteLine($"- {message}");
         }
-    };
+    }
 
     async Task ObserveWordCount() {
         var cMessageCount = await Computed.Capture(() => chat.GetWordCount(chatId));
         await foreach (var (wordCount, _) in cMessageCount.Changes())
             WriteLine($"Word count changed: {wordCount}");
-    };
+    }
 }

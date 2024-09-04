@@ -106,7 +106,7 @@ public static class StartupHelper
                 foreach (var key in stats.Keys.ToList()) {
                     if (key.Contains(".Pseudo"))
                         stats.Remove(key);
-                    if (key.StartsWith("FusionTime."))
+                    if (key.StartsWith("FusionTime.", StringComparison.Ordinal))
                         stats.Remove(key);
                 }
             }

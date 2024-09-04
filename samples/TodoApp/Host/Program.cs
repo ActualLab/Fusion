@@ -1,6 +1,7 @@
 using System.Data;
 using System.Globalization;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using ActualLab.DependencyInjection;
 using ActualLab.Fusion.Blazor;
 using ActualLab.Fusion.Blazor.Authentication;
@@ -265,12 +266,12 @@ void ConfigureApp()
     // we need to find Client's wwwroot in bin/(Debug/Release) folder
     // and set it as this server's content root.
     var baseDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
+    var cfgPart = Regex.Match(baseDir, @"[\\/](debug)|(release)(_[\w\d\.]+)?[\\/]").Value;
     var wwwRootPath = Path.Combine(baseDir, "wwwroot");
-    var dotNetDir = $"net{RuntimeInfo.DotNet.Version?.Major ?? 8}.0";
     if (!Directory.Exists(Path.Combine(wwwRootPath, "_framework")))
         // This is a regular build, not a build produced w/ "publish",
         // so we remap wwwroot to the client's wwwroot folder
-        wwwRootPath = Path.GetFullPath(Path.Combine(baseDir, $"../../UI/{dotNetDir}/wwwroot"));
+        wwwRootPath = Path.GetFullPath(Path.Combine(baseDir, $"../../UI/{cfgPart}/wwwroot"));
     env.WebRootPath = wwwRootPath;
     env.WebRootFileProvider = new PhysicalFileProvider(env.WebRootPath);
     StaticWebAssetsLoader.UseStaticWebAssets(env, cfg);

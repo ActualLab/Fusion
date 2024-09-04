@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="latest" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Central package management -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageFloatingVersionsEnabled>false</CentralPackageFloatingVersionsEnabled>
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
+  </PropertyGroup>
+
+  <!-- Constants -->
+  <PropertyGroup>
+    <!-- Core packages -->
+    <AspNetCoreVersion>[8.0.4,)</AspNetCoreVersion>
+    <AspNetCoreVersion7>[7.0.0,8)</AspNetCoreVersion7>
+    <AspNetCoreVersion6>[6.0.0,7)</AspNetCoreVersion6>
+    <AspNetCoreVersion5>[5.0.0,6)</AspNetCoreVersion5>
+    <AspNetCoreVersion3>[3.1.3,4)</AspNetCoreVersion3>
+    <BlazorVersion>$(AspNetCoreVersion)</BlazorVersion>
+    <BlazorVersion7>$(AspNetCoreVersion7)</BlazorVersion7>
+    <BlazorVersion6>$(AspNetCoreVersion6)</BlazorVersion6>
+    <BlazorVersion5>$(AspNetCoreVersion5)</BlazorVersion5>
+    <BlazorVersion3>$(AspNetCoreVersion3)</BlazorVersion3>
+    <SystemXxxVersion>$(AspNetCoreVersion)</SystemXxxVersion>
+    <SystemXxxVersion7>$(AspNetCoreVersion7)</SystemXxxVersion7>
+    <SystemXxxVersion6>$(AspNetCoreVersion6)</SystemXxxVersion6>
+    <SystemXxxVersion5>$(AspNetCoreVersion5)</SystemXxxVersion5>
+    <MicrosoftExtensionsVersion>[8.0.0,9)</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsVersion7>[7.0.0,8)</MicrosoftExtensionsVersion7>
+    <MicrosoftExtensionsVersion6>[6.0.0,7)</MicrosoftExtensionsVersion6>
+    <CSharpVersion>4.4.0</CSharpVersion>
+    <!-- EF Core -->
+    <EntityFrameworkCoreVersion>[8.0.2,)</EntityFrameworkCoreVersion>
+    <EntityFrameworkCoreVersion7>[7.0.20,8)</EntityFrameworkCoreVersion7>
+    <EntityFrameworkCoreVersion6>[6.0.33,7)</EntityFrameworkCoreVersion6>
+    <EntityFrameworkCoreVersion5>[5.0.17,6)</EntityFrameworkCoreVersion5>
+    <EntityFrameworkCoreVersion3>[3.1.32,4)</EntityFrameworkCoreVersion3>
+    <EntityFrameworkCoreNpgsqlVersion>8.0.2</EntityFrameworkCoreNpgsqlVersion>
+    <EntityFrameworkCoreNpgsqlVersion7>7.0.18</EntityFrameworkCoreNpgsqlVersion7>
+    <EntityFrameworkCoreNpgsqlVersion6>6.0.29</EntityFrameworkCoreNpgsqlVersion6>
+    <EntityFrameworkCoreNpgsqlVersion5>5.0.10</EntityFrameworkCoreNpgsqlVersion5>
+    <EntityFrameworkCoreNpgsqlVersion3>3.1.18</EntityFrameworkCoreNpgsqlVersion3>
+    <MySqlConnectorVersion>2.3.7</MySqlConnectorVersion>
+    <MySqlConnectorVersion7>2.2.7</MySqlConnectorVersion7>
+    <MySqlConnectorVersion6>2.2.7</MySqlConnectorVersion6>
+    <MySqlConnectorVersion5>2.2.7</MySqlConnectorVersion5>
+    <MySqlConnectorVersion3>0.69.10</MySqlConnectorVersion3>
+    <EntityFrameworkCoreMySqlVersion>8.0.2</EntityFrameworkCoreMySqlVersion>
+    <EntityFrameworkCoreMySqlVersion7>7.0.0</EntityFrameworkCoreMySqlVersion7>
+    <EntityFrameworkCoreMySqlVersion6>6.0.3</EntityFrameworkCoreMySqlVersion6>
+    <EntityFrameworkCoreMySqlVersion5>5.0.4</EntityFrameworkCoreMySqlVersion5>
+    <EntityFrameworkCoreMySqlVersion3>3.2.7</EntityFrameworkCoreMySqlVersion3>
+    <!-- Serialization -->
+    <NewtonsoftJsonVersion>13.0.3</NewtonsoftJsonVersion>
+    <MemoryPackVersion>1.10.0</MemoryPackVersion>
+    <MessagePackVersion>2.5.172</MessagePackVersion>
+    <!-- Other -->
+    <RedisVersion>2.8.12</RedisVersion>
+    <RestEaseVersion>1.6.4</RestEaseVersion>
+    <OpenTelemetryVersion>1.8.1</OpenTelemetryVersion>
+    <!-- Testing -->
+    <AspNetCoreMvcTestingVersion>$(AspNetCoreVersion)</AspNetCoreMvcTestingVersion>
+    <AspNetCoreMvcTestingVersion7>$(AspNetCoreVersion7)</AspNetCoreMvcTestingVersion7>
+    <AspNetCoreMvcTestingVersion6>$(AspNetCoreVersion6)</AspNetCoreMvcTestingVersion6>
+    <AspNetCoreMvcTestingVersion5>$(AspNetCoreVersion5)</AspNetCoreMvcTestingVersion5>
+    <AspNetCoreMvcTestingVersion3>$(AspNetCoreVersion3)</AspNetCoreMvcTestingVersion3>
+    <AspNetCoreMvcTestingVersionN4>$(AspNetCoreVersion5)</AspNetCoreMvcTestingVersionN4>
+    <!-- Build & Samples -->
+    <BlazoriseVersion>1.6.1</BlazoriseVersion>
+    <FusionVersion>9.1</FusionVersion>
+  </PropertyGroup>
+
+  <!-- Dependencies -->
+  <ItemGroup Label="Package Versions">
+    <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="8.1.0" />
+    <PackageVersion Include="Blazorise" Version="$(BlazoriseVersion)" />
+    <PackageVersion Include="Blazorise.Bootstrap5" Version="$(BlazoriseVersion)" />
+    <PackageVersion Include="Blazorise.DataGrid" Version="$(BlazoriseVersion)" />
+    <PackageVersion Include="Blazorise.Icons.FontAwesome" Version="$(BlazoriseVersion)" />
+    <PackageVersion Include="Blazorise.Sidebar" Version="$(BlazoriseVersion)" />
+    <PackageVersion Include="Bullseye" Version="5.0.0" />
+    <PackageVersion Include="CliWrap" Version="3.6.6" />
+    <PackageVersion Include="DataAnnotationsValidatorNetStandard" Version="1.0.3" />
+    <PackageVersion Include="MemoryPack" Version="$(MemoryPackVersion)" />
+    <PackageVersion Include="MemoryPack.Core" Version="$(MemoryPackVersion)" />
+    <PackageVersion Include="MessagePack" Version="$(MessagePackVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.2.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="$(AspNetCoreVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="$(AspNetCoreVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components" Version="$(BlazorVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="$(BlazorVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="$(BlazorVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="$(BlazorVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="$(BlazorVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="$(AspNetCoreVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="$(AspNetCoreVersion)" />
+    <PackageVersion Include="Microsoft.CSharp" Version="$(CSharpVersion)" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Primitives" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="$(EntityFrameworkCoreVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Abstractions" Version="$(EntityFrameworkCoreVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="$(EntityFrameworkCoreVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="$(EntityFrameworkCoreVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(EntityFrameworkCoreVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(EntityFrameworkCoreVersion)" />
+    <PackageVersion Include="Microsoft.Toolkit.HighPerformance" Version="7.1.2" />
+    <PackageVersion Include="MySqlConnector" Version="$(MySqlConnectorVersion)" />
+    <PackageVersion Include="Npgsql" Version="$(EntityFrameworkCoreVersion)" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(EntityFrameworkCoreNpgsqlVersion)" />
+    <PackageVersion Include="Microsoft.Identity.Web" Version="2.21.1" />
+    <PackageVersion Include="MsgPack.Cli" Version="1.0.1" />
+    <PackageVersion Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
+    <PackageVersion Include="Pastel" Version="5.0.0" />
+    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="$(EntityFrameworkCoreMySqlVersion)" />
+    <PackageVersion Include="RestEase" Version="$(RestEaseVersion)" />
+    <PackageVersion Include="StackExchange.Redis" Version="$(RedisVersion)" />
+    <PackageVersion Include="System.Collections.Immutable" Version="8.0.0" />
+    <PackageVersion Include="System.Configuration.ConfigurationManager" Version="$(SystemXxxVersion)" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageVersion Include="System.CommandLine.DragonFruit" Version="0.3.0-alpha.21216.1" />
+    <PackageVersion Include="System.Diagnostics.Common" Version="$(SystemXxxVersion)" />
+    <PackageVersion Include="System.Drawing.Common" Version="$(SystemXxxVersion)" />
+    <PackageVersion Include="System.IO.Abstractions" Version="19.2.87" />
+    <PackageVersion Include="System.Linq.Async" Version="$(SystemXxxVersion6)" />
+    <PackageVersion Include="System.Net.Http.Json" Version="$(SystemXxxVersion)" />
+    <PackageVersion Include="System.Net.Http" Version="4.3.4" />
+    <PackageVersion Include="System.Net.WebSockets" Version="4.3.0" />
+    <PackageVersion Include="System.Net.WebSockets.Client" Version="4.3.2" />
+    <PackageVersion Include="System.Reactive" Version="6.0.1" />
+    <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
+    <PackageVersion Include="System.Runtime.Numerics" Version="$(SystemXxxVersion)" />
+    <PackageVersion Include="System.Text.Json" Version="$(SystemXxxVersion)" />
+    <PackageVersion Include="System.Threading.Channels" Version="8.0.0" />
+    <PackageVersion Include="Ulid" Version="1.3.4" />
+    <PackageVersion Include="ZString" Version="2.6.0" />
+
+    <!-- OpenTelemetry -->
+    <PackageVersion Include="OpenTelemetry.Api" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="Npgsql.OpenTelemetry" Version="8.0.3" /> <!-- Used only in TodoApp sample -->
+
+    <!-- Aspire -->
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="8.2.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="8.6.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="8.0.2" />
+
+    <!-- Legacy support only -->
+    <PackageVersion Include="IndexRange" Version="1.0.3" />
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+    <PackageVersion Include="System.Memory" Version="4.5.5" />
+    <PackageVersion Include="Microsoft.AspNet.WebApi.Core" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.AspNet.WebApi.OwinSelfHost" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.Owin" Version="4.2.2" />
+    <PackageVersion Include="Owin" Version="1.0.0" />
+    <PackageVersion Include="System.Reflection.Emit.Lightweight" Version="4.7.0" />
+
+    <!-- Test time only -->
+    <PackageVersion Include="AutoFixture.AutoMoq" Version="4.18.1" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.2"
+                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageVersion Include="FluentAssertions" Version="6.12.0" />
+    <PackageVersion Include="ILogger.Moq" Version="1.1.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(AspNetCoreMvcTestingVersion)" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageVersion Include="Moq" Version="4.20.71" />
+    <PackageVersion Include="xunit" Version="2.7.0" />
+    <PackageVersion Include="Xunit.DependencyInjection.Logging" Version="8.1.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2"
+                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+
+    <!-- Samples only -->
+    <PackageVersion Include="ActualLab.Interception" Version="$(FusionVersion)" />
+    <PackageVersion Include="ActualLab.Generators" Version="$(FusionVersion)" />
+    <PackageVersion Include="ActualLab.CommandR" Version="$(FusionVersion)" />
+    <PackageVersion Include="ActualLab.Rpc" Version="$(FusionVersion)" />
+    <PackageVersion Include="ActualLab.Fusion" Version="$(FusionVersion)" />
+    <PackageVersion Include="ActualLab.Fusion.Server" Version="$(FusionVersion)" />
+    <PackageVersion Include="ActualLab.Fusion.EntityFramework" Version="$(FusionVersion)" />
+    <PackageVersion Include="ActualLab.Fusion.Ext.Contracts" Version="$(FusionVersion)" />
+    <PackageVersion Include="ActualLab.Fusion.Ext.Services" Version="$(FusionVersion)" />
+    <PackageVersion Include="Blazored.LocalStorage" Version="4.5.0" />
+    <PackageVersion Include="UAParser" Version="3.1.47" />
+
+    <!-- Build time only -->
+    <PackageVersion Include="ActualLab.Core" Version="$(FusionVersion)" />
+    <PackageVersion Include="PolySharp" Version="1.14.1"
+                    PrivateAssets="all" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Build" Version="$(BlazorVersion)"
+                    PrivateAssets="all" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(BlazorVersion)"
+                    PrivateAssets="all" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0"
+                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(EntityFrameworkCoreVersion)"
+                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers;" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EntityFrameworkCoreVersion)"
+                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers;" />
+    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.6.133"
+                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+
+    <!-- Analyzers -->
+    <PackageVersion Include="Moq.Analyzers" Version="0.0.9"
+                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers"/>
+    <PackageVersion Include="xunit.analyzers" Version="1.11.0"
+                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.9.28"
+                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="4.12.4"
+                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers"/>
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.163"
+                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers"/>
+
+    <!-- Generators -->
+    <PackageVersion Include="MemoryPack.Generator" Version="$(MemoryPackVersion)"
+                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(CSharpVersion)"
+                    PrivateAssets="all" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4"
+                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
+  </ItemGroup>
+
+</Project>

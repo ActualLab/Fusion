@@ -1,24 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="latest" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!--
+  <!-- We want samples to use completely isolated build settings
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
   -->
 
+  <!-- Defaults -->
   <PropertyGroup>
-    <BaseIntermediateOutputPath>$(SolutionDir)artifacts\obj\$(MSBuildProjectName)</BaseIntermediateOutputPath>
-    <OutputPath>$(SolutionDir)artifacts\samples\$(MSBuildProjectName)</OutputPath>
-    <IsPackable>false</IsPackable>
-    <IsPublishable>false</IsPublishable>
-  </PropertyGroup>
-
-  <!-- Useful defaults -->
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks Condition="$(UseMultitargeting) == 'true'">net8.0</TargetFrameworks>
+    <TargetFramework Condition="$(UseMultitargeting) == '' or $(UseMultitargeting) == 'false'">net8.0</TargetFramework>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled> -->
+  </PropertyGroup>
+
+  <!-- Output -->
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)..\artifacts\samples</ArtifactsPath>
+    <IsPackable>false</IsPackable>
+    <IsPublishable>false</IsPublishable>
   </PropertyGroup>
 
   <!-- Disable some warnings -->
@@ -39,7 +41,8 @@
     <AnalysisLevel>preview</AnalysisLevel>
     <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
     <!-- CA2007: Consider calling ConfigureAwait on the awaited task -->
-    <NoWarn>$(NoWarn);CA2007</NoWarn>
+    <NoWarn>$(NoWarn);MA0002;MA0004;MA0009;MA0011;MA0015;MA0016;MA0048;MA0051</NoWarn>
+    <NoWarn>$(NoWarn);CA2007;VSTHRD200</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>

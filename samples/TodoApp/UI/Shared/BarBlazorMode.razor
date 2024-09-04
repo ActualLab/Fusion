@@ -1,12 +1,10 @@
-@using ActualLab.OS
-@using System.Web
 @using System.Reflection
 @inject BlazorModeHelper BlazorModeHelper
 @inject IJSRuntime JS
 
 <BarDropdown Class="@CssClass">
     <BarDropdownToggle>@(_isPrerendering ? "Loading..." : GetModeName(_isServerSideBlazor))</BarDropdownToggle>
-    <BarDropdownMenu RightAligned="true">
+    <BarDropdownMenu>
         @foreach(var mode in new [] {true, false}) {
             <BarDropdownItem Clicked="@(() => BlazorModeHelper.ChangeMode(mode))">@GetModeName(mode)</BarDropdownItem>
         }

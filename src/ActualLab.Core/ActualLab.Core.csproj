@@ -15,18 +15,10 @@
 
   <ItemGroup>
     <PackageReference Include="MessagePack" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" />
-    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
     <PackageReference Include="Microsoft.Toolkit.HighPerformance" />
     <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="System.Reactive" />
-    <PackageReference Include="System.Threading.Channels" />
     <PackageReference Include="Ulid" />
     <PackageReference Include="ZString" />
   </ItemGroup>
@@ -36,6 +28,16 @@
     <PackageReference Include="MemoryPack.Generator" />
   </ItemGroup>
 
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+    <PackageReference Include="System.Collections.Immutable" />
+    <PackageReference Include="System.Threading.Channels" />
+  </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion7)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="$(MicrosoftExtensionsVersion7)" />
