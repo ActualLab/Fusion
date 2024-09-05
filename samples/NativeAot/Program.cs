@@ -16,10 +16,12 @@ using static System.Console;
 
 #pragma warning disable IL3050
 
+CodeKeeper.UseEverything();
+
 WriteLine($"RuntimeCodegen.Mode: {RuntimeCodegen.Mode}");
-var l0 = ArgumentList.New().KeepCode();
-var l2 = ArgumentList.New(1, "s").KeepCode();
-var l10 = ArgumentList.New(0, 1, 2, 3, 4, 5, 6, 7, 8, 9).KeepCode();
+var l0 = ArgumentList.New();
+var l2 = ArgumentList.New(1, "s");
+var l10 = ArgumentList.New(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 var m0 = typeof(Invoker).GetMethod(nameof(Invoker.Format0), BindingFlags.Public | BindingFlags.Static)!;
 var m2 = typeof(Invoker).GetMethod(nameof(Invoker.Format2), BindingFlags.Public | BindingFlags.Static)!;
 var m10 = typeof(Invoker).GetMethod(nameof(Invoker.Format10), BindingFlags.Public | BindingFlags.Static)!;
@@ -45,6 +47,10 @@ for (var i = 0; i <= ArgumentList.MaxItemCount; i++) {
 */
 
 var services = new ServiceCollection()
+    .AddLogging(l => {
+        l.SetMinimumLevel(LogLevel.Debug);
+        l.AddSimpleConsole();
+    })
     .AddFusion(fusion => {
         fusion.AddComputeService<TestService>();
         fusion.AddClient<ITestService>(addCommandHandlers: false);

@@ -59,7 +59,7 @@ public sealed class ComputedRegistry : IDisposable
             settings.InitialCapacity,
             ComputedInput.EqualityComparer);
         ChangeGraphPruner(new ComputedGraphPruner(new()), null!);
-        UpdatePruneCounterThreshold();
+        UpdatePruneCounterThreshold(out _);
     }
 
     public void Dispose()
@@ -221,22 +221,26 @@ public sealed class ComputedRegistry : IDisposable
                 prunedKeyCount++;
             }
         }
+
+        int keyCount;
         lock (Lock) {
-            UpdatePruneCounterThreshold();
+            UpdatePruneCounterThreshold(out keyCount);
             _opCounter.Value = 0;
         }
-        Interlocked.Exchange(ref Metrics.Capacity, _storage.GetCapacity());
+        Interlocked.Exchange(ref Metrics.KeyCount, keyCount);
         Metrics.PrunedKeyCount.Add(prunedKeyCount);
         Metrics.KeyPruneDuration.Record(startedAt.Elapsed.TotalMilliseconds);
     }
 
-    private void UpdatePruneCounterThreshold()
+    private void UpdatePruneCounterThreshold(out int keyCount)
     {
         lock (Lock) {
             // Should be called inside Lock
-            var capacity = _storage.GetCapacity();
-            var doubleCapacity = Math.Max(capacity, capacity << 1);
-            var nextThreshold = doubleCapacity.Clamp(1024, int.MaxValue >> 1);
+            keyCount = _storage.Count;
+            var nextThreshold = keyCount << 1; // x2
+            if (nextThreshold < keyCount) // Overflow
+                nextThreshold = int.MaxValue;
+            nextThreshold = nextThreshold.Clamp(1024, int.MaxValue >> 1);
             _pruneOpCounterThreshold = nextThreshold;
         }
     }
@@ -256,7 +260,7 @@ public sealed class ComputedRegistry : IDisposable
         public readonly Histogram<double> KeyPruneDuration;
         public readonly Histogram<double> NodePruneDuration;
         public readonly Histogram<double> EdgePruneDuration;
-        public long Capacity;
+        public long KeyCount;
         public long NodeCount;
         public long EdgeCount;
 
@@ -264,9 +268,9 @@ public sealed class ComputedRegistry : IDisposable
         {
             var m = FusionInstruments.Meter;
             var ms = "computed.registry";
-            CapacityCounter = m.CreateObservableCounter($"{ms}.capacity",
-                () => Interlocked.Read(ref Capacity),
-                null, "ComputedRegistry capacity.");
+            CapacityCounter = m.CreateObservableCounter($"{ms}.key.count",
+                () => Interlocked.Read(ref KeyCount),
+                null, "ComputedRegistry key count.");
             NodeCounter = m.CreateObservableCounter($"{ms}.node.count",
                 () => Interlocked.Read(ref NodeCount),
                 null, "Count of nodes in Computed<T> dependency graph.");
