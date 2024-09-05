@@ -5,7 +5,6 @@ using ActualLab.CommandR.Interception;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Interception;
-using ActualLab.Generators;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
@@ -16,8 +15,8 @@ namespace Samples.NativeAot;
 
 public static class CodeKeeper
 {
-    public static bool AlwaysTrue { get; }
-        = !RandomShared.NextDouble().ToString("F1").Contains('@'); // Always true
+    public static readonly bool AlwaysFalse = Random.Shared.NextDouble() > 10;
+    public static readonly bool AlwaysTrue = !AlwaysFalse;
 
     public static void UseEverything()
     {
@@ -60,6 +59,9 @@ public static class CodeKeeper
     {
         UseRpcCall<TResult, T0>();
         UseRpcCallArgument<T1>();
+        if (AlwaysTrue)
+            return;
+
         var l = ArgumentList.New<T0, T1>(default!, default!);
         UseArgumentList<T1>(l);
     }
@@ -68,6 +70,9 @@ public static class CodeKeeper
     {
         UseRpcCall<TResult, T0, T1>();
         UseRpcCallArgument<T2>();
+        if (AlwaysTrue)
+            return;
+
         var l = ArgumentList.New<T0, T1, T2>(default!, default!, default!);
         UseArgumentList<T2>(l);
     }
@@ -76,6 +81,9 @@ public static class CodeKeeper
     {
         UseRpcCall<TResult, T0, T1, T2>();
         UseRpcCallArgument<T3>();
+        if (AlwaysTrue)
+            return;
+
         var l = ArgumentList.New<T0, T1, T2, T3>(default!, default!, default!, default!);
         UseArgumentList<T3>(l);
     }
@@ -84,6 +92,9 @@ public static class CodeKeeper
     {
         UseRpcCall<TResult, T0, T1, T2, T3>();
         UseRpcCallArgument<T4>();
+        if (AlwaysTrue)
+            return;
+
         var l = ArgumentList.New<T0, T1, T2, T3, T4>(default!, default!, default!, default!, default!);
         UseArgumentList<T4>(l);
     }
@@ -92,6 +103,9 @@ public static class CodeKeeper
     {
         UseRpcCall<TResult, T0, T1, T2, T3, T4>();
         UseRpcCallArgument<T5>();
+        if (AlwaysTrue)
+            return;
+
         var l = ArgumentList.New<T0, T1, T2, T3, T4, T5>(default!, default!, default!, default!, default!, default!);
         UseArgumentList<T5>(l);
     }
@@ -100,6 +114,9 @@ public static class CodeKeeper
     {
         UseRpcCall<TResult, T0, T1, T2, T3, T4, T5>();
         UseRpcCallArgument<T6>();
+        if (AlwaysTrue)
+            return;
+
         var l = ArgumentList.New<T0, T1, T2, T3, T4, T5, T6>(default!, default!, default!, default!, default!, default!, default!);
         UseArgumentList<T6>(l);
     }
@@ -108,6 +125,9 @@ public static class CodeKeeper
     {
         UseRpcCall<TResult, T0, T1, T2, T3, T4, T5, T6>();
         UseRpcCallArgument<T7>();
+        if (AlwaysTrue)
+            return;
+
         var l = ArgumentList.New<T0, T1, T2, T3, T4, T5, T6, T7>(default!, default!, default!, default!, default!, default!, default!, default!);
         UseArgumentList<T7>(l);
     }
@@ -116,6 +136,9 @@ public static class CodeKeeper
     {
         UseRpcCall<TResult, T0, T1, T2, T3, T4, T5, T6, T7>();
         UseRpcCallArgument<T8>();
+        if (AlwaysTrue)
+            return;
+
         var l = ArgumentList.New<T0, T1, T2, T3, T4, T5, T6, T7, T8>(default!, default!, default!, default!, default!, default!, default!, default!, default!);
         UseArgumentList<T8>(l);
     }
@@ -129,8 +152,12 @@ public static class CodeKeeper
 
     public static void UseRpcCallResult<T>()
     {
-        // Key things
+        // This part must be evaluated in NativeAOT
         UseSerialiable<T>();
+        if (AlwaysTrue)
+            return;
+
+        // And the rest is optional
         UseArgumentList<T>(ArgumentList.New<T>(default!));
 
         // MethodDef
