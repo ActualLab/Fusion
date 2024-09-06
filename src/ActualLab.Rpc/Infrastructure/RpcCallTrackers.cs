@@ -117,13 +117,19 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     if (startedAt.Elapsed <= timeouts.Timeout)
                         continue;
 
-                    var error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.Timeout);
+                    Exception? error = null;
                     // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-                    if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Log) != 0)
-                        Peer.Log.LogError(error, "{PeerRef}': {Message}", Peer.Ref, error.Message);
-                    // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-                    if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Throw) != 0)
+                    if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Throw) != 0) {
+                        error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.Timeout);
                         call.SetError(error, context: null, assumeCancelled: false);
+                    }
+                    // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
+                    if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Log) != 0) {
+                        var logLevel = error != null ? LogLevel.Error : LogLevel.Warning;
+                        Peer.Log.Log(logLevel, error,
+                            "{PeerRef}': {Method} timed out ({Timeout})",
+                            Peer.Ref, call.MethodDef.FullName, timeouts.Timeout.ToShortString());
+                    }
                 }
 
                 await Task.Delay(Limits.CallTimeoutCheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
