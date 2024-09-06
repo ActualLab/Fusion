@@ -127,7 +127,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Log) != 0) {
                         var logLevel = error != null ? LogLevel.Error : LogLevel.Warning;
                         Peer.Log.Log(logLevel, error,
-                            "{PeerRef}': {Method} timed out ({Timeout})",
+                            "{PeerRef}': {Method} call is timed out (took > {Timeout})",
                             Peer.Ref, call.MethodDef.FullName, timeouts.Timeout.ToShortString());
                     }
                 }
