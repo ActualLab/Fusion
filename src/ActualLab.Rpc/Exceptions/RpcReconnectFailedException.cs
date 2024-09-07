@@ -18,6 +18,8 @@ public class RpcReconnectFailedException : Exception
         => new("Stop requested.", innerException);
     public static RpcReconnectFailedException ClientIsGone(Exception? innerException = null)
         => new("The client is gone.", innerException);
+    public static RpcReconnectFailedException Unspecified()
+        => new("RpcPeer is stopped w/o a specific error somehow.");
 
     public RpcReconnectFailedException()
         : this(message: null, innerException: null) { }

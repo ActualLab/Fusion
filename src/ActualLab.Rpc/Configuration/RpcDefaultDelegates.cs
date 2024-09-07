@@ -123,7 +123,7 @@ public static class RpcDefaultDelegates
         };
 
     public static RpcPeerTerminalErrorDetector PeerTerminalErrorDetector { get; set; } =
-        static error => error is RpcReconnectFailedException or RpcRerouteException;
+        static error => error is RpcReconnectFailedException;
 
     public static RpcCallTracerFactory CallTracerFactory { get; set; } =
         static method => new RpcDefaultCallTracer(method, traceOutbound: method.IsBackend);

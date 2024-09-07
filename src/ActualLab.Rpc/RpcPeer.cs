@@ -155,7 +155,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     spinWait.SpinOnce();
                 }
             }
-            catch (RpcReconnectFailedException) {
+            catch (Exception) {
+                if (!ConnectionState.IsFinal)
+                    continue;
                 if (Ref.IsRerouted)
                     throw RpcRerouteException.MustReroute();
                 throw;
@@ -335,10 +337,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         && !cancellationToken.IsCancellationRequested;
                     error = isReaderAbort ? null : e;
                 }
-
-                if (Ref.IsRerouted)
-                    error = RpcRerouteException.MustReroute();
-                else if (cancellationToken.IsCancellationRequested) {
+                if (cancellationToken.IsCancellationRequested) {
                     var isTerminal = error != null && Hub.PeerTerminalErrorDetector.Invoke(error);
                     if (!isTerminal)
                         error = RpcReconnectFailedException.StopRequested(error);
@@ -369,9 +368,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 }
                 else if (error == null) {
                     Log.LogError("The final connection state must have a non-null Error");
-                    error = Ref.IsRerouted
-                        ? RpcRerouteException.MustReroute()
-                        : RpcReconnectFailedException.StopRequested();
+                    error = RpcReconnectFailedException.Unspecified();
                 }
             }
 
