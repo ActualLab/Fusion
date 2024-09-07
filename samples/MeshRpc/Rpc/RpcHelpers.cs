@@ -32,7 +32,6 @@ public sealed class RpcHelpers
             return RpcShardPeerRef.Get(ShardRef.New(arguments.Get<int>(0)));
 
         return RpcShardPeerRef.Get(ShardRef.New(arguments.GetUntyped(0)));
-
     }
 
     public string GetHostUrl(RpcWebSocketClient client, RpcClientPeer peer)
