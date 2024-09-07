@@ -155,7 +155,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     spinWait.SpinOnce();
                 }
             }
-            catch (Exception) {
+            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                 if (!ConnectionState.IsFinal)
                     continue;
                 if (Ref.IsRerouted)
