@@ -114,7 +114,9 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     var startedAt = call.StartedAt;
                     if (startedAt == default)
                         continue; // Something is off: call.StartedAt wasn't set
-                    if (startedAt.Elapsed <= timeouts.Timeout)
+
+                    var elapsed = startedAt.Elapsed;
+                    if (elapsed <= timeouts.Timeout)
                         continue;
 
                     Exception? error = null;
@@ -123,12 +125,20 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                         error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.Timeout);
                         call.SetError(error, context: null, assumeCancelled: false);
                     }
+                    else {
+                        // Reset StartedAt to make sure it won't pop up every time we're here
+                        call.StartedAt = CpuTimestamp.Now;
+                    }
                     // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
                     if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Log) != 0) {
-                        var logLevel = error != null ? LogLevel.Error : LogLevel.Warning;
-                        Peer.Log.Log(logLevel, error,
-                            "{PeerRef}': {Method} call is timed out (took > {Timeout})",
-                            Peer.Ref, call.MethodDef.FullName, timeouts.Timeout.ToShortString());
+                        if (error != null)
+                            Peer.Log.LogError(error,
+                                "{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout})",
+                                Peer.Ref, call, elapsed.ToShortString(), timeouts.Timeout.ToShortString());
+                        else
+                            Peer.Log.LogWarning(
+                                "{PeerRef}': call {Call} took {Elapsed} from its start or previous report here",
+                                Peer.Ref, call, elapsed.ToShortString());
                     }
                 }
 
