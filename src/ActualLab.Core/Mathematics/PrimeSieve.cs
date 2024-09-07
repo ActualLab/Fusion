@@ -2,6 +2,9 @@ namespace ActualLab.Mathematics;
 
 public class PrimeSieve
 {
+    private static readonly object Lock = new();
+    private static PrimeSieve? _instance;
+
     private readonly int _limitSqrt;
     private readonly BitArray _isPrime;
 
@@ -27,6 +30,20 @@ public class PrimeSieve
                 for (var j = i * i; j < limit; j += k)
                     _isPrime[j >> 1] = false;
             }
+        }
+    }
+
+    public static PrimeSieve GetOrCompute(int limit)
+    {
+        if (_instance?.Limit >= limit)
+            return _instance;
+
+        lock (Lock) {
+            if (_instance?.Limit >= limit)
+                return _instance;
+
+            _instance = new PrimeSieve(limit);
+            return _instance;
         }
     }
 }

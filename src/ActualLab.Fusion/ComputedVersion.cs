@@ -12,7 +12,7 @@ public static class ComputedVersion
     static ComputedVersion()
     {
         var localVersionCount = HardwareInfo.GetProcessorCountFactor(4).Clamp(1, 1024);
-        var primeSieve = FusionDefaults.GetPrimeSieve(localVersionCount + 16);
+        var primeSieve = PrimeSieve.GetOrCompute(localVersionCount + 16);
         while (!primeSieve.IsPrime(localVersionCount))
             localVersionCount--;
         LocalVersionCount = localVersionCount;

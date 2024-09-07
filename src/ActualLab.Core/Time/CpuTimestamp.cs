@@ -15,20 +15,27 @@ public readonly record struct CpuTimestamp(long Value) : IComparable<CpuTimestam
 
     static CpuTimestamp()
     {
-        var mQueryPerformanceCounter = typeof(Stopwatch)
-            .GetMethod(
-                nameof(QueryPerformanceCounter),
-                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.NonPublic);
-        if (mQueryPerformanceCounter != null) {
-            // .NET + .NET Core, WASM
+        if (RuntimeCodegen.Mode != RuntimeCodegenMode.DynamicMethods) {
+            // AOT
             TickFrequency = Stopwatch.Frequency;
-            QueryPerformanceCounter = (Func<long>)mQueryPerformanceCounter!
-                .CreateDelegate(typeof(Func<long>));
+            QueryPerformanceCounter = Stopwatch.GetTimestamp;
         }
         else {
-            // .NET Framework
-            TickFrequency = 10_000_000;
-            QueryPerformanceCounter = Stopwatch.GetTimestamp;
+            var mQueryPerformanceCounter = typeof(Stopwatch)
+                .GetMethod(
+                    nameof(QueryPerformanceCounter),
+                    BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            if (mQueryPerformanceCounter != null) {
+                // .NET + .NET Core, WASM
+                TickFrequency = Stopwatch.Frequency;
+                QueryPerformanceCounter = (Func<long>)mQueryPerformanceCounter!
+                    .CreateDelegate(typeof(Func<long>));
+            }
+            else {
+                // .NET Framework
+                TickFrequency = 10_000_000;
+                QueryPerformanceCounter = Stopwatch.GetTimestamp;
+            }
         }
         TickDuration = 1d / TickFrequency;
         PositiveInfinity = new CpuTimestamp(long.MaxValue);

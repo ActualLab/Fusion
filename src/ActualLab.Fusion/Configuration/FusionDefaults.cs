@@ -6,7 +6,6 @@ public static class FusionDefaults
 {
     private static readonly object Lock = new();
     private static FusionMode _mode;
-    private static PrimeSieve? _primeSieve;
 
     public static FusionMode Mode {
         get => _mode;
@@ -38,15 +37,10 @@ public static class FusionDefaults
         TimeoutsConcurrencyLevel = (isServer ? cpuCountPo2 : cpuCountPo2 / 16).Clamp(1, isServer ? 256 : 4);
         ComputedRegistryConcurrencyLevel = cpuCountPo2 * (isServer ? 4 : 1);
         var computedRegistryCapacity = (ComputedRegistryConcurrencyLevel * 32).Clamp(256, 8192);
-        var primeSieve = GetPrimeSieve(computedRegistryCapacity + 16);
+        var primeSieve = PrimeSieve.GetOrCompute(computedRegistryCapacity + 16);
         while (!primeSieve.IsPrime(computedRegistryCapacity))
             computedRegistryCapacity--;
         ComputedRegistryCapacity = computedRegistryCapacity;
         ComputedGraphPrunerBatchSize = cpuCountPo2 * 512;
     }
-
-    internal static PrimeSieve GetPrimeSieve(int limit)
-        => _primeSieve?.Limit >= limit
-            ? _primeSieve
-            : _primeSieve = new PrimeSieve(limit);
 }

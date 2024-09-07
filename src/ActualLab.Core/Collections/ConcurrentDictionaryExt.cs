@@ -1,14 +1,7 @@
-using System.Linq.Expressions;
-using System.Reflection.Emit;
-
 namespace ActualLab.Collections;
 
 public static class ConcurrentDictionaryExt
 {
-    public static int GetCapacity<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> source)
-        where TKey : notnull
-        => Cache<TKey, TValue>.CapacityReader.Invoke(source);
-
     // GetOrAdd with LazySlim
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -92,55 +85,4 @@ public static class ConcurrentDictionaryExt
         // - https://devblogs.microsoft.com/pfxteam/little-known-gems-atomic-conditional-removals-from-concurrentdictionary/
         => ((ICollection<KeyValuePair<TKey, TValue>>) dictionary)
             .Remove(KeyValuePair.Create(key, value));
-
-    // Nested types
-
-    private static class Cache<TKey, TValue>
-        where TKey : notnull
-    {
-        public static readonly Func<ConcurrentDictionary<TKey, TValue>, int> CapacityReader;
-
-        static Cache()
-        {
-#if !NETSTANDARD2_0
-            var fTablesName = "_tables";
-            var fBucketsName = "_buckets";
-#else
-            var fTablesName = "m_tables";
-            var fBucketsName = "m_buckets";
-#endif
-            var fTables = typeof(ConcurrentDictionary<TKey, TValue>)
-                .GetField(fTablesName, BindingFlags.Instance | BindingFlags.NonPublic)!;
-#pragma warning disable IL2075
-            var fBuckets = fTables.FieldType
-                .GetField(fBucketsName, BindingFlags.Instance | BindingFlags.NonPublic)!;
-            var pLength = fBuckets.FieldType
-                .GetProperty("Length", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
-#pragma warning restore IL2075
-
-            if (RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods) {
-                var m = new DynamicMethod("_CapacityReader",
-                    typeof(int), [typeof(ConcurrentDictionary<TKey, TValue>)],
-                    true);
-                var il = m.GetILGenerator();
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldfld, fTables);
-                il.Emit(OpCodes.Ldfld, fBuckets);
-                il.Emit(OpCodes.Callvirt, pLength.GetMethod!);
-                il.Emit(OpCodes.Ret);
-                CapacityReader = (Func<ConcurrentDictionary<TKey, TValue>, int>)m.CreateDelegate(typeof(Func<ConcurrentDictionary<TKey, TValue>, int>));
-            }
-            else {
-                var pSource = Expression.Parameter(typeof(ConcurrentDictionary<TKey, TValue>));
-                var eBody = Expression.Property(
-                    Expression.Field(
-                        Expression.Field(pSource, fTables),
-                        fBuckets),
-                    pLength);
-                CapacityReader = Expression
-                    .Lambda<Func<ConcurrentDictionary<TKey, TValue>, int>>(eBody, pSource)
-                    .Compile();
-            }
-        }
-    }
 }

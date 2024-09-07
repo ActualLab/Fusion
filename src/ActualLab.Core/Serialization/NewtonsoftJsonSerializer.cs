@@ -50,10 +50,6 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
         _jsonSerializer = JsonSerializer.Create(settings);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    static NewtonsoftJsonSerializer()
-    { }
-
     // Read
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
