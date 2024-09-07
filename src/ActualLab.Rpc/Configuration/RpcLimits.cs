@@ -23,7 +23,7 @@ public record RpcLimits
     // The code that checks ObjectKeepAliveTimeout & ObjectReleaseTimeout runs w/ this cycle time
     public TimeSpan ObjectReleasePeriod { get; init; } = TimeSpan.FromSeconds(10);
     // When the object doesn't get a "keep-alive" this long, it gets released
-    public TimeSpan ObjectReleaseTimeout { get; init; }= TimeSpan.FromSeconds(125);
+    public TimeSpan ObjectReleaseTimeout { get; init; } = TimeSpan.FromSeconds(125);
     // We want to complete "object abort" in this number of cycles.
     // We proceed to the next iteration if at least one new object was disposed during the current one.
     public int ObjectAbortCycleCount { get; init; } = 3;
@@ -33,4 +33,9 @@ public record RpcLimits
     public TimeSpan CallAbortCyclePeriod { get; set; } = TimeSpan.FromSeconds(1);
     // Call timeout check period
     public RandomTimeSpan CallTimeoutCheckPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.2);
+    // Outbound call summary logging
+    public (int MinCount, TimeSpan Period) LogOutboundCallSummarySettings { get; init; }
+        = RpcDefaults.Mode == RpcMode.Client
+            ? (1, TimeSpan.FromMinutes(1))
+            : (1000, TimeSpan.FromMinutes(10));
 }

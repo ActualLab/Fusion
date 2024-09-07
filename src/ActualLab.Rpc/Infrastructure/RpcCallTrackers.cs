@@ -103,13 +103,18 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
     {
+        var lastSummaryReportAt = CpuTimestamp.Now;
         try {
             // This loop aborts timed out calls every CallTimeoutCheckPeriod
             while (!cancellationToken.IsCancellationRequested) {
+                var callCount = 0;
+                var inProgressCallCount = 0;
                 foreach (var call in this) {
+                    callCount++;
                     if (call.UntypedResultTask.IsCompleted)
                         continue;
 
+                    inProgressCallCount++;
                     var timeouts = call.MethodDef.Timeouts;
                     var startedAt = call.StartedAt;
                     if (startedAt == default)
@@ -140,6 +145,15 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                                 "{PeerRef}': call {Call} took {Elapsed} from its start or previous report here",
                                 Peer.Ref, call, elapsed.ToShortString());
                     }
+                }
+
+                var summaryLogSettings = Limits.LogOutboundCallSummarySettings;
+                if (lastSummaryReportAt.Elapsed > summaryLogSettings.Period
+                    && callCount > summaryLogSettings.MinCount) {
+                    lastSummaryReportAt = CpuTimestamp.Now;
+                    Peer.Log.LogInformation(
+                        "{PeerRef}': Tracking {CallCount} outbound calls (in progress: {InProgressCallCount})",
+                        Peer.Ref, callCount, inProgressCallCount);
                 }
 
                 await Task.Delay(Limits.CallTimeoutCheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
