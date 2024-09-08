@@ -20,184 +20,184 @@ public class ProxyCodeKeeper : CodeKeeper
         Keep<TProxy>();
     }
 
-    public void KeepSyncMethod<TResult>()
-        => KeepMethod<TResult, TResult>();
+    public void KeepSyncMethod<TResult>(string name = "")
+        => KeepMethod<TResult, TResult>(name);
 
-    public void KeepSyncMethod<TResult, T0>()
-        => KeepMethod<TResult, TResult, T0>();
+    public void KeepSyncMethod<TResult, T0>(string name = "")
+        => KeepMethod<TResult, TResult, T0>(name);
 
-    public void KeepSyncMethod<TResult, T0, T1>()
-        => KeepMethod<TResult, TResult, T0, T1>();
+    public void KeepSyncMethod<TResult, T0, T1>(string name = "")
+        => KeepMethod<TResult, TResult, T0, T1>(name);
 
-    public void KeepSyncMethod<TResult, T0, T1, T2>()
-        => KeepMethod<TResult, TResult, T0, T1, T2>();
+    public void KeepSyncMethod<TResult, T0, T1, T2>(string name = "")
+        => KeepMethod<TResult, TResult, T0, T1, T2>(name);
 
-    public void KeepSyncMethod<TResult, T0, T1, T2, T3>()
-        => KeepMethod<TResult, TResult, T0, T1, T2, T3>();
+    public void KeepSyncMethod<TResult, T0, T1, T2, T3>(string name = "")
+        => KeepMethod<TResult, TResult, T0, T1, T2, T3>(name);
 
-    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4>()
-        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4>();
+    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4>(string name = "")
+        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4>(name);
 
-    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5>()
-        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5>();
+    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5>(string name = "")
+        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5>(name);
 
-    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5, T6>()
-        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6>();
+    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5, T6>(string name = "")
+        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6>(name);
 
-    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5, T6, T7>()
-        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7>();
+    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5, T6, T7>(string name = "")
+        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7>(name);
 
-    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8>()
-        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8>();
+    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8>(string name = "")
+        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8>(name);
 
-    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>()
-        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>();
+    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(string name = "")
+        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(name);
 
-    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>()
-        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
+    public void KeepSyncMethod<TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(string name = "")
+        => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(name);
 
-    public void KeepAsyncMethod<TUnwrapped>()
+    public void KeepAsyncMethod<TUnwrapped>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped>(name);
     }
 
-    public void KeepAsyncMethod<TUnwrapped, T0>()
+    public void KeepAsyncMethod<TUnwrapped, T0>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0>(name);
     }
 
-    public void KeepAsyncMethod<TUnwrapped, T0, T1>()
+    public void KeepAsyncMethod<TUnwrapped, T0, T1>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1>(name);
     }
 
-    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2>()
+    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2>(name);
     }
 
-    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3>()
+    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3>(name);
     }
 
-    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4>()
+    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4>(name);
     }
 
-    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5>()
+    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5>(name);
     }
 
-    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5, T6>()
+    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5, T6>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6>(name);
     }
 
-    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7>()
+    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7>(name);
     }
 
-    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8>()
+    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8>(name);
     }
 
-    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>()
+    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(name);
     }
 
-    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>()
+    public void KeepAsyncMethod<TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(string name = "")
     {
-        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
-        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
+        KeepMethod<Task<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(name);
+        KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(name);
     }
 
-    public virtual void KeepMethod<TResult, TUnwrapped>()
-        => KeepMethodResult<TResult, TUnwrapped>();
+    public virtual void KeepMethod<TResult, TUnwrapped>(string name = "")
+        => KeepMethodResult<TResult, TUnwrapped>(name);
 
-    public virtual void KeepMethod<TResult, TUnwrapped, T0>()
+    public virtual void KeepMethod<TResult, TUnwrapped, T0>(string name = "")
     {
-        KeepMethodResult<TResult, TUnwrapped>();
-        KeepMethodArgument<T0>();
+        KeepMethod<TResult, TUnwrapped>(name);
+        KeepMethodArgument<T0>(name, 0);
     }
 
-    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1>()
+    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1>(string name = "")
     {
-        KeepMethod<TResult, TUnwrapped, T0>();
-        KeepMethodArgument<T1>();
+        KeepMethod<TResult, TUnwrapped, T0>(name);
+        KeepMethodArgument<T1>(name, 1);
     }
 
-    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2>()
+    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2>(string name = "")
     {
-        KeepMethod<TResult, TUnwrapped, T0, T1>();
-        KeepMethodArgument<T2>();
+        KeepMethod<TResult, TUnwrapped, T0, T1>(name);
+        KeepMethodArgument<T2>(name, 2);
     }
 
-    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3>()
+    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3>(string name = "")
     {
-        KeepMethod<TResult, TUnwrapped, T0, T1, T2>();
-        KeepMethodArgument<T3>();
+        KeepMethod<TResult, TUnwrapped, T0, T1, T2>(name);
+        KeepMethodArgument<T3>(name, 3);
     }
 
-    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4>()
+    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4>(string name = "")
     {
-        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3>();
-        KeepMethodArgument<T4>();
+        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3>(name);
+        KeepMethodArgument<T4>(name, 4);
     }
 
-    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5>()
+    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5>(string name = "")
     {
-        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4>();
-        KeepMethodArgument<T5>();
+        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4>(name);
+        KeepMethodArgument<T5>(name, 5);
     }
 
-    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6>()
+    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6>(string name = "")
     {
-        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5>();
-        KeepMethodArgument<T6>();
+        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5>(name);
+        KeepMethodArgument<T6>(name, 6);
     }
 
-    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7>()
+    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7>(string name = "")
     {
-        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6>();
-        KeepMethodArgument<T7>();
+        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6>(name);
+        KeepMethodArgument<T7>(name, 7);
     }
 
-    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8>()
+    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8>(string name = "")
     {
-        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7>();
-        KeepMethodArgument<T8>();
+        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7>(name);
+        KeepMethodArgument<T8>(name, 8);
     }
 
-    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>()
+    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(string name = "")
     {
-        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8>();
-        KeepMethodArgument<T9>();
+        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8>(name);
+        KeepMethodArgument<T9>(name, 9);
     }
 
-    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>()
+    public virtual void KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(string name = "")
     {
-        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>();
-        KeepMethodArgument<T10>();
+        KeepMethod<TResult, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(name);
+        KeepMethodArgument<T10>(name, 10);
     }
 
-    public virtual void KeepMethodArgument<TArg>()
+    public virtual void KeepMethodArgument<TArg>(string name = "", int index = -1)
     {
         if (AlwaysFalse)
             return;
@@ -206,7 +206,7 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepArgumentListArgument<TArg>();
     }
 
-    public virtual void KeepMethodResult<TResult, TUnwrapped>()
+    public virtual void KeepMethodResult<TResult, TUnwrapped>(string name = "")
     {
         if (AlwaysTrue)
             return;

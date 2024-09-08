@@ -11,9 +11,9 @@ public class CommanderProxyCodeKeeper : RpcProxyCodeKeeper
     static CommanderProxyCodeKeeper()
         => _ = default(CommanderBuilder).Services;
 
-    public override void KeepMethodResult<TResult, TUnwrapped>()
+    public override void KeepMethodResult<TResult, TUnwrapped>(string name = "")
     {
-        base.KeepMethodResult<TResult, TUnwrapped>();
+        base.KeepMethodResult<TResult, TUnwrapped>(name);
         if (AlwaysTrue)
             return;
 
