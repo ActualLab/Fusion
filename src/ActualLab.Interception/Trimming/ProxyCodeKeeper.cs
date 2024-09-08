@@ -6,6 +6,9 @@ public class ProxyCodeKeeper : CodeKeeper
 {
     private readonly MethodDefCodeKeeper _methodDefCodeKeeper = Get<MethodDefCodeKeeper>();
 
+    static ProxyCodeKeeper()
+        => _ = Proxies.Cache;
+
     public virtual void KeepProxy<TBase, TProxy>()
         where TBase : IRequiresAsyncProxy
         where TProxy : IProxy

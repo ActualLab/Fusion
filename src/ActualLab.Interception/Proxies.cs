@@ -10,7 +10,7 @@ namespace ActualLab.Interception;
 
 public static class Proxies
 {
-    private static readonly ConcurrentDictionary<Type, Type?> Cache = new();
+    internal static readonly ConcurrentDictionary<Type, Type?> Cache = new();
 
     static Proxies() => CodeKeeper.AddFakeAction(
         static () => {

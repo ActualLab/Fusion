@@ -24,8 +24,12 @@ public abstract class CodeKeeper
     public static void RunActions()
     {
         lock (Actions) {
-            foreach (var action in Actions)
-                CallSilently(action);
+            while (Actions.Count != 0) {
+                var actions = Actions.ToArray();
+                Actions.Clear();
+                foreach (var action in actions)
+                    CallSilently(action); // action may add more actions
+            }
             Actions.Clear();
         }
     }

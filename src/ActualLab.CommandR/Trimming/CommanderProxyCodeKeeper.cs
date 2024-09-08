@@ -9,7 +9,7 @@ public class CommanderProxyCodeKeeper : RpcProxyCodeKeeper
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(MethodCommandHandler<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(InterfaceCommandHandler<>))]
     static CommanderProxyCodeKeeper()
-    { }
+        => _ = default(CommanderBuilder).Services;
 
     public override void KeepMethodResult<TResult, TUnwrapped>()
     {

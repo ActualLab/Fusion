@@ -10,7 +10,7 @@ public class RpcProxyCodeKeeper : ProxyCodeKeeper
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInbound404Call<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcOutboundCall<>))]
     static RpcProxyCodeKeeper()
-    { }
+        => _ = default(RpcBuilder).Services;
 
     public override void KeepMethodArgument<T>()
     {

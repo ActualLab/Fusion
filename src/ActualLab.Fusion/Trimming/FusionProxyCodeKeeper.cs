@@ -21,7 +21,7 @@ public class FusionProxyCodeKeeper : ProxyCodeKeeper
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(FuncComputedState<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComputedSource<>))]
     static FusionProxyCodeKeeper()
-    { }
+        => _ = default(FusionBuilder).Services;
 
     public override void KeepMethodArgument<T>()
         => _commanderProxyCodeKeeper.KeepMethodArgument<T>();

@@ -12,7 +12,7 @@ public static class AppCodeKeeper
 {
     public static void KeepEverything()
     {
-        if (false && RuntimeCodegen.NativeMode == RuntimeCodegenMode.DynamicMethods)
+        if (RuntimeCodegen.NativeMode == RuntimeCodegenMode.DynamicMethods)
             return;
 
         CodeKeeper.AddAction(static () => {
