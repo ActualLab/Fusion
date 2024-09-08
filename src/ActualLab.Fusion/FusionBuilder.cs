@@ -8,9 +8,11 @@ using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Fusion.Operations.Reprocessing;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Client.Internal;
+using ActualLab.Fusion.Trimming;
 using ActualLab.Fusion.UI;
 using ActualLab.Resilience;
 using ActualLab.Rpc;
+using ActualLab.Trimming;
 using Errors = ActualLab.Internal.Errors;
 using UnreferencedCode = ActualLab.Fusion.Internal.UnreferencedCode;
 
@@ -23,18 +25,21 @@ public readonly struct FusionBuilder
     public RpcBuilder Rpc { get; }
     public RpcServiceMode DefaultServiceMode { get; }
 
+    static FusionBuilder() => CodeKeeper.AddFakeAction(
+        static () => {
+            CodeKeeper.Keep<CommanderBuilder>();
+            CodeKeeper.Keep<RpcBuilder>();
+
+            // Interceptors
+            CodeKeeper.Keep<FusionProxyCodeKeeper>();
+            CodeKeeper.Keep<ComputeServiceInterceptor>();
+            CodeKeeper.Keep<RemoteComputeServiceInterceptor>();
+
+            // Other services
+            CodeKeeper.Keep<RpcComputeSystemCalls>();
+        });
+
     [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CommanderBuilder))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcBuilder))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComputeServiceInterceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComputeMethodFunction<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcComputeSystemCalls))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundComputeCall<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcOutboundComputeCall<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RemoteComputeServiceInterceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RemoteComputeMethodFunction<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(FuncComputedState<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComputedSource<>))]
     internal FusionBuilder(
         IServiceCollection services,
         Action<FusionBuilder>? configure,

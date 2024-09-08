@@ -1,7 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Cysharp.Text;
 using ActualLab.Interception.Interceptors;
+using Cysharp.Text;
 using ActualLab.Interception.Internal;
+using ActualLab.Trimming;
 
 namespace ActualLab.Interception;
 
@@ -10,6 +11,35 @@ namespace ActualLab.Interception;
 public static class Proxies
 {
     private static readonly ConcurrentDictionary<Type, Type?> Cache = new();
+
+    static Proxies() => CodeKeeper.AddFakeAction(
+        static () => {
+            CodeKeeper.KeepStatic(typeof(ProxyHelper));
+
+            // ArgumentList
+            CodeKeeper.Keep<ArgumentListType>();
+            CodeKeeper.Keep<ArgumentList0>();
+            CodeKeeper.Keep<ArgumentListS1>();
+            CodeKeeper.Keep<ArgumentListS2>();
+            CodeKeeper.Keep<ArgumentListS3>();
+            CodeKeeper.Keep<ArgumentListS4>();
+            CodeKeeper.Keep<ArgumentListS5>();
+            CodeKeeper.Keep<ArgumentListS6>();
+            CodeKeeper.Keep<ArgumentListS7>();
+            CodeKeeper.Keep<ArgumentListS8>();
+            CodeKeeper.Keep<ArgumentListS9>();
+            CodeKeeper.Keep<ArgumentListS10>();
+
+            // Invocation, interceptor, proxies
+            CodeKeeper.Keep<MethodDef>();
+            CodeKeeper.Keep<Invocation>();
+            CodeKeeper.Keep<Interceptor>();
+            CodeKeeper.Keep<InterfaceProxy>();
+
+            // Build-in interceptors
+            CodeKeeper.Keep<TypeViewInterceptor>();
+            CodeKeeper.Keep<TypedFactoryInterceptor>();
+        });
 
     public static IProxy New(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type baseType,
@@ -30,19 +60,6 @@ public static class Proxies
     public static Type GetProxyType(Type baseType)
         => TryGetProxyType(baseType) ?? throw Errors.NoProxyType(baseType);
 
-#if NET5_0_OR_GREATER
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(InterfaceProxy))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ProxyHelper))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Interceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Interceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TypeViewInterceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TypedFactoryInterceptor))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(MethodDef))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Invocation))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentList))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Result<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ResultBox<>))]
-#endif
     public static Type? TryGetProxyType(Type baseType)
         => Cache.GetOrAdd(baseType, static type => {
             if (type.IsConstructedGenericType) {

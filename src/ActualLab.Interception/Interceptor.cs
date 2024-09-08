@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception.Internal;
+using ActualLab.Trimming;
 
 namespace ActualLab.Interception;
 
@@ -137,9 +138,6 @@ public abstract class Interceptor : IHasServices
             return _ => methodDef.DefaultResult;
         }, (this, invocation));
 
-    public virtual void CodeTouch<TUnwrapped>()
-        => CreateHandler<TUnwrapped>(default, null!);
-
     // Protected methods
 
     protected internal abstract Func<Invocation, object?>? CreateHandler<
@@ -159,6 +157,12 @@ public abstract class Interceptor : IHasServices
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
         Type type)
     { }
+
+    protected internal virtual void KeepCodeForResult<TResult, TUnwrapped>()
+    {
+        if (CodeKeeper.AlwaysFalse)
+            CreateHandler<TUnwrapped>(default, null!);
+    }
 
     // Private methods
 

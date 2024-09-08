@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception.Internal;
+using ActualLab.Trimming;
 using InvalidCastException = System.InvalidCastException;
 
 namespace ActualLab.Interception;
@@ -47,6 +48,9 @@ public class MethodDef
     public Func<Invocation, Task> InterceptedAsyncInvoker
         => _interceptedAsyncInvoker ??= GetAsyncInvoker<Func<Invocation, Task>>(CreateInterceptedAsyncInvokerMethod);
 
+    // Must be on KeepCodeForResult<,>, but since we can't use any params there...
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Result<>))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ResultBox<>))]
     public MethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
         MethodInfo method)
@@ -167,8 +171,22 @@ public class MethodDef
         return null;
     }
 
-    public virtual void CodeTouch<TUnwrapped>()
+    // Protected methods
+
+    protected internal virtual void KeepCodeForResult<TResult, TUnwrapped>()
     {
+        if (CodeKeeper.AlwaysTrue)
+            return;
+
+        CodeKeeper.Keep<TResult>();
+        CodeKeeper.Keep<TUnwrapped>();
+        CodeKeeper.Keep<Result<TUnwrapped>>();
+        CodeKeeper.Keep<Result<Task<TUnwrapped>>>();
+        CodeKeeper.Keep<Result<ValueTask<TUnwrapped>>>();
+        CodeKeeper.Keep<ResultBox<TUnwrapped>>();
+        CodeKeeper.Keep<ResultBox<Task<TUnwrapped>>>();
+        CodeKeeper.Keep<ResultBox<ValueTask<TUnwrapped>>>();
+
         WrapResult<TUnwrapped>(default!);
         WrapAsyncInvokerResult<TUnwrapped>(default!);
         WrapResultOfAsyncMethod<TUnwrapped>(default!);
