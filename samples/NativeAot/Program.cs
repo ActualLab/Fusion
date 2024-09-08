@@ -1,13 +1,17 @@
 ﻿using System.Reflection;
+using ActualLab.Fusion.Trimming;
 using ActualLab.Interception;
+using ActualLab.Interception.Trimming;
 using ActualLab.Rpc;
+using ActualLab.Trimming;
 using MemoryPack;
-using Samples.NativeAot;
 using static System.Console;
 
 #pragma warning disable IL3050
 
-AppCodeKeeper.KeepEverything();
+CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
+if (RuntimeCodegen.NativeMode != RuntimeCodegenMode.DynamicMethods)
+    CodeKeeper.RunActions();
 
 WriteLine($"RuntimeCodegen.Mode: {RuntimeCodegen.Mode}");
 var l0 = ArgumentList.New();

@@ -1,22 +1,17 @@
-using ActualLab.Fusion.Trimming;
-using ActualLab.Interception.Trimming;
+using System.Runtime.CompilerServices;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Infrastructure.ActualLabProxies;
-using ActualLab.Trimming;
 using ActualLabProxies;
 
 namespace Samples.NativeAot;
 
-public static class AppCodeKeeper
+public static class ModuleCodeKeeper
 {
-    public static void KeepEverything()
-    {
-        if (RuntimeCodegen.NativeMode == RuntimeCodegenMode.DynamicMethods)
-            return;
-
-        CodeKeeper.AddAction(static () => {
-            var c = CodeKeeper.Get<ProxyCodeKeeper>();
+    [ModuleInitializer]
+    public static void KeepCode()
+        => ActualLab.Trimming.CodeKeeper.AddAction(static () => {
+            var c = ActualLab.Trimming.CodeKeeper.Get<ActualLab.Interception.Trimming.ProxyCodeKeeper>();
 
             // IRpcSystemCalls
             c.KeepProxy<IRpcSystemCalls, IRpcSystemCallsProxy>();
@@ -40,7 +35,4 @@ public static class AppCodeKeeper
             c.KeepAsyncMethod<Moment, CancellationToken>();
             c.KeepAsyncMethod<string, SayHelloCommand, CancellationToken>();
         });
-        CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
-        CodeKeeper.RunActions();
-    }
 }
