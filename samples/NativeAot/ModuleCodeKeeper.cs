@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Infrastructure.ActualLabProxies;
@@ -8,7 +7,7 @@ namespace Samples.NativeAot;
 
 public static class ModuleCodeKeeper
 {
-    [ModuleInitializer]
+    [System.Runtime.CompilerServices.ModuleInitializer]
     public static void KeepCode()
         => ActualLab.Trimming.CodeKeeper.AddAction(static () => {
             var c = ActualLab.Trimming.CodeKeeper.Get<ActualLab.Interception.Trimming.ProxyCodeKeeper>();
