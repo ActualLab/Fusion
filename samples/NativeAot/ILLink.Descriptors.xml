@@ -1,6 +1,6 @@
 <linker>
   <!-- Entry point -->
-  <assembly fullname="Samples.NativeAot" />
+  <assembly fullname="Samples.NativeAot" preserve="all" />
 
   <!-- Trimmed types -->
   <assembly fullname="ActualLab.Interception">
