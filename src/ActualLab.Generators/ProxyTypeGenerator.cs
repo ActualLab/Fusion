@@ -179,12 +179,12 @@ public class ProxyTypeGenerator
                         .WithBody(Block()));
             }
 
-            var defaultArguments = (ctor?.Parameters ?? [])
+            var defaultArguments = ctor?.Parameters
                 .Select(p => Argument(
                     PostfixUnaryExpression(
                         SyntaxKind.SuppressNullableWarningExpression,
                         DefaultExpression(p.Type.ToTypeRef()))))
-                .ToArray();
+                .ToArray() ?? [];
             var fakeCtorCallExpression =
                 InvocationExpression(
                     MemberAccessExpression(
