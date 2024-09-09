@@ -4,13 +4,9 @@
 
   <!-- Trimmed types -->
   <assembly fullname="ActualLab.Interception">
-    <type fullname="ActualLab.Interception.ArgumentList`1" preserve="all" />
-    <type fullname="ActualLab.Interception.ArgumentList`2" preserve="all" />
-    <type fullname="ActualLab.Interception.ArgumentList`3" preserve="all" />
-    <type fullname="ActualLab.Interception.ArgumentList`4" required="false" />
-    <type fullname="ActualLab.Interception.ArgumentList`5" required="false" />
-    <type fullname="ActualLab.Interception.ArgumentList`6" required="false" />
-    <type fullname="ActualLab.Interception.ArgumentList`7" required="false" />
-    <type fullname="ActualLab.Interception.ArgumentList`8" required="false" />
+    <!-- ArgumentList is auto-configured to use ArgumentListS* types in AOT apps -->
+    <type fullname="ActualLab.Interception.ArgumentListS*" preserve="all" />
+    <!-- And ArgumentListG* types aren't used -->
+    <type fullname="ActualLab.Interception.ArgumentListG*" preserve="nothing" />
   </assembly>
 </linker>

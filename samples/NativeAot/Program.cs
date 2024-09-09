@@ -4,11 +4,13 @@ using ActualLab.Interception;
 using ActualLab.Interception.Trimming;
 using ActualLab.Rpc;
 using ActualLab.Trimming;
+using ActualLabProxies;
 using MemoryPack;
 using static System.Console;
 
 #pragma warning disable IL3050
 
+// TestServiceProxy.KeepCode(); // A code like this this might be used to force-load assemblies with proxies
 CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
 if (RuntimeCodegen.NativeMode != RuntimeCodegenMode.DynamicMethods)
     CodeKeeper.RunActions();
