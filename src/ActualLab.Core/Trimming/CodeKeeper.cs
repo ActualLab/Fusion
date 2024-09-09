@@ -79,6 +79,12 @@ public abstract class CodeKeeper
         }
     }
 
+    public static void FakeCallSilently(Action action)
+    {
+        if (AlwaysFalse)
+            CallSilently(action);
+    }
+
     // Private methods
 
     private static void KeepStaticTypeImpl([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)

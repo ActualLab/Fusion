@@ -75,11 +75,6 @@ public class ProxyTypeGenerator
                 TypeDef.TypeParameterList?.Parameters.Select(x => IdentifierName(x.Identifier.Text)) ?? [])))
             : IdentifierName(ProxyTypeName);
 
-        if (ClassDef != null && !AddClassConstructors()) {
-            WriteDebug?.Invoke($"[- Type] No constructors: {typeSymbol}");
-            return; // No public constructors
-        }
-
         KeepCodeMethodStatements.Add(VarStatement(
             ProxyCodeKeeperVarName.Identifier,
             InvocationExpression(
@@ -96,6 +91,10 @@ public class ProxyTypeGenerator
                     CodeKeeperKeepProxyGenericMethodName.WithTypeArgumentList(
                         TypeArgumentList(CommaSeparatedList(TypeRef, ProxyRef)))))));
 
+        if (!AddClassConstructors()) {
+            WriteDebug?.Invoke($"[- Type] No constructors: {typeSymbol}");
+            return; // No public constructors
+        }
         AddProxyMethods();
         AddProxyInterfaceImplementation(); // Must be the last one
         AddModuleInitializer();
@@ -151,29 +150,53 @@ public class ProxyTypeGenerator
 
     private bool AddClassConstructors()
     {
-        var constructors = TypeSymbol.GetMembers()
+        List<IMethodSymbol?> constructors = TypeSymbol.GetMembers()
             .OfType<IMethodSymbol>()
             .Where(m => m.MethodKind == MethodKind.Constructor && m.DeclaredAccessibility.HasFlag(Accessibility.Public))
-            .ToList();
-        if (constructors.Count == 0)
-            return false;
+            .ToList()!;
+        if (constructors.Count == 0) {
+            if (ClassDef != null)
+                return false;
+
+            constructors = [null];
+        }
 
         foreach (var ctor in constructors) {
-            var parameters = ctor.Parameters
-                .Select(p => Parameter(Identifier(p.Name)).WithType(p.Type.ToTypeRef()))
-                .ToArray();
-            var arguments = ctor.Parameters
-                .Select(p => Argument(IdentifierName(p.Name)))
-                .ToArray();
+            if (ctor != null) {
+                var parameters = ctor.Parameters
+                    .Select(p => Parameter(Identifier(p.Name)).WithType(p.Type.ToTypeRef()))
+                    .ToArray();
+                var arguments = ctor.Parameters
+                    .Select(p => Argument(IdentifierName(p.Name)))
+                    .ToArray();
+                Constructors.Add(
+                    ConstructorDeclaration(Identifier(ProxyTypeName))
+                        .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
+                        .WithParameterList(ParameterList(CommaSeparatedList(parameters)))
+                        .WithInitializer(
+                            ConstructorInitializer(SyntaxKind.BaseConstructorInitializer,
+                                ArgumentList(SeparatedList(arguments))))
+                        .WithBody(Block()));
+            }
 
-            Constructors.Add(
-                ConstructorDeclaration(Identifier(ProxyTypeName))
-                    .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
-                    .WithParameterList(ParameterList(CommaSeparatedList(parameters)))
-                    .WithInitializer(
-                        ConstructorInitializer(SyntaxKind.BaseConstructorInitializer,
-                            ArgumentList(SeparatedList(arguments))))
-                    .WithBody(Block()));
+            var defaultArguments = (ctor?.Parameters ?? [])
+                .Select(p => Argument(
+                    PostfixUnaryExpression(
+                        SyntaxKind.SuppressNullableWarningExpression,
+                        DefaultExpression(p.Type.ToTypeRef()))))
+                .ToArray();
+            var fakeCtorCallExpression =
+                InvocationExpression(
+                    MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        CodeKeeperTypeName,
+                        FakeCallSilentlyMethodName))
+                .WithArgumentList(ArgumentList(SingletonSeparatedList(Argument(
+                    ParenthesizedLambdaExpression()
+                        .WithExpressionBody(
+                            ObjectCreationExpression(ProxyRef)
+                                .WithArgumentList(ArgumentList(SeparatedList(defaultArguments))))))));
+            KeepCodeMethodStatements.Add(ExpressionStatement(fakeCtorCallExpression));
         }
         return true;
     }
