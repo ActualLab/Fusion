@@ -23,7 +23,11 @@ public class TypeCodeKeeper : CodeKeeper
         static TypeKeeper()
         {
             try {
+#if !NETSTANDARD2_0
                 Instance = (T)RuntimeHelpers.GetUninitializedObject(typeof(T));
+#else
+                Instance = (T)FormatterServices.GetUninitializedObject(typeof(T));
+#endif
             }
             catch {
                 Instance = default!;

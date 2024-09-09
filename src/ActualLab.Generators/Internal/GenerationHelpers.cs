@@ -5,16 +5,29 @@ using static SyntaxFactory;
 
 public static class GenerationHelpers
 {
+    public const string SystemReactiveNs = "System.Reactive";
+    public const string SystemReactiveGns = $"global::{SystemReactiveNs}";
+    public const string SystemRuntimeCompilerServicesNs = "System.Runtime.CompilerServices";
+    public const string SystemRuntimeCompilerServicesGns = $"global::{SystemRuntimeCompilerServicesNs}";
+    public const string TrimmingNs = "ActualLab.Trimming";
     public const string InterceptionNs = "ActualLab.Interception";
     public const string InterceptionInternalNs = "ActualLab.Interception.Internal";
+    public const string InterceptionTrimmingNs = "ActualLab.Interception.Trimming";
+    public const string TrimmingGns = $"global::{TrimmingNs}";
     public const string InterceptionGns = $"global::{InterceptionNs}";
     public const string InterceptionInternalGns = $"global::{InterceptionInternalNs}";
+    public const string InterceptionTrimmingGns = $"global::{InterceptionTrimmingNs}";
     public const string RequiresFullProxyInterfaceName = $"{InterceptionNs}.IRequiresFullProxy";
     public const string RequireAsyncProxyInterfaceName = $"{InterceptionNs}.IRequiresAsyncProxy";
     public const string ProxyIgnoreAttributeName = $"{InterceptionNs}.ProxyIgnoreAttribute";
     public const string ProxyClassSuffix = "Proxy";
     public const string ProxyNamespaceSuffix = "ActualLabProxies";
     public const int MaxGenericArgumentListItemCount = 5;
+
+    // System types
+    public static readonly IdentifierNameSyntax UnitTypeName = IdentifierName($"{SystemReactiveGns}.Unit");
+    public static readonly IdentifierNameSyntax ModuleInitializerAttributeName
+        = IdentifierName($"{SystemRuntimeCompilerServicesGns}.ModuleInitializer");
 
     // Types
     public static readonly IdentifierNameSyntax ProxyInterfaceTypeName = IdentifierName($"{InterceptionGns}.IProxy");
@@ -24,6 +37,8 @@ public static class GenerationHelpers
     public static readonly IdentifierNameSyntax ArgumentListTypeName = IdentifierName($"{InterceptionGns}.ArgumentList");
     public static readonly IdentifierNameSyntax ArgumentList0TypeName = IdentifierName($"{InterceptionGns}.ArgumentList0");
     public static readonly IdentifierNameSyntax InvocationTypeName = IdentifierName($"{InterceptionGns}.Invocation");
+    public static readonly IdentifierNameSyntax CodeKeeperTypeName = IdentifierName($"{TrimmingGns}.CodeKeeper");
+    public static readonly IdentifierNameSyntax ProxyCodeKeeperTypeName = IdentifierName($"{InterceptionTrimmingGns}.ProxyCodeKeeper");
     public static readonly IdentifierNameSyntax ErrorsTypeName = IdentifierName($"{InterceptionInternalGns}.Errors");
     public static readonly TypeSyntax NullableMethodInfoType = NullableType(typeof(MethodInfo).ToTypeRef());
     // Methods
@@ -32,14 +47,20 @@ public static class GenerationHelpers
     public static readonly IdentifierNameSyntax InterceptMethodName = IdentifierName("Intercept");
     public static readonly GenericNameSyntax InterceptGenericMethodName = GenericName(InterceptMethodName.Identifier.Text);
     public static readonly IdentifierNameSyntax NoInterceptorMethodName = IdentifierName("NoInterceptor");
+    public static readonly IdentifierNameSyntax KeepCodeMethodName = IdentifierName("KeepCode");
+    public static readonly IdentifierNameSyntax AddActionMethodName = IdentifierName("AddAction");
+    public static readonly GenericNameSyntax CodeKeeperGetGenericMethodName = GenericName("Get");
+    public static readonly GenericNameSyntax CodeKeeperKeepProxyGenericMethodName = GenericName("KeepProxy");
+    public static readonly GenericNameSyntax CodeKeeperKeepAsyncMethodGenericMethodName = GenericName("KeepAsyncMethod");
+    public static readonly GenericNameSyntax CodeKeeperKeepSyncMethodGenericMethodName = GenericName("KeepSyncMethod");
     // Properties, fields, locals
     public static readonly IdentifierNameSyntax ProxyTargetPropertyName = IdentifierName("ProxyTarget");
     public static readonly IdentifierNameSyntax InterceptorPropertyName = IdentifierName("Interceptor");
     public static readonly IdentifierNameSyntax InterceptorFieldName = IdentifierName("__interceptor");
-    public static readonly IdentifierNameSyntax InterceptorParameterName = IdentifierName("interceptor");
     public static readonly IdentifierNameSyntax ValueParameterName = IdentifierName("value");
     public static readonly IdentifierNameSyntax InterceptedVarName = IdentifierName("intercepted");
     public static readonly IdentifierNameSyntax InvocationVarName = IdentifierName("invocation");
+    public static readonly IdentifierNameSyntax ProxyCodeKeeperVarName = IdentifierName("proxyCodeKeeper");
 
     // Helpers
 

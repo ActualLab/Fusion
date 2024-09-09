@@ -1,18 +1,22 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Generators;
 
 namespace ActualLab.Trimming;
 
 public abstract class CodeKeeper
 {
     private static readonly List<Action> Actions = new();
+    private static readonly HashSet<Action> ActionSet = new();
 
-    public static readonly bool AlwaysFalse = Random.Shared.NextDouble() > 10;
+    public static readonly bool AlwaysFalse = RandomShared.NextDouble() > 10;
     public static readonly bool AlwaysTrue = !AlwaysFalse;
 
     public static void AddAction(Action action)
     {
-        lock (Actions)
-            Actions.Add(action);
+        lock (Actions) {
+            if (ActionSet.Add(action))
+                Actions.Add(action);
+        }
     }
 
     public static void AddFakeAction(Action action)
@@ -27,10 +31,10 @@ public abstract class CodeKeeper
             while (Actions.Count != 0) {
                 var actions = Actions.ToArray();
                 Actions.Clear();
+                ActionSet.Clear();
                 foreach (var action in actions)
                     CallSilently(action); // action may add more actions
             }
-            Actions.Clear();
         }
     }
 

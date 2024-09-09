@@ -24,6 +24,9 @@ public readonly struct RpcBuilder
             CodeKeeper.KeepStatic(typeof(Proxies));
             CodeKeeper.KeepStatic(typeof(RpcDefaultDelegates));
 
+            // Serializable types
+            CodeKeeper.KeepSerializable<TypeRef>();
+
             // Interceptors
             CodeKeeper.Keep<RpcProxyCodeKeeper>();
             CodeKeeper.Keep<RpcNonRoutingInterceptor>();

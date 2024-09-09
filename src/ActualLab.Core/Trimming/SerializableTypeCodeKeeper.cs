@@ -13,9 +13,11 @@ public class SerializableTypeCodeKeeper : CodeKeeper
         Keep<UniSerialized<T>>();
         Keep<MemoryPackSerialized<T>>();
         Keep<MemoryPackByteSerializer<T>>();
+#if !NETSTANDARD2_0
         CallSilently(() => MemoryPackSerializer.Deserialize<T>(ReadOnlySpan<byte>.Empty));
         CallSilently(() => MemoryPackSerializer.Deserialize<T>(ReadOnlySequence<byte>.Empty));
         CallSilently(() => MemoryPackSerializer.Serialize<T>(default));
+#endif
         return value;
     }
 }

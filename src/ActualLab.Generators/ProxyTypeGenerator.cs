@@ -8,21 +8,25 @@ public class ProxyTypeGenerator
     private SourceProductionContext Context { get; }
     private SemanticModel SemanticModel { get; }
     private TypeDeclarationSyntax TypeDef { get; }
+    private TypeSyntax TypeRef { get; } = null!;
     private ITypeSymbol TypeSymbol { get; } = null!;
     private NameSyntax NamespaceRef { get; } = null!;
     private ClassDeclarationSyntax? ClassDef { get; }
     private InterfaceDeclarationSyntax? InterfaceDef { get; }
+    private bool IsGenericType { get; }
     private bool IsInterfaceProxy => InterfaceDef != null;
     private bool IsFullProxy { get; }
-    private bool IsAsyncProxy => !IsFullProxy;
+    private bool IsAsyncOnlyProxy => !IsFullProxy;
 
     private string ProxyTypeName { get; } = "";
     private ClassDeclarationSyntax ProxyDef { get; } = null!;
+    private TypeSyntax ProxyRef { get; } = null!;
     private List<MemberDeclarationSyntax> StaticFields { get; } = new();
     private List<MemberDeclarationSyntax> Fields { get; } = new();
     private List<MemberDeclarationSyntax> Properties { get; } = new();
     private List<MemberDeclarationSyntax> Constructors { get; } = new();
     private List<MemberDeclarationSyntax> Methods { get; } = new();
+    private List<StatementSyntax> KeepCodeMethodStatements { get; } = new();
     private Dictionary<ITypeSymbol, string> CachedInterceptFieldNames { get; } = new(SymbolEqualityComparer.Default);
     private List<StatementSyntax> PostSetInterceptorStatements { get; } = new();
 
@@ -38,16 +42,17 @@ public class ProxyTypeGenerator
         if (TypeDef.GetNamespaceRef() is not { } namespaceRef)
             return;
 
+        TypeRef = TypeDef.ToTypeRef();
         TypeSymbol = typeSymbol;
         NamespaceRef = namespaceRef;
         ClassDef = TypeDef as ClassDeclarationSyntax;
         InterfaceDef = TypeDef as InterfaceDeclarationSyntax;
+        IsGenericType = TypeDef.TypeParameterList is { } l && l.Parameters.Count != 0;
         IsFullProxy = typeSymbol.AllInterfaces.Any(t => Equals(t.ToFullName(), RequiresFullProxyInterfaceName));
         WriteDebug?.Invoke($"{TypeSymbol.ToFullName()}: {(IsFullProxy ? "full" : "async")} proxy");
 
         ProxyTypeName = TypeDef.Identifier.Text + ProxyClassSuffix;
-        var typeRef = TypeDef.ToTypeRef();
-        var baseTypes = new List<TypeSyntax>() { typeRef, ProxyInterfaceTypeName };
+        var baseTypes = new List<TypeSyntax>() { TypeRef, ProxyInterfaceTypeName };
         if (IsInterfaceProxy)
             baseTypes.Insert(0, InterfaceProxyBaseTypeName);
 
@@ -65,14 +70,35 @@ public class ProxyTypeGenerator
             .WithBaseList(BaseList(CommaSeparatedList(
                 baseTypes.Select(t => (BaseTypeSyntax)SimpleBaseType(t)).ToArray())))
             .WithConstraintClauses(TypeDef.ConstraintClauses);
+        ProxyRef = IsGenericType
+            ? GenericName(Identifier(ProxyTypeName), TypeArgumentList(CommaSeparatedList<TypeSyntax>(
+                TypeDef.TypeParameterList?.Parameters.Select(x => IdentifierName(x.Identifier.Text)) ?? [])))
+            : IdentifierName(ProxyTypeName);
 
         if (ClassDef != null && !AddClassConstructors()) {
             WriteDebug?.Invoke($"[- Type] No constructors: {typeSymbol}");
             return; // No public constructors
         }
 
+        KeepCodeMethodStatements.Add(VarStatement(
+            ProxyCodeKeeperVarName.Identifier,
+            InvocationExpression(
+                MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    CodeKeeperTypeName,
+                    CodeKeeperGetGenericMethodName.WithTypeArgumentList(
+                        TypeArgumentList(SingletonSeparatedList<TypeSyntax>(ProxyCodeKeeperTypeName)))))));
+        KeepCodeMethodStatements.Add(ExpressionStatement(
+            InvocationExpression(
+                MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    ProxyCodeKeeperVarName,
+                    CodeKeeperKeepProxyGenericMethodName.WithTypeArgumentList(
+                        TypeArgumentList(CommaSeparatedList(TypeRef, ProxyRef)))))));
+
         AddProxyMethods();
         AddProxyInterfaceImplementation(); // Must be the last one
+        AddModuleInitializer();
 
         var disableObsoleteMemberWarning1 = Trivia(
             PragmaWarningDirectiveTrivia(Token(SyntaxKind.DisableKeyword), true)
@@ -156,7 +182,7 @@ public class ProxyTypeGenerator
     {
         var typeRef = TypeDef.ToTypeRef();
         var methodIndex = 0;
-        foreach (var method in GetProxyMethods()) {
+        foreach (var (method, unwrappedReturnType) in GetProxyMethods()) {
             var modifiers = TokenList(
                 method.DeclaredAccessibility.HasFlag(Accessibility.Protected)
                     ? Token(SyntaxKind.ProtectedKeyword)
@@ -213,6 +239,7 @@ public class ProxyTypeGenerator
                             GetMethodInfoExpression(typeRef, method, parameters)));
             }
 
+            // Method body
             var argumentList = CreateArgumentList(
                 method.Parameters
                     .Select(p => Argument(IdentifierName(p.Name)))
@@ -250,11 +277,66 @@ public class ProxyTypeGenerator
                     .WithModifiers(modifiers)
                     .WithParameterList(parameters)
                     .WithBody(body));
+
+            // KeepCode statement for this method
+            var isAsync = unwrappedReturnType != null;
+            var keepGenericMethodName = isAsync
+                ? CodeKeeperKeepAsyncMethodGenericMethodName
+                : CodeKeeperKeepSyncMethodGenericMethodName;
+            var keepMethodTypeArguments = TypeArgumentList(CommaSeparatedList(
+                new[] { unwrappedReturnType ?? (returnTypeIsVoid ? UnitTypeName : returnType) }.Concat(
+                    method.Parameters.Select(p => p.Type.ToTypeRef()))));
+            var keepMethodArguments = ArgumentList(CommaSeparatedList(
+                Argument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(method.Name)))));
+
+            var keepMethodCallExpression =
+                InvocationExpression(
+                    MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        ProxyCodeKeeperVarName,
+                        keepGenericMethodName.WithTypeArgumentList(keepMethodTypeArguments)))
+                .WithArgumentList(keepMethodArguments);
+            KeepCodeMethodStatements.Add(ExpressionStatement(keepMethodCallExpression));
             methodIndex++;
         }
     }
 
-    private IEnumerable<IMethodSymbol> GetProxyMethods()
+    private void AddModuleInitializer()
+    {
+        var bodyExpression =
+            ArrowExpressionClause(
+                InvocationExpression(
+                    MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        CodeKeeperTypeName,
+                        AddActionMethodName))
+                .WithArgumentList(
+                    ArgumentList(
+                        SingletonSeparatedList(
+                            Argument(
+                                ParenthesizedLambdaExpression()
+                                    .WithModifiers(
+                                        TokenList(Token(SyntaxKind.StaticKeyword)))
+                                    .WithBlock(Block(KeepCodeMethodStatements))))))
+                );
+
+        var method = MethodDeclaration(
+                PredefinedType(Token(SyntaxKind.VoidKeyword)),
+                Identifier(KeepCodeMethodName.Identifier.Text));
+        if (!IsGenericType)
+            method = method.WithAttributeLists(SingletonList(
+                AttributeList(SingletonSeparatedList(
+                    Attribute(ModuleInitializerAttributeName)))));
+        method = method
+            .WithModifiers(
+                TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.StaticKeyword)))
+            .WithExpressionBody(bodyExpression)
+            .WithSemicolonToken(
+                Token(SyntaxKind.SemicolonToken));
+        Methods.Add(method);
+    }
+
+    private IEnumerable<(IMethodSymbol Method, IdentifierNameSyntax? UnwrappedReturnType)> GetProxyMethods()
     {
         var hierarchy = IsInterfaceProxy
             ? TypeSymbol.GetAllInterfaces(true)
@@ -265,7 +347,7 @@ public class ProxyTypeGenerator
             if (type.ToTypeRef().IsObject())
                 continue;
 
-            foreach (var method in GetDeclaredProxyMethods(type)) {
+            foreach (var (method, unwrappedReturnType) in GetDeclaredProxyMethods(type)) {
                 if (!processedMethods.Add(method)) {
                     WriteDebug?.Invoke("  [-] Already processed");
                     continue;
@@ -278,20 +360,20 @@ public class ProxyTypeGenerator
                     processedMethods.Add(overriddenMethod);
                     overriddenMethod = overriddenMethod.OverriddenMethod;
                 }
-                yield return method;
+                yield return (method, unwrappedReturnType);
             }
         }
     }
 
-    private IEnumerable<IMethodSymbol> GetDeclaredProxyMethods(ITypeSymbol type)
+    private IEnumerable<(IMethodSymbol Method, IdentifierNameSyntax? UnwrappedReturnType)> GetDeclaredProxyMethods(ITypeSymbol type)
     {
         foreach (var member in type.GetMembers()) {
             if (member is not IMethodSymbol method)
                 continue;
-            if (IsDebugOutputEnabled) {
-                var returnTypeName = method.ReturnType.ToFullName();
+
+            var returnTypeName = method.ReturnType.ToFullName();
+            if (IsDebugOutputEnabled)
                 WriteDebug?.Invoke($"- {method.Name}({method.Parameters.Length}) -> {returnTypeName}");
-            }
             if (method.MethodKind is not MethodKind.Ordinary) {
                 WriteDebug?.Invoke($"  [-] Non-ordinary: {method.MethodKind}");
                 continue;
@@ -312,22 +394,23 @@ public class ProxyTypeGenerator
                     continue;
                 }
             }
-            if (IsAsyncProxy) {
-                var returnTypeName = method.ReturnType.ToFullName();
-                if (!returnTypeName.StartsWith("System.Threading.Tasks.", StringComparison.Ordinal)) {
-                    WriteDebug?.Invoke("  [-] Non-async (1)");
-                    continue;
-                }
 
-                var isAsync = false;
-                isAsync |= Equals(returnTypeName, "System.Threading.Tasks.Task");
-                isAsync |= Equals(returnTypeName, "System.Threading.Tasks.ValueTask");
-                isAsync |= returnTypeName.StartsWith("System.Threading.Tasks.Task<", StringComparison.Ordinal);
-                isAsync |= returnTypeName.StartsWith("System.Threading.Tasks.ValueTask<", StringComparison.Ordinal);
-                if (!isAsync) {
-                    WriteDebug?.Invoke("  [-] Non-async (2)");
-                    continue;
+            var unwrappedReturnType = (IdentifierNameSyntax?)null;
+            if (returnTypeName.OrdinalStartsWith("System.Threading.Tasks.")) {
+                if (Equals(returnTypeName, "System.Threading.Tasks.Task") ||
+                    Equals(returnTypeName, "System.Threading.Tasks.ValueTask"))
+                    unwrappedReturnType = UnitTypeName;
+                else {
+                    var bracketIndex = returnTypeName.OrdinalIndexOf('<');
+                    var genericName = bracketIndex >= 0 ? returnTypeName[..bracketIndex] : "";
+                    if (Equals(genericName, "System.Threading.Tasks.Task") ||
+                        Equals(genericName, "System.Threading.Tasks.ValueTask"))
+                        unwrappedReturnType = IdentifierName(returnTypeName[(bracketIndex + 1)..^1]);
                 }
+            }
+            if (IsAsyncOnlyProxy && unwrappedReturnType == null) {
+                WriteDebug?.Invoke("  [-] Non-async method in async-only proxy");
+                continue;
             }
 
             // Check for [ProxyIgnore]
@@ -344,8 +427,7 @@ public class ProxyTypeGenerator
                 WriteDebug?.Invoke("  [-] Has [ProxyIgnore]");
                 continue;
             }
-
-            yield return method;
+            yield return (method, unwrappedReturnType);
         }
     }
 

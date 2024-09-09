@@ -93,11 +93,7 @@ public static class GenerationExt
 
         // Get the C# representation of the generic type minus its type arguments.
         var name = type.Name.Replace('+', '.');
-#if !NETSTANDARD2_0
-        name = name.Substring(0, name.IndexOf('`', StringComparison.Ordinal));
-#else
-        name = name.Substring(0, name.IndexOf('`'));
-#endif
+        name = name.Substring(0, name.OrdinalIndexOf('`'));
 
         var args = type.GetGenericArguments();
         return GenericName(
@@ -118,7 +114,7 @@ public static class GenerationExt
             miscellaneousOptions: SymbolDisplayMiscellaneousOptions.ExpandNullable
         ));
         const string systemPrefix = "System.";
-        return name.StartsWith(systemPrefix, StringComparison.Ordinal)
+        return name.OrdinalStartsWith(systemPrefix)
             ? Simplify(name.Substring(systemPrefix.Length), name)
             : name;
     }
@@ -132,7 +128,7 @@ public static class GenerationExt
             miscellaneousOptions: SymbolDisplayMiscellaneousOptions.ExpandNullable
         ));
         const string globalSystemPrefix = "global::System.";
-        return name.StartsWith(globalSystemPrefix, StringComparison.Ordinal)
+        return name.OrdinalStartsWith(globalSystemPrefix)
             ? Simplify(name.Substring(globalSystemPrefix.Length), name)
             : name;
     }
@@ -141,7 +137,7 @@ public static class GenerationExt
     {
         if (string.IsNullOrEmpty(ns))
             return "global::";
-        if (ns.StartsWith("global::", StringComparison.Ordinal))
+        if (ns.OrdinalStartsWith("global::"))
             return ns;
         return "global::" + ns;
     }
