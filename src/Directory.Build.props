@@ -59,7 +59,7 @@
   -->
 
   <!-- Polyfills -->
-  <ItemGroup Condition="!($(TargetFramework.StartsWith('net8')))">
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')))">
     <PackageReference Include="PolySharp" />
   </ItemGroup>
 
