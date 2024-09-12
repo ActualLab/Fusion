@@ -22,3 +22,29 @@ public static class RandomShared
 #endif
     }
 }
+
+#if !NET6_0_OR_GREATER
+
+static file class ThreadRandom
+{
+    private static readonly Random SharedInstance = new();
+    [ThreadStatic] private static Random? _instance;
+
+    public static Random Instance {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _instance ??= CreateInstance();
+    }
+
+    public static int Next() => Instance.Next();
+    public static double NextDouble() => Instance.NextDouble();
+
+    // Private methods
+
+    private static Random CreateInstance()
+    {
+        lock (SharedInstance)
+            return new(SharedInstance.Next() + Environment.CurrentManagedThreadId);
+    }
+}
+
+#endif

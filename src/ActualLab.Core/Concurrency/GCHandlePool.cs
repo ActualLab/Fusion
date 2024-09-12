@@ -36,7 +36,7 @@ public sealed class GCHandlePool(GCHandlePool.Options settings) : IDisposable
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public GCHandle Acquire(object? target)
-        => Acquire(target, ThreadRandom.Next());
+        => Acquire(target, RandomShared.Next());
 
     public GCHandle Acquire(object? target, int random)
     {
@@ -53,7 +53,7 @@ public sealed class GCHandlePool(GCHandlePool.Options settings) : IDisposable
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Release(GCHandle handle)
-        => Release(handle, ThreadRandom.Next());
+        => Release(handle, RandomShared.Next());
 
     public bool Release(GCHandle handle, int random)
     {

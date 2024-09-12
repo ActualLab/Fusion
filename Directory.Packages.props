@@ -13,7 +13,7 @@
   <PropertyGroup>
     <!-- Core packages -->
     <AspNetCoreVersion>[9.0.0-rc.1.24452.1,)</AspNetCoreVersion>
-    <AspNetCoreVersion8>[8.0.4,9)</AspNetCoreVersion8>
+    <AspNetCoreVersion8>[8.0.4,)</AspNetCoreVersion8>
     <AspNetCoreVersion7>[7.0.0,8)</AspNetCoreVersion7>
     <AspNetCoreVersion6>[6.0.0,7)</AspNetCoreVersion6>
     <AspNetCoreVersion5>[5.0.0,6)</AspNetCoreVersion5>
@@ -25,7 +25,7 @@
     <BlazorVersion5>$(AspNetCoreVersion5)</BlazorVersion5>
     <BlazorVersion3>$(AspNetCoreVersion3)</BlazorVersion3>
     <MicrosoftExtensionsVersion>[9.0.0-rc.1.24431.7,)</MicrosoftExtensionsVersion>
-    <MicrosoftExtensionsVersion8>[8.0.0,9)</MicrosoftExtensionsVersion8>
+    <MicrosoftExtensionsVersion8>[8.0.0,)</MicrosoftExtensionsVersion8>
     <MicrosoftExtensionsVersion7>[7.0.0,8)</MicrosoftExtensionsVersion7>
     <MicrosoftExtensionsVersion6>[6.0.0,7)</MicrosoftExtensionsVersion6>
     <MicrosoftExtensionsVersion5>[5.0.0,6)</MicrosoftExtensionsVersion5>
@@ -33,14 +33,14 @@
     <!-- EF Core -->
     <!-- <EntityFrameworkCoreVersion>[9.0.0-rc.1.24451.1,)</EntityFrameworkCoreVersion>-->
     <EntityFrameworkCoreVersion>[8.0.2,)</EntityFrameworkCoreVersion>
-    <EntityFrameworkCoreVersion8>[8.0.2,9)</EntityFrameworkCoreVersion8>
+    <EntityFrameworkCoreVersion8>[8.0.2,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion7>[7.0.20,8)</EntityFrameworkCoreVersion7>
     <EntityFrameworkCoreVersion6>[6.0.33,7)</EntityFrameworkCoreVersion6>
     <EntityFrameworkCoreVersion5>[5.0.17,6)</EntityFrameworkCoreVersion5>
     <EntityFrameworkCoreVersion3>[3.1.32,4)</EntityFrameworkCoreVersion3>
     <!-- <EntityFrameworkCoreNpgsqlVersion>[9.0.0-preview.7,)</EntityFrameworkCoreNpgsqlVersion>-->
     <EntityFrameworkCoreNpgsqlVersion>[8.0.2,)</EntityFrameworkCoreNpgsqlVersion>
-    <EntityFrameworkCoreNpgsqlVersion8>[8.0.2,9)</EntityFrameworkCoreNpgsqlVersion8>
+    <EntityFrameworkCoreNpgsqlVersion8>[8.0.2,)</EntityFrameworkCoreNpgsqlVersion8>
     <EntityFrameworkCoreNpgsqlVersion7>[7.0.18,8)</EntityFrameworkCoreNpgsqlVersion7>
     <EntityFrameworkCoreNpgsqlVersion6>[6.0.29,7)</EntityFrameworkCoreNpgsqlVersion6>
     <EntityFrameworkCoreNpgsqlVersion5>[5.0.10,6)</EntityFrameworkCoreNpgsqlVersion5>
@@ -53,7 +53,7 @@
     <MySqlConnectorVersion3>0.69.10</MySqlConnectorVersion3>
     <!-- <EntityFrameworkCoreMySqlVersion>[9.0.0-preview.1,)</EntityFrameworkCoreMySqlVersion>-->
     <EntityFrameworkCoreMySqlVersion>[8.0.2,)</EntityFrameworkCoreMySqlVersion>
-    <EntityFrameworkCoreMySqlVersion8>[8.0.2,9)</EntityFrameworkCoreMySqlVersion8>
+    <EntityFrameworkCoreMySqlVersion8>[8.0.2,)</EntityFrameworkCoreMySqlVersion8>
     <EntityFrameworkCoreMySqlVersion7>[7.0.0,8)</EntityFrameworkCoreMySqlVersion7>
     <EntityFrameworkCoreMySqlVersion6>[6.0.3,7)</EntityFrameworkCoreMySqlVersion6>
     <EntityFrameworkCoreMySqlVersion5>[5.0.4,6)</EntityFrameworkCoreMySqlVersion5>
@@ -66,21 +66,13 @@
     <RedisVersion>[2.8.12,)</RedisVersion>
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>
     <OpenTelemetryVersion>[1.8.1,)</OpenTelemetryVersion>
-    <!-- Testing -->
-    <AspNetCoreMvcTestingVersion>$(AspNetCoreVersion)</AspNetCoreMvcTestingVersion>
-    <AspNetCoreMvcTestingVersion8>$(AspNetCoreVersion8)</AspNetCoreMvcTestingVersion8>
-    <AspNetCoreMvcTestingVersion7>$(AspNetCoreVersion7)</AspNetCoreMvcTestingVersion7>
-    <AspNetCoreMvcTestingVersion6>$(AspNetCoreVersion6)</AspNetCoreMvcTestingVersion6>
-    <AspNetCoreMvcTestingVersion5>$(AspNetCoreVersion5)</AspNetCoreMvcTestingVersion5>
-    <AspNetCoreMvcTestingVersion3>$(AspNetCoreVersion3)</AspNetCoreMvcTestingVersion3>
-    <AspNetCoreMvcTestingVersionN4>$(AspNetCoreVersion5)</AspNetCoreMvcTestingVersionN4>
     <!-- Build & Samples -->
     <BlazoriseVersion>[1.6.1,)</BlazoriseVersion>
     <FusionVersion>[9.2,)</FusionVersion>
   </PropertyGroup>
 
   <!-- Dependencies -->
-  <ItemGroup Label="Package Versions">
+  <ItemGroup>
     <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="8.1.0" />
     <PackageVersion Include="Blazorise" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Bootstrap5" Version="$(BlazoriseVersion)" />
@@ -191,7 +183,7 @@
                     PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
     <PackageVersion Include="ILogger.Moq" Version="1.1.10" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(AspNetCoreMvcTestingVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="xunit" Version="2.9.0" />

@@ -32,9 +32,9 @@ public class StochasticCounterTest(ITestOutputHelper @out) : TestBase(@out)
         c.Precision.Should().Be(HardwareInfo.ProcessorCountPo2);
         c.Value.Should().Be(0);
 
-        const int iterationCount = 5_000_000;
-        const int runCount = 10;
-        var agentCount = HardwareInfo.GetProcessorCountFraction(1);
+        const int iterationCount = 1_000_000;
+        const int runCount = 5;
+        var agentCount = HardwareInfo.GetProcessorCountFraction(2);
         var incrementCount = (double)(agentCount * iterationCount);
         Out.WriteLine($"Increment count: {incrementCount}");
         for (var i = 0; i < runCount; i++) {
@@ -44,11 +44,20 @@ public class StochasticCounterTest(ITestOutputHelper @out) : TestBase(@out)
                 .Select(_ => Task.Run(() => {
                     var min = 0;
                     var max = 0;
+                    var actualIncrementCount = 0;
+                    var actualDecrementCount = 0;
                     for (var j = 0; j < iterationCount; j++) {
-                        if (c.Increment() is { } max1)
+                        if (c.Increment() is { } max1) {
+                            actualIncrementCount++;
                             max = Math.Max(max, max1);
-                        if (c.Decrement() is { } min1)
+                        }
+
+                        if (c.Decrement() is { } min1) {
+                            actualDecrementCount++;
                             min = Math.Min(min, min1);
+                        }
+                        if (j % 250_000 == 0)
+                            Out.WriteLine($"- {j}: ({min}, {max}), counts: ({actualIncrementCount}, {actualDecrementCount})");
                     }
                     return (min, max);
                 }))

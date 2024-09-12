@@ -56,7 +56,7 @@ static void AddHost()
     if (freePortSlots.Count <= 0)
         return;
 
-    var freePortSlot = freePortSlots[ThreadRandom.Next().PositiveModulo(freePortSlots.Count)];
+    var freePortSlot = freePortSlots[RandomShared.Next().PositiveModulo(freePortSlots.Count)];
     var host = new Host(freePortSlot);
     host.Start();
 }
