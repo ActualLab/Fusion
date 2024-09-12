@@ -316,11 +316,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionState.Value.Connection != connection)
                         continue; // Somehow disconnected
 
-                    var maintenanceTask = Task.Run(() => {
-                        var tasks = new List<Task>();
-                        tasks.Add(SharedObjects.Maintain(handshake, readerToken));
-                        tasks.Add(RemoteObjects.Maintain(handshake, readerToken));
-                        tasks.Add(OutboundCalls.Maintain(handshake, readerToken));
+                    _ = Task.Run(() => {
+                        var tasks = new List<Task> {
+                            SharedObjects.Maintain(handshake, readerToken),
+                            RemoteObjects.Maintain(handshake, readerToken),
+                            OutboundCalls.Maintain(handshake, readerToken)
+                        };
                         if (peerChangeKind != RpcPeerChangeKind.ChangedToVeryFirst) {
                             var isPeerChanged = peerChangeKind == RpcPeerChangeKind.Changed;
                             tasks.Add(OutboundCalls.Reconnect(handshake, isPeerChanged, readerToken));

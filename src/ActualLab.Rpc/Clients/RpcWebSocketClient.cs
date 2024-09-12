@@ -63,7 +63,14 @@ public class RpcWebSocketClient(
         }
 
         public static WebSocketOwner DefaultWebSocketOwnerFactory(RpcWebSocketClient client, RpcClientPeer peer)
-            => new(peer.Ref.ToString(), new ClientWebSocket(), client.Services);
+        {
+            var ws = new ClientWebSocket();
+#if NET9_0_OR_GREATER
+            ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(20);
+            ws.Options.KeepAliveTimeout = TimeSpan.FromSeconds(10);
+#endif
+            return new WebSocketOwner(peer.Ref.ToString(), ws, client.Services);
+        }
     }
 
     public Options Settings { get; } = settings;
