@@ -5,16 +5,20 @@ using Xunit.Abstractions;
 
 namespace ActualLab.Testing.Output;
 
-public class TestOutputCapture : IStandardStreamWriter, ITestOutputHelper
+public class TestOutputCapture(TestTextWriter? downstream = null)
+    : IStandardStreamWriter, ITestOutputHelper
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
     private readonly object _lock = new();
+#endif
     public StringBuilder StringBuilder = new();
-    public TestTextWriter? Downstream { get; set; }
+    public TestTextWriter? Downstream { get; set; } = downstream;
 
-    public TestOutputCapture(TestTextWriter? downstream = null)
-        => Downstream = downstream;
     public TestOutputCapture(ITestOutputHelper downstream)
-        => Downstream = new TestTextWriter(downstream);
+        : this(new TestTextWriter(downstream))
+    { }
 
     public override string ToString()
     {

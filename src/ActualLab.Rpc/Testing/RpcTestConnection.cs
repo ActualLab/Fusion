@@ -5,7 +5,11 @@ namespace ActualLab.Rpc.Testing;
 
 public class RpcTestConnection
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
     private readonly object _lock = new();
+#endif
     private volatile AsyncState<ChannelPair<RpcMessage>?> _channels = new(null, true);
     private RpcClientPeer? _clientPeer;
     private RpcServerPeer? _serverPeer;

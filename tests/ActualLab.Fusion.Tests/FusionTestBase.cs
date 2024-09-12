@@ -26,7 +26,11 @@ public abstract class FusionTestBase : RpcTestBase
 {
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
 
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
     private readonly object _lock = new();
+#endif
     private IRemoteComputedCache? _remoteComputedCache;
 
     public FusionTestDbType DbType { get; set; } = TestRunnerInfo.IsBuildAgent()

@@ -6,7 +6,11 @@ public sealed class TickSource(TimeSpan period)
     // On other OSes it will be ~= t = N*NativeTimerPeriod so that t >= 15ms.
     public static TickSource Default { get; set; } = new(TimeSpan.FromMilliseconds(15));
 
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
     private readonly object _lock = new();
+#endif
     private volatile Task _whenNextTick = Task.CompletedTask;
 
     public TimeSpan Period { get; } = period > TimeSpan.Zero

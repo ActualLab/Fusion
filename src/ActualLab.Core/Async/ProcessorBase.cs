@@ -1,13 +1,15 @@
-using System.Diagnostics;
-
 namespace ActualLab.Async;
 
 public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDisposed
 {
     private volatile Task? _disposeTask;
 
+#if NET9_0_OR_GREATER
+    protected Lock Lock { get; } = new();
+#else
+    protected object Lock { get; } = new();
+#endif
     protected CancellationTokenSource StopTokenSource { get; }
-    protected object Lock => StopTokenSource;
 
     public CancellationToken StopToken { get; }
     public bool IsDisposed => _disposeTask != null;

@@ -21,7 +21,11 @@ public interface IMutableList<T> : IReadOnlyMutableList<T>, IList<T>
 
 public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
     private readonly object _lock = new();
+#endif
     private volatile ImmutableList<T> _items = items;
 
     public ImmutableList<T> Items {

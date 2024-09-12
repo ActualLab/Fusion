@@ -10,9 +10,8 @@ public sealed class RandomInt32Generator(RandomNumberGenerator? rng = null) : Ge
 
     public override int Next()
     {
-        lock (_rng) {
+        lock (_rng)
             _rng.GetBytes(_buffer);
-        }
         var bufferSpan = MemoryMarshal.Cast<byte, int>(_buffer.AsSpan());
         return bufferSpan![0];
     }

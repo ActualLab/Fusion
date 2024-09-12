@@ -21,7 +21,11 @@ public sealed class AuthStateProvider : AuthenticationStateProvider, IDisposable
         }
     };
 
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
     private readonly object _lock = new();
+#endif
     private Session? _session;
     private volatile Task<AuthState> _authStateTask;
     private volatile Task<AuthenticationState> _authenticationStateTask;

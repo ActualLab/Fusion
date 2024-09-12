@@ -5,7 +5,11 @@ namespace ActualLab.Redis;
 
 public sealed class RedisComponent<T>(RedisConnector connector, Func<IConnectionMultiplexer, T> factory)
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
     private readonly object _lock = new();
+#endif
     private volatile Task<Temporary<T>>? _resultTask;
 
     public RedisComponent(RedisDb redisDb, Func<IConnectionMultiplexer, T> factory)

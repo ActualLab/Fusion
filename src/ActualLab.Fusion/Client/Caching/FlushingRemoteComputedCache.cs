@@ -12,7 +12,11 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
         public MomentClock? Clock { get; init; }
     }
 
+#if NET9_0_OR_GREATER
+    protected readonly Lock Lock = new();
+#else
     protected readonly object Lock = new();
+#endif
     protected readonly MomentClock Clock;
     protected Dictionary<RpcCacheKey, RpcCacheValue> FlushQueue = new();
     protected Dictionary<RpcCacheKey, RpcCacheValue> FlushingQueue = new();

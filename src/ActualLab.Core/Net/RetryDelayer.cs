@@ -5,7 +5,11 @@ public class RetryDelayer : IRetryDelayer
     private CancellationTokenSource _cancelDelaysCts = new();
 
     private MomentClock? _clock;
-    protected object Lock = new();
+#if NET9_0_OR_GREATER
+    protected readonly Lock Lock = new();
+#else
+    protected readonly object Lock = new();
+#endif
 
     public Func<MomentClock> ClockProvider { get; init; } = static () => CpuClock.Instance;
     public MomentClock Clock => _clock ??= ClockProvider.Invoke();

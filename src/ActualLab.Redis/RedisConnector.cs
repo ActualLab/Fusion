@@ -4,7 +4,11 @@ namespace ActualLab.Redis;
 
 public class RedisConnector
 {
+#if NET9_0_OR_GREATER
+    protected readonly Lock Lock = new();
+#else
     protected readonly object Lock = new();
+#endif
     protected readonly Func<Task<IConnectionMultiplexer>> MultiplexerFactory;
     protected volatile AsyncState<Task<Temporary<IConnectionMultiplexer>>?> State = new(null, false);
     protected volatile CancellationTokenSource? GoneTokenSource;

@@ -5,6 +5,18 @@ using static GenerationHelpers;
 
 public class ProxyTypeGenerator
 {
+    private static readonly SyntaxTrivia[] PragmaDisableTrivia = new [] {
+        "CS0618", // Obsolete member access
+        "CS0672", // Obsolete member access
+        "CS1591", // No XML comment
+        "IL2072", // [DynamicallyAccessedMembers] attribute(s) don't match...
+        "IL2092", // [DynamicallyAccessedMembers] attribute(s) don't match...
+        "IL2111", // Member is accessed via reflection
+    }.Select(x => Trivia(
+        PragmaWarningDirectiveTrivia(Token(SyntaxKind.DisableKeyword), true)
+            .WithErrorCodes(SingletonSeparatedList<ExpressionSyntax>(IdentifierName(x)))))
+    .ToArray();
+
     private SourceProductionContext Context { get; }
     private SemanticModel SemanticModel { get; }
     private TypeDeclarationSyntax TypeDef { get; }
@@ -99,15 +111,6 @@ public class ProxyTypeGenerator
         AddProxyInterfaceImplementation(); // Must be the last one
         AddModuleInitializer();
 
-        var disableObsoleteMemberWarning1 = Trivia(
-            PragmaWarningDirectiveTrivia(Token(SyntaxKind.DisableKeyword), true)
-                .WithErrorCodes(SingletonSeparatedList<ExpressionSyntax>(IdentifierName("CS0618"))));
-        var disableObsoleteMemberWarning2 = Trivia(
-            PragmaWarningDirectiveTrivia(Token(SyntaxKind.DisableKeyword), true)
-                .WithErrorCodes(SingletonSeparatedList<ExpressionSyntax>(IdentifierName("CS0672"))));
-        var disableMissingXmlCommentWarning = Trivia(
-            PragmaWarningDirectiveTrivia(Token(SyntaxKind.DisableKeyword), true)
-                .WithErrorCodes(SingletonSeparatedList<ExpressionSyntax>(IdentifierName("CS1591"))));
         ProxyDef = ProxyDef
             .WithMembers(List(
                 StaticFields
@@ -115,10 +118,7 @@ public class ProxyTypeGenerator
                 .Concat(Properties)
                 .Concat(Constructors)
                 .Concat(Methods)))
-            .WithLeadingTrivia(
-                disableObsoleteMemberWarning1,
-                disableObsoleteMemberWarning2,
-                disableMissingXmlCommentWarning)
+            .WithLeadingTrivia(PragmaDisableTrivia)
             .NormalizeWhitespace();
         // WriteDebug?.Invoke(ProxyDef.ToString());
 

@@ -4,7 +4,11 @@ namespace ActualLab.Fusion;
 
 public class StateFactory(IServiceProvider services) : IHasServices
 {
+#if NET9_0_OR_GREATER
+    private static readonly Lock Lock = new();
+#else
     private static readonly object Lock = new();
+#endif
     private static StateFactory? _default;
 
     public static StateFactory Default {

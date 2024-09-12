@@ -24,13 +24,17 @@ public sealed class ComputedRegistry : IDisposable
         public GCHandlePool? GCHandlePool { get; init; } = null;
     }
 
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
+    private readonly object _lock = new();
+#endif
     private readonly ConcurrentDictionary<ComputedInput, GCHandle> _storage;
     private readonly GCHandlePool _gcHandlePool;
     private StochasticCounter _opCounter;
     private volatile ComputedGraphPruner _graphPruner = null!;
     private volatile int _pruneOpCounterThreshold;
     private Task? _pruneTask;
-    private object Lock => _storage;
 
     public IEnumerable<ComputedInput> Keys => _storage.Select(p => p.Key);
     public AsyncLockSet<ComputedInput> InputLocks { get; }
@@ -161,7 +165,7 @@ public sealed class ComputedRegistry : IDisposable
 
     public Task Prune()
     {
-        lock (Lock) {
+        lock (_lock) {
             if (_pruneTask == null || _pruneTask.IsCompleted) {
                 using var _ = ExecutionContextExt.TrySuppressFlow();
                 _pruneTask = Task.Run(PruneUnsafe);
@@ -198,7 +202,7 @@ public sealed class ComputedRegistry : IDisposable
 
     private void TryPrune()
     {
-        lock (Lock) {
+        lock (_lock) {
             if (_opCounter.Value <= _pruneOpCounterThreshold) return;
 
             _opCounter.Value = 0;
@@ -223,7 +227,7 @@ public sealed class ComputedRegistry : IDisposable
         }
 
         int keyCount;
-        lock (Lock) {
+        lock (_lock) {
             UpdatePruneCounterThreshold(out keyCount);
             _opCounter.Value = 0;
         }
@@ -234,7 +238,7 @@ public sealed class ComputedRegistry : IDisposable
 
     private void UpdatePruneCounterThreshold(out int keyCount)
     {
-        lock (Lock) {
+        lock (_lock) {
             // Should be called inside Lock
             keyCount = _storage.Count;
             var nextThreshold = keyCount << 1; // x2

@@ -4,7 +4,11 @@ namespace ActualLab.Fusion;
 
 public static class FusionDefaults
 {
+#if NET9_0_OR_GREATER
+    private static readonly Lock Lock = new();
+#else
     private static readonly object Lock = new();
+#endif
     private static FusionMode _mode;
 
     public static FusionMode Mode {

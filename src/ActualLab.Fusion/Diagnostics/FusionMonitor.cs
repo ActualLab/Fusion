@@ -6,11 +6,16 @@ namespace ActualLab.Fusion.Diagnostics;
 
 public sealed class FusionMonitor : WorkerBase
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
+    private readonly object _lock = new();
+#endif
+
     // Cached delegates
     private readonly Action<Computed, bool> _onAccess;
     private readonly Action<Computed> _onRegister;
     private readonly Action<Computed> _onUnregister;
-    private readonly object _lock = new();
 
     // Stats
     private Dictionary<string, (int, int)> _accesses = null!;

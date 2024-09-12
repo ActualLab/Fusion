@@ -5,8 +5,12 @@ namespace ActualLab.Rpc;
 
 public static class RpcCallTypeRegistry
 {
-    private static volatile (Type? InboundCallType, Type? OutboundCallType)[] _callTypes;
+#if NET9_0_OR_GREATER
+    private static readonly Lock Lock = new();
+#else
     private static readonly object Lock = new();
+#endif
+    private static volatile (Type? InboundCallType, Type? OutboundCallType)[] _callTypes;
 
     static RpcCallTypeRegistry()
     {
