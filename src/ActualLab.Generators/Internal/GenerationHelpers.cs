@@ -22,7 +22,7 @@ public static class GenerationHelpers
     public const string ProxyIgnoreAttributeName = $"{InterceptionNs}.ProxyIgnoreAttribute";
     public const string ProxyClassSuffix = "Proxy";
     public const string ProxyNamespaceSuffix = "ActualLabProxies";
-    public const int MaxGenericArgumentListItemCount = 5;
+    public const int MaxGenericArgumentListItemCount = 4; // Must match MaxGenericItemCount in ArgumentList-Generated.t4
 
     // System types
     public static readonly IdentifierNameSyntax UnitTypeName = IdentifierName($"{SystemReactiveGns}.Unit");
