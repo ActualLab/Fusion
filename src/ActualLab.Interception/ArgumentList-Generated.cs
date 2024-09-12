@@ -15,7 +15,7 @@ namespace ActualLab.Interception;
 public abstract partial record ArgumentList
 {
     public const int MaxItemCount = 10;
-    public const int MaxGenericItemCount = 5;
+    public const int MaxGenericItemCount = 4;
 
 #if NET5_0_OR_GREATER
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS1))]
@@ -27,17 +27,17 @@ public abstract partial record ArgumentList
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS4))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG4<, , , >))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS5))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG5<, , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG5<, , , >))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS6))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG6<, , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG6<, , , >))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS7))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG7<, , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG7<, , , >))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS8))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG8<, , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG8<, , , >))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS9))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG9<, , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG9<, , , >))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS10))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG10<, , , , >))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListG10<, , , >))]
 #endif
     public static readonly ImmutableArray<Type> SimpleTypes = ImmutableArray.Create(new [] {
         typeof(ArgumentList0),
@@ -58,12 +58,12 @@ public abstract partial record ArgumentList
         typeof(ArgumentListG2<, >),
         typeof(ArgumentListG3<, , >),
         typeof(ArgumentListG4<, , , >),
-        typeof(ArgumentListG5<, , , , >),
-        typeof(ArgumentListG6<, , , , >),
-        typeof(ArgumentListG7<, , , , >),
-        typeof(ArgumentListG8<, , , , >),
-        typeof(ArgumentListG9<, , , , >),
-        typeof(ArgumentListG10<, , , , >),
+        typeof(ArgumentListG5<, , , >),
+        typeof(ArgumentListG6<, , , >),
+        typeof(ArgumentListG7<, , , >),
+        typeof(ArgumentListG8<, , , >),
+        typeof(ArgumentListG9<, , , >),
+        typeof(ArgumentListG10<, , , >),
     });
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -91,32 +91,32 @@ public abstract partial record ArgumentList
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4)
         => AllowGenerics
-            ? new ArgumentListG5<T0, T1, T2, T3, T4>(item0, item1, item2, item3, item4)
+            ? new ArgumentListG5<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4)), item0, item1, item2, item3, item4)
             : new ArgumentListS5(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4)), item0, item1, item2, item3, item4);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4, T5>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5)
         => AllowGenerics
-            ? new ArgumentListG6<T0, T1, T2, T3, T4>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5)), item0, item1, item2, item3, item4, item5)
+            ? new ArgumentListG6<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5)), item0, item1, item2, item3, item4, item5)
             : new ArgumentListS6(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5)), item0, item1, item2, item3, item4, item5);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6)
         => AllowGenerics
-            ? new ArgumentListG7<T0, T1, T2, T3, T4>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6)), item0, item1, item2, item3, item4, item5, item6)
+            ? new ArgumentListG7<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6)), item0, item1, item2, item3, item4, item5, item6)
             : new ArgumentListS7(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6)), item0, item1, item2, item3, item4, item5, item6);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6, T7>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7)
         => AllowGenerics
-            ? new ArgumentListG8<T0, T1, T2, T3, T4>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7)), item0, item1, item2, item3, item4, item5, item6, item7)
+            ? new ArgumentListG8<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7)), item0, item1, item2, item3, item4, item5, item6, item7)
             : new ArgumentListS8(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7)), item0, item1, item2, item3, item4, item5, item6, item7);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6, T7, T8>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8)
         => AllowGenerics
-            ? new ArgumentListG9<T0, T1, T2, T3, T4>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8)), item0, item1, item2, item3, item4, item5, item6, item7, item8)
+            ? new ArgumentListG9<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8)), item0, item1, item2, item3, item4, item5, item6, item7, item8)
             : new ArgumentListS9(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8)), item0, item1, item2, item3, item4, item5, item6, item7, item8);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9)
         => AllowGenerics
-            ? new ArgumentListG10<T0, T1, T2, T3, T4>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9)), item0, item1, item2, item3, item4, item5, item6, item7, item8, item9)
+            ? new ArgumentListG10<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9)), item0, item1, item2, item3, item4, item5, item6, item7, item8, item9)
             : new ArgumentListS10(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9)), item0, item1, item2, item3, item4, item5, item6, item7, item8, item9);
 
     public virtual T Get0<T>() => throw new IndexOutOfRangeException();
@@ -3148,17 +3148,15 @@ public abstract record ArgumentList5 : ArgumentList
         => new Type?[5];
 }
 
-public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
+public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
 {
-    private static ArgumentListType? _cachedType;
-    // ReSharper disable once InconsistentNaming
-    private static ArgumentListType _type => _cachedType ??= ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+    private readonly ArgumentListType _type;
 
     private T0 _item0;
     private T1 _item1;
     private T2 _item2;
     private T3 _item3;
-    private T4 _item4;
+    private object? _item4;
 
     public override ArgumentListType Type => _type;
 
@@ -3182,7 +3180,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
         get => _item3;
         init => _item3 = value;
     }
-    public T4 Item4 {
+    public object? Item4 {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _item4;
         init => _item4 = value;
@@ -3190,17 +3188,20 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
 
     // Constructors
 
-    public ArgumentListG5()
+    public ArgumentListG5(ArgumentListType type)
     {
+        _type = type;
+        var defaultValues = type.DefaultValues;
         _item0 = default!;
         _item1 = default!;
         _item2 = default!;
         _item3 = default!;
-        _item4 = default!;
+        _item4 = defaultValues[4];
     }
 
-    public ArgumentListG5(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4)
+    public ArgumentListG5(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, object? item4)
     {
+        _type = type;
         _item0 = item0;
         _item1 = item1;
         _item2 = item2;
@@ -3211,7 +3212,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentListG5<T0, T1, T2, T3, T4>(Item0, Item1, Item2, Item3, Item4);
+        => new ArgumentListG5<T0, T1, T2, T3>(_type, Item0, Item1, Item2, Item3, Item4);
 
     // ToString & ToArray
 
@@ -3251,6 +3252,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
     {
         var itemTypes = (Type?[]?)null;
         Type? itemType;
+        Type? expectedItemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
             if (itemType != null && itemType != typeof(T0)) {
@@ -3279,9 +3281,10 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
                 itemTypes[3] = itemType;
             }
         }
-        if (!typeof(T4).IsValueType) {
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != typeof(T4)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -3297,7 +3300,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
             1 => typeof(T1),
             2 => typeof(T2),
             3 => typeof(T3),
-            4 => typeof(T4),
+            4 => _type.ItemTypes[4],
             _ => null,
         };
 
@@ -3362,7 +3365,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -3385,7 +3388,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -3408,7 +3411,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         default:
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -3419,7 +3422,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
 
     public override void SetFrom(ArgumentList other)
     {
-        if (other is ArgumentListG5<T0, T1, T2, T3, T4> vOther) {
+        if (other is ArgumentListG5<T0, T1, T2, T3> vOther) {
             _item0 = vOther._item0;
             _item1 = vOther._item1;
             _item2 = vOther._item2;
@@ -3431,7 +3434,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
             _item1 = other.Get1<T1>();
             _item2 = other.Get2<T2>();
             _item3 = other.Get3<T3>();
-            _item4 = other.Get4<T4>();
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
         }
     }
 
@@ -3487,6 +3490,8 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
                 il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
@@ -3532,7 +3537,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
                                 , Expression.PropertyOrField(vList, "Item1")
                                 , Expression.PropertyOrField(vList, "Item2")
                                 , Expression.PropertyOrField(vList, "Item3")
-                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
                                 ))
                     ]);
                 return (Func<object?, ArgumentList, object?>)Expression
@@ -3546,6 +3551,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
+        var itemTypes = _type.ItemTypes;
         if (typeof(T0).IsValueType)
             reader.OnStruct(_item0, 0);
         else
@@ -3562,15 +3568,14 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
             reader.OnStruct(_item3, 3);
         else
             reader.OnClass(typeof(T3), _item3, 3);
-        if (typeof(T4).IsValueType)
-            reader.OnStruct(_item4, 4);
-        else
-            reader.OnClass(typeof(T4), _item4, 4);
+        reader.OnAny(itemTypes[4], _item4, 4);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
+        var itemTypes = _type.ItemTypes;
+        var defaultValues = _type.DefaultValues;
         if (typeof(T0).IsValueType)
             _item0 = writer.OnStruct<T0>(0);
         else
@@ -3587,20 +3592,17 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
             _item3 = writer.OnStruct<T3>(3);
         else
             _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
-        if (typeof(T4).IsValueType)
-            _item4 = writer.OnStruct<T4>(4);
-        else
-            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
     }
 
     // Equality
 
-    public bool Equals(ArgumentListG5<T0, T1, T2, T3, T4>? other)
+    public bool Equals(ArgumentListG5<T0, T1, T2, T3>? other)
     {
         if (other == null)
             return false;
 
-        if (!EqualityComparer<T4>.Default.Equals(Item4, other.Item4))
+        if (!Equals(Item4, other.Item4))
             return false;
         if (!EqualityComparer<T3>.Default.Equals(Item3, other.Item3))
             return false;
@@ -3615,10 +3617,10 @@ public sealed record ArgumentListG5<T0, T1, T2, T3, T4> : ArgumentList5
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentListG5<T0, T1, T2, T3, T4> vOther)
+        if (other is not ArgumentListG5<T0, T1, T2, T3> vOther)
             return false;
 
-        if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
             return false;
         if (skipIndex != 3 && !EqualityComparer<T3>.Default.Equals(Item3, vOther.Item3))
             return false;
@@ -4183,7 +4185,7 @@ public abstract record ArgumentList6 : ArgumentList
         => new Type?[6];
 }
 
-public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
+public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
 {
     private readonly ArgumentListType _type;
 
@@ -4191,7 +4193,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
     private T1 _item1;
     private T2 _item2;
     private T3 _item3;
-    private T4 _item4;
+    private object? _item4;
     private object? _item5;
 
     public override ArgumentListType Type => _type;
@@ -4216,7 +4218,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
         get => _item3;
         init => _item3 = value;
     }
-    public T4 Item4 {
+    public object? Item4 {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _item4;
         init => _item4 = value;
@@ -4237,11 +4239,11 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
         _item1 = default!;
         _item2 = default!;
         _item3 = default!;
-        _item4 = default!;
+        _item4 = defaultValues[4];
         _item5 = defaultValues[5];
     }
 
-    public ArgumentListG6(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, object? item5)
+    public ArgumentListG6(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, object? item4, object? item5)
     {
         _type = type;
         _item0 = item0;
@@ -4255,7 +4257,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentListG6<T0, T1, T2, T3, T4>(_type, Item0, Item1, Item2, Item3, Item4, Item5);
+        => new ArgumentListG6<T0, T1, T2, T3>(_type, Item0, Item1, Item2, Item3, Item4, Item5);
 
     // ToString & ToArray
 
@@ -4327,9 +4329,10 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
                 itemTypes[3] = itemType;
             }
         }
-        if (!typeof(T4).IsValueType) {
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != typeof(T4)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -4353,7 +4356,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
             1 => typeof(T1),
             2 => typeof(T2),
             3 => typeof(T3),
-            4 => typeof(T4),
+            4 => _type.ItemTypes[4],
             5 => _type.ItemTypes[5],
             _ => null,
         };
@@ -4424,7 +4427,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -4450,7 +4453,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -4476,7 +4479,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -4490,7 +4493,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
 
     public override void SetFrom(ArgumentList other)
     {
-        if (other is ArgumentListG6<T0, T1, T2, T3, T4> vOther) {
+        if (other is ArgumentListG6<T0, T1, T2, T3> vOther) {
             _item0 = vOther._item0;
             _item1 = vOther._item1;
             _item2 = vOther._item2;
@@ -4503,7 +4506,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
             _item1 = other.Get1<T1>();
             _item2 = other.Get2<T2>();
             _item3 = other.Get3<T3>();
-            _item4 = other.Get4<T4>();
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
             _item5 = _type.CastItem(5, other.GetUntyped(5));
         }
     }
@@ -4562,6 +4565,8 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
                 itemType = type.ItemTypes[5];
@@ -4613,7 +4618,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
                                 , Expression.PropertyOrField(vList, "Item1")
                                 , Expression.PropertyOrField(vList, "Item2")
                                 , Expression.PropertyOrField(vList, "Item3")
-                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
                                 ))
                     ]);
@@ -4645,10 +4650,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
             reader.OnStruct(_item3, 3);
         else
             reader.OnClass(typeof(T3), _item3, 3);
-        if (typeof(T4).IsValueType)
-            reader.OnStruct(_item4, 4);
-        else
-            reader.OnClass(typeof(T4), _item4, 4);
+        reader.OnAny(itemTypes[4], _item4, 4);
         reader.OnAny(itemTypes[5], _item5, 5);
     }
 
@@ -4673,23 +4675,20 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
             _item3 = writer.OnStruct<T3>(3);
         else
             _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
-        if (typeof(T4).IsValueType)
-            _item4 = writer.OnStruct<T4>(4);
-        else
-            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
         _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
     }
 
     // Equality
 
-    public bool Equals(ArgumentListG6<T0, T1, T2, T3, T4>? other)
+    public bool Equals(ArgumentListG6<T0, T1, T2, T3>? other)
     {
         if (other == null)
             return false;
 
         if (!Equals(Item5, other.Item5))
             return false;
-        if (!EqualityComparer<T4>.Default.Equals(Item4, other.Item4))
+        if (!Equals(Item4, other.Item4))
             return false;
         if (!EqualityComparer<T3>.Default.Equals(Item3, other.Item3))
             return false;
@@ -4704,12 +4703,12 @@ public sealed record ArgumentListG6<T0, T1, T2, T3, T4> : ArgumentList6
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentListG6<T0, T1, T2, T3, T4> vOther)
+        if (other is not ArgumentListG6<T0, T1, T2, T3> vOther)
             return false;
 
         if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
             return false;
-        if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
             return false;
         if (skipIndex != 3 && !EqualityComparer<T3>.Default.Equals(Item3, vOther.Item3))
             return false;
@@ -5333,7 +5332,7 @@ public abstract record ArgumentList7 : ArgumentList
         => new Type?[7];
 }
 
-public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
+public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
 {
     private readonly ArgumentListType _type;
 
@@ -5341,7 +5340,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
     private T1 _item1;
     private T2 _item2;
     private T3 _item3;
-    private T4 _item4;
+    private object? _item4;
     private object? _item5;
     private object? _item6;
 
@@ -5367,7 +5366,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
         get => _item3;
         init => _item3 = value;
     }
-    public T4 Item4 {
+    public object? Item4 {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _item4;
         init => _item4 = value;
@@ -5393,12 +5392,12 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
         _item1 = default!;
         _item2 = default!;
         _item3 = default!;
-        _item4 = default!;
+        _item4 = defaultValues[4];
         _item5 = defaultValues[5];
         _item6 = defaultValues[6];
     }
 
-    public ArgumentListG7(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, object? item5, object? item6)
+    public ArgumentListG7(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, object? item4, object? item5, object? item6)
     {
         _type = type;
         _item0 = item0;
@@ -5413,7 +5412,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentListG7<T0, T1, T2, T3, T4>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6);
+        => new ArgumentListG7<T0, T1, T2, T3>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6);
 
     // ToString & ToArray
 
@@ -5488,9 +5487,10 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
                 itemTypes[3] = itemType;
             }
         }
-        if (!typeof(T4).IsValueType) {
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != typeof(T4)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -5522,7 +5522,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
             1 => typeof(T1),
             2 => typeof(T2),
             3 => typeof(T3),
-            4 => typeof(T4),
+            4 => _type.ItemTypes[4],
             5 => _type.ItemTypes[5],
             6 => _type.ItemTypes[6],
             _ => null,
@@ -5599,7 +5599,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -5628,7 +5628,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -5657,7 +5657,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -5674,7 +5674,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
 
     public override void SetFrom(ArgumentList other)
     {
-        if (other is ArgumentListG7<T0, T1, T2, T3, T4> vOther) {
+        if (other is ArgumentListG7<T0, T1, T2, T3> vOther) {
             _item0 = vOther._item0;
             _item1 = vOther._item1;
             _item2 = vOther._item2;
@@ -5688,7 +5688,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
             _item1 = other.Get1<T1>();
             _item2 = other.Get2<T2>();
             _item3 = other.Get3<T3>();
-            _item4 = other.Get4<T4>();
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
             _item5 = _type.CastItem(5, other.GetUntyped(5));
             _item6 = _type.CastItem(6, other.GetUntyped(6));
         }
@@ -5750,6 +5750,8 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
                 itemType = type.ItemTypes[5];
@@ -5807,7 +5809,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
                                 , Expression.PropertyOrField(vList, "Item1")
                                 , Expression.PropertyOrField(vList, "Item2")
                                 , Expression.PropertyOrField(vList, "Item3")
-                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
                                 ))
@@ -5840,10 +5842,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
             reader.OnStruct(_item3, 3);
         else
             reader.OnClass(typeof(T3), _item3, 3);
-        if (typeof(T4).IsValueType)
-            reader.OnStruct(_item4, 4);
-        else
-            reader.OnClass(typeof(T4), _item4, 4);
+        reader.OnAny(itemTypes[4], _item4, 4);
         reader.OnAny(itemTypes[5], _item5, 5);
         reader.OnAny(itemTypes[6], _item6, 6);
     }
@@ -5869,17 +5868,14 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
             _item3 = writer.OnStruct<T3>(3);
         else
             _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
-        if (typeof(T4).IsValueType)
-            _item4 = writer.OnStruct<T4>(4);
-        else
-            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
         _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
         _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
     }
 
     // Equality
 
-    public bool Equals(ArgumentListG7<T0, T1, T2, T3, T4>? other)
+    public bool Equals(ArgumentListG7<T0, T1, T2, T3>? other)
     {
         if (other == null)
             return false;
@@ -5888,7 +5884,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
             return false;
         if (!Equals(Item5, other.Item5))
             return false;
-        if (!EqualityComparer<T4>.Default.Equals(Item4, other.Item4))
+        if (!Equals(Item4, other.Item4))
             return false;
         if (!EqualityComparer<T3>.Default.Equals(Item3, other.Item3))
             return false;
@@ -5903,14 +5899,14 @@ public sealed record ArgumentListG7<T0, T1, T2, T3, T4> : ArgumentList7
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentListG7<T0, T1, T2, T3, T4> vOther)
+        if (other is not ArgumentListG7<T0, T1, T2, T3> vOther)
             return false;
 
         if (skipIndex != 6 && !Equals(Item6, vOther.Item6))
             return false;
         if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
             return false;
-        if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
             return false;
         if (skipIndex != 3 && !EqualityComparer<T3>.Default.Equals(Item3, vOther.Item3))
             return false;
@@ -6593,7 +6589,7 @@ public abstract record ArgumentList8 : ArgumentList
         => new Type?[8];
 }
 
-public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
+public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
 {
     private readonly ArgumentListType _type;
 
@@ -6601,7 +6597,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
     private T1 _item1;
     private T2 _item2;
     private T3 _item3;
-    private T4 _item4;
+    private object? _item4;
     private object? _item5;
     private object? _item6;
     private object? _item7;
@@ -6628,7 +6624,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
         get => _item3;
         init => _item3 = value;
     }
-    public T4 Item4 {
+    public object? Item4 {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _item4;
         init => _item4 = value;
@@ -6659,13 +6655,13 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
         _item1 = default!;
         _item2 = default!;
         _item3 = default!;
-        _item4 = default!;
+        _item4 = defaultValues[4];
         _item5 = defaultValues[5];
         _item6 = defaultValues[6];
         _item7 = defaultValues[7];
     }
 
-    public ArgumentListG8(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, object? item5, object? item6, object? item7)
+    public ArgumentListG8(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, object? item4, object? item5, object? item6, object? item7)
     {
         _type = type;
         _item0 = item0;
@@ -6681,7 +6677,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentListG8<T0, T1, T2, T3, T4>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7);
+        => new ArgumentListG8<T0, T1, T2, T3>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7);
 
     // ToString & ToArray
 
@@ -6759,9 +6755,10 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
                 itemTypes[3] = itemType;
             }
         }
-        if (!typeof(T4).IsValueType) {
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != typeof(T4)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -6801,7 +6798,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
             1 => typeof(T1),
             2 => typeof(T2),
             3 => typeof(T3),
-            4 => typeof(T4),
+            4 => _type.ItemTypes[4],
             5 => _type.ItemTypes[5],
             6 => _type.ItemTypes[6],
             7 => _type.ItemTypes[7],
@@ -6884,7 +6881,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -6916,7 +6913,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -6948,7 +6945,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -6968,7 +6965,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
 
     public override void SetFrom(ArgumentList other)
     {
-        if (other is ArgumentListG8<T0, T1, T2, T3, T4> vOther) {
+        if (other is ArgumentListG8<T0, T1, T2, T3> vOther) {
             _item0 = vOther._item0;
             _item1 = vOther._item1;
             _item2 = vOther._item2;
@@ -6983,7 +6980,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
             _item1 = other.Get1<T1>();
             _item2 = other.Get2<T2>();
             _item3 = other.Get3<T3>();
-            _item4 = other.Get4<T4>();
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
             _item5 = _type.CastItem(5, other.GetUntyped(5));
             _item6 = _type.CastItem(6, other.GetUntyped(6));
             _item7 = _type.CastItem(7, other.GetUntyped(7));
@@ -7048,6 +7045,8 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
                 itemType = type.ItemTypes[5];
@@ -7111,7 +7110,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
                                 , Expression.PropertyOrField(vList, "Item1")
                                 , Expression.PropertyOrField(vList, "Item2")
                                 , Expression.PropertyOrField(vList, "Item3")
-                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item7"), type.ItemTypes[7])
@@ -7145,10 +7144,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
             reader.OnStruct(_item3, 3);
         else
             reader.OnClass(typeof(T3), _item3, 3);
-        if (typeof(T4).IsValueType)
-            reader.OnStruct(_item4, 4);
-        else
-            reader.OnClass(typeof(T4), _item4, 4);
+        reader.OnAny(itemTypes[4], _item4, 4);
         reader.OnAny(itemTypes[5], _item5, 5);
         reader.OnAny(itemTypes[6], _item6, 6);
         reader.OnAny(itemTypes[7], _item7, 7);
@@ -7175,10 +7171,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
             _item3 = writer.OnStruct<T3>(3);
         else
             _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
-        if (typeof(T4).IsValueType)
-            _item4 = writer.OnStruct<T4>(4);
-        else
-            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
         _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
         _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
         _item7 = writer.OnAny(itemTypes[7], 7, defaultValues[7]);
@@ -7186,7 +7179,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
 
     // Equality
 
-    public bool Equals(ArgumentListG8<T0, T1, T2, T3, T4>? other)
+    public bool Equals(ArgumentListG8<T0, T1, T2, T3>? other)
     {
         if (other == null)
             return false;
@@ -7197,7 +7190,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
             return false;
         if (!Equals(Item5, other.Item5))
             return false;
-        if (!EqualityComparer<T4>.Default.Equals(Item4, other.Item4))
+        if (!Equals(Item4, other.Item4))
             return false;
         if (!EqualityComparer<T3>.Default.Equals(Item3, other.Item3))
             return false;
@@ -7212,7 +7205,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentListG8<T0, T1, T2, T3, T4> vOther)
+        if (other is not ArgumentListG8<T0, T1, T2, T3> vOther)
             return false;
 
         if (skipIndex != 7 && !Equals(Item7, vOther.Item7))
@@ -7221,7 +7214,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3, T4> : ArgumentList8
             return false;
         if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
             return false;
-        if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
             return false;
         if (skipIndex != 3 && !EqualityComparer<T3>.Default.Equals(Item3, vOther.Item3))
             return false;
@@ -7963,7 +7956,7 @@ public abstract record ArgumentList9 : ArgumentList
         => new Type?[9];
 }
 
-public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
+public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
 {
     private readonly ArgumentListType _type;
 
@@ -7971,7 +7964,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
     private T1 _item1;
     private T2 _item2;
     private T3 _item3;
-    private T4 _item4;
+    private object? _item4;
     private object? _item5;
     private object? _item6;
     private object? _item7;
@@ -7999,7 +7992,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
         get => _item3;
         init => _item3 = value;
     }
-    public T4 Item4 {
+    public object? Item4 {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _item4;
         init => _item4 = value;
@@ -8035,14 +8028,14 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
         _item1 = default!;
         _item2 = default!;
         _item3 = default!;
-        _item4 = default!;
+        _item4 = defaultValues[4];
         _item5 = defaultValues[5];
         _item6 = defaultValues[6];
         _item7 = defaultValues[7];
         _item8 = defaultValues[8];
     }
 
-    public ArgumentListG9(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, object? item5, object? item6, object? item7, object? item8)
+    public ArgumentListG9(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, object? item4, object? item5, object? item6, object? item7, object? item8)
     {
         _type = type;
         _item0 = item0;
@@ -8059,7 +8052,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentListG9<T0, T1, T2, T3, T4>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8);
+        => new ArgumentListG9<T0, T1, T2, T3>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8);
 
     // ToString & ToArray
 
@@ -8140,9 +8133,10 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
                 itemTypes[3] = itemType;
             }
         }
-        if (!typeof(T4).IsValueType) {
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != typeof(T4)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -8190,7 +8184,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
             1 => typeof(T1),
             2 => typeof(T2),
             3 => typeof(T3),
-            4 => typeof(T4),
+            4 => _type.ItemTypes[4],
             5 => _type.ItemTypes[5],
             6 => _type.ItemTypes[6],
             7 => _type.ItemTypes[7],
@@ -8279,7 +8273,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -8314,7 +8308,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -8349,7 +8343,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -8372,7 +8366,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
 
     public override void SetFrom(ArgumentList other)
     {
-        if (other is ArgumentListG9<T0, T1, T2, T3, T4> vOther) {
+        if (other is ArgumentListG9<T0, T1, T2, T3> vOther) {
             _item0 = vOther._item0;
             _item1 = vOther._item1;
             _item2 = vOther._item2;
@@ -8388,7 +8382,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
             _item1 = other.Get1<T1>();
             _item2 = other.Get2<T2>();
             _item3 = other.Get3<T3>();
-            _item4 = other.Get4<T4>();
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
             _item5 = _type.CastItem(5, other.GetUntyped(5));
             _item6 = _type.CastItem(6, other.GetUntyped(6));
             _item7 = _type.CastItem(7, other.GetUntyped(7));
@@ -8456,6 +8450,8 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
                 itemType = type.ItemTypes[5];
@@ -8525,7 +8521,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
                                 , Expression.PropertyOrField(vList, "Item1")
                                 , Expression.PropertyOrField(vList, "Item2")
                                 , Expression.PropertyOrField(vList, "Item3")
-                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item7"), type.ItemTypes[7])
@@ -8560,10 +8556,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
             reader.OnStruct(_item3, 3);
         else
             reader.OnClass(typeof(T3), _item3, 3);
-        if (typeof(T4).IsValueType)
-            reader.OnStruct(_item4, 4);
-        else
-            reader.OnClass(typeof(T4), _item4, 4);
+        reader.OnAny(itemTypes[4], _item4, 4);
         reader.OnAny(itemTypes[5], _item5, 5);
         reader.OnAny(itemTypes[6], _item6, 6);
         reader.OnAny(itemTypes[7], _item7, 7);
@@ -8591,10 +8584,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
             _item3 = writer.OnStruct<T3>(3);
         else
             _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
-        if (typeof(T4).IsValueType)
-            _item4 = writer.OnStruct<T4>(4);
-        else
-            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
         _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
         _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
         _item7 = writer.OnAny(itemTypes[7], 7, defaultValues[7]);
@@ -8603,7 +8593,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
 
     // Equality
 
-    public bool Equals(ArgumentListG9<T0, T1, T2, T3, T4>? other)
+    public bool Equals(ArgumentListG9<T0, T1, T2, T3>? other)
     {
         if (other == null)
             return false;
@@ -8616,7 +8606,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
             return false;
         if (!Equals(Item5, other.Item5))
             return false;
-        if (!EqualityComparer<T4>.Default.Equals(Item4, other.Item4))
+        if (!Equals(Item4, other.Item4))
             return false;
         if (!EqualityComparer<T3>.Default.Equals(Item3, other.Item3))
             return false;
@@ -8631,7 +8621,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentListG9<T0, T1, T2, T3, T4> vOther)
+        if (other is not ArgumentListG9<T0, T1, T2, T3> vOther)
             return false;
 
         if (skipIndex != 8 && !Equals(Item8, vOther.Item8))
@@ -8642,7 +8632,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3, T4> : ArgumentList9
             return false;
         if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
             return false;
-        if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
             return false;
         if (skipIndex != 3 && !EqualityComparer<T3>.Default.Equals(Item3, vOther.Item3))
             return false;
@@ -9443,7 +9433,7 @@ public abstract record ArgumentList10 : ArgumentList
         => new Type?[10];
 }
 
-public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
+public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
 {
     private readonly ArgumentListType _type;
 
@@ -9451,7 +9441,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
     private T1 _item1;
     private T2 _item2;
     private T3 _item3;
-    private T4 _item4;
+    private object? _item4;
     private object? _item5;
     private object? _item6;
     private object? _item7;
@@ -9480,7 +9470,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
         get => _item3;
         init => _item3 = value;
     }
-    public T4 Item4 {
+    public object? Item4 {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _item4;
         init => _item4 = value;
@@ -9521,7 +9511,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
         _item1 = default!;
         _item2 = default!;
         _item3 = default!;
-        _item4 = default!;
+        _item4 = defaultValues[4];
         _item5 = defaultValues[5];
         _item6 = defaultValues[6];
         _item7 = defaultValues[7];
@@ -9529,7 +9519,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
         _item9 = defaultValues[9];
     }
 
-    public ArgumentListG10(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, object? item5, object? item6, object? item7, object? item8, object? item9)
+    public ArgumentListG10(ArgumentListType type, T0 item0, T1 item1, T2 item2, T3 item3, object? item4, object? item5, object? item6, object? item7, object? item8, object? item9)
     {
         _type = type;
         _item0 = item0;
@@ -9547,7 +9537,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
     // Duplicate
 
     public override ArgumentList Duplicate()
-        => new ArgumentListG10<T0, T1, T2, T3, T4>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8, Item9);
+        => new ArgumentListG10<T0, T1, T2, T3>(_type, Item0, Item1, Item2, Item3, Item4, Item5, Item6, Item7, Item8, Item9);
 
     // ToString & ToArray
 
@@ -9631,9 +9621,10 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
                 itemTypes[3] = itemType;
             }
         }
-        if (!typeof(T4).IsValueType) {
+        expectedItemType = _type.ItemTypes[4];
+        if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != typeof(T4)) {
+            if (itemType != null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -9689,7 +9680,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
             1 => typeof(T1),
             2 => typeof(T2),
             3 => typeof(T3),
-            4 => typeof(T4),
+            4 => _type.ItemTypes[4],
             5 => _type.ItemTypes[5],
             6 => _type.ItemTypes[6],
             7 => _type.ItemTypes[7],
@@ -9784,7 +9775,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -9822,7 +9813,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -9860,7 +9851,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
             _item3 = item is T3 item3 ? item3 : default!;
             break;
         case 4:
-            _item4 = item is T4 item4 ? item4 : default!;
+            _item4 = _type.CastItem(4, item);
             break;
         case 5:
             _item5 = _type.CastItem(5, item);
@@ -9886,7 +9877,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
 
     public override void SetFrom(ArgumentList other)
     {
-        if (other is ArgumentListG10<T0, T1, T2, T3, T4> vOther) {
+        if (other is ArgumentListG10<T0, T1, T2, T3> vOther) {
             _item0 = vOther._item0;
             _item1 = vOther._item1;
             _item2 = vOther._item2;
@@ -9903,7 +9894,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
             _item1 = other.Get1<T1>();
             _item2 = other.Get2<T2>();
             _item3 = other.Get3<T3>();
-            _item4 = other.Get4<T4>();
+            _item4 = _type.CastItem(4, other.GetUntyped(4));
             _item5 = _type.CastItem(5, other.GetUntyped(5));
             _item6 = _type.CastItem(6, other.GetUntyped(6));
             _item7 = _type.CastItem(7, other.GetUntyped(7));
@@ -9974,6 +9965,8 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item4")!.GetGetMethod()!);
+                itemType = type.ItemTypes[4];
+                il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item5")!.GetGetMethod()!);
                 itemType = type.ItemTypes[5];
@@ -10049,7 +10042,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
                                 , Expression.PropertyOrField(vList, "Item1")
                                 , Expression.PropertyOrField(vList, "Item2")
                                 , Expression.PropertyOrField(vList, "Item3")
-                                , Expression.PropertyOrField(vList, "Item4")
+                                , Expression.Convert(Expression.PropertyOrField(vList, "Item4"), type.ItemTypes[4])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item5"), type.ItemTypes[5])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item6"), type.ItemTypes[6])
                                 , Expression.Convert(Expression.PropertyOrField(vList, "Item7"), type.ItemTypes[7])
@@ -10085,10 +10078,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
             reader.OnStruct(_item3, 3);
         else
             reader.OnClass(typeof(T3), _item3, 3);
-        if (typeof(T4).IsValueType)
-            reader.OnStruct(_item4, 4);
-        else
-            reader.OnClass(typeof(T4), _item4, 4);
+        reader.OnAny(itemTypes[4], _item4, 4);
         reader.OnAny(itemTypes[5], _item5, 5);
         reader.OnAny(itemTypes[6], _item6, 6);
         reader.OnAny(itemTypes[7], _item7, 7);
@@ -10117,10 +10107,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
             _item3 = writer.OnStruct<T3>(3);
         else
             _item3 = (T3)writer.OnClass(typeof(T3), 3)!;
-        if (typeof(T4).IsValueType)
-            _item4 = writer.OnStruct<T4>(4);
-        else
-            _item4 = (T4)writer.OnClass(typeof(T4), 4)!;
+        _item4 = writer.OnAny(itemTypes[4], 4, defaultValues[4]);
         _item5 = writer.OnAny(itemTypes[5], 5, defaultValues[5]);
         _item6 = writer.OnAny(itemTypes[6], 6, defaultValues[6]);
         _item7 = writer.OnAny(itemTypes[7], 7, defaultValues[7]);
@@ -10130,7 +10117,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
 
     // Equality
 
-    public bool Equals(ArgumentListG10<T0, T1, T2, T3, T4>? other)
+    public bool Equals(ArgumentListG10<T0, T1, T2, T3>? other)
     {
         if (other == null)
             return false;
@@ -10145,7 +10132,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
             return false;
         if (!Equals(Item5, other.Item5))
             return false;
-        if (!EqualityComparer<T4>.Default.Equals(Item4, other.Item4))
+        if (!Equals(Item4, other.Item4))
             return false;
         if (!EqualityComparer<T3>.Default.Equals(Item3, other.Item3))
             return false;
@@ -10160,7 +10147,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
 
     public override bool Equals(ArgumentList? other, int skipIndex)
     {
-        if (other is not ArgumentListG10<T0, T1, T2, T3, T4> vOther)
+        if (other is not ArgumentListG10<T0, T1, T2, T3> vOther)
             return false;
 
         if (skipIndex != 9 && !Equals(Item9, vOther.Item9))
@@ -10173,7 +10160,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3, T4> : ArgumentList10
             return false;
         if (skipIndex != 5 && !Equals(Item5, vOther.Item5))
             return false;
-        if (skipIndex != 4 && !EqualityComparer<T4>.Default.Equals(Item4, vOther.Item4))
+        if (skipIndex != 4 && !Equals(Item4, vOther.Item4))
             return false;
         if (skipIndex != 3 && !EqualityComparer<T3>.Default.Equals(Item3, vOther.Item3))
             return false;

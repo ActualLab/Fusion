@@ -11,7 +11,7 @@
 <#@ import namespace="System.Text" #>
 <#
     const int maxItemCount = 10;
-    const int maxGenericItemCount = 5;
+    const int maxGenericItemCount = 4;
 
     IEnumerable<int> AllBut(int count, int exceptIndex, int startIndex = 0)
     {
