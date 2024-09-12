@@ -33,15 +33,19 @@ public struct StochasticCounter
 
     // Overloads w/o random
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryIncrement(int max)
         => TryIncrement(RandomShared.Next(), max);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryDecrement(int min)
         => TryDecrement(RandomShared.Next(), min);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int? Increment()
         => Increment(RandomShared.Next());
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int? Decrement()
         => Decrement(RandomShared.Next());
 
