@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <TargetFrameworks Condition="$(UseMultitargeting)">net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1</TargetFrameworks>
-    <TargetFramework Condition="!$(UseMultitargeting)">net8.0</TargetFramework>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1</TargetFrameworks>
+    <TargetFramework Condition="!$(UseMultitargeting)">net9.0</TargetFramework>
     <RazorLangVersion>3.0</RazorLangVersion>
     <PackageTags>actual_chat actual_lab actual_lab_fusion blazor</PackageTags>
     <Description>Blazor components of ActualLab.Fusion - <!--
@@ -23,11 +23,17 @@
   <Target Name="PrepareProjectReferences" />
   <!-- End of workaround -->
 
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
     <PackageReference Include="Microsoft.AspNetCore.Components" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
+    <PackageReference Include="Microsoft.AspNetCore.Components" VersionOverride="$(BlazorVersion8)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" VersionOverride="$(BlazorVersion8)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" VersionOverride="$(BlazorVersion8)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" VersionOverride="$(BlazorVersion8)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
     <PackageReference Include="Microsoft.AspNetCore.Components" VersionOverride="$(BlazorVersion7)" />

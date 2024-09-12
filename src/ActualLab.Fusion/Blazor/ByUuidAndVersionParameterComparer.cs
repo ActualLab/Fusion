@@ -5,6 +5,8 @@ namespace ActualLab.Fusion.Blazor;
 public sealed class ByUuidAndVersionParameterComparer<TVersion> : ParameterComparer
     where TVersion : notnull
 {
+    public static ByUuidAndVersionParameterComparer<TVersion> Instance { get; } = new();
+
     public override bool AreEqual(object? oldValue, object? newValue)
     {
         if (ReferenceEquals(oldValue, newValue))

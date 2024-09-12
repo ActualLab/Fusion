@@ -9,10 +9,7 @@ namespace ActualLab.Fusion.Blazor;
     AttributeTargets.Enum |
     AttributeTargets.Delegate |
     AttributeTargets.Property)]
-public class ParameterComparerAttribute : Attribute
+public class ParameterComparerAttribute(Type comparerType) : Attribute
 {
-    public Type ComparerType { get; }
-
-    public ParameterComparerAttribute(Type comparerType)
-        => ComparerType = comparerType;
+    public Type ComparerType { get; } = comparerType;
 }

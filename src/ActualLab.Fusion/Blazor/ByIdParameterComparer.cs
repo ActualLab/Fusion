@@ -2,6 +2,8 @@ namespace ActualLab.Fusion.Blazor;
 
 public sealed class ByIdParameterComparer<TId> : ParameterComparer
 {
+    public static ByIdParameterComparer<TId> Instance { get; } = new();
+
     public override bool AreEqual(object? oldValue, object? newValue)
     {
         if (ReferenceEquals(oldValue, newValue))

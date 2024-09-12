@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks Condition="$(UseMultitargeting)">net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
-    <TargetFramework Condition="!$(UseMultitargeting)">net8.0</TargetFramework>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <TargetFramework Condition="!$(UseMultitargeting)">net9.0</TargetFramework>
     <RootNamespace>ActualLab</RootNamespace>
     <PackageTags>actual_chat actual_lab actual_lab_fusion core</PackageTags>
     <Description>ActualLab.Core is a collection of <!--
@@ -28,7 +28,7 @@
     <PackageReference Include="MemoryPack.Generator" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
@@ -38,6 +38,16 @@
     <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.Threading.Channels" />
   </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion8)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="$(MicrosoftExtensionsVersion8)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion8)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion8)" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" VersionOverride="$(MicrosoftExtensionsVersion8)" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" VersionOverride="$(MicrosoftExtensionsVersion8)" />
+    <PackageReference Include="System.Collections.Immutable" VersionOverride="$(MicrosoftExtensionsVersion8)" />
+    <PackageReference Include="System.Threading.Channels" VersionOverride="$(MicrosoftExtensionsVersion8)" />
+  </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion7)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="$(MicrosoftExtensionsVersion7)" />
@@ -45,18 +55,18 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion7)" />
     <PackageReference Include="Microsoft.Extensions.Hosting" VersionOverride="$(MicrosoftExtensionsVersion7)" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" VersionOverride="$(MicrosoftExtensionsVersion7)" />
-    <PackageReference Include="System.Collections.Immutable" VersionOverride="$(SystemXxxVersion7)" />
-    <PackageReference Include="System.Threading.Channels" VersionOverride="$(SystemXxxVersion7)" />
+    <PackageReference Include="System.Collections.Immutable" VersionOverride="$(MicrosoftExtensionsVersion7)" />
+    <PackageReference Include="System.Threading.Channels" VersionOverride="$(MicrosoftExtensionsVersion7)" />
   </ItemGroup>
-  <ItemGroup Condition="!($(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion6)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="$(MicrosoftExtensionsVersion6)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion6)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion6)" />
     <PackageReference Include="Microsoft.Extensions.Hosting" VersionOverride="$(MicrosoftExtensionsVersion6)" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" VersionOverride="$(MicrosoftExtensionsVersion6)" />
-    <PackageReference Include="System.Collections.Immutable" VersionOverride="$(SystemXxxVersion6)" />
-    <PackageReference Include="System.Threading.Channels" VersionOverride="$(SystemXxxVersion6)" />
+    <PackageReference Include="System.Collections.Immutable" VersionOverride="$(MicrosoftExtensionsVersion6)" />
+    <PackageReference Include="System.Threading.Channels" VersionOverride="$(MicrosoftExtensionsVersion6)" />
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('netstandard2.0'))">

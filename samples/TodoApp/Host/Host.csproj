@@ -53,20 +53,4 @@
     <None Include="$(ProjectDir)\Resources\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" LinkBase="Resources\" />
   </ItemGroup>
 
-  <ItemGroup>
-    <_ContentIncludedByDefault Remove="artifacts\obj\Host\Debug\net8.0\Host.sourcelink.json" />
-    <_ContentIncludedByDefault Remove="artifacts\obj\Host\Debug\net8.0\staticwebassets.build.json" />
-    <_ContentIncludedByDefault Remove="artifacts\obj\Host\Debug\net8.0\staticwebassets.development.json" />
-    <_ContentIncludedByDefault Remove="artifacts\obj\Host\Host.csproj.nuget.dgspec.json" />
-    <_ContentIncludedByDefault Remove="artifacts\obj\Host\project.assets.json" />
-    <_ContentIncludedByDefault Remove="artifacts\samples\Host\net8.0\ActualLab.Fusion.Blazor.Authentication.staticwebassets.runtime.json" />
-    <_ContentIncludedByDefault Remove="artifacts\samples\Host\net8.0\appsettings.Development.json" />
-    <_ContentIncludedByDefault Remove="artifacts\samples\Host\net8.0\appsettings.json" />
-    <_ContentIncludedByDefault Remove="artifacts\samples\Host\net8.0\BlazorDebugProxy\BrowserDebugHost.runtimeconfig.json" />
-    <_ContentIncludedByDefault Remove="artifacts\samples\Host\net8.0\Samples.TodoApp.Host.deps.json" />
-    <_ContentIncludedByDefault Remove="artifacts\samples\Host\net8.0\Samples.TodoApp.Host.runtimeconfig.json" />
-    <_ContentIncludedByDefault Remove="artifacts\samples\Host\net8.0\Samples.TodoApp.Host.staticwebassets.runtime.json" />
-    <_ContentIncludedByDefault Remove="artifacts\samples\Host\net8.0\Samples.TodoApp.UI.staticwebassets.runtime.json" />
-  </ItemGroup>
-
 </Project>

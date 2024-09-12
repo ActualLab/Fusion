@@ -6,8 +6,8 @@
 
   <!-- Defaults -->
   <PropertyGroup>
-    <TargetFrameworks Condition="$(UseMultitargeting) == 'true'">net8.0</TargetFrameworks>
-    <TargetFramework Condition="$(UseMultitargeting) == '' or $(UseMultitargeting) == 'false'">net8.0</TargetFramework>
+    <TargetFrameworks Condition="$(UseMultitargeting) == 'true'">net9.0</TargetFrameworks>
+    <TargetFramework Condition="$(UseMultitargeting) == '' or $(UseMultitargeting) == 'false'">net9.0</TargetFramework>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
