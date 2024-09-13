@@ -93,6 +93,9 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
                 var debugCategories = new List<string> {
                     "ActualLab.Rpc",
                     "ActualLab.Fusion",
+                    // "ActualLab.Fusion.EntityFramework",
+                    // "ActualLab.Fusion.EntityFramework.LogProcessing",
+                    // "ActualLab.Fusion.EntityFramework.Operations",
                     "ActualLab.CommandR",
                     "ActualLab.Tests",
                     "ActualLab.Tests.Fusion",

@@ -1,17 +1,10 @@
 using ActualLab.CommandR.Internal;
+using ActualLab.Versioning;
 using Cysharp.Text;
 
 namespace ActualLab.CommandR.Operations;
 
-public class Operation(
-    Symbol uuid,
-    Symbol hostId,
-    Moment loggedAt = default,
-    ICommand? command = null,
-    MutablePropertyBag? items = null,
-    ImmutableList<NestedOperation>? nestedOperations = null,
-    IOperationScope? scope = null
-    ) : IHasUuid, IHasId<Symbol>
+public class Operation : IHasUuid, IHasId<Symbol>
 {
 #if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
@@ -21,14 +14,13 @@ public class Operation(
     Symbol IHasId<Symbol>.Id => Uuid;
 
     public long? Index { get; set; }
-    public Symbol Uuid { get; set; } = uuid;
-    public Symbol HostId { get; set; } = hostId;
-    public Moment LoggedAt { get; set; } = loggedAt;
-    public ICommand Command { get; set; } = command!;
-    public MutablePropertyBag Items { get; set; } = items ?? new();
+    public Symbol Uuid { get; set; }
+    public Symbol HostId { get; set; }
+    public Moment LoggedAt { get; set; }
+    public ICommand Command { get; set; }
+    public MutablePropertyBag Items { get; set; }
     public ImmutableList<NestedOperation> NestedOperations { get; set; }
-        = nestedOperations ?? ImmutableList<NestedOperation>.Empty;
-    public IOperationScope? Scope { get; set; } = scope;
+    public IOperationScope? Scope { get; set; }
     public ImmutableList<OperationEvent> Events { get; private set; }
         = ImmutableList<OperationEvent>.Empty;
 
@@ -49,10 +41,33 @@ public class Operation(
         : this(default, default, default)
     { }
 
-    public OperationEvent AddEvent(object value, Symbol uuid = default)
-        => AddEvent(value, default(Moment), uuid);
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public Operation(Symbol uuid,
+        Symbol hostId,
+        Moment loggedAt = default,
+        ICommand? command = null,
+        MutablePropertyBag? items = null,
+        ImmutableList<NestedOperation>? nestedOperations = null,
+        IOperationScope? scope = null)
+    {
+        Uuid = uuid;
+        HostId = hostId;
+        LoggedAt = loggedAt;
+        Command = command!;
+        Items = items ?? new();
+        NestedOperations = nestedOperations ?? ImmutableList<NestedOperation>.Empty;
+        Scope = scope;
+    }
 
-    public OperationEvent AddEvent(object value, Moment delayUntil, Symbol uuid = default)
+    public OperationEvent AddEvent(OperationEvent @event)
+        => AddEvent(@event.Value!, @event.DelayUntil, @event.Uuid, @event.UuidConflictStrategy);
+    public OperationEvent AddEvent(
+        object value, Symbol uuid = default,
+        KeyConflictStrategy uuidConflictStrategy = KeyConflictStrategy.Fail)
+        => AddEvent(value, default(Moment), uuid, uuidConflictStrategy);
+    public OperationEvent AddEvent(
+        object value, Moment delayUntil, Symbol uuid = default,
+        KeyConflictStrategy uuidConflictStrategy = KeyConflictStrategy.Fail)
     {
         if (Scope is not { IsUsed: true, IsCommitted: null })
             throw Errors.ActiveOperationRequired();
@@ -69,13 +84,15 @@ public class Operation(
             if (delayUntil < loggedAt)
                 delayUntil = loggedAt;
 
-            var result = new OperationEvent(uuid, loggedAt, delayUntil, value);
+            var result = new OperationEvent(uuid, loggedAt, delayUntil, value, uuidConflictStrategy);
             Events = Events.Add(result);
             return result;
         }
     }
 
-    public OperationEvent AddEvent(object value, TimeSpan delay, Symbol uuid = default)
+    public OperationEvent AddEvent(
+        object value, TimeSpan delay, Symbol uuid = default,
+        KeyConflictStrategy uuidConflictStrategy = KeyConflictStrategy.Fail)
     {
         if (Scope is not { IsUsed: true, IsCommitted: null })
             throw Errors.ActiveOperationRequired();
@@ -89,7 +106,7 @@ public class Operation(
             var loggedAt = commanderHub.Clocks.SystemClock.Now;
             var delayUntil = loggedAt + delay.Positive();
 
-            var result = new OperationEvent(uuid, loggedAt, delayUntil, value);
+            var result = new OperationEvent(uuid, loggedAt, delayUntil, value, uuidConflictStrategy);
             Events = Events.Add(result);
             return result;
         }

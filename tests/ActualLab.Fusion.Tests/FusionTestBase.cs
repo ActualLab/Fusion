@@ -106,6 +106,8 @@ public abstract class FusionTestBase : RpcTestBase
             fusion.AddService<IScreenshotService, ScreenshotService>();
             fusion.AddService<IEdgeCaseService, EdgeCaseService>();
             fusion.AddService<IKeyValueService<string>, KeyValueService<string>>();
+            fusion.AddService<EventQueue>();
+            fusion.AddService<EventCatcher>();
         } else {
             services.AddSingleton<RpcPeerFactory>(_ => (hub, peerRef)
                 => peerRef.IsServer

@@ -99,6 +99,8 @@ public static class Errors
 
     public static Exception KeyAlreadyExists()
         => new InvalidOperationException("Specified key already exists.");
+    public static Exception KeyAlreadyExists<TEntity>()
+        => new InvalidOperationException($"The {typeof(TEntity).GetName()} with the specified key already exists.");
     public static Exception CollectionIsEmpty()
         => new InvalidOperationException("Collection is empty.");
     public static Exception CollectionIsFull()

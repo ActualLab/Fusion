@@ -10,7 +10,6 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 #pragma warning disable IL2026
 
 [Table("_Events")]
-[Index(nameof(Uuid), IsUnique = true)] // "Uuid -> Index" queries
 [Index(nameof(State), nameof(DelayUntil))] // "!IsProcessed & DelayUntil < now" queries
 [Index(nameof(DelayUntil))] // "DelayUntil < trimAt" queries
 public sealed class DbEvent : IDbEventLogEntry
@@ -20,8 +19,7 @@ public sealed class DbEvent : IDbEventLogEntry
     private DateTime _loggedAt;
     private DateTime _delayUntil;
 
-    [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public string Uuid { get; set; } = "";
+    [Key] public string Uuid { get; set; } = "";
 
     [ConcurrencyCheck]
     public long Version { get; set; }
@@ -48,11 +46,14 @@ public sealed class DbEvent : IDbEventLogEntry
         var value = ValueJson.IsNullOrEmpty()
             ? null
             : Serializer.Read(ValueJson, typeof(object));
-        return new OperationEvent(Uuid, LoggedAt, DelayUntil, value);
+        return new OperationEvent(Uuid, LoggedAt, DelayUntil, value, KeyConflictStrategy.Fail);
     }
 
     public DbEvent UpdateFrom(OperationEvent model, VersionGenerator<long>? versionGenerator = null)
     {
+        if (model.Uuid.IsEmpty)
+            throw new ArgumentOutOfRangeException(nameof(model), "Uuid is empty.");
+
         Uuid = model.Uuid;
         if (versionGenerator != null)
             Version = versionGenerator.NextVersion(Version);

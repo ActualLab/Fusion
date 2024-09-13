@@ -5,7 +5,7 @@ namespace ActualLab.Fusion.EntityFramework.Internal;
 public static class Errors
 {
     public static Exception DbContextIsReadOnly()
-        => new InvalidOperationException("This DbContext is read-only.");
+        => new InvalidOperationException("Provided DbContext is read-only.");
 
     public static Exception WrongDbOperationScopeShard(Type scopeType, DbShard shard, DbShard requestedShard)
         => new InvalidOperationException($"{scopeType} is already bound to shard '{shard}', which differs from '{requestedShard}'.");

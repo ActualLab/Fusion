@@ -2,8 +2,10 @@ using System.Data;
 using System.Data.Common;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Fusion.EntityFramework.LogProcessing;
 using ActualLab.Locking;
 using ActualLab.Resilience;
+using ActualLab.Versioning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -183,22 +185,48 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                 throw ActualLab.Fusion.Operations.Internal.Errors.OperationHasNoCommand();
 
             var dbContext = MasterDbContext;
-            dbContext.EnableChangeTracking(false); // Just to speed up things a bit
-            if (Operation.Events.Count != 0) {
-                var eventVersion = DbHub.VersionGenerator.NextVersion();
-                foreach (var operationEvent in Operation.Events) {
-                    if (ReferenceEquals(operationEvent.Value, null))
-                        continue; // We don't store events with null values
+            if (dbContext.ChangeTracker.HasChanges())
+                throw ActualLab.Internal.Errors.InternalError(
+                    "MasterDbContext has some unsaved changes, which isn't expected here.");
 
-                    var dbEvent = new DbEvent(operationEvent) {
-                        Version = eventVersion, // Just to avoid extra calls to NextVersion
-                    };
-                    dbContext.Add(dbEvent);
-                    HasEvents = true;
+            // We'll manually add/update entities here
+            dbContext.EnableChangeTracking(false);
+            if (Operation.Events.Count != 0) {
+                var events = new Dictionary<Symbol, OperationEvent>();
+                // We "clean up" the events first by getting rid of duplicates there
+                foreach (var e in Operation.Events) {
+                    if (ReferenceEquals(e.Value, null))
+                        continue; // Events with null values cannot be processed
+
+                    events[e.Uuid] = e;
+                }
+                var dbEvents = dbContext.Set<DbEvent>();
+                HasEvents = events.Count != 0;
+                foreach (var e in events.Values.OrderBy(x => x.Uuid)) {
+                    var dbEvent = new DbEvent(e, DbHub.VersionGenerator);
+                    var conflictStrategy = e.UuidConflictStrategy;
+                    if (conflictStrategy == KeyConflictStrategy.Fail)
+                        dbEvents.Add(dbEvent);
+                    else {
+                        var existingDbEvent = await dbEvents
+                            .FindAsync(DbKey.Compose(dbEvent.Uuid), cancellationToken)
+                            .ConfigureAwait(false);
+                        if (existingDbEvent == null)
+                            dbEvents.Add(dbEvent);
+                        else if (conflictStrategy == KeyConflictStrategy.Update) {
+                            if (existingDbEvent.State != LogEntryState.New)
+                                throw KeyConflictResolver.Error<DbEvent>();
+
+                            dbEvents.Attach(existingDbEvent);
+                            existingDbEvent.UpdateFrom(e, DbHub.VersionGenerator);
+                            dbEvents.Update(existingDbEvent);
+                        }
+                    }
                 }
             }
             var dbOperation = new DbOperation(Operation);
             dbContext.Add(dbOperation);
+
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             if (!dbOperation.HasIndex)
                 throw Errors.DbOperationIndexWasNotAssigned();
@@ -341,4 +369,6 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             .Aggregate(IsolationLevel.Unspecified, (x, y) => x.Max(y));
         return isolationLevel;
     }
+
+
 }
