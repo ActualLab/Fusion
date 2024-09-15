@@ -94,9 +94,6 @@ public static class Errors
     public static Exception AlreadyDisposedOrDisposing<T>()
         => AlreadyDisposedOrDisposing(typeof(T));
 
-    public static Exception AlreadyStopped()
-        => new InvalidOperationException("The process or task is already stopped.");
-
     public static Exception KeyAlreadyExists()
         => new InvalidOperationException("Specified key already exists.");
     public static Exception KeyAlreadyExists<TEntity>()

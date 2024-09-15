@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Hosting;
-using ActualLab.Internal;
 
 namespace ActualLab.Async;
 
@@ -25,8 +24,7 @@ public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null
                 return _whenRunning;
 
             this.ThrowIfDisposedOrDisposing();
-            if (StopToken.IsCancellationRequested)
-                throw Errors.AlreadyStopped();
+            StopToken.ThrowIfCancellationRequested();
 
             using var _ = FlowExecutionContext ? default : ExecutionContextExt.TrySuppressFlow();
             Task onStartTask;
