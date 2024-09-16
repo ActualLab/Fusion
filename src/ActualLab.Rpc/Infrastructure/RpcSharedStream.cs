@@ -9,7 +9,8 @@ namespace ActualLab.Rpc.Infrastructure;
 public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcSharedObject
 {
 #pragma warning disable CA2201
-    protected static readonly Exception NoMoreItemTag = new();
+    // We never throw this error, so it's fine to share its single instance here
+    protected static readonly Exception NoMoreItemsTag = new();
 #pragma warning restore CA2201
 
     private ILogger? _log;
@@ -166,7 +167,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                             whenMovedNextAsTask = null; // Must go after SafeMoveNext call (which may fail)
                         }
                         else {
-                            item = Result.Error<T>(NoMoreItemTag);
+                            item = Result.Error<T>(NoMoreItemsTag);
                             isFullyBuffered = true;
                         }
                     }
@@ -231,7 +232,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         if (item.IsValue(out var value))
             return _systemCallSender.Item(Peer, Id.LocalId, index, value, _sizeHintProvider?.Invoke(value) ?? 0);
 
-        var error = ReferenceEquals(item.Error, NoMoreItemTag) ? null : item.Error;
+        var error = ReferenceEquals(item.Error, NoMoreItemsTag) ? null : item.Error;
         return _systemCallSender.End(Peer, Id.LocalId, index, error);
     }
 
