@@ -33,12 +33,12 @@ public static class TimeSpanExt
         if (absValue < TimeSpan.FromSeconds(60))
             return $"{value.TotalSeconds:0.###}s";
 
-        var sign = value < TimeSpan.Zero ? "-" : "";
+        var (pre, post) = value < TimeSpan.Zero ? ("-(", ")") : ("", "");
         var totalMinutes = absValue.TotalMinutes;
         var totalMinutesFloor = Math.Floor(totalMinutes);
         var seconds = (totalMinutes - totalMinutesFloor) * 60;
         return totalMinutesFloor < 60
-            ? $"{sign}{totalMinutesFloor:0}m {seconds:0.###}s"
-            : $"{sign}{Math.Floor(absValue.TotalHours):0}h {absValue.Minutes:0}m {seconds:0.#}s";
+            ? $"{pre}{totalMinutesFloor:0}m {seconds:0.###}s{post}"
+            : $"{pre}{Math.Floor(absValue.TotalHours):0}h {absValue.Minutes:0}m {seconds:0.#}s{post}";
     }
 }
