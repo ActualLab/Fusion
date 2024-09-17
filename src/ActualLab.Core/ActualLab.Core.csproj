@@ -76,4 +76,19 @@
     <PackageReference Include="System.Reflection.Emit.Lightweight" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Collections\Fixed\FixedArray.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>FixedArray.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Collections\Fixed\FixedArray.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>FixedArray.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
 </Project>

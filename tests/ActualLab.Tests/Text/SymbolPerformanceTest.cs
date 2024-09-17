@@ -1,6 +1,6 @@
 namespace ActualLab.Tests.Text;
 
-public sealed class SymbolBenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
+public sealed class SymbolPerformanceTest(ITestOutputHelper @out) : BenchmarkTestBase(@out)
 {
     private static readonly int[] DefaultOptions = [12, 20, 32, 64];
     private static readonly int DefaultIterationCount = 20_000_000;
@@ -166,45 +166,5 @@ public sealed class SymbolBenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
                 _ = d.TryGetValue(key, out _);
             return startedAt;
         }, options);
-    }
-
-    // Private methods
-
-    private Task Benchmark<T>(
-        string title, int iterationCount, Action<T, int> action,
-        params T[] options)
-        where T : notnull
-        => Benchmark(title, iterationCount, (option, count) => {
-            var startedAt = CpuTimestamp.Now;
-            action.Invoke(option, count);
-            return startedAt;
-        }, options);
-    private async Task Benchmark<T>(
-        string title, int iterationCount, Func<T, int, CpuTimestamp> action,
-        params T[] options)
-        where T : notnull
-    {
-        Out.WriteLine($"{title}:");
-        var maxOptionWidth = options.Select(o => o.ToString()!.Length).Max();
-        foreach (var option in options) {
-            var frequency = 0d;
-            for (var testIndex = 0; testIndex < 5; testIndex++) {
-                GC.Collect();
-                await Task.Delay(100);
-                GC.Collect();
-
-                var startedAt = action.Invoke(option, iterationCount);
-                frequency = Math.Max(frequency, iterationCount / startedAt.Elapsed.TotalSeconds);
-            }
-
-            var (f, suffix) = frequency switch {
-                >= 2e8 => (frequency / 1e9, "G"),
-                >= 2e5 => (frequency / 1e6, "M"),
-                >= 2e2 => (frequency / 1e9, "K"),
-                _ => (frequency, "")
-            };
-            var sOption = string.Format($"{{0,-{maxOptionWidth}}}", option);
-            Out.WriteLine($"  {sOption}: {f:F2}{suffix} ops/s");
-        }
     }
 }

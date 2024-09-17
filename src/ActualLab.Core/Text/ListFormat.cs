@@ -19,6 +19,16 @@ public readonly struct ListFormat(char delimiter, char escape = '\\')
     public ListParser CreateParser(ReadOnlySpan<char> source, int itemIndex = 0)
         => new(this, source, itemIndex);
 
+#if NET8_0_OR_GREATER
+    public string Format(params ReadOnlySpan<string> source)
+    {
+        using var f = CreateFormatter();
+        foreach (var item in source)
+            f.Append(item);
+        f.AppendEnd();
+        return f.Output;
+    }
+#else
     public string Format(params string[] source)
     {
         using var f = CreateFormatter();
@@ -27,6 +37,7 @@ public readonly struct ListFormat(char delimiter, char escape = '\\')
         f.AppendEnd();
         return f.Output;
     }
+#endif
 
     public string Format(IEnumerable<string> source)
     {
@@ -46,7 +57,7 @@ public readonly struct ListFormat(char delimiter, char escape = '\\')
         return target;
     }
 
-    public List<string> Parse(in ReadOnlySpan<char> source, List<string>? target = null)
+    public List<string> Parse(ReadOnlySpan<char> source, List<string>? target = null)
     {
         target ??= new List<string>();
         using var p = CreateParser(source);

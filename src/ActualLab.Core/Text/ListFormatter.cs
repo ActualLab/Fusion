@@ -38,7 +38,7 @@ public ref struct ListFormatter
         }
     }
 
-    public void Append(in ReadOnlySpan<char> item)
+    public void Append(ReadOnlySpan<char> item)
     {
         if (ItemIndex++ != 0)
             OutputBuilder.Append(Delimiter);

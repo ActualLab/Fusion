@@ -1,11 +1,15 @@
-using ActualLab.Collections.Internal;
+using ActualLab.Collections.Fixed;
 
 namespace ActualLab.Interception;
 
-public sealed class ArgumentListType
+public sealed partial class ArgumentListType
 {
-    private static readonly ConcurrentDictionary<SequenceEqualityBox.ForArray<Type>, ArgumentListType> GenericDefCache = new();
-    private static readonly ConcurrentDictionary<SequenceEqualityBox.ForArray<Type>, ArgumentListType> SimpleDefCache = new();
+    private static readonly ConcurrentDictionary<FixedArray3<Type?>, ArgumentListType> GDefCache3 = new();
+    private static readonly ConcurrentDictionary<FixedArray3<Type?>, ArgumentListType> SDefCache3 = new();
+    private static readonly ConcurrentDictionary<FixedArray6<Type?>, ArgumentListType> GDefCache6 = new();
+    private static readonly ConcurrentDictionary<FixedArray6<Type?>, ArgumentListType> SDefCache6 = new();
+    private static readonly ConcurrentDictionary<FixedArray10<Type?>, ArgumentListType> GDefCacheN = new();
+    private static readonly ConcurrentDictionary<FixedArray10<Type?>, ArgumentListType> SDefCacheN = new();
     private string? _toString;
 
     public readonly Type ListType;
@@ -17,17 +21,38 @@ public sealed class ArgumentListType
     public readonly object?[] DefaultValues;
     public readonly Func<ArgumentList> Factory;
 
-    public static ArgumentListType Get(params Type[] itemTypes)
+    public static ArgumentListType Get(params ReadOnlySpan<Type> itemTypes)
         => Get(ArgumentList.AllowGenerics, itemTypes);
-    public static ArgumentListType Get(bool useGenerics, params Type[] itemTypes)
-        => useGenerics
-            ? GenericDefCache.GetOrAdd(new(itemTypes),
-                static key => new ArgumentListType(true, key.Source))
-            : SimpleDefCache.GetOrAdd(new(itemTypes),
-                static key => key.Source.Length == 0 ? Get(true) : new ArgumentListType(false, key.Source));
 
-    private ArgumentListType(bool useGenerics, Type[] itemTypes)
+    public static ArgumentListType Get(bool useGenerics, params ReadOnlySpan<Type> itemTypes)
     {
+        if (itemTypes.Length <= 3) // Primary scenario
+            return useGenerics || itemTypes.Length == 0
+                ? GDefCache3.GetOrAdd(FixedArray3<Type?>.New(itemTypes!), static key => new ArgumentListType(true, key.ReadOnlySpan))
+                : SDefCache3.GetOrAdd(FixedArray3<Type?>.New(itemTypes!), static key => new ArgumentListType(false, key.ReadOnlySpan));
+
+        return itemTypes.Length <= 6
+            ? Get6(useGenerics, itemTypes)
+            : GetN(useGenerics, itemTypes);
+    }
+
+    // Private methods
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static ArgumentListType Get6(bool useGenerics, in ReadOnlySpan<Type> itemTypes)
+        => useGenerics
+            ? GDefCache6.GetOrAdd(FixedArray6<Type?>.New(itemTypes!), static key => new ArgumentListType(true, key.ReadOnlySpan))
+            : SDefCache6.GetOrAdd(FixedArray6<Type?>.New(itemTypes!), static key => new ArgumentListType(false, key.ReadOnlySpan));
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static ArgumentListType GetN(bool useGenerics, in ReadOnlySpan<Type> itemTypes)
+        => useGenerics
+            ? GDefCacheN.GetOrAdd(FixedArray10<Type?>.New(itemTypes!), static key => new ArgumentListType(true, key.ReadOnlySpan))
+            : SDefCacheN.GetOrAdd(FixedArray10<Type?>.New(itemTypes!), static key => new ArgumentListType(false, key.ReadOnlySpan));
+
+    private ArgumentListType(bool useGenerics, ReadOnlySpan<Type?> key)
+    {
+        Type[] itemTypes = key.ToArray().TakeWhile(x => x != null).ToArray()!;
         ItemTypes = itemTypes;
         ItemCount = itemTypes.Length;
         if (useGenerics) {
@@ -40,6 +65,9 @@ public sealed class ArgumentListType
                 ListType = ListType.MakeGenericType(GenericItemTypes);
         }
         else {
+            if (itemTypes.Length == 0)
+                throw new ArgumentOutOfRangeException(nameof(useGenerics));
+
             GenericItemCount = 0;
             // ReSharper disable once UseCollectionExpression
             GenericItemTypes = Array.Empty<Type>();

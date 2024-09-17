@@ -1,0 +1,119 @@
+<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ output extension=".cs" encoding="utf-8" #>
+<#@ assembly Name="System.Core.dll" #>
+<#
+    const int maxItemCount = 16;
+#>
+using System.Diagnostics.CodeAnalysis;
+
+namespace ActualLab.Collections.Fixed;
+
+#pragma warning disable CS0169 // Field is never used
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+<#
+    for (var itemCount = 1; itemCount <= maxItemCount; itemCount++)
+    {
+        var className = $"FixedArray{itemCount}<T>";
+        var ctorName = $"FixedArray{itemCount}";
+#>
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
+public struct <#= className #> : IEquatable<<#= className #>>
+{
+#if !NETSTANDARD2_0
+<#
+    for (var i = 0; i < itemCount; i++) {
+#>
+    private T _item<#= i #>;
+<#
+    }
+#>
+
+    public Span<T> Span {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => MemoryMarshal.CreateSpan(ref _item0, <#= itemCount #>);
+    }
+
+    public ReadOnlySpan<T> ReadOnlySpan {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => MemoryMarshal.CreateReadOnlySpan(ref _item0, <#= itemCount #>);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static <#= className #> New() => new();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static <#= className #> New(params ReadOnlySpan<T> source) => new(in source);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public <#= ctorName #>(in ReadOnlySpan<T> source)
+        => source.CopyTo(Span);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public <#= ctorName #>(T[] items)
+        => items.CopyTo(Span);
+#else
+    private readonly T[] _items;
+
+    public Span<T> Span {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items.AsSpan();
+    }
+
+    public ReadOnlySpan<T> ReadOnlySpan {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items.AsSpan();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static <#= className #> New() => new(new T[<#= itemCount #>]);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static <#= className #> New(params ReadOnlySpan<T> source) => new(in source);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public <#= ctorName #>(in ReadOnlySpan<T> source)
+    {
+        _items = new T[<#= itemCount #>];
+        source.CopyTo(_items);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public <#= ctorName #>(T[] items)
+        => _items = items;
+#endif
+
+    // Equality
+
+    public override bool Equals([NotNullWhen(true)] object? obj)
+        => obj is <#= className #> other && Equals(other);
+
+    public bool Equals(<#= className #> other)
+#if NET6_0_OR_GREATER
+        => Span.SequenceEqual(other.Span);
+#else
+    {
+        var span = Span;
+        var otherSpan = other.Span;
+        if (span.Length != otherSpan.Length)
+            return false;
+
+        for (var i = 0; i < span.Length; i++)
+            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+                return false;
+
+        return true;
+    }
+#endif
+
+    public override int GetHashCode()
+    {
+        var hashCode = 0;
+        foreach (var item in Span)
+            hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+        return hashCode;
+    }
+}
+<#
+    }
+#>

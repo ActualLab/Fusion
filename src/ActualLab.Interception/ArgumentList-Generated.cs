@@ -15,7 +15,7 @@ namespace ActualLab.Interception;
 public abstract partial record ArgumentList
 {
     public const int MaxItemCount = 10;
-    public const int MaxGenericItemCount = 4; // Must match MaxGenericArgumentListItemCount in GenerationHelpers
+    public const int MaxGenericItemCount = 4;
 
 #if NET5_0_OR_GREATER
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS1))]
@@ -11010,3 +11010,4 @@ public sealed record ArgumentListS10 : ArgumentList10
         }
     }
 }
+
