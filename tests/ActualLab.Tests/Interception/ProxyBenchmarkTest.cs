@@ -6,7 +6,7 @@ namespace ActualLab.Tests.Interception;
 
 public class ProxyBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBase(@out)
 {
-    private static readonly int DefaultIterationCount = 5_000_000;
+    private static readonly int DefaultIterationCount = 10_000_000;
     private static readonly IServiceProvider Services = new ServiceCollection()
         .AddSingleton(_ => DefaultResultInterceptor.Options.Default)
         .AddSingleton<DefaultResultInterceptor>()
@@ -33,6 +33,10 @@ public class ProxyBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBase(@out
         var castlePassThroughProxy = (IProxyBenchmarkTester)castleGenerator.CreateInterfaceProxyWithTarget(
             typeof(IProxyBenchmarkTester), noProxy, castlePassThroughInterceptor);
 
+        var iterationCount = DefaultIterationCount;
+        if (TestRunnerInfo.IsBuildAgent())
+            iterationCount /= 100;
+
         var variants = new[] {
             new ProxyVariant(noProxy, "No proxy"),
             new ProxyVariant(simpleProxy, "ActualLab interceptor"),
@@ -41,7 +45,6 @@ public class ProxyBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBase(@out
             new ProxyVariant(castlePassThroughProxy, "Castle pass-through"),
         };
 
-        var iterationCount = DefaultIterationCount;
         await Benchmark("proxy.Void()", iterationCount, (v, n) => {
             var proxy = v.Proxy;
             for (var i = 0; i < n; i++)
