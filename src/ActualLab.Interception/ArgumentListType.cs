@@ -2,7 +2,7 @@ using ActualLab.Collections.Fixed;
 
 namespace ActualLab.Interception;
 
-public sealed partial class ArgumentListType
+public sealed class ArgumentListType
 {
     private static readonly ConcurrentDictionary<FixedArray3<Type?>, ArgumentListType> GDefCache3 = new();
     private static readonly ConcurrentDictionary<FixedArray3<Type?>, ArgumentListType> SDefCache3 = new();
