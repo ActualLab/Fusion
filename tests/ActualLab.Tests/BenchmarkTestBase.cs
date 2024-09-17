@@ -38,10 +38,10 @@ public abstract class BenchmarkTestBase(ITestOutputHelper @out) : TestBase(@out)
                 GC.Collect();
                 await Task.Delay(InterTryDelay);
 
-                var memoryAtStart = GC.GetAllocatedBytesForCurrentThread();
+                var memoryAtStart = GetAllocatedBytesForCurrentThread();
                 var startedAt = func.Invoke(variant, iterationCount);
                 frequency = Math.Max(frequency, iterationCount / startedAt.Elapsed.TotalSeconds);
-                bytesPerOperationList.Add((GC.GetAllocatedBytesForCurrentThread() - memoryAtStart) / (double)iterationCount);
+                bytesPerOperationList.Add((GetAllocatedBytesForCurrentThread() - memoryAtStart) / (double)iterationCount);
             }
             bytesPerOperationList.Sort();
             var bytesPerOperation = bytesPerOperationList[bytesPerOperationList.Count / 2];
@@ -63,4 +63,11 @@ public abstract class BenchmarkTestBase(ITestOutputHelper @out) : TestBase(@out)
             Out.WriteLine($"  {sVariant} : {sFrequency,14}, {sAllocated}");
         }
     }
+
+    private long GetAllocatedBytesForCurrentThread()
+#if !NET471
+        => GC.GetAllocatedBytesForCurrentThread();
+#else
+        => GC.GetTotalMemory(false);
+#endif
 }

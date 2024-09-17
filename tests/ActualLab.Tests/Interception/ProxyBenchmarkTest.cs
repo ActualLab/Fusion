@@ -61,7 +61,7 @@ public class ProxyBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBase(@out
         await Benchmark("proxy.ValueTask(ct)", iterationCount, (v, n) => {
             var proxy = v.Proxy;
             var ct = CancellationToken.None;
-            var result = ValueTask.CompletedTask;
+            var result = default(ValueTask);
             for (var i = 0; i < n; i++)
                 result = proxy.ValueTask(ct);
             Use(result);
@@ -124,7 +124,7 @@ public class ProxyBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBase(@out
         await Benchmark("proxy.IntValueTask(ct)", iterationCount, (v, n) => {
             var proxy = v.Proxy;
             var ct = CancellationToken.None;
-            var result = ValueTask.FromResult(0);
+            var result = default(ValueTask<int>);
             for (var i = 0; i < n; i++)
                 result = proxy.IntValueTask(ct);
             Use(result);
@@ -132,7 +132,7 @@ public class ProxyBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBase(@out
         await Benchmark("proxy.IntValueTask(i, ct)", iterationCount, (v, n) => {
             var proxy = v.Proxy;
             var ct = CancellationToken.None;
-            var result = ValueTask.FromResult(0);
+            var result = default(ValueTask<int>);
             for (var i = 0; i < n; i++)
                 result = proxy.IntValueTask(i, ct);
             Use(result);
@@ -140,7 +140,7 @@ public class ProxyBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBase(@out
         await Benchmark("proxy.IntValueTask(i, i, ct)", iterationCount, (v, n) => {
             var proxy = v.Proxy;
             var ct = CancellationToken.None;
-            var result = ValueTask.FromResult(0);
+            var result = default(ValueTask<int>);
             for (var i = 0; i < n; i++)
                 result = proxy.IntValueTask(i, i, ct);
             Use(result);

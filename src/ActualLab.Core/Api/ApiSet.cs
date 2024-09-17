@@ -28,7 +28,11 @@ public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
 
     public ApiSet() { }
 
+#if !NETSTANDARD2_0
     public ApiSet(in ReadOnlySpan<T> span) : base(span.Length)
+#else
+    public ApiSet(in ReadOnlySpan<T> span)
+#endif
     {
         foreach (var item in span)
             Add(item);
