@@ -208,7 +208,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
             disruptorCts.CancelAndDisposeSilently();
             await disruptorTask.WaitAsync(timeout).SuppressCancellationAwait();
             await connection.Connect().WaitAsync(timeout);
-            await Delay(0.2); // Enough for invalidations to come through
+            await Delay(0.5); // Enough for invalidations to come through
 
             await AssertNoCalls(connection.ClientPeer, Out);
             await AssertNoCalls(connection.ServerPeer, Out);

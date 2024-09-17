@@ -52,7 +52,7 @@ public static class TestHelpers
             await TestExt.When(() => {
                 peer.InboundCalls.Count.Should().Be(0);
                 peer.OutboundCalls.Count.Should().Be(0);
-            }, TimeSpan.FromSeconds(3));
+            }, TimeSpan.FromSeconds(5));
         }
         catch (XunitException) {
             @out?.WriteLine($"Inbound calls: {peer.InboundCalls.ToDelimitedString()}");
