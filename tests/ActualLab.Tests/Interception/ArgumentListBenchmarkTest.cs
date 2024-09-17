@@ -118,6 +118,8 @@ public class ArgumentListBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBa
         });
     }
 
+    // Private methods
+
     private static void Use(object obj)
         => _ = obj.GetHashCode();
 }

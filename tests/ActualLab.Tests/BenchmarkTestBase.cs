@@ -3,7 +3,7 @@ namespace ActualLab.Tests;
 public abstract class BenchmarkTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
     protected int TryCount { get; set; } = 5;
-    protected TimeSpan InterTryDelay { get; set; } = TimeSpan.FromSeconds(0.1);
+    protected TimeSpan InterTryDelay { get; set; } = TimeSpan.FromMilliseconds(50);
 
     // Private methods
 
@@ -32,23 +32,35 @@ public abstract class BenchmarkTestBase(ITestOutputHelper @out) : TestBase(@out)
         var maxVariantWidth = variants.Select(o => o.ToString()!.Length).Max();
         foreach (var variant in variants) {
             var frequency = 0d;
+            var bytesPerOperationList = new List<double>();
             for (var testIndex = 0; testIndex < TryCount; testIndex++) {
                 GC.Collect();
-                await Task.Delay(InterTryDelay);
                 GC.Collect();
+                await Task.Delay(InterTryDelay);
 
+                var memoryAtStart = GC.GetAllocatedBytesForCurrentThread();
                 var startedAt = func.Invoke(variant, iterationCount);
                 frequency = Math.Max(frequency, iterationCount / startedAt.Elapsed.TotalSeconds);
+                bytesPerOperationList.Add((GC.GetAllocatedBytesForCurrentThread() - memoryAtStart) / (double)iterationCount);
             }
+            bytesPerOperationList.Sort();
+            var bytesPerOperation = bytesPerOperationList[bytesPerOperationList.Count / 2];
 
-            var (f, suffix) = frequency switch {
+            var (f, fSuffix) = frequency switch {
                 >= 2e8 => (frequency / 1e9, "G"),
                 >= 2e5 => (frequency / 1e6, "M"),
-                >= 2e2 => (frequency / 1e9, "K"),
-                _ => (frequency, "")
+                >= 2e2 => (frequency / 1e3, "K"),
+                _ => (frequency, "bytes")
+            };
+            var (b, bSuffix) = bytesPerOperation switch {
+                >= 2e5 => (bytesPerOperation / 1e6, "MB"),
+                >= 2e2 => (bytesPerOperation / 1e3, "KB"),
+                _ => (bytesPerOperation, "B")
             };
             var sVariant = string.Format($"{{0,-{maxVariantWidth}}}", variant);
-            Out.WriteLine($"  {sVariant}: {f:F3}{suffix} ops/s");
+            var sFrequency = $"{f:F3}{fSuffix} ops/s";
+            var sAllocated = $"{b:0.#} {bSuffix}/op";
+            Out.WriteLine($"  {sVariant} : {sFrequency,14}, {sAllocated}");
         }
     }
 }

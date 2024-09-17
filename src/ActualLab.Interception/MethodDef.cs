@@ -92,7 +92,7 @@ public class MethodDef
         }
         UnwrappedReturnType = IsAsyncMethod
             ? IsAsyncVoidMethod ? typeof(Unit) : ReturnType.GetGenericArguments()[0]
-            : ReturnType;
+            : ReturnType == typeof(void) ? typeof(Unit) : ReturnType;
         _defaultResultLazy = new LazySlim<MethodDef, object?>(this, static self => self.GetDefaultResult());
         _defaultUnwrappedResultLazy = new LazySlim<MethodDef, object?>(this, static self => self.GetDefaultUnwrappedResult());
     }
@@ -204,7 +204,7 @@ public class MethodDef
         => !IsAsyncMethod
             ? DefaultUnwrappedResult
             : ReturnsValueTask
-                ? ValueTaskExt.FromDefaultResult(UnwrappedReturnType)
+                ? IsAsyncVoidMethod ? default(ValueTask) : ValueTaskExt.FromDefaultResult(UnwrappedReturnType)
                 : TaskExt.FromDefaultResult(UnwrappedReturnType);
 
     private object? GetDefaultUnwrappedResult()

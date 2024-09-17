@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="System.Net.WebSockets.Client" />
+    <PackageReference Include="Castle.Core" />
   </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">

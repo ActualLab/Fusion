@@ -23,7 +23,6 @@ public abstract class Interceptor : IHasServices
     private static readonly MethodInfo CreateTypedHandlerMethod = typeof(Interceptor)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
         .Single(m => string.Equals(m.Name, nameof(CreateHandler), StringComparison.Ordinal));
-    private static readonly ConcurrentDictionary<MethodInfo, Func<Invocation, object?>> SkippingHandlerCache = new();
 
     private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandlerUntyped;
     private readonly Func<MethodInfo, Type, MethodDef?> _createMethodDef;
@@ -127,16 +126,6 @@ public abstract class Interceptor : IHasServices
             return default;
         }, this);
     }
-
-    // Helpers
-
-    // Returns a handler that does nothing & returns default(T) / completed Task<T> or ValueTask<T> with default(T)
-    public Func<Invocation, object?> GetNoopHandler(Invocation invocation)
-        => SkippingHandlerCache.GetOrAdd(invocation.Method, static (method, key) => {
-            var (self, invocation1) = key;
-            var methodDef = self.GetMethodDef(method, invocation1.Proxy.GetType())!;
-            return _ => methodDef.DefaultResult;
-        }, (this, invocation));
 
     // Protected methods
 
