@@ -11,7 +11,7 @@ public interface IMutablePropertyBag : IReadOnlyPropertyBag
     bool Set<T>(Symbol key, T value);
     bool Set(Symbol key, object? value);
     void SetMany(PropertyBag items);
-    void SetMany(params PropertyBagItem[] items);
+    void SetMany(params ReadOnlySpan<PropertyBagItem> items);
     bool Remove<T>();
     bool Remove(Symbol key);
     void Clear();
@@ -156,8 +156,17 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
     public void SetMany(PropertyBag items)
         => SetMany(items.RawItems ?? []);
 
-    public void SetMany(params PropertyBagItem[] items)
-        => Update(items, static (items1, bag) => bag.SetMany(items1));
+    public void SetMany(params ReadOnlySpan<PropertyBagItem> items)
+    {
+        bool isChanged;
+        lock (_lock) {
+            var oldSnapshot = _snapshot;
+            _snapshot = oldSnapshot.SetMany(items);
+            isChanged = _snapshot != oldSnapshot;
+        }
+        if (isChanged)
+            Changed?.Invoke();
+    }
 
     // Remove
 

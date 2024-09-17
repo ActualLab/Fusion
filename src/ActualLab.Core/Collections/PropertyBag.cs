@@ -183,7 +183,7 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
     public PropertyBag SetMany(PropertyBag items)
         => SetMany(items.RawItems ?? []);
 
-    public PropertyBag SetMany(params PropertyBagItem[] items)
+    public PropertyBag SetMany(params ReadOnlySpan<PropertyBagItem> items)
     {
         var buffer = ArrayBuffer<PropertyBagItem>.Lease(true);
         try {

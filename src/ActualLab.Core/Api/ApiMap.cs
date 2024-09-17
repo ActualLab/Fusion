@@ -62,7 +62,7 @@ public sealed partial class ApiMap<TKey, TValue>
         return newMap;
     }
 
-    public ApiMap<TKey, TValue> With(params KeyValuePair<TKey, TValue>[] pairs)
+    public ApiMap<TKey, TValue> WithMany(params ReadOnlySpan<KeyValuePair<TKey, TValue>> pairs)
     {
         var newMap = Clone();
         foreach (var (key, value) in pairs)
@@ -70,7 +70,7 @@ public sealed partial class ApiMap<TKey, TValue>
         return newMap;
     }
 
-    public ApiMap<TKey, TValue> With(IEnumerable<KeyValuePair<TKey, TValue>> pairs)
+    public ApiMap<TKey, TValue> WithMany(IEnumerable<KeyValuePair<TKey, TValue>> pairs)
     {
         var newMap = Clone();
         foreach (var (key, value) in pairs)
@@ -85,7 +85,7 @@ public sealed partial class ApiMap<TKey, TValue>
         return newMap;
     }
 
-    public ApiMap<TKey, TValue> Without(params TKey[] keys)
+    public ApiMap<TKey, TValue> WithoutMany(params ReadOnlySpan<TKey> keys)
     {
         var newMap = Clone();
         foreach (var key in keys)
@@ -93,7 +93,7 @@ public sealed partial class ApiMap<TKey, TValue>
         return newMap;
     }
 
-    public ApiMap<TKey, TValue> Without(IEnumerable<TKey> keys)
+    public ApiMap<TKey, TValue> WithoutMany(IEnumerable<TKey> keys)
     {
         var newMap = Clone();
         foreach (var key in keys)

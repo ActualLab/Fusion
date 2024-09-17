@@ -17,6 +17,14 @@ public static class DbContextExt
         where TDbEntity : class
         => dbContext.Set<TDbEntity>().WithHints(hint);
 
+    public static IQueryable<TDbEntity> Set<TDbEntity>(this DbContext dbContext, DbHint hint1, DbHint hint2)
+        where TDbEntity : class
+        => dbContext.Set<TDbEntity>().WithHints(hint1, hint2);
+
+    public static IQueryable<TDbEntity> Set<TDbEntity>(this DbContext dbContext, DbHint hint1, DbHint hint2, DbHint hint3)
+        where TDbEntity : class
+        => dbContext.Set<TDbEntity>().WithHints(hint1, hint2, hint3);
+
     public static IQueryable<TDbEntity> Set<TDbEntity>(this DbContext dbContext, params DbHint[] hints)
         where TDbEntity : class
         => dbContext.Set<TDbEntity>().WithHints(hints);

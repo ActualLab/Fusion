@@ -25,7 +25,7 @@ public static class ConfigurationExt
             var plusIndex = sectionName.IndexOf('+', StringComparison.Ordinal);
             if (plusIndex >= 0)
                 sectionName = sectionName[(plusIndex + 1)..];
-            altSectionName = sectionName.TrimSuffix("Settings", "Cfg", "Config", "Configuration");
+            altSectionName = sectionName.TrimSuffixes("Settings", "Cfg", "Config", "Configuration");
         }
         var settings = new TSettings();
         var section = configuration.GetSection(sectionName);

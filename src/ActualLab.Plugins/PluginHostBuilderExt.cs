@@ -28,7 +28,7 @@ public static class PluginHostBuilderExt
         bool resolveIndirectDependencies,
         params Type[] pluginTypes)
         where TBuilder : PluginHostBuilder
-        => builder.UsePlugins(resolveIndirectDependencies, (IEnumerable<Type>) pluginTypes);
+        => builder.UsePlugins(resolveIndirectDependencies, (IEnumerable<Type>)pluginTypes);
 
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     public static TBuilder UsePlugins<TBuilder>(this TBuilder builder,

@@ -45,7 +45,7 @@ public static class StringExt
         }
     }
 
-    public static string TrimSuffix(this string source, params string[] suffixes)
+    public static string TrimSuffixes(this string source, params ReadOnlySpan<string> suffixes)
     {
         foreach (var suffix in suffixes) {
             var result = source.TrimSuffix(suffix);

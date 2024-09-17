@@ -9,7 +9,7 @@ public static class ApiSet
         => ApiSet<T>.Empty;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ApiSet<T> New<T>(params T[] items)
+    public static ApiSet<T> New<T>(params ReadOnlySpan<T> items)
         => new(items);
 }
 
@@ -17,7 +17,7 @@ public static class ApiSet
 public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
 
 {
-    public static readonly ApiSet<T> Empty = new(Array.Empty<T>());
+    public static readonly ApiSet<T> Empty = new();
 
     private SortedItemCache? _sortedItemCache;
 
@@ -27,8 +27,15 @@ public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
     public bool IsEmpty => Count == 0;
 
     public ApiSet() { }
-    public ApiSet(IEnumerable<T> collection) : base(collection) { }
-    public ApiSet(IEnumerable<T> collection, IEqualityComparer<T>? comparer) : base(collection, comparer) { }
+
+    public ApiSet(in ReadOnlySpan<T> span) : base(span.Length)
+    {
+        foreach (var item in span)
+            Add(item);
+    }
+
+    public ApiSet(IEnumerable<T> items) : base(items) { }
+    public ApiSet(IEnumerable<T> items, IEqualityComparer<T>? comparer) : base(items, comparer) { }
     public ApiSet(IEqualityComparer<T>? comparer) : base(comparer) { }
 #if !NETSTANDARD2_0
     public ApiSet(int capacity) : base(capacity) { }
@@ -53,14 +60,15 @@ public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
         return newSet;
     }
 
-    public ApiSet<T> With(params T[] items)
+    public ApiSet<T> WithMany(params ReadOnlySpan<T> items)
     {
         var newSet = Clone();
-        newSet.AddRange(items);
+        foreach (var item in items)
+            newSet.Add(item);
         return newSet;
     }
 
-    public ApiSet<T> With(IEnumerable<T> items)
+    public ApiSet<T> WithMany(IEnumerable<T> items)
     {
         var newSet = Clone();
         newSet.AddRange(items);
@@ -74,7 +82,7 @@ public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
         return newSet;
     }
 
-    public ApiSet<T> Without(params T[] items)
+    public ApiSet<T> WithoutMany(params ReadOnlySpan<T> items)
     {
         var newSet = Clone();
         foreach (var item in items)
@@ -82,7 +90,7 @@ public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
         return newSet;
     }
 
-    public ApiSet<T> Without(IEnumerable<T> items)
+    public ApiSet<T> WithoutMany(IEnumerable<T> items)
     {
         var newSet = Clone();
         foreach (var item in items)

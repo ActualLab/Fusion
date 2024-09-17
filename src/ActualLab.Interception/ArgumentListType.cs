@@ -22,7 +22,16 @@ public sealed class ArgumentListType
     public readonly Func<ArgumentList> Factory;
 
     public static ArgumentListType Get(params ReadOnlySpan<Type> itemTypes)
-        => Get(ArgumentList.AllowGenerics, itemTypes);
+    {
+        if (itemTypes.Length <= 3) // Primary scenario
+            return ArgumentList.AllowGenerics || itemTypes.Length == 0
+                ? GDefCache3.GetOrAdd(FixedArray3<Type?>.New(itemTypes!), static key => new ArgumentListType(true, key.ReadOnlySpan))
+                : SDefCache3.GetOrAdd(FixedArray3<Type?>.New(itemTypes!), static key => new ArgumentListType(false, key.ReadOnlySpan));
+
+        return itemTypes.Length <= 6
+            ? Get6(ArgumentList.AllowGenerics, itemTypes)
+            : GetN(ArgumentList.AllowGenerics, itemTypes);
+    }
 
     public static ArgumentListType Get(bool useGenerics, params ReadOnlySpan<Type> itemTypes)
     {

@@ -6,13 +6,13 @@ public static class ApiCollectionExt
 
     // ToApiArray
 
-    public static Api.ApiArray<T> ToApiArray<T>(this T[] source, bool copy = false)
+    public static ApiArray<T> ToApiArray<T>(this T[] source, bool copy = false)
         => new(copy ? source.ToArray() : source);
 
-    public static Api.ApiArray<T> ToApiArray<T>(this IEnumerable<T> source)
+    public static ApiArray<T> ToApiArray<T>(this IEnumerable<T> source)
         => new(source);
 
-    public static async Task<Api.ApiArray<TSource>> ToApiArrayAsync<TSource>(
+    public static async Task<ApiArray<TSource>> ToApiArrayAsync<TSource>(
         this IAsyncEnumerable<TSource> source,
         CancellationToken cancellationToken = default)
     {
@@ -28,7 +28,7 @@ public static class ApiCollectionExt
     }
 
     // That's just a bit more efficient conversion than .Select().ToApiArray()
-    public static Api.ApiArray<TResult> ToApiArray<TSource, TResult>(
+    public static ApiArray<TResult> ToApiArray<TSource, TResult>(
         this IReadOnlyCollection<TSource> source,
         Func<TSource, TResult> selector)
     {
@@ -36,7 +36,7 @@ public static class ApiCollectionExt
         var i = 0;
         foreach (var item in source)
             result[i++] = selector(item);
-        return new Api.ApiArray<TResult>(result);
+        return new ApiArray<TResult>(result);
     }
 
     // ToApiList

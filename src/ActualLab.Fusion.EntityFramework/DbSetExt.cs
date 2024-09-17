@@ -57,6 +57,26 @@ public static class DbSetExt
         }
     }
 
+    public static IQueryable<TEntity> WithHints<TEntity>(
+        this DbSet<TEntity> dbSet, DbHint hint1, DbHint hint2, DbHint hint3)
+        where TEntity: class
+    {
+        var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
+        if (hintFormatter == null)
+            return dbSet;
+
+        var mHints = MemoryBuffer<DbHint>.Lease(false);
+        try {
+            mHints.Add(hint1);
+            mHints.Add(hint2);
+            mHints.Add(hint3);
+            return hintFormatter.Apply(dbSet, ref mHints);
+        }
+        finally {
+            mHints.Release();
+        }
+    }
+
     public static IQueryable<TEntity> WithHints<TEntity>(this DbSet<TEntity> dbSet, params DbHint[] hints)
         where TEntity: class
     {
@@ -69,7 +89,7 @@ public static class DbSetExt
 
         var mHints = MemoryBuffer<DbHint>.Lease(false);
         try {
-            mHints.AddSpan(hints.AsSpan());
+            mHints.AddRange(hints);
             return hintFormatter.Apply(dbSet, ref mHints);
         }
         finally {
