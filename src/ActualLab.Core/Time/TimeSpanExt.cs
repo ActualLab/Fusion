@@ -25,16 +25,20 @@ public static class TimeSpanExt
     {
         var absValue = TimeSpan.FromTicks(Math.Abs(value.Ticks));
         if (absValue < TimeSpan.FromMilliseconds(0.001))
-            return $"{value.TotalMilliseconds * 1000:0.###}μs";
+            return absValue == TimeSpan.Zero
+                ? "0s"
+                : $"{value.TotalMilliseconds * 1000:0.###}μs";
         if (absValue < TimeSpan.FromSeconds(1))
             return $"{value.TotalMilliseconds:0.###}ms";
         if (absValue < TimeSpan.FromSeconds(60))
             return $"{value.TotalSeconds:0.###}s";
-        var totalMinutes = value.TotalMinutes;
+
+        var sign = value < TimeSpan.Zero ? "-" : "";
+        var totalMinutes = absValue.TotalMinutes;
         var totalMinutesFloor = Math.Floor(totalMinutes);
         var seconds = (totalMinutes - totalMinutesFloor) * 60;
         return totalMinutesFloor < 60
-            ? $"{totalMinutesFloor:0}m {seconds:0.###}s"
-            : $"{Math.Floor(value.TotalHours):0}h {value.Minutes:0}m {seconds:0.#}s";
+            ? $"{sign}{totalMinutesFloor:0}m {seconds:0.###}s"
+            : $"{sign}{Math.Floor(absValue.TotalHours):0}h {absValue.Minutes:0}m {seconds:0.#}s";
     }
 }
