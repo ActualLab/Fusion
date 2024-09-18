@@ -11,7 +11,7 @@
 
   <!-- Multitargeting -->
   <PropertyGroup Condition="'$(UseMultitargeting)' == ''">
-    <UseMultitargeting>true</UseMultitargeting>
+    <UseMultitargeting>false</UseMultitargeting>
   </PropertyGroup>
 
   <!-- Common properties -->
