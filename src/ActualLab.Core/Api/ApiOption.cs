@@ -129,7 +129,7 @@ public readonly partial struct ApiOption<T>(bool hasValue, T valueOrDefault)
 
     public int CompareTo(ApiOption<T> other)
         => HasValue
-            ? other.HasValue ? Comparer<T>.Default.Compare(ValueOrDefault, other.ValueOrDefault) : 1
+            ? other.HasValue ? Comparer<T>.Default.Compare(ValueOrDefault!, other.ValueOrDefault!) : 1
             : other.HasValue ? -1 : 0;
 
     // Operators
@@ -139,7 +139,7 @@ public readonly partial struct ApiOption<T>(bool hasValue, T valueOrDefault)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator ApiOption<T>((bool HasValue, T Value) source) => new(source.HasValue, source.Value);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator ApiOption<T>(Option<T> source) => new(source.HasValue, source.ValueOrDefault);
+    public static implicit operator ApiOption<T>(Option<T> source) => new(source.HasValue, source.ValueOrDefault!);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator Option<T>(ApiOption<T> source) => new(source.HasValue, source.ValueOrDefault);
 

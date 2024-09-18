@@ -129,7 +129,7 @@ public readonly partial struct Option<T>(bool hasValue, T? valueOrDefault)
     }
 
     public Option<T> ToApiOption() => new(HasValue, ValueOrDefault);
-    ApiOption<T> IConvertibleTo<ApiOption<T>>.Convert() => new(HasValue, ValueOrDefault);
+    ApiOption<T> IConvertibleTo<ApiOption<T>>.Convert() => new(HasValue, ValueOrDefault!);
 
     // Equality
 
@@ -147,7 +147,7 @@ public readonly partial struct Option<T>(bool hasValue, T? valueOrDefault)
 
     public int CompareTo(Option<T> other)
         => HasValue
-            ? other.HasValue ? Comparer<T>.Default.Compare(ValueOrDefault, other.ValueOrDefault) : 1
+            ? other.HasValue ? Comparer<T>.Default.Compare(ValueOrDefault!, other.ValueOrDefault!) : 1
             : other.HasValue ? -1 : 0;
 
     // Operators
