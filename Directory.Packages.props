@@ -60,7 +60,7 @@
     <EntityFrameworkCoreMySqlVersion3>[3.2.7,4)</EntityFrameworkCoreMySqlVersion3>
     <!-- Serialization -->
     <NewtonsoftJsonVersion>[13.0.3,)</NewtonsoftJsonVersion>
-    <MemoryPackVersion>[1.10.0,)</MemoryPackVersion>
+    <MemoryPackVersion>[1.21.2,)</MemoryPackVersion>
     <MessagePackVersion>[2.5.172,)</MessagePackVersion>
     <!-- Other -->
     <RedisVersion>[2.8.12,)</RedisVersion>

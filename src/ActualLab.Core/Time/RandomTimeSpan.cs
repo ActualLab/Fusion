@@ -3,7 +3,7 @@ using ActualLab.Generators;
 namespace ActualLab.Time;
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor]
 // Unmanaged struct, so no need for [method: MemoryPackConstructor]

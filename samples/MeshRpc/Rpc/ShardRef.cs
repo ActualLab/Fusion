@@ -5,7 +5,7 @@ using Microsoft.Toolkit.HighPerformance;
 
 namespace Samples.MeshRpc;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable]
 public readonly partial record struct ShardRef(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] int Key)
 {

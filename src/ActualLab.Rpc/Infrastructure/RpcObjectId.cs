@@ -3,7 +3,7 @@ using System.Globalization;
 namespace ActualLab.Rpc.Infrastructure;
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable]
 public readonly partial record struct RpcObjectId(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] Guid HostId,
     [property: DataMember(Order = 1), MemoryPackOrder(1)] long LocalId)
