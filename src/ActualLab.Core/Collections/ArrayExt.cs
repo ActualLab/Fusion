@@ -2,7 +2,7 @@ namespace ActualLab.Collections;
 
 public static class ArrayExt
 {
-    public static T[] CloneArray<T>(this T[] source)
+    public static T[] Duplicate<T>(this T[] source)
     {
         var length = source.Length;
         if (length == 0)

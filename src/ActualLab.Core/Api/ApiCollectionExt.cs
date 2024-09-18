@@ -7,7 +7,7 @@ public static class ApiCollectionExt
     // ToApiArray
 
     public static ApiArray<T> ToApiArray<T>(this T[] source, bool makeCopy = true)
-        => new(makeCopy ? source.CloneArray() : source);
+        => new(makeCopy ? source.Duplicate() : source);
 
     public static ApiArray<T> ToApiArray<T>(this IReadOnlyCollection<T> source)
         => new(source);

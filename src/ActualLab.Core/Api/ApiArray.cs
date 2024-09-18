@@ -80,7 +80,7 @@ public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArr
     public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)Items).GetEnumerator();
 
     public ApiArray<T> Clone()
-        => IsEmpty ? Empty : new(Items.CloneArray());
+        => IsEmpty ? Empty : new(Items.Duplicate());
 
     public override string ToString()
     {
@@ -176,7 +176,7 @@ public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArr
         if (index < 0)
             return Add(item, addInFront);
 
-        var newItems = Items.CloneArray();
+        var newItems = Items.Duplicate();
         newItems[index] = updater.Invoke(newItems[index]);
         return new(newItems);
     }
@@ -191,7 +191,7 @@ public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArr
         for (var i = 0; i < items.Length; i++) {
             var item = items[i];
             if (where.Invoke(item)) {
-                copy ??= items.CloneArray();
+                copy ??= items.Duplicate();
                 copy[i] = updater.Invoke(item);
             }
         }
