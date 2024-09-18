@@ -19,7 +19,7 @@ public class BuggyServiceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
     {
         var services = CreateServices();
         var testClient = services.GetRequiredService<RpcTestClient>();
-        Assert.ThrowsAny<ArgumentException>(() => {
+        Assert.Throws<InvalidOperationException>(() => {
             _ = testClient.Connections.First().Value.ClientPeer;
         });
     }
