@@ -2,6 +2,17 @@ namespace ActualLab.Collections;
 
 public static class ArrayExt
 {
+    public static T[] CloneArray<T>(this T[] source)
+    {
+#if NET5_0_OR_GREATER
+        var result = GC.AllocateUninitializedArray<T>(source.Length);
+#else
+        var result = new T[source.Length];
+#endif
+        source.AsSpan().CopyTo(result);
+        return result;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T[] SortInPlace<T>(this T[] array)
     {

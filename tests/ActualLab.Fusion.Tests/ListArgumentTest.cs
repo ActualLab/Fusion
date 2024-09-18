@@ -20,7 +20,7 @@ public class ListArgumentTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
             c1 = await Computed.Capture(() => math.Sum(values));
             c1.Value.Should().Be(values.Sum());
 
-            values = values.ToArray(); // Copy array
+            values = values.CloneArray();
             c2 = await Computed.Capture(() => math.Sum(values));
             c2.Value.Should().Be(c1.Value);
 #if NETFRAMEWORK

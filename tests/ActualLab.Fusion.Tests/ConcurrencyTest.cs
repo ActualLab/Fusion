@@ -189,7 +189,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
                     return (Source: source, Computed: computed, SourceReader: reader);
                 })
                 .Collect()
-                ).ToArray();
+                ).CloneArray();
             readers.Zip(readers, (x, y) => (x, y))
                 .Any(p => !ReferenceEquals(p.x.Computed, p.y.Computed))
                 .Should().BeFalse();

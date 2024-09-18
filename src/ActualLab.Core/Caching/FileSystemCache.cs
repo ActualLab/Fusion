@@ -49,7 +49,10 @@ public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, T
                 var pairs =
                     Deserialize(originalText)
                     ?? new Dictionary<TKey, TValue>();
-                pairs.SetOrRemove(key, value);
+                if (value.IsSome(out var v))
+                    pairs[key] = v;
+                else
+                    pairs.Remove(key);
                 newText = Serialize(pairs);
                 await SetText(fileStream, newText, cancellationToken).ConfigureAwait(false);
             }

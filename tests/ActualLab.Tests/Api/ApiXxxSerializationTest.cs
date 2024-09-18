@@ -8,7 +8,7 @@ public class ApiXxxSerializationTest(ITestOutputHelper @out) : TestBase(@out)
         ApiArray<string>.Empty.Should().BeEmpty();
         default(ApiArray<string>).Should().BeEmpty();
 
-        for (var length = 0; length < 10; length++) {
+        for (var length = 0; length < 100; length++) {
             var c = Enumerable.Range(0, length).ToApiArray();
             Out.WriteLine($"Testing: {c}");
             var s = c.PassThroughAllSerializers(Out);
@@ -18,6 +18,11 @@ public class ApiXxxSerializationTest(ITestOutputHelper @out) : TestBase(@out)
                 c[3].Should().Be(3);
                 c[1..3].Should().Equal(1, 2);
             }
+
+            var c1 = Enumerable.Range(0, length).Select(x => Option.Some(x.ToString())).ToApiArray();
+            Out.WriteLine($"Testing: {c}");
+            var s1 = c1.PassThroughAllSerializers(Out);
+            s1.Should().Equal(c1);
         }
 
         for (var length = 0; length < 10; length++) {

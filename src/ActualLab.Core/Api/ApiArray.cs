@@ -10,12 +10,12 @@ public static class ApiArray
         => default;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ApiArray<T> New<T>(params T[] items)
-        => items.Length == 0 ? default : new(items);
+    public static ApiArray<T> New<T>(params ReadOnlySpan<T> items)
+        => items.Length == 0 ? default : new(items.ToArray());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ApiArray<T> New<T>(scoped ReadOnlySpan<T> items)
-        => items.Length == 0 ? default : new(items.ToArray());
+    public static ApiArray<T> Wrap<T>(T[] items)
+        => new(items);
 }
 
 #pragma warning disable MA0084
@@ -25,14 +25,12 @@ public static class ApiArray
 [JsonConverter(typeof(ApiArrayJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(ApiArrayNewtonsoftJsonConverter))]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[method: MemoryPackConstructor]
-public readonly partial struct ApiArray<T>(T[] items)
-    : IReadOnlyList<T>, IEquatable<ApiArray<T>>
+public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArray<T>>
 {
     private static readonly T[] EmptyItems = [];
     public static readonly ApiArray<T> Empty = default!;
 
-    private readonly T[]? _items = items is { Length: 0 } ? null : items;
+    private readonly T[]? _items;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public T[] Items {
@@ -66,6 +64,10 @@ public readonly partial struct ApiArray<T>(T[] items)
 #endif
     }
 
+    [method: MemoryPackConstructor]
+    internal ApiArray(T[] items)
+        => _items = items is { Length: 0 } ? null : items;
+
     public ApiArray(IReadOnlyCollection<T> source)
         : this(source.Count == 0 ? EmptyItems : source.ToArray())
     { }
@@ -77,7 +79,8 @@ public readonly partial struct ApiArray<T>(T[] items)
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)Items).GetEnumerator();
 
-    public ApiArray<T> Clone() => IsEmpty ? Empty : new(Items.ToArray());
+    public ApiArray<T> Clone()
+        => IsEmpty ? Empty : new(Items.CloneArray());
 
     public override string ToString()
     {
@@ -173,7 +176,7 @@ public readonly partial struct ApiArray<T>(T[] items)
         if (index < 0)
             return Add(item, addInFront);
 
-        var newItems = Items.ToArray();
+        var newItems = Items.CloneArray();
         newItems[index] = updater.Invoke(newItems[index]);
         return new(newItems);
     }
@@ -188,7 +191,7 @@ public readonly partial struct ApiArray<T>(T[] items)
         for (var i = 0; i < items.Length; i++) {
             var item = items[i];
             if (where.Invoke(item)) {
-                copy ??= items.ToArray();
+                copy ??= items.CloneArray();
                 copy[i] = updater.Invoke(item);
             }
         }

@@ -6,11 +6,26 @@ public static class ApiCollectionExt
 
     // ToApiArray
 
-    public static ApiArray<T> ToApiArray<T>(this T[] source, bool copy = false)
-        => new(copy ? source.ToArray() : source);
+    public static ApiArray<T> ToApiArray<T>(this T[] source, bool makeCopy = true)
+        => new(makeCopy ? source.CloneArray() : source);
+
+    public static ApiArray<T> ToApiArray<T>(this IReadOnlyCollection<T> source)
+        => new(source);
 
     public static ApiArray<T> ToApiArray<T>(this IEnumerable<T> source)
         => new(source);
+
+    // That's just a bit more efficient conversion than .Select().ToApiArray()
+    public static ApiArray<TResult> ToApiArray<TSource, TResult>(
+        this IReadOnlyCollection<TSource> source,
+        Func<TSource, TResult> selector)
+    {
+        var result = new TResult[source.Count];
+        var i = 0;
+        foreach (var item in source)
+            result[i++] = selector(item);
+        return new ApiArray<TResult>(result);
+    }
 
     public static async Task<ApiArray<TSource>> ToApiArrayAsync<TSource>(
         this IAsyncEnumerable<TSource> source,
@@ -25,18 +40,6 @@ public static class ApiCollectionExt
         finally {
             buffer.Release();
         }
-    }
-
-    // That's just a bit more efficient conversion than .Select().ToApiArray()
-    public static ApiArray<TResult> ToApiArray<TSource, TResult>(
-        this IReadOnlyCollection<TSource> source,
-        Func<TSource, TResult> selector)
-    {
-        var result = new TResult[source.Count];
-        var i = 0;
-        foreach (var item in source)
-            result[i++] = selector(item);
-        return new ApiArray<TResult>(result);
     }
 
     // ToApiList
