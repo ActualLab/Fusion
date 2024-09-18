@@ -4,6 +4,7 @@ using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using MemoryPack;
+using Microsoft.AspNetCore.Builder;
 using static System.Console;
 
 #pragma warning disable ASP0000
@@ -74,13 +75,13 @@ async Task RunClient()
             foreach (var message in messages)
                 WriteLine($"- {message}");
         }
-    }
+    };
 
     async Task ObserveWordCount() {
         var cMessageCount = await Computed.Capture(() => chat.GetWordCount());
         await foreach (var (wordCount, _) in cMessageCount.Changes())
             WriteLine($"Word count changed: {wordCount}");
-    }
+    };
 }
 
 public interface IChat : IComputeService

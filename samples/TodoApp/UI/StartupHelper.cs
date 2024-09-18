@@ -79,7 +79,10 @@ public static class StartupHelper
             services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25)); // 0.25s
 
             // Blazorise
-            services.AddBlazorise(options => options.Immediate = true)
+            services.AddBlazorise(options => {
+                    options.Immediate = true;
+                    options.Debounce = true;
+                })
                 .AddBootstrap5Providers()
                 .AddFontAwesomeIcons();
         }

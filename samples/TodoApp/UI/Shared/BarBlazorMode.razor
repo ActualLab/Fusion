@@ -4,7 +4,7 @@
 
 <BarDropdown Class="@CssClass">
     <BarDropdownToggle>@(_isPrerendering ? "Loading..." : GetModeName(_isServerSideBlazor))</BarDropdownToggle>
-    <BarDropdownMenu>
+    <BarDropdownMenu RightAligned="true">
         @foreach(var mode in new [] {true, false}) {
             <BarDropdownItem Clicked="@(() => BlazorModeHelper.ChangeMode(mode))">@GetModeName(mode)</BarDropdownItem>
         }

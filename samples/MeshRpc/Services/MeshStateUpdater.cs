@@ -1,4 +1,5 @@
 using ActualLab.Rpc;
+using Microsoft.Extensions.Hosting;
 
 namespace Samples.MeshRpc.Services;
 
