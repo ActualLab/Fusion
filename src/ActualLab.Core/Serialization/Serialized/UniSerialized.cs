@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
+using ActualLab.IO;
 using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
@@ -82,19 +83,19 @@ public readonly partial struct UniSerialized<T>
     private static byte[] SerializeBytes(T value, SerializerKind serializerKind)
     {
         var serializer = serializerKind.GetDefaultSerializer();
-        if (serializerKind != SerializerKind.MemoryPack) {
-            using var buffer = serializer.Write(value);
-            return buffer.WrittenSpan.ToArray();
-        }
-
-        var state = MemoryPackSerializerExt.WriterState;
-        MemoryPackSerializerExt.WriterState = default;
+        ArrayPoolBuffer<byte>? buffer = null;
         try {
-            using var buffer = serializer.Write(value);
+            if (serializerKind != SerializerKind.MemoryPack) {
+                buffer = serializer.Write(value);
+                return buffer.WrittenSpan.ToArray();
+            }
+
+            using var stateSnapshot = MemoryPackSerializer.ResetWriterState();
+            buffer = serializer.Write(value);
             return buffer.WrittenSpan.ToArray();
         }
         finally {
-            MemoryPackSerializerExt.WriterState = state;
+            buffer?.Dispose();
         }
     }
 
@@ -112,13 +113,7 @@ public readonly partial struct UniSerialized<T>
         if (serializerKind != SerializerKind.MemoryPack)
             return serializer.Read<T>(bytes);
 
-        var state = MemoryPackSerializerExt.ReaderState;
-        MemoryPackSerializerExt.ReaderState = default;
-        try {
-            return serializer.Read<T>(bytes);
-        }
-        finally {
-            MemoryPackSerializerExt.ReaderState = state;
-        }
+        using var stateSnapshot = MemoryPackSerializer.ResetReaderState();
+        return serializer.Read<T>(bytes);
     }
 }
