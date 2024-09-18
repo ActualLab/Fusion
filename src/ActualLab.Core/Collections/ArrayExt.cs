@@ -4,10 +4,14 @@ public static class ArrayExt
 {
     public static T[] CloneArray<T>(this T[] source)
     {
+        var length = source.Length;
+        if (length == 0)
+            return source;
+
 #if NET5_0_OR_GREATER
-        var result = GC.AllocateUninitializedArray<T>(source.Length);
+        var result = GC.AllocateUninitializedArray<T>(length);
 #else
-        var result = new T[source.Length];
+        var result = new T[length];
 #endif
         source.AsSpan().CopyTo(result);
         return result;
