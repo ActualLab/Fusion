@@ -85,12 +85,14 @@ public readonly partial struct TypeDecoratingUniSerialized<T>
         var serializer = serializerKind.GetDefaultTypeDecoratingSerializer();
         ArrayPoolBuffer<byte>? buffer = null;
         try {
+#if !NETSTANDARD2_0
             if (serializerKind != SerializerKind.MemoryPack) {
                 buffer = serializer.Write(value);
                 return buffer.WrittenSpan.ToArray();
             }
 
             using var stateSnapshot = MemoryPackSerializer.ResetWriterState();
+#endif
             buffer = serializer.Write(value);
             return buffer.WrittenSpan.ToArray();
         }
@@ -110,10 +112,12 @@ public readonly partial struct TypeDecoratingUniSerialized<T>
     private static T DeserializeBytes(byte[] bytes, SerializerKind serializerKind)
     {
         var serializer = serializerKind.GetDefaultTypeDecoratingSerializer();
+#if !NETSTANDARD2_0
         if (serializerKind != SerializerKind.MemoryPack)
             return serializer.Read<T>(bytes);
 
         using var stateSnapshot = MemoryPackSerializer.ResetReaderState();
+#endif
         return serializer.Read<T>(bytes);
     }
 }
