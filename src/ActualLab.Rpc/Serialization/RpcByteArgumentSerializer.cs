@@ -7,9 +7,19 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Serialization;
 
-public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcArgumentSerializer
+public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
 {
     public static int CopySizeThreshold { get; set; } = 1024;
+
+    private readonly IByteSerializer _serializer;
+    private readonly byte[] _defaultTypeRefBytes;
+
+    public RpcByteArgumentSerializer(IByteSerializer serializer)
+    {
+        _serializer = serializer;
+        using var buffer = serializer.Write(default(TypeRef));
+        _defaultTypeRefBytes = buffer.WrittenSpan.ToArray();
+    }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override TextOrBytes Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
@@ -20,8 +30,8 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
         var buffer = new ArrayPoolBuffer<byte>(128 + Math.Max(128, sizeHint));
         try {
             var itemSerializer = allowPolymorphism
-                ? (ItemSerializer)new ItemPolymorphicSerializer(serializer, buffer)
-                : new ItemNonPolymorphicSerializer(serializer, buffer);
+                ? (ItemSerializer)new ItemPolymorphicSerializer(_serializer, buffer)
+                : new ItemNonPolymorphicSerializer(_serializer, buffer, _defaultTypeRefBytes);
             arguments.Read(itemSerializer);
 
             ReadOnlyMemory<byte> bytes;
@@ -49,8 +59,8 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
             return;
 
         var deserializer = allowPolymorphism
-            ? (ItemDeserializer)new ItemPolymorphicDeserializer(serializer, bytes)
-            : new ItemNonPolymorphicDeserializer(serializer, bytes);
+            ? (ItemDeserializer)new ItemPolymorphicDeserializer(_serializer, bytes)
+            : new ItemNonPolymorphicDeserializer(_serializer, bytes);
         arguments.Write(deserializer);
     }
 
@@ -98,13 +108,18 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
         }
     }
 
-    private sealed class ItemNonPolymorphicSerializer(IByteSerializer serializer, IBufferWriter<byte> buffer)
+    private sealed class ItemNonPolymorphicSerializer(IByteSerializer serializer, IBufferWriter<byte> buffer, byte[] defaultTypeRefBytes)
         : ItemSerializer(serializer, buffer)
     {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnClass(Type type, object? item, int index)
         {
-            Serializer.Write(Buffer, default(TypeRef));
+            // The code below is a faster equivalent of:
+            // Serializer.Write(Buffer, default(TypeRef));
+            // Serializer.Write(Buffer, item, type);
+            var bufferSpan = Buffer.GetSpan(defaultTypeRefBytes.Length);
+            defaultTypeRefBytes.CopyTo(bufferSpan);
+            Buffer.Advance(defaultTypeRefBytes.Length);
             Serializer.Write(Buffer, item, type);
         }
 
@@ -117,7 +132,12 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer serializer) : RpcA
                 return;
             }
 
-            Serializer.Write(Buffer, default(TypeRef));
+            // The code below is a faster equivalent of:
+            // Serializer.Write(Buffer, default(TypeRef));
+            // Serializer.Write(Buffer, item, type);
+            var bufferSpan = Buffer.GetSpan(defaultTypeRefBytes.Length);
+            defaultTypeRefBytes.CopyTo(bufferSpan);
+            Buffer.Advance(defaultTypeRefBytes.Length);
             Serializer.Write(Buffer, item, type);
         }
     }

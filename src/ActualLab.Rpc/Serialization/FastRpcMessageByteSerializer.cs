@@ -58,9 +58,9 @@ public sealed class FastRpcMessageByteSerializer(IByteSerializer baseSerializer,
         baseSerializer.Write(bufferWriter, new FastRpcMessage(value));
         var argumentData = value.ArgumentData.Data;
         var argumentDataLength = argumentData.Length + 4;
-        var span = bufferWriter.GetSpan(argumentDataLength);
-        span.WriteUnchecked(argumentDataLength);
-        argumentData.Span.CopyTo(span[4..]);
+        var bufferSpan = bufferWriter.GetSpan(argumentDataLength);
+        bufferSpan.WriteUnchecked(argumentDataLength);
+        argumentData.Span.CopyTo(bufferSpan[4..]);
         bufferWriter.Advance(argumentDataLength);
     }
 
