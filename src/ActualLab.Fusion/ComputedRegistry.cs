@@ -62,8 +62,12 @@ public sealed class ComputedRegistry : IDisposable
             settings.ConcurrencyLevel,
             settings.InitialCapacity,
             ComputedInput.EqualityComparer);
-        ChangeGraphPruner(new ComputedGraphPruner(new()), null!);
         UpdatePruneCounterThreshold(out _);
+        _ = Task.Delay(TimeSpan.FromSeconds(5)).ContinueWith(
+            // It's important to run this code once ComputedRegistry constructor completes:
+            // it uses ComputedRegistry.Instance, which can be null otherwise.
+            _ => ChangeGraphPruner(new ComputedGraphPruner(ComputedGraphPruner.Options.Default), null!),
+            TaskScheduler.Default);
     }
 
     public void Dispose()

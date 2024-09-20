@@ -6,6 +6,7 @@ using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Client.Interception;
+using ActualLab.Fusion.Internal;
 using ActualLab.Fusion.UI;
 using ActualLab.OS;
 using ActualLab.Rpc;
@@ -58,10 +59,11 @@ public static class StartupHelper
 
     public static void ConfigureSharedServices(IServiceCollection services, HostKind hostKind, string remoteRpcHostUrl)
     {
+        // We override default ComputedGraphPruner options just to show how it works here, you don't need to change them
+        ComputedGraphPruner.Options.Default = new() {
+            CheckPeriod = TimeSpan.FromSeconds(10),
+        };
         var fusion = services.AddFusion();
-        fusion.AddComputedGraphPruner(_ => new() {
-            CheckPeriod = TimeSpan.FromSeconds(10) // You should stick to defaults here, it's just for testing
-        });
         fusion.AddFusionTime(); // Add it only if you use it
 
         if (hostKind != HostKind.BackendServer) {

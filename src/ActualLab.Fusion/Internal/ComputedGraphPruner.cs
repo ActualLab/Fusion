@@ -1,5 +1,3 @@
-using System.Diagnostics.Metrics;
-
 namespace ActualLab.Fusion.Internal;
 
 public sealed class ComputedGraphPruner : WorkerBase
@@ -15,7 +13,6 @@ public sealed class ComputedGraphPruner : WorkerBase
         public RandomTimeSpan InterBatchDelay { get; init; } = TimeSpan.FromSeconds(0.1).ToRandom(0.25);
         public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
         public TimeSpan DisposedComputedInvalidationDelay { get; init; } = TimeSpan.FromSeconds(5);
-        public Meter? Meter { get; init; } = null;
     }
 
     internal static readonly ComputedRegistry.MeterSet Metrics = ComputedRegistry.Metrics;
@@ -35,7 +32,7 @@ public sealed class ComputedGraphPruner : WorkerBase
     {
         Settings = settings;
         Clock = clocks.CpuClock;
-        Log = log ?? NullLogger<ComputedGraphPruner>.Instance;
+        Log = log ?? StaticLog.For(GetType());
         _whenActivatedSource = TaskCompletionSourceExt.New<Unit>();
 
         if (settings.AutoActivate)
@@ -65,6 +62,7 @@ public sealed class ComputedGraphPruner : WorkerBase
         }
         _whenActivatedSource.TrySetResult(default);
 
+        await Clock.Delay(Settings.CheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
         var chain = CreatePruneOnceChain()
             .AppendDelay(Settings.CheckPeriod, Clock)
             .RetryForever(Settings.RetryDelays, Clock)

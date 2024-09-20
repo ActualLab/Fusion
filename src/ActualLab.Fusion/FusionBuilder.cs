@@ -470,22 +470,6 @@ public readonly struct FusionBuilder
         => AddRemoteComputedCache<InMemoryRemoteComputedCache, InMemoryRemoteComputedCache.Options>(
             optionsFactory ?? (_ => InMemoryRemoteComputedCache.Options.Default));
 
-    // AddComputedGraphPruner
-
-    public FusionBuilder AddComputedGraphPruner(
-        Func<IServiceProvider, ComputedGraphPruner.Options>? optionsFactory = null)
-    {
-        var services = Services;
-        services.AddSingleton(optionsFactory, _ => ComputedGraphPruner.Options.Default);
-        if (services.HasService<ComputedGraphPruner>())
-            return this;
-
-        services.AddSingleton(c => new ComputedGraphPruner(
-            c.GetRequiredService<ComputedGraphPruner.Options>(), c));
-        services.AddHostedService(c => c.GetRequiredService<ComputedGraphPruner>());
-        return this;
-    }
-
     // Nested types
 
     public class FusionTag
