@@ -70,11 +70,7 @@ public abstract partial class RpcStream : IRpcObject
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 {
-#if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
     private readonly IAsyncEnumerable<T>? _localSource;
     private Channel<T>? _remoteChannel;
     private long _nextIndex;

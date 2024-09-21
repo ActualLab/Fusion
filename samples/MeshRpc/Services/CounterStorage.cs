@@ -2,7 +2,7 @@ namespace Samples.MeshRpc.Services;
 
 public static class CounterStorage
 {
-    private static readonly object Lock = new();
+    private static readonly Lock Lock = new();
     private static readonly Dictionary<int, MutableState<Counter>> States = new();
 
     public static Counter Get(int key)

@@ -35,10 +35,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
     // ReSharper disable once InconsistentNaming
     private InvalidatedHandlerSet _invalidated;
 
-    protected object Lock {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => this;
-    }
+    protected Lock Lock = new();
 
     protected ComputedFlags Flags {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

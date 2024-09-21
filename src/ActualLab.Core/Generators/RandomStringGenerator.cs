@@ -14,7 +14,7 @@ public class RandomStringGenerator : Generator<string>, IDisposable
 
     protected readonly RandomNumberGenerator Rng;
     // ReSharper disable once InconsistentlySynchronizedField
-    protected object Lock => Rng;
+    protected Lock Lock = new();
 
     public string Alphabet { get; }
     public int Length { get; }

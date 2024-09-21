@@ -20,7 +20,7 @@ public interface IDbShardRegistry<TContext> : IDbShardRegistry;
 
 public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
 {
-    protected readonly object Lock = new();
+    protected readonly Lock Lock = new();
     private readonly MutableState<ImmutableHashSet<DbShard>> _shards;
     private readonly MutableState<ImmutableHashSet<DbShard>> _usedShards;
     private readonly ComputedState<ImmutableHashSet<DbShard>> _eventProcessorShards;

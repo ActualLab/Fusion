@@ -5,11 +5,7 @@ namespace ActualLab.Trimming;
 
 public abstract class CodeKeeper
 {
-#if NET9_0_OR_GREATER
     private static readonly Lock Lock = new();
-#else
-    private static readonly object Lock = new();
-#endif
     private static readonly List<Action> Actions = new();
     private static readonly HashSet<Action> ActionSet = new();
 

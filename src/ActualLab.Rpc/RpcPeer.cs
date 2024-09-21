@@ -412,11 +412,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         RpcPeerConnectionState newState,
         AsyncState<RpcPeerConnectionState>? expectedState = null)
     {
-        Monitor.Enter(Lock);
+        Lock.Enter();
         var connectionState = _connectionState;
         var oldState = connectionState.Value;
         if ((expectedState != null && connectionState != expectedState) || ReferenceEquals(newState, oldState)) {
-            Monitor.Exit(Lock);
+            Lock.Exit();
             return connectionState;
         }
         Exception? terminalError = null;
@@ -427,7 +427,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             }
             var nextConnectionState = connectionState.TrySetNext(newState);
             if (ReferenceEquals(nextConnectionState, connectionState)) {
-                Monitor.Exit(Lock);
+                Lock.Exit();
                 return connectionState;
             }
             _connectionState = connectionState = nextConnectionState;
@@ -455,7 +455,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 // Complete the old Channel
                 oldState.Sender?.TryComplete(newState.Error);
             }
-            Monitor.Exit(Lock);
+            Lock.Exit();
 
             // The code below is responsible solely for logging - all important stuff is already done
             if (terminalError != null)

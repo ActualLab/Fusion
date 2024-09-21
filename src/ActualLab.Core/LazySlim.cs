@@ -32,6 +32,7 @@ public static class LazySlim
 
 public sealed class LazySlim<TValue> : ILazySlim<TValue>
 {
+    private readonly Lock _syncLock = new();
     private Func<TValue>? _factory;
     private TValue _value;
 
@@ -39,7 +40,7 @@ public sealed class LazySlim<TValue> : ILazySlim<TValue>
         get {
             // Double-check locking
             if (_factory == null) return _value;
-            lock (this) {
+            lock (_syncLock) {
                 if (_factory == null) return _value;
                 _value = _factory.Invoke();
                 _factory = null;

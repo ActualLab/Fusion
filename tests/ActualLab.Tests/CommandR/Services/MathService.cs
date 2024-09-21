@@ -11,11 +11,7 @@ public interface IMathService : ICommandService, IRequiresFullProxy
 
 public class MathService(IServiceProvider services) : ServiceBase(services), IMathService
 {
-#if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
 
     private ICommander Commander { get; } = services.Commander();
 
