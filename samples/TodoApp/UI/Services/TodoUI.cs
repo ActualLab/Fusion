@@ -5,6 +5,8 @@ using Samples.TodoApp.Abstractions;
 
 namespace Samples.TodoApp.UI.Services;
 
+#pragma warning disable MA0004, VSTHRD200
+
 public class TodoUI(Session session, ITodoService todoService) : IComputeService, IDisposable, IHasIsDisposed
 {
     private static readonly ActivitySource ActivitySource = AppInstruments.ActivitySource;
@@ -30,7 +32,7 @@ public class TodoUI(Session session, ITodoService todoService) : IComputeService
         var ids = await todoService.ListIds(Session, count, cancellationToken);
         var todos = await ids
             .Select(id => todoService.Get(Session, id, cancellationToken))
-            .Collect(); // Like Task.WhenAll, but acting on IEnumerable<T>
+            .Collect(cancellationToken); // Like Task.WhenAll, but acting on IEnumerable<T>
         return todos.SkipNullItems().ToArray();
     }
 

@@ -51,13 +51,14 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
                 shard.Value, entries.Count, batchSize);
 
             var results = await GetProcessTasks(shard, entries, cancellationToken)
-                .Collect(Settings.ConcurrencyLevel)
+                .Collect(Settings.ConcurrencyLevel, useCurrentScheduler: false, cancellationToken)
                 .ConfigureAwait(false);
 
-            foreach (var (entry, isProcessed) in entries.Zip(results,
-                         static (entry, isProcessed) => (entry, isProcessed)))
+            var entriesZipped = entries.Zip(results, static (entry, isProcessed) => (entry, isProcessed));
+            foreach (var (entry, isProcessed) in entriesZipped) {
                 if (isProcessed)
                     SetEntryState(dbEntries, entry, LogEntryState.Processed);
+            }
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
             return entries.Count;

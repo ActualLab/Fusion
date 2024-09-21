@@ -55,7 +55,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                 shard.Value, entries.Count, batchSize, nextIndex);
 
             await GetProcessTasks(shard, entries, nextIndex, cancellationToken)
-                .Collect(Settings.ConcurrencyLevel)
+                .Collect(Settings.ConcurrencyLevel, useCurrentScheduler: false, cancellationToken)
                 .ConfigureAwait(false);
             NextIndexes[shard] = entries[^1].Index + 1;
             return entries.Count;

@@ -136,7 +136,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
             return;
         await batchProcessors.Values
             .Select(p => p.DisposeAsync().AsTask())
-            .Collect()
+            .Collect(CancellationToken.None)
             .ConfigureAwait(false);
     }
 

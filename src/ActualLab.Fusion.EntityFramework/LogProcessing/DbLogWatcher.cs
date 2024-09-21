@@ -41,7 +41,7 @@ public abstract class DbLogWatcher<TDbContext, TDbEntry>(IServiceProvider servic
     {
         await ShardWatchers.Values
             .Select(v => v.Value.DisposeAsync().AsTask())
-            .Collect()
+            .Collect(CancellationToken.None)
             .ConfigureAwait(false);
     }
 }

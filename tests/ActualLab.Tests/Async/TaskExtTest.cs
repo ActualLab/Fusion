@@ -168,6 +168,35 @@ public class TaskExtTest(ITestOutputHelper @out) : TestBase(@out)
         }
     }
 
+    [Fact]
+    public async Task CollectResultTest()
+    {
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await Test(0));
+        await Test(-1);
+
+        Task<Result<int>[]> Test(int cancelAt) {
+            var cts = new CancellationTokenSource();
+            var range = Enumerable.Range(0, 1000);
+            var rnd = new Random();
+            var totalTaskCount = 0;
+            var seq = range.Select(async i => {
+                var taskCount = Interlocked.Increment(ref totalTaskCount);
+                taskCount.Should().BeLessThan(105);
+                try {
+                    var delay = rnd.Next(250);
+                    if (i == cancelAt)
+                        cts.Cancel();
+                    await Task.Delay(delay, cts.Token).ConfigureAwait(false);
+                }
+                finally {
+                    Interlocked.Decrement(ref totalTaskCount);
+                }
+                return i;
+            });
+            return seq.CollectResults(100, cts.Token);
+        }
+    }
+
     // Private methods
 
     private Task<int> RandomIntDelay(int seed, int maxDelay)
