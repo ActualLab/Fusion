@@ -65,8 +65,10 @@ public static partial class TaskExt
     private static async Task<T[]> CollectConcurrently<T>(
         this IEnumerable<Task<T>> tasks, int concurrency, bool useCurrentScheduler, CancellationToken cancellationToken)
     {
-        var semaphore = new SemaphoreSlim(concurrency);
-        Action releaseSemaphore = () => semaphore.Release();
+        SemaphoreSlim? semaphore = new SemaphoreSlim(concurrency);
+        // ReSharper disable once AccessToModifiedClosure
+        // ReSharper disable once AccessToDisposedClosure
+        Action releaseSemaphore = () => semaphore?.ReleaseSilently();
         var buffer = ArrayBuffer<Task<T>>.Lease(true, concurrency * 2);
         try {
             foreach (var task in tasks) {
@@ -84,14 +86,23 @@ public static partial class TaskExt
         }
         finally {
             buffer.Release();
+            try {
+                semaphore.Dispose();
+            }
+            catch {
+                // Intended
+            }
+            semaphore = null;
         }
     }
 
     private static async Task CollectConcurrently(
         this IEnumerable<Task> tasks, int concurrency, bool useCurrentScheduler, CancellationToken cancellationToken)
     {
-        var semaphore = new SemaphoreSlim(concurrency);
-        Action releaseSemaphore = () => semaphore.Release();
+        SemaphoreSlim? semaphore = new SemaphoreSlim(concurrency);
+        // ReSharper disable once AccessToModifiedClosure
+        // ReSharper disable once AccessToDisposedClosure
+        Action releaseSemaphore = () => semaphore?.ReleaseSilently();
         var buffer = ArrayBuffer<Task>.Lease(true, concurrency * 2);
         try {
             foreach (var task in tasks) {
@@ -108,14 +119,23 @@ public static partial class TaskExt
         }
         finally {
             buffer.Release();
+            try {
+                semaphore.Dispose();
+            }
+            catch {
+                // Intended
+            }
+            semaphore = null;
         }
     }
 
     private static async Task<Result<T>[]> CollectResultsConcurrently<T>(
         this IEnumerable<Task<T>> tasks, int concurrency, bool useCurrentScheduler, CancellationToken cancellationToken)
     {
-        var semaphore = new SemaphoreSlim(concurrency);
-        Action releaseSemaphore = () => semaphore.Release();
+        SemaphoreSlim? semaphore = new SemaphoreSlim(concurrency);
+        // ReSharper disable once AccessToModifiedClosure
+        // ReSharper disable once AccessToDisposedClosure
+        Action releaseSemaphore = () => semaphore?.ReleaseSilently();
         var buffer = ArrayBuffer<Task<T>>.Lease(true, concurrency * 2);
         try {
             foreach (var task in tasks) {
@@ -133,6 +153,13 @@ public static partial class TaskExt
         }
         finally {
             buffer.Release();
+            try {
+                semaphore.Dispose();
+            }
+            catch {
+                // Intended
+            }
+            semaphore = null;
         }
     }
 
