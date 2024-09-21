@@ -50,7 +50,7 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
 
         await Enumerable.Range(0, 1000)
             .Select(i => Task.Run(() => Test(i)))
-            .Collect(100);
+            .Collect();
 
         async Task<Unit> Test(int index) {
             var mustCancel = RandomShared.NextDouble() < 0.5;

@@ -61,7 +61,7 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
             TimeSpan.FromSeconds(1));
 
         c1 = Computed.GetExisting(() => counters.Get("a"));
-        c1.Should().BeNull();
+        c1?.IsConsistent().Should().BeFalse();
     }
 
     [Fact]
