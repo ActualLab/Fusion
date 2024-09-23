@@ -208,7 +208,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
     {
-        _lastKeepAliveAt = CpuTimestamp.Now.Value;
+        InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, CpuTimestamp.Now.Value);
         try {
             var hub = Peer.Hub;
             var clock = hub.Clock;
@@ -234,7 +234,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task KeepAlive(long[] localIds)
     {
-        Interlocked.Exchange(ref _lastKeepAliveAt, CpuTimestamp.Now.Value);
+        InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, CpuTimestamp.Now.Value);
         var buffer = MemoryBuffer<long>.Lease(false);
         try {
             foreach (var id in localIds) {

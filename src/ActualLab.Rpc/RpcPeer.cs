@@ -191,7 +191,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     public Task Disconnect(
         bool abortReader = false,
-        Exception? writeError = null,
+        Exception? error = null,
         AsyncState<RpcPeerConnectionState>? expectedState = null)
     {
         AsyncState<RpcPeerConnectionState> connectionState;
@@ -210,7 +210,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             readerTokenSource = connectionState.Value.ReaderTokenSource;
             _sender = null;
         }
-        sender?.TryComplete(writeError);
+        sender?.TryComplete(error);
         if (abortReader)
             readerTokenSource.CancelAndDisposeSilently();
         // ReSharper disable once MethodSupportsCancellation

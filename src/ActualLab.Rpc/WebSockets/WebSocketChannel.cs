@@ -424,7 +424,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         if (error != null) {
             status = WebSocketCloseStatus.InternalServerError;
             message = "Internal Server Error.";
-            ErrorLog?.LogError(error, "WebSocket is closing after an error");
+            ErrorLog?.LogWarning(error, "WebSocket is closing after an error");
         }
 
         try {
