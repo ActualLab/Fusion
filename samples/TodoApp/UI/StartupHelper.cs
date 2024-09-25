@@ -59,10 +59,12 @@ public static class StartupHelper
 
     public static void ConfigureSharedServices(IServiceCollection services, HostKind hostKind, string remoteRpcHostUrl)
     {
-        // We override default ComputedGraphPruner options just to show how it works here, you don't need to change them
+#if false
+        // Uncomment to see how ComputedGraphPruner works
         ComputedGraphPruner.Options.Default = new() {
-            CheckPeriod = TimeSpan.FromSeconds(10),
+            CheckPeriod = TimeSpan.FromSeconds(10), // Default is 5 min.
         };
+#endif
         var fusion = services.AddFusion();
         fusion.AddFusionTime(); // Add it only if you use it
 
