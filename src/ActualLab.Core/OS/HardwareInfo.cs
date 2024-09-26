@@ -3,11 +3,7 @@ namespace ActualLab.OS;
 public static class HardwareInfo
 {
     private const int RefreshIntervalTicks = 30_000; // Tick = millisecond
-#if NET9_0_OR_GREATER
     private static readonly Lock Lock = new();
-#else
-    private static readonly object Lock = new();
-#endif
     private static volatile int _processorCount;
     private static volatile int _processorCountPo2;
     private static volatile int _lastRefreshTicks =

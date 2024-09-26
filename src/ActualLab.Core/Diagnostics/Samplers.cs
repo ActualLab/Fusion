@@ -86,11 +86,7 @@ public sealed record Sampler(
         if (probability >= 1)
             return Always;
 
-#if NET9_0_OR_GREATER
         Lock @lock = new();
-#else
-        object @lock = new();
-#endif
         var rnd = new Random();
         var maxIntBasedLimit = (int)((1d + int.MaxValue) * probability - 1);
         var sampler = new Sampler(nameof(Random), probability, () => {
@@ -127,11 +123,7 @@ public sealed record Sampler(
         if (probability >= 1)
             return Always;
 
-#if NET9_0_OR_GREATER
         Lock @lock = new();
-#else
-        object @lock = new();
-#endif
         var rnd = new Random();
         var stepSize = 1d / probability;
         var maxIntBasedLimit = (int)((1d + int.MaxValue) * probability - 1);

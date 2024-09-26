@@ -4,11 +4,7 @@ public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDis
 {
     private volatile Task? _disposeTask;
 
-#if NET9_0_OR_GREATER
-    protected Lock Lock { get; } = new();
-#else
-    protected object Lock { get; } = new();
-#endif
+    protected Lock Lock = new();
     protected CancellationTokenSource StopTokenSource { get; }
 
     public CancellationToken StopToken { get; }

@@ -14,11 +14,7 @@ public record TimerSetOptions
 public sealed class TimerSet<TTimer> : WorkerBase
     where TTimer : notnull
 {
-#if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
     private readonly Action<TTimer>? _fireHandler;
     private readonly RadixHeapSet<TTimer> _timers = new(45);
     private readonly Moment _start;

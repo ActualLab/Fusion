@@ -22,7 +22,7 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
     protected HostId HostId { get; }
     protected IOperationCompletionListener[] OperationCompletionListeners { get; }
     protected RecentlySeenMap<Symbol, Unit> RecentlySeenUuids { get; }
-    protected object Lock => RecentlySeenUuids;
+    protected Lock Lock = new();
     protected MomentClock Clock { get; }
     protected ILogger Log { get; }
 

@@ -1,4 +1,4 @@
-﻿using System.Runtime.Serialization;
+using System.Runtime.Serialization;
 using ActualLab.Fusion.Server;
 using ActualLab.IO;
 using ActualLab.Rpc;
@@ -103,7 +103,7 @@ public sealed partial record Chat_Post(
 
 public class Chat : IChat
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private List<string> _posts = new();
 
     public virtual Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default)

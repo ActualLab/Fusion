@@ -12,11 +12,7 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
         public MomentClock? Clock { get; init; }
     }
 
-#if NET9_0_OR_GREATER
     protected readonly Lock Lock = new();
-#else
-    protected readonly object Lock = new();
-#endif
     protected readonly MomentClock Clock;
     protected Dictionary<RpcCacheKey, RpcCacheValue> FlushQueue = new();
     protected Dictionary<RpcCacheKey, RpcCacheValue> FlushingQueue = new();
@@ -95,19 +91,19 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
             }
         }
 
-        Monitor.Enter(Lock);
+        Lock.Enter();
         try {
             while (true) {
                 var flushingTask = FlushingTask;
                 if (flushingTask.IsCompleted)
                     break;
 
-                Monitor.Exit(Lock);
+                Lock.Exit();
                 try {
                     await flushingTask.SilentAwait(false);
                 }
                 finally {
-                    Monitor.Enter(Lock);
+                    Lock.Enter();
                 }
             }
             var flushingQueue = FlushingQueue = FlushQueue;
@@ -116,7 +112,7 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
             FlushTask = null;
         }
         finally {
-            Monitor.Exit(Lock);
+            Lock.Exit();
         }
     }
 }

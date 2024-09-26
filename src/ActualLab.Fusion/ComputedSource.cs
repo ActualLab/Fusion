@@ -23,7 +23,7 @@ public class ComputedSource<T> : ComputedInput,
     private ILogger? _log;
 
     protected AsyncLock AsyncLock { get; }
-    protected object Lock => AsyncLock;
+    protected Lock Lock = new();
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; }

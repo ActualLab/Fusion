@@ -31,11 +31,7 @@ public interface IMutablePropertyBag : IReadOnlyPropertyBag
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial class MutablePropertyBag : IMutablePropertyBag
 {
-#if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
     private PropertyBag _snapshot;
 
     public event Action? Changed;

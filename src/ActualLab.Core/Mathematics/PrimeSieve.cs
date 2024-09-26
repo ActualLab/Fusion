@@ -2,11 +2,7 @@ namespace ActualLab.Mathematics;
 
 public class PrimeSieve
 {
-#if NET9_0_OR_GREATER
     private static readonly Lock Lock = new();
-#else
-    private static readonly object Lock = new();
-#endif
     private static PrimeSieve? _instance;
 
     private readonly int _limitSqrt;

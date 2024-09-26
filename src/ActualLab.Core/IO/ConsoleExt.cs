@@ -4,11 +4,7 @@ namespace ActualLab.IO;
 
 public static class ConsoleExt
 {
-#if NET9_0_OR_GREATER
     private static readonly Lock Lock = new();
-#else
-    private static readonly object Lock = new();
-#endif
     private static TaskScheduler? _scheduler;
 
     public static TaskScheduler Scheduler {

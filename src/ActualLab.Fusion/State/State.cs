@@ -63,7 +63,7 @@ public abstract class State<T> : ComputedInput,
 
     protected ComputedOptions ComputedOptions { get; private set; } = null!;
     protected AsyncLock AsyncLock { get; } = new(LockReentryMode.CheckedFail);
-    protected object Lock => AsyncLock;
+    protected Lock Lock = new();
     protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; }
