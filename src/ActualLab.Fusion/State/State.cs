@@ -114,21 +114,17 @@ public abstract class State<T> : ComputedInput,
     public event Action<IState<T>, StateEventKind>? Updated;
 
     event Action<IState, StateEventKind>? IState.Invalidated {
-        add => UntypedInvalidated += value;
-        remove => UntypedInvalidated -= value;
+        add => Invalidated += value;
+        remove => Invalidated -= value;
     }
     event Action<IState, StateEventKind>? IState.Updating {
-        add => UntypedUpdating += value;
-        remove => UntypedUpdating -= value;
+        add => Updating += value;
+        remove => Updating -= value;
     }
     event Action<IState, StateEventKind>? IState.Updated {
-        add => UntypedUpdated += value;
-        remove => UntypedUpdated -= value;
+        add => Updated += value;
+        remove => Updated -= value;
     }
-
-    protected event Action<IState<T>, StateEventKind>? UntypedInvalidated;
-    protected event Action<IState<T>, StateEventKind>? UntypedUpdating;
-    protected event Action<IState<T>, StateEventKind>? UntypedUpdated;
 
     protected State(Options settings, IServiceProvider services, bool initialize = true)
     {
@@ -193,10 +189,9 @@ public abstract class State<T> : ComputedInput,
 
         try {
             Invalidated?.Invoke(this, StateEventKind.Invalidated);
-            UntypedInvalidated?.Invoke(this, StateEventKind.Invalidated);
         }
         catch (Exception e) {
-            Log.LogError(e, "Invalidated / UntypedInvalidated handler failed for {Category}", Category);
+            Log.LogError(e, "Invalidated event handler failed for {Category}", Category);
         }
     }
 
@@ -209,10 +204,9 @@ public abstract class State<T> : ComputedInput,
         try {
             snapshot.OnUpdating();
             Updating?.Invoke(this, StateEventKind.Updating);
-            UntypedUpdating?.Invoke(this, StateEventKind.Updating);
         }
         catch (Exception e) {
-            Log.LogError(e, "Updating / UntypedUpdating handler failed for {Category}", Category);
+            Log.LogError(e, "Updating event handler failed for {Category}", Category);
         }
     }
 
@@ -225,10 +219,9 @@ public abstract class State<T> : ComputedInput,
         try {
             prevSnapshot.OnUpdated();
             Updated?.Invoke(this, StateEventKind.Updated);
-            UntypedUpdated?.Invoke(this, StateEventKind.Updated);
         }
         catch (Exception e) {
-            Log.LogError(e, "Updated / UntypedUpdated handler failed for {Category}", Category);
+            Log.LogError(e, "Updated event handler failed for {Category}", Category);
         }
     }
 
