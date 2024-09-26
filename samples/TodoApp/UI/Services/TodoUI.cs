@@ -5,9 +5,7 @@ using Samples.TodoApp.Abstractions;
 
 namespace Samples.TodoApp.UI.Services;
 
-#pragma warning disable MA0004, VSTHRD200
-
-public class TodoUI(Session session, ITodoService todoService) : IComputeService, IDisposable, IHasIsDisposed
+public class TodoUI(Session session, ITodoApi todoApi) : IComputeService, IDisposable, IHasIsDisposed
 {
     private static readonly ActivitySource ActivitySource = AppInstruments.ActivitySource;
     private volatile int _isDisposed;
@@ -19,27 +17,35 @@ public class TodoUI(Session session, ITodoService todoService) : IComputeService
         => Interlocked.Exchange(ref _isDisposed, 1);
 
     [ComputeMethod]
-    public virtual async Task<Todo?> Get(Ulid id, CancellationToken cancellationToken = default)
+    public virtual async Task<TodoItem?> Get(Ulid id, CancellationToken cancellationToken = default)
     {
-        using var activity = ActivitySource.StartActivity(typeof(TodoUI));
-        return await todoService.Get(Session, id, cancellationToken);
+        using var _ = ActivitySource.StartActivity(typeof(TodoUI));
+        return await todoApi.Get(Session, id, cancellationToken).ConfigureAwait(false);
     }
 
     [ComputeMethod]
-    public virtual async Task<Todo[]> List(int count, CancellationToken cancellationToken = default)
+    public virtual async Task<Ulid[]> ListIds(int count, CancellationToken cancellationToken = default)
     {
-        using var activity = ActivitySource.StartActivity(typeof(TodoUI));
-        var ids = await todoService.ListIds(Session, count, cancellationToken);
-        var todos = await ids
-            .Select(id => todoService.Get(Session, id, cancellationToken))
-            .Collect(cancellationToken); // Like Task.WhenAll, but acting on IEnumerable<T>
-        return todos.SkipNullItems().ToArray();
+        using var _ = ActivitySource.StartActivity(typeof(TodoUI));
+        return await todoApi.ListIds(Session, count, cancellationToken).ConfigureAwait(false);
+    }
+
+    [ComputeMethod]
+    public virtual async Task<TodoItem[]> List(int count, CancellationToken cancellationToken = default)
+    {
+        using var _ = ActivitySource.StartActivity(typeof(TodoUI));
+        var ids = await todoApi.ListIds(Session, count, cancellationToken).ConfigureAwait(false);
+        var items = await ids
+            .Select(id => todoApi.Get(Session, id, cancellationToken))
+            .Collect(cancellationToken) // Like Task.WhenAll, but acting on IEnumerable<T>
+            .ConfigureAwait(false);
+        return items.SkipNullItems().ToArray();
     }
 
     [ComputeMethod]
     public virtual async Task<TodoSummary> GetSummary(CancellationToken cancellationToken = default)
     {
-        using var activity = ActivitySource.StartActivity(typeof(TodoUI));
-        return await todoService.GetSummary(Session, cancellationToken);
+        using var _ = ActivitySource.StartActivity(typeof(TodoUI));
+        return await todoApi.GetSummary(Session, cancellationToken).ConfigureAwait(false);
     }
 }

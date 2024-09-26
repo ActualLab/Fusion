@@ -1,6 +1,7 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 
+const bool useTenants = false; // Change to true to run it in multi-tenant mode
 const int tenant0Port = 5005;
 const int tenantCount = 3;
 const int backendPortOffset = 1000;
@@ -14,10 +15,11 @@ app.Run();
 
 void AddTenantHost(int tenantIndex, bool useRemoteBackend = true)
 {
+    var namePrefix = useTenants ? "tenant" : "host";
     var port = tenant0Port + tenantIndex;
-    var apiHost = AddHost($"tenant{tenantIndex}-api", tenantIndex, port, useRemoteBackend ? "ApiServer" : "SingleServer");
+    var apiHost = AddHost($"{namePrefix}{tenantIndex}-api", tenantIndex, port, useRemoteBackend ? "ApiServer" : "SingleServer");
     if (useRemoteBackend) {
-        var backendHost = AddHost($"tenant{tenantIndex}-backend", tenantIndex, port + backendPortOffset, "BackendServer");
+        var backendHost = AddHost($"{namePrefix}{tenantIndex}-backend", tenantIndex, port + backendPortOffset, "BackendServer");
         apiHost.WithReference(backendHost);
         apiHost.WithEnvironment("Host__BackendUrl", backendHost.GetEndpoint("http"));
     }
@@ -27,6 +29,7 @@ IResourceBuilder<ProjectResource> AddHost(string name, int tenantIndex, int port
     => builder.AddProject<Projects.Host>(name, options => { options.ExcludeLaunchProfile = true; })
         .WithEnvironment("Host__IsAspireManaged", "true")
         .WithEnvironment("Host__HostKind", hostKind)
+        .WithEnvironment("Host__UseTenants", useTenants.ToString())
         .WithEnvironment("Host__TenantIndex", tenantIndex.ToString())
         .WithEnvironment("Host__Tenant0Port", tenant0Port.ToString())
         .WithEnvironment("Host__TenantCount", tenantCount.ToString())

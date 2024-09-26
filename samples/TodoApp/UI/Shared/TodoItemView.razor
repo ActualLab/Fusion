@@ -1,20 +1,27 @@
-@inherits FusionComponentBase
-@inject Session Session
+@using Samples.TodoApp.UI.Services
+@inherits ComputedStateComponent<TodoItem?>
+@inject TodoUI TodoUI
 @inject UICommander UICommander
 @inject ILogger<TodoItemView> Log
 
 @{
-    Log.LogInformation("Rendering, Item = {Item}", Value);
+    var c = State.Computed;
+    var m = State.Value;
+    Log.LogInformation(
+        "Rendering item #{Id} (Computed.Version = {Version}, IsConsistent = {IsConsistent}): {Item}",
+        Id, c.Version, c.IsConsistent(), m);
+    if (m == null)
+        return;
 }
 
 <Addons Margin="Margin.Is3.OnY">
     <Addon AddonType="AddonType.Start">
         <AddonLabel>
-            <Blazorise.Icon Name="@(Value.IsDone ? FontAwesomeIcons.CheckSquare : FontAwesomeIcons.Square)"
+            <Blazorise.Icon Name="@(m.IsDone ? FontAwesomeIcons.CheckSquare : FontAwesomeIcons.Square)"
                             @onclick="InvertDone" />
         </AddonLabel>
     </Addon>
-    <TextEdit TextChanged="@(new EventCallback<string>(null, UpdateTitle))" Text="@Value.Title" Debounce="true" />
+    <TextEdit TextChanged="@(new EventCallback<string>(null, UpdateTitle))" Text="@m.Title" Debounce="true" />
     <Addon AddonType="AddonType.End">
         <Button Clicked="Remove" Color="Color.Warning">
             <Blazorise.Icon Name="FontAwesomeIcons.Minus"/>
@@ -23,24 +30,42 @@
 </Addons>
 
 @code {
-    [Parameter, ParameterComparer(typeof(ByValueParameterComparer))]
-    public Todo Value { get; set; } = null!;
+    [Parameter]
+    public string Id { get; set; } = null!;
+
+    protected override Task<TodoItem?> ComputeState(CancellationToken cancellationToken)
+    {
+        var id = Ulid.Parse(Id);
+        return TodoUI.Get(id, cancellationToken);
+    }
 
     private Task InvertDone()
     {
-        var todo = Value with { IsDone = !Value.IsDone };
-        return UICommander.Run(new Todos_AddOrUpdate(Session, todo));
+        var item = State.Value;
+        if (item == null)
+            return Task.CompletedTask;
+
+        item = item with { IsDone = !item.IsDone };
+        return UICommander.Run(new Todos_AddOrUpdate(TodoUI.Session, item));
     }
 
     private Task UpdateTitle(string title)
     {
         title = title.Trim();
-        if (Value.Title == title)
+        var item = State.Value;
+        if (item == null || item.Title == title)
             return Task.CompletedTask;
-        var todo = Value with { Title = title };
-        return UICommander.Run(new Todos_AddOrUpdate(Session, todo));
+
+        item = item with { Title = title };
+        return UICommander.Run(new Todos_AddOrUpdate(TodoUI.Session, item));
     }
 
     private Task Remove()
-        => UICommander.Run(new Todos_Remove(Session, Value.Id));
+    {
+        var item = State.Value;
+        if (item == null)
+            return Task.CompletedTask;
+
+        return UICommander.Run(new Todos_Remove(TodoUI.Session, item.Id));
+    }
 }

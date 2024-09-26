@@ -1,0 +1,119 @@
+@page "/todo2"
+@using ActualLab.Rpc
+@using Samples.TodoApp.UI.Services
+@inherits ComputedStateComponent<TodoPage2.Model>
+@inject Session Session
+@inject TodoUI TodoUI
+@inject UICommander UICommander
+@inject RpcHub RpcHub
+@inject ILogger<TodoPage2> Log
+
+@{
+    var c = State.Computed;
+    Log.LogInformation(
+        "Rendering page (Computed.Version = {Version}, IsConsistent = {IsConsistent})",
+        c.Version, c.IsConsistent());
+    var error = c.Error;
+    var model = c.ValueOrDefault ?? Model.None; // ValueOrDefault returns default if there is an Error
+}
+
+<h1>Todos - recommended version</h1>
+
+<TextConnectionStatus />
+<Div Margin="Margin.Is1.OnY">
+    Computed at: <b><MomentsAgoBadge Value="model.ComputedAt" /></b>, current state: <b><StateOfStateText State="State"/></b>.
+</Div>
+<Div Margin="Margin.Is1.OnY">
+    Call:
+    <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => StateHasChanged()">StateHasChanged()</Button>
+    <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => State.Invalidate()">State.Invalidate()</Button>
+    <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => State.Recompute()">State.Recompute()</Button>
+    <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => RpcHub.GetPeer(RpcPeerRef.Default).Disconnect()">Disconnect</Button>
+</Div>
+<Note>
+    Try typing "#" and "@@" symbols in item title.
+</Note>
+
+<WhenException Exception="@error" />
+<Row>
+    <Column ColumnSize="ColumnSize.Is6.OnDesktop.Is12.OnTablet">
+        <Paragraph>
+            <TodoSummaryBadge/>
+        </Paragraph>
+
+        @foreach (var id in model.ItemIds) {
+            <TodoItemView @key="@id" Id="@id.ToString()" />
+        }
+
+        @if (model.HasMore) {
+            <Button Clicked="_ => LoadMore()" Color="Color.Primary" Margin="Margin.Is3.OnY">
+                Load @LoadedItemCount more <Blazorise.Icon Name="FontAwesomeIcons.AngleDoubleDown"/>
+            </Button>
+        }
+
+        <Form @onsubmit="Create" Margin="Margin.Is3.OnY">
+            <Addons>
+                <Addon AddonType="AddonType.Start">
+                    <Button Type="@ButtonType.Submit" Color="Color.Primary">
+                        <Blazorise.Icon Name="@FontAwesomeIcons.PlusSquare"/>
+                    </Button>
+                </Addon>
+                <input @bind="NewItemTitle" @bind:event="onchange" class="form-control"/>
+            </Addons>
+        </Form>
+    </Column>
+</Row>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <SignInDropdown Why="to see your personal Todos instead of shared ones" />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private int LoadedItemCount { get; set; } = 5;
+    private string NewItemTitle { get; set; } = "";
+
+    // AuthState property below is seemingly unused - the real reason it is declared here is:
+    // - AuthState is a cascading parameter
+    // - TodoPage.Options (inherited from ComputedStateComponent) include StateIsParameterDependent flag
+    // So when AuthState changes, State here gets recomputed instantly (i.e. w/o a delay).
+    // If you'll comment it out, you'll notice a regular update delay before it changes on sign-out.
+    // It's not a recommended way to apply some change instantly on sign-in or sign-out though -
+    // i.e. ideally you just need to trigger a full re-render as a reaction to sign-in / sign-out somewhere
+    // in one of your top-level components.
+    [CascadingParameter] protected Task<AuthState> AuthState { get; set; } = null!;
+
+    protected override async Task<Model> ComputeState(CancellationToken cancellationToken)
+    {
+        Log.LogInformation("ComputeState: LoadedItemCount = {LoadedItemCount}", LoadedItemCount);
+        var itemIds = await TodoUI.ListIds(LoadedItemCount + 1, cancellationToken);
+        var hasMore = itemIds.Length > LoadedItemCount;
+        if (hasMore)
+            itemIds = itemIds[..LoadedItemCount];
+        return new Model(itemIds, hasMore, DateTime.UtcNow);
+    }
+
+    private void LoadMore()
+    {
+        LoadedItemCount *= 2;
+        _ = State.Recompute();
+    }
+
+    private void Create()
+    {
+        var item = new TodoItem(default, NewItemTitle);
+        NewItemTitle = "";
+        _ = UICommander.Run(new Todos_AddOrUpdate(Session, item));
+    }
+
+    // Nested types
+
+    public sealed record Model(
+        Ulid[] ItemIds,
+        bool HasMore,
+        DateTime ComputedAt)
+    {
+        public static Model None => new([], false, DateTime.UtcNow);
+    }
+}

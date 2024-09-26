@@ -1,28 +1,27 @@
-@page "/todo"
+@page "/todo1"
 @using ActualLab.Rpc
 @using Samples.TodoApp.UI.Services
-@inherits ComputedStateComponent<TodoPage.Model>
+@inherits ComputedStateComponent<TodoPage1.Model>
 @inject Session Session
 @inject TodoUI TodoUI
 @inject UICommander UICommander
 @inject RpcHub RpcHub
-@inject ILogger<TodoPage> Log
+@inject ILogger<TodoPage1> Log
 
 @{
     var c = State.Computed;
     Log.LogInformation(
-        "Rendering, Computed.Version = {Version}, IsConsistent = {IsConsistent}",
+        "Rendering page (Computed.Version = {Version}, IsConsistent = {IsConsistent})",
         c.Version, c.IsConsistent());
     var error = c.Error;
     var model = c.ValueOrDefault ?? Model.None; // ValueOrDefault returns default if there is an Error
 }
 
-<h1>Todo List</h1>
+<h1>Todos - "prefetch everything" version</h1>
 
 <TextConnectionStatus />
-<StateOfStateBadge State="@State" />
 <Div Margin="Margin.Is1.OnY">
-    Updated: <b><MomentsAgoBadge Value="model.ComputedAt" /></b>
+    Computed at: <b><MomentsAgoBadge Value="model.ComputedAt" /></b>, current state: <b><StateOfStateText State="State"/></b>.
 </Div>
 <Div Margin="Margin.Is1.OnY">
     Call:
@@ -31,6 +30,9 @@
     <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => State.Recompute()">State.Recompute()</Button>
     <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => RpcHub.GetPeer(RpcPeerRef.Default).Disconnect()">Disconnect</Button>
 </Div>
+<Note>
+    Try typing "#" and "@@" symbols in item title.
+</Note>
 
 <WhenException Exception="@error" />
 <Row>
@@ -39,8 +41,8 @@
             <TodoSummaryBadge/>
         </Paragraph>
 
-        @foreach (var todo in model.Items) {
-            <TodoItemView @key="@todo.Id" Value="@todo" />
+        @foreach (var item in model.Items) {
+            <TodoItemRawView @key="@item.Id" Item="@item" />
         }
 
         @if (model.HasMore) {
@@ -56,7 +58,7 @@
                         <Blazorise.Icon Name="@FontAwesomeIcons.PlusSquare"/>
                     </Button>
                 </Addon>
-                <input @bind="NewTodoTitle" @bind:event="onchange" class="form-control"/>
+                <input @bind="NewItemTitle" @bind:event="onchange" class="form-control"/>
             </Addons>
         </Form>
     </Column>
@@ -70,7 +72,7 @@
 
 @code {
     private int LoadedItemCount { get; set; } = 5;
-    private string NewTodoTitle { get; set; } = "";
+    private string NewItemTitle { get; set; } = "";
 
     // AuthState property below is seemingly unused - the real reason it is declared here is:
     // - AuthState is a cascading parameter
@@ -100,15 +102,15 @@
 
     private void Create()
     {
-        var todo = new Todo(default, NewTodoTitle);
-        NewTodoTitle = "";
-        _ = UICommander.Run(new Todos_AddOrUpdate(Session, todo));
+        var item = new TodoItem(default, NewItemTitle);
+        NewItemTitle = "";
+        _ = UICommander.Run(new Todos_AddOrUpdate(Session, item));
     }
 
     // Nested types
 
     public sealed record Model(
-        Todo[] Items,
+        TodoItem[] Items,
         bool HasMore,
         DateTime ComputedAt)
     {

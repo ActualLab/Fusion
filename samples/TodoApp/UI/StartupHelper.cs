@@ -43,7 +43,7 @@ public static class StartupHelper
         fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
 
         // RPC clients
-        fusion.AddClient<ITodoService>();
+        fusion.AddClient<ITodoApi>();
         fusion.Rpc.AddClient<IRpcExampleService>();
 
         // LocalStorageRemoteComputedCache as IRemoteComputedCache

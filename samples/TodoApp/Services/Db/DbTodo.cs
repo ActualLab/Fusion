@@ -8,18 +8,23 @@ namespace Samples.TodoApp.Services.Db;
 public class DbTodo
 {
     [Key] public string Key { get; set; } = "";
-
     public string Title { get; set; } = "";
     public bool IsDone { get; set; }
 
-    public static DbTodo FromModel(string folder, Todo todo)
-        => new() {
-            Key = ComposeKey(folder, todo.Id),
-            Title = todo.Title,
-            IsDone = todo.IsDone,
-        };
+    public DbTodo() { }
+    public DbTodo(string folder, TodoItem item)
+    {
+        Key = ComposeKey(folder, item.Id);
+        UpdateFrom(item);
+    }
 
-    public Todo ToModel()
+    public void UpdateFrom(TodoItem item)
+    {
+        Title = item.Title;
+        IsDone = item.IsDone;
+    }
+
+    public TodoItem ToModel()
         => new(SplitKey(Key).Id, Title, IsDone);
 
     public static string ComposeKey(string folder, Ulid id)

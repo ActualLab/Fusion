@@ -4,26 +4,28 @@ using ActualLab.Fusion.Blazor;
 
 namespace Samples.TodoApp.Abstractions;
 
-public interface ITodoService : IComputeService
+public interface ITodoApi : IComputeService
 {
     // Commands
     [CommandHandler]
-    Task<Todo> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default);
+    Task<TodoItem> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default);
     [CommandHandler]
     Task Remove(Todos_Remove command, CancellationToken cancellationToken = default);
 
     // Queries
     [ComputeMethod]
-    Task<Todo?> Get(Session session, Ulid id, CancellationToken cancellationToken = default);
+    Task<TodoItem?> Get(Session session, Ulid id, CancellationToken cancellationToken = default);
     [ComputeMethod]
     Task<Ulid[]> ListIds(Session session, int count, CancellationToken cancellationToken = default);
-    [ComputeMethod(InvalidationDelay = 1)]
+    [ComputeMethod(InvalidationDelay = 0.5)]
     Task<TodoSummary> GetSummary(Session session, CancellationToken cancellationToken = default);
 }
 
+// Data
+
 [DataContract, MemoryPackable]
 [ParameterComparer(typeof(ByValueParameterComparer))]
-public sealed partial record Todo(
+public sealed partial record TodoItem(
     [property: DataMember] Ulid Id,
     [property: DataMember] string Title,
     [property: DataMember] bool IsDone = false
@@ -35,14 +37,16 @@ public sealed partial record TodoSummary(
     [property: DataMember] int DoneCount)
 {
     public static readonly TodoSummary None = new(0, 0);
-};
+}
+
+// Commands
 
 [DataContract, MemoryPackable]
 // ReSharper disable once InconsistentNaming
 public sealed partial record Todos_AddOrUpdate(
     [property: DataMember] Session Session,
-    [property: DataMember] Todo Item
-) : ISessionCommand<Todo>, IApiCommand;
+    [property: DataMember] TodoItem Item
+) : ISessionCommand<TodoItem>, IApiCommand;
 
 [DataContract, MemoryPackable]
 // ReSharper disable once InconsistentNaming

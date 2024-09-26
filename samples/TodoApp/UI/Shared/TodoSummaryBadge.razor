@@ -1,17 +1,24 @@
 @inherits ComputedRenderStateComponent<TodoSummary>
 @inject Session Session
-@inject ITodoService TodoService
+@inject ITodoApi TodoApi
 @inject ILogger<TodoSummaryBadge> Log
 
 @{
     var summary = State.ValueOrDefault ?? TodoSummary.None;
-    Log.LogInformation("Rendering: {Summary}", summary);
+    Log.LogInformation("Rendering summary: {Summary}", summary);
 }
 
 <Badge Color="Color.Success"><b>@summary.DoneCount</b> done</Badge>
 <Badge Color="Color.Primary"><b>@summary.Count</b> total</Badge>
+(<StateOfStateText State="State"/>)
 
 @code {
+
+    protected override ComputedState<TodoSummary>.Options GetStateOptions()
+        => base.GetStateOptions() with {
+            UpdateDelayer = FixedDelayer.Get(1),
+        };
+
     protected override Task<TodoSummary> ComputeState(CancellationToken cancellationToken)
-        => TodoService.GetSummary(Session, cancellationToken);
+        => TodoApi.GetSummary(Session, cancellationToken);
 }

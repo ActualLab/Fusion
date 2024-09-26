@@ -1,0 +1,54 @@
+@implements IDisposable
+@*
+    ComponentStateText:
+    - Displays the current state of provided 'State' (Invalidated/Updating/Updated).
+    - Updates on state change without re-rendering the parent component.
+*@
+
+@if (IsLoading) {
+    <span>loading</span>
+} else if (IsUpdating) {
+    <span>updating</span>
+} else if (IsInvalidated) {
+    <span>invalidated</span>
+} else {
+    <span>in sync</span>
+}
+
+@code {
+    private readonly Action<IState, StateEventKind> _stateOfStateChangedHandler;
+    private volatile IStateSnapshot? _snapshot = null!;
+
+#pragma warning disable BL0007
+    [Parameter]
+    public IState? State {
+        get => _snapshot?.State;
+        set {
+            var oldState = _snapshot?.State;
+            if (ReferenceEquals(oldState, value))
+                return;
+
+            _snapshot = null;
+            oldState?.RemoveEventHandler(StateEventKind.All, _stateOfStateChangedHandler);
+            value?.AddEventHandler(StateEventKind.All, _stateOfStateChangedHandler);
+            _snapshot = value?.Snapshot;
+        }
+    }
+#pragma warning restore BL0007
+
+    public bool IsLoading => _snapshot == null || _snapshot.UpdateCount == 0;
+    public bool IsUpdating => _snapshot is { } s && s.WhenUpdating().IsCompleted;
+    public bool IsInvalidated => _snapshot is { } s && s.Computed.IsInvalidated();
+
+    public StateOfStateText()
+        => _stateOfStateChangedHandler = (_, _) => InvokeAsync(OnStateOfStateChanged);
+
+    public virtual void Dispose()
+        => State = null!;
+
+    private void OnStateOfStateChanged()
+    {
+        _snapshot = _snapshot?.State.Snapshot;
+        StateHasChanged();
+    }
+}

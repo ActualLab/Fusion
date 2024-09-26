@@ -2,16 +2,15 @@ using ActualLab.Fusion.UI;
 using Samples.TodoApp.Abstractions;
 using static System.Console;
 
-Write("Enter SessionId to use: ");
+Write("Enter Session ID to use: ");
 var sessionId = ReadLine()!.Trim();
 var session = new Session(sessionId);
 
 var services = CreateServiceProvider();
-var todoService = services.GetRequiredService<ITodoService>();
-var computed = await Computed.Capture(() => todoService.GetSummary(session));
-await foreach (var c in computed.Changes()) {
+var todoApi = services.GetRequiredService<ITodoApi>();
+var computed = await Computed.Capture(() => todoApi.GetSummary(session)).ConfigureAwait(false);
+await foreach (var c in computed.Changes().ConfigureAwait(false))
     WriteLine($"- {c.Value}");
-}
 
 IServiceProvider CreateServiceProvider()
 {
