@@ -79,7 +79,7 @@ StaticLog.Factory = app.Services.LoggerFactory();
 ConfigureApp();
 
 // Ensure the DB is created
-if (hostKind != HostKind.BackendServer) { // This has to be done in a more robust way in a real app - e.g. by a sidecar container
+if (hostKind != HostKind.ApiServer) { // This has to be done in a more robust way in a real app - e.g. by a sidecar container
     var dbContextFactory = app.Services.GetRequiredService<IShardDbContextFactory<AppDbContext>>();
     var shardRegistry = app.Services.GetRequiredService<IDbShardRegistry<AppDbContext>>();
     foreach (var shard in shardRegistry.Shards.Value) {
@@ -113,44 +113,45 @@ void ConfigureServices()
 
     // DbContext & related services
     DbOperationScope.Options.DefaultIsolationLevel = IsolationLevel.RepeatableRead;
-    services.AddDbContextServices<AppDbContext>(db => {
-        // Uncomment if you'll be using AddRedisOperationLogWatcher
-        // db.AddRedisDb("localhost", "Fusion.Samples.TodoApp");
-        db.AddOperations(operations => {
-            operations.ConfigureOperationLogReader(_ => new() {
-                // We use AddFileSystemOperationLogWatcher, so unconditional check period
-                // can be arbitrary long - all depends on the reliability of Notifier-Watcher chain.
-                CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
+    if (hostKind != HostKind.ApiServer) // ApiServer doesn't need DB
+        services.AddDbContextServices<AppDbContext>(db => {
+            // Uncomment if you'll be using AddRedisOperationLogWatcher
+            // db.AddRedisDb("localhost", "Fusion.Samples.TodoApp");
+            db.AddOperations(operations => {
+                operations.ConfigureOperationLogReader(_ => new() {
+                    // We use AddFileSystemOperationLogWatcher, so unconditional check period
+                    // can be arbitrary long - all depends on the reliability of Notifier-Watcher chain.
+                    CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
+                });
+                operations.ConfigureEventLogReader(_ => new() {
+                    CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
+                });
+                if (!hostSettings.UsePostgreSql.IsNullOrEmpty())
+                    operations.AddNpgsqlOperationLogWatcher();
+                else
+                    operations.AddFileSystemOperationLogWatcher();
+                // operations.AddRedisOperationLogWatcher();
             });
-            operations.ConfigureEventLogReader(_ => new() {
-                CheckPeriod = TimeSpan.FromSeconds(env.IsDevelopment() ? 60 : 5),
-            });
-            if (!hostSettings.UsePostgreSql.IsNullOrEmpty())
-                operations.AddNpgsqlOperationLogWatcher();
-            else
-                operations.AddFileSystemOperationLogWatcher();
-            // operations.AddRedisOperationLogWatcher();
-        });
-        db.AddEntityResolver<string, DbTodo>();
+            db.AddEntityResolver<string, DbTodo>();
 
-        if (hostSettings.UseTenants) {
-            db.AddSharding(sharding => {
-                var tenantIndexes = hostSettings.TenantIndex is { } tenantIndex
-                    ? Enumerable.Range(tenantIndex, 1) // Serve just a single tenant
-                    : Enumerable.Range(0, hostSettings.TenantCount); // All tenants are served
-                sharding.AddShardRegistry(tenantIndexes.Select(i => new DbShard($"tenant{i}")));
-                sharding.AddTransientShardDbContextFactory(ConfigureShardDbContext);
-            });
-        }
-        else {
-            // ReSharper disable once VariableHidesOuterVariable
-            db.Services.AddTransientDbContextFactory<AppDbContext>((c, db) => {
-                // We use fakeShard here solely to be able to
-                // re-use the configuration logic from ConfigureShardDbContext.
-                ConfigureShardDbContext(c, default, db);
-            });
-        }
-    });
+            if (hostSettings.UseTenants) {
+                db.AddSharding(sharding => {
+                    var tenantIndexes = hostSettings.TenantIndex is { } tenantIndex
+                        ? Enumerable.Range(tenantIndex, 1) // Serve just a single tenant
+                        : Enumerable.Range(0, hostSettings.TenantCount); // All tenants are served
+                    sharding.AddShardRegistry(tenantIndexes.Select(i => new DbShard($"tenant{i}")));
+                    sharding.AddTransientShardDbContextFactory(ConfigureShardDbContext);
+                });
+            }
+            else {
+                // ReSharper disable once VariableHidesOuterVariable
+                db.Services.AddTransientDbContextFactory<AppDbContext>((c, db) => {
+                    // We use fakeShard here solely to be able to
+                    // re-use the configuration logic from ConfigureShardDbContext.
+                    ConfigureShardDbContext(c, default, db);
+                });
+            }
+        });
 
     // Fusion services
     var fusion = services.AddFusion(RpcServiceMode.Server, true);
@@ -161,8 +162,18 @@ void ConfigureServices()
         Delay = new(1, 0.1),
     });
 #endif
-    fusion.AddOperationReprocessor();
-    fusion.AddDbAuthService<AppDbContext, string>();
+
+    if (hostKind == HostKind.ApiServer) {
+        fusion.AddClient<IAuth>(); // IAuth = a client of backend's IAuth
+        fusion.AddClient<IAuthBackend>(); // IAuthBackend = a client of backend's IAuthBackend
+        fusion.Rpc.Service<IAuth>().HasServer<IAuth>(); // Expose IAuth (a client) via RPC
+    }
+    else { // SingleServer or BackendServer
+        fusion.AddOperationReprocessor();
+        fusion.AddDbAuthService<AppDbContext, string>();
+        if (hostKind == HostKind.BackendServer)
+            fusion.Rpc.Service<IAuthBackend>().HasServer(); // Expose IAuthBackend via RPC
+    }
 
     if (hostSettings.UseTenants) {
         var tenantTagExtractor = hostSettings.TenantIndex is { } tenantIndex
