@@ -186,6 +186,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Item<TItem>(RpcPeer peer, long localId, long index, TItem item, int sizeHint, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
+        using var _ = context.Activate();
         var call = context.PrepareCallForSendNoWait(ItemMethodDef, ArgumentList.New(index, item))!;
         return call.SendNoWait(true);
     }
@@ -194,6 +195,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     public Task Batch<TItem>(RpcPeer peer, long localId, long index, TItem[] items, int sizeHint, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
+        using var _ = context.Activate();
         var call = context.PrepareCallForSendNoWait(BatchMethodDef, ArgumentList.New(index, items))!;
         return call.SendNoWait(true);
     }

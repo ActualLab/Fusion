@@ -5,7 +5,7 @@ using Samples.TodoApp.Abstractions;
 
 namespace Samples.TodoApp.UI.Services;
 
-public class TodoUI(Session session, ITodoApi todoApi) : IComputeService, IDisposable, IHasIsDisposed
+public class Todos(Session session, ITodoApi todoApi) : IComputeService, IDisposable, IHasIsDisposed
 {
     private static readonly ActivitySource ActivitySource = AppInstruments.ActivitySource;
     private volatile int _isDisposed;
@@ -19,21 +19,21 @@ public class TodoUI(Session session, ITodoApi todoApi) : IComputeService, IDispo
     [ComputeMethod]
     public virtual async Task<TodoItem?> Get(Ulid id, CancellationToken cancellationToken = default)
     {
-        using var _ = ActivitySource.StartActivity(typeof(TodoUI));
+        using var _ = ActivitySource.StartActivity(typeof(Todos));
         return await todoApi.Get(Session, id, cancellationToken).ConfigureAwait(false);
     }
 
     [ComputeMethod]
     public virtual async Task<Ulid[]> ListIds(int count, CancellationToken cancellationToken = default)
     {
-        using var _ = ActivitySource.StartActivity(typeof(TodoUI));
+        using var _ = ActivitySource.StartActivity(typeof(Todos));
         return await todoApi.ListIds(Session, count, cancellationToken).ConfigureAwait(false);
     }
 
     [ComputeMethod]
     public virtual async Task<TodoItem[]> List(int count, CancellationToken cancellationToken = default)
     {
-        using var _ = ActivitySource.StartActivity(typeof(TodoUI));
+        using var _ = ActivitySource.StartActivity(typeof(Todos));
         var ids = await todoApi.ListIds(Session, count, cancellationToken).ConfigureAwait(false);
         var items = await ids
             .Select(id => todoApi.Get(Session, id, cancellationToken))
@@ -45,7 +45,7 @@ public class TodoUI(Session session, ITodoApi todoApi) : IComputeService, IDispo
     [ComputeMethod]
     public virtual async Task<TodoSummary> GetSummary(CancellationToken cancellationToken = default)
     {
-        using var _ = ActivitySource.StartActivity(typeof(TodoUI));
+        using var _ = ActivitySource.StartActivity(typeof(Todos));
         return await todoApi.GetSummary(Session, cancellationToken).ConfigureAwait(false);
     }
 }

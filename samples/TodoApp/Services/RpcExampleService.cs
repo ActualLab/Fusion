@@ -1,20 +1,49 @@
+using System.Runtime.CompilerServices;
 using ActualLab.Rpc;
-using ActualLab.Rpc.Infrastructure;
 using Samples.TodoApp.Abstractions;
 
 namespace Samples.TodoApp.Services;
 
 public class RpcExampleService : IRpcExampleService
 {
-    public Task<string> Greet(string name)
+    private const double RowDelayProbability = 0.2;
+    private const double ItemDelayProbability = 0.2;
+    private readonly TimeSpan DelayDuration = TimeSpan.FromMilliseconds(300);
+
+    public Task<string> Greet(string name, CancellationToken cancellationToken = default)
         => Task.FromResult($"Hello, {name}!");
 
-    public Task<(RpcObjectId, string)> GetComplex()
-        => Task.FromResult((new RpcObjectId(Guid.NewGuid(), 1), "Second item"));
+    public Task<Table<int>> GetTable(string title, CancellationToken cancellationToken = default)
+    {
+        var table = new Table<int>(title, RpcStream.New(GetRows(CancellationToken.None)));
+        return Task.FromResult(table);
+    }
 
-    public Task<RpcStream<int>> GetStream(CancellationToken cancellationToken = default)
-        => Task.FromResult(new RpcStream<int>(Enumerable.Range(0, int.MaxValue).ToAsyncEnumerable()));
-
-    public Task<int> SumStream(RpcStream<int> stream, CancellationToken cancellationToken = default)
+    public Task<int> Sum(RpcStream<int> stream, CancellationToken cancellationToken = default)
         => stream.SumAsync(cancellationToken).AsTask();
+
+    // Private methods
+
+    private async IAsyncEnumerable<Row<int>> GetRows([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var rnd = new Random();
+        for (var i = 0;; i++) {
+            if (rnd.NextDouble() <= RowDelayProbability)
+                await Task.Delay(DelayDuration, cancellationToken).ConfigureAwait(false);
+            var items = GetItems(i, CancellationToken.None);
+            yield return new Row<int>(i, RpcStream.New(items));
+        }
+        // ReSharper disable once IteratorNeverReturns
+    }
+
+    private async IAsyncEnumerable<int> GetItems(int index, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var rnd = new Random();
+        for (var i = 0;; i++) {
+            if (rnd.NextDouble() <= ItemDelayProbability)
+                await Task.Delay(DelayDuration, cancellationToken).ConfigureAwait(false);
+            yield return index * i;
+        }
+        // ReSharper disable once IteratorNeverReturns
+    }
 }

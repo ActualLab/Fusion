@@ -17,11 +17,12 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         var context = CommandContext.GetCurrent();
         if (Invalidation.IsActive) {
             // Invalidation logic
+            var isNew = context.Operation.Items.GetOrDefault<bool>("New");
+            var isDoneChanged = context.Operation.Items.GetOrDefault<bool>("IsDoneChanged");
             _ = Get(folder, item.Id, default);
-            // The code below leaves a few tags for invalidation logic, and we use them here.
-            if (context.Operation.Items.GetOrDefault<bool>("New"))
-                _ = PseudoAccessFolder(folder); // GetSummary depends on it
-            else if (context.Operation.Items.GetOrDefault<bool>("IsDoneChanged"))
+            if (isNew)
+                _ = PseudoListIds(folder);
+            if (isNew || isDoneChanged)
                 _ = GetSummary(folder, default);
             return null!;
         }
@@ -66,7 +67,8 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         if (Invalidation.IsActive) {
             // Invalidation logic
             _ = Get(folder, id, default);
-            _ = PseudoAccessFolder(folder);
+            _ = GetSummary(folder, default);
+            _ = PseudoListIds(folder);
             return;
         }
 
@@ -96,7 +98,7 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
 
     public virtual async Task<Ulid[]> ListIds(string folder, int limit, CancellationToken cancellationToken = default)
     {
-        await PseudoAccessFolder(folder).ConfigureAwait(false);
+        await PseudoListIds(folder).ConfigureAwait(false);
 
         var tenant = folder.GetTenant();
         var dbContext = await DbHub.CreateDbContext(tenant, cancellationToken).ConfigureAwait(false);
@@ -113,8 +115,6 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
 
     public virtual async Task<TodoSummary> GetSummary(string folder, CancellationToken cancellationToken = default)
     {
-        await PseudoAccessFolder(folder).ConfigureAwait(false);
-
         var tenant = folder.GetTenant();
         var dbContext = await DbHub.CreateDbContext(tenant, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
@@ -137,6 +137,6 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
     // When it gets invalidated, it also invalidates all ListIds(folder, <any_limit>) at once.
     // See the places it's called from to understand how it works.
     [ComputeMethod]
-    protected virtual Task<Unit> PseudoAccessFolder(string folder)
+    protected virtual Task<Unit> PseudoListIds(string folder)
         => TaskExt.UnitTask;
 }

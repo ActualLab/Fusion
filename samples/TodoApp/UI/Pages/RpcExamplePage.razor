@@ -1,7 +1,7 @@
 @page "/rpc-example"
 @using System.Globalization
-@using ActualLab.Rpc.Infrastructure
 @using ActualLab.Rpc
+@implements IDisposable
 @inject IRpcExampleService RpcExampleService
 @inject ILogger<RpcExamplePage> Log
 
@@ -19,31 +19,99 @@
     Greet: <b>@_greeting</b>
 </Div>
 <Div Margin="Margin.Is1.OnY">
-    GetComplex: <b>@_complex</b>
+    GetTable: <b>@_table.Title</b>
+    @if (_table.IsCompleted) {
+        <Span TextColor="TextColor.Secondary"> - completed</Span>
+    }
 </Div>
-<Div Margin="Margin.Is1.OnY">
-    GetStream().Take(@StreamLimit): <b>@_list.ToDelimitedString()</b>
-</Div>
-<Div Margin="Margin.Is1.OnY">
-    SumStream: <b>@_sum</b>
-</Div>
+@if (_table.Rows.Count > 0) {
+    @foreach (var row in _table.Rows) {
+        <Div Margin="Margin.Is2.OnX">
+            <span>Row <b>@row.Index</b>:</span>
+            <span>@(row.Items.ToDelimitedString())</span>
+            <span>, sum = <b>@row.Sum</b></span>
+            @if (row.IsCompleted) {
+                <Span TextColor="TextColor.Secondary"> - completed</Span>
+            }
+        </Div>
+    }
+}
 
 @code {
-    private const int StreamLimit = 10;
+    private const int RowLimit = 11;
+    private const int ItemLimit = 11;
+
+    private readonly CancellationTokenSource? _stopTokenSource;
+    private readonly CancellationToken _stopToken;
     private string _greeting = "";
-    private (RpcObjectId, string) _complex;
-    private List<int> _list = new();
-    private int _sum;
+    private TableModel<int> _table = new();
+
+    public RpcExamplePage()
+    {
+        _stopTokenSource = new();
+        _stopToken = _stopTokenSource.Token;
+    }
+
+    public void Dispose()
+        => _stopTokenSource?.CancelAndDisposeSilently();
 
     protected override async Task OnInitializedAsync()
     {
-        var greetingTask = RpcExampleService.Greet("Fusion explorer");
-        var complexTask = RpcExampleService.GetComplex();
-        var streamTask = RpcExampleService.GetStream();
+        var cancellationToken = _stopToken;
+        var greetingTask = RpcExampleService.Greet("Fusion explorer", cancellationToken);
+        var tableTask = RpcExampleService.GetTable("Streamed table", cancellationToken);
         _greeting = await greetingTask;
-        _complex = await complexTask;
-        var stream = await streamTask;
-        _list = await stream.Take(StreamLimit).ToListAsync();
-        _sum = await RpcExampleService.SumStream(RpcStream.New(_list));
+        var table = await tableTask;
+        _table = new TableModel<int>(table.Title);
+        _ = ReadTable(table, cancellationToken);
+    }
+
+    private async Task ReadTable(Table<int> table, CancellationToken cancellationToken)
+    {
+        var model = _table;
+        await foreach (var row in table.Rows.WithCancellation(cancellationToken)) {
+            model.Rows.Add(new RowModel<int>(row.Index));
+            StateHasChanged();
+            _ = ReadRow(row, cancellationToken);
+            if (model.Rows.Count >= RowLimit)
+                break;
+        }
+        model.IsCompleted = true;
+    }
+
+    private async Task ReadRow(Row<int> row, CancellationToken cancellationToken)
+    {
+        var model = _table.Rows[row.Index];
+        await foreach (var item in row.Items.WithCancellation(cancellationToken)) {
+            model.Items.Add(item);
+            StateHasChanged();
+            _ = UpdateSum(model, cancellationToken);
+            if (model.Items.Count >= ItemLimit)
+                break;
+        }
+        model.IsCompleted = true;
+    }
+
+    private async Task UpdateSum(RowModel<int> row, CancellationToken cancellationToken)
+    {
+        row.Sum = await RpcExampleService.Sum(RpcStream.New(row.Items), cancellationToken);
+        StateHasChanged();
+    }
+
+    // Nested types
+
+    public sealed class TableModel<T>(string title = "")
+    {
+        public string Title { get; } = title;
+        public List<RowModel<T>> Rows { get; } = new();
+        public bool IsCompleted { get; set; }
+    }
+
+    public sealed class RowModel<T>(int index)
+    {
+        public int Index { get; } = index;
+        public List<T> Items { get; } = new();
+        public int? Sum { get; set; }
+        public bool IsCompleted { get; set; }
     }
 }

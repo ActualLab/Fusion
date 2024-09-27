@@ -22,8 +22,10 @@ public class InMemoryTodoApi : ITodoApi
         using var invalidating = Invalidation.Begin();
         // Invalidation logic
         _ = Get(session, todo.Id, default);
-        if (items.Count != oldItems.Count)
-            _ = PseudoGetAllItems(session);
+        if (items.Count != oldItems.Count) {
+            _ = PseudoListIds(session);
+            _ = GetSummary(session, default);
+        }
         else if (todo.IsDone != oldItem?.IsDone)
             _ = GetSummary(session, default);
         return todo;
@@ -40,7 +42,8 @@ public class InMemoryTodoApi : ITodoApi
         using var invalidating = Invalidation.Begin();
         // Invalidation logic
         _ = Get(session, id, default);
-        _ = PseudoGetAllItems(session);
+        _ = PseudoListIds(session);
+        _ = GetSummary(session, default);
     }
 
     // Queries
@@ -50,13 +53,12 @@ public class InMemoryTodoApi : ITodoApi
 
     public virtual async Task<Ulid[]> ListIds(Session session, int count, CancellationToken cancellationToken = default)
     {
-        await PseudoGetAllItems(session).ConfigureAwait(false);
+        await PseudoListIds(session).ConfigureAwait(false);
         return _items.Select(x => x.Id).Order().Take(count).ToArray();
     }
 
     public virtual async Task<TodoSummary> GetSummary(Session session, CancellationToken cancellationToken = default)
     {
-        await PseudoGetAllItems(session).ConfigureAwait(false);
         var count = _items.Count;
         var doneCount = _items.Count(i => i.IsDone);
         return new TodoSummary(count, doneCount);
@@ -68,6 +70,6 @@ public class InMemoryTodoApi : ITodoApi
     // When it gets invalidated, it also invalidates all ListIds(session, <any_limit>) at once.
     // See the places it's called from to understand how it works.
     [ComputeMethod]
-    protected virtual Task<Unit> PseudoGetAllItems(Session session)
+    protected virtual Task<Unit> PseudoListIds(Session session)
         => TaskExt.UnitTask;
 }

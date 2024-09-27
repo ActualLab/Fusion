@@ -78,7 +78,7 @@ public static class StartupHelper
 
             // Client and SSB services
             ComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
-            fusion.AddService<TodoUI>(ServiceLifetime.Scoped);
+            fusion.AddService<Todos>(ServiceLifetime.Scoped);
             services.AddScoped(c => new RpcPeerStateMonitor(c, OSInfo.IsAnyClient ? RpcPeerRef.Default : null));
             services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25)); // 0.25s
 
