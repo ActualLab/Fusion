@@ -25,11 +25,11 @@ public static class GuidExt
     }
 
     public static string ToBase64Url(this Guid guid)
-        => Base64UrlEncoder.Encode(guid.ToByteArray());
+        => Base64Encode.Encode(guid.ToByteArray());
 
     public static Guid FromBase64Url(string source)
     {
-        var bytes = Base64UrlEncoder.Decode(source);
+        var bytes = Base64Encode.Decode(source);
 #if !NETSTANDARD2_0
         return new Guid(bytes);
 #else

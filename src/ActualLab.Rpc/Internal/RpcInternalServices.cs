@@ -1,8 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.Serialization;
-using Microsoft.Toolkit.HighPerformance.Buffers;
 
 namespace ActualLab.Rpc.Internal;
 
@@ -10,6 +8,7 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
 {
     public RpcHub Hub = hub;
     public IServiceProvider Services { get; } = hub.Services;
+    public RpcSerializationFormatResolver SerializationFormats => Hub.SerializationFormats;
     public RpcServiceDefBuilder ServiceDefBuilder => Hub.ServiceDefBuilder;
     public RpcMethodDefBuilder MethodDefBuilder => Hub.MethodDefBuilder;
     public RpcBackendServiceDetector BackendServiceDetector => Hub.BackendServiceDetector;
@@ -18,7 +17,6 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcServiceScopeResolver ServiceScopeResolver => Hub.ServiceScopeResolver;
     public RpcSafeCallRouter CallRouter => Hub.CallRouter;
     public RpcRerouteDelayer RerouteDelayer => Hub.RerouteDelayer;
-    public RpcArgumentSerializer ArgumentSerializer => Hub.ArgumentSerializer;
     public RpcHashProvider HashProvider => Hub.HashProvider;
     public RpcInboundContextFactory InboundContextFactory => Hub.InboundContextFactory;
     public RpcInboundMiddlewares InboundMiddlewares => Hub.InboundMiddlewares;

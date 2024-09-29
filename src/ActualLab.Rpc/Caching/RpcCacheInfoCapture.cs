@@ -53,7 +53,7 @@ public sealed class RpcCacheInfoCapture
 
     public void CaptureValue(RpcMessage message)
     {
-        var hash = message.Headers.TryGet(RpcHeaderNames.Hash) ?? "";
+        var hash = message.Headers.TryGet(WellKnownRpcHeaders.Hash) ?? "";
         ValueSource?.TrySetResult(new RpcCacheValue(message.ArgumentData, hash));
     }
 

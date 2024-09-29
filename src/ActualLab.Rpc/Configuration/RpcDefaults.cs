@@ -9,9 +9,10 @@ public static class RpcDefaults
 #else
     private static readonly object Lock = new();
 #endif
+
+    private static RpcMode _mode = OSInfo.IsAnyClient ? RpcMode.Client : RpcMode.Server;
     private static VersionSet? _apiPeerVersions;
     private static VersionSet? _backendPeerVersions;
-    private static RpcMode _mode;
 
     public static RpcMode Mode {
         get => _mode;
@@ -47,9 +48,4 @@ public static class RpcDefaults
             return _backendPeerVersions;
         }
     }
-
-    // Type constructor
-
-    static RpcDefaults()
-        => Mode = OSInfo.IsAnyClient ? RpcMode.Client : RpcMode.Server;
 }

@@ -24,6 +24,7 @@ public class RpcWebSocketServer(
         public bool ExposeBackend { get; init; } = false;
         public string RequestPath { get; init; } = RpcWebSocketClient.Options.Default.RequestPath;
         public string BackendRequestPath { get; init; } = RpcWebSocketClient.Options.Default.BackendRequestPath;
+        public string SerializationFormatParameterName { get; init; } = RpcWebSocketClient.Options.Default.SerializationFormatParameterName;
         public string ClientIdParameterName { get; init; } = RpcWebSocketClient.Options.Default.ClientIdParameterName;
         public TimeSpan ChangeConnectionDelay { get; init; } = TimeSpan.FromSeconds(0.5);
     }
@@ -47,12 +48,12 @@ public class RpcWebSocketServer(
         var peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
         _ = Hub.GetServerPeer(peerRef);
 
-        var requestHeaders =
+        var headers =
             GetValue<IDictionary<string, string[]>>(context.Environment, "owin.RequestHeaders")
             ?? ImmutableDictionary<string, string[]>.Empty;
 
         var acceptOptions = new Dictionary<string, object>(StringComparer.Ordinal);
-        if (requestHeaders.TryGetValue("Sec-WebSocket-Protocol", out string[]? subProtocols) && subProtocols.Length > 0) {
+        if (headers.TryGetValue("Sec-WebSocket-Protocol", out string[]? subProtocols) && subProtocols.Length > 0) {
             // Select the first one from the client
             acceptOptions.Add("websocket.SubProtocol", subProtocols[0].Split(',').First().Trim());
         }

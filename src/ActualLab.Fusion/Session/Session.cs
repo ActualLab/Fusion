@@ -1,8 +1,8 @@
 using System.ComponentModel;
 using System.Globalization;
-using Microsoft.Toolkit.HighPerformance;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
+using CommunityToolkit.HighPerformance;
 using Cysharp.Text;
 
 namespace ActualLab.Fusion;
@@ -95,7 +95,7 @@ public sealed partial class Session : IHasId<Symbol>,
     // SessionId by knowing it; on the other hand, ~4B hash variants are enough to identify
     // a Session of a given user, and that's the only purpose of this hash.
     private string ComputeHash()
-        => ((uint) Id.Value.GetDjb2HashCode()).ToString("x8", CultureInfo.InvariantCulture);
+        => ((uint)Id.Value.GetDjb2HashCode()).ToString("x8", CultureInfo.InvariantCulture);
 
     // Conversion
 

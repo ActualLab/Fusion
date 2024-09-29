@@ -13,7 +13,7 @@ namespace ActualLab.Text;
 [TypeConverter(typeof(SymbolTypeConverter))]
 public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>, IConvertibleTo<string>, ISerializable
 {
-    public static readonly Symbol Empty = new("");
+    public static readonly Symbol Empty = default;
 
     private readonly string? _value;
     private readonly int _hashCode;

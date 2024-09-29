@@ -71,7 +71,7 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
             }
             if (Computed != null) {
                 // '@' is required to make it compatible with pre-v7.2 versions
-                var versionHeader = new RpcHeader(FusionRpcHeaderNames.Version, Computed.Version.FormatVersion('@'));
+                var versionHeader = new RpcHeader(WellKnownRpcHeaders.Version, Computed.Version.FormatVersion('@'));
                 ResultHeaders = ResultHeaders.WithOrReplace(versionHeader);
             }
         }

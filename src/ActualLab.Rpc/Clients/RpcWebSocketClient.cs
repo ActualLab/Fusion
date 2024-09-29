@@ -26,6 +26,7 @@ public class RpcWebSocketClient(
 
         public string RequestPath { get; init; } = "/rpc/ws";
         public string BackendRequestPath { get; init; } = "/backend/rpc/ws";
+        public string SerializationFormatParameterName { get; init; } = "f";
         public string ClientIdParameterName { get; init; } = "clientId";
 
         public static string DefaultHostUrlResolver(RpcWebSocketClient client, RpcClientPeer peer)
@@ -53,13 +54,10 @@ public class RpcWebSocketClient(
                 url += requestPath;
             }
 
-            var uriBuilder = new UriBuilder(url);
-            var queryTail = $"{settings.ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}";
-            if (!uriBuilder.Query.IsNullOrEmpty())
-                uriBuilder.Query += "&" + queryTail;
-            else
-                uriBuilder.Query = queryTail;
-            return uriBuilder.Uri;
+            var queryStart = url.IndexOf('?') < 0 ? '?' : '&';
+            url = $"{url}{queryStart}{settings.ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}"
+                + $"&{settings.SerializationFormatParameterName}={peer.SerializationFormat.Key.Value}";
+            return new Uri(url, UriKind.Absolute);
         }
 
         public static WebSocketOwner DefaultWebSocketOwnerFactory(RpcWebSocketClient client, RpcClientPeer peer)

@@ -94,6 +94,7 @@ public readonly struct RpcBuilder
         // Core services
         services.AddSingleton(c => new RpcHub(c));
         services.AddSingleton(c => new RpcServiceRegistry(c));
+        services.AddSingleton(_ => RpcSerializationFormatResolver.Default);
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
         services.AddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);
         services.AddSingleton(_ => RpcDefaultDelegates.BackendServiceDetector);
@@ -113,7 +114,6 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.CallTracerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFilter);
-        services.AddSingleton(_ => RpcArgumentSerializer.Default);
         services.AddSingleton(c => new RpcSafeCallRouter(c));
         services.AddSingleton(c => new RpcInboundMiddlewares(c));
         services.AddSingleton(c => new RpcOutboundMiddlewares(c));

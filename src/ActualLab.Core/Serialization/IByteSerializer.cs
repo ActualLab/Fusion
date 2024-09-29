@@ -21,6 +21,11 @@ public interface IByteSerializer<T>
     void Write(IBufferWriter<byte> bufferWriter, T value);
 }
 
+/// <summary>
+/// A serializer that allows projection of <seealso cref="ReadOnlyMemory{T}"/> parts
+/// from source <seealso cref="ReadOnlyMemory{T}"/> on reads.
+/// </summary>
+/// <typeparam name="T">The serialized type.</typeparam>
 public interface IProjectingByteSerializer<T> : IByteSerializer<T>
 {
     bool AllowProjection { get; }

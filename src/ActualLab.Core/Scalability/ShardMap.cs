@@ -1,5 +1,5 @@
 using System.Text;
-using Microsoft.Toolkit.HighPerformance;
+using CommunityToolkit.HighPerformance;
 using StringBuilderExt = ActualLab.Text.StringBuilderExt;
 
 namespace ActualLab.Scalability;

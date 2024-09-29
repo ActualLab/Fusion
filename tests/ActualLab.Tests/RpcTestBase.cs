@@ -4,7 +4,6 @@ using ActualLab.RestEase;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.Serialization;
 using ActualLab.Rpc.WebSockets;
 using ActualLab.Testing.Collections;
 using ActualLab.Time.Testing;
@@ -27,8 +26,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
 
     public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
     public RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
-    public bool UseMessagePackSerializer { get; init; } = false;
-    public bool UseFastRpcByteSerializer { get; init; } = false;
+    public Symbol SerializationFormat { get; set; } = "mempack2";
     public bool ExposeBackend { get; init; } = false;
     public bool UseTestClock { get; init; }
     public bool UseLogging { get; init; } = true;
@@ -131,19 +129,12 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
         services.AddSingleton<RpcCallRouter>(_ => {
             return (method, arguments) => RpcPeerRef.GetDefaultPeerRef(ConnectionKind, method.IsBackend);
         });
+        services.AddSingleton<RpcSerializationFormatResolver>(
+            _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()));
         services.AddSingleton<RpcWebSocketChannelOptionsProvider>(_ => {
-            return (_, _) => {
-                var options = WebSocketChannel<RpcMessage>.Options.Default;
-                var baseSerializer = UseMessagePackSerializer
-                    ? (IByteSerializer)MessagePackByteSerializer.Default
-                    : MemoryPackByteSerializer.Default;
-                var serializer = UseFastRpcByteSerializer
-                    ? new FastRpcMessageByteSerializer(baseSerializer, allowProjection: true)
-                    : ByteSerializer.Default.ToTyped<RpcMessage>();
-                return options with {
-                    FrameDelayerFactory = RpcFrameDelayerFactory,
-                    Serializer = serializer,
-                };
+            return (peer, _) => WebSocketChannel<RpcMessage>.Options.Default with {
+                Serializer = peer.Hub.SerializationFormats.Get(peer.Ref).MessageSerializerFactory.Invoke(peer),
+                FrameDelayerFactory = RpcFrameDelayerFactory,
             };
         });
         if (!isClient) {

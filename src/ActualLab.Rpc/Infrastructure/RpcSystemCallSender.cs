@@ -88,7 +88,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         try {
             var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
             var call = context.PrepareCallForSendNoWait(OkMethodDef, ArgumentList.New(result))!;
-            var inboundHash = inboundCall.Context.Message.Headers.TryGet(RpcHeaderNames.Hash);
+            var inboundHash = inboundCall.Context.Message.Headers.TryGet(WellKnownRpcHeaders.Hash);
             if (inboundHash == null)
                 return call.SendNoWait(allowPolymorphism);
 

@@ -19,6 +19,7 @@ public class RpcWebSocketServer(
         public bool ExposeBackend { get; init; } = false;
         public string RequestPath { get; init; } = RpcWebSocketClient.Options.Default.RequestPath;
         public string BackendRequestPath { get; init; } = RpcWebSocketClient.Options.Default.BackendRequestPath;
+        public string SerializationFormatParameterName { get; init; } = RpcWebSocketClient.Options.Default.SerializationFormatParameterName;
         public string ClientIdParameterName { get; init; } = RpcWebSocketClient.Options.Default.ClientIdParameterName;
         public TimeSpan ChangeConnectionDelay { get; init; } = TimeSpan.FromSeconds(0.5);
 #if NET6_0_OR_GREATER

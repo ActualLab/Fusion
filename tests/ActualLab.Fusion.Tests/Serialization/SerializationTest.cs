@@ -90,9 +90,9 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void Base64EncodedSerialization()
+    public void ByteStringSerialization()
     {
-        var s = new Base64Encoded([1, 2, 3]);
+        var s = new ByteString([1, 2, 3]);
         s.AssertPassesThroughAllSerializers();
     }
 

@@ -32,9 +32,10 @@ public abstract class RpcInboundCall : RpcCall
         if (methodDef == null) {
             var notFoundMethodDef = context.Peer.Hub.SystemCallSender.NotFoundMethodDef;
             var message = context.Message;
+            var (service, method) = message.MethodRef.GetServiceAndMethodName();
             return new RpcInbound404Call<Unit>(context, notFoundMethodDef) {
                 // This prevents argument deserialization
-                Arguments = ArgumentList.New(message.Service, message.Method)
+                Arguments = ArgumentList.New(service, method)
             };
         }
 

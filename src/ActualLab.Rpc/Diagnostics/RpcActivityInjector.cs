@@ -11,19 +11,19 @@ public static class RpcActivityInjector
     {
         var (traceParent, traceState) = activityContext.Format();
         return headers.With(
-            new(RpcHeaderNames.W3CTraceParent, traceParent),
-            new(RpcHeaderNames.W3CTraceState, traceState)
+            new(WellKnownRpcHeaders.W3CTraceParent, traceParent),
+            new(WellKnownRpcHeaders.W3CTraceState, traceState)
         );
     }
 
     public static bool TryExtract(RpcHeader[]? headers, out ActivityContext activityContext)
     {
-        var traceParent = headers.TryGet(RpcHeaderNames.W3CTraceParent);
+        var traceParent = headers.TryGet(WellKnownRpcHeaders.W3CTraceParent);
         if (traceParent == null) {
             activityContext = default;
             return false;
         }
-        var traceState = headers.TryGet(RpcHeaderNames.W3CTraceState);
+        var traceState = headers.TryGet(WellKnownRpcHeaders.W3CTraceState);
         // Log.LogWarning("TryExtract: {TraceParent} | {TraceState}", traceParent, traceState);
 #if NET7_0_OR_GREATER
         return ActivityContext.TryParse(traceParent, traceState, true, out activityContext);

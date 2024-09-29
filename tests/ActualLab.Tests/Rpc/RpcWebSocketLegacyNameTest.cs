@@ -43,7 +43,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         var serverMethodResolver = WebHost.Services.RpcHub().InternalServices.Peers.First().Value.ServerMethodResolver;
         Out.WriteLine(serverMethodResolver.ToString());
 
-        serverMethodResolver.LegacyMethods!.Count.Should().Be(1);
+        serverMethodResolver.Methods!.Count.Should().Be(1);
         version.Should().Be("0.1");
     }
 
@@ -59,7 +59,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         var serverMethodResolver = WebHost.Services.RpcHub().InternalServices.Peers.First().Value.ServerMethodResolver;
         Out.WriteLine(serverMethodResolver.ToString());
 
-        serverMethodResolver.LegacyMethods!.Count.Should().Be(1);
+        serverMethodResolver.Methods!.Count.Should().Be(1);
         version.Should().Be("0.5");
     }
 
@@ -74,7 +74,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         var serverMethodResolver = WebHost.Services.RpcHub().InternalServices.Peers.First().Value.ServerMethodResolver;
         Out.WriteLine(serverMethodResolver.ToString());
 
-        serverMethodResolver.LegacyMethods!.Count.Should().Be(2);
+        serverMethodResolver.Methods!.Count.Should().Be(2);
         version.Should().Be("1.0*");
     }
 }

@@ -1,6 +1,5 @@
 using System.Text;
 using FluentAssertions;
-using Microsoft.Toolkit.HighPerformance.Buffers;
 using Newtonsoft.Json;
 using ActualLab.IO;
 using Xunit.Abstractions;

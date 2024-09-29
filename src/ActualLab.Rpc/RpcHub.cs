@@ -26,7 +26,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcServiceScopeResolver ServiceScopeResolver;
     internal readonly RpcSafeCallRouter CallRouter;
     internal readonly RpcRerouteDelayer RerouteDelayer;
-    internal readonly RpcArgumentSerializer ArgumentSerializer;
     internal readonly RpcHashProvider HashProvider;
     internal readonly RpcInboundCallFilter InboundCallFilter;
     internal readonly RpcInboundContextFactory InboundContextFactory;
@@ -50,7 +49,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public IServiceProvider Services { get; }
     public RpcConfiguration Configuration { get; }
     public RpcServiceRegistry ServiceRegistry => _serviceRegistry ??= Services.GetRequiredService<RpcServiceRegistry>();
-    public RpcInternalServices InternalServices;
+    public RpcSerializationFormatResolver SerializationFormats { get; }
+    public RpcInternalServices InternalServices { get; }
     public RpcLimits Limits { get; }
     public MomentClock Clock { get; }
 
@@ -67,7 +67,8 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         Configuration = services.GetRequiredService<RpcConfiguration>();
         Configuration.Freeze();
 
-        // Delegates
+        // Services & delegates
+        SerializationFormats = services.GetRequiredService<RpcSerializationFormatResolver>();
         ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
         MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
         BackendServiceDetector = services.GetRequiredService<RpcBackendServiceDetector>();
@@ -76,7 +77,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();
         CallRouter = services.GetRequiredService<RpcSafeCallRouter>();
         RerouteDelayer = services.GetRequiredService<RpcRerouteDelayer>();
-        ArgumentSerializer = services.GetRequiredService<RpcArgumentSerializer>();
         HashProvider = services.GetRequiredService<RpcHashProvider>();
         InboundCallFilter = services.GetRequiredService<RpcInboundCallFilter>();
         InboundContextFactory = services.GetRequiredService<RpcInboundContextFactory>();

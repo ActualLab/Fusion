@@ -393,15 +393,15 @@ public sealed class WebSocketChannel<T> : Channel<T>
                     continue;
 
                 var buffer = readBuffer.WrittenMemory;
-                var gotProjection = false;
+                var gotAnyProjection = false;
                 while (buffer.Length != 0) {
                     if (TryProjectingDeserializeBytes(ref buffer, out var value, out var isProjection))
                         yield return value;
 
-                    gotProjection |= isProjection;
+                    gotAnyProjection |= isProjection;
                 }
 
-                if (gotProjection)
+                if (gotAnyProjection)
                     readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize);
                 else if (MustReset(ref _readBufferResetCounter))
                     readBuffer.Reset(minReadBufferSize, _retainedBufferSize);
@@ -454,7 +454,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
 
             // Log?.LogInformation("Wrote: {Value}", value);
             // Log?.LogInformation("Data({Size}): {Data}",
-            //     size - 4, new Base64Encoded(buffer.WrittenMemory[(startOffset + 4)..].ToArray()).Encode());
+            //     size - 4, new ByteString(buffer.WrittenMemory[(startOffset + 4)..].ToArray()));
             return true;
         }
         catch (Exception e) {
@@ -509,8 +509,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 throw Errors.InvalidItemSize();
 
             // Log?.LogInformation("Read: {Value}", value);
-            // Log?.LogInformation("Data({Size}): {Data}",
-            //     readSize, new Base64Encoded(data.ToArray()).Encode());
+            // Log?.LogInformation("Data({Size}): {Data}",  readSize, new ByteString(data.ToArray()));
 
             bytes = bytes[size..];
             return true;
@@ -544,8 +543,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 throw Errors.InvalidItemSize();
 
             // Log?.LogInformation("Read: {Value}", value);
-            // Log?.LogInformation("Data({Size}): {Data}",
-            //     readSize, new Base64Encoded(data.ToArray()).Encode());
+            // Log?.LogInformation("Data({Size}): {Data}", readSize, new ByteString(data.ToArray()));
 
             bytes = bytes[size..];
             return true;

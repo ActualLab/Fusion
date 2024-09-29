@@ -35,8 +35,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public CpuTimestamp CreatedAt { get; } = CpuTimestamp.Now;
     public RpcPeerConnectionKind ConnectionKind { get; }
     public VersionSet Versions { get; init; }
-    public RpcServerMethodResolver ServerMethodResolver { get; protected set; }
+    public RpcSerializationFormat SerializationFormat { get; init; }
     public RpcArgumentSerializer ArgumentSerializer { get; init; }
+    public RpcServerMethodResolver ServerMethodResolver { get; protected set; }
     public RpcHashProvider HashProvider { get; init; }
     public RpcInboundContextFactory InboundContextFactory { get; init; }
     public RpcInboundCallFilter InboundCallFilter { get; init; }
@@ -56,19 +57,20 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
-    protected RpcPeer(RpcHub hub, RpcPeerRef @ref, VersionSet? versions)
+    protected RpcPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions)
     {
         // ServiceRegistry is resolved in lazy fashion in RpcHub.
         // We access it here to make sure any configuration error gets thrown at this point.
         _ = hub.ServiceRegistry;
 
         Hub = hub;
-        Ref = @ref;
-        ConnectionKind = @ref.GetConnectionKind(hub);
-        Versions = versions ?? @ref.GetVersions();
+        Ref = peerRef;
+        ConnectionKind = peerRef.GetConnectionKind(hub);
+        Versions = versions ?? peerRef.GetVersions();
 
+        SerializationFormat = Hub.SerializationFormats.Get(peerRef);
+        ArgumentSerializer = SerializationFormat.ArgumentSerializer;
         ServerMethodResolver = Hub.ServiceRegistry.DefaultServerMethodResolver;
-        ArgumentSerializer = Hub.ArgumentSerializer;
         HashProvider = Hub.HashProvider;
         InboundContextFactory = Hub.InboundContextFactory;
         InboundCallFilter = Hub.InboundCallFilter;

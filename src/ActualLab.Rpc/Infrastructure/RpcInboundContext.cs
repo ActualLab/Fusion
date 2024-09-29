@@ -44,7 +44,8 @@ public class RpcInboundContext
 
     private RpcMethodDef? GetMethodDef()
     {
-        var method = Peer.ServerMethodResolver[Message.Service, Message.Method];
+        var methodRef = Message.MethodRef;
+        var method = methodRef.Target ?? Peer.ServerMethodResolver[methodRef];
         if (method == null || method.IsSystem)
             return method;
 

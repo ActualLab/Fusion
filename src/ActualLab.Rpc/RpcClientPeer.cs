@@ -11,8 +11,8 @@ public class RpcClientPeer : RpcPeer
 
     public AsyncState<Moment> ReconnectsAt => _reconnectAt;
 
-    public RpcClientPeer(RpcHub hub, RpcPeerRef @ref, VersionSet? versions = null)
-        : base(hub, @ref, versions)
+    public RpcClientPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions = null)
+        : base(hub, peerRef, versions)
     {
         ClientId = Id.ToBase64Url();
         ReconnectDelayer = Hub.ClientPeerReconnectDelayer;

@@ -10,7 +10,7 @@ public sealed class RpcInbound404Call<TResult>(RpcInboundContext context, RpcMet
     protected override Task<TResult> InvokeTarget()
     {
         var message = Context.Message;
-        var (service, method) = (message.Service, message.Method);
+        var (service, method) = message.MethodRef.GetServiceAndMethodName();
         return Task.FromException<TResult>(Errors.EndpointNotFound(service, method));
     }
 }

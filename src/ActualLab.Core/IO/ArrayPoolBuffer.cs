@@ -1,7 +1,7 @@
 using System.Buffers;
 using System.Diagnostics.Contracts;
-using Microsoft.Toolkit.HighPerformance;
-using Microsoft.Toolkit.HighPerformance.Buffers;
+using CommunityToolkit.HighPerformance;
+using CommunityToolkit.HighPerformance.Buffers;
 
 namespace ActualLab.IO;
 

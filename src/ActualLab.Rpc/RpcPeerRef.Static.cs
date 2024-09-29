@@ -18,6 +18,20 @@ public partial record RpcPeerRef
     public static RpcPeerRef Local { get; set; } = GetDefaultPeerRef(RpcPeerConnectionKind.Local, true);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Symbol ComposeKey(string prefix, string serializationFormat)
+        => $"{prefix}${serializationFormat}";
+
+    public static RpcPeerRef NewServer(string clientId, string serializationFormat, bool isBackend = false)
+        => new(ComposeKey(clientId, serializationFormat), true, isBackend);
+    public static RpcPeerRef NewServer(Symbol key,  bool isBackend = false)
+        => new(key, true, isBackend);
+
+    public static RpcPeerRef NewClient(string serverId, string serializationFormat, bool isBackend = false)
+        => new(ComposeKey(serverId, serializationFormat), false, isBackend);
+    public static RpcPeerRef NewClient(Symbol key, bool isBackend = false)
+        => new(key, false, isBackend);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static RpcPeerRef GetDefaultPeerRef(bool isBackend = false)
         => GetDefaultPeerRef(RpcPeerConnectionKind.Remote, isBackend);
 

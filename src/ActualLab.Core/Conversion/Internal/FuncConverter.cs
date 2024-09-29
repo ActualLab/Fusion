@@ -1,9 +1,12 @@
 namespace ActualLab.Conversion.Internal;
 
-public class FuncConverter<TSource, TTarget> : Converter<TSource, TTarget>
+public class FuncConverter<TSource, TTarget>(
+    Func<TSource, TTarget> converter,
+    Func<TSource, Option<TTarget>> tryConverter
+    ) : Converter<TSource, TTarget>
 {
-    public Func<TSource, TTarget> Converter { get; init; }
-    public Func<TSource, Option<TTarget>> TryConverter { get; init; }
+    public Func<TSource, TTarget> Converter { get; init; } = converter;
+    public Func<TSource, Option<TTarget>> TryConverter { get; init; } = tryConverter;
 
     public override TTarget Convert(TSource source)
         => Converter(source);
@@ -14,14 +17,6 @@ public class FuncConverter<TSource, TTarget> : Converter<TSource, TTarget>
         => TryConverter(source).Cast<TTarget>();
     public override Option<object?> TryConvertUntyped(object? source)
         => source is TSource t ? TryConverter(t).Cast<object?>() : Option<object?>.None;
-
-    public FuncConverter(
-        Func<TSource, TTarget> converter,
-        Func<TSource, Option<TTarget>> tryConverter)
-    {
-        Converter = converter;
-        TryConverter = tryConverter;
-    }
 }
 
 public static class FuncConverter<TSource>

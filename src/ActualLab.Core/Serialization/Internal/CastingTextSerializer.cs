@@ -4,7 +4,7 @@ using ActualLab.Internal;
 
 namespace ActualLab.Serialization.Internal;
 
-public class CastingTextSerializer<T>(ITextSerializer untypedSerializer, Type serializedType)
+public sealed class CastingTextSerializer<T>(ITextSerializer untypedSerializer, Type serializedType)
     : ITextSerializer<T>
 {
     public ITextSerializer UntypedSerializer { get; } = untypedSerializer;

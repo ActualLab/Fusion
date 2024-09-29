@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
+using Cysharp.Text;
 
 namespace ActualLab.Rpc;
 
@@ -21,11 +22,13 @@ public sealed class RpcMethodDef : MethodDef
                 throw new ArgumentOutOfRangeException(nameof(value));
 
             _name = value;
-            FullName = $"{Service.Name.Value}.{value}";
+            FullName = ComposeFullName(Service.Name.Value, value.Value);
+            Ref = new RpcMethodRef(FullName.Value, this);
         }
     }
 
     public new readonly Symbol FullName;
+    public readonly RpcMethodRef Ref;
 
     public readonly ArgumentListType ArgumentListType;
     public readonly ArgumentListType ResultListType;
@@ -87,5 +90,22 @@ public sealed class RpcMethodDef : MethodDef
         var arguments = ParameterTypes.Select(t => t.GetName()).ToDelimitedString();
         var returnType = UnwrappedReturnType.GetName();
         return  $"'{(useShortName ? Name : FullName)}': ({arguments}) -> {returnType}{(IsValid ? "" : " - invalid")}";
+    }
+
+    // Helpers
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static string ComposeFullName(string serviceName, string methodName)
+        => ZString.Concat(serviceName, '.', methodName);
+
+    public static (string ServiceName, string MethodName) SplitFullName(string fullName)
+    {
+        var dotIndex = fullName.LastIndexOf('.');
+        if (dotIndex < 0)
+            return ("", fullName);
+
+        var serviceName = fullName[..dotIndex];
+        var methodName = fullName[(dotIndex + 1)..];
+        return (serviceName, methodName);
     }
 }

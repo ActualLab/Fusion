@@ -4,7 +4,7 @@ using ActualLab.Internal;
 
 namespace ActualLab.Serialization.Internal;
 
-public class CastingByteSerializer<T>(IByteSerializer untypedSerializer, Type serializedType)
+public sealed class CastingByteSerializer<T>(IByteSerializer untypedSerializer, Type serializedType)
     : IByteSerializer<T>
 {
     public IByteSerializer UntypedSerializer { get; } = untypedSerializer;

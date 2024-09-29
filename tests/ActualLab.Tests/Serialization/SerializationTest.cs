@@ -163,30 +163,30 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void RpcMessageSerialization()
+    public void RpcMessageV1Serialization()
     {
-        Test(new RpcMessage(0, 3, "s", "m",
+        Test(new RpcMessageV1(0, 3, "s", "m",
             new TextOrBytes([1, 2, 3]),
             null));
 
-        Test(new RpcMessage(1, 3, "s", "m",
+        Test(new RpcMessageV1(1, 3, "s", "m",
             new TextOrBytes([1, 2, 3]),
             []));
 
-        Test(new RpcMessage(2, 3, "s", "m",
+        Test(new RpcMessageV1(2, 3, "s", "m",
             new TextOrBytes([1, 2, 3]),
             [
                 new("v", "@OVhtp0TRc")
             ]));
 
-        Test(new RpcMessage(0, 3, "s", "m",
+        Test(new RpcMessageV1(0, 3, "s", "m",
             new TextOrBytes([1, 2, 3]),
             [
                 new("a", "b"),
                 new("v", "@OVhtp0TRc")
             ]));
 
-        void Test(RpcMessage m) {
+        void Test(RpcMessageV1 m) {
             var ms = m.PassThroughAllSerializers();
             ms.RelatedId.Should().Be(m.RelatedId);
             ms.Service.Should().Be(m.Service);
@@ -219,17 +219,33 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void Base64DataSerialization()
+    public void ByteStringSerialization()
     {
-        Test(default);
-        Test(new Base64Encoded(null!));
-        Test(new Base64Encoded([]));
-        Test(new Base64Encoded([1]));
-        Test(new Base64Encoded([1, 2]));
+        var e0 = Test(default);
+        var e1 = Test(ByteString.Empty);
+        var e2 = Test(new ByteString(null!));
+        var e3 = Test(new ByteString([]));
+        e3.Should().Be(e0).And.Be(e1).And.Be(e2);
+        e3.GetHashCode().Should().Be(e0.GetHashCode()).And.Be(e1.GetHashCode()).And.Be(e2.GetHashCode());
 
-        void Test(Base64Encoded src) {
+        var s1 = Test(new ByteString([1]));
+        s1.Should().NotBe(e0);
+        s1.GetHashCode().Should().NotBe(e0.GetHashCode());
+
+        var s2 = Test(new ByteString([1, 2]));
+        s2.Should().NotBe(e0);
+        s2.GetHashCode().Should().NotBe(e0.GetHashCode());
+
+        var s3 = Test(new ByteString(Enumerable.Range(0, 500).Select(i => (byte)i).ToArray()));
+        s3.Should().NotBe(e0);
+        s3.GetHashCode().Should().NotBe(e0.GetHashCode());
+
+        ByteString Test(ByteString src) {
             var dst = src.PassThroughAllSerializers(Out);
-            src.Data.SequenceEqual(dst.Data).Should().BeTrue();
+            src.GetHashCode().Equals(dst.GetHashCode()).Should().BeTrue();
+            src.Equals(dst).Should().BeTrue();
+            src.Bytes.Span.SequenceEqual(dst.Bytes.Span).Should().BeTrue();
+            return src;
         }
     }
 
@@ -244,7 +260,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         Test(new TextOrBytes("2"));
 
         Test(TextOrBytes.EmptyBytes);
-        Test(new TextOrBytes(Array.Empty<byte>()));
+        Test(new TextOrBytes(ByteString.EmptyBytes));
         Test(new TextOrBytes([1]));
         Test(new TextOrBytes([1, 2]));
 

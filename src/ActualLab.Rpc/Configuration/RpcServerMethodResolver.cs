@@ -7,18 +7,15 @@ public sealed class RpcServerMethodResolver
 {
     public RpcServiceRegistry ServiceRegistry { get; }
     public VersionSet? Versions { get; }
-    public IReadOnlyDictionary<(Symbol, Symbol), MethodEntry>? LegacyMethods { get; }
+    public IReadOnlyDictionary<RpcMethodRef, MethodEntry>? Methods { get; }
+    public bool IsDefault { get; }
 
-    public RpcMethodDef? this[Symbol serviceName, Symbol methodName] {
+    public RpcMethodDef? this[RpcMethodRef methodRef] {
         get {
-            if (LegacyMethods != null && LegacyMethods.TryGetValue((serviceName, methodName), out var methodEntry))
+            if (Methods != null && Methods.TryGetValue(methodRef, out var methodEntry))
                 return methodEntry.Method;
 
-            // Default flow
-            var service = ServiceRegistry.Get(serviceName);
-            return service is { HasServer: true }
-                ? service.GetMethod(methodName)
-                : null;
+            return IsDefault ? null : ServiceRegistry.DefaultServerMethodResolver[methodRef];
         }
     }
 
@@ -26,14 +23,25 @@ public sealed class RpcServerMethodResolver
     {
         ServiceRegistry = serviceRegistry;
         Versions = null;
-        LegacyMethods = null;
+        var methods = new Dictionary<RpcMethodRef, MethodEntry>();
+        foreach (var service in ServiceRegistry) {
+            if (!service.HasServer)
+                continue; // No need to remap clients
+
+            foreach (var method in service.Methods) {
+                var key = new RpcMethodRef(service.Name.Value, method.Name.Value, method);
+                methods.Add(key, new MethodEntry(method, VersionExt.MaxValue));
+            }
+        }
+        Methods = methods;
+        IsDefault = true;
     }
 
     public RpcServerMethodResolver(RpcServiceRegistry serviceRegistry, VersionSet versions)
     {
         ServiceRegistry = serviceRegistry;
         Versions = versions;
-        var legacyMethods = new Dictionary<(Symbol, Symbol), MethodEntry>();
+        var methods = new Dictionary<RpcMethodRef, MethodEntry>();
         foreach (var service in ServiceRegistry) {
             if (!service.HasServer)
                 continue; // No need to remap clients
@@ -51,9 +59,9 @@ public sealed class RpcServerMethodResolver
                 var methodName = legacyMethodName.Name.Or(method.Name);
                 var methodVersion = legacyMethodName.IsNone ? serviceVersion : legacyMethodName.MaxVersion;
 
-                var key = (serviceName, methodName);
-                if (!legacyMethods.TryGetValue(key, out var existingEntry)) {
-                    legacyMethods.Add(key, new MethodEntry(method, methodVersion));
+                var key = new RpcMethodRef(serviceName.Value, methodName.Value, method);
+                if (!methods.TryGetValue(key, out var existingEntry)) {
+                    methods.Add(key, new MethodEntry(method, methodVersion));
                     continue;
                 }
 
@@ -64,19 +72,19 @@ public sealed class RpcServerMethodResolver
                         $"are both mapped to '{serviceName}.{methodName}' in v{methodVersion.Format()}.");
 
                 if (c < 0) // methodVersion < existingEntry.Version
-                    legacyMethods[key] = new MethodEntry(method, methodVersion);
+                    methods[key] = new MethodEntry(method, methodVersion);
             }
         }
-        LegacyMethods = legacyMethods.Count != 0 ? legacyMethods : null;
+        Methods = methods.Count != 0 ? methods : null;
     }
 
     public override string ToString()
     {
-        var legacyMethods = LegacyMethods == null
+        var methods = IsDefault || Methods == null
             ? "[]"
-            : "[" + string.Join("", LegacyMethods.OrderBy(x => x.Key).Select(x => $"{Environment.NewLine}  '{x.Key.Item1}.{x.Key.Item2}' -> '{x.Value.Method.FullName}' (v{x.Value.Version.Format()})"))
+            : "[" + string.Join("", Methods.OrderBy(x => x.Key).Select(x => $"{Environment.NewLine}  '{x.Key.GetFullMethodName()}' -> '{x.Value.Method.FullName}' (v{x.Value.Version.Format()})"))
                   + Environment.NewLine + "]";
-        return $"{nameof(RpcServerMethodResolver)}(Versions = \"{Versions?.Format()}\", {nameof(LegacyMethods)} = {legacyMethods})";
+        return $"{nameof(RpcServerMethodResolver)}(Versions = \"{Versions?.Format()}\", {nameof(Methods)} = {methods})";
     }
 
     // Nested type

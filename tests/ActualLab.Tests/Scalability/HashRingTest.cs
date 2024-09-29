@@ -1,5 +1,5 @@
 using ActualLab.Scalability;
-using Microsoft.Toolkit.HighPerformance;
+using CommunityToolkit.HighPerformance;
 
 namespace ActualLab.Tests.Scalability;
 

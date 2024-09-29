@@ -140,14 +140,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism, Context.SizeHint);
         var headers = Context.Headers;
         if (hash != null)
-            headers = headers.With(new(RpcHeaderNames.Hash, hash));
+            headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
         if (activity != null)
             headers = RpcActivityInjector.Inject(headers, activity.Context);
-
-        return new RpcMessage(
-            Context.CallTypeId, relatedId,
-            MethodDef.Service.Name, MethodDef.Name,
-            argumentData, headers);
+        return new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
     }
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
@@ -156,11 +152,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var arguments = Context.Arguments!;
         var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism, Context.SizeHint);
         var hash = Peer.HashProvider.Invoke(argumentData);
-        var headers = Context.Headers.With(new(RpcHeaderNames.Hash, hash));
-        var message = new RpcMessage(
-            Context.CallTypeId, relatedId,
-            MethodDef.Service.Name, MethodDef.Name,
-            argumentData, headers);
+        var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
+        var message = new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
         return (message, hash);
     }
 

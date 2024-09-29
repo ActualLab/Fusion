@@ -6,13 +6,15 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
 {
     public static RpcHeader None => default;
 
-    private readonly string? _name;
     private readonly string? _value;
+
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    public RpcHeaderKey Key { get; init; }
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public string Name {
-        get => _name ?? "";
-        init => _name = value;
+        get => Key.Name;
+        init => Key = new RpcHeaderKey(value);
     }
 
     [DataMember(Order = 1), MemoryPackOrder(1)]
@@ -23,12 +25,18 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public bool IsNone
-        => ReferenceEquals(_name, null) && ReferenceEquals(_value, null);
+        => Key.IsNone && ReferenceEquals(_value, null);
+
+    public RpcHeader(RpcHeaderKey key, string? value = "")
+    {
+        Key = key;
+        _value = value;
+    }
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
     public RpcHeader(string? name, string? value = "")
     {
-        _name = name;
+        Key = new RpcHeaderKey(name ?? "");
         _value = value;
     }
 
@@ -37,12 +45,12 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcHeader With(string value)
-        => new(Name, value);
+        => new(Key, value);
 
     // Equality is based solely on header name
     public bool Equals(RpcHeader other)
-        => string.Equals(Name, other.Name, StringComparison.Ordinal);
+        => Key.Name == other.Key.Name;
 
     public override int GetHashCode()
-        => StringComparer.Ordinal.GetHashCode(Name);
+        => Key.GetHashCode();
 }

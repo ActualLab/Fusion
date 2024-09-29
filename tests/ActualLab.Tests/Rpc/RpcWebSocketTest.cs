@@ -30,9 +30,16 @@ public class RpcWebSocketTest : RpcTestBase
         }
     }
 
-    [Fact]
-    public async Task BasicTest()
+    [Theory]
+    // [InlineData("json")]
+    // [InlineData("njson")]
+    [InlineData("mempack1")]
+    [InlineData("mempack2")]
+    [InlineData("msgpack1")]
+    [InlineData("msgpack2")]
+    public async Task BasicTest(string serializationFormat)
     {
+        SerializationFormat = serializationFormat;
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = services.GetRequiredService<ITestRpcServiceClient>();
@@ -136,9 +143,16 @@ public class RpcWebSocketTest : RpcTestBase
         }
     }
 
-    [Fact]
-    public async Task PolymorphTest()
+    [Theory]
+    // [InlineData("json")]
+    // [InlineData("njson")]
+    [InlineData("mempack1")]
+    [InlineData("mempack2")]
+    [InlineData("msgpack1")]
+    [InlineData("msgpack2")]
+    public async Task PolymorphTest(string serializationFormat)
     {
+        SerializationFormat = serializationFormat;
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = ClientServices.GetRequiredService<ITestRpcServiceClient>();
@@ -286,12 +300,21 @@ public class RpcWebSocketTest : RpcTestBase
     }
 
     [Theory]
-    [InlineData(100)]
-    [InlineData(1000)]
-    [InlineData(50_000)]
-    public async Task PerformanceTest(int iterationCount)
+    [InlineData(100, "mempack2")]
+    [InlineData(100, "msgpack2")]
+    [InlineData(1000, "mempack1")]
+    [InlineData(1000, "mempack2")]
+    [InlineData(1000, "msgpack1")]
+    [InlineData(1000, "msgpack2")]
+    [InlineData(500_000, "mempack1")]
+    [InlineData(500_000, "mempack2")]
+    [InlineData(500_000, "mempack2s")]
+    [InlineData(50_000, "msgpack1")]
+    [InlineData(50_000, "msgpack2")]
+    public async Task PerformanceTest(int iterationCount, string serializationFormat)
     {
-        // ByteSerializer.Default = MessagePackByteSerializer.Default;
+        SerializationFormat = serializationFormat;
+        RpcFrameDelayerFactory = null;
         if (TestRunnerInfo.IsBuildAgent())
             iterationCount = 100;
 

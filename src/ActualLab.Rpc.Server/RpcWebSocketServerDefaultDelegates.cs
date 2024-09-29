@@ -10,6 +10,7 @@ public static class RpcWebSocketServerDefaultDelegates
         static (server, context, isBackend) => {
             var query = context.Request.Query;
             var clientId = query[server.Settings.ClientIdParameterName].SingleOrDefault() ?? "";
-            return RpcPeerRef.NewServer(clientId, isBackend);
+            var serializationFormat = query[server.Settings.SerializationFormatParameterName].SingleOrDefault() ?? "";
+            return RpcPeerRef.NewServer(clientId, serializationFormat, isBackend);
         };
 }

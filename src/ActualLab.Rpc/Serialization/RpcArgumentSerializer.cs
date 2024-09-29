@@ -6,8 +6,6 @@ namespace ActualLab.Rpc.Serialization;
 
 public abstract class RpcArgumentSerializer
 {
-    public static RpcArgumentSerializer Default { get; set; } = new RpcByteArgumentSerializer(ByteSerializer.Default);
-
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract TextOrBytes Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint);
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

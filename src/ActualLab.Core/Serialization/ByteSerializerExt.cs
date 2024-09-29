@@ -1,7 +1,9 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Conversion;
 using ActualLab.Internal;
 using ActualLab.IO;
+using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
 
@@ -78,4 +80,11 @@ public static class ByteSerializerExt
         serializer.Write(bufferWriter, value);
         return bufferWriter;
     }
+
+    // Convert
+
+    public static IByteSerializer<T> Convert<TInner, T>(
+        this IByteSerializer<TInner> serializer,
+        BiConverter<T, TInner> converter)
+        => new ConvertingByteSerializer<T, TInner>(serializer, converter);
 }

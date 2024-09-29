@@ -1,5 +1,5 @@
+using CommunityToolkit.HighPerformance;
 using Cysharp.Text;
-using Microsoft.Toolkit.HighPerformance;
 
 namespace ActualLab.Serialization;
 
