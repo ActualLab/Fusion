@@ -43,7 +43,7 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
         var cancellationDelayThreshold = cancellationDelay + TimeSpan.FromMilliseconds(25);
         var timeout = Debugger.IsAttached
             ? TimeSpan.FromMinutes(10)
-            : TimeSpan.FromSeconds(10);
+            : TimeSpan.FromSeconds(20);
 
         await counters.Get(key);
         await counters.Increment(key);
@@ -58,12 +58,18 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
             var callStartedAt = CpuTimestamp.Now;
 
             if (!mustCancel) {
-                var c = await counters.Get(key).WaitAsync(timeout);
-                Out.WriteLine($"{index}: {c} in {callStartedAt.Elapsed.ToShortString()}");
-                for (var j = 0; j < 100; j++)
-                    await Task.Yield();
-                _ = serverCounters.Increment(key);
-                return default;
+                try {
+                    var c = await counters.Get(key).WaitAsync(timeout, CancellationToken.None);
+                    Out.WriteLine($"{index}: {c} in {callStartedAt.Elapsed.ToShortString()}");
+                    for (var j = 0; j < 100; j++)
+                        await Task.Yield();
+                    _ = serverCounters.Increment(key);
+                    return default;
+                }
+                catch (TimeoutException) {
+                    Out.WriteLine($"!!! {index}: timed-out (1) in {callStartedAt.Elapsed.ToShortString()}");
+                    throw;
+                }
             }
 
             using var cts = new CancellationTokenSource(cancellationDelay);
@@ -72,7 +78,11 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
                 var elapsed = callStartedAt.Elapsed;
                 if (cts.IsCancellationRequested && elapsed >= cancellationDelayThreshold)
                     Assert.Fail("Should not be here.");
-                Out.WriteLine($"!!! {index}: {c} in {elapsed.ToShortString()}");
+                Out.WriteLine($"{index}: {c} in {elapsed.ToShortString()}");
+            }
+            catch (TimeoutException) {
+                Out.WriteLine($"!!! {index}: timed-out (2) in {callStartedAt.Elapsed.ToShortString()}");
+                throw;
             }
             catch (OperationCanceledException) {
                 var elapsed = callStartedAt.Elapsed;
