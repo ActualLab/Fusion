@@ -13,11 +13,23 @@ public sealed class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSeri
     [ThreadStatic] private static ArrayPoolBuffer<byte>? _encodeBuffer;
     [ThreadStatic] private static ArrayPoolBuffer<char>? _decodeBuffer;
 
+    public static class Defaults
+    {
+        public static bool AllowProjection { get; set; } = false;
+        public static int MinProjectionSize { get; set; } = 8192;
+        public static int MaxInefficiencyFactor { get; set; } = 4;
+        public static int Utf8BufferCapacity { get; set; } = 512; // In bytes and characters, used only for header values
+        public static int Utf8BufferReplaceCapacity { get; set; } = 8192; // In bytes and characters, used only for header values
+    }
+
+    // Settings - they affect only on performance (i.e. wire format won't change if you change them)
+    public bool AllowProjection { get; init; } = Defaults.AllowProjection;
+    public int MinProjectionSize { get; init; } = Defaults.MinProjectionSize;
+    public int MaxInefficiencyFactor { get; init; } = Defaults.MaxInefficiencyFactor;
+    public int Utf8BufferCapacity { get; init; } = Defaults.Utf8BufferCapacity;
+    public int Utf8BufferReplaceCapacity { get; init; } = Defaults.Utf8BufferReplaceCapacity;
+
     public RpcPeer Peer { get; } = peer;
-    public bool AllowProjection { get; init; } = true;
-    public int MinProjectionSize { get; init; } = 8192;
-    public int MaxInefficiencyFactor { get; init; } = 4;
-    public int Utf8BufferCapacity { get; init; } = 512; // In characters, used only for header values
 
     public RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
         => Read(data, AllowProjection, out readLength, out isProjection);
@@ -60,19 +72,19 @@ public sealed class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSeri
             return;
 
         var encoder = _utf8Encoder ??= Encoding.UTF8.GetEncoder();
-        var encodeBufferCapacity = Utf8BufferCapacity << 1;
-        var encodeBuffer = _encodeBuffer ??= new ArrayPoolBuffer<byte>(encodeBufferCapacity);
+        var encodeBuffer = _encodeBuffer ??= new ArrayPoolBuffer<byte>(Utf8BufferCapacity);
         try {
             foreach (var h in headers) {
-                encodeBuffer.Reset(encodeBufferCapacity);
+                encodeBuffer.Reset(Utf8BufferCapacity, Utf8BufferReplaceCapacity);
                 var key = h.Key.Utf8NameBytes;
                 encoder.Convert(h.Value.AsSpan(), encodeBuffer);
                 var valueSpan = encodeBuffer.WrittenSpan;
 
-                writer = new SpanWriter(bufferWriter.GetSpan(3 + key.Length + valueSpan.Length));
+                var headerLength = 3 + key.Length + valueSpan.Length;
+                writer = new SpanWriter(bufferWriter.GetSpan(headerLength));
                 writer.WriteSpanL1(key.Span);
                 writer.WriteSpanL2(valueSpan);
-                bufferWriter.Advance(writer.Offset);
+                bufferWriter.Advance(headerLength);
             }
         }
         catch {
@@ -83,6 +95,7 @@ public sealed class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSeri
 
     // Private methods
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private RpcMessage Read(ReadOnlyMemory<byte> data, bool allowProjection, out int readLength, out bool isProjection)
     {
         var reader = new MemoryReader(data);
@@ -119,7 +132,7 @@ public sealed class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSeri
             var decodeBuffer = _decodeBuffer ??= new ArrayPoolBuffer<char>(Utf8BufferCapacity);
             try {
                 for (var i = 0; i < headerCount; i++) {
-                    decodeBuffer.Reset(Utf8BufferCapacity);
+                    decodeBuffer.Reset(Utf8BufferCapacity, Utf8BufferReplaceCapacity);
 
                     // key
                     blob = reader.ReadMemoryL1();
