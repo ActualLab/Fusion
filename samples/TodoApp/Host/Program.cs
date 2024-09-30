@@ -283,7 +283,7 @@ void ConfigureApp()
     // we need to find Client's wwwroot in bin/(Debug/Release) folder
     // and set it as this server's content root.
     var baseDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
-    var cfgPart = Regex.Match(baseDir, @"[\\/](debug)|(release)(_[\w\d\.]+)?[\\/]").Value;
+    var cfgPart = Regex.Match(baseDir, @"[\\/](debug)|(release)(_[\w\d\.]+[\\/])?").Value;
     var wwwRootPath = Path.Combine(baseDir, "wwwroot");
     if (!Directory.Exists(Path.Combine(wwwRootPath, "_framework")))
         // This is a regular build, not a build produced w/ "publish",
