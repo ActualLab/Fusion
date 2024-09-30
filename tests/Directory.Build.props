@@ -2,8 +2,10 @@
 <Project ToolsVersion="latest" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
-  <!-- PolySharp -->
+  <!-- Defaults for test projects -->
   <PropertyGroup>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;net48;net471</TargetFrameworks>
+    <!-- PolySharp -->
     <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
   </PropertyGroup>
 
