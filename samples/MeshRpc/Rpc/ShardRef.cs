@@ -1,7 +1,7 @@
 using System.Runtime.Serialization;
 using ActualLab.Mathematics;
+using CommunityToolkit.HighPerformance;
 using MemoryPack;
-using Microsoft.Toolkit.HighPerformance;
 
 namespace Samples.MeshRpc;
 

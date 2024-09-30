@@ -1,10 +1,10 @@
-﻿using Microsoft.Toolkit.HighPerformance;
-using Samples.MultiServerRpc;
+﻿using Samples.MultiServerRpc;
 using ActualLab.Fusion.Server;
 using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Server;
+using CommunityToolkit.HighPerformance;
 using Microsoft.AspNetCore.Builder;
 using static System.Console;
 
