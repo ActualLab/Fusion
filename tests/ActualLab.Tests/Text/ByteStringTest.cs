@@ -47,7 +47,7 @@ public class ByteStringTest(ITestOutputHelper @out) : TestBase(@out)
 
                 var decoded = ByteString.FromBase64Url(encoded);
                 decoded.Should().Be(bytes);
-                decoded.GetHashCode().Should().Be(bytes.GetHashCode());
+                decoded.GetHashCode().Should().Be(s.GetHashCode());
             }
         }
     }
@@ -67,7 +67,7 @@ public class ByteStringTest(ITestOutputHelper @out) : TestBase(@out)
 
                 var decoded = ByteString.FromBase64(encoded);
                 decoded.Should().Be(bytes);
-                decoded.GetHashCode().Should().Be(bytes.GetHashCode());
+                decoded.GetHashCode().Should().Be(s.GetHashCode());
             }
         }
     }
