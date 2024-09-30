@@ -80,11 +80,15 @@ public sealed class RpcServerMethodResolver
 
     public override string ToString()
     {
-        var methods = IsDefault || Methods == null
-            ? "[]"
-            : "[" + string.Join("", Methods.OrderBy(x => x.Key).Select(x => $"{Environment.NewLine}  '{x.Key.GetFullMethodName()}' -> '{x.Value.Method.FullName}' (v{x.Value.Version.Format()})"))
-                  + Environment.NewLine + "]";
-        return $"{nameof(RpcServerMethodResolver)}(Versions = \"{Versions?.Format()}\", {nameof(Methods)} = {methods})";
+        var sMethods = "[]";
+        if (!IsDefault && Methods != null) {
+            var methods = Methods
+                .OrderBy(x => x.Key.Id.ToStringAsUtf8(), StringComparer.Ordinal)
+                .Select(x =>
+                    $"{Environment.NewLine}  '{x.Key.GetFullMethodName()}' -> '{x.Value.Method.FullName}' (v{x.Value.Version.Format()})");
+            sMethods = "[" + string.Join("", methods) + Environment.NewLine + "]";
+        }
+        return $"{nameof(RpcServerMethodResolver)}(Versions = \"{Versions?.Format()}\", {nameof(Methods)} = {sMethods})";
     }
 
     // Nested type
