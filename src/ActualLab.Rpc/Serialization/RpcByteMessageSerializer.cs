@@ -153,8 +153,4 @@ public sealed class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSeri
 #endif
     }
 #pragma warning restore CA1822
-
-    // Private methods
-
-
 }
