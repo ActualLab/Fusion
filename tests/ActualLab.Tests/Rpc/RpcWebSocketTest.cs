@@ -35,8 +35,10 @@ public class RpcWebSocketTest : RpcTestBase
     // [InlineData("njson")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
+    [InlineData("mempack2s")]
     [InlineData("msgpack1")]
     [InlineData("msgpack2")]
+    [InlineData("msgpack2s")]
     public async Task BasicTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -148,8 +150,10 @@ public class RpcWebSocketTest : RpcTestBase
     // [InlineData("njson")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
+    [InlineData("mempack2s")]
     [InlineData("msgpack1")]
     [InlineData("msgpack2")]
+    [InlineData("msgpack2s")]
     public async Task PolymorphTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -300,17 +304,20 @@ public class RpcWebSocketTest : RpcTestBase
     }
 
     [Theory]
+    [InlineData(100, "mempack1")]
     [InlineData(100, "mempack2")]
+    [InlineData(100, "msgpack1")]
     [InlineData(100, "msgpack2")]
     [InlineData(1000, "mempack1")]
     [InlineData(1000, "mempack2")]
     [InlineData(1000, "msgpack1")]
     [InlineData(1000, "msgpack2")]
-    [InlineData(500_000, "mempack1")]
-    [InlineData(500_000, "mempack2")]
-    [InlineData(500_000, "mempack2s")]
+    [InlineData(50_000, "mempack1")]
+    [InlineData(50_000, "mempack2")]
+    [InlineData(50_000, "mempack2s")]
     [InlineData(50_000, "msgpack1")]
     [InlineData(50_000, "msgpack2")]
+    [InlineData(50_000, "msgpack2s")]
     public async Task PerformanceTest(int iterationCount, string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -323,28 +330,26 @@ public class RpcWebSocketTest : RpcTestBase
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
         var client = services.GetRequiredService<ITestRpcServiceClient>();
 
-        var threadCount = Math.Max(1, HardwareInfo.ProcessorCount / 4);
+        var threadCount = Math.Max(1, HardwareInfo.ProcessorCount / 2);
         var tasks = new Task[threadCount];
-        await Run(10); // Warmup
-        var elapsed = await Run(iterationCount);
+        await Run(100); // Warmup
 
+        Out.WriteLine($"{iterationCount} iterations x {threadCount} threads:");
+        var elapsed = await Run(iterationCount);
         var totalIterationCount = threadCount * iterationCount;
-        Out.WriteLine($"{iterationCount}: {totalIterationCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
+        Out.WriteLine($"{totalIterationCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
+
         await AssertNoCalls(peer, Out);
 
-        async Task<TimeSpan> Run(int count)
-        {
+        async Task<TimeSpan> Run(int count) {
             var startedAt = CpuTimestamp.Now;
             for (var threadIndex = 0; threadIndex < threadCount; threadIndex++) {
-                tasks[threadIndex] = Task.Run(() =>
-                    Enumerable
-                        .Range(0, count)
-                        .Select(async i => {
-                            if (i != await client.Div(i, 1).ConfigureAwait(false))
-                                Assert.Fail("Wrong result.");
-                        })
-                        .Collect(256),
-                    CancellationToken.None);
+                tasks[threadIndex] = Task.Run(async () => {
+                    for (var i = 0; i < count; i++) {
+                        if (i != await client.Div(i, 1).ConfigureAwait(false))
+                            Assert.Fail("Wrong result.");
+                    }
+                }, CancellationToken.None);
             }
 
             await Task.WhenAll(tasks);

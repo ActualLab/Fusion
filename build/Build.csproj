@@ -1,12 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>False</IsPackable>
     <IsPublishable>False</IsPublishable>
     <RollForward>Major</RollForward>
     <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
     <DependencyVersion>Highest</DependencyVersion>
+    <NoWarn>NU1903;VSTHRD200;MA0011;MA0051;MA0144;$(NoWarn)</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,7 +22,4 @@
     <UpToDateCheckInput Condition="Exists('..\version.json')" Include="..\version.json" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Remove="Directory.Build.props" />
-  </ItemGroup>
 </Project>

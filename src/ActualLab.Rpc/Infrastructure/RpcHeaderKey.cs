@@ -20,6 +20,11 @@ public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNo
         get => Name.IsEmpty;
     }
 
+    public static RpcHeaderKey NewOrWellKnown(Symbol name)
+        => WellKnownRpcHeaders.ByName.TryGetValue(name, out var key)
+            ? key
+            : new RpcHeaderKey(name);
+
     public RpcHeaderKey(Symbol name)
     {
         Name = name;
@@ -30,16 +35,6 @@ public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNo
     {
         Utf8Name = utf8Name;
         Name = (Symbol)utf8Name.ToStringAsUtf8();
-    }
-
-    // Deserializing constructors
-
-    public RpcHeaderKey(string name)
-    {
-        Name = (Symbol)name;
-        Utf8Name = WellKnownRpcHeaders.ByName.TryGetValue(Name, out var key)
-            ? key.Utf8Name
-            : ByteString.FromStringAsUtf8(name);
     }
 
     [MemoryPackConstructor]

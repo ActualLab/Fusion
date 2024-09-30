@@ -1,6 +1,8 @@
 ﻿using ActualLab.Fusion.Tests;
+using ActualLab.OS;
 using ActualLab.Reflection;
 
+WriteLine($".NET: {RuntimeInfo.DotNet.VersionString ?? RuntimeInformation.FrameworkDescription}");
 if (HasSwitch("PostgreSql") || HasSwitch("npgsql") || HasSwitchAll())
     await Run<PerformanceTest_PostgreSql>();
 if (HasSwitch("mariadb") || HasSwitch("mysql") || HasSwitchAll())
@@ -17,8 +19,7 @@ ReadKey();
 async Task Run<TTest>()
     where TTest : PerformanceTestBase
 {
-    var testOutputHelper = new ConsoleTestOutputHelper();
-    await using var test = (TTest)typeof(TTest).CreateInstance(testOutputHelper);
+    await using var test = (TTest)typeof(TTest).CreateInstance(new ConsoleTestOutputHelper());
     test.IsConsoleApp = true;
     test.UseOperationLogChangeTracking = false;
     test.UseEntityResolver = HasSwitch("-useEntityResolver") || HasSwitch("-er");

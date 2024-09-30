@@ -12,12 +12,14 @@ public sealed class RpcSerializationFormatResolver(
     private static RpcSerializationFormatResolver? _default;
 
     public static ImmutableArray<RpcSerializationFormat> DefaultFormats {
-        get => _defaultFormats ??= RpcSerializationFormat.AllBinary;
+        get => _defaultFormats ??= RpcSerializationFormat.All;
         set => _defaultFormats = value;
     }
 
     public static RpcSerializationFormatResolver Default {
-        get => _default ??= NewDefault(RpcSerializationFormat.MemoryPackV1.Key, RpcSerializationFormat.MemoryPackV2.Key);
+        get => _default ??= NewDefault(
+            RpcSerializationFormat.MemoryPackV1.Key, // Default server format (should be this one for backward compatibility)
+            RpcSerializationFormat.MemoryPackV2.Key); // Default client format (the newest and fastest one)
         set => _default = value;
     }
 

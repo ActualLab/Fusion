@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks Condition="$(UseMultitargeting)">net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1</TargetFrameworks>
-    <TargetFramework Condition="!$(UseMultitargeting)">net9.0</TargetFramework>
     <PackageTags>actual_chat actual_lab actual_lab_fusion server</PackageTags>
     <Description>Server-side components of ActualLab.Fusion - <!--
     -->a new implementation of "computed observables" <!--

@@ -5,18 +5,11 @@ namespace ActualLab.Rpc.Infrastructure;
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record RpcMessage
 {
-    private RpcMethodRef _methodRef;
-
-    [DataMember(Order = 0), MemoryPackOrder(0)]
-    public byte CallTypeId { get; init; }
-    [DataMember(Order = 1), MemoryPackOrder(1)]
-    public long RelatedId { get; init; }
-    [DataMember(Order = 2), MemoryPackOrder(2)]
-    public RpcMethodRef MethodRef { get => _methodRef; init => _methodRef = value; }
-    [DataMember(Order = 3), MemoryPackOrder(3)]
-    public TextOrBytes ArgumentData { get; init; }
-    [DataMember(Order = 4), MemoryPackOrder(4)]
-    public RpcHeader[]? Headers { get; init; }
+    [DataMember(Order = 0), MemoryPackOrder(0)] public byte CallTypeId { get; init; }
+    [DataMember(Order = 1), MemoryPackOrder(1)] public long RelatedId { get; init; }
+    [DataMember(Order = 2), MemoryPackOrder(2)] public RpcMethodRef MethodRef { get; init; }
+    [DataMember(Order = 3), MemoryPackOrder(3)] public TextOrBytes ArgumentData { get; init; }
+    [DataMember(Order = 4), MemoryPackOrder(4)] public RpcHeader[]? Headers { get; init; }
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public ArgumentList? Arguments { get; init; }
@@ -41,9 +34,6 @@ public sealed partial record RpcMessage
                 : $"ArgumentData: {ArgumentData.ToString(16)}")
             + (headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
     }
-
-    public void SetMethodRef(RpcMethodRef methodRef)
-        => _methodRef = methodRef;
 
     // This record relies on referential equality
     public bool Equals(RpcMessage? other) => ReferenceEquals(this, other);

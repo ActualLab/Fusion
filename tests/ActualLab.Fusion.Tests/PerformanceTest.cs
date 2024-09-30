@@ -83,7 +83,6 @@ public abstract class PerformanceTestBase : FusionTestBase
         var withSerialization = (Action<User>?)(u => JsonSerializer.Serialize(u)); // STJ serializer
         var enableSerialization = false;
 
-        Out.WriteLine($".NET: {RuntimeInfo.DotNet.VersionString ?? RuntimeInformation.FrameworkDescription}");
         Out.WriteLine($"Database: {DbType}" + (UseEntityResolver ? " (with DbEntityResolver)" : ""));
         Out.WriteLine("With ActualLab.Fusion:");
         if (enableSerialization)

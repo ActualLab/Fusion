@@ -14,7 +14,7 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public string Name {
         get => Key.Name;
-        init => Key = new RpcHeaderKey(value);
+        init => Key = RpcHeaderKey.NewOrWellKnown(value);
     }
 
     [DataMember(Order = 1), MemoryPackOrder(1)]
@@ -36,7 +36,7 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
     public RpcHeader(string? name, string? value = "")
     {
-        Key = new RpcHeaderKey(name ?? "");
+        Key = RpcHeaderKey.NewOrWellKnown(name);
         _value = value;
     }
 
