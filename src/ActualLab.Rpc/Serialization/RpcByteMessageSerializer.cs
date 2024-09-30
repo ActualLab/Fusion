@@ -66,7 +66,7 @@ public sealed class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSeri
             foreach (var h in headers) {
                 encodeBuffer.Reset(encodeBufferCapacity);
                 var key = h.Key.Utf8NameBytes;
-                encoder.Convert(h.Value, encodeBuffer);
+                encoder.Convert(h.Value.AsSpan(), encodeBuffer);
                 var valueSpan = encodeBuffer.WrittenSpan;
 
                 writer = new SpanWriter(bufferWriter.GetSpan(3 + key.Length + valueSpan.Length));
@@ -128,7 +128,12 @@ public sealed class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSeri
                     // h.Value
                     var valueSpan = reader.ReadSpanL2();
                     decoder.Convert(valueSpan, decodeBuffer);
-                    headers[i] = new RpcHeader(key, new string(decodeBuffer.WrittenSpan));
+#if !NETSTANDARD2_0
+                    var value = new string(decodeBuffer.WrittenSpan);
+#else
+                    var value = decodeBuffer.WrittenSpan.ToString();
+#endif
+                    headers[i] = new RpcHeader(key, value);
                 }
             }
             catch {

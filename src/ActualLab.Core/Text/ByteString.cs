@@ -30,7 +30,7 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
     {
         bufferLength = Math.Max(bufferLength, source.Length);
         using var buffer = new ArrayPoolBuffer<byte>(bufferLength);
-        Encoding.UTF8.GetEncoder().Convert(source, buffer);
+        Encoding.UTF8.GetEncoder().Convert(source.AsSpan(), buffer);
         return buffer.WrittenSpan.ToArray();
     }
 
@@ -57,7 +57,11 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public string ToBase64()
+#if !NETSTANDARD2_0
         => Convert.ToBase64String(Bytes.Span);
+#else
+        => Convert.ToBase64String(Bytes.ToArray());
+#endif
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public string ToBase64Url()
@@ -77,7 +81,11 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
     {
         var span = Bytes.Span;
         return (span.Length & 1) == 0
+#if !NETSTANDARD2_0
             ? new string(span.Cast<byte, char>())
+#else
+            ? span.Cast<byte, char>().ToString()
+#endif
             : throw Errors.Format("Invalid sequence length.");
     }
 
