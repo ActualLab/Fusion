@@ -74,7 +74,7 @@
   <!-- Dependencies -->
   <ItemGroup>
     <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="8.1.0" />
-    <PackageVersion Include="Backport.System.Threading.Lock" Version="2.0.3" />
+    <PackageVersion Include="Backport.System.Threading.Lock" Version="2.0.5" />
     <PackageVersion Include="Blazorise" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Bootstrap5" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.DataGrid" Version="$(BlazoriseVersion)" />
