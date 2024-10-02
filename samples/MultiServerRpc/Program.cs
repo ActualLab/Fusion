@@ -60,10 +60,10 @@ async Task RunClient()
                     var arg0Type = args.GetType(0);
                     int hash;
                     if (arg0Type == typeof(Symbol))
-                        // Contrary to string.GetHashCode, GetDjb2HashCode doesn't change run to run
-                        hash = args.Get<Symbol>(0).Value.GetDjb2HashCode();
+                        // Contrary to string.GetHashCode, GetXxHash3 doesn't change run to run
+                        hash = args.Get<Symbol>(0).Value.GetXxHash3();
                     else if (arg0Type == typeof(Chat_Post))
-                        hash = args.Get<Chat_Post>(0).ChatId.Value.GetDjb2HashCode();
+                        hash = args.Get<Chat_Post>(0).ChatId.Value.GetXxHash3();
                     else
                         throw new NotSupportedException("Can't route this call.");
                     return clientPeerRefs[hash % serverCount];

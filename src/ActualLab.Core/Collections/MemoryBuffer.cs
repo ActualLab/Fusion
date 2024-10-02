@@ -170,7 +170,7 @@ public ref struct MemoryBuffer<T>
             capacity = minCapacity;
         else if (capacity > MaxCapacity)
             throw new ArgumentOutOfRangeException(nameof(capacity));
-        return (int) Bits.GreaterOrEqualPowerOf2((uint) capacity);
+        return (int)Bits.GreaterOrEqualPowerOf2((ulong)capacity);
     }
 
     private void ChangeLease(IMemoryOwner<T> newLease)

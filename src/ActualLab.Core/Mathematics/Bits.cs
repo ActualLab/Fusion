@@ -35,13 +35,13 @@ public static partial class Bits
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int PopCount(ulong n)
-        => (int)ulong.PopCount(n);
+        => unchecked((int)ulong.PopCount(n));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong LeadingBitMask(ulong n)
     {
         const ulong highBit = 1UL << 63;
-        var leadingZeroCount = (int)ulong.LeadingZeroCount(n);
+        var leadingZeroCount = unchecked((int)ulong.LeadingZeroCount(n));
         // a >> b works as a >> (b & 63)
         return leadingZeroCount > 63 ? 0 : highBit >> leadingZeroCount;
     }
@@ -49,17 +49,17 @@ public static partial class Bits
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int LeadingBitIndex(ulong n)
     {
-        var r = (int)ulong.LeadingZeroCount(n);
+        var r = unchecked((int)ulong.LeadingZeroCount(n));
         return r == 64 ? r : 63 - r;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int LeadingZeroCount(ulong n)
-        => (int)ulong.LeadingZeroCount(n);
+        => unchecked((int)ulong.LeadingZeroCount(n));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int TrailingZeroCount(ulong n)
-        => (int)ulong.TrailingZeroCount(n);
+        => unchecked((int)ulong.TrailingZeroCount(n));
 
 #else
     // .NET 6 and below - the methods here don't use AggressiveInlining option
@@ -79,7 +79,7 @@ public static partial class Bits
 #if !NETSTANDARD
         const ulong highBit = 1UL << 63;
         if (Lzcnt.X64.IsSupported) {
-            var leadingZeroCount = (int)Lzcnt.X64.LeadingZeroCount(n);
+            var leadingZeroCount = unchecked((int)Lzcnt.X64.LeadingZeroCount(n));
             // a >> b works as a >> (b & 63)
             return leadingZeroCount > 63 ? 0 : highBit >> leadingZeroCount;
         }
@@ -97,7 +97,7 @@ public static partial class Bits
     {
 #if !NETSTANDARD
         if (Lzcnt.X64.IsSupported) {
-            var leadingZeroCount = (int)Lzcnt.X64.LeadingZeroCount(n);
+            var leadingZeroCount = unchecked((int)Lzcnt.X64.LeadingZeroCount(n));
             return leadingZeroCount == 64 ? 64 : 63 - leadingZeroCount;
         }
 #endif
@@ -108,7 +108,7 @@ public static partial class Bits
     {
 #if !NETSTANDARD
         if (Lzcnt.X64.IsSupported)
-            return (int)Lzcnt.X64.LeadingZeroCount(n);
+            return unchecked((int)Lzcnt.X64.LeadingZeroCount(n));
 #endif
         var r = TrailingZeroCount(LeadingBitMask(n));
         return r == 64 ? 64 : 63 - r;
@@ -118,7 +118,7 @@ public static partial class Bits
     {
 #if !NETSTANDARD
         if (Bmi1.X64.IsSupported)
-            return (int)Bmi1.X64.TrailingZeroCount(n);
+            return unchecked((int)Bmi1.X64.TrailingZeroCount(n));
 #endif
         if (n == 0)
             return 64;

@@ -1,3 +1,4 @@
+using System.Reflection;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Tests.Model;
 using ActualLab.Fusion.Tests.Services;
@@ -145,6 +146,26 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             AssertEqual(s.Options, t.Options);
         }
     }
+
+    [Theory]
+    [InlineData(typeof(MemoryPackByteSerializer))]
+    [InlineData(typeof(MessagePackByteSerializer))]
+    public void ByteSerializerStringSerialization(Type serializerType)
+    {
+        var serializer = (IByteSerializer)serializerType
+            .GetProperty("Default", BindingFlags.Static | BindingFlags.Public)!
+            .GetValue(null)!;
+        var typedSerializer = serializer.ToTyped<string?>();
+
+        for (var i = 1; i <= 1000; i++) {
+            var s = i < 0 ? null : new string('\0', i);
+            var bytes = new ByteString(typedSerializer.Write(s).WrittenMemory);
+            // Out.WriteLine(bytes.ToHexString());
+            // bytes.Bytes.Span[0].Should().NotBe(0);
+        }
+    }
+
+    // Private methods
 
     private static User ToNewUser(OldUser user)
         => new(user.Id, user.Name, user.Version, user.Claims.ToApiMap(), user.JsonCompatibleIdentities.ToApiMap());

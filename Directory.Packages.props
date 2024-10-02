@@ -145,6 +145,7 @@
     <!-- Looks like MS internally updates these packages together w/ extensions -->
     <PackageVersion Include="System.Collections.Immutable" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Configuration.ConfigurationManager" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="System.IO.Hashing" Version="$(MicrosoftExtensionsVersion)"/>
     <PackageVersion Include="System.Net.Http.Json" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Runtime.Numerics" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Text.Json" Version="$(MicrosoftExtensionsVersion)" />

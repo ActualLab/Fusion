@@ -10,14 +10,15 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
 {
     private readonly Dictionary<Type, RpcServiceDef> _services = new();
     private readonly Dictionary<Symbol, RpcServiceDef> _serviceByName = new();
-    private readonly ConcurrentDictionary<VersionSet, RpcServerMethodResolver> _serverMethodResolvers = new();
+    private readonly ConcurrentDictionary<VersionSet, RpcMethodResolver> _serverMethodResolvers = new();
 
     public static LogLevel ConstructionDumpLogLevel { get; set; } = OSInfo.IsAnyClient ? LogLevel.None : LogLevel.Information;
 
     public int Count => _serviceByName.Count;
     public RpcServiceDef this[Type serviceType] => Get(serviceType) ?? throw Errors.NoService(serviceType);
     public RpcServiceDef this[Symbol serviceName] => Get(serviceName) ?? throw Errors.NoService(serviceName);
-    public RpcServerMethodResolver DefaultServerMethodResolver { get; }
+    public RpcMethodResolver ServerMethodResolver { get; }
+    public RpcMethodResolver AnyMethodResolver { get; }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public IEnumerator<RpcServiceDef> GetEnumerator() => _serviceByName.Values.GetEnumerator();
@@ -38,7 +39,8 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
 
             _serviceByName.Add(serviceDef.Name, serviceDef);
         }
-        DefaultServerMethodResolver = new RpcServerMethodResolver(this);
+        AnyMethodResolver = new RpcMethodResolver(this, serverOnly: false);
+        ServerMethodResolver = new RpcMethodResolver(this, serverOnly: true);
         DumpTo(Log, ConstructionDumpLogLevel, "Registered services:");
     }
 
@@ -88,13 +90,13 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     public RpcServiceDef? Get(Symbol serviceName)
         => _serviceByName.GetValueOrDefault(serviceName);
 
-    public RpcServerMethodResolver GetServerMethodResolver(VersionSet? apiVersion)
+    public RpcMethodResolver GetServerMethodResolver(VersionSet? apiVersion)
     {
         if (apiVersion == null)
-            return DefaultServerMethodResolver;
+            return ServerMethodResolver;
 
         return _serverMethodResolvers.GetOrAdd(apiVersion,
-            static (key, self) => new RpcServerMethodResolver(self, key),
+            static (key, self) => new RpcMethodResolver(self, key, self.ServerMethodResolver),
             this);
     }
 }

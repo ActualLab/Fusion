@@ -56,7 +56,7 @@ public static class HardwareInfo
             if (IsSingleThreaded)
                 _processorCount = 1; // Weird, but Environment.ProcessorCount reports true CPU count in Blazor!
 
-            _processorCountPo2 = Math.Max(1, (int) Bits.GreaterOrEqualPowerOf2((uint) _processorCount));
+            _processorCountPo2 = Math.Max(1, (int)Bits.GreaterOrEqualPowerOf2((ulong)_processorCount));
             // This should be done at last, otherwise there is a chance
             // another thread sees _processorCount == 0
             _lastRefreshTicks = now;

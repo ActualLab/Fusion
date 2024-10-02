@@ -148,7 +148,7 @@ public static class MathExt
         var index = buffer.Length;
         var n = Math.Abs(number);
         while (n != 0)  {
-            var digit = (int)(n % radix);
+            var digit = unchecked((int)(n % radix));
             buffer[--index] = digits[digit];
             n /= radix;
         }
@@ -171,7 +171,7 @@ public static class MathExt
         }
         var index = buffer.Length;
         while (number != 0)  {
-            var digit = (int)(number % radix);
+            var digit = unchecked((int)(number % radix));
             buffer[--index] = digits[digit];
             number /= radix;
         }

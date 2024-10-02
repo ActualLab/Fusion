@@ -69,7 +69,7 @@ public static class Combinatorics
             yield break;
         var setSize = source.Length;
         var subsetCount = 1UL << setSize;
-        var bufferSize = setSize * (int) MathExt.Min((ulong) maxBufferSize, subsetCount);
+        var bufferSize = setSize * (int)MathExt.Min(maxBufferSize, subsetCount);
 
         var buffer = Memory<T>.Empty;
         var lastBufferIndex = 0;

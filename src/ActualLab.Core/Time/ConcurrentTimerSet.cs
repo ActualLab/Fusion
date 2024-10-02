@@ -27,7 +27,7 @@ public sealed class ConcurrentTimerSet<TTimer> : SafeAsyncDisposableBase
         Clock = options.Clock;
         TickSource = options.TickSource;
         Quanta = options.Quanta;
-        ConcurrencyLevel = (int) Bits.GreaterOrEqualPowerOf2((ulong) Math.Max(1, options.ConcurrencyLevel));
+        ConcurrencyLevel = (int)Bits.GreaterOrEqualPowerOf2((ulong) Math.Max(1, options.ConcurrencyLevel));
         _concurrencyLevelMask = ConcurrencyLevel - 1;
         _start = start ?? Clock.Now;
         _timerSets = new TimerSet<TTimer>[ConcurrencyLevel];

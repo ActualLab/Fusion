@@ -96,7 +96,7 @@ public readonly partial record struct TextOrBytes(
     // Structural equality
 
     public int GetDataHashCode()
-        => Data.Span.GetDjb2HashCode();
+        => Data.Span.GetXxHash3();
 
     public bool DataEquals(TextOrBytes other)
         => Data.Span.SequenceEqual(other.Data.Span);

@@ -39,7 +39,7 @@ public class FusionTime : IFusionTime
         if (delta < TimeSpan.Zero)
             delta = TimeSpan.Zero;
         var (unit, unitName) = GetMomentsAgoUnit(delta);
-        var unitCount = (int) (delta.TotalSeconds / unit.TotalSeconds);
+        var unitCount = (int)(delta.TotalSeconds / unit.TotalSeconds);
         string result;
         if (unitCount == 0 && unit == TimeSpan.FromSeconds(1))
             result = $"just now";

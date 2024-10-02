@@ -15,7 +15,7 @@ public sealed class ConcurrentFuncBasedGenerator<T> : ConcurrentGenerator<T>
         : this(generators.ToArray()) { }
     public ConcurrentFuncBasedGenerator(Func<T>[] generators)
     {
-        if (!Bits.IsPowerOf2((uint) generators.Length))
+        if (!Bits.IsPowerOf2((ulong)generators.Length))
             throw new ArgumentOutOfRangeException(nameof(generators));
 
         _generators = generators;

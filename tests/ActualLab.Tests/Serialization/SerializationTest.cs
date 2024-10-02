@@ -244,7 +244,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             var dst = src.PassThroughAllSerializers(Out);
             src.GetHashCode().Equals(dst.GetHashCode()).Should().BeTrue();
             src.Equals(dst).Should().BeTrue();
-            src.Bytes.Span.SequenceEqual(dst.Bytes.Span).Should().BeTrue();
+            src.Span.SequenceEqual(dst.Span).Should().BeTrue();
             return src;
         }
     }

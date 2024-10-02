@@ -10,7 +10,7 @@ public static class ConcurrentInt64Generator
     {
         if (concurrencyLevel <= 0)
             concurrencyLevel = ConcurrentInt32Generator.DefaultConcurrencyLevel;
-        var dCount = (long) Bits.GreaterOrEqualPowerOf2((uint) concurrencyLevel);
+        var dCount = (long) Bits.GreaterOrEqualPowerOf2((ulong)concurrencyLevel);
         return new ConcurrentFuncBasedGenerator<long>(i => {
             var count = start + i;
             return () => count += dCount;

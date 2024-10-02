@@ -59,4 +59,10 @@ public static class StringExt
         => source.EndsWith(suffix, StringComparison.Ordinal)
             ? source.Substring(0, source.Length - suffix.Length)
             : source;
+
+    public static ulong GetXxHash3L(this string source)
+        => source.AsSpan().GetXxHash3L();
+
+    public static int GetXxHash3(this string source)
+        => source.AsSpan().GetXxHash3();
 }

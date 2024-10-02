@@ -46,7 +46,7 @@ public static class LongExt
 
         var index = buffer.Length;
         while (n != 0)  {
-            var digit = (int)(n & mask);
+            var digit = unchecked((int)(n & mask));
             buffer[--index] = FormatVersionDigits[digit];
             n >>= shift;
         }

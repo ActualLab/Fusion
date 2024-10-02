@@ -16,7 +16,7 @@ public class PrimeSieve
 
     public PrimeSieve(int limit = 10010896)
     {
-        _limitSqrt = (int) (1 + Math.Sqrt(limit));
+        _limitSqrt = (int)(1 + Math.Sqrt(limit));
         Limit = _limitSqrt * _limitSqrt;
         _isPrime = new BitArray(1 + (Limit / 2), true);
         Compute();

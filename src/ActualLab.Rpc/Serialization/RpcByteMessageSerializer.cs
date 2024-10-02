@@ -39,7 +39,7 @@ public sealed class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSeri
 
     public void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
     {
-        var methodData = value.MethodRef.IdBytes;
+        var methodData = value.MethodRef.Utf8NameBytes;
         if (methodData.Length > 0xFFFF)
             throw ActualLab.Internal.Errors.Format("Full method name length must not exceed 65535 bytes.");
 

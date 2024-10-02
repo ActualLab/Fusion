@@ -37,7 +37,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public VersionSet Versions { get; init; }
     public RpcSerializationFormat SerializationFormat { get; init; }
     public RpcArgumentSerializer ArgumentSerializer { get; init; }
-    public RpcServerMethodResolver ServerMethodResolver { get; protected set; }
+    public RpcMethodResolver ServerMethodResolver { get; protected set; }
     public RpcHashProvider HashProvider { get; init; }
     public RpcInboundContextFactory InboundContextFactory { get; init; }
     public RpcInboundCallFilter InboundCallFilter { get; init; }
@@ -70,7 +70,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
         SerializationFormat = Hub.SerializationFormats.Get(peerRef);
         ArgumentSerializer = SerializationFormat.ArgumentSerializer;
-        ServerMethodResolver = Hub.ServiceRegistry.DefaultServerMethodResolver;
+        ServerMethodResolver = Hub.ServiceRegistry.ServerMethodResolver;
         HashProvider = Hub.HashProvider;
         InboundContextFactory = Hub.InboundContextFactory;
         InboundCallFilter = Hub.InboundCallFilter;
@@ -414,11 +414,19 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         RpcPeerConnectionState newState,
         AsyncState<RpcPeerConnectionState>? expectedState = null)
     {
+#if NET9_0_OR_GREATER
+        Lock.Enter();
+#else
         Monitor.Enter(Lock);
+#endif
         var connectionState = _connectionState;
         var oldState = connectionState.Value;
         if ((expectedState != null && connectionState != expectedState) || ReferenceEquals(newState, oldState)) {
+#if NET9_0_OR_GREATER
+            Lock.Exit();
+#else
             Monitor.Exit(Lock);
+#endif
             return connectionState;
         }
         Exception? terminalError = null;
@@ -429,17 +437,21 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             }
             var nextConnectionState = connectionState.TrySetNext(newState);
             if (ReferenceEquals(nextConnectionState, connectionState)) {
+#if NET9_0_OR_GREATER
+                Lock.Exit();
+#else
                 Monitor.Exit(Lock);
+#endif
                 return connectionState;
             }
             _connectionState = connectionState = nextConnectionState;
+            var serviceRegistry = Hub.ServiceRegistry;
             try {
-                ServerMethodResolver =
-                    Hub.ServiceRegistry.GetServerMethodResolver(newState.Handshake?.RemoteApiVersionSet);
+                ServerMethodResolver = serviceRegistry.GetServerMethodResolver(newState.Handshake?.RemoteApiVersionSet);
             }
             catch (Exception e) {
                 Log.LogError(e, "[LegacyName] conflict");
-                ServerMethodResolver = Hub.ServiceRegistry.DefaultServerMethodResolver;
+                ServerMethodResolver = serviceRegistry.ServerMethodResolver;
             }
             if (newState.Error != null && Hub.PeerTerminalErrorDetector.Invoke(newState.Error)) {
                 terminalError = newState.Error;
@@ -457,7 +469,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 // Complete the old Channel
                 oldState.Sender?.TryComplete(newState.Error);
             }
+#if NET9_0_OR_GREATER
+            Lock.Exit();
+#else
             Monitor.Exit(Lock);
+#endif
 
             // The code below is responsible solely for logging - all important stuff is already done
             if (terminalError != null)

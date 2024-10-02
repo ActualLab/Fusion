@@ -21,7 +21,7 @@ public sealed class RpcSerializationFormat(
 
     private static readonly LazySlim<RpcSerializationFormat> MemoryPackV1Lazy = new(
         () => new RpcSerializationFormat("mempack1",
-            () => new RpcByteArgumentSerializer(MemoryPackByteSerializer.Default),
+            () => new RpcByteArgumentSerializerV1(MemoryPackByteSerializer.Default),
             _ => MemoryPackByteSerializer.Default.ToTyped<RpcMessageV1>().Convert(RpcMessageV1.Converter)));
     private static readonly LazySlim<RpcSerializationFormat> MemoryPackV2Lazy = new(
         () => new RpcSerializationFormat("mempack2",
@@ -34,7 +34,7 @@ public sealed class RpcSerializationFormat(
 
     private static readonly LazySlim<RpcSerializationFormat> MessagePackV1Lazy = new(
         () => new RpcSerializationFormat("msgpack1",
-            () => new RpcByteArgumentSerializer(MessagePackByteSerializer.Default),
+            () => new RpcByteArgumentSerializerV1(MessagePackByteSerializer.Default),
             _ => MessagePackByteSerializer.Default.ToTyped<RpcMessageV1>().Convert(RpcMessageV1.Converter)));
     private static readonly LazySlim<RpcSerializationFormat> MessagePackV2Lazy = new(
         () => new RpcSerializationFormat("msgpack2",

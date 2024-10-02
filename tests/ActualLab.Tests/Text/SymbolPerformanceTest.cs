@@ -2,13 +2,13 @@ namespace ActualLab.Tests.Text;
 
 public sealed class SymbolPerformanceTest(ITestOutputHelper @out) : BenchmarkTestBase(@out)
 {
-    private static readonly int[] DefaultOptions = [12, 20, 32, 64];
+    private static readonly int[] DefaultVariants = [12, 20, 32, 64];
     private static readonly int DefaultIterationCount = 20_000_000;
 
     [Fact]
     public async Task CreationTest()
     {
-        var options = DefaultOptions;
+        var options = DefaultVariants;
         var iterationCount = DefaultIterationCount;
         await Benchmark("new Symbol(length) - pure overhead", iterationCount, static (c, n) => {
             var s = new string('0', c);
@@ -30,7 +30,7 @@ public sealed class SymbolPerformanceTest(ITestOutputHelper @out) : BenchmarkTes
     [Fact]
     public async Task HashCodeTest()
     {
-        var options = DefaultOptions;
+        var options = DefaultVariants;
         var iterationCount = DefaultIterationCount * 2;
         await Benchmark("Symbol(length).GetHashCode()", iterationCount, static (c, n) => {
             var s = (Symbol)new string('0', c);
@@ -60,7 +60,7 @@ public sealed class SymbolPerformanceTest(ITestOutputHelper @out) : BenchmarkTes
     [Fact]
     public async Task EqualsTest()
     {
-        var options = DefaultOptions;
+        var options = DefaultVariants;
         var iterationCount = DefaultIterationCount / 2;
         await Benchmark("Symbol(length) == Symbol(length) - when ==", iterationCount, static (c, n) => {
             var s1 = (Symbol)new string('0', c);
@@ -93,7 +93,7 @@ public sealed class SymbolPerformanceTest(ITestOutputHelper @out) : BenchmarkTes
     public async Task DictionaryLookupTest()
     {
         var sizeOptions = new[] { 10_000 };
-        var lengthOptions = DefaultOptions;
+        var lengthOptions = DefaultVariants;
         var options = sizeOptions
             .SelectMany(size => lengthOptions.Select(length => (size, length)))
             .ToArray();

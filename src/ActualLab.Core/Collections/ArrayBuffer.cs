@@ -165,7 +165,7 @@ public struct ArrayBuffer<T>
             requestedCapacity = minCapacity;
         else if (requestedCapacity > MaxCapacity)
             throw new ArgumentOutOfRangeException(nameof(requestedCapacity));
-        return (int) Bits.GreaterOrEqualPowerOf2((uint) requestedCapacity);
+        return (int)Bits.GreaterOrEqualPowerOf2((ulong)requestedCapacity);
     }
 
     private void ChangeLease(T[] newLease)

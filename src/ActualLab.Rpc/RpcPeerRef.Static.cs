@@ -26,8 +26,8 @@ public partial record RpcPeerRef
     public static RpcPeerRef NewServer(Symbol key,  bool isBackend = false)
         => new(key, true, isBackend);
 
-    public static RpcPeerRef NewClient(string serverId, string serializationFormat, bool isBackend = false)
-        => new(ComposeKey(serverId, serializationFormat), false, isBackend);
+    public static RpcPeerRef NewClient(string clientId, string serializationFormat, bool isBackend = false)
+        => new(ComposeKey(clientId, serializationFormat), false, isBackend);
     public static RpcPeerRef NewClient(Symbol key, bool isBackend = false)
         => new(key, false, isBackend);
 

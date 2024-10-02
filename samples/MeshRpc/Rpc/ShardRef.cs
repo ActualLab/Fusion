@@ -23,10 +23,10 @@ public readonly partial record struct ShardRef(
         => new(hash.PositiveModulo(ShardCount));
 
     public static ShardRef New(Symbol value)
-        => New(value.Value.GetDjb2HashCode().PositiveModulo(ShardCount));
+        => New(value.Value.GetXxHash3().PositiveModulo(ShardCount));
 
     public static ShardRef New(string value)
-        => New(value.GetDjb2HashCode().PositiveModulo(ShardCount));
+        => New(value.GetXxHash3().PositiveModulo(ShardCount));
 
     public override string ToString()
         => $"shard:{Key}";

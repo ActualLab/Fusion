@@ -67,7 +67,7 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
         var data = argumentData.IsBytes(out var bytes)
             ? Convert.ToBase64String(bytes.Span)
             : "`" + (argumentData.IsText(out var text) ? new string(text.Span) : ""); // No '`' in Base64
-        return ZString.Concat(_keyPrefix, key.Service, '.', key.Method, ' ', data);
+        return ZString.Concat(_keyPrefix, key.Name, ' ', data);
 #endif
     }
 }

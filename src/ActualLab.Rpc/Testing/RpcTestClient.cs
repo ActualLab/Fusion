@@ -15,6 +15,7 @@ public class RpcTestClient(
     {
         public static Options Default { get; set; } = new();
 
+        public Symbol SerializationFormatKey { get; init; }
         public BoundedChannelOptions ChannelOptions { get; init; } = WebSocketChannel<RpcMessage>.Options.Default.WriteChannelOptions;
         public Func<RpcTestClient, ChannelPair<RpcMessage>> ConnectionFactory { get; init; } = DefaultConnectionFactory;
 
@@ -48,10 +49,17 @@ public class RpcTestClient(
         return CreateConnection($"client-{pairId}", $"server-{pairId}");
     }
 
-    public RpcTestConnection CreateConnection(Symbol clientId, Symbol serverId)
+    public RpcTestConnection CreateConnection(string clientId, string serverId)
     {
-        var clientPeerRef = RpcPeerRef.NewClient(clientId);
-        var serverPeerRef = RpcPeerRef.NewServer(serverId);
+        var serializationFormatResolver = Services.GetRequiredService<RpcSerializationFormatResolver>();
+        var serializationFormatKey = Settings.SerializationFormatKey;
+        if (serializationFormatKey.IsEmpty)
+            serializationFormatKey = serializationFormatResolver.DefaultClientFormatKey;
+
+        var clientPeerRef = serializationFormatKey == serializationFormatResolver.DefaultClientFormatKey
+            ? RpcPeerRef.NewClient(clientId)
+            : RpcPeerRef.NewClient(clientId, serializationFormatKey);
+        var serverPeerRef = RpcPeerRef.NewServer(serverId, serializationFormatKey);
         return CreateConnection(clientPeerRef, serverPeerRef);
     }
 

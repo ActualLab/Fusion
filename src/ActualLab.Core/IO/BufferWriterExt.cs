@@ -9,4 +9,12 @@ public static class BufferWriterExt
         foreach (var segment in sequence)
             writer.Write(segment.Span);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Append<T>(this IBufferWriter<T> writer, ReadOnlySpan<T> span)
+    {
+        var targetSpan = writer.GetSpan(span.Length);
+        span.CopyTo(targetSpan);
+        writer.Advance(span.Length);
+    }
 }

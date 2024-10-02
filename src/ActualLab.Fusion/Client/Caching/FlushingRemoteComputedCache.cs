@@ -95,19 +95,31 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
             }
         }
 
+#if NET9_0_OR_GREATER
+        Lock.Enter();
+#else
         Monitor.Enter(Lock);
+#endif
         try {
             while (true) {
                 var flushingTask = FlushingTask;
                 if (flushingTask.IsCompleted)
                     break;
 
+#if NET9_0_OR_GREATER
+                Lock.Exit();
+#else
                 Monitor.Exit(Lock);
+#endif
                 try {
                     await flushingTask.SilentAwait(false);
                 }
                 finally {
+#if NET9_0_OR_GREATER
+                    Lock.Enter();
+#else
                     Monitor.Enter(Lock);
+#endif
                 }
             }
             var flushingQueue = FlushingQueue = FlushQueue;
@@ -116,7 +128,11 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
             FlushTask = null;
         }
         finally {
+#if NET9_0_OR_GREATER
+            Lock.Exit();
+#else
             Monitor.Exit(Lock);
+#endif
         }
     }
 }

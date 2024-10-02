@@ -1,5 +1,4 @@
 using ActualLab.Scalability;
-using CommunityToolkit.HighPerformance;
 
 namespace ActualLab.Tests.Scalability;
 
@@ -8,7 +7,7 @@ public class HashRingTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void BasicTest()
     {
-        var hr = new HashRing<string>(new [] { "a", "b", "c" }, v => v.GetDjb2HashCode());
+        var hr = new HashRing<string>(new [] { "a", "b", "c" }, v => v.GetXxHash3());
         hr.Count.Should().Be(3);
 
         foreach (var (item, hash) in hr.Nodes) {

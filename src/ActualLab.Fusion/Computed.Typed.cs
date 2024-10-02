@@ -92,7 +92,7 @@ public abstract class Computed<T> : Computed, IResult<T>
     // GetHashCode
 
     public sealed override int GetHashCode()
-        => (int)Version;
+        => unchecked((int)Version);
 
     // Update & use
 

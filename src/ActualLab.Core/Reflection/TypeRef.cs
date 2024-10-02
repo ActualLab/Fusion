@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
-using ActualLab.Concurrency;
 using ActualLab.Internal;
 using ActualLab.Reflection.Internal;
 using Errors = ActualLab.Reflection.Internal.Errors;

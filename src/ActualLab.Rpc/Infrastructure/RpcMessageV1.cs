@@ -56,21 +56,12 @@ public sealed partial class RpcMessageV1
 
     public static RpcMessage ToRpcMessage(RpcMessageV1 x)
     {
-        var methodRef = new RpcMethodRef(x.Service, x.Method);
+        var fullName = RpcMethodDef.ComposeFullName(x.Service, x.Method);
+        var methodRef = new RpcMethodRef(fullName);
         return new RpcMessage(x.CallTypeId, x.RelatedId, methodRef, x.ArgumentData, x.Headers);
     }
 
     // This record relies on referential equality
     public bool Equals(RpcMessageV1? other) => ReferenceEquals(this, other);
     public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
-
-    public void Deconstruct(out byte CallTypeId, out long RelatedId, out string Service, out string Method, out TextOrBytes ArgumentData, out RpcHeader[]? Headers)
-    {
-        CallTypeId = this.CallTypeId;
-        RelatedId = this.RelatedId;
-        Service = this.Service;
-        Method = this.Method;
-        ArgumentData = this.ArgumentData;
-        Headers = this.Headers;
-    }
 }

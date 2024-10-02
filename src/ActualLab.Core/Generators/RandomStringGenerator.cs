@@ -41,7 +41,7 @@ public class RandomStringGenerator : Generator<string>, IDisposable
     {
         var alphabetSpan = alphabet.AsSpan();
         var alphabetLength = alphabetSpan.Length;
-        if (Bits.IsPowerOf2((uint)alphabetLength)) {
+        if (Bits.IsPowerOf2((ulong)alphabetLength)) {
             var alphabetMask = alphabetLength - 1;
             for (var i = 0; i<charSpan.Length; i++)
                 charSpan[i] = alphabetSpan[bufferSpan[i] & alphabetMask];

@@ -29,7 +29,7 @@
         <Div Margin="Margin.Is2.OnX">
             <span>Row <b>@row.Index</b>:</span>
             <span>@(row.Items.ToDelimitedString())</span>
-            <span>, sum = <b>@row.Sum</b></span>
+            <span>, sum = <b>@(row.Sum?.ToString() ?? "...")</b></span>
             @if (row.IsCompleted) {
                 <Span TextColor="TextColor.Secondary"> - completed</Span>
             }
@@ -38,8 +38,8 @@
 }
 
 @code {
-    private const int RowLimit = 11;
-    private const int ItemLimit = 11;
+    private const int RowLimit = 16;
+    private const int ItemLimit = 16;
 
     private readonly CancellationTokenSource? _stopTokenSource;
     private readonly CancellationToken _stopToken;
@@ -96,7 +96,10 @@
 
     private async Task UpdateSum(RowModel<int> row, CancellationToken cancellationToken)
     {
-        row.Sum = await RpcExampleService.Sum(RpcStream.New(row.Items), cancellationToken);
+        row.Sum = null;
+        StateHasChanged();
+        var stream = RpcStream.New(row.Items.ToArray()); // We need a copy here to enable concurrent enumeration
+        row.Sum = await RpcExampleService.Sum(stream, cancellationToken);
         StateHasChanged();
     }
 

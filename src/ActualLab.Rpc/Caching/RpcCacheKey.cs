@@ -1,40 +1,34 @@
-using CommunityToolkit.HighPerformance;
-
 namespace ActualLab.Rpc.Caching;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MemoryPackable]
 public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public readonly int HashCode;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)] public readonly Symbol Service;
-    [DataMember(Order = 1), MemoryPackOrder(1)] public readonly Symbol Method;
-    [DataMember(Order = 2), MemoryPackOrder(2)] public readonly TextOrBytes ArgumentData;
+    [DataMember(Order = 0), MemoryPackOrder(0)]
+    public readonly string Name;
+    [DataMember(Order = 1), MemoryPackOrder(1)]
+    public readonly TextOrBytes ArgumentData;
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
-    public RpcCacheKey(Symbol service, Symbol method, TextOrBytes argumentData)
+    [MemoryPackConstructor]
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public RpcCacheKey(string name, TextOrBytes argumentData)
     {
-        Service = service;
-        Method = method;
+        Name = name;
         ArgumentData = argumentData;
-        HashCode = unchecked(
-            Service.Value.GetDjb2HashCode()
-            ^ (353*Method.Value.GetDjb2HashCode())
-            ^ argumentData.GetDataHashCode());
+        HashCode = unchecked((353 * name.GetXxHash3()) + argumentData.Data.Span.GetXxHash3());
     }
 
     public override string ToString()
-        => $"#{(uint)HashCode:x}: {Service}.{Method}({Convert.ToBase64String(ArgumentData.Bytes)})";
+        => $"#{(uint)HashCode:x}: {Name}({Convert.ToBase64String(ArgumentData.Bytes)})";
 
     // Equality
 
     public bool Equals(RpcCacheKey? other)
         =>  !ReferenceEquals(other, null)
             && HashCode == other.HashCode
-            && string.Equals(Method.Value, other.Method.Value, StringComparison.Ordinal)
-            && string.Equals(Service.Value, other.Service.Value, StringComparison.Ordinal)
+            && Name.AsSpan().SequenceEqual(other.Name.AsSpan())
             && ArgumentData.DataEquals(other.ArgumentData);
 
     public override bool Equals(object? obj) => obj is RpcCacheKey other && Equals(other);

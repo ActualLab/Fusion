@@ -31,7 +31,7 @@ public static class ComputedVersion
         var m = Environment.CurrentManagedThreadId % LocalVersionCount;
         if (m < 0)
             m += LocalVersionCount;
-        return (int)m;
+        return unchecked((int)m);
     }
 
     // Nested types

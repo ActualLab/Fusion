@@ -241,8 +241,12 @@ public class RpcWebSocketTest : RpcTestBase
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
         var client = services.GetRequiredService<ITestRpcServiceClient>();
 
-        var expected1 = AsyncEnumerable.Range(0, 500);
-        (await client.Count(RpcStream.New(expected1))).Should().Be(500);
+        using var cts = new CancellationTokenSource();
+        for (var length = 0; length < 100; length++) {
+            var seq = Enumerable.Range(0, length);
+            var count = await client.Count(RpcStream.New(seq), cts.Token);
+            count.Should().Be(length);
+        }
     }
 
     [Fact]

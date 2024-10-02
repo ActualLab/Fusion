@@ -21,6 +21,18 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public readonly ReadOnlyMemory<byte> Bytes;
 
+    [IgnoreDataMember, MemoryPackIgnore]
+    public int Length {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => Bytes.Length;
+    }
+
+    [IgnoreDataMember, MemoryPackIgnore]
+    public ReadOnlySpan<byte> Span {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => Bytes.Span;
+    }
+
     public static ByteString FromBase64(string? base64)
         => base64.IsNullOrEmpty() ? Empty : new(Convert.FromBase64String(base64));
     public static ByteString FromBase64Url(string? base64Url)
@@ -51,9 +63,12 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
     public override string ToString()
         => ToString(64);
     public string ToString(int maxLength)
-        => ZString.Concat("[ ",
-            Bytes.Length, " byte(s): ", ToHexString(maxLength),
-            Bytes.Length <= maxLength ? " ]" : "... ]");
+    {
+        var length = Bytes.Length;
+        return ZString.Concat("[ ",
+            length, " byte(s): ", ToHexString(maxLength),
+            length <= maxLength ? " ]" : "... ]");
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public string ToBase64()
@@ -103,8 +118,8 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
     {
         var span = Bytes.Span;
         var hash = span.Length <= 32
-            ? span.GetDjb2HashCode()
-            : span[..16].GetDjb2HashCode() + span[^16..].GetDjb2HashCode();
+            ? span.GetXxHash3()
+            : span[..16].GetXxHash3() + span[^16..].GetXxHash3();
         return (359 * span.Length) + hash;
     }
 
