@@ -9,7 +9,6 @@ public class RpcExampleService : IRpcExampleService
     private const double RowDelayProbability = 0.2;
     private const double ItemDelayProbability = 0.2;
     private static readonly RandomTimeSpan DelayDuration = TimeSpan.FromMilliseconds(300).ToRandom(0.5);
-    private static readonly RandomTimeSpan SumDelayDuration = TimeSpan.FromMilliseconds(100).ToRandom(0.5);
 
     public Task<string> Greet(string name, CancellationToken cancellationToken = default)
         => Task.FromResult($"Hello, {name}!");
@@ -20,11 +19,8 @@ public class RpcExampleService : IRpcExampleService
         return Task.FromResult(table);
     }
 
-    public async Task<int> Sum(RpcStream<int> stream, CancellationToken cancellationToken = default)
-    {
-        await Task.Delay(SumDelayDuration.Next(), cancellationToken);
-        return await stream.SumAsync(cancellationToken).ConfigureAwait(false);
-    }
+    public Task<int> Sum(RpcStream<int> stream, CancellationToken cancellationToken = default)
+        => stream.SumAsync(cancellationToken).AsTask();
 
     // Private methods
 

@@ -83,13 +83,16 @@
     private async Task ReadRow(Row<int> row, CancellationToken cancellationToken)
     {
         var model = _table.Rows[row.Index];
+        using var updateSumCts = cancellationToken.CreateLinkedTokenSource();
         await foreach (var item in row.Items.WithCancellation(cancellationToken)) {
             model.Items.Add(item);
             StateHasChanged();
-            _ = UpdateSum(model, cancellationToken);
             if (model.Items.Count >= ItemLimit)
                 break;
+            _ = UpdateSum(model, updateSumCts.Token); // Notice we don't await it here!
         }
+        await updateSumCts.CancelAsync();
+        await UpdateSum(model, cancellationToken); // The final UpdateSum is called for all items
         model.IsCompleted = true;
         StateHasChanged();
     }
@@ -97,9 +100,12 @@
     private async Task UpdateSum(RowModel<int> row, CancellationToken cancellationToken)
     {
         row.Sum = null;
-        StateHasChanged();
-        var stream = RpcStream.New(row.Items.ToArray()); // We need a copy here to enable concurrent enumeration
-        row.Sum = await RpcExampleService.Sum(stream, cancellationToken);
+        var items = row.Items.ToArray(); // We need a copy here to enable concurrent enumeration
+        var stream = RpcStream.New(items);
+        var sum = await RpcExampleService.Sum(stream, cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested(); // No updates if CT was cancelled
+        row.Sum = sum == items.Sum() ? sum : -sum; // Quick error check
         StateHasChanged();
     }
 
