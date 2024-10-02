@@ -90,8 +90,7 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
         public override void OnClass(Type type, object? item, int index)
         {
             var itemType = item?.GetType() ?? type;
-            var typeSpan = typeSerializer.ToBytes(itemType == type ? null : itemType).Span;
-            Buffer.Append(typeSpan);
+            typeSerializer.WriteDerivedItemType(Buffer, type, itemType);
             Serializer.Write(Buffer, item, itemType);
         }
 
@@ -105,8 +104,7 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
             }
 
             var itemType = item?.GetType() ?? type;
-            var typeSpan = typeSerializer.ToBytes(itemType == type ? null : itemType).Span;
-            Buffer.Append(typeSpan);
+            typeSerializer.WriteDerivedItemType(Buffer, type, itemType);
             Serializer.Write(Buffer, item, itemType);
         }
     }

@@ -1,3 +1,4 @@
+using System.Buffers;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Internal;
@@ -12,12 +13,8 @@ public sealed class CachingTypeByteSerializer(IByteSerializer serializer)
     private readonly ConcurrentDictionary<Type, ByteString> _toBytes = new();
     private readonly ConcurrentDictionary<ByteString, Type?> _fromBytes = new();
 
-    public ByteString ToBytes(Type? type)
-    {
-        if (type == null)
-            return NullTypeBytes;
-
-        return _toBytes.GetOrAdd(type, t => {
+    public ByteString ToBytes(Type type) =>
+        _toBytes.GetOrAdd(type, t => {
             var name = new TypeRef(t).WithoutAssemblyVersions().AssemblyQualifiedName.Value;
             var nameSpan = ByteString.FromStringAsUtf8(name).Span;
             var fullLength = nameSpan.Length + 4;
@@ -33,7 +30,6 @@ public sealed class CachingTypeByteSerializer(IByteSerializer serializer)
             buffer.Advance(fullLength);
             return buffer.WrittenSpan.ToArray();
         });
-    }
 
     public Type? FromBytes(ByteString bytes)
         => _fromBytes.GetOrAdd(bytes, b => {
@@ -46,6 +42,15 @@ public sealed class CachingTypeByteSerializer(IByteSerializer serializer)
             var typeRef = new TypeRef(utf8.ToStringAsUtf8());
             return typeRef.Resolve();
         });
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void WriteDerivedItemType(IBufferWriter<byte> buffer, Type expectedType, Type itemType)
+    {
+        var span = itemType == expectedType
+            ? NullTypeSpan
+            : ToBytes(itemType).Span;
+        buffer.Append(span);
+    }
 
     public void ReadExactItemType(ref ReadOnlyMemory<byte> data, Type expectedType)
     {
