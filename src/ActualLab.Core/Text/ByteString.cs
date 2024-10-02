@@ -36,7 +36,7 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
     public static ByteString FromBase64(string? base64)
         => base64.IsNullOrEmpty() ? Empty : new(Convert.FromBase64String(base64));
     public static ByteString FromBase64Url(string? base64Url)
-        => base64Url.IsNullOrEmpty() ? Empty : new(Base64Encode.Decode(base64Url).ToArray());
+        => base64Url.IsNullOrEmpty() ? Empty : new(Base64UrlEncoder.Decode(base64Url).ToArray());
 
     public static ByteString FromStringAsUtf8(string source, int bufferLength = 1)
     {
@@ -80,7 +80,7 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public string ToBase64Url()
-        => Base64Encode.Encode(Bytes.Span);
+        => Base64UrlEncoder.Encode(Bytes.Span);
 
     public string ToHexString(int maxLength = int.MaxValue)
 #if NET5_0_OR_GREATER

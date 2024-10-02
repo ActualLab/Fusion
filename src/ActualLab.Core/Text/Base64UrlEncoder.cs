@@ -3,7 +3,7 @@ using System.Buffers.Text;
 
 namespace ActualLab.Text;
 
-public static class Base64Encode
+public static class Base64UrlEncoder
 {
     private const int MaxOnStackLength = 2048;
     private const char EqualsChar = '=';
