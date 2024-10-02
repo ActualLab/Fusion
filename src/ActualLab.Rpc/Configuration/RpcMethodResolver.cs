@@ -106,7 +106,7 @@ public sealed class RpcMethodResolver
         var sMethods = "[]";
         if (MethodByFullName != null) {
             var methods = MethodByFullName
-                .OrderBy(x => x.Key, StringComparer.Ordinal)
+                .OrderBy(x => x.Key)
                 .Select(x =>
                     $"{Environment.NewLine}  '{x.Key}' -> '{x.Value.Method.FullName}' (v{x.Value.Version.Format()})");
             sMethods = "[" + string.Join("", methods) + Environment.NewLine + "]";
