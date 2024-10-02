@@ -16,7 +16,7 @@ public class DbProductService(IServiceProvider services)
             return;
         }
 
-        await using var dbContext = await DbHub.CreateCommandDbContext(cancellationToken);
+        await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
         var dbProduct = await dbContext.Products.FindAsync(DbKey.Compose(productId), cancellationToken);
         if (product == null) {
             if (dbProduct != null)

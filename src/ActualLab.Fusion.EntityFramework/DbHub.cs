@@ -22,10 +22,10 @@ public interface IDbHub : IHasServices
     ValueTask<DbContext> CreateDbContext(bool readWrite, CancellationToken cancellationToken = default);
     ValueTask<DbContext> CreateDbContext(DbShard shard, CancellationToken cancellationToken = default);
     ValueTask<DbContext> CreateDbContext(DbShard shard, bool readWrite, CancellationToken cancellationToken = default);
-    ValueTask<DbContext> CreateCommandDbContext(CancellationToken cancellationToken = default);
-    ValueTask<DbContext> CreateCommandDbContext(DbShard shard, CancellationToken cancellationToken = default);
-    ValueTask<DbContext> CreateCommandDbContext(IsolationLevel isolationLevel, CancellationToken cancellationToken = default);
-    ValueTask<DbContext> CreateCommandDbContext(DbShard shard, IsolationLevel isolationLevel, CancellationToken cancellationToken = default);
+    ValueTask<DbContext> CreateOperationDbContext(CancellationToken cancellationToken = default);
+    ValueTask<DbContext> CreateOperationDbContext(DbShard shard, CancellationToken cancellationToken = default);
+    ValueTask<DbContext> CreateOperationDbContext(IsolationLevel isolationLevel, CancellationToken cancellationToken = default);
+    ValueTask<DbContext> CreateOperationDbContext(DbShard shard, IsolationLevel isolationLevel, CancellationToken cancellationToken = default);
 }
 
 public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
@@ -78,20 +78,20 @@ public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<TDbContext> CreateCommandDbContext(CancellationToken cancellationToken = default)
-        => CreateCommandDbContext(default, IsolationLevel.Unspecified, cancellationToken);
+    public ValueTask<TDbContext> CreateOperationDbContext(CancellationToken cancellationToken = default)
+        => CreateOperationDbContext(default, IsolationLevel.Unspecified, cancellationToken);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<TDbContext> CreateCommandDbContext(DbShard shard, CancellationToken cancellationToken = default)
-        => CreateCommandDbContext(shard, IsolationLevel.Unspecified, cancellationToken);
+    public ValueTask<TDbContext> CreateOperationDbContext(DbShard shard, CancellationToken cancellationToken = default)
+        => CreateOperationDbContext(shard, IsolationLevel.Unspecified, cancellationToken);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<TDbContext> CreateCommandDbContext(
+    public ValueTask<TDbContext> CreateOperationDbContext(
         IsolationLevel isolationLevel,
         CancellationToken cancellationToken = default)
-        => CreateCommandDbContext(default, isolationLevel, cancellationToken);
+        => CreateOperationDbContext(default, isolationLevel, cancellationToken);
 
-    public async ValueTask<TDbContext> CreateCommandDbContext(
+    public async ValueTask<TDbContext> CreateOperationDbContext(
         DbShard shard,
         IsolationLevel isolationLevel,
         CancellationToken cancellationToken = default)
@@ -117,12 +117,12 @@ public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
     async ValueTask<DbContext> IDbHub.CreateDbContext(DbShard shard, bool readWrite, CancellationToken cancellationToken)
         => await CreateDbContext(shard, readWrite, cancellationToken).ConfigureAwait(false);
 
-    async ValueTask<DbContext> IDbHub.CreateCommandDbContext(CancellationToken cancellationToken)
-        => await CreateCommandDbContext(cancellationToken).ConfigureAwait(false);
-    async ValueTask<DbContext> IDbHub.CreateCommandDbContext(DbShard shard, CancellationToken cancellationToken)
-        => await CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
-    async ValueTask<DbContext> IDbHub.CreateCommandDbContext(IsolationLevel isolationLevel, CancellationToken cancellationToken)
-        => await CreateCommandDbContext(isolationLevel, cancellationToken).ConfigureAwait(false);
-    async ValueTask<DbContext> IDbHub.CreateCommandDbContext(DbShard shard, IsolationLevel isolationLevel, CancellationToken cancellationToken)
-        => await CreateCommandDbContext(shard, isolationLevel, cancellationToken).ConfigureAwait(false);
+    async ValueTask<DbContext> IDbHub.CreateOperationDbContext(CancellationToken cancellationToken)
+        => await CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
+    async ValueTask<DbContext> IDbHub.CreateOperationDbContext(DbShard shard, CancellationToken cancellationToken)
+        => await CreateOperationDbContext(shard, cancellationToken).ConfigureAwait(false);
+    async ValueTask<DbContext> IDbHub.CreateOperationDbContext(IsolationLevel isolationLevel, CancellationToken cancellationToken)
+        => await CreateOperationDbContext(isolationLevel, cancellationToken).ConfigureAwait(false);
+    async ValueTask<DbContext> IDbHub.CreateOperationDbContext(DbShard shard, IsolationLevel isolationLevel, CancellationToken cancellationToken)
+        => await CreateOperationDbContext(shard, isolationLevel, cancellationToken).ConfigureAwait(false);
 }

@@ -24,7 +24,7 @@ public class DbKeyValueStore<TDbContext, TDbKeyValue>(IServiceProvider services)
             return;
         }
 
-        var dbContext = await DbHub.CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateOperationDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false); // Just to speed up things a bit
 
@@ -61,7 +61,7 @@ public class DbKeyValueStore<TDbContext, TDbKeyValue>(IServiceProvider services)
             return;
         }
 
-        var dbContext = await DbHub.CreateCommandDbContext(shard, cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateOperationDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false); // Just to speed up things a bit
 

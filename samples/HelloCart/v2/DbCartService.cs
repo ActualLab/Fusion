@@ -18,7 +18,7 @@ public class DbCartService(IServiceProvider services)
             return;
         }
 
-        await using var dbContext = await DbHub.CreateCommandDbContext(cancellationToken);
+        await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
         var dbCart = await dbContext.Carts.FindAsync(DbKey.Compose(cartId), cancellationToken);
         if (cart == null) {
             if (dbCart != null)

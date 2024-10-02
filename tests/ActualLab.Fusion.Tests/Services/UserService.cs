@@ -71,7 +71,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
             return;
         }
 
-        var dbContext = await DbHub.CreateCommandDbContext(cancellationToken).ConfigureAwait(false);
+        var dbContext = await CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);
 
@@ -96,7 +96,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
             return;
         }
 
-        var dbContext = await DbHub.CreateCommandDbContext(cancellationToken).ConfigureAwait(false);
+        var dbContext = await CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         dbContext.Users.Update(user);
@@ -130,7 +130,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
             return false;
         }
 
-        var dbContext = await DbHub.CreateCommandDbContext(cancellationToken).ConfigureAwait(false);
+        var dbContext = await CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         dbContext.Users.Remove(user);
@@ -191,8 +191,8 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
     [ComputeMethod]
     protected virtual Task<Unit> Everything() => TaskExt.UnitTask;
 
-    private ValueTask<TestDbContext> CreateCommandDbContext(CancellationToken cancellationToken = default)
+    private ValueTask<TestDbContext> CreateOperationDbContext(CancellationToken cancellationToken = default)
         => IsProxy
-            ? DbHub.CreateCommandDbContext(cancellationToken)
+            ? DbHub.CreateOperationDbContext(cancellationToken)
             : DbHub.CreateDbContext(readWrite: true, cancellationToken);
 }

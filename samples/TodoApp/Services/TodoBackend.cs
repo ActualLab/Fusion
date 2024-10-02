@@ -28,7 +28,7 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         }
 
         var tenant = folder.GetTenant();
-        var dbContext = await DbHub.CreateCommandDbContext(tenant, cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateOperationDbContext(tenant, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         // These "throw"-s are to show how error handling / reprocessing works
@@ -73,7 +73,7 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         }
 
         var tenant = folder.GetTenant();
-        var dbContext = await DbHub.CreateCommandDbContext(tenant, cancellationToken).ConfigureAwait(false);
+        var dbContext = await DbHub.CreateOperationDbContext(tenant, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         var dbTodo = await dbContext

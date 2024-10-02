@@ -16,7 +16,7 @@ public class EventQueue(IServiceProvider services) : DbServiceBase<TestDbContext
         if (Invalidation.IsActive)
             return;
 
-        var context = await DbHub.CreateCommandDbContext(cancellationToken).ConfigureAwait(false);
+        var context = await DbHub.CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
         await using var _ = context.ConfigureAwait(false);
 
         var operation = CommandContext.GetCurrent().Operation;
