@@ -114,7 +114,7 @@ public static class RpcDefaultDelegates
     public static RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; set; } =
         static (peer, properties) => WebSocketChannel<RpcMessage>.Options.Default with {
             Serializer = peer.Hub.SerializationFormats.Get(peer.Ref).MessageSerializerFactory.Invoke(peer),
-            FrameDelayerFactory = RpcFrameDelayers.DefaultFactoryProvider.Invoke(peer, properties),
+            FrameDelayerFactory = RpcFrameDelayers.DefaultProvider.Invoke(peer, properties),
         };
 
     public static RpcServerPeerCloseTimeoutProvider ServerPeerCloseTimeoutProvider { get; set; } =
