@@ -2,11 +2,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.DependencyInjection;
 
-public class SimpleResolver<TKey, TValue>(IReadOnlyDictionary<TKey, TValue> items) : IResolver<TKey, TValue>
+public record SimpleResolver<TKey, TValue>(IReadOnlyDictionary<TKey, TValue> Items) : IResolver<TKey, TValue>
     where TKey : notnull
 {
-    public IReadOnlyDictionary<TKey, TValue> Items { get; } = items;
-
     public override string ToString()
         => $"{GetType().GetName()}([{Items.Keys.ToDelimitedString()}])";
 

@@ -1,4 +1,6 @@
+#if NET8_0_OR_GREATER
 using System.Collections.Frozen;
+#endif
 using ActualLab.Comparison;
 using ActualLab.Internal;
 using ActualLab.OS;

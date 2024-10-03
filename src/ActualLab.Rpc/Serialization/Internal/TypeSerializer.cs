@@ -5,16 +5,16 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Serialization.Internal;
 
-public sealed class CachingTypeByteSerializer(IByteSerializer serializer)
+public static class TypeSerializer
 {
+    private static readonly ConcurrentDictionary<Type, ByteString> ToBytesCache = new();
+    private static readonly ConcurrentDictionary<ByteString, Type?> FromBytesCache = new();
+
     public static readonly byte[] NullTypeBytes = [0, 0];
     public static ReadOnlySpan<byte> NullTypeSpan => NullTypeBytes.AsSpan();
 
-    private readonly ConcurrentDictionary<Type, ByteString> _toBytes = new();
-    private readonly ConcurrentDictionary<ByteString, Type?> _fromBytes = new();
-
-    public ByteString ToBytes(Type type) =>
-        _toBytes.GetOrAdd(type, t => {
+    public static ByteString ToBytes(Type type) =>
+        ToBytesCache.GetOrAdd(type, t => {
             var name = new TypeRef(t).WithoutAssemblyVersions().AssemblyQualifiedName.Value;
             var nameSpan = ByteString.FromStringAsUtf8(name).Span;
             var fullLength = nameSpan.Length + 4;
@@ -31,8 +31,8 @@ public sealed class CachingTypeByteSerializer(IByteSerializer serializer)
             return buffer.WrittenSpan.ToArray();
         });
 
-    public Type? FromBytes(ByteString bytes)
-        => _fromBytes.GetOrAdd(bytes, b => {
+    public static Type? FromBytes(ByteString bytes)
+        => FromBytesCache.GetOrAdd(bytes, b => {
             var memory = b.Bytes;
             var length = memory.Span.ReadUnchecked<ushort>();
             if (length == 0)
@@ -44,7 +44,7 @@ public sealed class CachingTypeByteSerializer(IByteSerializer serializer)
         });
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WriteDerivedItemType(IBufferWriter<byte> buffer, Type expectedType, Type itemType)
+    public static void WriteDerivedItemType(IBufferWriter<byte> buffer, Type expectedType, Type itemType)
     {
         var span = itemType == expectedType
             ? NullTypeSpan
@@ -52,7 +52,7 @@ public sealed class CachingTypeByteSerializer(IByteSerializer serializer)
         buffer.Append(span);
     }
 
-    public void ReadExactItemType(ref ReadOnlyMemory<byte> data, Type expectedType)
+    public static void ReadExactItemType(ref ReadOnlyMemory<byte> data, Type expectedType)
     {
         var length = data.Span.ReadUnchecked<ushort>();
         if (length == 0) {
@@ -71,7 +71,7 @@ public sealed class CachingTypeByteSerializer(IByteSerializer serializer)
         throw Errors.CannotDeserializeUnexpectedPolymorphicArgumentType(expectedType, itemType);
     }
 
-    public Type ReadDerivedItemType(ref ReadOnlyMemory<byte> data, Type expectedType)
+    public static Type ReadDerivedItemType(ref ReadOnlyMemory<byte> data, Type expectedType)
     {
         var length = data.Span.ReadUnchecked<ushort>();
         if (length == 0) {

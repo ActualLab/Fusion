@@ -1,10 +1,10 @@
 namespace ActualLab.Rpc;
 
-public sealed class RpcSerializationFormatResolver(
-    Symbol defaultServerFormatKey,
-    Symbol defaultClientFormatKey,
-    params RpcSerializationFormat[] formats
-    ) : SimpleResolver<Symbol, RpcSerializationFormat>(formats.ToDictionary(x => x.Key))
+public sealed record RpcSerializationFormatResolver(
+    Symbol DefaultServerFormatKey,
+    Symbol DefaultClientFormatKey,
+    IReadOnlyDictionary<Symbol, RpcSerializationFormat> Items
+    ) : SimpleResolver<Symbol, RpcSerializationFormat>(Items)
 {
     // Static members
 
@@ -30,11 +30,15 @@ public sealed class RpcSerializationFormatResolver(
 
     // Instance members
 
-    public Symbol DefaultServerFormatKey { get; init; } = defaultServerFormatKey;
-    public Symbol DefaultClientFormatKey { get; } = defaultClientFormatKey;
-
     public RpcSerializationFormatResolver(Symbol defaultFormatKey, params RpcSerializationFormat[] formats)
         : this(defaultFormatKey, defaultFormatKey, formats)
+    { }
+
+    public RpcSerializationFormatResolver(
+        Symbol defaultServerFormatKey,
+        Symbol defaultClientFormatKey,
+        params RpcSerializationFormat[] formats)
+        : this(defaultServerFormatKey, defaultClientFormatKey, formats.ToDictionary(x => x.Key))
     { }
 
     public override string ToString()

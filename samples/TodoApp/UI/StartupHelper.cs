@@ -36,6 +36,10 @@ public static class StartupHelper
             LogCacheEntryUpdateSettings = (LogLevel.Warning, int.MaxValue),
         };
 #endif
+        // Default RPC client serialization format
+        RpcSerializationFormatResolver.Default = RpcSerializationFormatResolver.Default with {
+            DefaultClientFormatKey = "mempack2c",
+        };
 
         // Fusion services
         var fusion = services.AddFusion();

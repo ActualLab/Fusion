@@ -1,5 +1,6 @@
 namespace ActualLab.IO.Internal;
 
+[StructLayout(LayoutKind.Auto)]
 public ref struct SpanWriter(Span<byte> buffer)
 {
     public Span<byte> Span = buffer;

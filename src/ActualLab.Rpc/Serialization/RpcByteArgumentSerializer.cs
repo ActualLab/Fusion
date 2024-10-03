@@ -12,14 +12,10 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
     public static int CopySizeThreshold { get; set; } = 1024;
 
     private readonly IByteSerializer _serializer;
-    private readonly CachingTypeByteSerializer _typeSerializer;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public RpcByteArgumentSerializer(IByteSerializer serializer)
-    {
-        _serializer = serializer;
-        _typeSerializer = new CachingTypeByteSerializer(serializer);
-    }
+        => _serializer = serializer;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override TextOrBytes Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
@@ -30,7 +26,7 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
         var buffer = new ArrayPoolBuffer<byte>(128 + Math.Max(128, sizeHint));
         try {
             var itemSerializer = allowPolymorphism
-                ? (ItemSerializer)new ItemPolymorphicSerializer(_serializer, _typeSerializer, buffer)
+                ? (ItemSerializer)new ItemPolymorphicSerializer(_serializer, buffer)
                 : new ItemNonPolymorphicSerializer(_serializer, buffer);
             arguments.Read(itemSerializer);
 
@@ -59,8 +55,8 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
             return;
 
         var deserializer = allowPolymorphism
-            ? (ItemDeserializer)new ItemPolymorphicDeserializer(_serializer, _typeSerializer, bytes)
-            : new ItemNonPolymorphicDeserializer(_serializer, _typeSerializer, bytes);
+            ? (ItemDeserializer)new ItemPolymorphicDeserializer(_serializer, bytes)
+            : new ItemNonPolymorphicDeserializer(_serializer, bytes);
         arguments.Write(deserializer);
     }
 
@@ -80,17 +76,14 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
         }
     }
 
-    private sealed class ItemPolymorphicSerializer(
-        IByteSerializer serializer,
-        CachingTypeByteSerializer typeSerializer,
-        IBufferWriter<byte> buffer)
+    private sealed class ItemPolymorphicSerializer(IByteSerializer serializer, IBufferWriter<byte> buffer)
         : ItemSerializer(serializer, buffer)
     {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnClass(Type type, object? item, int index)
         {
             var itemType = item?.GetType() ?? type;
-            typeSerializer.WriteDerivedItemType(Buffer, type, itemType);
+            TypeSerializer.WriteDerivedItemType(Buffer, type, itemType);
             Serializer.Write(Buffer, item, itemType);
         }
 
@@ -104,7 +97,7 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
             }
 
             var itemType = item?.GetType() ?? type;
-            typeSerializer.WriteDerivedItemType(Buffer, type, itemType);
+            TypeSerializer.WriteDerivedItemType(Buffer, type, itemType);
             Serializer.Write(Buffer, item, itemType);
         }
     }
@@ -117,7 +110,7 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnClass(Type type, object? item, int index)
         {
-            Buffer.Append(CachingTypeByteSerializer.NullTypeSpan);
+            Buffer.Append(TypeSerializer.NullTypeSpan);
             Serializer.Write(Buffer, item, type);
         }
 
@@ -130,7 +123,7 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
                 return;
             }
 
-            Buffer.Append(CachingTypeByteSerializer.NullTypeSpan);
+            Buffer.Append(TypeSerializer.NullTypeSpan);
             Serializer.Write(Buffer, item, type);
         }
     }
@@ -150,16 +143,13 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
                 : Serializer.Read<T>(ref Data);
     }
 
-    private sealed class ItemPolymorphicDeserializer(
-        IByteSerializer serializer,
-        CachingTypeByteSerializer typeSerializer,
-        ReadOnlyMemory<byte> data)
+    private sealed class ItemPolymorphicDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
         : ItemDeserializer(serializer, data)
     {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnClass(Type type, int index)
         {
-            var itemType = typeSerializer.ReadDerivedItemType(ref Data, type);
+            var itemType = TypeSerializer.ReadDerivedItemType(ref Data, type);
             return Serializer.Read(ref Data, itemType);
         }
 
@@ -171,21 +161,18 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
                     ? defaultValue
                     : Serializer.Read(ref Data, type);
 
-            var itemType = typeSerializer.ReadDerivedItemType(ref Data, type);
+            var itemType = TypeSerializer.ReadDerivedItemType(ref Data, type);
             return Serializer.Read(ref Data, itemType);
         }
     }
 
-    private sealed class ItemNonPolymorphicDeserializer(
-        IByteSerializer serializer,
-        CachingTypeByteSerializer typeSerializer,
-        ReadOnlyMemory<byte> data)
+    private sealed class ItemNonPolymorphicDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
         : ItemDeserializer(serializer, data)
     {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnClass(Type type, int index)
         {
-            typeSerializer.ReadExactItemType(ref Data, type);
+            TypeSerializer.ReadExactItemType(ref Data, type);
             return Serializer.Read(ref Data, type);
         }
 
@@ -196,7 +183,7 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
                     ? defaultValue
                     : Serializer.Read(ref Data, type);
 
-            typeSerializer.ReadExactItemType(ref Data, type);
+            TypeSerializer.ReadExactItemType(ref Data, type);
             return Serializer.Read(ref Data, type);
         }
     }

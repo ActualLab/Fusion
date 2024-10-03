@@ -27,7 +27,7 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
     }
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public RpcMethodRef(ReadOnlyMemory<byte> utf8Name, int hashCode)
+    public RpcMethodRef(in ReadOnlyMemory<byte> utf8Name, int hashCode)
     {
         Utf8Name = utf8Name;
         HashCode = hashCode;
@@ -79,7 +79,7 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
 
     // Static methods
 
-    public static unsafe int ComputeHashCode(ReadOnlyMemory<byte> utf8Name)
+    public static unsafe int ComputeHashCode(in ReadOnlyMemory<byte> utf8Name)
     {
         if (utf8Name.Length > MaxUtf8NameLength)
             throw new ArgumentOutOfRangeException(nameof(utf8Name));
