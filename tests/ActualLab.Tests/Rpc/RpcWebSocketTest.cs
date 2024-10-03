@@ -35,10 +35,12 @@ public class RpcWebSocketTest : RpcTestBase
     // [InlineData("njson")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
-    [InlineData("mempack2s")]
+    [InlineData("mempack2c")]
+    [InlineData("mempack2a")]
     [InlineData("msgpack1")]
     [InlineData("msgpack2")]
-    [InlineData("msgpack2s")]
+    [InlineData("msgpack2c")]
+    [InlineData("msgpack2a")]
     public async Task BasicTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -150,10 +152,12 @@ public class RpcWebSocketTest : RpcTestBase
     // [InlineData("njson")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
-    [InlineData("mempack2s")]
+    [InlineData("mempack2a")]
+    [InlineData("mempack2c")]
     [InlineData("msgpack1")]
     [InlineData("msgpack2")]
-    [InlineData("msgpack2s")]
+    [InlineData("msgpack2a")]
+    [InlineData("msgpack2c")]
     public async Task PolymorphTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -310,18 +314,24 @@ public class RpcWebSocketTest : RpcTestBase
     [Theory]
     [InlineData(100, "mempack1")]
     [InlineData(100, "mempack2")]
+    [InlineData(100, "mempack2c")]
     [InlineData(100, "msgpack1")]
     [InlineData(100, "msgpack2")]
+    [InlineData(100, "msgpack2c")]
     [InlineData(1000, "mempack1")]
     [InlineData(1000, "mempack2")]
+    [InlineData(1000, "mempack2c")]
     [InlineData(1000, "msgpack1")]
     [InlineData(1000, "msgpack2")]
+    [InlineData(1000, "msgpack2c")]
     [InlineData(50_000, "mempack1")]
     [InlineData(50_000, "mempack2")]
-    [InlineData(50_000, "mempack2s")]
+    [InlineData(50_000, "mempack2a")]
+    [InlineData(50_000, "mempack2c")]
     [InlineData(50_000, "msgpack1")]
     [InlineData(50_000, "msgpack2")]
-    [InlineData(50_000, "msgpack2s")]
+    [InlineData(50_000, "msgpack2a")]
+    [InlineData(50_000, "msgpack2c")]
     public async Task PerformanceTest(int iterationCount, string serializationFormat)
     {
         SerializationFormat = serializationFormat;

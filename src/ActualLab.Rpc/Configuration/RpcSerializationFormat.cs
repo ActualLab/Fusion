@@ -27,8 +27,12 @@ public sealed class RpcSerializationFormat(
         () => new RpcSerializationFormat("mempack2",
             () => new RpcByteArgumentSerializer(MemoryPackByteSerializer.Default),
             peer => new RpcByteMessageSerializer(peer)));
-    private static readonly LazySlim<RpcSerializationFormat> MemoryPackV2SLazy = new(
-        () => new RpcSerializationFormat("mempack2s",
+    private static readonly LazySlim<RpcSerializationFormat> MemoryPackV2CLazy = new(
+        () => new RpcSerializationFormat("mempack2c",
+            () => new RpcByteArgumentSerializer(MemoryPackByteSerializer.Default),
+            peer => new RpcByteMessageSerializerCompact(peer)));
+    private static readonly LazySlim<RpcSerializationFormat> MemoryPackV2ALazy = new(
+        () => new RpcSerializationFormat("mempack2a",
             () => new RpcByteArgumentSerializer(MemoryPackByteSerializer.Default),
             _ => MemoryPackByteSerializer.Default.ToTyped<RpcMessage>()));
 
@@ -40,25 +44,31 @@ public sealed class RpcSerializationFormat(
         () => new RpcSerializationFormat("msgpack2",
             () => new RpcByteArgumentSerializer(MessagePackByteSerializer.Default),
             peer => new RpcByteMessageSerializer(peer)));
-    private static readonly LazySlim<RpcSerializationFormat> MessagePackV2SLazy = new(
-        () => new RpcSerializationFormat("msgpack2s",
+    private static readonly LazySlim<RpcSerializationFormat> MessagePackV2CLazy = new(
+        () => new RpcSerializationFormat("msgpack2c",
+            () => new RpcByteArgumentSerializer(MessagePackByteSerializer.Default),
+            peer => new RpcByteMessageSerializerCompact(peer)));
+    private static readonly LazySlim<RpcSerializationFormat> MessagePackV2ALazy = new(
+        () => new RpcSerializationFormat("msgpack2a",
             () => new RpcByteArgumentSerializer(MessagePackByteSerializer.Default),
             _ => MessagePackByteSerializer.Default.ToTyped<RpcMessage>()));
 
     private static readonly LazySlim<ImmutableArray<RpcSerializationFormat>> AllLazy =
         new(ImmutableArray.Create(
             // SystemJson, NewtonsoftJson,
-            MemoryPackV1, MemoryPackV2, MemoryPackV2S,
-            MessagePackV1, MessagePackV2, MessagePackV2S));
+            MemoryPackV1, MemoryPackV2, MemoryPackV2C, MemoryPackV2A,
+            MessagePackV1, MessagePackV2, MessagePackV2C, MessagePackV2A));
 
     // public static RpcSerializationFormat SystemJson => SystemJsonLazy.Value;
     // public static RpcSerializationFormat NewtonsoftJson => NewtonsoftJsonLazy.Value;
     public static RpcSerializationFormat MemoryPackV1 => MemoryPackV1Lazy.Value;
     public static RpcSerializationFormat MemoryPackV2 => MemoryPackV2Lazy.Value;
-    public static RpcSerializationFormat MemoryPackV2S => MemoryPackV2SLazy.Value;
+    public static RpcSerializationFormat MemoryPackV2C => MemoryPackV2CLazy.Value;
+    public static RpcSerializationFormat MemoryPackV2A => MemoryPackV2ALazy.Value;
     public static RpcSerializationFormat MessagePackV1 => MessagePackV1Lazy.Value;
     public static RpcSerializationFormat MessagePackV2 => MessagePackV2Lazy.Value;
-    public static RpcSerializationFormat MessagePackV2S => MessagePackV2SLazy.Value;
+    public static RpcSerializationFormat MessagePackV2C => MessagePackV2CLazy.Value;
+    public static RpcSerializationFormat MessagePackV2A => MessagePackV2ALazy.Value;
     public static ImmutableArray<RpcSerializationFormat> All => AllLazy.Value;
 
     // Instance members

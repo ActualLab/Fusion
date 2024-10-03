@@ -20,7 +20,7 @@ public abstract class TextSerializerBase : ITextSerializer
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public virtual object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
-        var decoder = Encoding.UTF8.GetDecoder();
+        var decoder = EncodingExt.Utf8NoBom.GetDecoder();
         var buffer = ZString.CreateStringBuilder();
         try {
             decoder.Convert(data.Span, ref buffer);
@@ -48,7 +48,7 @@ public abstract class TextSerializerBase : ITextSerializer
     public virtual void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
     {
         var result = Write(value, type);
-        var encoder = Encoding.UTF8.GetEncoder();
+        var encoder = EncodingExt.Utf8NoBom.GetEncoder();
         encoder.Convert(result.AsSpan(), bufferWriter);
     }
 

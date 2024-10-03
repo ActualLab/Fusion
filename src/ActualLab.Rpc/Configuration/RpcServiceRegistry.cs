@@ -39,8 +39,8 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
 
             _serviceByName.Add(serviceDef.Name, serviceDef);
         }
-        AnyMethodResolver = new RpcMethodResolver(this, serverOnly: false);
-        ServerMethodResolver = new RpcMethodResolver(this, serverOnly: true);
+        AnyMethodResolver = new RpcMethodResolver(this, serverOnly: false, Log);
+        ServerMethodResolver = new RpcMethodResolver(this, serverOnly: true, null);
         DumpTo(Log, ConstructionDumpLogLevel, "Registered services:");
     }
 
@@ -90,13 +90,13 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     public RpcServiceDef? Get(Symbol serviceName)
         => _serviceByName.GetValueOrDefault(serviceName);
 
-    public RpcMethodResolver GetServerMethodResolver(VersionSet? apiVersion)
+    public RpcMethodResolver GetServerMethodResolver(VersionSet? versions)
     {
-        if (apiVersion == null)
+        if (versions == null)
             return ServerMethodResolver;
 
-        return _serverMethodResolvers.GetOrAdd(apiVersion,
-            static (key, self) => new RpcMethodResolver(self, key, self.ServerMethodResolver),
+        return _serverMethodResolvers.GetOrAdd(versions,
+            static (versions, self) => new RpcMethodResolver(self, versions, self.ServerMethodResolver, self.Log),
             this);
     }
 }

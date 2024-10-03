@@ -15,6 +15,7 @@ public sealed class RpcMethodDef : MethodDef
 
     public RpcHub Hub { get; }
     public RpcServiceDef Service { get; }
+
     public Symbol Name {
         get => _name;
         init {

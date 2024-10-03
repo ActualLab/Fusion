@@ -8,24 +8,6 @@ public static class RpcFrameDelayers
     public const int NoDelayFrameCount = 2; // Handshake + Reconnect frames are never delayed
     public static int DelayedFrameSize { get; set; } = 1024; // Only frames smaller than this are delayed
 
-    public static Func<RpcPeer, PropertyBag, RpcFrameDelayerFactory?> DefaultProvider { get; set; } = None;
-
-    // Providers
-
-    public static RpcFrameDelayerFactory? None(RpcPeer peer, PropertyBag properties)
-        => null;
-
-    public static Func<RpcPeer, PropertyBag, RpcFrameDelayerFactory?> Auto(int clientYieldCount = 1)
-        => (peer, _) => {
-            var peerRef = peer.Ref;
-            if (peerRef.IsBackend)
-                return null;
-
-            return peerRef.IsServer
-                ? () => NextTick() // Server awaits the next tick to compose larger frames
-                : () => Yield(clientYieldCount); // Client yields to compose larger frames
-        };
-
     // Frame delayers (can used by providers)
 
     public static RpcFrameDelayer? Yield(int yieldCount = 1, long handshakeFrameCount = 1)

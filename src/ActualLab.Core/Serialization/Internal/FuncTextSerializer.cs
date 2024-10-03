@@ -21,7 +21,7 @@ public class FuncTextSerializer<T>(Func<string, T> reader, Func<T, string> write
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public T Read(ReadOnlyMemory<byte> data, out int readLength)
     {
-        var decoder = Encoding.UTF8.GetDecoder();
+        var decoder = EncodingExt.Utf8NoBom.GetDecoder();
         var buffer = ZString.CreateStringBuilder();
         try {
             decoder.Convert(data.Span, ref buffer);
@@ -53,7 +53,7 @@ public class FuncTextSerializer<T>(Func<string, T> reader, Func<T, string> write
     public void Write(IBufferWriter<byte> bufferWriter, T value)
     {
         var result = Writer.Invoke(value);
-        var encoder = Encoding.UTF8.GetEncoder();
+        var encoder = EncodingExt.Utf8NoBom.GetEncoder();
         encoder.Convert(result.AsSpan(), bufferWriter);
     }
 

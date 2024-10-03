@@ -32,6 +32,19 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
+    public ulong ReadVarULong(int offset)
+    {
+        var size = Remaining[offset++];
+        var result = size switch {
+            2 => Remaining.ReadUnchecked<ushort>(offset),
+            4 => Remaining.ReadUnchecked<uint>(offset),
+            8 => Remaining.ReadUnchecked<ulong>(offset),
+            _ => throw ActualLab.Internal.Errors.Format("Invalid message format."),
+        };
+        Advance(size + offset);
+        return result;
+    }
+
     public ReadOnlySpan<byte> ReadSpanL1()
     {
         var end = 1 + Remaining.ReadUnchecked<byte>();

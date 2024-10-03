@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Text;
 using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.Text.Internal;
@@ -39,12 +38,7 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
         => base64Url.IsNullOrEmpty() ? Empty : new(Base64UrlEncoder.Decode(base64Url).ToArray());
 
     public static ByteString FromStringAsUtf8(string source, int bufferLength = 1)
-    {
-        bufferLength = Math.Max(bufferLength, source.Length);
-        using var buffer = new ArrayPoolBuffer<byte>(bufferLength);
-        Encoding.UTF8.GetEncoder().Convert(source.AsSpan(), buffer);
-        return buffer.WrittenSpan.ToArray();
-    }
+        => EncodingExt.Utf8NoBom.GetBytes(source);
 
     public static ByteString FromStringAsUtf16(string source)
         => source.AsSpan().Cast<char, byte>().ToArray();
@@ -90,7 +84,11 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
 #endif
 
     public string ToStringAsUtf8()
-        => Encoding.UTF8.GetDecoder().Convert(Bytes.Span);
+#if !NETSTANDARD2_0
+        => EncodingExt.Utf8NoBom.GetString(Bytes.Span);
+#else
+        => EncodingExt.Utf8NoBom.GetDecoder().Convert(Bytes.Span);
+#endif
 
     public string ToStringAsUtf16()
     {

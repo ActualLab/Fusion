@@ -16,7 +16,7 @@ public class RedisPub
         RedisDb = redisDb;
         Key = key;
         FullKey = RedisDb.FullKey(Key);
-        Channel = new RedisChannel(Encoding.UTF8.GetBytes(FullKey), RedisChannel.PatternMode.Auto);
+        Channel = new RedisChannel(EncodingExt.Utf8NoBom.GetBytes(FullKey), RedisChannel.PatternMode.Auto);
     }
 
     public async Task<long> Publish(RedisValue item)

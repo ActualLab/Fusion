@@ -14,7 +14,7 @@ public static class WellKnownRpcHeaders
     public static void Set(params RpcHeaderKey[] headers)
     {
         ByName = headers.ToDictionary(x => x.Name);
-        ByUtf8Name = headers.ToDictionary(x => x.Utf8Name);
+        ByUtf8Name = headers.ToDictionary(x => new ByteString(x.Utf8Name));
     }
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor.

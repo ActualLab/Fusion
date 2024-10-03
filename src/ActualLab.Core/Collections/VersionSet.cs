@@ -15,12 +15,13 @@ public sealed partial record VersionSet(
     public static readonly Version ZeroVersion = new();
     public static readonly ListFormat ListFormat = ListFormat.CommaSeparated;
 
+    private string? _value;
     private int _hashCode;
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public int Count => Items.Count;
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    public string Versions => Format();
+    public string Value => _value ??= Format();
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
     public int HashCode {
@@ -63,26 +64,14 @@ public sealed partial record VersionSet(
     { }
 
     [Newtonsoft.Json.JsonConstructor, JsonConstructor, MemoryPackConstructor]
-    public VersionSet(string? versions)
-        : this(Parse(versions).Items)
+    public VersionSet(string? value)
+        : this(Parse(value).Items)
     { }
 
     // Conversion
 
     public override string ToString()
-        => $"{nameof(VersionSet)}(\"{Versions}\")";
-
-    public string Format()
-    {
-        if (Items.Count == 0)
-            return "";
-
-        using var formatter = ListFormat.CreateFormatter();
-        foreach (var (scope, version) in Items)
-            formatter.Append($"{scope.Value}={version.Format()}");
-        formatter.AppendEnd();
-        return formatter.Output;
-    }
+        => Value;
 
     // Equality
 
@@ -140,5 +129,19 @@ public sealed partial record VersionSet(
 
         result = new VersionSet(versions);
         return true;
+    }
+
+    // Private methods
+
+    private string Format()
+    {
+        if (Items.Count == 0)
+            return "";
+
+        using var formatter = ListFormat.CreateFormatter();
+        foreach (var (scope, version) in Items)
+            formatter.Append($"{scope.Value}={version.Format()}");
+        formatter.AppendEnd();
+        return formatter.Output;
     }
 }

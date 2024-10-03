@@ -1,51 +1,63 @@
+using ActualLab.IO.Internal;
+
 namespace ActualLab.Rpc;
 
 [DataContract, MemoryPackable]
 public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
 {
-    [IgnoreDataMember, MemoryPackIgnore]
-    public readonly ByteString Utf8Name;
-    [IgnoreDataMember, MemoryPackIgnore]
-    public readonly int HashCode;
-    [IgnoreDataMember, MemoryPackIgnore]
-    public readonly RpcMethodDef? Target;
+    public const int MaxUtf8NameLength = 4096;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    public ReadOnlyMemory<byte> Utf8NameBytes => Utf8Name.Bytes;
+    public readonly ReadOnlyMemory<byte> Utf8Name;
+
+    [IgnoreDataMember, MemoryPackIgnore]
+    public readonly RpcMethodDef? Target;
+    [IgnoreDataMember, MemoryPackIgnore]
+    public readonly int HashCode;
+
+    [IgnoreDataMember, MemoryPackIgnore]
+    public bool HashName => Utf8Name.Length != 0;
 
     [MemoryPackConstructor]
-    public RpcMethodRef(ReadOnlyMemory<byte> utf8NameBytes)
+    public RpcMethodRef(ReadOnlyMemory<byte> utf8Name)
     {
-        Utf8Name = new ByteString(utf8NameBytes);
-        HashCode = Utf8Name.Span.GetXxHash3();
+        Utf8Name = utf8Name;
+        HashCode = ComputeHashCode(utf8Name);
         Target = null;
     }
 
-    public RpcMethodRef(ByteString utf8Name, RpcMethodDef? target = null)
-    {
-        Utf8Name = utf8Name;
-        HashCode = utf8Name.Span.GetXxHash3();
-        Target = target;
-    }
-
-    public RpcMethodRef(string name, RpcMethodDef? target = null)
-    {
-        Utf8Name = ByteString.FromStringAsUtf8(name);
-        HashCode = Utf8Name.Bytes.Span.GetXxHash3();
-        Target = target;
-    }
-
-    public RpcMethodRef(ByteString utf8Name, int hashCode, RpcMethodDef? target = null)
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public RpcMethodRef(ReadOnlyMemory<byte> utf8Name, int hashCode)
     {
         Utf8Name = utf8Name;
         HashCode = hashCode;
+        Target = null;
+    }
+
+    // This constructor is used on RpcMethodDef generation,
+    // but also on RpcMessageV1 -> RpcMessage conversion, so ideally it has to be fast
+    public RpcMethodRef(string name, RpcMethodDef? target = null)
+    {
+        Utf8Name = EncodingExt.Utf8NoBom.GetBytes(name);
+        HashCode = ComputeHashCode(Utf8Name);
         Target = target;
     }
 
+    public override string ToString()
+        => $"('{GetFullMethodName()}', HashCode: 0x{(uint)HashCode:x8})";
+
     public string GetFullMethodName()
-        => Target != null
-            ? Target.FullName.Value
-            : Utf8Name.ToStringAsUtf8();
+    {
+        if (Target != null)
+            return Target.FullName.Value;
+        if (HashName)
+#if !NETSTANDARD2_0
+            return EncodingExt.Utf8NoBom.GetString(Utf8Name.Span);
+#else
+            return EncodingExt.Utf8NoBom.GetDecoder().Convert(Utf8Name.Span);
+#endif
+        return $"Service.Method<{(uint)HashCode:x8}>";
+    }
 
     public (string ServiceName, string MethodName) GetServiceAndMethodName()
     {
@@ -59,9 +71,23 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
     // Equality
 
     public bool Equals(RpcMethodRef other)
-        => HashCode == other.HashCode && Utf8Name == other.Utf8Name;
+        => HashCode == other.HashCode && Utf8Name.Span.SequenceEqual(other.Utf8Name.Span);
     public override bool Equals(object? obj)
         => obj is RpcMethodRef other && Equals(other);
     public override int GetHashCode()
         => HashCode;
+
+    // Static methods
+
+    public static unsafe int ComputeHashCode(ReadOnlyMemory<byte> utf8Name)
+    {
+        if (utf8Name.Length > MaxUtf8NameLength)
+            throw new ArgumentOutOfRangeException(nameof(utf8Name));
+
+        var span = (Span<byte>)stackalloc byte[utf8Name.Length + 4];
+        var prefix = unchecked((uint)(67211L * utf8Name.Length));
+        span.WriteUnchecked(prefix);
+        utf8Name.Span.CopyTo(span[4..]);
+        return span.GetXxHash3();
+    }
 }

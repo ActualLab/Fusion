@@ -48,7 +48,7 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
             return;
         }
 
-        var expectedData = new TextOrBytes(Encoding.UTF8.GetBytes(version));
+        var expectedData = new TextOrBytes(EncodingExt.Utf8NoBom.GetBytes(version));
         var entry = await Get(VersionKey, cancellationToken).ConfigureAwait(false);
         if (!entry.IsNone) {
             if (entry.Data.DataEquals(expectedData)) {

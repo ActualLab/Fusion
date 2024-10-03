@@ -1,5 +1,7 @@
+using System.Collections.Frozen;
 using ActualLab.Comparison;
 using ActualLab.Internal;
+using ActualLab.OS;
 
 namespace ActualLab.Rpc;
 
@@ -7,11 +9,12 @@ public sealed class RpcMethodResolver
 {
     public readonly RpcServiceRegistry ServiceRegistry;
     public readonly VersionSet? Versions;
-    public readonly IReadOnlyDictionary<RpcMethodRef, MethodEntry>? MethodByRef;
     public readonly IReadOnlyDictionary<Symbol, MethodEntry>? MethodByFullName;
+    public readonly IReadOnlyDictionary<RpcMethodRef, MethodEntry>? MethodByRef;
+    public readonly IReadOnlyDictionary<int, MethodEntry>? MethodByHashCode;
     public readonly RpcMethodResolver? NextResolver;
 
-    public RpcMethodDef? this[RpcMethodRef methodRef] {
+    public RpcMethodDef? this[in RpcMethodRef methodRef] {
         get {
             if (MethodByRef != null && MethodByRef.TryGetValue(methodRef, out var methodEntry))
                 return methodEntry.Method;
@@ -29,35 +32,70 @@ public sealed class RpcMethodResolver
         }
     }
 
-    public RpcMethodResolver(RpcServiceRegistry serviceRegistry, bool serverOnly)
+    public RpcMethodDef? this[int id] {
+        get {
+            if (MethodByHashCode != null && MethodByHashCode.TryGetValue(id, out var methodEntry))
+                return methodEntry.Method;
+
+            return NextResolver?[id];
+        }
+    }
+
+    public RpcMethodResolver(RpcServiceRegistry serviceRegistry, bool serverOnly, ILogger? log)
     {
         ServiceRegistry = serviceRegistry;
         Versions = null;
-        var methodByRef = new Dictionary<RpcMethodRef, MethodEntry>();
         var methodByFullName = new Dictionary<Symbol, MethodEntry>();
+        var methodByRef = new Dictionary<RpcMethodRef, MethodEntry>();
+        var methodByHashCode = new Dictionary<int, MethodEntry>();
         foreach (var service in ServiceRegistry) {
             if (serverOnly && !service.HasServer)
                 continue;
 
             foreach (var method in service.Methods) {
                 var fullName = method.FullName.Value;
-                var key = new RpcMethodRef(fullName, method);
+                var methodRef = new RpcMethodRef(fullName, method);
+                var hashCode = methodRef.HashCode;
                 var entry = new MethodEntry(method, VersionExt.MaxValue);
-                methodByRef.Add(key, entry);
                 methodByFullName.Add(method.FullName, entry);
+                methodByRef.Add(methodRef, entry);
+                methodByHashCode[hashCode] = entry;
             }
         }
-        MethodByRef = methodByRef;
+        if (methodByHashCode.Count != methodByRef.Count) {
+            var conflicts = methodByRef.Keys
+                .GroupBy(x => x.HashCode)
+                .Where(g => g.Count() > 1)
+                .SelectMany(x => x)
+                .OrderBy(x => x.HashCode).ThenBy(x => x.GetFullMethodName(), StringComparer.Ordinal)
+                .ToList();
+            foreach (var methodRef in conflicts) {
+                log?.LogError("RpcMethodRef.HashCode conflict for {MethodRef}", methodRef);
+                methodByHashCode[methodRef.HashCode] = default;
+            }
+        }
+
         MethodByFullName = methodByFullName;
+        MethodByRef = methodByRef;
+        MethodByHashCode = methodByHashCode;
+#if NET8_0_OR_GREATER
+        var useFrozenDictionary = RpcDefaults.Mode == RpcMode.Server;
+        if (useFrozenDictionary) {
+            MethodByFullName = methodByFullName.ToFrozenDictionary();
+            MethodByRef = methodByRef.ToFrozenDictionary();
+            MethodByHashCode = methodByHashCode.ToFrozenDictionary();
+        }
+#endif
     }
 
-    public RpcMethodResolver(RpcServiceRegistry serviceRegistry, VersionSet versions, RpcMethodResolver? nextResolver)
+    public RpcMethodResolver(RpcServiceRegistry serviceRegistry, VersionSet versions, RpcMethodResolver nextResolver, ILogger? log)
     {
         ServiceRegistry = serviceRegistry;
         Versions = versions;
         NextResolver = nextResolver;
         var methodByRef = new Dictionary<RpcMethodRef, MethodEntry>();
         var methodByFullName = new Dictionary<Symbol, MethodEntry>();
+        var methodByHashCode = new Dictionary<int, MethodEntry>();
         foreach (var service in ServiceRegistry) {
             if (!service.HasServer)
                 continue; // No need to remap clients
@@ -76,11 +114,13 @@ public sealed class RpcMethodResolver
                 var methodVersion = legacyMethodName.IsNone ? serviceVersion : legacyMethodName.MaxVersion;
 
                 var fullName = RpcMethodDef.ComposeFullName(serviceName.Value, methodName.Value);
-                var key = new RpcMethodRef(fullName, method);
+                var methodRef = new RpcMethodRef(fullName, method);
+                var hashCode = methodRef.HashCode;
                 var entry = new MethodEntry(method, methodVersion);
-                if (!methodByRef.TryGetValue(key, out var existingEntry)) {
-                    methodByRef.Add(key, entry);
+                if (!methodByRef.TryGetValue(methodRef, out var existingEntry)) {
+                    methodByRef.Add(methodRef, entry);
                     methodByFullName.Add(fullName, entry);
+                    methodByHashCode[hashCode] = entry;
                     continue;
                 }
 
@@ -92,13 +132,26 @@ public sealed class RpcMethodResolver
 
                 if (c < 0) {
                     // methodVersion < existingEntry.Version
-                    methodByRef[key] = entry;
+                    methodByRef[methodRef] = entry;
                     methodByFullName[fullName] = entry;
+                    methodByHashCode[hashCode] = entry;
                 }
             }
         }
+        var conflicts = methodByRef.Keys.Concat(nextResolver.MethodByRef?.Keys ?? [])
+            .GroupBy(x => x.HashCode)
+            .Where(g => g.Count() > 1)
+            .SelectMany(x => x)
+            .OrderBy(x => x.HashCode).ThenBy(x => x.GetFullMethodName(), StringComparer.Ordinal)
+            .ToList();
+        foreach (var methodRef in conflicts) {
+            log?.LogError("RpcMethodRef.HashCode conflict for {MethodRef} @ {VersionSet}", methodRef, versions);
+            methodByHashCode[methodRef.HashCode] = default;
+        }
+
         MethodByRef = methodByRef.Count != 0 ? methodByRef : null;
         MethodByFullName = methodByFullName.Count != 0 ? methodByFullName : null;
+        MethodByHashCode = methodByHashCode.Count != 0 ? methodByHashCode : null;
     }
 
     public override string ToString()
@@ -107,20 +160,23 @@ public sealed class RpcMethodResolver
         if (MethodByFullName != null) {
             var methods = MethodByFullName
                 .OrderBy(x => x.Key)
-                .Select(x =>
-                    $"{Environment.NewLine}  '{x.Key}' -> '{x.Value.Method.FullName}' (v{x.Value.Version.Format()})");
+                .Select(x => $"{Environment.NewLine}  {x.Key} -> {x.Value}");
             sMethods = "[" + string.Join("", methods) + Environment.NewLine + "]";
         }
-        return $"{nameof(RpcMethodResolver)}(Versions = \"{Versions?.Format()}\", {nameof(MethodByRef)} = {sMethods})";
+        return $"{nameof(RpcMethodResolver)}(Versions = \"{Versions}\", {nameof(MethodByRef)} = {sMethods})";
     }
 
     // Nested type
 
-    public readonly record struct MethodEntry(
-        RpcMethodDef Method,
-        Version Version)
+    public readonly record struct MethodEntry(RpcMethodDef Method, Version Version) : ICanBeNone<MethodEntry>
     {
+        public static MethodEntry None => default;
+
+        public bool IsNone => ReferenceEquals(Method, null);
+
         public override string ToString()
-            => $"{Method} (v{Version.Format()})";
+            => IsNone
+                ? "n/a"
+                : $"{Method} (v{Version.Format()})";
     }
 }

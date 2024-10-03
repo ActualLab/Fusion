@@ -9,11 +9,9 @@ public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNo
 
     [IgnoreDataMember, MemoryPackIgnore]
     public readonly Symbol Name;
-    [IgnoreDataMember, MemoryPackIgnore]
-    public readonly ByteString Utf8Name;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    public ReadOnlyMemory<byte> Utf8NameBytes => Utf8Name.Bytes;
+    public readonly ReadOnlyMemory<byte> Utf8Name;
 
     public bool IsNone {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -28,26 +26,29 @@ public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNo
     public RpcHeaderKey(Symbol name)
     {
         Name = name;
-        Utf8Name = ByteString.FromStringAsUtf8(name);
+        Utf8Name = EncodingExt.Utf8NoBom.GetBytes(name);
     }
 
     public RpcHeaderKey(ByteString utf8Name)
     {
-        Utf8Name = utf8Name;
+        Utf8Name = utf8Name.Bytes;
         Name = (Symbol)utf8Name.ToStringAsUtf8();
     }
 
     [MemoryPackConstructor]
-    public RpcHeaderKey(ReadOnlyMemory<byte> utf8NameBytes)
+    public RpcHeaderKey(ReadOnlyMemory<byte> utf8Name)
     {
-        var utf8Name = new ByteString(utf8NameBytes);
-        if (WellKnownRpcHeaders.ByUtf8Name.TryGetValue(Utf8Name, out var key)) {
+        if (WellKnownRpcHeaders.ByUtf8Name.TryGetValue(utf8Name, out var key)) {
             Name = key.Name;
             Utf8Name = key.Utf8Name;
         }
         else {
-            Name = (Symbol)utf8Name.ToStringAsUtf8();
-            Utf8Name = new ByteString(utf8NameBytes.ToArray());
+#if !NETSTANDARD2_0
+            Name = (Symbol)EncodingExt.Utf8NoBom.GetString(utf8Name.Span);
+#else
+            Name = (Symbol)EncodingExt.Utf8NoBom.GetDecoder().Convert(utf8Name.Span);
+#endif
+            Utf8Name = utf8Name.ToArray();
         }
     }
 

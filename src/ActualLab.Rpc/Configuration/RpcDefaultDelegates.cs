@@ -111,10 +111,13 @@ public static class RpcDefaultDelegates
     public static RpcServerConnectionFactory ServerConnectionFactory { get; set; } =
         static (peer, channel, options, cancellationToken) => Task.FromResult(new RpcConnection(channel, options));
 
+    public static Func<RpcPeer, PropertyBag, RpcFrameDelayerFactory?> FrameDelayerProvider { get; set; } =
+        RpcFrameDelayerProviders.None;
+
     public static RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; set; } =
         static (peer, properties) => WebSocketChannel<RpcMessage>.Options.Default with {
             Serializer = peer.Hub.SerializationFormats.Get(peer.Ref).MessageSerializerFactory.Invoke(peer),
-            FrameDelayerFactory = RpcFrameDelayers.DefaultProvider.Invoke(peer, properties),
+            FrameDelayerFactory = FrameDelayerProvider.Invoke(peer, properties),
         };
 
     public static RpcServerPeerCloseTimeoutProvider ServerPeerCloseTimeoutProvider { get; set; } =

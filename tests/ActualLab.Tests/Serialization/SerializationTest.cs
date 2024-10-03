@@ -145,7 +145,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         static void AssertEqual(RpcHandshake value, OldRpcHandshake expected) {
             value.RemotePeerId.Should().Be(expected.RemotePeerId);
             value.RemoteHubId.Should().Be(expected.RemoteHubId);
-            value.RemoteApiVersionSet!.Versions.Should().Be(expected.RemoteApiVersionSet!.Versions);
+            value.RemoteApiVersionSet!.Value.Should().Be(expected.RemoteApiVersionSet!.Value);
         }
     }
 
