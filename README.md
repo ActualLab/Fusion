@@ -36,10 +36,10 @@ The magic happens when `[ComputeMethod]`-s are invoked:
 
 The second step allows Fusion to track which values are expected to change when one of them changes. It's quite similar to [lot traceability](https://en.wikipedia.org/wiki/Traceability), but implemented for arbitrary functions rather than manufacturing processes.
 
-The last piece of a puzzle is `Computed.Invalidate()` block allowing to tag cached results as "inconsistent with the ground truth". Here is how you use it:
+The last piece of a puzzle is `Invalidation.Begin()` block allowing to tag cached results as "inconsistent with the ground truth". Here is how you use it:
 ```cs
 var avatars = await GetUserAvatars(userId);
-using (Computed.Invalidate()) {
+using (Invalidation.Begin()) {
     // Any [ComputeMethod] invoked inside this block doesn't run normally,
     // but invalidates the result of the identical call instead.
     // Such calls complete synchronously and return completed Task<TResult>, 
@@ -219,7 +219,7 @@ public class ExampleService : IComputeService
         // but since GetPair uses GetValue, it will be invalidated 
         // automatically once we invalidate GetValue.
         await File.WriteAllTextAsync(_prefix + key, value);
-        using (Computed.Invalidate()) {
+        using (Invalidation.Begin()) {
             // This is how you invalidate what's changed by this method.
             // Call arguments matter: you invalidate only a result of a 
             // call with matching arguments rather than every GetValue 

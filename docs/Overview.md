@@ -383,7 +383,8 @@ is untouched.
 public async Task<ChatUser> CreateUserAsync(string name)
 {
     // The real-life code should do this a bit differently
-    using var dbContext = CreateDbContext();
+    using var dbContext = DbHub.CreateDbContext();
+    dbContext.ReadWrite();
 
     // That's the code you'd see normally here
     var userEntry = dbContext.Users.Add(new ChatUser() {
@@ -393,14 +394,16 @@ public async Task<ChatUser> CreateUserAsync(string name)
     var user = userEntry.Entity;
 
     // And that's the extra logic performing invalidations
-    Computed.Invalidate(() => GetUserAsync(user.Id));
-    Computed.Invalidate(() => GetUserCountAsync());
+    using (Invalidation.Begin()) {
+        _ = GetUserAsync(user.Id);
+        _ = GetUserCountAsync();
+    }
     return user;
 }
 ```
 
-As you see, it's fairly simple - you use `Computed.Invalidate(...)`
-to capture and invalidate the result of another compute service method.
+As you see, it's fairly simple - you use `Invalidation.Begin()` block
+to invalidate a set of compute service method call results.
 
 I guess you anticipate there are some cases when it's hard to precisely 
 pinpoint what to invalidate. Yes, there are, and here is a bit trickier
@@ -410,7 +413,8 @@ example:
 [ComputeMethod]
 public virtual async Task<ChatPage> GetChatTailAsync(int length)
 {
-    using var dbContext = GetDbContext();
+    using var dbContext = DbHub.CreateDbContext();
+    dbContext.ReadWrite();
 
     // The same code as usual
     var messages = dbContext.Messages.OrderByDescending(m => m.Id).Take(length).ToList();
@@ -432,7 +436,7 @@ protected virtual async Task<Unit> EveryChatTail() => default;
 
 ```
 
-> Q: What's the problem here?
+> Q: Why this scenario is a bit more complex?
 
 A: `GetChatTailAsync(...)` has `length` argument, so let's say we write
 `AddMessageAsync` method - how it supposed to find every chat tail
@@ -461,7 +465,8 @@ If you look for usages of `EveryChatTail()`, you'll find another one:
 ```cs
 public async Task<ChatMessage> AddMessageAsync(long userId, string text)
 {
-    using var dbContext = CreateDbContext();
+    using var dbContext = DbHub.CreateDbContext();
+    dbContext.ReadWrite();
     
     // Again, this absolutely usual code
     await GetUserAsync(userId, cancellationToken); // Let's make sure the user exists
@@ -474,7 +479,8 @@ public async Task<ChatMessage> AddMessageAsync(long userId, string text)
     var message = messageEntry.Entity;
 
     // And that's the extra invalidation logic:
-    Computed.Invalidate(EveryChatTail); // <-- Pay attention to this line
+    using (Invalidation.Begin())
+        _ = EveryChatTail(); // <-- Pay attention to this line
     return message;
 }
 ```
