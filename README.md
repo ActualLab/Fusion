@@ -53,9 +53,9 @@ using (Invalidation.Begin()) {
 
 *The invalidation is always transitive:* if `GetUserProfile(3)` calls `GetUserAvatar("3:ava1")`, and `GetUserAvatar("3:ava1")` gets invalidated, `GetUserProfile(3)` gets invalidated as well.
 
-To make it work, Fusion maintains a dictionary-like structure that tracks recent and "observed" call results:
-- Key: `(serviceInstance, method, call arguments...)`
-- Value: [Computed<T>], which stores the result, consistency state (`Computing`, `Consistent`, `Invalidated`) and dependent-dependency links. `Computed<T>` instances are nearly immutable: once constructed, they can only transition to `Inconsistent` state.
+To make it work, Fusion maintains a dictionary-like structure that tracks every call result, where:
+- Key is ~ `(serviceInstance, method, call arguments...)`
+- Value is [Computed<T>], which stores the result, consistency state (`Computing`, `Consistent`, `Invalidated`) and dependent-dependency links. `Computed<T>` instances are nearly immutable: once constructed, they can only transition to `Inconsistent` state.
 
 You can "pull" the `Computed<T>` instance "backing" certain call like this:
 ```cs
