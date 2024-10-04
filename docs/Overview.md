@@ -7,7 +7,7 @@ gets updated even when the user doesn't take any actions.
 
 Let's look at seemingly unrelated problem first: 
 **caching with real-time entry invalidation**. 
-A pseudo-code solving this problem for a specific computation
+A pseudocode solving this problem for a specific computation
 would look as follows:
 
 ```cs
@@ -72,7 +72,7 @@ just proves the rule is right, because it's all about the readability:
 
 And even more importantly, Fusion also automatically tracks dependencies
 between [Computed Values] produced by [Compute Services], so once
-any of them gets invalidated, it ensures all of the values dependent
+any of them gets invalidated, it ensures all the values dependent
 on it are invalidated too. This feature saves a tremendous amount
 of time, because in fact, **Fusion requires you to manually invalidate
 just the values produced from external (non Fusion-based) data sources**;
@@ -111,7 +111,7 @@ Quick recap of what consistency and caching is:
 5. **"Caching"** is just a fancy way of saying "we store the results of 
    computations somewhere and reuse them without running the actual
    computation again". 
-   * Typically "caching" implies use of high-performance key-value 
+   * Typically, "caching" implies use of high-performance key-value 
      stores with some built-in invalidation policies (LRU, timer-based 
      expiration, etc.), but...
    * If we define "caching" broadly, even storing the data in CPU
@@ -280,7 +280,7 @@ override DateTime GetCurrentTimeWithOffset(TimeSpan offset) {
     try {
         // 1. Trying to pull cached value w/o locking;
         //    the real cacheKey is, of course, more complex.
-        var cacheKey = (object) (this, nameof(GetCurrentTimeWithOffset), offset);
+        var cacheKey = (object)(this, nameof(GetCurrentTimeWithOffset), offset);
         if (ComputedRegistry.TryGet(cacheKey, out var result))
             return result;
         
@@ -535,7 +535,7 @@ public class ReplicaComputed<T> : IComputed<T> {
 As you see, it does nothing but "replicates" the source's behavior. Doesn't seem
 quite useful, right? But what about remote replicas? What if we implement something
 allowing to publish a computed instance on server side, which will let clients
-to create its remote replicas, and these remote replicas will support all the same
+create its remote replicas, and these remote replicas will support all the same
 operations - e.g. you could subscribe to their invalidation events or request an update?
 
 Long story short, such type really exists in Fusion, and it works nearly as 
@@ -613,7 +613,7 @@ If you look at `PublishAsync` code above, you'll notice it checks if the
 request has `RequestPublication` header (it's actual value is `"X-Fusion-Publish"`),
 and:
 * If this header presents, it runs a `producer` and does some extra to publish its output
-* Otherwise it simply returns the value produced.
+* Otherwise, it simply returns the value produced.
 
 All of this means that if you write your controllers like this, you get both a 
 "normal" server-side API, and an API that supports Fusion publication mechanism
@@ -770,9 +770,9 @@ replicas query its most current state.
 Besides that, you don't have to think of concepts like "topics" or 
 "subscriptions" - whatever you consume from a client automatically gets
 the updates, and if it's something shared among multiple clients,
-you may thing of this as a "topic".
+you may think of this as a "topic".
 
-Of course I don't mean SignalR is absolutely useless with Fusion - 
+Of course, I don't mean SignalR is absolutely useless with Fusion - 
 there are scenarios where you could still benefit from it - e.g.
 if you really want to deliver the update as quickly as possible, 
 SignalR could be a better choice: currently there is no way to tell Fusion
@@ -863,7 +863,7 @@ especially for the companies running their server-side code on .NET Core (or .NE
   compile it to WebAssembly. So why do you even want to bet on a tech like
   TypeScript, if the long-term future of a codebase written on it is actually
   under big question? I.e. not that it won't work, but what's the point to delay
-  switching to something else assuming its not going to be the best choice in 
+  switching to something else assuming it's not going to be the best choice in 
   future?      
 
 ### Next Steps
