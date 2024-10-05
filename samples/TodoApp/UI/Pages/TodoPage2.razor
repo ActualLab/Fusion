@@ -2,7 +2,8 @@
 @using ActualLab.Rpc
 @using Samples.TodoApp.UI.Services
 @inherits ComputedStateComponent<TodoPage2.Model>
-@inject Todos Todos
+@inject Session Session
+@inject ITodoApi TodoApi
 @inject UICommander UICommander
 @inject RpcHub RpcHub
 @inject ILogger<TodoPage2> Log
@@ -86,7 +87,7 @@
     protected override async Task<Model> ComputeState(CancellationToken cancellationToken)
     {
         Log.LogInformation("ComputeState: LoadedItemCount = {LoadedItemCount}", LoadedItemCount);
-        var itemIds = await Todos.ListIds(LoadedItemCount + 1, cancellationToken);
+        var itemIds = await TodoApi.ListIds(Session, LoadedItemCount + 1, cancellationToken);
         var hasMore = itemIds.Length > LoadedItemCount;
         if (hasMore)
             itemIds = itemIds[..LoadedItemCount];
@@ -103,7 +104,7 @@
     {
         var item = new TodoItem(default, NewItemTitle);
         NewItemTitle = "";
-        _ = UICommander.Run(new Todos_AddOrUpdate(Todos.Session, item));
+        _ = UICommander.Run(new Todos_AddOrUpdate(Session, item));
     }
 
     // Nested types

@@ -1,6 +1,7 @@
 @using Samples.TodoApp.UI.Services
 @inherits ComputedStateComponent<TodoItem?>
-@inject Todos Todos
+@inject Session Session
+@inject ITodoApi TodoApi
 @inject UICommander UICommander
 @inject ILogger<TodoItemView> Log
 
@@ -34,10 +35,7 @@
     public string Id { get; set; } = null!;
 
     protected override Task<TodoItem?> ComputeState(CancellationToken cancellationToken)
-    {
-        var id = Ulid.Parse(Id);
-        return Todos.Get(id, cancellationToken);
-    }
+        => TodoApi.Get(Session, Ulid.Parse(Id), cancellationToken);
 
     private Task InvertDone()
     {
@@ -46,7 +44,7 @@
             return Task.CompletedTask;
 
         item = item with { IsDone = !item.IsDone };
-        return UICommander.Run(new Todos_AddOrUpdate(Todos.Session, item));
+        return UICommander.Run(new Todos_AddOrUpdate(Session, item));
     }
 
     private Task UpdateTitle(string title)
@@ -57,7 +55,7 @@
             return Task.CompletedTask;
 
         item = item with { Title = title };
-        return UICommander.Run(new Todos_AddOrUpdate(Todos.Session, item));
+        return UICommander.Run(new Todos_AddOrUpdate(Session, item));
     }
 
     private Task Remove()
@@ -66,6 +64,6 @@
         if (item == null)
             return Task.CompletedTask;
 
-        return UICommander.Run(new Todos_Remove(Todos.Session, item.Id));
+        return UICommander.Run(new Todos_Remove(Session, item.Id));
     }
 }
