@@ -22,6 +22,11 @@ public class TypeCodeKeeper : CodeKeeper
 
         static TypeKeeper()
         {
+            if (typeof(T).IsArray || typeof(T) == typeof(string)) {
+                Instance = default!;
+                return;
+            }
+
             try {
 #if !NETSTANDARD2_0
                 Instance = (T)RuntimeHelpers.GetUninitializedObject(typeof(T));
