@@ -23,7 +23,7 @@ public class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSerializer<
     [ThreadStatic] protected static Decoder? Utf8Decoder;
     [ThreadStatic] protected static ArrayPoolBuffer<byte>? EncodeBuffer;
     [ThreadStatic] protected static ArrayPoolBuffer<char>? DecodeBuffer;
-    protected readonly RpcMethodResolver ServerMethodResolver = peer.ServerMethodResolver;
+    protected RpcMethodResolver ServerMethodResolver => Peer.ServerMethodResolver;
 
     public RpcPeer Peer { get; } = peer;
 
