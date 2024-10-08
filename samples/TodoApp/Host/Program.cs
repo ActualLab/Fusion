@@ -203,6 +203,7 @@ void ConfigureServices()
 
     // RPC-exposed compute service(s)
     fusion.AddService<ITodoApi, TodoApi>();
+    // fusion.AddService<ITodoApi, InMemoryTodoApi>();
     // RPC-exposed non-compute services
     fusion.Rpc.AddService<IRpcExampleService, RpcExampleService>();
 

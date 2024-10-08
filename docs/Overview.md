@@ -869,7 +869,7 @@ especially for the companies running their server-side code on .NET Core (or .NE
 ### Next Steps
 
 * Check out the [Tutorial] or go to [Documentation Home]
-* Join our [Discord Server] to ask questions and track project updates.
+* Join [Fusion Place] to ask questions and track project updates.
 
 
 [Compute Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
@@ -885,5 +885,5 @@ especially for the companies running their server-side code on .NET Core (or .NE
 [Tutorial]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/README.md
 [Fusion In Simple Terms]: https://medium.com/@alexyakunin/stl-fusion-in-simple-terms-65b1975967ab?source=friends_link&sk=04e73e75a52768cf7c3330744a9b1e38
 
-[Discord Server]: https://discord.gg/EKEwv6d
+[Fusion Place]: https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo
 [Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6

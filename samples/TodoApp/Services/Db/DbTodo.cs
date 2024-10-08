@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Globalization;
 using Samples.TodoApp.Abstractions;
 
 namespace Samples.TodoApp.Services.Db;
@@ -37,7 +38,7 @@ public class DbTodo
             throw new ArgumentOutOfRangeException(nameof(key));
 
         var folder = key[..lastSlashIndex];
-        var id = Ulid.Parse(key[(lastSlashIndex + 1)..]);
+        var id = Ulid.Parse(key[(lastSlashIndex + 1)..], CultureInfo.InvariantCulture);
         return (folder, id);
     }
 }

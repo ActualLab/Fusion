@@ -104,7 +104,9 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         var dbContext = await DbHub.CreateDbContext(tenant, cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
 
+        var prefix = $"{folder}/";
         var keys = await dbContext.Todos
+            .Where(x => x.Key.StartsWith(prefix))
             .OrderBy(x => x.Key) // We want 100% stable order here
             .Select(x => x.Key)
             .Take(limit)

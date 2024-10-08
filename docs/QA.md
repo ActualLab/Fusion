@@ -4,10 +4,10 @@
 
 > Q: What's the best place to ask questions related to Fusion?
 
-[Discord Server] is currently the best place to ask questions and
+[Fusion Place] is currently the best place to ask questions and
 track project updates.
 
-[![Discord Server](https://img.shields.io/discord/729970863419424788.svg)](https://discord.gg/EKEwv6d) 
+[![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Actual%20Chat-BE145B)](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo)
 
 > Q: Can I contribute to the project?
 
@@ -61,8 +61,6 @@ nearly real-time invalidation / minimum % of inconsistent reads.
 
 TBD.
 
-[Fusion Discord Server]: https://discord.gg/EKEwv6d
 [Fusion Samples]: https://github.com/ActualLab/Fusion.Samples
-
-[Discord Server]: https://discord.gg/EKEwv6d
+[Fusion Place]: https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo
 [Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6

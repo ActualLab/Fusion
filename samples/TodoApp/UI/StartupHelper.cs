@@ -38,7 +38,7 @@ public static class StartupHelper
 #endif
         // Default RPC client serialization format
         RpcSerializationFormatResolver.Default = RpcSerializationFormatResolver.Default with {
-            DefaultClientFormatKey = "mempack2c",
+            DefaultClientFormatKey = "mempack2",
         };
 
         // Fusion services

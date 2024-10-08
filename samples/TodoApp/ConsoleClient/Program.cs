@@ -25,6 +25,8 @@ IServiceProvider CreateServiceProvider()
     var fusion = services.AddFusion();
     fusion.Rpc.AddWebSocketClient("http://localhost:5005");
     fusion.AddAuthClient();
+    fusion.AddClient<ITodoApi>();
+    fusion.Rpc.AddClient<IRpcExampleService>();
 
     // Default update delay is 0.2s
     services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.2));

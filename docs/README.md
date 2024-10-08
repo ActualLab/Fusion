@@ -40,8 +40,8 @@ Videos:
 * More videos are upcoming.
 
 You can always ask for help here:
-* [Discord Server] &ndash; <a href="https://discord.gg/EKEwv6d">
-  <img valign="middle" src="https://img.shields.io/discord/729970863419424788.svg" alt="Discord Server">
+* [Fusion Place] &ndash; <a href="https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo">
+  <img valign="middle" src="https://img.shields.io/badge/Fusion%20%40%20Actual%20Chat-BE145B" alt="Fusion @ Actual Chat">
   </a>
 
 ## Credits
@@ -56,5 +56,5 @@ Indirect contributors & everyone else who made Fusion possible:
 [Tutorial]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/README.md
 [Fusion Samples]: https://github.com/ActualLab/Fusion.Samples
 
-[Discord Server]: https://discord.gg/EKEwv6d
+[Fusion Place]: https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo
 [Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6

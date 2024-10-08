@@ -4,13 +4,14 @@
 [![NuGet Version](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 [![MIT License](https://img.shields.io/github/license/actuallab/Fusion?)](https://github.com/ActualLab/Fusion/blob/master/LICENSE)
 <br/>
-[![Discord Server](https://img.shields.io/discord/729970863419424788.svg)](https://discord.gg/EKEwv6d) 
+[![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Actual%20Chat-BE145B)](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo) 
 ![Commit Activity](https://img.shields.io/github/commit-activity/m/actuallab/Fusion)
 [![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 
-Fusion is a .NET library that implements 🦄 **D**istributed **REA**ctive **M**emoization (**DREAM**) &ndash; 
+`ActualLab.Fusion` is a .NET library that implements 🦄 **D**istributed **REA**ctive **M**emoization (**DREAM**) &ndash; 
 a novel abstraction somewhat similar to MobX or Flux, but **designed to deal with an arbitrary large state** 
 spanning across your backend microservices, API servers, and reaching even every client of your app.
+ActualLab.Fusion is a successor of [Stl.Fusion](https://github.com/servicetitan/Stl.Fusion).
 
 Fusion solves a set of infamously hard problems with a single hammer:
 
@@ -105,7 +106,7 @@ Check out [Samples]; some of them are covered further in this document.
 
 ## "What is your evidence?"<sup><a href="https://www.youtube.com/watch?v=7O-aNYTtx44<">*</a></sup>
 
-**All of this sounds way too good to be true, right?** That's why there are lots of visual proofs in the remaining part of this document. But if you'll find anything concerning in Fusion's source code or [samples], please feel free to grill us with questions on [Discord]!
+**All of this sounds way too good to be true, right?** That's why there are lots of visual proofs in the remaining part of this document. But if you'll find anything concerning in Fusion's source code or [samples], please feel free to grill us with questions on [Fusion Place]!
 
 Let's start with some big guns:
 
@@ -368,7 +369,7 @@ kills the chattiness you'd expect from a regular client-side proxy.
 
 * Read [Quick Start], [Cheat Sheet], or the whole [Tutorial]
 * Check out [Samples]
-* Join our [Discord Server] to ask questions and track project updates. *If you're curious, "why Discord," the server was created long before the first line of [Actual Chat]'s code was written. However, a Fusion-powered alternative will be available quite soon :)*
+* Join [Fusion Place] to ask questions and track project updates.
 
 ## Posts And Other Content
 * [Fusion: 1st birthday, 1K+ stars on GitHub, System.Text.Json support in v1.4](https://alexyakunin.medium.com/fusion-1st-birthday-1k-stars-on-github-system-text-json-support-in-v1-4-c73e9feb45c7?source=friends_link&sk=2e261e0dacce92f05d31baac400c3032)
@@ -408,6 +409,5 @@ please help us to make it better by completing [Fusion Feedback Form]
 [MMORPG]: https://en.wikipedia.org/wiki/Massively_multiplayer_online_role-playing_game
 [Actual Chat]: https://actual.chat
 
-[Discord]: https://discord.gg/EKEwv6d
-[Discord Server]: https://discord.gg/EKEwv6d
+[Fusion Place]: https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo
 [Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6
