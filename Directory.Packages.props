@@ -12,7 +12,7 @@
   <!-- Constants -->
   <PropertyGroup>
     <!-- Core packages -->
-    <AspNetCoreVersion>[9.0.0-rc.1.24452.1,)</AspNetCoreVersion>
+    <AspNetCoreVersion>[9.0.0-rc.2.24474.3,)</AspNetCoreVersion>
     <AspNetCoreVersion8>[8.0.4,)</AspNetCoreVersion8>
     <AspNetCoreVersion7>[7.0.0,8)</AspNetCoreVersion7>
     <AspNetCoreVersion6>[6.0.0,7)</AspNetCoreVersion6>
@@ -24,21 +24,21 @@
     <BlazorVersion6>$(AspNetCoreVersion6)</BlazorVersion6>
     <BlazorVersion5>$(AspNetCoreVersion5)</BlazorVersion5>
     <BlazorVersion3>$(AspNetCoreVersion3)</BlazorVersion3>
-    <MicrosoftExtensionsVersion>[9.0.0-rc.1.24431.7,)</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsVersion>[9.0.0-rc.2.24473.5,)</MicrosoftExtensionsVersion>
     <MicrosoftExtensionsVersion8>[8.0.0,)</MicrosoftExtensionsVersion8>
     <MicrosoftExtensionsVersion7>[7.0.0,8)</MicrosoftExtensionsVersion7>
     <MicrosoftExtensionsVersion6>[6.0.0,7)</MicrosoftExtensionsVersion6>
     <MicrosoftExtensionsVersion5>[5.0.0,6)</MicrosoftExtensionsVersion5>
     <CSharpVersion>4.4.0</CSharpVersion>
     <!-- EF Core -->
-    <!-- <EntityFrameworkCoreVersion>[9.0.0-rc.1.24451.1,)</EntityFrameworkCoreVersion>-->
+    <!-- <EntityFrameworkCoreVersion>[9.0.0-rc.2.24474.1,)</EntityFrameworkCoreVersion>-->
     <EntityFrameworkCoreVersion>[8.0.2,)</EntityFrameworkCoreVersion>
     <EntityFrameworkCoreVersion8>[8.0.2,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion7>[7.0.20,8)</EntityFrameworkCoreVersion7>
     <EntityFrameworkCoreVersion6>[6.0.33,7)</EntityFrameworkCoreVersion6>
     <EntityFrameworkCoreVersion5>[5.0.17,6)</EntityFrameworkCoreVersion5>
     <EntityFrameworkCoreVersion3>[3.1.32,4)</EntityFrameworkCoreVersion3>
-    <!-- <EntityFrameworkCoreNpgsqlVersion>[9.0.0-preview.7,)</EntityFrameworkCoreNpgsqlVersion>-->
+    <!-- <EntityFrameworkCoreNpgsqlVersion>[9.0.0-rc.1,)</EntityFrameworkCoreNpgsqlVersion>-->
     <EntityFrameworkCoreNpgsqlVersion>[8.0.2,)</EntityFrameworkCoreNpgsqlVersion>
     <EntityFrameworkCoreNpgsqlVersion8>[8.0.2,)</EntityFrameworkCoreNpgsqlVersion8>
     <EntityFrameworkCoreNpgsqlVersion7>[7.0.18,8)</EntityFrameworkCoreNpgsqlVersion7>
@@ -60,7 +60,7 @@
     <EntityFrameworkCoreMySqlVersion3>[3.2.7,4)</EntityFrameworkCoreMySqlVersion3>
     <!-- Serialization -->
     <NewtonsoftJsonVersion>[13.0.3,)</NewtonsoftJsonVersion>
-    <MemoryPackVersion>[1.21.2,)</MemoryPackVersion>
+    <MemoryPackVersion>[1.21.3,)</MemoryPackVersion>
     <MessagePackVersion>[2.5.172,)</MessagePackVersion>
     <!-- Other -->
     <RedisVersion>[2.8.12,)</RedisVersion>
@@ -68,12 +68,12 @@
     <OpenTelemetryVersion>[1.8.1,)</OpenTelemetryVersion>
     <!-- Build & Samples -->
     <BlazoriseVersion>[1.6.1,)</BlazoriseVersion>
-    <FusionVersion>[9.2,)</FusionVersion>
+    <FusionVersion>[9.5,)</FusionVersion>
   </PropertyGroup>
 
   <!-- Dependencies -->
   <ItemGroup>
-    <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="8.1.0" />
+    <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="8.2.0" />
     <PackageVersion Include="Blazorise" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Bootstrap5" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.DataGrid" Version="$(BlazoriseVersion)" />
@@ -164,7 +164,7 @@
     <PackageVersion Include="Npgsql.OpenTelemetry" Version="8.0.3" /> <!-- Used only in TodoApp sample -->
 
     <!-- Aspire -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="8.2.0" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="8.2.1" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="8.6.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="8.0.2" />
 
