@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
+using MessagePack;
 
 namespace ActualLab.Serialization;
 
@@ -18,7 +19,7 @@ public static class NewtonsoftJsonSerialized
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class NewtonsoftJsonSerialized<T> : TextSerialized<T>
 {

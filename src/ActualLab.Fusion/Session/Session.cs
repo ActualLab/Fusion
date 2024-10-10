@@ -2,12 +2,12 @@ using System.ComponentModel;
 using System.Globalization;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
-using CommunityToolkit.HighPerformance;
 using Cysharp.Text;
+using MessagePack;
 
 namespace ActualLab.Fusion;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [JsonConverter(typeof(SessionJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(SessionNewtonsoftJsonConverter))]
 [TypeConverter(typeof(SessionTypeConverter))]
@@ -21,15 +21,15 @@ public sealed partial class Session : IHasId<Symbol>,
 
     private string? _hash;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public Symbol Id { get; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public string Hash => _hash ??= ComputeHash();
 
     public static Session New()
         => Factory.Invoke();
 
-    [MemoryPackConstructor]
+    [MemoryPackConstructor, SerializationConstructor]
     public Session(Symbol id)
     {
         // The check is here to prevent use of sessions with empty or other special Ids,

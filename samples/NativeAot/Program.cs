@@ -5,6 +5,7 @@ using ActualLab.Interception.Trimming;
 using ActualLab.Rpc;
 using ActualLab.Trimming;
 using MemoryPack;
+using MessagePack;
 using static System.Console;
 
 #pragma warning disable IL3050
@@ -79,9 +80,9 @@ public interface ITestService : IComputeService
     Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default);
 }
 
-[MemoryPackable(GenerateType.VersionTolerant)]
+[MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 public sealed partial record SayHelloCommand(
-    [property: MemoryPackOrder(0)] string Name
+    [property: MemoryPackOrder(0), Key(0)] string Name
 ) : ICommand<string>;
 
 public class TestService : ITestService

@@ -1,6 +1,8 @@
+using MessagePack;
+
 namespace ActualLab.Rpc.Infrastructure;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
 {
@@ -8,22 +10,22 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
 
     private readonly string? _value;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public RpcHeaderKey Key { get; init; }
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public string Name {
         get => Key.Name;
         init => Key = RpcHeaderKey.NewOrWellKnown(value);
     }
 
-    [DataMember(Order = 1), MemoryPackOrder(1)]
+    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
     public string Value {
         get => _value ?? "";
         init => _value = value;
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsNone
         => Key.IsNone && ReferenceEquals(_value, null);
 
@@ -33,7 +35,7 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
         _value = value;
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public RpcHeader(string? name, string? value = "")
     {
         Key = RpcHeaderKey.NewOrWellKnown(name);

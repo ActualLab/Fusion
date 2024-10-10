@@ -5,10 +5,11 @@ using System.Text.Json.Serialization;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Requirements;
 using ActualLab.Versioning;
+using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Serialization;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial record OldUser : IHasId<Symbol>, IHasVersion<long>, IRequirementTarget
 {
@@ -22,20 +23,21 @@ public partial record OldUser : IHasId<Symbol>, IHasVersion<long>, IRequirementT
 
     private Lazy<ClaimsPrincipal>? _claimsPrincipalLazy;
 
-    [DataMember, MemoryPackOrder(0)]
+    [DataMember, MemoryPackOrder(0), Key(0)]
     public Symbol Id { get; init; }
-    [DataMember, MemoryPackOrder(1)]
+    [DataMember, MemoryPackOrder(1), Key(1)]
     public string Name { get; init; }
-    [DataMember, MemoryPackOrder(2)]
+    [DataMember, MemoryPackOrder(2), Key(2)]
     public long Version { get; init; }
-    [DataMember, MemoryPackOrder(3)]
+    [DataMember, MemoryPackOrder(3), Key(3)]
     public ImmutableDictionary<string, string> Claims { get; init; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public ImmutableDictionary<UserIdentity, string> Identities { get; init; }
 
     // Computed properties
 
-    [DataMember(Name = nameof(Identities)), MemoryPackOrder(4)]
+    [DataMember(Name = nameof(Identities)), MemoryPackOrder(4), Key(4)]
     [JsonPropertyName(nameof(Identities)),  Newtonsoft.Json.JsonProperty(nameof(Identities))]
     public Dictionary<string, string> JsonCompatibleIdentities {
         get => Identities.ToDictionary(p => p.Key.Id.Value, p => p.Value, StringComparer.Ordinal);
@@ -54,7 +56,7 @@ public partial record OldUser : IHasId<Symbol>, IHasVersion<long>, IRequirementT
         Identities = ImmutableDictionary<UserIdentity, string>.Empty;
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public OldUser(
         Symbol id,
         string name,

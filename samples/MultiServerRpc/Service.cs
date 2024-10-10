@@ -1,5 +1,6 @@
 using System.Runtime.Serialization;
 using MemoryPack;
+using MessagePack;
 using static System.Console;
 
 namespace Samples.MultiServerRpc;
@@ -17,11 +18,11 @@ public interface IChat : IComputeService
     Task Post(Chat_Post command, CancellationToken cancellationToken);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public sealed partial record Chat_Post(
-    [property: DataMember, MemoryPackOrder(0)] Symbol ChatId,
-    [property: DataMember, MemoryPackOrder(1)] string Message
+    [property: DataMember, MemoryPackOrder(0), Key(0)] Symbol ChatId,
+    [property: DataMember, MemoryPackOrder(1), Key(1)] string Message
     ) : ICommand<Unit>;
 
 public class Chat(ServerId serverId) : IChat

@@ -1,3 +1,5 @@
+using MessagePack;
+
 namespace ActualLab.Fusion.Authentication;
 
 public interface IAuth : IComputeService
@@ -22,32 +24,32 @@ public interface IAuth : IComputeService
     Task<ImmutableArray<SessionInfo>> GetUserSessions(Session session, CancellationToken cancellationToken = default);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record AuthBackend_SetSessionOptions(
-    [property: DataMember, MemoryPackOrder(0)] Session Session,
-    [property: DataMember, MemoryPackOrder(1)] ImmutableOptionSet Options,
-    [property: DataMember, MemoryPackOrder(2)] long? ExpectedVersion = null
+    [property: DataMember, MemoryPackOrder(0), Key(0)] Session Session,
+    [property: DataMember, MemoryPackOrder(1), Key(1)] ImmutableOptionSet Options,
+    [property: DataMember, MemoryPackOrder(2), Key(2)] long? ExpectedVersion = null
 ) : ISessionCommand<Unit>;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record Auth_EditUser(
-    [property: DataMember, MemoryPackOrder(0)] Session Session,
-    [property: DataMember, MemoryPackOrder(1)] string? Name
+    [property: DataMember, MemoryPackOrder(0), Key(0)] Session Session,
+    [property: DataMember, MemoryPackOrder(1), Key(1)] string? Name
 ) : ISessionCommand<Unit>;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record Auth_SignOut: ISessionCommand<Unit>
 {
-    [DataMember, MemoryPackOrder(0)]
+    [DataMember, MemoryPackOrder(0), Key(0)]
     public Session Session { get; init; } = null!;
-    [DataMember, MemoryPackOrder(1)]
+    [DataMember, MemoryPackOrder(1), Key(1)]
     public string? KickUserSessionHash { get; init; }
-    [DataMember, MemoryPackOrder(2)]
+    [DataMember, MemoryPackOrder(2), Key(2)]
     public bool KickAllUserSessions { get; init; }
-    [DataMember, MemoryPackOrder(3)]
+    [DataMember, MemoryPackOrder(3), Key(3)]
     public bool Force { get; init; }
 
     public Auth_SignOut(Session session, bool force = false)
@@ -63,7 +65,7 @@ public partial record Auth_SignOut: ISessionCommand<Unit>
         Force = force;
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public Auth_SignOut(
         Session session,
         string? kickUserSessionHash,

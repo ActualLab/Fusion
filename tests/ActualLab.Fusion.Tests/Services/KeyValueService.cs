@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Reflection;
+using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Services;
 
@@ -18,17 +19,17 @@ public interface IKeyValueService<TValue> : IComputeService
     Task RemoveCmd(KeyValueService_Remove cmd, CancellationToken cancellationToken = default);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record KeyValueService_Remove(
-    [property: DataMember, MemoryPackOrder(0)] string Key
+    [property: DataMember, MemoryPackOrder(0), Key(0)] string Key
 ) : ICommand<Unit>;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record KeyValueService_Set<TValue>(
-    [property: DataMember, MemoryPackOrder(0)] string Key,
-    [property: DataMember, MemoryPackOrder(1)] TValue Value
+    [property: DataMember, MemoryPackOrder(0), Key(0)] string Key,
+    [property: DataMember, MemoryPackOrder(1), Key(1)] TValue Value
 ) : ICommand<Unit>;
 
 public class KeyValueService<TValue> : IKeyValueService<TValue>

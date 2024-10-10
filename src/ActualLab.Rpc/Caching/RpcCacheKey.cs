@@ -1,17 +1,19 @@
+using MessagePack;
+
 namespace ActualLab.Rpc.Caching;
 
-[DataContract, MemoryPackable]
+[DataContract, MemoryPackable, MessagePackObject]
 public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public readonly int HashCode;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public readonly string Name;
-    [DataMember(Order = 1), MemoryPackOrder(1)]
+    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
     public readonly TextOrBytes ArgumentData;
 
-    [MemoryPackConstructor]
+    [MemoryPackConstructor, SerializationConstructor]
     // ReSharper disable once ConvertToPrimaryConstructor
     public RpcCacheKey(string name, TextOrBytes argumentData)
     {

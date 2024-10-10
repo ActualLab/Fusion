@@ -1,7 +1,9 @@
+using MessagePack;
+
 namespace ActualLab.Rpc;
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
-[DataContract, MemoryPackable]
+[DataContract, MemoryPackable, MessagePackObject]
 public readonly partial struct RpcNoWait
 {
     public static class Tasks

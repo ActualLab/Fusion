@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using ActualLab.Conversion;
 using ActualLab.Internal;
+using MessagePack;
 
 namespace ActualLab;
 
@@ -130,36 +131,36 @@ public interface IMutableResult<T> : IResult<T>, IMutableResult
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 [StructLayout(LayoutKind.Auto)]
 [DebuggerDisplay("({" + nameof(ValueOrDefault) + "}, Error = {" + nameof(Error) + "})")]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
 {
     /// <inheritdoc />
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public T? ValueOrDefault { get; }
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public Exception? Error { get; }
 
-    [DataMember(Order = 1), MemoryPackOrder(1)]
+    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
     public ExceptionInfo? ExceptionInfo => Error?.ToExceptionInfo();
 
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool HasValue {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Error == null;
     }
 
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool HasError {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Error != null;
     }
 
     /// <inheritdoc />
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public T Value {
         get {
             if (Error != null)
@@ -186,7 +187,7 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public Result(T valueOrDefault, ExceptionInfo? exceptionInfo)
     {
         if (exceptionInfo is { IsNone: false } vExceptionInfo) {

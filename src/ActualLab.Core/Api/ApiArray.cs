@@ -1,5 +1,6 @@
 using System.Globalization;
 using ActualLab.Api.Internal;
+using MessagePack;
 
 namespace ActualLab.Api;
 
@@ -24,7 +25,7 @@ public static class ApiArray
 [CollectionBuilder(typeof(ApiArray), "New")]
 [JsonConverter(typeof(ApiArrayJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(ApiArrayNewtonsoftJsonConverter))]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArray<T>>
 {
     private static readonly T[] EmptyItems = [];
@@ -32,19 +33,19 @@ public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArr
 
     private readonly T[]? _items;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public T[] Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items ?? EmptyItems;
     }
 
-    [MemoryPackIgnore]
+    [MemoryPackIgnore, IgnoreMember]
     public int Count {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Items.Length;
     }
 
-    [MemoryPackIgnore]
+    [MemoryPackIgnore, IgnoreMember]
     public bool IsEmpty {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Items.Length == 0;
@@ -64,7 +65,7 @@ public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArr
 #endif
     }
 
-    [method: MemoryPackConstructor]
+    [method: MemoryPackConstructor, SerializationConstructor]
     internal ApiArray(T[] items)
         => _items = items is { Length: 0 } ? null : items;
 

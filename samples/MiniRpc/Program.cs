@@ -4,6 +4,7 @@ using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using MemoryPack;
+using MessagePack;
 using Microsoft.AspNetCore.Builder;
 using static System.Console;
 
@@ -95,10 +96,10 @@ public interface IChat : IComputeService
     Task Post(Chat_Post command, CancellationToken cancellationToken);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public sealed partial record Chat_Post(
-    [property: DataMember, MemoryPackOrder(0)] string Message
+    [property: DataMember, MemoryPackOrder(0), Key(0)] string Message
 ) : ICommand<Unit>;
 
 public class Chat : IChat

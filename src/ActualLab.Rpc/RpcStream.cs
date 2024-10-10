@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
+using MessagePack;
 using Errors = ActualLab.Internal.Errors;
 using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
@@ -66,7 +67,7 @@ public abstract partial class RpcStream : IRpcObject
     protected abstract void Disconnect();
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 {
@@ -81,7 +82,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     private bool _isRegistered;
     private bool _isDisconnected;
 
-    [DataMember(Order = 2), MemoryPackOrder(2)]
+    [DataMember(Order = 2), MemoryPackOrder(2), Key(2)]
     public RpcObjectId SerializedId {
         get {
             // This member must be never accessed directly - its only purpose is to be called on serialization
@@ -113,12 +114,12 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         }
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreMember]
     public override Type ItemType => typeof(T);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreMember]
     public override RpcObjectKind Kind => _localSource != null ? RpcObjectKind.Local : RpcObjectKind.Remote;
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public RpcStream() { }
 
     public RpcStream(IAsyncEnumerable<T> localSource)

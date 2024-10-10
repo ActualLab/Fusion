@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ActualLab.Conversion;
+using MessagePack;
 
 namespace ActualLab.Api;
 
@@ -25,7 +26,7 @@ public static class ApiNullable8
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 [StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 public readonly partial struct ApiNullable8<T>
@@ -35,20 +36,20 @@ public readonly partial struct ApiNullable8<T>
 {
     public static readonly ApiNullable8<T> Null;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     private string DebugValue => ToString();
 
     [Obsolete("This member exists solely to make serialization work. Don't use it!")]
-    [DataMember(Order = 0), MemoryPackOrder(0), JsonIgnore, Newtonsoft.Json.JsonIgnore]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0), JsonIgnore, Newtonsoft.Json.JsonIgnore]
     public long RawHasValue { get; }
 
-    [DataMember(Order = 1), MemoryPackOrder(1), JsonIgnore, Newtonsoft.Json.JsonIgnore]
+    [DataMember(Order = 1), MemoryPackOrder(1), Key(1), JsonIgnore, Newtonsoft.Json.JsonIgnore]
     public T ValueOrDefault { get; }
 
-    [JsonInclude, Newtonsoft.Json.JsonProperty, MemoryPackIgnore]
+    [JsonInclude, Newtonsoft.Json.JsonProperty, MemoryPackIgnore, IgnoreMember]
     public T? Value => HasValue ? ValueOrDefault : null;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool HasValue {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => RawHasValue != 0;
@@ -71,7 +72,7 @@ public readonly partial struct ApiNullable8<T>
         ValueOrDefault = value;
     }
 
-    [MemoryPackConstructor]
+    [MemoryPackConstructor, SerializationConstructor]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     // ReSharper disable once ConvertToPrimaryConstructor
     public ApiNullable8(long rawHasValue, T valueOrDefault)

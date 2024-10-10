@@ -1,5 +1,6 @@
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Tests.Model;
+using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Services;
 
@@ -19,8 +20,8 @@ public class EventCatcher(IServiceProvider services) : DbServiceBase<TestDbConte
     }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record EventCatcher_Event(
-    [property: DataMember, MemoryPackOrder(0)] string Id
+    [property: DataMember, MemoryPackOrder(0), Key(0)] string Id
 ) : ICommand<Unit>;

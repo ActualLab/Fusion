@@ -1,11 +1,12 @@
 using System.ComponentModel;
 using ActualLab.Internal;
 using ActualLab.IO.Internal;
+using MessagePack;
 
 namespace ActualLab.IO;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [JsonConverter(typeof(FilePathJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(FilePathNewtonsoftJsonConverter))]
 [TypeConverter(typeof(FilePathTypeConverter))]
@@ -15,7 +16,7 @@ public readonly partial struct FilePath : IEquatable<FilePath>, IComparable<File
 
     private readonly string? _value;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public string Value => _value ?? "";
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
@@ -45,8 +46,10 @@ public readonly partial struct FilePath : IEquatable<FilePath>, IComparable<File
 
     public static FilePath New(string? value) => new(value ?? "");
 
-    [MemoryPackConstructor]
-    public FilePath(string? value) => _value = value;
+    [MemoryPackConstructor, SerializationConstructor]
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public FilePath(string? value)
+        => _value = value;
 
     // Conversion
     public override string ToString() => Value;

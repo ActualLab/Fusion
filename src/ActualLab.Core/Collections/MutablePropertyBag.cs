@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Collections.Internal;
+using MessagePack;
 
 namespace ActualLab.Collections;
 
@@ -27,7 +28,7 @@ public interface IMutablePropertyBag : IReadOnlyPropertyBag
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial class MutablePropertyBag : IMutablePropertyBag
 {
@@ -42,7 +43,7 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
 
     // MessagePack requires this member to be public
     [Obsolete("This member exists solely to make serialization work. Don't use it!")]
-    [DataMember(Order = 0), MemoryPackOrder(0), MemoryPackInclude, JsonInclude, Newtonsoft.Json.JsonProperty]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0), MemoryPackInclude, JsonInclude, Newtonsoft.Json.JsonProperty]
     public PropertyBagItem[]? RawItems {
         get => _snapshot.RawItems;
         init => _snapshot = new PropertyBag(value);
@@ -50,20 +51,20 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
 
     // Computed properties
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public PropertyBag Snapshot {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _snapshot;
         set => Update(value, (bag, _) => bag);
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public int Count {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _snapshot.Count;
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public IReadOnlyList<PropertyBagItem> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _snapshot.Items;
@@ -81,7 +82,7 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
     public MutablePropertyBag(PropertyBag snapshot)
         => _snapshot = snapshot;
 
-    [MemoryPackConstructor, JsonConstructor, Newtonsoft.Json.JsonConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public MutablePropertyBag(PropertyBagItem[]? rawItems)
         => _snapshot = new PropertyBag(rawItems);
 

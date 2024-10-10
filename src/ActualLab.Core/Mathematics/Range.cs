@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using MessagePack;
 
 namespace ActualLab.Mathematics;
 
@@ -11,7 +12,7 @@ namespace ActualLab.Mathematics;
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct Range<T> : IEquatable<Range<T>>
     where T : notnull
@@ -19,23 +20,23 @@ public readonly partial struct Range<T> : IEquatable<Range<T>>
     /// <summary>
     /// Lower range boundary, always inclusive.
     /// </summary>
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public T Start { get; }
 
     /// <summary>
     /// Upper range boundary, typically exclusive.
     /// </summary>
-    [DataMember(Order = 1), MemoryPackOrder(1)]
+    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
     public T End { get; }
 
     /// <summary>
     /// Indicates whether the range is empty (has no items).
     /// </summary>
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsEmpty => EqualityComparer<T>.Default.Equals(Start, End);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsNegative => Comparer<T>.Default.Compare(Start, End) > 0;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsEmptyOrNegative => Comparer<T>.Default.Compare(Start, End) >= 0;
 
     /// <summary>
@@ -43,7 +44,7 @@ public readonly partial struct Range<T> : IEquatable<Range<T>>
     /// </summary>
     /// <param name="start"><see cref="Start"/> property value.</param>
     /// <param name="end"><see cref="End"/> property value.</param>
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public Range(T start, T end)
     {
         Start = start;

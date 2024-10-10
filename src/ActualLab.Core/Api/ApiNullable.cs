@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ActualLab.Conversion;
+using MessagePack;
 
 namespace ActualLab.Api;
 
@@ -25,7 +26,7 @@ public static class ApiNullable
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 public readonly partial struct ApiNullable<T>
@@ -35,16 +36,16 @@ public readonly partial struct ApiNullable<T>
 {
     public static readonly ApiNullable<T> Null;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     private string DebugValue => ToString();
 
-    [DataMember(Order = 0), MemoryPackOrder(0), JsonIgnore, Newtonsoft.Json.JsonIgnore]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0), JsonIgnore, Newtonsoft.Json.JsonIgnore]
     public bool HasValue { get; }
 
-    [DataMember(Order = 1), MemoryPackOrder(1), JsonIgnore, Newtonsoft.Json.JsonIgnore]
+    [DataMember(Order = 1), MemoryPackOrder(1), Key(1), JsonIgnore, Newtonsoft.Json.JsonIgnore]
     public T ValueOrDefault { get; }
 
-    [JsonInclude, Newtonsoft.Json.JsonProperty, MemoryPackIgnore]
+    [JsonInclude, Newtonsoft.Json.JsonProperty, MemoryPackIgnore, IgnoreMember]
     public T? Value => HasValue ? ValueOrDefault : null;
 
     // Constructors
@@ -57,7 +58,7 @@ public readonly partial struct ApiNullable<T>
         ValueOrDefault = value.GetValueOrDefault();
     }
 
-    [MemoryPackConstructor]
+    [MemoryPackConstructor, SerializationConstructor]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     // ReSharper disable once ConvertToPrimaryConstructor
     public ApiNullable(bool hasValue, T valueOrDefault)

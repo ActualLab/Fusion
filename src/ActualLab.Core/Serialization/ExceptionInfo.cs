@@ -1,11 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
+using MessagePack;
 using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 {
     private static readonly Type[] ExceptionCtorArgumentTypes1 = { typeof(string), typeof(Exception) };
@@ -16,14 +17,14 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 
     private readonly string _message;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public TypeRef TypeRef { get; }
-    [DataMember(Order = 1), MemoryPackOrder(1)]
+    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
     public string Message => _message ?? "";
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsNone => TypeRef.AssemblyQualifiedName.IsEmpty;
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public ExceptionInfo(TypeRef typeRef, string? message)
     {
         TypeRef = typeRef;

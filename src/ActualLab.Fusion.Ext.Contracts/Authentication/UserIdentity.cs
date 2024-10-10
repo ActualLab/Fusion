@@ -1,13 +1,15 @@
+using MessagePack;
+
 namespace ActualLab.Fusion.Authentication;
 
 #pragma warning disable CA1036
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public readonly partial record struct UserIdentity(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] Symbol Id
+    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] Symbol Id
     ) : IComparable<UserIdentity>
 {
     private static readonly ListFormat IdFormat = ListFormat.SlashSeparated;
@@ -17,11 +19,11 @@ public readonly partial record struct UserIdentity(
 
     // Computed properties
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, IgnoreMember]
     public string Schema => ParseId(Id.Value).Schema;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, IgnoreMember]
     public string SchemaBoundId => ParseId(Id.Value).SchemaBoundId;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, IgnoreMember]
     public bool IsValid => !Id.IsEmpty;
 
     public UserIdentity(string id)

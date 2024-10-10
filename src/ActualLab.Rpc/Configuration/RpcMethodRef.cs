@@ -1,24 +1,25 @@
 using ActualLab.IO.Internal;
+using MessagePack;
 
 namespace ActualLab.Rpc;
 
-[DataContract, MemoryPackable]
+[DataContract, MemoryPackable, MessagePackObject]
 public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
 {
     public const int MaxUtf8NameLength = 4096;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public readonly ReadOnlyMemory<byte> Utf8Name;
 
-    [IgnoreDataMember, MemoryPackIgnore]
+    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public readonly RpcMethodDef? Target;
-    [IgnoreDataMember, MemoryPackIgnore]
+    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public readonly int HashCode;
 
-    [IgnoreDataMember, MemoryPackIgnore]
+    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool HashName => Utf8Name.Length != 0;
 
-    [MemoryPackConstructor]
+    [MemoryPackConstructor, SerializationConstructor]
     public RpcMethodRef(ReadOnlyMemory<byte> utf8Name)
     {
         Utf8Name = utf8Name;

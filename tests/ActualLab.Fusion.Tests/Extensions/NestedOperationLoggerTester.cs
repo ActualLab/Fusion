@@ -1,4 +1,5 @@
 using ActualLab.Fusion.Extensions;
+using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Extensions;
 
@@ -21,9 +22,9 @@ public class NestedOperationLoggerTester(IKeyValueStore keyValueStore) : IComput
     }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record NestedOperationLoggerTester_SetMany(
-    [property: DataMember, MemoryPackOrder(0)] string[] Keys,
-    [property: DataMember, MemoryPackOrder(1)] string ValuePrefix
+    [property: DataMember, MemoryPackOrder(0), Key(0)] string[] Keys,
+    [property: DataMember, MemoryPackOrder(1), Key(1)] string ValuePrefix
 ) : ICommand<Unit>;

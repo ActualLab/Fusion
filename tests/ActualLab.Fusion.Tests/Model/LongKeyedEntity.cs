@@ -1,12 +1,12 @@
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Model;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 public partial record LongKeyedEntity : IHasId<long>
 {
-    [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [DataMember, MemoryPackOrder(0)]
+    [System.ComponentModel.DataAnnotations.Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [DataMember, MemoryPackOrder(0), Key(0)]
     public long Id { get; init; }
 }

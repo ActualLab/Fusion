@@ -1,25 +1,26 @@
 using Cysharp.Text;
+using MessagePack;
 
 namespace ActualLab.Rpc.Caching;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial record struct RpcCacheValue(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] TextOrBytes Data,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] string Hash
+    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] TextOrBytes Data,
+    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] string Hash
 ) : ICanBeNone<RpcCacheValue>
 {
     public static RpcCacheValue None => default;
     public static readonly RpcCacheValue RequestHash = new(default, "");
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsNone {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => ReferenceEquals(Hash, null);
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool HasHash {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Hash is { Length: > 0 };

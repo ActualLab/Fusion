@@ -1,6 +1,7 @@
 using System.Runtime.Serialization;
 using MemoryPack;
 using ActualLab.Rpc;
+using MessagePack;
 using static Samples.MeshRpc.HostFactorySettings;
 
 namespace Samples.MeshRpc.Services;
@@ -12,10 +13,10 @@ public interface ISimpleCounter : IRpcService
     Task<CounterWithOrigin> Increment(SimpleCounter_Increment command, CancellationToken cancellationToken);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public sealed partial record SimpleCounter_Increment(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Key
+    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] int Key
 ) : ICommand<CounterWithOrigin>, IHasShardRef
 {
     [IgnoreDataMember, MemoryPackIgnore]

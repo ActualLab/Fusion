@@ -1,13 +1,14 @@
 using ActualLab.Resilience;
+using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Services;
 
 #pragma warning disable CA1024, CA1067
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 public partial record SetValueCommand : ICommand<Unit>
 {
-    [DataMember, MemoryPackOrder(0)]
+    [DataMember, MemoryPackOrder(0), Key(0)]
     public string Value { get; init; } = "";
 }
 

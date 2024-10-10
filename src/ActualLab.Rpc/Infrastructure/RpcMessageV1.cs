@@ -1,9 +1,10 @@
 using ActualLab.Conversion;
 using ActualLab.Interception;
+using MessagePack;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial class RpcMessageV1
 {
@@ -19,17 +20,17 @@ public sealed partial class RpcMessageV1
 
     // Instance members
 
-    [DataMember(Order = 0), MemoryPackOrder(0)] public byte CallTypeId { get; init; }
-    [DataMember(Order = 1), MemoryPackOrder(1)] public long RelatedId { get; init; }
-    [DataMember(Order = 2), MemoryPackOrder(2)] public string Service { get; init; }
-    [DataMember(Order = 3), MemoryPackOrder(3)] public string Method { get; init; }
-    [DataMember(Order = 4), MemoryPackOrder(4)] public TextOrBytes ArgumentData { get; init; }
-    [DataMember(Order = 5), MemoryPackOrder(5)] public RpcHeader[]? Headers { get; init; }
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)] public byte CallTypeId { get; init; }
+    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)] public long RelatedId { get; init; }
+    [DataMember(Order = 2), MemoryPackOrder(2), Key(2)] public string Service { get; init; }
+    [DataMember(Order = 3), MemoryPackOrder(3), Key(3)] public string Method { get; init; }
+    [DataMember(Order = 4), MemoryPackOrder(4), Key(4)] public TextOrBytes ArgumentData { get; init; }
+    [DataMember(Order = 5), MemoryPackOrder(5), Key(5)] public RpcHeader[]? Headers { get; init; }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public ArgumentList? Arguments { get; init; }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     // ReSharper disable once ConvertToPrimaryConstructor
     public RpcMessageV1(
         byte callTypeId, long relatedId,

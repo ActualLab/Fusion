@@ -1,5 +1,6 @@
 using CommunityToolkit.HighPerformance;
 using Cysharp.Text;
+using MessagePack;
 
 namespace ActualLab.Serialization;
 
@@ -10,13 +11,13 @@ public enum DataFormat
 }
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[method: MemoryPackConstructor]
+[method: MemoryPackConstructor, SerializationConstructor]
 public readonly partial record struct TextOrBytes(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)]
+    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     DataFormat Format,
-    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, DataMember(Order = 1), MemoryPackOrder(1)]
+    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
     ReadOnlyMemory<byte> Data
 ) {
     public static readonly TextOrBytes EmptyBytes = new(DataFormat.Bytes, default!);
@@ -25,10 +26,10 @@ public readonly partial record struct TextOrBytes(
     private readonly byte[]? _data; // This field is used solely to avoid .ToArray() calls in Bytes property
 
     // Computed properties
-    [MemoryPackIgnore]
+    [MemoryPackIgnore, IgnoreMember]
     public byte[] Bytes => _data ?? GetBytes();
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsEmpty => Data.Length == 0;
 
     public TextOrBytes(string text)

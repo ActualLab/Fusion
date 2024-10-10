@@ -1,13 +1,14 @@
 using System.ComponentModel;
 using ActualLab.Conversion;
 using ActualLab.Text.Internal;
+using MessagePack;
 
 namespace ActualLab.Text;
 
 #pragma warning disable CA1721
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [JsonConverter(typeof(SymbolJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(SymbolNewtonsoftJsonConverter))]
 [TypeConverter(typeof(SymbolTypeConverter))]
@@ -18,25 +19,25 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
     private readonly string? _value;
     private readonly int _hashCode;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public string Value {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _value ?? "";
     }
 
-    [IgnoreDataMember, MemoryPackIgnore]
+    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public int HashCode {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _hashCode;
     }
 
-    [IgnoreDataMember, MemoryPackIgnore]
+    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsEmpty {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Value.Length == 0;
     }
 
-    [MemoryPackConstructor]
+    [MemoryPackConstructor, SerializationConstructor]
     public Symbol(string? value)
     {
         if (ReferenceEquals(value, null) || value.Length == 0)

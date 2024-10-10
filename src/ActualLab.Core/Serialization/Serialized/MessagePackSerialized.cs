@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
+using MessagePack;
 
 namespace ActualLab.Serialization;
 
@@ -15,7 +16,7 @@ public static class MessagePackSerialized
         => new() { Data = data };
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class MessagePackSerialized<T> : ByteSerialized<T>
 {

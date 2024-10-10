@@ -1,23 +1,24 @@
 using System.Security;
 using ActualLab.Versioning;
+using MessagePack;
 
 namespace ActualLab.Fusion.Authentication;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 public partial record SessionInfo : SessionAuthInfo, IHasVersion<long>
 {
     public static new Requirement<SessionInfo> MustBeAuthenticated { get; set; } = Requirement.New(
         (SessionInfo? i) => i?.IsAuthenticated() ?? false,
         new("Session is not authenticated.", m => new SecurityException(m)));
 
-    [DataMember(Order = 10), MemoryPackOrder(10)] public long Version { get; init; }
-    [DataMember(Order = 11), MemoryPackOrder(11)] public Moment CreatedAt { get; init; }
-    [DataMember(Order = 12), MemoryPackOrder(12)] public Moment LastSeenAt { get; init; }
-    [DataMember(Order = 13), MemoryPackOrder(13)] public string IPAddress { get; init; } = "";
-    [DataMember(Order = 14), MemoryPackOrder(14)] public string UserAgent { get; init; } = "";
-    [DataMember(Order = 15), MemoryPackOrder(15)] public ImmutableOptionSet Options { get; init; }
+    [DataMember(Order = 10), MemoryPackOrder(10), Key(10)] public long Version { get; init; }
+    [DataMember(Order = 11), MemoryPackOrder(11), Key(11)] public Moment CreatedAt { get; init; }
+    [DataMember(Order = 12), MemoryPackOrder(12), Key(12)] public Moment LastSeenAt { get; init; }
+    [DataMember(Order = 13), MemoryPackOrder(13), Key(13)] public string IPAddress { get; init; } = "";
+    [DataMember(Order = 14), MemoryPackOrder(14), Key(14)] public string UserAgent { get; init; } = "";
+    [DataMember(Order = 15), MemoryPackOrder(15), Key(15)] public ImmutableOptionSet Options { get; init; }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public SessionInfo() { }
     public SessionInfo(Moment createdAt) : this(null, createdAt) { }
     public SessionInfo(Session? session, Moment createdAt = default) : base(session)

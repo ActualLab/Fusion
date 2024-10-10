@@ -1,6 +1,7 @@
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Tests.Model;
+using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Services;
 
@@ -25,8 +26,8 @@ public class EventQueue(IServiceProvider services) : DbServiceBase<TestDbContext
     }
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record EventQueue_Add(
-    [property: DataMember, MemoryPackOrder(0)] params OperationEvent[] Events
+    [property: DataMember, MemoryPackOrder(0), Key(0)] params OperationEvent[] Events
 ) : ICommand<Unit>;

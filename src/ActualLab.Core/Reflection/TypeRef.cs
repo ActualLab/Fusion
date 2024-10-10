@@ -3,12 +3,13 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using ActualLab.Internal;
 using ActualLab.Reflection.Internal;
+using MessagePack;
 using Errors = ActualLab.Reflection.Internal.Errors;
 
 namespace ActualLab.Reflection;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [JsonConverter(typeof(TypeRefJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(TypeRefNewtonsoftJsonConverter))]
 [TypeConverter(typeof(TypeRefTypeConverter))]
@@ -27,15 +28,16 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
 
     public static readonly TypeRef None = default;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public Symbol AssemblyQualifiedName { get; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public string TypeName
         => AssemblyQualifiedName.Value[..AssemblyQualifiedName.Value.IndexOf(',', StringComparison.Ordinal)];
 
     public TypeRef(Type type)
         : this(type.AssemblyQualifiedName!) { }
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public TypeRef(Symbol assemblyQualifiedName)
         => AssemblyQualifiedName = assemblyQualifiedName;
     public TypeRef(string assemblyQualifiedName)

@@ -3,10 +3,11 @@ using System.Security;
 using System.Security.Claims;
 using ActualLab.Requirements;
 using ActualLab.Versioning;
+using MessagePack;
 
 namespace ActualLab.Fusion.Authentication;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarget
 {
@@ -20,20 +21,21 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
 
     private Lazy<ClaimsPrincipal>? _claimsPrincipalLazy;
 
-    [DataMember, MemoryPackOrder(0)]
+    [DataMember, MemoryPackOrder(0), Key(0)]
     public Symbol Id { get; init; }
-    [DataMember, MemoryPackOrder(1)]
+    [DataMember, MemoryPackOrder(1), Key(1)]
     public string Name { get; init; }
-    [DataMember, MemoryPackOrder(2)]
+    [DataMember, MemoryPackOrder(2), Key(2)]
     public long Version { get; init; }
-    [DataMember, MemoryPackOrder(3)]
+    [DataMember, MemoryPackOrder(3), Key(3)]
     public ApiMap<string, string> Claims { get; init; }
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public ApiMap<UserIdentity, string> Identities { get; init; }
 
     // Computed properties
 
-    [DataMember(Name = nameof(Identities)), MemoryPackOrder(4)]
+    [DataMember(Name = nameof(Identities)), MemoryPackOrder(4), Key(4)]
     [JsonPropertyName(nameof(Identities)),  Newtonsoft.Json.JsonProperty(nameof(Identities))]
     public ApiMap<string, string> JsonCompatibleIdentities {
         get => Identities.UnorderedItems.ToApiMap(p => p.Key.Id.Value, p => p.Value, StringComparer.Ordinal);
@@ -52,7 +54,7 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
         Identities = ApiMap<UserIdentity, string>.Empty;
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public User(
         Symbol id,
         string name,

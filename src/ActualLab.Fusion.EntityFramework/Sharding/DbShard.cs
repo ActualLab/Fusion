@@ -2,11 +2,12 @@ using System.ComponentModel;
 using ActualLab.Fusion.Blazor;
 using ActualLab.Identifiers.Internal;
 using ActualLab.Internal;
+using MessagePack;
 
 namespace ActualLab.Fusion.EntityFramework;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [JsonConverter(typeof(SymbolIdentifierJsonConverter<DbShard>))]
 [Newtonsoft.Json.JsonConverter(typeof(SymbolIdentifierNewtonsoftJsonConverter<DbShard>))]
 [TypeConverter(typeof(SymbolIdentifierTypeConverter<DbShard>))]
@@ -20,20 +21,20 @@ public readonly partial struct DbShard : ISymbolIdentifier<DbShard>
     public static DbShard Template => new("__template", AssumeValid.Option);
     public static Func<DbShard, bool> Validator { get; set; } = static shard => !shard.IsSpecial;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public Symbol Id { get; }
 
     // Computed
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public string Value => Id.Value;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsNone => Id.IsEmpty;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsTemplate => Id == Template.Id;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsSpecial => IsNone || IsTemplate;
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public DbShard(Symbol id)
         => this = Parse(id);
     public DbShard(string? id)

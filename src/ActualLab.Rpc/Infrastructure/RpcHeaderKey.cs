@@ -1,16 +1,18 @@
 
+using MessagePack;
+
 namespace ActualLab.Rpc.Infrastructure;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable]
+[DataContract, MemoryPackable, MessagePackObject]
 public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNone<RpcHeaderKey>
 {
     public static RpcHeaderKey None => default;
 
-    [IgnoreDataMember, MemoryPackIgnore]
+    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public readonly Symbol Name;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public readonly ReadOnlyMemory<byte> Utf8Name;
 
     public bool IsNone {
@@ -35,7 +37,7 @@ public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNo
         Name = (Symbol)utf8Name.ToStringAsUtf8();
     }
 
-    [MemoryPackConstructor]
+    [MemoryPackConstructor, SerializationConstructor]
     public RpcHeaderKey(ReadOnlyMemory<byte> utf8Name)
     {
         if (WellKnownRpcHeaders.ByUtf8Name.TryGetValue(utf8Name, out var key)) {

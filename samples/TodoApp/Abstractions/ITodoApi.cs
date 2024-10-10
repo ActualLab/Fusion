@@ -1,6 +1,7 @@
 using System.Runtime.Serialization;
 using MemoryPack;
 using ActualLab.Fusion.Blazor;
+using MessagePack;
 
 namespace Samples.TodoApp.Abstractions;
 
@@ -23,7 +24,7 @@ public interface ITodoApi : IComputeService
 
 // Data
 
-[DataContract, MemoryPackable]
+[DataContract, MemoryPackable, MessagePackObject]
 [ParameterComparer(typeof(ByValueParameterComparer))]
 public sealed partial record TodoItem(
     [property: DataMember] Ulid Id,
@@ -31,7 +32,7 @@ public sealed partial record TodoItem(
     [property: DataMember] bool IsDone = false
 );
 
-[DataContract, MemoryPackable]
+[DataContract, MemoryPackable, MessagePackObject]
 public sealed partial record TodoSummary(
     [property: DataMember] int Count,
     [property: DataMember] int DoneCount)
@@ -41,14 +42,14 @@ public sealed partial record TodoSummary(
 
 // Commands
 
-[DataContract, MemoryPackable]
+[DataContract, MemoryPackable, MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public sealed partial record Todos_AddOrUpdate(
     [property: DataMember] Session Session,
     [property: DataMember] TodoItem Item
 ) : ISessionCommand<TodoItem>, IApiCommand;
 
-[DataContract, MemoryPackable]
+[DataContract, MemoryPackable, MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public sealed partial record Todos_Remove(
     [property: DataMember] Session Session,

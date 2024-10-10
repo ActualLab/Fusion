@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.Serialization.Internal;
+using MessagePack;
 
 namespace ActualLab.Serialization;
 
@@ -16,14 +17,14 @@ public static class TypeDecoratingUniSerialized
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct TypeDecoratingUniSerialized<T>
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public T Value { get; init; } = default!;
 
-    [JsonInclude, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonInclude, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public string Json {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => SerializeText(Value, SerializerKind.SystemJson);
@@ -31,7 +32,7 @@ public readonly partial struct TypeDecoratingUniSerialized<T>
         init => Value = DeserializeText(value, SerializerKind.SystemJson);
     }
 
-    [JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, MemoryPackIgnore, IgnoreMember]
     public string NewtonsoftJson {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => SerializeText(Value, SerializerKind.NewtonsoftJson);
@@ -39,7 +40,7 @@ public readonly partial struct TypeDecoratingUniSerialized<T>
         init => Value = DeserializeText(value, SerializerKind.NewtonsoftJson);
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackOrder(0)]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, IgnoreMember, MemoryPackOrder(0)]
     public byte[] MemoryPack {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => SerializeBytes(Value, SerializerKind.MemoryPack);
@@ -47,7 +48,7 @@ public readonly partial struct TypeDecoratingUniSerialized<T>
         init => Value = DeserializeBytes(value, SerializerKind.MemoryPack);
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, DataMember(Order = 0)]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, DataMember(Order = 0), Key(0)]
     public MessagePackData MessagePack {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => SerializeBytes(Value, SerializerKind.MessagePack);
@@ -59,6 +60,7 @@ public readonly partial struct TypeDecoratingUniSerialized<T>
     public TypeDecoratingUniSerialized(byte[] memoryPack)
         => MemoryPack = memoryPack;
 
+    [SerializationConstructor]
     public TypeDecoratingUniSerialized(MessagePackData messagePack)
         => MessagePack = messagePack;
 

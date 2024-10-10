@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Tests.Model;
 using ActualLab.Reflection;
+using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Services;
 
@@ -24,23 +25,23 @@ public interface IUserService : IComputeService
     Task Invalidate();
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record UserService_Add(
-    [property: DataMember, MemoryPackOrder(0)] User User,
-    [property: DataMember, MemoryPackOrder(1)] bool OrUpdate = false
+    [property: DataMember, MemoryPackOrder(0), Key(0)] User User,
+    [property: DataMember, MemoryPackOrder(1), Key(1)] bool OrUpdate = false
 ) : ICommand<Unit>;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record UserService_Update(
-    [property: DataMember, MemoryPackOrder(0)] User User
+    [property: DataMember, MemoryPackOrder(0), Key(0)] User User
 ) : ICommand<Unit>;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record UserService_Delete(
-    [property: DataMember, MemoryPackOrder(0)] User User
+    [property: DataMember, MemoryPackOrder(0), Key(0)] User User
 ) : ICommand<bool>;
 
 public class UserService : DbServiceBase<TestDbContext>, IUserService

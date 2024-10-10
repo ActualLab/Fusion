@@ -1,5 +1,6 @@
 using System.Runtime.Serialization;
 using MemoryPack;
+using MessagePack;
 using static Samples.MeshRpc.HostFactorySettings;
 
 namespace Samples.MeshRpc.Services;
@@ -12,10 +13,10 @@ public interface IFusionCounter : IComputeService
     Task<CounterWithOrigin> Increment(FusionCounter_Increment command, CancellationToken cancellationToken);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public sealed partial record FusionCounter_Increment(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Key
+    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] int Key
 ) : ICommand<CounterWithOrigin>, IHasShardRef
 {
     [IgnoreDataMember, MemoryPackIgnore]

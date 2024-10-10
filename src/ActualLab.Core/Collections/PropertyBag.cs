@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Collections.Internal;
+using MessagePack;
 
 namespace ActualLab.Collections;
 
@@ -27,7 +28,7 @@ public interface IReadOnlyPropertyBag
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<PropertyBag>
 {
@@ -37,7 +38,7 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
 
     // MessagePack requires this member to be public
     [Obsolete("This member exists solely to make serialization work. Don't use it!")]
-    [DataMember(Order = 0), MemoryPackOrder(0), MemoryPackInclude, JsonInclude, Newtonsoft.Json.JsonProperty]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0), MemoryPackInclude, JsonInclude, Newtonsoft.Json.JsonProperty]
     public PropertyBagItem[]? RawItems {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items;
@@ -46,13 +47,13 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
 
     // Computed properties
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public int Count {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items?.Length ?? 0;
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public IReadOnlyList<PropertyBagItem> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items ?? [];
@@ -71,7 +72,7 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
     public PropertyBag()
     { }
 
-    [MemoryPackConstructor, JsonConstructor, Newtonsoft.Json.JsonConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public PropertyBag(PropertyBagItem[]? rawItems)
     {
         if (rawItems != null && rawItems.Length != 0)

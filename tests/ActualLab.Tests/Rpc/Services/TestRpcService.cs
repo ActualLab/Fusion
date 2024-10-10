@@ -1,14 +1,15 @@
 using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
 using ActualLab.Rpc;
+using MessagePack;
 
 namespace ActualLab.Tests.Rpc;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
 public partial record HelloCommand(
-    [property: DataMember, MemoryPackOrder(0)] string Name,
-    [property: DataMember, MemoryPackOrder(1)] TimeSpan Delay
+    [property: DataMember, MemoryPackOrder(0), Key(0)] string Name,
+    [property: DataMember, MemoryPackOrder(1), Key(1)] TimeSpan Delay
 ) : ICommand<string>
 {
     public HelloCommand(string name) : this(name, default) { }

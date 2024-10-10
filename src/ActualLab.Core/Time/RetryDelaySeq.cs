@@ -1,10 +1,12 @@
+using MessagePack;
+
 namespace ActualLab.Time;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 public partial record RetryDelaySeq(
-    [property: DataMember, MemoryPackOrder(0)] TimeSpan Min,
-    [property: DataMember, MemoryPackOrder(1)] TimeSpan Max,
-    [property: DataMember, MemoryPackOrder(2)] double Spread)
+    [property: DataMember, MemoryPackOrder(0), Key(0)] TimeSpan Min,
+    [property: DataMember, MemoryPackOrder(1), Key(1)] TimeSpan Max,
+    [property: DataMember, MemoryPackOrder(2), Key(2)] double Spread)
 {
     public const double DefaultSpread = 0.1;
     public const double DefaultMultiplier = 1.41421356237; // Math.Sqrt(2)
@@ -19,7 +21,7 @@ public partial record RetryDelaySeq(
     public static RetryDelaySeq Exp(TimeSpan min, TimeSpan max, double spread = DefaultSpread, double multiplier = DefaultMultiplier)
         => new (min, max, spread, multiplier);
 
-    [DataMember, MemoryPackOrder(3)]
+    [DataMember, MemoryPackOrder(3), Key(3)]
     public double Multiplier { get; init; } = DefaultMultiplier;
 
     public virtual TimeSpan this[int failureCount] {
@@ -27,7 +29,7 @@ public partial record RetryDelaySeq(
         get => GetDelay(failureCount);
     }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public RetryDelaySeq(
         TimeSpan min, TimeSpan max,
         double spread = DefaultSpread,

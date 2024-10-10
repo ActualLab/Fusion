@@ -1,16 +1,17 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Services;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 public partial record Screenshot
 {
-    [DataMember, MemoryPackOrder(0)] public int Width { get; init; }
-    [DataMember, MemoryPackOrder(1)] public int Height { get; init; }
-    [DataMember, MemoryPackOrder(2)] public Moment CapturedAt { get; init; }
-    [DataMember, MemoryPackOrder(3)] public byte[] Image { get; init; } = [];
+    [DataMember, MemoryPackOrder(0), Key(0)] public int Width { get; init; }
+    [DataMember, MemoryPackOrder(1), Key(1)] public int Height { get; init; }
+    [DataMember, MemoryPackOrder(2), Key(2)] public Moment CapturedAt { get; init; }
+    [DataMember, MemoryPackOrder(3), Key(3)] public byte[] Image { get; init; } = [];
 }
 
 public interface IScreenshotService : IComputeService

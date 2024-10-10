@@ -1,13 +1,14 @@
 using System.Globalization;
 using ActualLab.OS;
+using MessagePack;
 
 namespace ActualLab;
 
-[DataContract, MemoryPackable]
+[DataContract, MemoryPackable, MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record HostId(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] Symbol Id
+    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] Symbol Id
     ) : IEquatable<Symbol>, IEquatable<string>
 {
     private static long _nextId;
@@ -23,7 +24,7 @@ public partial record HostId(
     }
 
     // Computed
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public string Value => Id.Value;
 
     public HostId() : this(NextId())

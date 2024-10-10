@@ -1,15 +1,16 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Comparison;
 using ActualLab.Internal;
+using MessagePack;
 
 namespace ActualLab.Collections;
 
 #pragma warning disable CA1721
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record VersionSet(
-    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     IReadOnlyDictionary<Symbol, Version> Items
 ) {
     public static readonly Version ZeroVersion = new();
@@ -18,12 +19,12 @@ public sealed partial record VersionSet(
     private string? _value;
     private int _hashCode;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
-    public int Count => Items.Count;
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public string Value => _value ??= Format();
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    public int Count => Items.Count;
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public int HashCode {
         get {
             if (_hashCode == 0) {
@@ -63,7 +64,7 @@ public sealed partial record VersionSet(
         : this(versions.ToDictionary(kv => kv.Scope, kv => VersionExt.Parse(kv.Version)))
     { }
 
-    [Newtonsoft.Json.JsonConstructor, JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public VersionSet(string? value)
         : this(Parse(value).Items)
     { }

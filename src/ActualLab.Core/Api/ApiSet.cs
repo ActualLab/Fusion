@@ -1,4 +1,5 @@
 using System.Globalization;
+using MessagePack;
 
 namespace ActualLab.Api;
 
@@ -13,7 +14,7 @@ public static class ApiSet
         => new(items);
 }
 
-[DataContract, MemoryPackable(GenerateType.Collection)]
+[DataContract, MemoryPackable(GenerateType.Collection), MessagePackObject]
 public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
 
 {
@@ -21,9 +22,9 @@ public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
 
     private SortedItemCache? _sortedItemCache;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public UnorderedItemEnumerable UnorderedItems => new(this);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsEmpty => Count == 0;
 
     public ApiSet() { }

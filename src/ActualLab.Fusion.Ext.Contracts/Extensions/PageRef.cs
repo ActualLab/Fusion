@@ -1,4 +1,5 @@
 using System.Globalization;
+using MessagePack;
 
 namespace ActualLab.Fusion.Extensions;
 
@@ -19,10 +20,10 @@ public abstract record PageRef : IHasToStringProducingJson
 #pragma warning restore IL2026
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 public partial record PageRef<TKey>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Count,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] Option<TKey> After = default
+    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] int Count,
+    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] Option<TKey> After = default
     ) : PageRef
 {
     public override string ToString()

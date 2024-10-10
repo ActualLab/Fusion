@@ -1,8 +1,9 @@
 using System.Globalization;
+using MessagePack;
 
 namespace ActualLab.Api;
 
-[DataContract, MemoryPackable(GenerateType.Collection)]
+[DataContract, MemoryPackable(GenerateType.Collection), MessagePackObject]
 public sealed partial class ApiMap<TKey, TValue>
     : Dictionary<TKey, TValue>, IEnumerable<KeyValuePair<TKey, TValue>>
     where TKey : notnull
@@ -11,9 +12,9 @@ public sealed partial class ApiMap<TKey, TValue>
 
     private SortedItemCache? _sortedItemCache;
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public UnorderedItemEnumerable UnorderedItems => new(this);
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsEmpty => Count == 0;
 
     public ApiMap() { }

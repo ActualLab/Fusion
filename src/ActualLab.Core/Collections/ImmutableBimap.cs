@@ -1,6 +1,8 @@
+using MessagePack;
+
 namespace ActualLab.Collections;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial record ImmutableBimap<TFrom, TTo>
     where TFrom : notnull
@@ -8,7 +10,7 @@ public partial record ImmutableBimap<TFrom, TTo>
 {
     private readonly IReadOnlyDictionary<TFrom, TTo> _forward = ImmutableDictionary<TFrom, TTo>.Empty;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public IReadOnlyDictionary<TFrom, TTo> Forward {
         get => _forward;
         init {
@@ -19,13 +21,13 @@ public partial record ImmutableBimap<TFrom, TTo>
         }
     }
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public IReadOnlyDictionary<TTo, TFrom> Backward { get; private set; } = ImmutableDictionary<TTo, TFrom>.Empty;
 
     public ImmutableBimap()
     { }
 
-    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public ImmutableBimap(IReadOnlyDictionary<TFrom, TTo> forward)
         => Forward = forward;
 

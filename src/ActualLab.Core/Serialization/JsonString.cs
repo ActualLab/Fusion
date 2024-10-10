@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using ActualLab.Conversion;
 using ActualLab.Serialization.Internal;
+using MessagePack;
 
 #if !NETSTANDARD2_0
 using System.Diagnostics.CodeAnalysis;
@@ -8,11 +9,11 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Serialization;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [JsonConverter(typeof(JsonStringJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(JsonStringNewtonsoftJsonConverter))]
 [TypeConverter(typeof(JsonStringTypeConverter))]
-[method: MemoryPackConstructor] // Has JsonConverters
+[method: MemoryPackConstructor, SerializationConstructor] // Has JsonConverters
 public partial class JsonString(string value) :
     IEquatable<JsonString>,
     IComparable<JsonString>,
@@ -23,7 +24,7 @@ public partial class JsonString(string value) :
 
     private readonly string? _value = value;
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public string Value => _value ?? string.Empty;
 
     public static JsonString? New(string? value)

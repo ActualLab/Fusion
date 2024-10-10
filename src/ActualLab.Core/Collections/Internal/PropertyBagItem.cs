@@ -1,14 +1,16 @@
+using MessagePack;
+
 namespace ActualLab.Collections.Internal;
 
 #pragma warning disable CA1036 // Implement <, <=, etc.
 
 [StructLayout(LayoutKind.Auto)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record struct PropertyBagItem(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] Symbol Key,
-    [property: DataMember(Order = 1), MemoryPackOrder(1)] TypeDecoratingUniSerialized<object> Serialized
+    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] Symbol Key,
+    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] TypeDecoratingUniSerialized<object> Serialized
     ) : IComparable<PropertyBagItem>
 {
     public static readonly IComparer<PropertyBagItem> Comparer = new ComparerImpl();

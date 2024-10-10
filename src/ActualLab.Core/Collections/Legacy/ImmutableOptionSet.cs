@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Collections.Internal;
+using MessagePack;
 
 namespace ActualLab.Collections;
 
@@ -7,7 +8,7 @@ namespace ActualLab.Collections;
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 // [Obsolete("Use PropertyBag instead.")]
 public readonly partial record struct ImmutableOptionSet
@@ -20,13 +21,13 @@ public readonly partial record struct ImmutableOptionSet
 
     // Computed properties
 
-    [JsonIgnore, MemoryPackIgnore]
+    [JsonIgnore, MemoryPackIgnore, IgnoreMember]
     public ImmutableDictionary<Symbol, object> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items ?? EmptyItems;
     }
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     [JsonPropertyName(nameof(Items)), Newtonsoft.Json.JsonIgnore]
     public IDictionary<string, NewtonsoftJsonSerialized<object>> JsonCompatibleItems
         => OptionSetHelper.ToNewtonsoftJsonCompatible(Items);
@@ -39,7 +40,7 @@ public readonly partial record struct ImmutableOptionSet
     public ImmutableOptionSet(ImmutableDictionary<Symbol, object> items)
         => _items = items;
 
-    [JsonConstructor, MemoryPackConstructor]
+    [JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public ImmutableOptionSet(IDictionary<string, NewtonsoftJsonSerialized<object>>? jsonCompatibleItems)
         => _items = jsonCompatibleItems?.ToImmutableDictionary(p => (Symbol) p.Key, p => p.Value.Value);
 

@@ -1,11 +1,12 @@
 using System.Globalization;
+using MessagePack;
 
 namespace ActualLab.Api;
 
-[DataContract, MemoryPackable(GenerateType.Collection)]
+[DataContract, MemoryPackable(GenerateType.Collection), MessagePackObject]
 public sealed partial class ApiList<T> : List<T>
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsEmpty => Count == 0;
 
     public ApiList() { }
