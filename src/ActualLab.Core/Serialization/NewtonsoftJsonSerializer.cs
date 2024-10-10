@@ -54,15 +54,19 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(string data, Type type)
-        => _jsonSerializer.Deserialize(new StringReader(data), type);
+    {
+        var stringReader = new StringReader(data); // No need to dispose
+        var reader = new JsonTextReader(stringReader) { CloseInput = false }; // No need to dispose
+        return _jsonSerializer.Deserialize(reader, type);
+    }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
-        using var stream = data.AsStream();
-        using var reader = new StreamReader(stream);
+        var streamReader = new StreamReader(data.AsStream()); // No need to dispose
+        var reader = new JsonTextReader(streamReader) { CloseInput = false }; // No need to dispose
         var result = _jsonSerializer.Deserialize(reader, type);
-        readLength = (int)stream.Position;
+        readLength = data.Length; // Always full length!
         return result;
     }
 
@@ -72,7 +76,7 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
     public override string Write(object? value, Type type)
     {
         using var stringWriter = new ZStringWriter();
-        using var writer = new JsonTextWriter(stringWriter);
+        using var writer = new JsonTextWriter(stringWriter) { CloseOutput = false };
         writer.Formatting = _jsonSerializer.Formatting;
         // ReSharper disable once HeapView.BoxingAllocation
         _jsonSerializer.Serialize(writer, value, type);
@@ -82,7 +86,7 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(TextWriter textWriter, object? value, Type type)
     {
-        using var writer = new JsonTextWriter(textWriter);
+        using var writer = new JsonTextWriter(textWriter) { CloseOutput = false };
         writer.Formatting = _jsonSerializer.Formatting;
         // ReSharper disable once HeapView.BoxingAllocation
         _jsonSerializer.Serialize(writer, value, type);

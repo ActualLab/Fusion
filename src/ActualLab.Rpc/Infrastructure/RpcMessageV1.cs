@@ -15,7 +15,8 @@ public sealed partial class RpcMessageV1
     public static RpcMessageV1 New(RpcMessage x)
     {
         var (service, method) = x.MethodRef.GetServiceAndMethodName();
-        return new RpcMessageV1(x.CallTypeId, x.RelatedId, service, method, x.ArgumentData, x.Headers);
+        var argumentData = new TextOrBytes(DataFormat.Bytes, x.ArgumentData);
+        return new RpcMessageV1(x.CallTypeId, x.RelatedId, service, method, argumentData, x.Headers);
     }
 
     // Instance members
@@ -59,7 +60,7 @@ public sealed partial class RpcMessageV1
     {
         var fullName = RpcMethodDef.ComposeFullName(x.Service, x.Method);
         var methodRef = new RpcMethodRef(fullName);
-        return new RpcMessage(x.CallTypeId, x.RelatedId, methodRef, x.ArgumentData, x.Headers);
+        return new RpcMessage(x.CallTypeId, x.RelatedId, methodRef, x.ArgumentData.Data, x.Headers);
     }
 
     // This record relies on referential equality

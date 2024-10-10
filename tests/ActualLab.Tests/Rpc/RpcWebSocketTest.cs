@@ -31,8 +31,8 @@ public class RpcWebSocketTest : RpcTestBase
     }
 
     [Theory]
-    // [InlineData("json")]
-    // [InlineData("njson")]
+    [InlineData("json")]
+    [InlineData("njson")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
     [InlineData("mempack2c")]
@@ -148,8 +148,8 @@ public class RpcWebSocketTest : RpcTestBase
     }
 
     [Theory]
-    // [InlineData("json")]
-    // [InlineData("njson")]
+    [InlineData("json")]
+    [InlineData("njson")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
     [InlineData("mempack2a")]
@@ -312,6 +312,8 @@ public class RpcWebSocketTest : RpcTestBase
     }
 
     [Theory]
+    [InlineData(100, "json")]
+    [InlineData(100, "njson")]
     [InlineData(100, "mempack1")]
     [InlineData(100, "mempack2")]
     [InlineData(100, "mempack2c")]
@@ -324,6 +326,8 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData(1000, "msgpack1")]
     [InlineData(1000, "msgpack2")]
     [InlineData(1000, "msgpack2c")]
+    [InlineData(10_000, "json")]
+    [InlineData(10_000, "njson")]
     [InlineData(50_000, "mempack1")]
     [InlineData(50_000, "mempack2")]
     [InlineData(50_000, "mempack2a")]

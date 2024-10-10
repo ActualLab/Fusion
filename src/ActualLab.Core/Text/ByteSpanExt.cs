@@ -55,4 +55,12 @@ public static class ByteSpanExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetXxHash3(this ReadOnlySpan<byte> source)
         => unchecked((int)XxHash3.HashToUInt64(source));
+
+    public static int GetPartialXxHash3(this ReadOnlySpan<byte> source)
+    {
+        var hash = source.Length <= 32
+            ? source.GetXxHash3()
+            : source[..16].GetXxHash3() + source[^16..].GetXxHash3();
+        return (359 * source.Length) + hash;
+    }
 }

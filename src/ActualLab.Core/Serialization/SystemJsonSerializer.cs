@@ -52,9 +52,10 @@ public class SystemJsonSerializer : TextSerializerBase
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
-        readLength = data.Length;
-        var utf8JsonReader = new Utf8JsonReader(data.Span);
-        return JsonSerializer.Deserialize(ref utf8JsonReader, type, Options);
+        var reader = new Utf8JsonReader(data.Span);
+        var result = JsonSerializer.Deserialize(ref reader, type, Options);
+        readLength = (int)reader.BytesConsumed;
+        return result;
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

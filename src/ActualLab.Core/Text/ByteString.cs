@@ -114,13 +114,7 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
         => obj is ByteString other && Equals(other);
 
     public override int GetHashCode()
-    {
-        var span = Bytes.Span;
-        var hash = span.Length <= 32
-            ? span.GetXxHash3()
-            : span[..16].GetXxHash3() + span[^16..].GetXxHash3();
-        return (359 * span.Length) + hash;
-    }
+        => Bytes.Span.GetPartialXxHash3();
 
     // Comparison
 

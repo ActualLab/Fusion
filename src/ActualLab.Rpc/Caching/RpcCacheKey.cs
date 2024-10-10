@@ -11,19 +11,19 @@ public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public readonly string Name;
     [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
-    public readonly TextOrBytes ArgumentData;
+    public readonly ReadOnlyMemory<byte> ArgumentData;
 
     [MemoryPackConstructor, SerializationConstructor]
     // ReSharper disable once ConvertToPrimaryConstructor
-    public RpcCacheKey(string name, TextOrBytes argumentData)
+    public RpcCacheKey(string name, ReadOnlyMemory<byte> argumentData)
     {
         Name = name;
         ArgumentData = argumentData;
-        HashCode = unchecked((353 * name.GetXxHash3()) + argumentData.Data.Span.GetXxHash3());
+        HashCode = name.GetXxHash3() ^ argumentData.Span.GetPartialXxHash3();
     }
 
     public override string ToString()
-        => $"#{(uint)HashCode:x}: {Name}({Convert.ToBase64String(ArgumentData.Bytes)})";
+        => $"#{(uint)HashCode:x}: {Name}({new ByteString(ArgumentData).ToString()})";
 
     // Equality
 
@@ -31,7 +31,7 @@ public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
         =>  !ReferenceEquals(other, null)
             && HashCode == other.HashCode
             && Name.AsSpan().SequenceEqual(other.Name.AsSpan())
-            && ArgumentData.DataEquals(other.ArgumentData);
+            && ArgumentData.Span.SequenceEqual(other.ArgumentData.Span);
 
     public override bool Equals(object? obj) => obj is RpcCacheKey other && Equals(other);
     public override int GetHashCode() => HashCode;

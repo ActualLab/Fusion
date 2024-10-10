@@ -20,7 +20,7 @@ public class ApiArrayJsonConverter : JsonConverterFactory
             return (JsonConverter)tConverter.CreateInstance();
         });
 
-    // Nested type
+    // Nested types
 
     public sealed class Converter<T> : JsonConverter<ApiArray<T>>
     {

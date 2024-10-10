@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Serialization.Internal;
 using MessagePack;
 using Errors = ActualLab.Internal.Errors;
 using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
@@ -69,6 +71,8 @@ public abstract partial class RpcStream : IRpcObject
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[JsonConverter(typeof(RpcStreamJsonConverter))]
+[Newtonsoft.Json.JsonConverter(typeof(RpcStreamNewtonsoftJsonConverter))]
 public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 {
 #if NET9_0_OR_GREATER
@@ -154,6 +158,39 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
             }
             return new RemoteChannelEnumerator(this, cancellationToken);
         }
+    }
+
+    public static string SerializeToString(RpcStream<T>? stream)
+    {
+        if (stream == null)
+            return "";
+
+        using var formatter = ListFormat.CommaSeparated.CreateFormatter();
+        var id = stream.SerializedId;
+        formatter.Append(id.HostId.ToString());
+        formatter.Append(id.LocalId.ToString(CultureInfo.InvariantCulture));
+        formatter.Append(stream.AckPeriod.ToString(CultureInfo.InvariantCulture));
+        formatter.Append(stream.AckAdvance.ToString(CultureInfo.InvariantCulture));
+        formatter.AppendEnd();
+        return formatter.Output;
+    }
+
+    public static RpcStream<T>? DeserializeFromString(string? source)
+    {
+        if (source.IsNullOrEmpty())
+            return null;
+
+        using var parser = ListFormat.CommaSeparated.CreateParser(source);
+        parser.ParseNext();
+        var hostId = Guid.Parse(parser.Item);
+        parser.ParseNext();
+        var localId = long.Parse(parser.Item, CultureInfo.InvariantCulture);
+        var id = new RpcObjectId(hostId, localId);
+        parser.ParseNext();
+        var ackPeriod = int.Parse(parser.Item, CultureInfo.InvariantCulture);
+        parser.ParseNext();
+        var ackAdvance = int.Parse(parser.Item, CultureInfo.InvariantCulture);
+        return new RpcStream<T>() { SerializedId = id, AckPeriod = ackPeriod, AckAdvance = ackAdvance };
     }
 
     // Protected methods

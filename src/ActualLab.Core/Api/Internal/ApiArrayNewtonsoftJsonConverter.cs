@@ -39,7 +39,8 @@ public class ApiArrayNewtonsoftJsonConverter : JsonConverter
     private static bool IsApiArray(Type type)
         => type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ApiArray<>);
 
-    // Nested type
+    // Nested types
+
     private sealed class Converter<T> : Newtonsoft.Json.JsonConverter<ApiArray<T>>
     {
         public override ApiArray<T> ReadJson(

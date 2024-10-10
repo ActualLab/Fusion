@@ -11,13 +11,13 @@ public sealed class RpcSerializationFormat(
     // Static members
 
     private static readonly LazySlim<RpcSerializationFormat> SystemJsonLazy = new(
-        () => new RpcSerializationFormat("json", // Doesn't work yet
+        () => new RpcSerializationFormat("json",
             () => new RpcTextArgumentSerializer(SystemJsonSerializer.Default),
-            _ => SystemJsonSerializer.Default.ToTyped<RpcMessageV1>().Convert(RpcMessageV1.Converter)));
+            peer => new RpcTextMessageSerializer(peer)));
     private static readonly LazySlim<RpcSerializationFormat> NewtonsoftJsonLazy = new(
-        () => new RpcSerializationFormat("njson", // Doesn't work yet
+        () => new RpcSerializationFormat("njson",
             () => new RpcTextArgumentSerializer(NewtonsoftJsonSerializer.Default),
-            _ => NewtonsoftJsonSerializer.Default.ToTyped<RpcMessageV1>().Convert(RpcMessageV1.Converter)));
+            peer => new RpcTextMessageSerializer(peer)));
 
     private static readonly LazySlim<RpcSerializationFormat> MemoryPackV1Lazy = new(
         () => new RpcSerializationFormat("mempack1",
@@ -57,7 +57,8 @@ public sealed class RpcSerializationFormat(
         new(ImmutableArray.Create(
             // SystemJson, NewtonsoftJson,
             MemoryPackV1, MemoryPackV2, MemoryPackV2C, MemoryPackV2A,
-            MessagePackV1, MessagePackV2, MessagePackV2C, MessagePackV2A));
+            MessagePackV1, MessagePackV2, MessagePackV2C, MessagePackV2A,
+            SystemJson, NewtonsoftJson));
 
     // public static RpcSerializationFormat SystemJson => SystemJsonLazy.Value;
     // public static RpcSerializationFormat NewtonsoftJson => NewtonsoftJsonLazy.Value;
@@ -69,6 +70,8 @@ public sealed class RpcSerializationFormat(
     public static RpcSerializationFormat MessagePackV2 => MessagePackV2Lazy.Value;
     public static RpcSerializationFormat MessagePackV2C => MessagePackV2CLazy.Value;
     public static RpcSerializationFormat MessagePackV2A => MessagePackV2ALazy.Value;
+    public static RpcSerializationFormat SystemJson => SystemJsonLazy.Value;
+    public static RpcSerializationFormat NewtonsoftJson => NewtonsoftJsonLazy.Value;
     public static ImmutableArray<RpcSerializationFormat> All => AllLazy.Value;
 
     // Instance members

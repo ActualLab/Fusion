@@ -9,7 +9,9 @@ namespace ActualLab.Rpc.Serialization;
 
 public sealed class RpcByteArgumentSerializerV1 : RpcArgumentSerializer
 {
-    public static int CopySizeThreshold { get; set; } = 1024;
+    [ThreadStatic] private static ArrayPoolBuffer<byte>? _writeBuffer;
+    public static int WriteBufferCapacity { get; set; } = 16384;
+    public static int WriteBufferReplaceCapacity { get; set; } = 65536;
 
     private readonly IByteSerializer _serializer;
     private readonly byte[] _defaultTypeRefBytes;
@@ -22,45 +24,29 @@ public sealed class RpcByteArgumentSerializerV1 : RpcArgumentSerializer
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override TextOrBytes Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
+    public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
     {
         if (arguments.Length == 0)
-            return TextOrBytes.EmptyBytes;
+            return default;
 
-        var buffer = new ArrayPoolBuffer<byte>(128 + Math.Max(128, sizeHint));
-        try {
-            var itemSerializer = allowPolymorphism
-                ? (ItemSerializer)new ItemPolymorphicSerializer(_serializer, buffer)
-                : new ItemNonPolymorphicSerializer(_serializer, buffer, _defaultTypeRefBytes);
-            arguments.Read(itemSerializer);
-
-            ReadOnlyMemory<byte> bytes;
-            var position = buffer.Position;
-            if (position < CopySizeThreshold || position < buffer.FreeCapacity) {
-                bytes = buffer.WrittenSpan.ToArray();
-                buffer.Dispose();
-            }
-            else
-                bytes = buffer.WrittenMemory;
-            return new TextOrBytes(bytes);
-        }
-        catch {
-            buffer.Dispose();
-            throw;
-        }
+        var buffer = _writeBuffer ??= new ArrayPoolBuffer<byte>(WriteBufferCapacity);
+        buffer.Reset(WriteBufferCapacity, WriteBufferReplaceCapacity);
+        var itemSerializer = allowPolymorphism
+            ? (ItemSerializer)new ItemPolymorphicSerializer(_serializer, buffer)
+            : new ItemNonPolymorphicSerializer(_serializer, buffer, _defaultTypeRefBytes);
+        arguments.Read(itemSerializer);
+        return buffer.WrittenSpan.ToArray();
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, TextOrBytes data)
+    public override void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, ReadOnlyMemory<byte> data)
     {
-        if (!data.IsBytes(out var bytes))
-            throw new ArgumentOutOfRangeException(nameof(data));
-        if (bytes.IsEmpty)
+        if (data.IsEmpty)
             return;
 
         var deserializer = allowPolymorphism
-            ? (ItemDeserializer)new ItemPolymorphicDeserializer(_serializer, bytes)
-            : new ItemNonPolymorphicDeserializer(_serializer, bytes);
+            ? (ItemDeserializer)new ItemPolymorphicDeserializer(_serializer, data)
+            : new ItemNonPolymorphicDeserializer(_serializer, data);
         arguments.Write(deserializer);
     }
 

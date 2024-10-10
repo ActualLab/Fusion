@@ -11,7 +11,7 @@ namespace ActualLab.Fusion.Client.Caching;
 
 public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteComputedCache
 {
-    public static RpcCacheKey VersionKey { get; set; } = new("Version", TextOrBytes.EmptyBytes);
+    public static RpcCacheKey VersionKey { get; set; } = new("Version", default);
 
     public record Options(string Version = "")
     {
@@ -48,10 +48,10 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
             return;
         }
 
-        var expectedData = new TextOrBytes(EncodingExt.Utf8NoBom.GetBytes(version));
+        var expectedData = EncodingExt.Utf8NoBom.GetBytes(version);
         var entry = await Get(VersionKey, cancellationToken).ConfigureAwait(false);
         if (!entry.IsNone) {
-            if (entry.Data.DataEquals(expectedData)) {
+            if (entry.Data.Span.SequenceEqual(expectedData)) {
                 DefaultLog?.Log(Settings.LogLevel, "Initialize: version match -> will reuse cache content");
                 return;
             }

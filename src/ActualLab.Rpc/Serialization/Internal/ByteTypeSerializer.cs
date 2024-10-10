@@ -5,13 +5,13 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Serialization.Internal;
 
-public static class TypeSerializer
+public static class ByteTypeSerializer
 {
     private static readonly ConcurrentDictionary<Type, ByteString> ToBytesCache = new();
     private static readonly ConcurrentDictionary<ByteString, Type?> FromBytesCache = new();
 
     public static readonly byte[] NullTypeBytes = [0, 0];
-    public static ReadOnlySpan<byte> NullTypeSpan => NullTypeBytes.AsSpan();
+    public static ReadOnlySpan<byte> NullTypeSpan => NullTypeBytes;
 
     public static ByteString ToBytes(Type type) =>
         ToBytesCache.GetOrAdd(type, t => {
@@ -54,39 +54,35 @@ public static class TypeSerializer
 
     public static void ReadExactItemType(ref ReadOnlyMemory<byte> data, Type expectedType)
     {
-        var length = data.Span.ReadUnchecked<ushort>();
-        if (length == 0) {
-            data = data[2..];
-            return;
-        }
-
-        var fullLength = length + 4;
-        var itemType = FromBytes(data[..fullLength]);
-        data = data[fullLength..];
-        if (itemType == null)
-            return;
-        if (expectedType == itemType)
+        var itemType = ReadItemType(ref data);
+        if (itemType == null || itemType == expectedType)
             return;
 
-        throw Errors.CannotDeserializeUnexpectedPolymorphicArgumentType(expectedType, itemType);
+        throw Errors.CannotDeserializeUnexpectedArgumentType(expectedType, itemType);
     }
 
     public static Type ReadDerivedItemType(ref ReadOnlyMemory<byte> data, Type expectedType)
     {
-        var length = data.Span.ReadUnchecked<ushort>();
-        if (length == 0) {
-            data = data[2..];
-            return expectedType;
-        }
-
-        var fullLength = length + 4;
-        var itemType = FromBytes(data[..fullLength]);
-        data = data[fullLength..];
+        var itemType = ReadItemType(ref data);
         if (itemType == null)
             return expectedType;
         if (expectedType.IsAssignableFrom(itemType))
             return itemType;
 
         throw Errors.CannotDeserializeUnexpectedPolymorphicArgumentType(expectedType, itemType);
+    }
+
+    public static Type? ReadItemType(ref ReadOnlyMemory<byte> data)
+    {
+        var length = data.Span.ReadUnchecked<ushort>();
+        if (length == 0) {
+            data = data[2..];
+            return null;
+        }
+
+        var fullLength = length + 4;
+        var itemType = FromBytes(data[..fullLength]);
+        data = data[fullLength..];
+        return itemType;
     }
 }

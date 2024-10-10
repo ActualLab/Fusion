@@ -25,9 +25,7 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
         // ArgumentData
         var blob = reader.ReadMemoryL4();
         isProjection = AllowProjection && blob.Length >= MinProjectionSize && IsProjectable(blob);
-        var argumentData = isProjection
-            ? new TextOrBytes(DataFormat.Bytes, blob)
-            : new TextOrBytes(DataFormat.Bytes, blob.ToArray());
+        var argumentData = isProjection ? blob : (ReadOnlyMemory<byte>)blob.ToArray();
 
         // Headers
         var headerCount = (int)reader.Remaining[0];
@@ -35,8 +33,8 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
         RpcHeader[]? headers = null;
         if (headerCount > 0) {
             headers = new RpcHeader[headerCount];
-            var decoder = Utf8Decoder ??= EncodingExt.Utf8NoBom.GetDecoder();
-            var decodeBuffer = DecodeBuffer ??= new ArrayPoolBuffer<char>(Utf8BufferCapacity);
+            var decoder = GetUtf8Decoder();
+            var decodeBuffer = GetUtf8DecodeBuffer();
             try {
                 for (var i = 0; i < headerCount; i++) {
                     decodeBuffer.Reset(Utf8BufferCapacity, Utf8BufferReplaceCapacity);
@@ -83,7 +81,7 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
 
         // ArgumentData
         var blob = reader.ReadMemoryL4();
-        var argumentData = new TextOrBytes(DataFormat.Bytes, blob.ToArray());
+        var argumentData = (ReadOnlyMemory<byte>)blob.ToArray();
 
         // Headers
         var headerCount = (int)reader.Remaining[0];
@@ -91,8 +89,8 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
         RpcHeader[]? headers = null;
         if (headerCount > 0) {
             headers = new RpcHeader[headerCount];
-            var decoder = Utf8Decoder ??= EncodingExt.Utf8NoBom.GetDecoder();
-            var decodeBuffer = DecodeBuffer ??= new ArrayPoolBuffer<char>(Utf8BufferCapacity);
+            var decoder = GetUtf8Decoder();
+            var decodeBuffer = GetUtf8DecodeBuffer();
             try {
                 for (var i = 0; i < headerCount; i++) {
                     decodeBuffer.Reset(Utf8BufferCapacity, Utf8BufferReplaceCapacity);
@@ -124,7 +122,7 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
 
     public override void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
     {
-        var argumentData = value.ArgumentData.Data;
+        var argumentData = value.ArgumentData;
         var requestedLength = 4 + 1 + 9 + (4 + argumentData.Length) + 1;
 
         var writer = new SpanWriter(bufferWriter.GetSpan(requestedLength));
@@ -152,8 +150,8 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
         if (headers.Length == 0)
             return;
 
-        var encoder = Utf8Encoder ??= EncodingExt.Utf8NoBom.GetEncoder();
-        var encodeBuffer = EncodeBuffer ??= new ArrayPoolBuffer<byte>(Utf8BufferCapacity);
+        var encoder = GetUtf8Encoder();
+        var encodeBuffer = GetUtf8EncodeBuffer();
         try {
             foreach (var h in headers) {
                 encodeBuffer.Reset(Utf8BufferCapacity, Utf8BufferReplaceCapacity);

@@ -1,5 +1,4 @@
 using System.Buffers;
-using System.Text;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Infrastructure;
@@ -8,31 +7,20 @@ namespace ActualLab.Rpc.Serialization;
 
 #pragma warning disable MA0069
 
-public class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSerializer<RpcMessage>
+public class RpcByteMessageSerializer(RpcPeer peer)
+    : RpcMessageSerializer(peer), IProjectingByteSerializer<RpcMessage>
 {
     public static class Defaults
     {
         public static bool AllowProjection { get; set; } = false;
         public static int MinProjectionSize { get; set; } = 8192;
         public static int MaxInefficiencyFactor { get; set; } = 4;
-        public static int Utf8BufferCapacity { get; set; } = 512; // In bytes and characters, used only for header values
-        public static int Utf8BufferReplaceCapacity { get; set; } = 8192; // In bytes and characters, used only for header values
     }
-
-    [ThreadStatic] protected static Encoder? Utf8Encoder;
-    [ThreadStatic] protected static Decoder? Utf8Decoder;
-    [ThreadStatic] protected static ArrayPoolBuffer<byte>? EncodeBuffer;
-    [ThreadStatic] protected static ArrayPoolBuffer<char>? DecodeBuffer;
-    protected RpcMethodResolver ServerMethodResolver => Peer.ServerMethodResolver;
-
-    public RpcPeer Peer { get; } = peer;
 
     // Settings - they affect only on performance (i.e. wire format won't change if you change them)
     public bool AllowProjection { get; init; } = Defaults.AllowProjection;
     public int MinProjectionSize { get; init; } = Defaults.MinProjectionSize;
     public int MaxInefficiencyFactor { get; init; } = Defaults.MaxInefficiencyFactor;
-    public int Utf8BufferCapacity { get; init; } = Defaults.Utf8BufferCapacity;
-    public int Utf8BufferReplaceCapacity { get; init; } = Defaults.Utf8BufferReplaceCapacity;
 
     public virtual RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
     {
@@ -56,9 +44,7 @@ public class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSerializer<
         // ArgumentData
         blob = reader.ReadMemoryL4();
         isProjection = AllowProjection && blob.Length >= MinProjectionSize && IsProjectable(blob);
-        var argumentData = isProjection
-            ? new TextOrBytes(DataFormat.Bytes, blob)
-            : new TextOrBytes(DataFormat.Bytes, blob.ToArray());
+        var argumentData = isProjection ? blob : (ReadOnlyMemory<byte>)blob.ToArray();
 
         // Headers
         var headerCount = (int)reader.Remaining[0];
@@ -66,8 +52,8 @@ public class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSerializer<
         RpcHeader[]? headers = null;
         if (headerCount > 0) {
             headers = new RpcHeader[headerCount];
-            var decoder = Utf8Decoder ??= EncodingExt.Utf8NoBom.GetDecoder();
-            var decodeBuffer = DecodeBuffer ??= new ArrayPoolBuffer<char>(Utf8BufferCapacity);
+            var decoder = GetUtf8Decoder();
+            var decodeBuffer = GetUtf8DecodeBuffer();
             try {
                 for (var i = 0; i < headerCount; i++) {
                     decodeBuffer.Reset(Utf8BufferCapacity, Utf8BufferReplaceCapacity);
@@ -97,7 +83,7 @@ public class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSerializer<
         return new RpcMessage(callTypeId, relatedId, methodRef, argumentData, headers);
     }
 
-    public virtual RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength)
+    public override RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength)
     {
         var reader = new MemoryReader(data);
 
@@ -118,7 +104,7 @@ public class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSerializer<
 
         // ArgumentData
         blob = reader.ReadMemoryL4();
-        var argumentData = new TextOrBytes(DataFormat.Bytes, blob.ToArray());
+        var argumentData = (ReadOnlyMemory<byte>)blob.ToArray();
 
         // Headers
         var headerCount = (int)reader.Remaining[0];
@@ -126,8 +112,8 @@ public class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSerializer<
         RpcHeader[]? headers = null;
         if (headerCount > 0) {
             headers = new RpcHeader[headerCount];
-            var decoder = Utf8Decoder ??= EncodingExt.Utf8NoBom.GetDecoder();
-            var decodeBuffer = DecodeBuffer ??= new ArrayPoolBuffer<char>(Utf8BufferCapacity);
+            var decoder = GetUtf8Decoder();
+            var decodeBuffer = GetUtf8DecodeBuffer();
             try {
                 for (var i = 0; i < headerCount; i++) {
                     decodeBuffer.Reset(Utf8BufferCapacity, Utf8BufferReplaceCapacity);
@@ -157,10 +143,10 @@ public class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSerializer<
         return new RpcMessage(callTypeId, relatedId, methodRef, argumentData, headers);
     }
 
-    public virtual void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
+    public override void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
     {
         var utf8Name = value.MethodRef.Utf8Name;
-        var argumentData = value.ArgumentData.Data;
+        var argumentData = value.ArgumentData;
         var requestedLength = 1 + 9 + (2 + utf8Name.Length) + (4 + argumentData.Length) + 1;
 
         var writer = new SpanWriter(bufferWriter.GetSpan(requestedLength));
@@ -188,8 +174,8 @@ public class RpcByteMessageSerializer(RpcPeer peer) : IProjectingByteSerializer<
         if (headers.Length == 0)
             return;
 
-        var encoder = Utf8Encoder ??= EncodingExt.Utf8NoBom.GetEncoder();
-        var encodeBuffer = EncodeBuffer ??= new ArrayPoolBuffer<byte>(Utf8BufferCapacity);
+        var encoder = GetUtf8Encoder();
+        var encodeBuffer = GetUtf8EncodeBuffer();
         try {
             foreach (var h in headers) {
                 encodeBuffer.Reset(Utf8BufferCapacity, Utf8BufferReplaceCapacity);

@@ -52,6 +52,12 @@ public static class Errors
         => new SerializationException("The item size exceeds the limit.");
     public static Exception InvalidItemSize()
         => new SerializationException("Invalid item size. The remainder of the message will be dropped.");
+    public static Exception InvalidItemTypeFormat()
+        => new SerializationException("Invalid item type format.");
+    public static Exception InvalidMessageFormat()
+        => new SerializationException("Invalid message format.");
+    public static Exception CannotSerializeAbstractType(Type type)
+        => new SerializationException($"Cannot serialize abstract type '{type.GetName()}'.");
     public static Exception CannotDeserializeUnexpectedArgumentType(Type expectedType, Type actualType)
         => new SerializationException($"Cannot deserialize unexpected argument type: " +
             $"expected '{expectedType.GetName()}' (exact match), got '{actualType.GetName()}'.");

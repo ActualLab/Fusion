@@ -48,6 +48,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
 using ActualLab.Internal;
+using MessagePack;
 
 namespace ActualLab.Interception;
 
@@ -108,7 +109,7 @@ public abstract partial record ArgumentList
 #>
 public abstract record ArgumentList<#=itemCount#> : ArgumentList
 {
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public override int Length => <#=itemCount#>;
 
     protected static Type?[] CreateNonDefaultItemTypes()

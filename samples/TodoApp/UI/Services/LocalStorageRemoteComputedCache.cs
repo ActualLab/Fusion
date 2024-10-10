@@ -63,10 +63,7 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
         return Convert.ToBase64String(buffer.WrittenSpan);
 #else
         // And that's one of ways to produce a readable one
-        var argumentData = key.ArgumentData;
-        var data = argumentData.IsBytes(out var bytes)
-            ? Convert.ToBase64String(bytes.Span)
-            : "`" + (argumentData.IsText(out var text) ? new string(text.Span) : ""); // No '`' in Base64
+        var data = Convert.ToBase64String(key.ArgumentData.Span);
         return ZString.Concat(_keyPrefix, key.Name, ' ', data);
 #endif
     }

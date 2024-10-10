@@ -1,88 +1,200 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Internal;
+using ActualLab.IO.Internal;
+using ActualLab.Rpc.Serialization.Internal;
+using Cysharp.Text;
 
 namespace ActualLab.Rpc.Serialization;
 
-public sealed class RpcTextArgumentSerializer(ITextSerializer serializer) : RpcArgumentSerializer
+public sealed class RpcTextArgumentSerializer : RpcArgumentSerializer
 {
-    public ListFormat ListFormat { get; init; } = ListFormat.Default;
+    private static readonly byte Delimiter = 0x1e; // Record separator in ASCII / UTF8
 
-    private readonly ITextSerializer _polymorphicSerializer = new TypeDecoratingTextSerializer(serializer);
+    [ThreadStatic] private static Utf8TextWriter? _writer;
+    public static int WriteBufferReplaceCapacity { get; set; } = 65536;
+
+    private readonly ITextSerializer _serializer;
+
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public RpcTextArgumentSerializer(ITextSerializer serializer)
+        => _serializer = serializer;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override TextOrBytes Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
+    public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
     {
         if (arguments.Length == 0)
-            return TextOrBytes.EmptyText;
+            return default;
 
-        var items = new List<string>();
-        var itemSerializer = new ItemSerializer(GetSerializer(allowPolymorphism), items);
-        arguments.Read(itemSerializer);
-
-        using var f = ListFormat.CreateFormatter();
-        foreach (var item in items)
-            f.Append(item);
-        f.AppendEnd();
-        return new TextOrBytes(f.Output);
+        var writer = _writer ??= new Utf8TextWriter();
+        try {
+            var itemSerializer = allowPolymorphism
+                ? (ItemSerializer)new ItemPolymorphicSerializer(_serializer, writer)
+                : new ItemNonPolymorphicSerializer(_serializer, writer);
+            arguments.Read(itemSerializer);
+            var span = writer.Buffer.AsSpan();
+            if (span.Length >= 1 && span[^1] == Delimiter)
+                span = span[..^1];
+            return span.ToArray();
+        }
+        finally {
+            ref var buffer = ref writer.Buffer;
+            if (buffer.Length <= WriteBufferReplaceCapacity)
+                buffer.Clear();
+            else {
+                buffer.Dispose();
+                buffer = new Utf8ValueStringBuilder();
+            }
+        }
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public override void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, TextOrBytes data)
+    public override void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, ReadOnlyMemory<byte> data)
     {
-        if (!data.IsText(out var text))
-            throw new ArgumentOutOfRangeException(nameof(data));
-        if (text.IsEmpty)
+        if (data.IsEmpty)
             return;
 
-        var items = ListFormat.CreateParser(text.Span).ParseAll();
-        var deserializer = new ItemDeserializer(GetSerializer(allowPolymorphism), items);
+        var deserializer = allowPolymorphism
+            ? (ItemDeserializer)new ItemPolymorphicDeserializer(_serializer, data)
+            : new ItemNonPolymorphicDeserializer(_serializer, data);
         arguments.Write(deserializer);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ITextSerializer GetSerializer(bool allowPolymorphism)
-        => allowPolymorphism ? _polymorphicSerializer : serializer;
+    // ItemSerializer + its variants
 
-    // Nested types
-
-    private sealed class ItemSerializer(ITextSerializer serializer, List<string> items) : ArgumentListReader
+    private abstract class ItemSerializer(ITextSerializer serializer, Utf8TextWriter writer)
+        : ArgumentListReader
     {
+        protected readonly ITextSerializer Serializer = serializer;
+        protected readonly Utf8TextWriter Writer = writer;
+
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnStruct<T>(T item, int index)
         {
-            if (typeof(T) != typeof(CancellationToken))
-                items.Add(serializer.Write(item));
+            if (typeof(T) != typeof(CancellationToken)) {
+                Serializer.Write(Writer, item, typeof(T));
+                Writer.WriteLiteral(Delimiter);
+            }
         }
+    }
 
+    private sealed class ItemPolymorphicSerializer(ITextSerializer serializer, Utf8TextWriter writer)
+        : ItemSerializer(serializer, writer)
+    {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnClass(Type type, object? item, int index)
-            => items.Add(serializer.Write(item, type));
+        {
+            var itemType = item?.GetType() ?? RequireNonAbstract(type);
+            TextTypeSerializer.WriteDerivedItemType(Writer, type, itemType);
+            Serializer.Write(Writer, item, itemType);
+            Writer.WriteLiteral(Delimiter);
+        }
 
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnAny(Type type, object? item, int index)
         {
-            if (type != typeof(CancellationToken))
-                items.Add(serializer.Write(item, type));
+            if (type.IsValueType) {
+                if (type != typeof(CancellationToken)) {
+                    Serializer.Write(Writer, item, type);
+                    Writer.WriteLiteral(Delimiter);
+                }
+                return;
+            }
+
+            var itemType = item?.GetType() ?? RequireNonAbstract(type);
+            TextTypeSerializer.WriteDerivedItemType(Writer, type, itemType);
+            Serializer.Write(Writer, item, itemType);
+            Writer.WriteLiteral(Delimiter);
         }
     }
 
-    private sealed class ItemDeserializer(ITextSerializer serializer, List<string> items) : ArgumentListWriter
+    private sealed class ItemNonPolymorphicSerializer(
+        ITextSerializer serializer,
+        Utf8TextWriter writer)
+        : ItemSerializer(serializer, writer)
     {
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override void OnClass(Type type, object? item, int index)
+        {
+            Writer.WriteLiteral(TextTypeSerializer.NullTypeSpan);
+            Serializer.Write(Writer, item, RequireNonAbstract(type));
+            Writer.WriteLiteral(Delimiter);
+        }
+
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override void OnAny(Type type, object? item, int index)
+        {
+            if (type.IsValueType) {
+                if (type != typeof(CancellationToken)) {
+                    Serializer.Write(Writer, item, type);
+                    Writer.WriteLiteral(Delimiter);
+                }
+                return;
+            }
+
+            Writer.WriteLiteral(TextTypeSerializer.NullTypeSpan);
+            Serializer.Write(Writer, item, RequireNonAbstract(type));
+            Writer.WriteLiteral(Delimiter);
+        }
+    }
+
+    // ItemDeserializer + its variants
+
+    private abstract class ItemDeserializer(ITextSerializer serializer, ReadOnlyMemory<byte> data)
+        : ArgumentListWriter
+    {
+        protected readonly ITextSerializer Serializer = serializer;
+        protected ReadOnlyMemory<byte> Data = data;
+
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override T OnStruct<T>(int index)
             => typeof(T) == typeof(CancellationToken)
                 ? default!
-                : serializer.Read<T>(items[index]);
+                : (T)Serializer.ReadDelimited(ref Data, typeof(T), Delimiter)!;
+    }
 
+    private sealed class ItemPolymorphicDeserializer(ITextSerializer serializer, ReadOnlyMemory<byte> data)
+        : ItemDeserializer(serializer, data)
+    {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnClass(Type type, int index)
-            => serializer.Read(items[index], type);
+        {
+            var itemType = TextTypeSerializer.ReadDerivedItemType(ref Data, type);
+            return Serializer.ReadDelimited(ref Data, itemType, Delimiter);
+        }
 
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnAny(Type type, int index, object? defaultValue)
-            => type == typeof(CancellationToken)
-                ? defaultValue
-                : serializer.Read(items[index], type);
+        {
+            if (type.IsValueType)
+                return type == typeof(CancellationToken)
+                    ? defaultValue
+                    : Serializer.ReadDelimited(ref Data, type, Delimiter);
+
+            var itemType = TextTypeSerializer.ReadDerivedItemType(ref Data, type);
+            return Serializer.ReadDelimited(ref Data, itemType, Delimiter);
+        }
+    }
+
+    private sealed class ItemNonPolymorphicDeserializer(ITextSerializer serializer, ReadOnlyMemory<byte> data)
+        : ItemDeserializer(serializer, data)
+    {
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override object? OnClass(Type type, int index)
+        {
+            TextTypeSerializer.ReadExactItemType(ref Data, type);
+            return Serializer.ReadDelimited(ref Data, type, Delimiter);
+        }
+
+        public override object? OnAny(Type type, int index, object? defaultValue)
+        {
+            if (type.IsValueType)
+                return type == typeof(CancellationToken)
+                    ? defaultValue
+                    : Serializer.ReadDelimited(ref Data, type, Delimiter);
+
+            TextTypeSerializer.ReadExactItemType(ref Data, type);
+            return Serializer.ReadDelimited(ref Data, type, Delimiter);
+        }
     }
 }
