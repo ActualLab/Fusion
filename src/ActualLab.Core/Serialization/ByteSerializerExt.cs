@@ -68,7 +68,7 @@ public static class ByteSerializerExt
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static ArrayPoolBuffer<byte> Write(this IByteSerializer serializer, object? value, Type type)
     {
-        var bufferWriter = new ArrayPoolBuffer<byte>();
+        var bufferWriter = new ArrayPoolBuffer<byte>(false);
         serializer.Write(bufferWriter, value, type);
         return bufferWriter;
     }
@@ -76,7 +76,7 @@ public static class ByteSerializerExt
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static ArrayPoolBuffer<byte> Write<T>(this IByteSerializer<T> serializer, T value)
     {
-        var bufferWriter = new ArrayPoolBuffer<byte>();
+        var bufferWriter = new ArrayPoolBuffer<byte>(false);
         serializer.Write(bufferWriter, value);
         return bufferWriter;
     }

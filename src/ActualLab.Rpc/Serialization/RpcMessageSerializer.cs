@@ -32,9 +32,9 @@ public abstract class RpcMessageSerializer(RpcPeer peer) : IByteSerializer<RpcMe
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected static ArrayPoolBuffer<byte> GetUtf8EncodeBuffer()
-        => _utf8EncodeBuffer ??= new ArrayPoolBuffer<byte>(Utf8BufferCapacity);
+        => ArrayPoolBuffer<byte>.NewOrReset(ref _utf8EncodeBuffer, Utf8BufferCapacity, Utf8BufferReplaceCapacity, false);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected static ArrayPoolBuffer<char> GetUtf8DecodeBuffer()
-        => _utf8DecodeBuffer ??= new ArrayPoolBuffer<char>(Utf8BufferCapacity);
+        => ArrayPoolBuffer<char>.NewOrReset(ref _utf8DecodeBuffer, Utf8BufferCapacity, Utf8BufferReplaceCapacity, false);
 }

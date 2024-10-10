@@ -5,7 +5,8 @@ using CommunityToolkit.HighPerformance.Buffers;
 
 namespace ActualLab.IO;
 
-public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity) : IBuffer<T>, IMemoryOwner<T>
+public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, bool mustClear)
+    : IBuffer<T>, IMemoryOwner<T>
 {
     private const int MinCapacity = 16;
     private const int DefaultInitialCapacity = 256;
@@ -13,13 +14,9 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity) :
     private T[] _array = pool.Rent(RoundCapacity(initialCapacity));
     private int _position;
 
-    public bool MustClear { get; init; }
-#if !NETSTANDARD2_0
-        = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
-#else
-        = true; // Not sure what's a better way to do this
-#endif
+    public bool MustClear { get; init; } = mustClear;
     public T[] Array => _array;
+    public ArrayPool<T> Pool => pool;
 
     /// <inheritdoc/>
     Memory<T> IMemoryOwner<T>.Memory => MemoryMarshal.AsMemory(WrittenMemory);
@@ -66,16 +63,58 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity) :
         get => _array.Length - _position;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ArrayPoolBuffer<T> NewOrReset(
+        ref ArrayPoolBuffer<T>? buffer, int minCapacity, int maxCapacity)
+    {
+        if (buffer == null)
+            return buffer = new ArrayPoolBuffer<T>(minCapacity);
+
+        buffer.Reset(minCapacity, maxCapacity);
+        return buffer;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ArrayPoolBuffer<T> NewOrReset(
+        ref ArrayPoolBuffer<T>? buffer, int minCapacity, int maxCapacity, bool mustClear)
+    {
+        if (buffer == null)
+            return buffer = new ArrayPoolBuffer<T>(minCapacity, mustClear);
+
+        buffer.Reset(minCapacity, maxCapacity);
+        return buffer;
+    }
+
     public ArrayPoolBuffer()
         : this(ArrayPool<T>.Shared, DefaultInitialCapacity)
+    { }
+
+    public ArrayPoolBuffer(bool mustClear)
+        : this(ArrayPool<T>.Shared, DefaultInitialCapacity, mustClear)
     { }
 
     public ArrayPoolBuffer(ArrayPool<T> pool)
         : this(pool, DefaultInitialCapacity)
     { }
 
+    public ArrayPoolBuffer(ArrayPool<T> pool, bool mustClear)
+        : this(pool, DefaultInitialCapacity, mustClear)
+    { }
+
     public ArrayPoolBuffer(int initialCapacity)
         : this(ArrayPool<T>.Shared, initialCapacity)
+    { }
+
+    public ArrayPoolBuffer(int initialCapacity, bool mustClear)
+        : this(ArrayPool<T>.Shared, initialCapacity, mustClear)
+    { }
+
+    public ArrayPoolBuffer(ArrayPool<T> pool, int initialCapacity)
+#if !NETSTANDARD2_0
+        : this(pool, initialCapacity, RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+#else
+        : this(pool, initialCapacity, true)
+#endif
     { }
 
     /// <inheritdoc/>

@@ -29,13 +29,12 @@ public sealed class RpcByteArgumentSerializerV1 : RpcArgumentSerializer
         if (arguments.Length == 0)
             return default;
 
-        var buffer = _writeBuffer ??= new ArrayPoolBuffer<byte>(WriteBufferCapacity);
-        buffer.Reset(WriteBufferCapacity, WriteBufferReplaceCapacity);
+        var buffer = GetWriteBuffer(sizeHint);
         var itemSerializer = allowPolymorphism
             ? (ItemSerializer)new ItemPolymorphicSerializer(_serializer, buffer)
             : new ItemNonPolymorphicSerializer(_serializer, buffer, _defaultTypeRefBytes);
         arguments.Read(itemSerializer);
-        return buffer.WrittenSpan.ToArray();
+        return GetWriteBufferMemory(buffer);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

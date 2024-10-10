@@ -19,7 +19,7 @@ public static class ByteTypeSerializer
             var nameSpan = ByteString.FromStringAsUtf8(name).Span;
             var fullLength = nameSpan.Length + 4;
 
-            using var buffer = new ArrayPoolBuffer<byte>(fullLength);
+            using var buffer = new ArrayPoolBuffer<byte>(fullLength, false);
             var writer = new SpanWriter(buffer.GetSpan(fullLength));
             if (nameSpan.Length > 0xFFFF)
                 throw new ArgumentOutOfRangeException(nameof(type), "Serialized type length exceeds 65535 bytes.");

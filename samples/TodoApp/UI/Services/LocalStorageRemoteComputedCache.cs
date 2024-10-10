@@ -16,6 +16,7 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
         public string KeyPrefix { get; init; } = "";
     }
 
+    [ThreadStatic] private static ArrayPoolBuffer<byte>? _writeBuffer;
     private readonly ISyncLocalStorageService _storage;
     private readonly string _keyPrefix;
 
@@ -40,7 +41,7 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
 
     public override void Set(RpcCacheKey key, RpcCacheValue value)
     {
-        using var buffer = new ArrayPoolBuffer<byte>();
+        var buffer = ArrayPoolBuffer<byte>.NewOrReset(ref _writeBuffer, 4096, 65536, false);
         MemoryPackSerializer.Serialize(buffer, value);
         var sValue = Convert.ToBase64String(buffer.WrittenSpan);
         _storage.SetItemAsString(GetStringKey(key), sValue);
@@ -58,7 +59,7 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
     private string GetStringKey(RpcCacheKey key)
     {
 #if false // The simplest impl., which doesn't produce "readable" keys
-        using var buffer = new ArrayPoolBuffer<byte>();
+        var buffer = ArrayPoolBuffer<byte>.NewOrReset(ref _writeBuffer, 4096, 65536, false);
         MemoryPackSerializer.Serialize(buffer, key);
         return Convert.ToBase64String(buffer.WrittenSpan);
 #else

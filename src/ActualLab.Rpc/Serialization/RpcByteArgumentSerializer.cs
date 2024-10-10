@@ -9,10 +9,6 @@ namespace ActualLab.Rpc.Serialization;
 
 public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
 {
-    [ThreadStatic] private static ArrayPoolBuffer<byte>? _writeBuffer;
-    public static int WriteBufferCapacity { get; set; } = 16384;
-    public static int WriteBufferReplaceCapacity { get; set; } = 65536;
-
     private readonly IByteSerializer _serializer;
 
     // ReSharper disable once ConvertToPrimaryConstructor
@@ -25,13 +21,12 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
         if (arguments.Length == 0)
             return default;
 
-        var buffer = _writeBuffer ??= new ArrayPoolBuffer<byte>(WriteBufferCapacity);
-        buffer.Reset(WriteBufferCapacity, WriteBufferReplaceCapacity);
+        var buffer = GetWriteBuffer(sizeHint);
         var itemSerializer = allowPolymorphism
             ? (ItemSerializer)new ItemPolymorphicSerializer(_serializer, buffer)
             : new ItemNonPolymorphicSerializer(_serializer, buffer);
         arguments.Read(itemSerializer);
-        return buffer.WrittenSpan.ToArray();
+        return GetWriteBufferMemory(buffer);
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

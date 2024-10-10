@@ -37,8 +37,6 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
             var decodeBuffer = GetUtf8DecodeBuffer();
             try {
                 for (var i = 0; i < headerCount; i++) {
-                    decodeBuffer.Reset(Utf8BufferCapacity, Utf8BufferReplaceCapacity);
-
                     // key
                     blob = reader.ReadMemoryL1();
                     var key = new RpcHeaderKey(blob);
@@ -52,6 +50,7 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
                     var value = decodeBuffer.WrittenSpan.ToString();
 #endif
                     headers[i] = new RpcHeader(key, value);
+                    decodeBuffer.Reset();
                 }
             }
             catch {
@@ -93,8 +92,6 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
             var decodeBuffer = GetUtf8DecodeBuffer();
             try {
                 for (var i = 0; i < headerCount; i++) {
-                    decodeBuffer.Reset(Utf8BufferCapacity, Utf8BufferReplaceCapacity);
-
                     // key
                     blob = reader.ReadMemoryL1();
                     var key = new RpcHeaderKey(blob);
@@ -108,6 +105,7 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
                     var value = decodeBuffer.WrittenSpan.ToString();
 #endif
                     headers[i] = new RpcHeader(key, value);
+                    decodeBuffer.Reset();
                 }
             }
             catch {
@@ -154,7 +152,6 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
         var encodeBuffer = GetUtf8EncodeBuffer();
         try {
             foreach (var h in headers) {
-                encodeBuffer.Reset(Utf8BufferCapacity, Utf8BufferReplaceCapacity);
                 var key = h.Key.Utf8Name;
                 encoder.Convert(h.Value.AsSpan(), encodeBuffer);
                 var valueSpan = encodeBuffer.WrittenSpan;
@@ -164,6 +161,7 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
                 writer.WriteSpanL1(key.Span);
                 writer.WriteSpanL2(valueSpan);
                 bufferWriter.Advance(headerLength);
+                encodeBuffer.Reset();
             }
         }
         catch {

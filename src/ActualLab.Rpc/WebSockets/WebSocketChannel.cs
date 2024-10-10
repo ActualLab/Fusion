@@ -107,7 +107,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         _retainedBufferSize = settings.RetainedBufferSize;
         _bufferResetPeriod = settings.BufferResetPeriod;
         _maxItemSize = settings.MaxItemSize;
-        _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize);
+        _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, false);
 
         _readChannel = Channel.CreateBounded<T>(settings.ReadChannelOptions);
         _writeChannel = Channel.CreateBounded<T>(settings.WriteChannelOptions);
@@ -331,7 +331,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private async IAsyncEnumerable<T> ReadAll([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var minReadBufferSize = Settings.MinReadBufferSize;
-        var readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize);
+        var readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize, false);
         try {
             while (true) {
                 T value;
@@ -375,7 +375,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private async IAsyncEnumerable<T> ReadAllProjecting([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var minReadBufferSize = Settings.MinReadBufferSize;
-        var readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize);
+        var readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize, false);
         try {
             while (true) {
                 var readMemory = readBuffer.GetMemory(minReadBufferSize);
@@ -402,7 +402,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 }
 
                 if (gotAnyProjection)
-                    readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize);
+                    readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize, false);
                 else if (MustReset(ref _readBufferResetCounter))
                     readBuffer.Reset(minReadBufferSize, _retainedBufferSize);
                 else
