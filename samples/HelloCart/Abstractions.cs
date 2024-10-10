@@ -11,14 +11,14 @@ namespace Samples.HelloCart;
 [DataContract, MemoryPackable, MessagePackObject]
 [method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record Product(
-    [property: DataMember] string Id,
-    [property: DataMember] decimal Price
+    [property: DataMember, Key(0)] string Id,
+    [property: DataMember, Key(1)] decimal Price
 ) : IHasId<string>;
 
 [DataContract, MemoryPackable, MessagePackObject]
 [method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record Cart(
-    [property: DataMember] string Id
+    [property: DataMember, Key(0)] string Id
 ) : IHasId<string>
 {
     [DataMember] public ImmutableDictionary<string, decimal> Items { get; init; } = ImmutableDictionary<string, decimal>.Empty;
@@ -27,8 +27,8 @@ public partial record Cart(
 [DataContract, MemoryPackable, MessagePackObject]
 [method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record EditCommand<TItem>(
-    [property: DataMember] string Id,
-    [property: DataMember] TItem? Item
+    [property: DataMember, Key(0)] string Id,
+    [property: DataMember, Key(1)] TItem? Item
 ) : ICommand<Unit>
     where TItem : class, IHasId<string>
 {
@@ -38,9 +38,9 @@ public partial record EditCommand<TItem>(
 [DataContract, MemoryPackable, MessagePackObject]
 [method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record LogMessageCommand(
-    [property: DataMember] Symbol Uuid,
-    [property: DataMember] string Message,
-    [property: DataMember] Moment DelayUntil = default
+    [property: DataMember, Key(0)] Symbol Uuid,
+    [property: DataMember, Key(1)] string Message,
+    [property: DataMember, Key(2)] Moment DelayUntil = default
 ) : ILocalCommand<Unit>, IHasUuid, IHasDelayUntil
 {
     private static long _nextIndex;

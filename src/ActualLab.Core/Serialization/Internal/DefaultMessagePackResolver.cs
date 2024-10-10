@@ -1,3 +1,4 @@
+using Cysharp.Serialization.MessagePack;
 using MessagePack;
 using MessagePack.Formatters;
 using MessagePack.Resolvers;
@@ -10,6 +11,7 @@ public class DefaultMessagePackResolver : IFormatterResolver
 
     public static IEnumerable<IFormatterResolver> Resolvers { get; set; } = new [] {
         StandardResolver.Instance,
+        UlidMessagePackResolver.Instance,
         UnitMessagePackFormatter.Resolver,
     };
 

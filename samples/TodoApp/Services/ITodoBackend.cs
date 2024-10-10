@@ -25,13 +25,13 @@ public interface ITodoBackend : IComputeService
 [DataContract, MemoryPackable, MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public sealed partial record TodoBackend_AddOrUpdate(
-    [property: DataMember] string Folder,
-    [property: DataMember] TodoItem Item
+    [property: DataMember, Key(0)] string Folder,
+    [property: DataMember, Key(1)] TodoItem Item
 ) : IBackendCommand<TodoItem>;
 
 [DataContract, MemoryPackable, MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public sealed partial record TodoBackend_Remove(
-    [property: DataMember] string Folder,
-    [property: DataMember] Ulid Id
+    [property: DataMember, Key(0)] string Folder,
+    [property: DataMember, Key(1)] Ulid Id
 ) : IBackendCommand<Unit>;
