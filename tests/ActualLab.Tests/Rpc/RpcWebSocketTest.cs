@@ -204,9 +204,20 @@ public class RpcWebSocketTest : RpcTestBase
         await AssertNoCalls(peer, Out);
     }
 
-    [Fact]
-    public async Task StreamTest()
+    [Theory]
+    [InlineData("json")]
+    [InlineData("njson")]
+    [InlineData("mempack1")]
+    [InlineData("mempack2")]
+    [InlineData("mempack2a")]
+    [InlineData("mempack2c")]
+    [InlineData("msgpack1")]
+    [InlineData("msgpack2")]
+    [InlineData("msgpack2a")]
+    [InlineData("msgpack2c")]
+    public async Task StreamTest(string serializationFormat)
     {
+        SerializationFormat = serializationFormat;
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
