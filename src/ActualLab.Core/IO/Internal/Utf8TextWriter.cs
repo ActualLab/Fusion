@@ -103,6 +103,7 @@ public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(
     public override void Write(decimal value)
         => _sb.Append(value);
 
+#if !NETSTANDARD2_0
     public override void Write(ReadOnlySpan<char> buffer)
         => _sb.Append(buffer);
 
@@ -133,6 +134,7 @@ public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(
         WriteLine(buffer.Span);
         return Task.CompletedTask;
     }
+#endif
 
     public override Task FlushAsync()
         => Task.CompletedTask;
