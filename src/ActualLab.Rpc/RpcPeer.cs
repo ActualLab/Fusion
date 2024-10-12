@@ -11,6 +11,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public static LogLevel DefaultCallLogLevel { get; set; } = LogLevel.None;
 
     private volatile AsyncState<RpcPeerConnectionState> _connectionState = new(RpcPeerConnectionState.Disconnected, true);
+    private volatile RpcHandshake? _handshake;
+    private volatile RpcMethodResolver _serverMethodResolver;
     private volatile ChannelWriter<RpcMessage>? _sender;
     private volatile RpcPeerStopMode _stopMode;
     private bool _resetTryIndex;
@@ -37,7 +39,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public VersionSet Versions { get; init; }
     public RpcSerializationFormat SerializationFormat { get; init; }
     public RpcArgumentSerializer ArgumentSerializer { get; init; }
-    public RpcMethodResolver ServerMethodResolver { get; protected set; }
     public RpcHashProvider HashProvider { get; init; }
     public RpcInboundContextFactory InboundContextFactory { get; init; }
     public RpcInboundCallFilter InboundCallFilter { get; init; }
@@ -45,9 +46,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public RpcOutboundCallTracker OutboundCalls { get; init; }
     public RpcRemoteObjectTracker RemoteObjects { get; init; }
     public RpcSharedObjectTracker SharedObjects { get; init; }
-    public LogLevel CallLogLevel { get; init; } = DefaultCallLogLevel;
-    public AsyncState<RpcPeerConnectionState> ConnectionState => _connectionState;
     public RpcPeerInternalServices InternalServices => new(this);
+    public LogLevel CallLogLevel { get; init; } = DefaultCallLogLevel;
+
+    public AsyncState<RpcPeerConnectionState> ConnectionState => _connectionState;
+    public RpcMethodResolver ServerMethodResolver => _serverMethodResolver;
+    public RpcHandshake? Handshake => _handshake;
 
     public RpcPeerStopMode StopMode {
         get => _stopMode;
@@ -67,10 +71,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         Ref = peerRef;
         ConnectionKind = peerRef.GetConnectionKind(hub);
         Versions = versions ?? peerRef.GetVersions();
+        _serverMethodResolver = GetServerMethodResolver(null);
 
         SerializationFormat = Hub.SerializationFormats.Get(peerRef);
         ArgumentSerializer = SerializationFormat.ArgumentSerializer;
-        ServerMethodResolver = Hub.ServiceRegistry.ServerMethodResolver;
         HashProvider = Hub.HashProvider;
         InboundContextFactory = Hub.InboundContextFactory;
         InboundCallFilter = Hub.InboundCallFilter;
@@ -386,7 +390,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         RemoteObjects.Abort();
         await SharedObjects.Abort(error).ConfigureAwait(false);
         if (isStopped)
-            await OutboundCalls.Abort(error).ConfigureAwait(false);
+            await OutboundCalls.Abort(error, assumeCancelled: true).ConfigureAwait(false);
         // Inbound calls are auto-aborted via peerChangedToken from OnRun,
         // which becomes RpcInboundCallContext.CancellationToken.
         InboundCalls.Clear();
@@ -445,14 +449,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 return connectionState;
             }
             _connectionState = connectionState = nextConnectionState;
-            var serviceRegistry = Hub.ServiceRegistry;
-            try {
-                ServerMethodResolver = serviceRegistry.GetServerMethodResolver(newState.Handshake?.RemoteApiVersionSet);
-            }
-            catch (Exception e) {
-                Log.LogError(e, "[LegacyName] conflict");
-                ServerMethodResolver = serviceRegistry.ServerMethodResolver;
-            }
+            _serverMethodResolver = GetServerMethodResolver(newState.Handshake);
+            _handshake = newState.Handshake;
             if (newState.Error != null && Hub.PeerTerminalErrorDetector.Invoke(newState.Error)) {
                 terminalError = newState.Error;
                 connectionState.TrySetFinal(terminalError);
@@ -487,6 +485,17 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 else
                     Log.LogWarning("'{PeerRef}': Disconnected", Ref);
             }
+        }
+    }
+
+    protected virtual RpcMethodResolver GetServerMethodResolver(RpcHandshake? handshake)
+    {
+        try {
+            return Hub.ServiceRegistry.GetServerMethodResolver(handshake?.RemoteApiVersionSet);
+        }
+        catch (Exception e) {
+            Log.LogError(e, "[LegacyName] conflict");
+            return Hub.ServiceRegistry.ServerMethodResolver;
         }
     }
 

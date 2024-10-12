@@ -55,30 +55,31 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
             return WhenProcessed = completedStage switch {
                 >= 2 => Task.CompletedTask,
                 1 => ProcessStage2(cancellationToken),
-                _ => ProcessStage1(cancellationToken)
+                _ => ProcessStage1Plus(cancellationToken)
             };
         }
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    protected override async Task ProcessStage1(CancellationToken cancellationToken)
+    protected override async Task ProcessStage1Plus(CancellationToken cancellationToken)
     {
         await ResultTask!.SilentAwait(false);
+
         lock (Lock) {
             if (Trace is { } trace) {
                 trace.Complete(this);
                 Trace = null;
             }
-            if (Computed != null) {
+            if (Context.Peer.Handshake is { ProtocolVersion: <= 1 } && Computed != null) {
                 // '@' is required to make it compatible with pre-v7.2 versions
                 var versionHeader = new RpcHeader(WellKnownRpcHeaders.Version, Computed.Version.FormatVersion('@'));
                 ResultHeaders = ResultHeaders.WithOrReplace(versionHeader);
             }
-        }
-        if (CallCancelToken.IsCancellationRequested) {
-            // The call is cancelled by remote party
-            Unregister();
-            return;
+            if (CallCancelToken.IsCancellationRequested) {
+                // The call is cancelled by remote party
+                UnregisterFromLock();
+                return;
+            }
         }
         await SendResult().ConfigureAwait(false);
         await ProcessStage2(cancellationToken).ConfigureAwait(false);
@@ -87,6 +88,7 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected async Task ProcessStage2(CancellationToken cancellationToken)
     {
+        var mustSendInvalidation = true;
         try {
             if (Computed is { } computed) {
                 using var commonCts = cancellationToken.LinkWith(CallCancelToken);
@@ -98,17 +100,12 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
         }
         catch (OperationCanceledException) when (CallCancelToken.IsCancellationRequested) {
             // The call is cancelled by remote party
-            Unregister();
-            return;
+            mustSendInvalidation = false;
         }
         Unregister();
-        await SendInvalidation().ConfigureAwait(false);
-    }
-
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    private Task SendInvalidation()
-    {
-        var computeSystemCallSender = Hub.Services.GetRequiredService<RpcComputeSystemCallSender>();
-        return computeSystemCallSender.Invalidate(Context.Peer, Id, ResultHeaders);
+        if (mustSendInvalidation) {
+            var computeSystemCallSender = Hub.Services.GetRequiredService<RpcComputeSystemCallSender>();
+            await computeSystemCallSender.Invalidate(Context.Peer, Id, ResultHeaders).ConfigureAwait(false);
+        }
     }
 }

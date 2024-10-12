@@ -220,14 +220,14 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    public async Task Abort(Exception error)
+    public async Task Abort(Exception error, bool assumeCancelled)
     {
         var abortedCallIds = new HashSet<long>();
         for (int i = 0;; i++) {
             var abortedCallCountBefore = abortedCallIds.Count;
             foreach (var call in this) {
                 if (abortedCallIds.Add(call.Id))
-                    call.SetError(error, context: null, assumeCancelled: true);
+                    call.SetError(error, context: null, assumeCancelled);
             }
             if (i >= 2 && abortedCallCountBefore == abortedCallIds.Count)
                 break;

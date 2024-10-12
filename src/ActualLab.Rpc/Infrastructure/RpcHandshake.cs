@@ -11,7 +11,7 @@ public sealed partial record RpcHandshake(
     [property: DataMember(Order = 3), MemoryPackOrder(3), Key(3)] int ProtocolVersion,
     [property: DataMember(Order = 4), MemoryPackOrder(4), Key(4)] int Index
 ) {
-    public const int CurrentProtocolVersion = 1;
+    public const int CurrentProtocolVersion = 2;
 
     public RpcPeerChangeKind GetPeerChangeKind(RpcHandshake? lastHandshake)
     {

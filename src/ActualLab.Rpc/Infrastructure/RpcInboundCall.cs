@@ -102,12 +102,16 @@ public abstract class RpcInboundCall : RpcCall
 
     protected bool Unregister()
     {
-        lock (Lock) {
-            if (!Context.Peer.InboundCalls.Unregister(this))
-                return false; // Already completed or NoWait
+        lock (Lock)
+            return UnregisterFromLock();
+    }
 
-            CallCancelSource.DisposeSilently();
-        }
+    protected bool UnregisterFromLock()
+    {
+        if (!Context.Peer.InboundCalls.Unregister(this))
+            return false; // Already completed or NoWait
+
+        CallCancelSource.DisposeSilently();
         return true;
     }
 }
@@ -168,7 +172,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
             catch (Exception error) {
                 ResultTask = Task.FromException<TResult>(error);
             }
-            return WhenProcessed = ProcessStage1(cancellationToken);
+            return WhenProcessed = ProcessStage1Plus(cancellationToken);
         }
     }
 
@@ -181,7 +185,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
 
             return WhenProcessed = completedStage switch {
                 >= 1 => Task.CompletedTask,
-                _ => ProcessStage1(cancellationToken)
+                _ => ProcessStage1Plus(cancellationToken)
             };
         }
     }
@@ -189,7 +193,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     // Protected methods
 
     [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
-    protected virtual Task ProcessStage1(CancellationToken cancellationToken)
+    protected virtual Task ProcessStage1Plus(CancellationToken cancellationToken)
     {
         return ResultTask!.IsCompleted
             ? Complete()
@@ -206,7 +210,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
                     trace.Complete(this);
                     Trace = null;
                 }
-                Unregister();
+                UnregisterFromLock();
             }
             return CallCancelToken.IsCancellationRequested
                 ? Task.CompletedTask

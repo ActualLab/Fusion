@@ -3,7 +3,7 @@ namespace ActualLab.Rpc.Infrastructure;
 public static class WellKnownRpcHeaders
 {
     public static readonly RpcHeaderKey Hash = new((Symbol)"#");
-    public static readonly RpcHeaderKey Version = new((Symbol)"v");
+    public static readonly RpcHeaderKey Version = new((Symbol)"v"); // Unused from ProtocolVersion >= 2
     public static readonly RpcHeaderKey ActivityId = new((Symbol)"~");
     public static readonly RpcHeaderKey W3CTraceParent = new((Symbol)"~p");
     public static readonly RpcHeaderKey W3CTraceState = new((Symbol)"~s");

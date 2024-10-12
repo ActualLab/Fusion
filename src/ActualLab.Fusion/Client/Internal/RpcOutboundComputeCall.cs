@@ -8,8 +8,6 @@ namespace ActualLab.Fusion.Client.Internal;
 
 public interface IRpcOutboundComputeCall
 {
-    string? ResultVersion { get; }
-
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     void SetInvalidated(RpcInboundContext context);
 }
@@ -28,7 +26,6 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
                 : RpcCallStage.ResultReady
             : 0;
 
-    public string? ResultVersion { get; protected set; }
     // ReSharper disable once InconsistentlySynchronizedField
     public Task WhenInvalidated => WhenInvalidatedSource.Task;
 
@@ -55,7 +52,6 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void SetResult(object? result, RpcInboundContext? context)
     {
-        var resultVersion = context.GetResultVersion();
         // We always use Lock to update ResultSource in this type
         lock (Lock) {
             // The code below is a copy of base.SetResult
@@ -72,23 +68,15 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             }
 
             if (!ResultSource.TrySetResult(typedResult)) {
-                // Result was set earlier; let's check for non-peer set or version mismatch
-                if (resultVersion == null || !resultVersion.Equals(ResultVersion, StringComparison.Ordinal))
-                    SetInvalidatedUnsafe(true);
-                return;
+                CompleteKeepRegistered();
+                Context.CacheInfoCapture?.CaptureValue(context!.Message);
             }
-
-            CompleteKeepRegistered();
-            ResultVersion = resultVersion;
-            if (context != null)
-                Context.CacheInfoCapture?.CaptureValue(context.Message);
         }
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void SetMatch(RpcInboundContext? context)
     {
-        var resultVersion = context.GetResultVersion();
         // We always use Lock to update ResultSource in this type
         lock (Lock) {
             // The code below is a copy of base.SetResult
@@ -97,28 +85,25 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             // we'll need to await for invalidation
             var cacheEntry = Context.CacheInfoCapture?.CacheEntry as RpcCacheEntry<TResult>;
             if (cacheEntry == null) {
-                SetError(Rpc.Internal.Errors.MatchButNoCachedEntry(), null);
+                var error = Rpc.Internal.Errors.MatchButNoCachedEntry();
+                SetError(error, context: null);
+                Peer.InternalServices.Log.LogError(error,
+                    "Got 'Match', but the outbound call has no cached entry: {Call}", this);
                 return;
             }
-
-            if (!ResultSource.TrySetResult(cacheEntry.Result)) {
-                // Result was set earlier; let's check for non-peer set or version mismatch
-                if (resultVersion == null || !resultVersion.Equals(ResultVersion, StringComparison.Ordinal))
-                    SetInvalidatedUnsafe(true);
-                return;
-            }
-
-            CompleteKeepRegistered();
-            ResultVersion = resultVersion;
-            if (context != null)
+            if (ResultSource.TrySetResult(cacheEntry.Result)) {
+                CompleteKeepRegistered();
                 Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
+            }
         }
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void SetError(Exception error, RpcInboundContext? context, bool assumeCancelled = false)
     {
-        var resultVersion = context.GetResultVersion();
+        // SetError call not only sets the error, but also
+        // invalidates computed method calls awaiting the invalidation, if context == null.
+
         var oce = error as OperationCanceledException;
         if (error is RpcRerouteException)
             oce = null; // RpcRerouteException is OperationCanceledException, but must be exposed as-is here
@@ -128,17 +113,10 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             var isResultSet = oce != null
                 ? ResultSource.TrySetCanceled(cancellationToken)
                 : ResultSource.TrySetException(error);
-            if (!isResultSet) {
-                // Result was set earlier; let's check for non-peer set or version mismatch
-                if (resultVersion == null || !resultVersion.Equals(ResultVersion, StringComparison.Ordinal))
-                    SetInvalidatedUnsafe(!assumeCancelled);
-                return;
+            if (isResultSet) {
+                CompleteKeepRegistered();
+                Context.CacheInfoCapture?.CaptureValue(oce != null, error, cancellationToken);
             }
-
-            // Result was just set
-            CompleteKeepRegistered();
-            ResultVersion = resultVersion;
-            Context.CacheInfoCapture?.CaptureValue(oce != null, error, cancellationToken);
             if (context == null) // Non-peer set
                 SetInvalidatedUnsafe(!assumeCancelled);
         }
