@@ -64,7 +64,6 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
     protected override async Task ProcessStage1Plus(CancellationToken cancellationToken)
     {
         await ResultTask!.SilentAwait(false);
-
         lock (Lock) {
             if (Trace is { } trace) {
                 trace.Complete(this);

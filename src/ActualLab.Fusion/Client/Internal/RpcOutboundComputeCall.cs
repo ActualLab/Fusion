@@ -66,8 +66,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             catch (InvalidCastException) {
                 // Intended
             }
-
-            if (!ResultSource.TrySetResult(typedResult)) {
+            if (ResultSource.TrySetResult(typedResult)) {
                 CompleteKeepRegistered();
                 Context.CacheInfoCapture?.CaptureValue(context!.Message);
             }
