@@ -32,7 +32,7 @@ public sealed class RpcTextMessageSerializer(RpcPeer peer)
             tail = tail[1..];
 
         var argumentData = (ReadOnlyMemory<byte>)tail.ToArray();
-        var result = new RpcMessage(m.CallTypeId, m.RelatedId, methodRef, argumentData, m.ParseHeaders());
+        var result = new RpcMessage(m.CallType, m.RelatedId, methodRef, argumentData, m.ParseHeaders());
         readLength = data.Length;
         return result;
     }

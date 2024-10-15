@@ -1,12 +1,17 @@
+using System.ComponentModel;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Serialization.Internal;
 
 [method: JsonConstructor]
 public sealed record JsonRpcMessage(
-    byte CallTypeId,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault), DefaultValue((byte)0)]
+    byte CallType,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault), DefaultValue((long)0)]
     long RelatedId,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault), DefaultValue(null)]
     string? Method,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault), DefaultValue(null)]
     List<string>? Headers)
 {
     private const int HeaderBufferCapacity = 16;
