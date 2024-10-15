@@ -11,6 +11,7 @@ var session = new Session(sessionId);
 var services = CreateServiceProvider();
 var todoApi = services.GetRequiredService<ITodoApi>();
 await ObserveTodos();
+// await ObserveSummary();
 
 async Task ObserveTodos()
 {
