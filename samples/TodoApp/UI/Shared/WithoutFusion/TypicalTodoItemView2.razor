@@ -1,0 +1,61 @@
+@implements IDisposable
+@inject ITypicalTodoApi TodoApi
+
+@{
+    var m = _item;
+    if (ReferenceEquals(m, null))
+        return;
+}
+
+<Addons Margin="Margin.Is3.OnY">
+    <Addon AddonType="AddonType.Start">
+        <AddonLabel>
+            <Blazorise.Icon Name="@(m.IsDone ? FontAwesomeIcons.CheckSquare : FontAwesomeIcons.Square)" />
+        </AddonLabel>
+    </Addon>
+    <TextEdit Text="@m.Title" Debounce="true" />
+    <Addon AddonType="AddonType.End">
+        <Button Color="Color.Warning">
+            <Blazorise.Icon Name="FontAwesomeIcons.Minus"/>
+        </Button>
+    </Addon>
+</Addons>
+
+@code {
+    private CancellationTokenSource? _stopTokenSource;
+    private TodoItem? _item;
+
+    [Parameter]
+    public string Id { get; set; } = null!;
+
+    public void Dispose()
+        => _stopTokenSource?.CancelAndDisposeSilently();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _stopTokenSource = new();
+        var cancellationToken = _stopTokenSource.Token;
+        var changes = await TodoApi.ObserveItem(cancellationToken); // We should call ObserveItem this before GetItem
+        _ = ObserveChanges(changes, cancellationToken); // And _reliably_ cancel + dispose
+        _item ??= await TodoApi.GetItem(Ulid.Parse(Id), cancellationToken); // Note "??="
+
+        // And even this code is far from being perfect:
+        // - ObserveItem must be written really carefully: the sequence it produces can't miss a change
+        // - What's going to happen on disconnect?
+        // - This code implies we have to re-render everything on reconnect (so user may see scrolls, etc.)
+    }
+
+    private async Task ObserveChanges(IAsyncEnumerable<TodoItem> changes, CancellationToken cancellationToken)
+    {
+        // "await foreach" reliably disposes the enumerator
+        await foreach (var item in changes.WithCancellation(cancellationToken))
+            _item = item;
+    }
+
+    // Since this is just an example, the API is declared right here:
+    public interface ITypicalTodoApi
+    {
+        Task<TodoItem?> GetItem(Ulid id, CancellationToken cancellationToken = default);
+        Task<IAsyncEnumerable<TodoItem>> ObserveItem(CancellationToken cancellationToken = default);
+    }
+}

@@ -1,0 +1,48 @@
+@inject ITypicalTodoApi TodoApi
+
+@{
+    var m = _item;
+    if (ReferenceEquals(m, null))
+        return;
+}
+
+<Addons Margin="Margin.Is3.OnY">
+    <Addon AddonType="AddonType.Start">
+        <AddonLabel>
+            <Blazorise.Icon Name="@(m.IsDone ? FontAwesomeIcons.CheckSquare : FontAwesomeIcons.Square)" />
+        </AddonLabel>
+    </Addon>
+    <TextEdit Text="@m.Title" Debounce="true" />
+    <Addon AddonType="AddonType.End">
+        <Button Color="Color.Warning">
+            <Blazorise.Icon Name="FontAwesomeIcons.Minus"/>
+        </Button>
+    </Addon>
+</Addons>
+
+@code {
+    private TodoItem? _item;
+
+    [Parameter]
+    public string Id { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _item = await TodoApi.GetItem(Ulid.Parse(Id));
+        _ = ObserveChanges();
+    }
+
+    private async Task ObserveChanges()
+    {
+        var changes = await TodoApi.ObserveItem();
+        await foreach (var item in changes)
+            _item = item;
+    }
+
+    // Since this is just an example, the API is declared right here:
+    public interface ITypicalTodoApi
+    {
+        Task<TodoItem?> GetItem(Ulid id, CancellationToken cancellationToken = default);
+        Task<IAsyncEnumerable<TodoItem>> ObserveItem(CancellationToken cancellationToken = default);
+    }
+}
