@@ -201,11 +201,12 @@ void ConfigureServices()
         _ => throw Errors.InternalError("Invalid host kind."),
     };
 
-    // RPC-exposed compute service(s)
-    fusion.AddService<ITodoApi, TodoApi>();
-    // fusion.AddService<ITodoApi, InMemoryTodoApi>();
-    // RPC-exposed non-compute services
-    fusion.Rpc.AddService<IRpcExampleService, RpcExampleService>();
+    // ITodoApi and ISimpleService
+    if (hostKind is HostKind.ApiServer or HostKind.SingleServer) {
+        fusion.AddServer<ITodoApi, TodoApi>();
+        // fusion.AddServer<ITodoApi, InMemoryTodoApi>(); // Simpler in-memory alternative to TodoApi
+        fusion.Rpc.AddServer<ISimpleService, SimpleService>();
+    }
 
     // Shared services
     StartupHelper.ConfigureSharedServices(services, hostKind, hostSettings.BackendUrl);

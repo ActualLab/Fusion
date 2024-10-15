@@ -1,8 +1,10 @@
 @page "/rpc-example"
 @using System.Globalization
+@using Samples.TodoApp.UI.Services
 @using ActualLab.Rpc
 @implements IDisposable
-@inject IRpcExampleService RpcExampleService
+@inject IServiceProvider Services
+@inject ISimpleService SimpleService
 @inject ILogger<RpcExamplePage> Log
 
 @{
@@ -17,6 +19,9 @@
 </Div>
 <Div Margin="Margin.Is1.OnY">
     Greet: <b>@_greeting</b>
+</Div>
+<Div Margin="Margin.Is1.OnY">
+    Ping-pong: <b>@_lastPing</b> - <b>@_lastPong</b>
 </Div>
 <Div Margin="Margin.Is1.OnY">
     GetTable: <b>@_table.Title</b>
@@ -40,9 +45,12 @@
 @code {
     private const int RowLimit = 16;
     private const int ItemLimit = 16;
+    private static int _lastPingIndex;
 
     private readonly CancellationTokenSource? _stopTokenSource;
     private readonly CancellationToken _stopToken;
+    private string _lastPing = "";
+    private string _lastPong = "";
     private string _greeting = "";
     private TableModel<int> _table = new();
 
@@ -58,13 +66,16 @@
     protected override async Task OnInitializedAsync()
     {
         var cancellationToken = _stopToken;
-        var greetingTask = RpcExampleService.Greet("Fusion explorer", cancellationToken);
-        var tableTask = RpcExampleService.GetTable("Streamed table", cancellationToken);
+        var greetingTask = SimpleService.Greet("Fusion explorer", cancellationToken);
+        var tableTask = SimpleService.GetTable("Streamed table", cancellationToken);
+        _ = PingPong(cancellationToken);
         _greeting = await greetingTask;
         var table = await tableTask;
         _table = new TableModel<int>(table.Title);
         _ = ReadTable(table, cancellationToken);
     }
+
+    // Private methods
 
     private async Task ReadTable(Table<int> table, CancellationToken cancellationToken)
     {
@@ -102,11 +113,44 @@
         row.Sum = null;
         var items = row.Items.ToArray(); // We need a copy here to enable concurrent enumeration
         var stream = RpcStream.New(items);
-        var sum = await RpcExampleService.Sum(stream, cancellationToken);
+        var sum = await SimpleService.Sum(stream, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested(); // No updates if CT was cancelled
         row.Sum = sum == items.Sum() ? sum : -sum; // Quick error check
         StateHasChanged();
+    }
+
+    private async Task PingPong(CancellationToken cancellationToken)
+    {
+        var clientSideService = Services.GetService<SimpleClientSideService>();
+        if (clientSideService == null) {
+            _lastPong = "Switch to WASM - Blazor Server can't play ping-pong!";
+            StateHasChanged();
+            return;
+        }
+
+        _ = SendPings(cancellationToken);
+        await foreach (var pong in clientSideService.PongChannel.Reader.ReadAllAsync(cancellationToken)) {
+            _lastPong = pong;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SendPings(CancellationToken cancellationToken)
+    {
+        var peer = Services.RpcHub().GetClientPeer(RpcPeerRef.Default);
+        // RpcNoWait calls are simply dropped if there is no connection -
+        // that's why it makes sense to wait for connection before sending the first ping.
+        // Try disconnecting the
+        await peer.WhenConnected(cancellationToken);
+        while (true) {
+            var message = $"Ping {Interlocked.Increment(ref _lastPingIndex)}";
+            _lastPing = message;
+            _lastPong = "";
+            StateHasChanged();
+            await SimpleService.Ping(message); // You don't have to await it
+            await Task.Delay(TimeSpan.FromSeconds(0.5), cancellationToken);
+        }
     }
 
     // Nested types

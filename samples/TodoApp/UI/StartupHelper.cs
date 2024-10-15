@@ -38,7 +38,8 @@ public static class StartupHelper
 #endif
         // Default RPC client serialization format
         RpcSerializationFormatResolver.Default = RpcSerializationFormatResolver.Default with {
-            DefaultClientFormatKey = "mempack2",
+            DefaultClientFormatKey = "mempack2c",
+            // DefaultClientFormatKey = "json",
         };
 
         // Fusion services
@@ -48,7 +49,10 @@ public static class StartupHelper
 
         // RPC clients
         fusion.AddClient<ITodoApi>();
-        fusion.Rpc.AddClient<IRpcExampleService>();
+        fusion.Rpc.AddClient<ISimpleService>();
+
+        // Client-side RPC services (client-side servers callable from the server side)
+        fusion.Rpc.AddServer<ISimpleClientSideService, SimpleClientSideService>();
 
         // LocalStorageRemoteComputedCache as IRemoteComputedCache
         services.AddBlazoredLocalStorageAsSingleton();
@@ -74,16 +78,21 @@ public static class StartupHelper
 
         if (hostKind != HostKind.BackendServer) {
             // Client and API host settings
-            // RpcCallTimeouts.Defaults.BackendCommand = RpcCallTimeouts.Defaults.Command; // Just for debugging
-            RpcDefaultDelegates.FrameDelayerProvider = RpcFrameDelayerProviders.Auto(); // Highly recommended option for client & API servers
-            fusion.Rpc.AddWebSocketClient(remoteRpcHostUrl);
-            if (hostKind == HostKind.ApiServer)
-                // ApiServer should always go to BackendServer's /backend/rpc/ws endpoint
-                RpcPeerRef.Default = RpcPeerRef.GetDefaultPeerRef(isBackend: true);
 
-            // Client and SSB services
-            ComputedState.DefaultOptions.FlowExecutionContext = true; // To preserve current culture
-            fusion.AddService<Todos>(ServiceLifetime.Scoped);
+            // Highly recommended option for client & API servers:
+            RpcDefaultDelegates.FrameDelayerProvider = RpcFrameDelayerProviders.Auto();
+            // Lets ComputedState to be dependent on e.g. current culture - use only if you need this:
+            // ComputedState.DefaultOptions.FlowExecutionContext = true;
+            fusion.Rpc.AddWebSocketClient(remoteRpcHostUrl);
+            if (hostKind is HostKind.ApiServer or HostKind.SingleServer) {
+                // All server-originating RPC connections should go to the default backend server
+                RpcPeerRef.Default = RpcPeerRef.GetDefaultPeerRef(isBackend: true);
+                // And want to call the client via this server-side RPC client:
+                fusion.Rpc.AddClient<ISimpleClientSideService>();
+            }
+
+            // If we're here, hostKind is Client, ApiServer, or SingleServer
+            fusion.AddComputeService<Todos>(ServiceLifetime.Scoped);
             services.AddScoped(c => new RpcPeerStateMonitor(c, OSInfo.IsAnyClient ? RpcPeerRef.Default : null));
             services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25)); // 0.25s
 

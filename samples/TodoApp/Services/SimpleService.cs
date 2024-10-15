@@ -1,10 +1,11 @@
 using System.Runtime.CompilerServices;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 using Samples.TodoApp.Abstractions;
 
 namespace Samples.TodoApp.Services;
 
-public class RpcExampleService : IRpcExampleService
+public class SimpleService(ISimpleClientSideService clientSideService) : ISimpleService
 {
     private const double RowDelayProbability = 0.2;
     private const double ItemDelayProbability = 0.2;
@@ -21,6 +22,14 @@ public class RpcExampleService : IRpcExampleService
 
     public Task<int> Sum(RpcStream<int> stream, CancellationToken cancellationToken = default)
         => stream.SumAsync(cancellationToken).AsTask();
+
+    public async Task<RpcNoWait> Ping(string message)
+    {
+        var peer = RpcInboundContext.GetCurrent().Peer; // Get the peer for the current call
+        using var _ = new RpcOutboundContext(peer).Activate(); // Pre-routes the upcoming call to that peer
+        await clientSideService.Pong($"Pong to '{message}'").ConfigureAwait(false);
+        return default;
+    }
 
     // Private methods
 
