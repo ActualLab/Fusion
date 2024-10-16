@@ -192,7 +192,6 @@
     <PackageVersion Include="Xunit.DependencyInjection.Logging" Version="8.1.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
 
-
     <!-- Samples only -->
     <PackageVersion Include="ActualLab.Interception" Version="$(FusionVersion)" />
     <PackageVersion Include="ActualLab.Generators" Version="$(FusionVersion)" />
