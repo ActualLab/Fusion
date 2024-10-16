@@ -84,15 +84,15 @@
 
   <!-- Polyfills -->
   <ItemGroup Condition="!($(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')))">
-    <PackageReference Include="PolySharp" />
+    <PackageReference Include="PolySharp" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- Analyzers -->
   <ItemGroup>
-    <PackageReference Include="xunit.analyzers" />
-    <PackageReference Include="Roslynator.Analyzers" />
-    <PackageReference Include="Meziantou.Analyzer" />
-    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" />
+    <PackageReference Include="xunit.analyzers" PrivateAssets="all" />
+    <PackageReference Include="Roslynator.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- Global usings -->

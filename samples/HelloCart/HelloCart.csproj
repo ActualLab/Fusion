@@ -24,7 +24,7 @@
   <!-- Source generators -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <PackageReference Include="MemoryPack.Generator" />
+    <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

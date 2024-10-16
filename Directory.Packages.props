@@ -182,8 +182,7 @@
     <!-- Test time only -->
     <PackageVersion Include="Castle.Core" Version="5.1.1" />
     <PackageVersion Include="AutoFixture.AutoMoq" Version="4.18.1" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.2"
-                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
     <PackageVersion Include="ILogger.Moq" Version="1.1.10" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(AspNetCoreVersion)" />
@@ -191,8 +190,8 @@
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="xunit" Version="2.9.0" />
     <PackageVersion Include="Xunit.DependencyInjection.Logging" Version="8.1.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2"
-                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+
 
     <!-- Samples only -->
     <PackageVersion Include="ActualLab.Interception" Version="$(FusionVersion)" />
@@ -209,40 +208,26 @@
 
     <!-- Build time only -->
     <PackageVersion Include="ActualLab.Core" Version="$(FusionVersion)" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Build" Version="$(BlazorVersion)"
-                    PrivateAssets="all" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(BlazorVersion)"
-                    PrivateAssets="all" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0"
-                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(EntityFrameworkCoreVersion)"
-                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers;" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EntityFrameworkCoreVersion)"
-                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers;" />
-    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.6.133"
-                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
-    <PackageVersion Include="PolySharp" Version="1.14.1"
-                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Build" Version="$(BlazorVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(BlazorVersion)" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(EntityFrameworkCoreVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EntityFrameworkCoreVersion)" />
+    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.6.133" />
+    <PackageVersion Include="PolySharp" Version="1.14.1" />
+
 
     <!-- Analyzers -->
-    <PackageVersion Include="Moq.Analyzers" Version="0.0.9"
-                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers"/>
-    <PackageVersion Include="xunit.analyzers" Version="1.15.0"
-                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
-    <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.9.28"
-                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.12.4"
-                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers"/>
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.163"
-                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers"/>
+    <PackageVersion Include="Moq.Analyzers" Version="0.0.9" />
+    <PackageVersion Include="xunit.analyzers" Version="1.15.0" />
+    <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.9.28" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="4.12.4" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.163" />
 
     <!-- Generators -->
-    <PackageVersion Include="MemoryPack.Generator" Version="$(MemoryPackVersion)"
-                    PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(CSharpVersion)"
-                    PrivateAssets="all" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4"
-                    PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
+    <PackageVersion Include="MemoryPack.Generator" Version="$(MemoryPackVersion)" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(CSharpVersion)" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" />
   </ItemGroup>
 
 </Project>

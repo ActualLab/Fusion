@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
-    <PackageReference Include="MemoryPack.Generator" />
+    <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">

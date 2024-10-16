@@ -14,7 +14,7 @@
   <ItemGroup>
     <PackageReference Include="Bullseye" />
     <PackageReference Include="CliWrap" />
-    <PackageReference Include="ActualLab.Core" />
+    <PackageReference Include="ActualLab.Core" PrivateAssets="all" />
     <PackageReference Include="System.CommandLine.DragonFruit" />
   </ItemGroup>
 
