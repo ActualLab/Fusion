@@ -22,7 +22,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
     private readonly Action<TTimer>? _fireHandler;
     private readonly RadixHeapSet<TTimer> _timers = new(45);
     private readonly Moment _start;
-    private int _minPriority = 0;
+    private int _minPriority;
 
     public MomentClock Clock { get; }
     public TickSource TickSource { get; }

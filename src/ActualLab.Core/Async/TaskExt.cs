@@ -1,4 +1,5 @@
 using ActualLab.Internal;
+using ActualLab.OS;
 
 namespace ActualLab.Async;
 
@@ -6,9 +7,10 @@ namespace ActualLab.Async;
 
 public static partial class TaskExt
 {
-    private static readonly MethodInfo FromTypedTaskInternalMethod =
-        typeof(TaskExt).GetMethod(nameof(FromTypedTaskInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly ConcurrentDictionary<Type, Func<Task, IResult>> ToTypedResultCache = new();
+    private static readonly MethodInfo FromTypedTaskInternalMethod
+        = typeof(TaskExt).GetMethod(nameof(FromTypedTaskInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
+    private static readonly ConcurrentDictionary<Type, Func<Task, IResult>> ToTypedResultCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static readonly Task<Unit> UnitTask = Task.FromResult(Unit.Default);
     public static readonly Task<bool> TrueTask = Task.FromResult(true);

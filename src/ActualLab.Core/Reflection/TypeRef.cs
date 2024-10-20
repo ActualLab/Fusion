@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using ActualLab.Internal;
+using ActualLab.OS;
 using ActualLab.Reflection.Internal;
 using MessagePack;
 using Errors = ActualLab.Reflection.Internal.Errors;
@@ -23,8 +24,10 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
     private static readonly Regex RemoveAssemblyVersionsRe =
         new(@",\s+Version=[^,]*,\s+Culture=[^,]*,\s+PublicKeyToken=[A-Za-z0-9]+", RegexOptions.Compiled);
 #endif
-    private static readonly ConcurrentDictionary<Symbol, TypeRef> UnversionedAssemblyNameCache = new();
-    private static readonly ConcurrentDictionary<Symbol, Type?> ResolveCache = new();
+    private static readonly ConcurrentDictionary<Symbol, TypeRef> UnversionedAssemblyNameCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<Symbol, Type?> ResolveCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static readonly TypeRef None = default;
 

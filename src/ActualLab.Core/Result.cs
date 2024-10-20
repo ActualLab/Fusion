@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using ActualLab.Conversion;
 using ActualLab.Internal;
+using ActualLab.OS;
 using MessagePack;
 
 namespace ActualLab;
@@ -241,7 +242,7 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
         => Error == other.Error && EqualityComparer<T>.Default.Equals(ValueOrDefault!, other.ValueOrDefault!);
     public override bool Equals(object? obj)
         => obj is Result<T> o && Equals(o);
-    public override int GetHashCode() => HashCode.Combine(ValueOrDefault!, Error);
+    public override int GetHashCode() => (ValueOrDefault?.GetHashCode() ?? 0) ^ (Error?.GetHashCode() ?? 0);
     public static bool operator ==(Result<T> left, Result<T> right) => left.Equals(right);
     public static bool operator !=(Result<T> left, Result<T> right) => !left.Equals(right);
 
@@ -260,9 +261,10 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
 /// </summary>
 public static class Result
 {
-    private static readonly ConcurrentDictionary<Type, Func<Exception, IResult>> ErrorCache = new();
-    private static readonly MethodInfo ErrorInternalMethod =
-        typeof(Result).GetMethod(nameof(ErrorInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
+    private static readonly ConcurrentDictionary<Type, Func<Exception, IResult>> ErrorCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly MethodInfo ErrorInternalMethod
+        = typeof(Result).GetMethod(nameof(ErrorInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> New<T>(T value, Exception? error = null) => new(value, error);

@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Interception;
+using ActualLab.OS;
 using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Interception;
@@ -10,7 +11,11 @@ public class ComputeServiceInterceptor : Interceptor
 {
     public new record Options : Interceptor.Options
     {
-        public static Options Default { get; set; } = new();
+        public static Options Default { get; set; } = new() {
+            // This interceptor is shared, so we adjust its cache concurrency settings
+            HandlerCacheConcurrencyLevel = HardwareInfo.GetProcessorCountPo2Factor(2),
+            HandlerCacheCapacity = 131,
+        };
     }
 
     public readonly FusionHub Hub;

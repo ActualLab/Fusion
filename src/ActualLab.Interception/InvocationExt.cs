@@ -10,7 +10,7 @@ public static class InvocationExt
     private static readonly MethodInfo InvokeInterceptedUntypedMethod = typeof(InvocationExt)
         .GetMethod(nameof(InvokeInterceptedUntypedImpl), BindingFlags.Static | BindingFlags.NonPublic)!;
     private static readonly ConcurrentDictionary<Type, InterceptedUntypedFunc> InterceptedUntypedCache
-        = new(HardwareInfo.GetProcessorCountPo2Factor(4), 256);
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static object? InvokeInterceptedUntyped(in this Invocation invocation)
         => InterceptedUntypedCache.GetOrAdd(invocation.Method.ReturnType,

@@ -1,13 +1,16 @@
 using System.Linq.Expressions;
 using System.Reflection.Emit;
 using ActualLab.Internal;
+using ActualLab.OS;
 
 namespace ActualLab.Reflection;
 
 public static class MemberInfoExt
 {
-    private static readonly ConcurrentDictionary<(MemberInfo, Type, bool), Delegate> GetterCache = new();
-    private static readonly ConcurrentDictionary<(MemberInfo, Type, bool), Delegate> SetterCache = new();
+    private static readonly ConcurrentDictionary<(MemberInfo, Type, bool), Delegate> GetterCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<(MemberInfo, Type, bool), Delegate> SetterCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static Type ReturnType(this MemberInfo memberInfo)
         => memberInfo switch {

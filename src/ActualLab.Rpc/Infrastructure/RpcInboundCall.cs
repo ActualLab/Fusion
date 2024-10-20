@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
+using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Internal;
 using Cysharp.Text;
@@ -10,7 +11,8 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcInboundCall : RpcCall
 {
-    private static readonly ConcurrentDictionary<(byte, Type), Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>> FactoryCache = new();
+    private static readonly ConcurrentDictionary<(byte, Type), Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>> FactoryCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     protected readonly CancellationTokenSource? CallCancelSource;
     protected ILogger Log => Context.Peer.Log;

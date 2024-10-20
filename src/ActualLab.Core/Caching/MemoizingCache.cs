@@ -1,9 +1,11 @@
+using ActualLab.OS;
+
 namespace ActualLab.Caching;
 
 public class MemoizingCache<TKey, TValue> : AsyncCacheBase<TKey, TValue>
     where TKey : notnull
 {
-    private readonly ConcurrentDictionary<TKey, TValue> _dictionary = new();
+    private readonly ConcurrentDictionary<TKey, TValue> _dictionary = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public override ValueTask<TValue?> Get(TKey key, CancellationToken cancellationToken = default)
         => ValueTaskExt.FromResult(_dictionary[key])!;

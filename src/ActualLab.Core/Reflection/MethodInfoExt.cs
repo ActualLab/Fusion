@@ -1,11 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
+using ActualLab.OS;
 
 namespace ActualLab.Reflection;
 
 public static class MethodInfoExt
 {
-    private static readonly ConcurrentDictionary<MethodInfo, MethodInfo?> BaseOrDeclaringMethodCache = new();
+    private static readonly ConcurrentDictionary<MethodInfo, MethodInfo?> BaseOrDeclaringMethodCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static MethodInfo? GetBaseOrDeclaringMethod(this MethodInfo method)

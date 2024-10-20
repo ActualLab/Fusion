@@ -13,8 +13,8 @@ public class AsyncLockSet<TKey>(
     IEqualityComparer<TKey>? equalityComparer = null
     ) where TKey : notnull
 {
-    public static int DefaultConcurrencyLevel => HardwareInfo.GetProcessorCountFactor();
-    public static int DefaultCapacity => 31;
+    public static int DefaultConcurrencyLevel => HardwareInfo.ProcessorCountPo2;
+    public static int DefaultCapacity => HardwareInfo.GetProcessorCountPo2Factor(4).Clamp(32, 256);
 
     private readonly ConcurrentDictionary<TKey, Entry> _entries
         = new(concurrencyLevel, capacity, equalityComparer ?? EqualityComparer<TKey>.Default);

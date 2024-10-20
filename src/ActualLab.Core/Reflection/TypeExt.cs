@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
+using ActualLab.OS;
 using Cysharp.Text;
 
 namespace ActualLab.Reflection;
@@ -23,12 +24,18 @@ public static partial class TypeExt
     private static readonly Regex GenericTypeNameTailRe = new("`.+$", RegexOptions.Compiled);
 #endif
 
-    private static readonly ConcurrentDictionary<Type, Type> NonProxyTypeCache = new();
-    private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), Symbol>> GetNameCache = new();
-    private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), Symbol>> ToIdentifierNameCache = new();
-    private static readonly ConcurrentDictionary<Type, LazySlim<Type, Symbol>> ToSymbolCache = new();
-    private static readonly ConcurrentDictionary<Type, Type?> GetTaskOrValueTaskTypeCache = new();
-    private static readonly ConcurrentDictionary<Type, object?> DefaultValueCache = new();
+    private static readonly ConcurrentDictionary<Type, Type> NonProxyTypeCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), Symbol>> GetNameCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), Symbol>> ToIdentifierNameCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<Type, LazySlim<Type, Symbol>> ToSymbolCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<Type, Type?> GetTaskOrValueTaskTypeCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<Type, object?> DefaultValueCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
     private static Func<Type, Type> _nonProxyTypeResolver = DefaultNonProxyTypeResolver;
 
     public static readonly string SymbolPrefix = "@";

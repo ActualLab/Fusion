@@ -1,12 +1,17 @@
+using ActualLab.OS;
+
 namespace ActualLab.Fusion.Blazor;
 
 public static class ComputedStateComponent
 {
     private static readonly MethodInfo GetDefaultOptionsImplMethod = typeof(ComputedStateComponent)
         .GetMethod(nameof(CreateDefaultStateOptionsImpl), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly ConcurrentDictionary<Type, string> StateCategoryCache = new();
-    private static readonly ConcurrentDictionary<Type, IComputedState.IOptions> StateOptionsCache = new();
-    private static readonly ConcurrentDictionary<Type, Func<Type, IComputedState.IOptions>> CreateDefaultStateOptionsCache = new();
+    private static readonly ConcurrentDictionary<Type, string> StateCategoryCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<Type, IComputedState.IOptions> StateOptionsCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<Type, Func<Type, IComputedState.IOptions>> CreateDefaultStateOptionsCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static ComputedStateComponentOptions DefaultOptions { get; set; }
         = ComputedStateComponentOptions.RecomputeStateOnParameterChange;

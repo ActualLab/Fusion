@@ -1,11 +1,11 @@
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.CommandR.Internal;
+using ActualLab.OS;
 
 namespace ActualLab.CommandR;
 
 public static class CommanderExt
 {
-    private static readonly ConcurrentDictionary<Type, Func<ICommander, ICommand, bool, CancellationToken, Task>> TypedCallCache = new();
+    private static readonly ConcurrentDictionary<Type, Func<ICommander, ICommand, bool, CancellationToken, Task>> TypedCallCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly MethodInfo TypedCallMethod = typeof(CommanderExt)
         .GetMethod(nameof(TypedCall), BindingFlags.Static | BindingFlags.NonPublic)!;
 

@@ -1,10 +1,15 @@
+using ActualLab.OS;
+
 namespace ActualLab.Fusion;
 
 public static class StateCategories
 {
-    private static readonly ConcurrentDictionary<(Symbol, Symbol), string> Cache1 = new();
-    private static readonly ConcurrentDictionary<(Type, Symbol), string> Cache2 = new();
-    private static readonly ConcurrentDictionary<(Type, Symbol, Symbol), string> Cache3 = new();
+    private static readonly ConcurrentDictionary<(Symbol, Symbol), string> Cache1
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<(Type, Symbol), string> Cache2
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<(Type, Symbol, Symbol), string> Cache3
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static string Get(Symbol prefix, Symbol suffix)
         => Cache1.GetOrAdd((prefix, suffix), static kv => $"{kv.Item1}.{kv.Item2.Value}");

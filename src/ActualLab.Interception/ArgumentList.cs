@@ -12,7 +12,8 @@ public abstract partial record ArgumentList
 {
     protected static readonly ConcurrentDictionary<
         (ArgumentListType, MethodInfo),
-        LazySlim<(ArgumentListType, MethodInfo), Func<object?, ArgumentList, object?>>> InvokerCache = new();
+        LazySlim<(ArgumentListType, MethodInfo), Func<object?, ArgumentList, object?>>> InvokerCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static readonly bool AllowGenerics
         = RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods && !OSInfo.IsAnyClient;

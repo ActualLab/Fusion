@@ -1,15 +1,22 @@
 using ActualLab.Collections.Fixed;
+using ActualLab.OS;
 
 namespace ActualLab.Interception;
 
 public sealed class ArgumentListType
 {
-    private static readonly ConcurrentDictionary<FixedArray3<Type?>, ArgumentListType> GDefCache3 = new();
-    private static readonly ConcurrentDictionary<FixedArray3<Type?>, ArgumentListType> SDefCache3 = new();
-    private static readonly ConcurrentDictionary<FixedArray6<Type?>, ArgumentListType> GDefCache6 = new();
-    private static readonly ConcurrentDictionary<FixedArray6<Type?>, ArgumentListType> SDefCache6 = new();
-    private static readonly ConcurrentDictionary<FixedArray10<Type?>, ArgumentListType> GDefCacheN = new();
-    private static readonly ConcurrentDictionary<FixedArray10<Type?>, ArgumentListType> SDefCacheN = new();
+    private static readonly ConcurrentDictionary<FixedArray3<Type?>, ArgumentListType> GDefCache3
+        = new(HardwareInfo.ProcessorCountPo2, 128);
+    private static readonly ConcurrentDictionary<FixedArray3<Type?>, ArgumentListType> SDefCache3
+        = new(HardwareInfo.ProcessorCountPo2, 128);
+    private static readonly ConcurrentDictionary<FixedArray6<Type?>, ArgumentListType> GDefCache6
+        = new(HardwareInfo.ProcessorCountPo2, 128);
+    private static readonly ConcurrentDictionary<FixedArray6<Type?>, ArgumentListType> SDefCache6
+        = new(HardwareInfo.ProcessorCountPo2, 128);
+    private static readonly ConcurrentDictionary<FixedArray10<Type?>, ArgumentListType> GDefCacheN
+        = new(HardwareInfo.ProcessorCountPo2, 128);
+    private static readonly ConcurrentDictionary<FixedArray10<Type?>, ArgumentListType> SDefCacheN
+        = new(HardwareInfo.ProcessorCountPo2, 128);
     private string? _toString;
 
     public readonly Type ListType;

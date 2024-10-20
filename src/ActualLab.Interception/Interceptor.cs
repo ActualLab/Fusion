@@ -1,8 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception.Internal;
+using ActualLab.OS;
 using ActualLab.Trimming;
 
 namespace ActualLab.Interception;
+
+#pragma warning disable CS0420 // A reference to a volatile field will not be treated as volatile
 
 public abstract class Interceptor : IHasServices
 {
@@ -10,13 +13,17 @@ public abstract class Interceptor : IHasServices
     {
         public static class Defaults
         {
+            public static int HandlerCacheConcurrencyLevel { get; set; } = HardwareInfo.ProcessorCountPo2.Clamp(1, 8);
+            public static int HandlerCacheCapacity { get; set; } = 17;
             public static LogLevel LogLevel { get; set; } = LogLevel.Debug;
             public static LogLevel ValidationLogLevel { get; set; } = LogLevel.Debug;
             public static bool IsValidationEnabled { get; set; } = true;
         }
 
-        public LogLevel LogLevel { get; set; } = Defaults.LogLevel;
-        public LogLevel ValidationLogLevel { get; set; } = Defaults.ValidationLogLevel;
+        public int HandlerCacheConcurrencyLevel { get; init; } = Defaults.HandlerCacheConcurrencyLevel;
+        public int HandlerCacheCapacity { get; init; } = Defaults.HandlerCacheCapacity;
+        public LogLevel LogLevel { get; init; } = Defaults.LogLevel;
+        public LogLevel ValidationLogLevel { get; init; } = Defaults.ValidationLogLevel;
         public bool IsValidationEnabled { get; init; } = Defaults.IsValidationEnabled;
     }
 
@@ -26,9 +33,9 @@ public abstract class Interceptor : IHasServices
 
     private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandlerUntyped;
     private readonly Func<MethodInfo, Type, MethodDef?> _createMethodDef;
-    private readonly ConcurrentDictionary<MethodInfo, MethodDef?> _methodDefCache = new();
-    private readonly ConcurrentDictionary<MethodInfo, Func<Invocation, object?>?> _handlerCache = new();
-    private readonly ConcurrentDictionary<Type, Unit> _validateTypeCache = new();
+    private readonly ConcurrentDictionary<Type, Unit> _validateTypeCache;
+    private readonly ConcurrentDictionary<MethodInfo, MethodDef?> _methodDefCache;
+    private readonly ConcurrentDictionary<MethodInfo, Func<Invocation, object?>?> _handlerCache;
 
     protected readonly ILogger Log;
     protected readonly ILogger? DefaultLog;
@@ -36,11 +43,11 @@ public abstract class Interceptor : IHasServices
     protected readonly LogLevel LogLevel;
     protected readonly LogLevel ValidationLogLevel;
 
-    public IServiceProvider Services { get; }
-    public bool IsValidationEnabled { get; }
-    public bool MustInterceptAsyncCalls { get; init; } = true;
-    public bool MustInterceptSyncCalls { get; init; } = false;
-    public bool MustValidateProxyType { get; init; } = true;
+    public IServiceProvider Services { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
+    public bool IsValidationEnabled { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
+    public bool MustInterceptAsyncCalls { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = true;
+    public bool MustInterceptSyncCalls { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = false;
+    public bool MustValidateProxyType { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = true;
 
     protected Interceptor(Options settings, IServiceProvider services)
     {
@@ -55,6 +62,12 @@ public abstract class Interceptor : IHasServices
 
         _createHandlerUntyped = CreateHandlerUntyped;
         _createMethodDef = CreateMethodDef;
+        _validateTypeCache = new ConcurrentDictionary<Type, Unit>(
+            settings.HandlerCacheConcurrencyLevel, settings.HandlerCacheCapacity);
+        _methodDefCache = new ConcurrentDictionary<MethodInfo, MethodDef?>(
+            settings.HandlerCacheConcurrencyLevel, settings.HandlerCacheCapacity);
+        _handlerCache = new ConcurrentDictionary<MethodInfo, Func<Invocation, object?>?>(
+            settings.HandlerCacheConcurrencyLevel, settings.HandlerCacheCapacity);
     }
 
     public void BindTo(IRequiresAsyncProxy proxy, object? proxyTarget = null, bool initialize = true)
@@ -80,7 +93,7 @@ public abstract class Interceptor : IHasServices
         if (handler != null)
             handler.Invoke(invocation);
         else
-            invocation.InvokeIntercepted();
+            throw Errors.InvalidInterceptedDelegate();
     }
 
     /// <summary>
@@ -101,7 +114,12 @@ public abstract class Interceptor : IHasServices
         => GetHandler(invocation);
 
     public Func<Invocation, object?>? GetHandler(in Invocation invocation)
-        => _handlerCache.GetOrAdd(invocation.Method, _createHandlerUntyped, invocation);
+    {
+        if (_handlerCache.TryGetValue(invocation.Method, out var handler))
+            return handler;
+
+        return _handlerCache.GetOrAdd(invocation.Method, _createHandlerUntyped, invocation);
+    }
 
     public virtual MethodDef? GetMethodDef(MethodInfo method, Type proxyType)
         => _methodDefCache.GetOrAdd(method, _createMethodDef, proxyType);

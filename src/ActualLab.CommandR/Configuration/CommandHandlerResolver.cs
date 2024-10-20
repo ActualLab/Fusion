@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
+using ActualLab.OS;
 
 namespace ActualLab.CommandR.Configuration;
 
@@ -15,7 +16,7 @@ public class CommandHandlerResolver
 
     protected Options Settings { get; }
     protected Func<CommandHandler, Type, bool> Filter { get; }
-    protected ConcurrentDictionary<Type, CommandHandlerSet> Cache { get; } = new();
+    protected ConcurrentDictionary<Type, CommandHandlerSet> Cache { get; } = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public CommandHandlerResolver(Options settings, IServiceProvider services)
     {

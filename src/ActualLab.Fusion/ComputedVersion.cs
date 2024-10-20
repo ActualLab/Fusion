@@ -4,53 +4,35 @@ namespace ActualLab.Fusion;
 
 public static class ComputedVersion
 {
-    private static readonly long LocalVersionCount;
+    private static readonly int LocalVersionCount;
+    private static readonly int LocalVersionCountMask;
 
     private static readonly LocalVersion[] LocalVersions;
     [ThreadStatic] private static LocalVersion? _localVersion;
 
     static ComputedVersion()
     {
-        var localVersionCount = HardwareInfo.GetProcessorCountFactor(4).Clamp(1, 1024);
-        var primeSieve = PrimeSieve.GetOrCompute(localVersionCount + 16);
-        while (!primeSieve.IsPrime(localVersionCount))
-            localVersionCount--;
-        LocalVersionCount = localVersionCount;
-        LocalVersions = new LocalVersion[localVersionCount];
+        LocalVersionCount = HardwareInfo.GetProcessorCountPo2Factor(4).Clamp(1, 1024);
+        LocalVersionCountMask = LocalVersionCount - 1;
+        LocalVersions = new LocalVersion[LocalVersionCount];
         for (var i = 0; i < LocalVersions.Length; i++)
             LocalVersions[i] = new LocalVersion(i);
     }
 
     public static ulong Next()
-        => (_localVersion ??= LocalVersions[GetLocalVersionIndex()]).Next();
-
-    // Private methods
-
-    private static int GetLocalVersionIndex()
     {
-        var m = Environment.CurrentManagedThreadId % LocalVersionCount;
-        if (m < 0)
-            m += LocalVersionCount;
-        return unchecked((int)m);
+        var localVersion = _localVersion ??= LocalVersions[Environment.CurrentManagedThreadId & LocalVersionCountMask];
+        while (true) {
+            var result = Interlocked.Add(ref localVersion.Value, LocalVersionCount);
+            if (result != 0)
+                return (ulong)result;
+        }
     }
 
     // Nested types
 
-    private sealed class LocalVersion
+    private sealed class LocalVersion(long value)
     {
-        private long _version;
-
-        // ReSharper disable once ConvertToPrimaryConstructor
-        public LocalVersion(long initialVersion)
-            => _version = initialVersion;
-
-        // ReSharper disable once MemberHidesStaticFromOuterClass
-        public ulong Next()
-        {
-            var result = Interlocked.Add(ref _version, LocalVersionCount);
-            while (result == 0)
-                result = Interlocked.Add(ref _version, LocalVersionCount);
-            return (ulong)result;
-        }
+        public long Value = value;
     }
 }

@@ -60,7 +60,8 @@ public readonly record struct LegacyName : ICanBeNone<LegacyName>
             : Name == other.Name && _maxVersion == other._maxVersion;
 
     public override int GetHashCode()
-        => IsNone ? 0 : HashCode.Combine(Name, _maxVersion);
+        => IsNone ? 0
+            : HashCode.Combine(Name, _maxVersion);
 
     // Nested types
 

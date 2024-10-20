@@ -1,8 +1,11 @@
+using ActualLab.OS;
+
 namespace ActualLab.Async;
 
 public static partial class TaskExt
 {
-    private static readonly ConcurrentDictionary<Type, Task> FromDefaultResultCache = new();
+    private static readonly ConcurrentDictionary<Type, Task> FromDefaultResultCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     // FromDefaultResult
 

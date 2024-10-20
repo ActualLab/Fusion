@@ -11,8 +11,7 @@ public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
 {
     private RpcPeer _peer = null!;
     protected RpcLimits Limits { get; private set; } = null!;
-    protected readonly ConcurrentDictionary<long, TRpcCall> Calls
-        = new(HardwareInfo.GetProcessorCountFraction(2), 127);
+    protected readonly ConcurrentDictionary<long, TRpcCall> Calls = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public RpcPeer Peer {
         get => _peer;
@@ -60,8 +59,7 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
 
 public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 {
-    private readonly ConcurrentDictionary<long, RpcOutboundCall> _inProgressCalls
-        = new(HardwareInfo.GetProcessorCountFraction(2), 127);
+    private readonly ConcurrentDictionary<long, RpcOutboundCall> _inProgressCalls = new(HardwareInfo.ProcessorCountPo2, 131);
     private long _lastId;
 
     public int InProgressCallCount => _inProgressCalls.Count;

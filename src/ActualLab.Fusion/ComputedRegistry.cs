@@ -17,7 +17,7 @@ public sealed class ComputedRegistry : IDisposable
 
     public sealed record Options
     {
-        public int InitialCapacity { get; init; } = FusionDefaults.ComputedRegistryCapacity;
+        public int InitialCapacity { get; init; } = FusionDefaults.ComputedRegistryInitialCapacity;
         public int ConcurrencyLevel { get; init; } = FusionDefaults.ComputedRegistryConcurrencyLevel;
         public Func<AsyncLockSet<ComputedInput>>? LocksFactory { get; init; } = null;
         // ReSharper disable once InconsistentNaming
@@ -60,7 +60,7 @@ public sealed class ComputedRegistry : IDisposable
         InputLocks = settings.LocksFactory?.Invoke() ?? new AsyncLockSet<ComputedInput>(
             LockReentryMode.CheckedFail,
             settings.ConcurrencyLevel,
-            settings.InitialCapacity,
+            Math.Max(1, settings.InitialCapacity / 4),
             ComputedInput.EqualityComparer);
         UpdatePruneCounterThreshold(out _);
         _ = Task.Delay(TimeSpan.FromSeconds(5)).ContinueWith(

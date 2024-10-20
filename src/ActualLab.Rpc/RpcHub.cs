@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using ActualLab.OS;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Serialization;
@@ -42,7 +43,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal RpcSystemCallSender SystemCallSender => _systemCallSender ??= Services.GetRequiredService<RpcSystemCallSender>();
     internal RpcClient Client => _client ??= Services.GetRequiredService<RpcClient>();
 
-    internal ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers { get; } = new();
+    internal ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers { get; } = new(HardwareInfo.ProcessorCountPo2, 17);
 
     public Guid Id { get; init; } = Guid.NewGuid();
     public HostId HostId => _hostId ??= Services.GetRequiredService<HostId>();

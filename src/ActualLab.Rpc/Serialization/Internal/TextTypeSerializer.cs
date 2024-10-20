@@ -14,7 +14,7 @@ public static class TextTypeSerializer
     public static ReadOnlySpan<byte> NullTypeSpan => "/* @= */"u8; // Must be Prefix + Suffix
 
     public static ByteString ToBytes(Type type) =>
-        ToBytesCache.GetOrAdd(type, t => {
+        ToBytesCache.GetOrAdd(type, static t => {
             var name = new TypeRef(t).WithoutAssemblyVersions().AssemblyQualifiedName.Value;
             using var sb = ZString.CreateUtf8StringBuilder();
             sb.AppendLiteral(Prefix);
@@ -24,7 +24,7 @@ public static class TextTypeSerializer
         });
 
     public static Type? FromBytes(ByteString bytes)
-        => FromBytesCache.GetOrAdd(bytes, b => {
+        => FromBytesCache.GetOrAdd(bytes, static b => {
             var utf8Name = new ByteString(b.Bytes[Prefix.Length..^Suffix.Length]);
             var typeRef = new TypeRef(utf8Name.ToStringAsUtf8());
             return typeRef.Resolve();

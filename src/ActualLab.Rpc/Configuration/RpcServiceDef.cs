@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception.Internal;
+using ActualLab.OS;
 using ActualLab.Rpc.Infrastructure;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
@@ -7,7 +8,8 @@ namespace ActualLab.Rpc;
 
 public sealed class RpcServiceDef
 {
-    private readonly ConcurrentDictionary<MethodInfo, RpcMethodDef?> _getOrFindMethodCache = new();
+    private readonly ConcurrentDictionary<MethodInfo, RpcMethodDef?> _getOrFindMethodCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
     private Dictionary<MethodInfo, RpcMethodDef> _methods = null!;
     private Dictionary<Symbol, RpcMethodDef> _methodByName = null!;
     private object? _server;

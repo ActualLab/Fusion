@@ -1,20 +1,23 @@
 using System.Buffers;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
+using ActualLab.OS;
 using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Serialization.Internal;
 
 public static class ByteTypeSerializer
 {
-    private static readonly ConcurrentDictionary<Type, ByteString> ToBytesCache = new();
-    private static readonly ConcurrentDictionary<ByteString, Type?> FromBytesCache = new();
+    private static readonly ConcurrentDictionary<Type, ByteString> ToBytesCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<ByteString, Type?> FromBytesCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static readonly byte[] NullTypeBytes = [0, 0];
     public static ReadOnlySpan<byte> NullTypeSpan => NullTypeBytes;
 
     public static ByteString ToBytes(Type type) =>
-        ToBytesCache.GetOrAdd(type, t => {
+        ToBytesCache.GetOrAdd(type, static t => {
             var name = new TypeRef(t).WithoutAssemblyVersions().AssemblyQualifiedName.Value;
             var nameSpan = ByteString.FromStringAsUtf8(name).Span;
             var fullLength = nameSpan.Length + 4;
@@ -32,7 +35,7 @@ public static class ByteTypeSerializer
         });
 
     public static Type? FromBytes(ByteString bytes)
-        => FromBytesCache.GetOrAdd(bytes, b => {
+        => FromBytesCache.GetOrAdd(bytes, static b => {
             var memory = b.Bytes;
             var length = memory.Span.ReadUnchecked<ushort>();
             if (length == 0)

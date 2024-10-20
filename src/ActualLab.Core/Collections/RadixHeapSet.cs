@@ -51,6 +51,7 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
         var index = GetBucketIndex(priority);
         if (!_bucketIndexes.TryAdd(value, index))
             return false;
+
         _buckets[index].Add(value, priority);
         return true;
     }
@@ -174,6 +175,7 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
             return Empty;
         if (priority == MinPriority)
             return ExtractBucket0();
+
         for (var index = 0; index < _buckets.Length; index++) {
             var bucket = _buckets[index];
             if (bucket.Count != 0) {
@@ -204,6 +206,7 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
     {
         if (Count == 0)
             return;
+
         for (var index = 0; index < _buckets.Length; index++) {
             var bucket = _buckets[index];
             if (bucket.Count != 0) {

@@ -1,12 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
+using ActualLab.OS;
 
 namespace ActualLab.CommandR;
 
 public static class CommandExt
 {
-    private static readonly ConcurrentDictionary<Type, Type> ResultTypeCache = new();
-    private static readonly ConcurrentDictionary<(Type, Symbol, string, string), string> OperationNameCache = new();
+    private static readonly ConcurrentDictionary<Type, Type> ResultTypeCache = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<(Type, Symbol, string, string), string> OperationNameCache = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly Type CommandWithResultType = typeof(ICommand<>);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

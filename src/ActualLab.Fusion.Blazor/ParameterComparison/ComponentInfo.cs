@@ -1,12 +1,14 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.OS;
 using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
 public sealed class ComponentInfo
 {
-    private static readonly ConcurrentDictionary<Type, LazySlim<Type, ComponentInfo>> ComponentInfoCache = new();
+    private static readonly ConcurrentDictionary<Type, LazySlim<Type, ComponentInfo>> ComponentInfoCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public Type Type { get; }
     public bool HasCustomParameterComparers { get; }

@@ -35,7 +35,7 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
         Capacity = HardwareInfo.GetProcessorCountPo2Factor(16),
     });
 
-    private readonly ConcurrentDictionary<long, GCHandle> _objects = new();
+    private readonly ConcurrentDictionary<long, GCHandle> _objects = new(HardwareInfo.ProcessorCountPo2, 17);
 
     public override int Count => _objects.Count;
 
@@ -174,7 +174,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 {
     private long _lastId;
     private long _lastKeepAliveAt; // CpuTimestamp
-    private readonly ConcurrentDictionary<long, IRpcSharedObject> _objects = new();
+    private readonly ConcurrentDictionary<long, IRpcSharedObject> _objects = new(HardwareInfo.ProcessorCountPo2, 17);
 
     public override int Count => _objects.Count;
 

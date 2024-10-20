@@ -22,7 +22,6 @@ public readonly struct Invocation(
     public string Format()
         => $"{Proxy.GetType().NonProxyType().GetName()}.{Method.Name}{Arguments}";
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void InvokeIntercepted()
     {
         if (InterceptedDelegate is Action<ArgumentList> action)
@@ -31,22 +30,20 @@ public readonly struct Invocation(
             throw Errors.InvalidInterceptedDelegate();
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TResult InvokeIntercepted<TResult>()
         => InterceptedDelegate is Func<ArgumentList, TResult> func
             ? func.Invoke(Arguments)
             : throw Errors.InvalidInterceptedDelegate();
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Invocation With(ArgumentList arguments)
         => new(Proxy, Method, arguments, InterceptedDelegate, Context);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Invocation With(object? context)
         => new(Proxy, Method, Arguments, InterceptedDelegate, context);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Invocation With(ArgumentList arguments, object? context)
         => new(Proxy, Method, arguments, InterceptedDelegate, context);
-
-};
+}

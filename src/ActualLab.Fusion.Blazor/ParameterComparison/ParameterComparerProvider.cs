@@ -1,11 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
+using ActualLab.OS;
 
 namespace ActualLab.Fusion.Blazor;
 
 public class ParameterComparerProvider
 {
-    private static readonly ConcurrentDictionary<Type, LazySlim<Type, ParameterComparer>> Cache = new();
+    private static readonly ConcurrentDictionary<Type, LazySlim<Type, ParameterComparer>> Cache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static ParameterComparerProvider Instance { get; set; } = new();
 

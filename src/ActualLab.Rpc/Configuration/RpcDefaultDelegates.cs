@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using ActualLab.Interception;
+using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
@@ -33,7 +34,8 @@ public delegate bool RpcCallLoggerFilter(RpcPeer peer, RpcCall call);
 
 public static class RpcDefaultDelegates
 {
-    private static readonly ConcurrentDictionary<Type, bool> IsCommandTypeCache = new();
+    private static readonly ConcurrentDictionary<Type, bool> IsCommandTypeCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static string CommandInterfaceFullName { get; set; } = "ActualLab.CommandR.ICommand";
 

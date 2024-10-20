@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception.Interceptors;
 using Cysharp.Text;
 using ActualLab.Interception.Internal;
+using ActualLab.OS;
 using ActualLab.Trimming;
 
 namespace ActualLab.Interception;
@@ -10,7 +11,8 @@ namespace ActualLab.Interception;
 
 public static class Proxies
 {
-    internal static readonly ConcurrentDictionary<Type, Type?> Cache = new();
+    internal static readonly ConcurrentDictionary<Type, Type?> Cache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     static Proxies() => CodeKeeper.AddFakeAction(
         static () => {

@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using MessagePack;
 using ActualLab.Internal;
+using ActualLab.OS;
 using ActualLab.Serialization.Internal;
 using Errors = ActualLab.Serialization.Internal.Errors;
 
@@ -9,7 +10,8 @@ namespace ActualLab.Serialization;
 
 public class MessagePackByteSerializer(MessagePackSerializerOptions options) : IByteSerializer
 {
-    private readonly ConcurrentDictionary<Type, MessagePackByteSerializer> _typedSerializers = new();
+    private readonly ConcurrentDictionary<Type, MessagePackByteSerializer> _typedSerializerCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
     private static MessagePackSerializerOptions? _defaultOptions;
     private static MessagePackByteSerializer? _default;
     private static TypeDecoratingByteSerializer? _defaultTypeDecorating;
@@ -43,7 +45,7 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public virtual object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
-        var serializer = _typedSerializers.GetOrAdd(type,
+        var serializer = _typedSerializerCache.GetOrAdd(type,
             static (type1, self) => (MessagePackByteSerializer)typeof(MessagePackByteSerializer<>)
                 .MakeGenericType(type1)
                 .CreateInstance(self.Options, type1),
@@ -54,7 +56,7 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public virtual void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
     {
-        var serializer = _typedSerializers.GetOrAdd(type,
+        var serializer = _typedSerializerCache.GetOrAdd(type,
             static (type1, self) => (MessagePackByteSerializer)typeof(MessagePackByteSerializer<>)
                 .MakeGenericType(type1)
                 .CreateInstance(self.Options, type1),
@@ -65,7 +67,7 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
     // Private methods
 
     private MessagePackByteSerializer GetTypedSerializer(Type serializedType)
-        => _typedSerializers.GetOrAdd(serializedType,
+        => _typedSerializerCache.GetOrAdd(serializedType,
             static (type1, self) => (MessagePackByteSerializer)typeof(MessagePackByteSerializer<>)
                 .MakeGenericType(type1)
                 .CreateInstance(self.Options, type1),

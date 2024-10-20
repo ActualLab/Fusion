@@ -1,9 +1,11 @@
+using ActualLab.OS;
+
 namespace ActualLab.Fusion.UI;
 
 public class UICommander(IServiceProvider services) : IHasServices
 {
     private static readonly ConcurrentDictionary<Type, Func<UICommander, ICommand, CancellationToken, UIAction>>
-        CreateUIActionInvokers = new();
+        CreateUIActionInvokers = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly MethodInfo CreateUIActionTypedMethod = typeof(UICommander)
         .GetMethod(nameof(CreateUIActionTyped), BindingFlags.Static | BindingFlags.NonPublic)!;
 

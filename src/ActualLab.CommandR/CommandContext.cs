@@ -1,12 +1,13 @@
 using System.Runtime.ExceptionServices;
 using ActualLab.CommandR.Internal;
 using ActualLab.CommandR.Operations;
+using ActualLab.OS;
 
 namespace ActualLab.CommandR;
 
 public abstract class CommandContext(ICommander commander) : IHasServices, IAsyncDisposable
 {
-    private static readonly ConcurrentDictionary<Type, Type> CommandContextTypeCache = new();
+    private static readonly ConcurrentDictionary<Type, Type> CommandContextTypeCache = new(HardwareInfo.ProcessorCountPo2, 131);
 
     protected static readonly AsyncLocal<CommandContext?> CurrentLocal = new();
 

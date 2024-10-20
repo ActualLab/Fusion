@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
 using ActualLab.Interception;
+using ActualLab.OS;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.CommandR.Interception;
@@ -13,7 +14,11 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
 {
     public new record Options : Interceptor.Options
     {
-        public static Options Default { get; set; } = new();
+        public static Options Default { get; set; } = new() {
+            // This interceptor is shared, so we adjust its cache concurrency settings
+            HandlerCacheConcurrencyLevel = HardwareInfo.GetProcessorCountPo2Factor(2),
+            HandlerCacheCapacity = 131,
+        };
     }
 
     public readonly ICommander Commander = services.Commander();

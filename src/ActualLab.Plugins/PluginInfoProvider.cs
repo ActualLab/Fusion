@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.OS;
 using ActualLab.Plugins.Internal;
 
 namespace ActualLab.Plugins;
@@ -26,7 +27,8 @@ public interface IPluginInfoProvider
 
 public class PluginInfoProvider : IPluginInfoProvider
 {
-    private readonly ConcurrentDictionary<Type, LazySlim<Type, object?>> _pluginCache = new();
+    private readonly ConcurrentDictionary<Type, LazySlim<Type, object?>> _pluginCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     public virtual ImmutableHashSet<TypeRef> GetDependencies(Type pluginType)

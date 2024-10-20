@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception.Internal;
+using ActualLab.OS;
 using ActualLab.Trimming;
 using InvalidCastException = System.InvalidCastException;
 
@@ -7,13 +8,14 @@ namespace ActualLab.Interception;
 
 public class MethodDef
 {
-    private static readonly ConcurrentDictionary<(MethodInfo, Type), Func<MethodDef, object>> AsyncInvokerCache = new();
-    private static readonly MethodInfo CreateTargetAsyncInvokerMethod =
-        typeof(MethodDef).GetMethod(nameof(CreateTargetAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly MethodInfo CreateInterceptorAsyncInvokerMethod =
-        typeof(MethodDef).GetMethod(nameof(CreateInterceptorAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly MethodInfo CreateInterceptedAsyncInvokerMethod =
-        typeof(MethodDef).GetMethod(nameof(CreateInterceptedAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
+    private static readonly ConcurrentDictionary<(MethodInfo, Type), Func<MethodDef, object>> AsyncInvokerCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly MethodInfo CreateTargetAsyncInvokerMethod
+        = typeof(MethodDef).GetMethod(nameof(CreateTargetAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
+    private static readonly MethodInfo CreateInterceptorAsyncInvokerMethod
+        = typeof(MethodDef).GetMethod(nameof(CreateInterceptorAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
+    private static readonly MethodInfo CreateInterceptedAsyncInvokerMethod
+        = typeof(MethodDef).GetMethod(nameof(CreateInterceptedAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
     private static int _lastId = 1;
 
     private string? _fullName;

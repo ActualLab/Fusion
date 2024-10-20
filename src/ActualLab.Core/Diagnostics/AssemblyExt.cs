@@ -5,7 +5,8 @@ namespace ActualLab.Diagnostics;
 
 public static class AssemblyExt
 {
-    private static readonly ConcurrentDictionary<Assembly, string?> InformationalVersions = new();
+    private static readonly ConcurrentDictionary<Assembly, string?> InformationalVersions
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static string? GetInformationalVersion(this Assembly assembly)
         => InformationalVersionResolver.Invoke(assembly);
