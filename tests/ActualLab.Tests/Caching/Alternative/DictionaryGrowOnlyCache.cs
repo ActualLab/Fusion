@@ -13,7 +13,11 @@ public sealed class DictionaryGrowOnlyCache<TKey, TValue> : GrowOnlyCache<TKey, 
         => _items = new Dictionary<TKey, TValue>(comparer);
 
     public DictionaryGrowOnlyCache(GrowOnlyCache<TKey, TValue> source) : base(source)
-        => _items = new Dictionary<TKey, TValue>(source, source.Comparer);
+    {
+        _items = new Dictionary<TKey, TValue>(source.Comparer);
+        foreach (var (key, value) in source)
+            _items.Add(key, value);
+    }
 
     public override bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value)
         => _items.TryGetValue(key, out value);

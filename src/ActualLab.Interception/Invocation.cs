@@ -35,15 +35,15 @@ public readonly struct Invocation(
             ? func.Invoke(Arguments)
             : throw Errors.InvalidInterceptedDelegate();
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Invocation With(ArgumentList arguments)
         => new(Proxy, Method, arguments, InterceptedDelegate, Context);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Invocation With(object? context)
         => new(Proxy, Method, Arguments, InterceptedDelegate, context);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Invocation With(ArgumentList arguments, object? context)
         => new(Proxy, Method, arguments, InterceptedDelegate, context);
 }

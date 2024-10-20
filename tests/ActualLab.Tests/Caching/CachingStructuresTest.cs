@@ -42,7 +42,7 @@ public class CachingStructuresTest(ITestOutputHelper @out) : BenchmarkTestBase(@
         }, DefaultVariants);
 
         await Benchmark("Dictionary<int, int>.TryGetValue()", iterationCount, (length, n) => {
-            var d = source.Take(length).ToDictionary();
+            var d = source.Take(length).ToDictionary(x => x.Key);
             var j = 0;
             for (var i = 0; i < n; i++) {
                 d.TryGetValue(j++, out _);

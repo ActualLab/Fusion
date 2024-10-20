@@ -42,8 +42,8 @@ public sealed class ArrayGrowOnlyCache<TKey, TValue> : GrowOnlyCache<TKey, TValu
             value = valueFactory.Invoke(key);
             index = ~index;
             newItems[index] = new(Comparer.GetHashCode(key), key, value);
-            _items.AsSpan(..index).CopyTo(newItems.AsSpan());
-            _items.AsSpan(index..).CopyTo(newItems.AsSpan((index + 1)..));
+            _items.AsSpan(0, index).CopyTo(newItems.AsSpan());
+            _items.AsSpan(index).CopyTo(newItems.AsSpan(index + 1));
             _items = newItems;
             return value;
         }
@@ -69,8 +69,8 @@ public sealed class ArrayGrowOnlyCache<TKey, TValue> : GrowOnlyCache<TKey, TValu
             value = valueFactory.Invoke(key, state);
             index = ~index;
             newItems[index] = new(Comparer.GetHashCode(key), key, value);
-            _items.AsSpan(..index).CopyTo(newItems.AsSpan());
-            _items.AsSpan(index..).CopyTo(newItems.AsSpan((index + 1)..));
+            _items.AsSpan(0, index).CopyTo(newItems.AsSpan());
+            _items.AsSpan(index).CopyTo(newItems.AsSpan(index + 1));
             _items = newItems;
             return value;
         }
