@@ -10,7 +10,7 @@ public abstract class GrowOnlyCache<TKey, TValue> : IEnumerable<KeyValuePair<TKe
     public IEqualityComparer<TKey> Comparer { get; }
 
     public static GrowOnlyCache<TKey, TValue> New(IEqualityComparer<TKey>? comparer = null)
-        => new Tests.Caching.Alternative.ArrayGrowOnlyCache<TKey, TValue>(comparer ?? EqualityComparer<TKey>.Default);
+        => new ArrayGrowOnlyCache<TKey, TValue>(comparer ?? EqualityComparer<TKey>.Default);
 
     public static GrowOnlyCache<TKey, TValue> New(IEnumerable<KeyValuePair<TKey, TValue>> items, IEqualityComparer<TKey>? comparer = null)
     {

@@ -2,17 +2,12 @@ using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Internal;
-using ActualLab.IO;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Serialization;
 
 public sealed class RpcByteArgumentSerializerV1 : RpcArgumentSerializer
 {
-    [ThreadStatic] private static ArrayPoolBuffer<byte>? _writeBuffer;
-    public static int WriteBufferCapacity { get; set; } = 16384;
-    public static int WriteBufferReplaceCapacity { get; set; } = 65536;
-
     private readonly IByteSerializer _serializer;
     private readonly byte[] _defaultTypeRefBytes;
 

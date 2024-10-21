@@ -11,8 +11,8 @@ public sealed class RpcTextArgumentSerializer : RpcArgumentSerializer
 {
     private static readonly byte Delimiter = 0x1e; // Record separator in ASCII / UTF8
 
-    [ThreadStatic] private static Utf8TextWriter? _writer;
-    public static int WriteBufferReplaceCapacity { get; set; } = 65536;
+    [ThreadStatic] private static Utf8TextWriter? _utf8Buffer;
+    public static int Utf8BufferReplaceCapacity { get; set; } = 65536;
 
     private readonly ITextSerializer _serializer;
 
@@ -26,7 +26,7 @@ public sealed class RpcTextArgumentSerializer : RpcArgumentSerializer
         if (arguments.Length == 0)
             return default;
 
-        var writer = _writer ??= new Utf8TextWriter();
+        var writer = _utf8Buffer ??= new Utf8TextWriter();
         try {
             var itemSerializer = allowPolymorphism
                 ? (ItemSerializer)new ItemPolymorphicSerializer(_serializer, writer)
@@ -39,7 +39,7 @@ public sealed class RpcTextArgumentSerializer : RpcArgumentSerializer
         }
         finally {
             ref var buffer = ref writer.Buffer;
-            if (buffer.Length <= WriteBufferReplaceCapacity)
+            if (buffer.Length <= Utf8BufferReplaceCapacity)
                 buffer.Clear();
             else {
                 buffer.Dispose();

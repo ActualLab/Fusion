@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Tests.Caching.Alternative;
 
-#pragma warning disable RCS1059
+#pragma warning disable RCS1059, MA0064
 
 public sealed class ArrayGrowOnlyCache<TKey, TValue> : GrowOnlyCache<TKey, TValue>
     where TKey : notnull

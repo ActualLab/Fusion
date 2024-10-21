@@ -6,6 +6,8 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion.Tests;
 
+#pragma warning disable CS0162 // Unreachable code detected
+
 public class PerformanceTest_Sqlite : PerformanceTestBase
 {
     public PerformanceTest_Sqlite(ITestOutputHelper @out) : base(@out)

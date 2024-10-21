@@ -62,8 +62,4 @@ public sealed partial class RpcMessageV1
         var methodRef = new RpcMethodRef(fullName);
         return new RpcMessage(x.CallTypeId, x.RelatedId, methodRef, x.ArgumentData.Data, x.Headers);
     }
-
-    // This record relies on referential equality
-    public bool Equals(RpcMessageV1? other) => ReferenceEquals(this, other);
-    public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 }
