@@ -93,7 +93,7 @@ public abstract class Interceptor : IHasServices
         if (handler != null)
             handler.Invoke(invocation);
         else
-            throw Errors.InvalidInterceptedDelegate();
+            invocation.InvokeIntercepted();
     }
 
     /// <summary>

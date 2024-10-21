@@ -78,9 +78,6 @@
     <ProjectReference Include="..\..\src\ActualLab.Testing\ActualLab.Testing.csproj" />
     <ProjectReference Include="..\ActualLab.Tests\ActualLab.Tests.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-  </ItemGroup>
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Blazor\ActualLab.Fusion.Blazor.csproj" />
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Blazor.Authentication\ActualLab.Fusion.Blazor.Authentication.csproj" />
@@ -88,6 +85,9 @@
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Server.NetFx\ActualLab.Fusion.Server.NetFx.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
