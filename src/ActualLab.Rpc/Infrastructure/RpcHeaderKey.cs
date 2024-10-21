@@ -40,7 +40,7 @@ public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNo
     [MemoryPackConstructor, SerializationConstructor]
     public RpcHeaderKey(ReadOnlyMemory<byte> utf8Name)
     {
-        if (WellKnownRpcHeaders.ByUtf8Name.TryGetValue(utf8Name, out var key)) {
+        if (WellKnownRpcHeaders.ByUtf8Name.TryGetValue(utf8Name.AsByteString(), out var key)) {
             Name = key.Name;
             Utf8Name = key.Utf8Name;
         }

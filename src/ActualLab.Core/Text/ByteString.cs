@@ -39,10 +39,10 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
         => base64Url.IsNullOrEmpty() ? Empty : new(Base64UrlEncoder.Decode(base64Url).ToArray());
 
     public static ByteString FromStringAsUtf8(string source, int bufferLength = 1)
-        => EncodingExt.Utf8NoBom.GetBytes(source);
+        => EncodingExt.Utf8NoBom.GetBytes(source).AsByteString();
 
     public static ByteString FromStringAsUtf16(string source)
-        => source.AsSpan().Cast<char, byte>().ToArray();
+        => source.AsSpan().Cast<char, byte>().ToArray().AsByteString();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ByteString(byte[] bytes)
@@ -136,13 +136,6 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
     public static bool operator >(ByteString left, ByteString right) => left.CompareTo(right) > 0;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator >=(ByteString left, ByteString right) => left.CompareTo(right) >= 0;
-
-    // Conversion operators
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator ByteString(ReadOnlyMemory<byte> source) => new(source);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator ByteString(byte[] source) => new(source);
 
     // Serialization
 

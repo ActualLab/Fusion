@@ -61,12 +61,12 @@ public static class SerializationTestExt
     public static T2 AssertPassesThroughAllSerializers<T1, T2>(this T1 value, Action<T2, T1> assertion, ITestOutputHelper? output = null)
     {
         var mp1 = MemoryPackSerialized.New(value);
-        output?.WriteLine($"MemoryPackSerializer: {mp1.Data}");
+        output?.WriteLine($"MemoryPackSerializer: {mp1.Data.AsByteString()}");
         var mp2 = MemoryPackSerialized.New<T2>(mp1.Data);
         assertion.Invoke(mp2.Value, value);
 
         var msp1 = MessagePackSerialized.New(value);
-        output?.WriteLine($"MessagePackSerializer: {msp1.Data}");
+        output?.WriteLine($"MessagePackSerializer: {msp1.Data.AsByteString()}");
         var msp2 = MessagePackSerialized.New<T2>(msp1.Data);
         assertion.Invoke(msp2.Value, value);
 
@@ -141,7 +141,7 @@ public static class SerializationTestExt
         var s = new TypeDecoratingByteSerializer(sInner);
         using var buffer = s.Write(value, typeof(object));
         var v0 = buffer.WrittenMemory.ToArray();
-        output?.WriteLine($"TypeDecoratingByteSerializer: {JsonFormatter.Format(v0)}");
+        output?.WriteLine($"TypeDecoratingByteSerializer: {v0.AsByteString()}");
         var result = (T)s.Read<object>(v0);
 
         output?.WriteLine($"PassThroughTypeDecoratingByteSerializer -> {result}");
@@ -211,15 +211,15 @@ public static class SerializationTestExt
         var s = new MessagePackByteSerializer().ToTyped<T>();
         using var buffer = s.Write(value);
         var v0 = buffer.WrittenMemory.ToArray();
-        output?.WriteLine($"MessagePackByteSerializer: {JsonFormatter.Format(v0)}");
+        output?.WriteLine($"MessagePackByteSerializer: {v0.AsByteString()}");
         value = s.Read(v0);
 
         var v1 = MessagePackSerialized.New(value);
-        output?.WriteLine($"MessagePackSerialized: {JsonFormatter.Format(v1.Data)}");
+        output?.WriteLine($"MessagePackSerialized: {v1.Data.AsByteString()}");
         value = MessagePackSerialized.New<T>(v1.Data).Value;
 
         var v2 = TypeDecoratingMessagePackSerialized.New(value);
-        output?.WriteLine($"TypeDecoratingMessagePackSerialized: {JsonFormatter.Format(v2.Data)}");
+        output?.WriteLine($"TypeDecoratingMessagePackSerialized: {v2.Data.AsByteString()}");
         value = TypeDecoratingMessagePackSerialized.New<T>(v2.Data).Value;
 
         output?.WriteLine($"PassThroughMessagePackByteSerializer -> {value}");
@@ -233,15 +233,15 @@ public static class SerializationTestExt
         var s = new MemoryPackByteSerializer().ToTyped<T>();
         using var buffer = s.Write(value);
         var v0 = buffer.WrittenMemory.ToArray();
-        output?.WriteLine($"MemoryPackByteSerializer: {JsonFormatter.Format(v0)}");
+        output?.WriteLine($"MemoryPackByteSerializer: {v0.AsByteString()}");
         value = s.Read(v0);
 
         var v1 = MemoryPackSerialized.New(value);
-        output?.WriteLine($"MemoryPackSerialized: {JsonFormatter.Format(v1.Data)}");
+        output?.WriteLine($"MemoryPackSerialized: {v1.Data.AsByteString()}");
         value = MemoryPackSerialized.New<T>(v1.Data).Value;
 
         var v2 = TypeDecoratingMemoryPackSerialized.New(value);
-        output?.WriteLine($"TypeDecoratingMemoryPackSerialized: {JsonFormatter.Format(v2.Data)}");
+        output?.WriteLine($"TypeDecoratingMemoryPackSerialized: {v2.Data.AsByteString()}");
         value = TypeDecoratingMemoryPackSerialized.New<T>(v2.Data).Value;
 
         output?.WriteLine($"PassThroughMemoryPackByteSerializer -> {value}");

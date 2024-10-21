@@ -1,6 +1,7 @@
 using ActualLab.Collections.Internal;
 using ActualLab.IO;
 using ActualLab.Reflection;
+using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using TextOrBytes = ActualLab.Serialization.TextOrBytes;
 
@@ -147,6 +148,23 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             value.RemoteHubId.Should().Be(expected.RemoteHubId);
             value.RemoteApiVersionSet!.Value.Should().Be(expected.RemoteApiVersionSet!.Value);
         }
+    }
+
+    [Fact]
+    public void RpcNoWaitSerialization()
+    {
+        var x = default(RpcNoWait);
+        var o = default(OldRpcNoWait);
+
+        Out.WriteLine("New:");
+        x.PassThroughAllSerializers(Out);
+        Out.WriteLine("Old:");
+        o.PassThroughAllSerializers(Out);
+
+        Out.WriteLine("Old to new:");
+        o.AssertPassesThroughAllSerializers<OldRpcNoWait, RpcNoWait>((_, _) => {}, Out);
+        Out.WriteLine("New to old:");
+        x.AssertPassesThroughAllSerializers<RpcNoWait, OldRpcNoWait>((_, _) => {}, Out);
     }
 
     [Fact]

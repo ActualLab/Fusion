@@ -2,10 +2,23 @@ using MessagePack;
 
 namespace ActualLab.Rpc;
 
+#pragma warning disable CS0169 // Field is never used
+
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
 [DataContract, MemoryPackable, MessagePackObject]
-public readonly partial struct RpcNoWait
+public readonly partial struct RpcNoWait : IEquatable<RpcNoWait>
 {
+    // See https://github.com/dotnet/runtime/pull/107198
+    [Obsolete("This member exists solely to make Mono AOT work. Don't use it!")]
+    private readonly byte _dummyValue;
+
+    // Equality
+    public bool Equals(RpcNoWait other) => true;
+    public override bool Equals(object? obj) => obj is RpcNoWait;
+    public override int GetHashCode() => 0;
+
+    // Nested types
+
     public static class Tasks
     {
         public static readonly Task<RpcNoWait> Completed = Task.FromResult(default(RpcNoWait));

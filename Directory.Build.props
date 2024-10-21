@@ -99,12 +99,15 @@
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
     <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
     <WarningLevel>4</WarningLevel>
+    <!-- NETSDK1057: You're using a preview version of .NET -->
+    <NoWarn>$(NoWarn);NETSDK1057</NoWarn>
     <!-- NuGet & libraries / frameworks -->
     <!-- NU1603: Approximate best match for X was resolved -->
+    <!-- NU1901-1904: Package 'X' has a known severity vulnerability -->
     <!-- NU5048: The 'PackageIconUrl'/'iconUrl' element is deprecated -->
     <!-- NU5105: The package version uses SemVer 2.0.0 or components of SemVer 1.0.0 that are not supported on legacy clients -->
     <!-- NETSDK1138: The target framework 'net5.0' is out of support. -->
-    <NoWarn>$(NoWarn);NU1603;NU1902;NU1904;NU5048;NU5105;NETSDK1138</NoWarn>
+    <NoWarn>$(NoWarn);NU1603;NU1901;NU1902;NU1903;NU1904;NU5048;NU5105;NETSDK1138</NoWarn>
     <!-- C# -->
     <!-- CA1062: Validate arguments of public methods -->
     <!-- CS1591: Missing XML comment for publicly visible type or member -->

@@ -76,7 +76,7 @@ public static class TextTypeSerializer
         }
 
         var typeLength = Prefix.Length + suffixIndex + Suffix.Length;
-        var result = FromBytes(data[..typeLength]);
+        var result = FromBytes(data[..typeLength].AsByteString());
         data = data[typeLength..];
         return result;
     }

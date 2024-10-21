@@ -31,7 +31,7 @@ public static class ByteTypeSerializer
             writer.Remaining.WriteUnchecked(2, unchecked((ushort)nameSpan.GetXxHash3L())); // 2-byte hash for faster lookups
             nameSpan.CopyTo(writer.Remaining[4..]);
             buffer.Advance(fullLength);
-            return buffer.WrittenSpan.ToArray();
+            return buffer.WrittenSpan.ToArray().AsByteString();
         });
 
     public static Type? FromBytes(ByteString bytes)
@@ -84,7 +84,7 @@ public static class ByteTypeSerializer
         }
 
         var fullLength = length + 4;
-        var itemType = FromBytes(data[..fullLength]);
+        var itemType = FromBytes(data[..fullLength].AsByteString());
         data = data[fullLength..];
         return itemType;
     }
