@@ -47,7 +47,7 @@ public sealed class GCHandlePool(GCHandlePool.Options settings) : IDisposable
             return handle;
         }
 
-        _opCounter.Value = 0;
+        _opCounter.Reset();
         return GCHandle.Alloc(target, HandleType);
     }
 
@@ -73,6 +73,6 @@ public sealed class GCHandlePool(GCHandlePool.Options settings) : IDisposable
     {
         while (_queue.TryDequeue(out var handle))
             handle.Free();
-        _opCounter.Value = 0;
+        _opCounter.Reset();
     }
 }

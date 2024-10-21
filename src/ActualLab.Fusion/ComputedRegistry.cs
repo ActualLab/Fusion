@@ -32,8 +32,8 @@ public sealed class ComputedRegistry : IDisposable
     private readonly ConcurrentDictionary<ComputedInput, GCHandle> _storage;
     private readonly GCHandlePool _gcHandlePool;
     private StochasticCounter _opCounter;
-    private volatile ComputedGraphPruner _graphPruner = null!;
-    private volatile int _pruneOpCounterThreshold;
+    private ComputedGraphPruner _graphPruner = null!;
+    private int _pruneOpCounterThreshold;
     private Task? _pruneTask;
 
     public IEnumerable<ComputedInput> Keys => _storage.Select(p => p.Key);
@@ -190,6 +190,7 @@ public sealed class ComputedRegistry : IDisposable
         return graphPruner;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ReportAccess(Computed computed, bool isNew)
     {
         if (OnAccess != null && computed.Input.Function is IComputeMethodFunction)
@@ -200,18 +201,12 @@ public sealed class ComputedRegistry : IDisposable
 
     private void OnOperation(int random)
     {
-        if (_opCounter.Increment(random) is { } c && c > _pruneOpCounterThreshold)
-            TryPrune();
-    }
+        if (_opCounter.Increment(random) is not { } c || c <= _pruneOpCounterThreshold)
+            return;
+        if (_opCounter.Reset() <= _pruneOpCounterThreshold)
+            return;
 
-    private void TryPrune()
-    {
-        lock (_lock) {
-            if (_opCounter.Value <= _pruneOpCounterThreshold) return;
-
-            _opCounter.Value = 0;
-            _ = Prune();
-        }
+        _ = Prune();
     }
 
     private void PruneUnsafe()
@@ -233,7 +228,7 @@ public sealed class ComputedRegistry : IDisposable
         int keyCount;
         lock (_lock) {
             UpdatePruneCounterThreshold(out keyCount);
-            _opCounter.Value = 0;
+            _opCounter.Reset();
         }
         Interlocked.Exchange(ref Metrics.KeyCount, keyCount);
         Metrics.PrunedKeyCount.Add(prunedKeyCount);

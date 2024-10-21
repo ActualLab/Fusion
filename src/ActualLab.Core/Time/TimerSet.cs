@@ -53,7 +53,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
     public void AddOrUpdate(TTimer timer, long priority)
     {
         lock (_lock)
-            _timers.AddOrUpdate(FixPriority(priority), timer);
+            _timers.AddOrUpdate(FixPriorityFromLock(priority), timer);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -62,7 +62,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
     public bool AddOrUpdateToEarlier(TTimer timer, long priority)
     {
         lock (_lock)
-            return _timers.AddOrUpdateToLower(FixPriority(priority), timer);
+            return _timers.AddOrUpdateToLower(FixPriorityFromLock(priority), timer);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -71,7 +71,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
     public bool AddOrUpdateToLater(TTimer timer, long priority)
     {
         lock (_lock)
-            return _timers.AddOrUpdateToHigher(FixPriority(priority), timer);
+            return _timers.AddOrUpdateToHigher(FixPriorityFromLock(priority), timer);
     }
 
     public bool Remove(TTimer timer)
@@ -113,6 +113,6 @@ public sealed class TimerSet<TTimer> : WorkerBase
     // Private methods
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private long FixPriority(long priority)
+    private long FixPriorityFromLock(long priority)
         => Math.Max(_minPriority, priority);
 }

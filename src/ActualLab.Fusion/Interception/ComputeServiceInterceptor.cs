@@ -29,6 +29,9 @@ public class ComputeServiceInterceptor : Interceptor
         CommandServiceInterceptor = Hub.CommanderHub.Interceptor;
     }
 
+#if NET5_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#endif
     public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
         => GetHandler(invocation) ?? CommandServiceInterceptor.SelectHandler(invocation);
 

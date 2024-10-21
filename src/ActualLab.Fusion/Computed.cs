@@ -29,7 +29,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 {
     private volatile int _state;
     private volatile ComputedFlags _flags;
-    private long _lastKeepAliveSlot;
+    private volatile int _lastKeepAliveSlot;
     private RefHashSetSlim3<Computed> _dependencies;
     private HashSetSlim3<(ComputedInput Input, ulong Version)> _dependants;
     // ReSharper disable once InconsistentNaming
@@ -241,6 +241,9 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         }
     }
 
+#if NET5_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#endif
     protected internal void RenewTimeouts(bool isNew)
     {
         if (ConsistencyState == ConsistencyState.Invalidated)
@@ -249,11 +252,11 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         var minCacheDuration = Options.MinCacheDuration;
         if (minCacheDuration != default) {
             var keepAliveSlot = Timeouts.GetKeepAliveSlot(Timeouts.Clock.Now + minCacheDuration);
-            var lastKeepAliveSlot = Interlocked.Exchange(ref _lastKeepAliveSlot, keepAliveSlot);
-            if (lastKeepAliveSlot != keepAliveSlot)
-                Timeouts.KeepAlive.AddOrUpdateToLater(this, keepAliveSlot);
+            if (_lastKeepAliveSlot != keepAliveSlot) { // Fast check
+                if (Interlocked.Exchange(ref _lastKeepAliveSlot, keepAliveSlot) != keepAliveSlot) // Slow check
+                    Timeouts.KeepAlive.AddOrUpdateToLater(this, keepAliveSlot);
+            }
         }
-
         ComputedRegistry.Instance.ReportAccess(this, isNew);
     }
 

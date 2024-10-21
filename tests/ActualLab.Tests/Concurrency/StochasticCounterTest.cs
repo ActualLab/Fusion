@@ -38,7 +38,7 @@ public class StochasticCounterTest(ITestOutputHelper @out) : TestBase(@out)
         var incrementCount = (double)(agentCount * iterationCount);
         Out.WriteLine($"Increment count: {incrementCount}");
         for (var i = 0; i < runCount; i++) {
-            c.Value = 0;
+            c.Reset();
             var startedAt = CpuTimestamp.Now;
             var tasks = Enumerable.Range(0, agentCount)
                 .Select(_ => Task.Run(() => {

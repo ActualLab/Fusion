@@ -46,6 +46,10 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
                 break;
         }
     }
+
+#if NET5_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#endif
     public bool Add(long priority, T value)
     {
         var index = GetBucketIndex(priority);
@@ -56,6 +60,9 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
         return true;
     }
 
+#if NET5_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#endif
     public void AddOrUpdate(long priority, T value)
     {
         var index = GetBucketIndex(priority);
@@ -71,6 +78,9 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
         bucket.Add(value, priority);
     }
 
+#if NET5_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#endif
     public bool AddOrUpdateToLower(long priority, T value)
     {
         var index = GetBucketIndex(priority);
@@ -98,6 +108,9 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
         return true;
     }
 
+#if NET5_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#endif
     public bool AddOrUpdateToHigher(long priority, T value)
     {
         var index = GetBucketIndex(priority);
@@ -125,6 +138,9 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
         return true;
     }
 
+#if NET5_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#endif
     public bool Remove(T value, out long priority)
     {
         if (!_bucketIndexes.Remove(value, out var index)) {
@@ -241,13 +257,16 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
         return bucket;
     }
 
+#if NET5_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#endif
     private int GetBucketIndex(long priority)
     {
         if (priority < MinPriority)
             throw new ArgumentOutOfRangeException(nameof(priority));
 
-        var xor = MinPriority ^ priority;
-        return xor == 0 ? 0 : 1 + Bits.LeadingBitIndex((ulong)xor);
+        priority ^= MinPriority;
+        return 64 - unchecked((int)ulong.LeadingZeroCount((ulong)priority));
     }
 
     private int GetBucketIndexUnchecked(long priority)

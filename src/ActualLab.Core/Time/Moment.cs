@@ -17,11 +17,15 @@ public readonly partial struct Moment(long epochOffsetTicks)
     public static readonly Moment MaxValue = new(long.MaxValue);
     public static readonly Moment EpochStart = default; // AKA Unix Epoch
 
-    public static Moment Now
-        => new(DateTime.UtcNow);
+    public static Moment Now {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(DateTime.UtcNow);
+    }
 
-    public static Moment CpuNow
-        => new(CpuClock.ZeroEpochOffsetTicks + CpuClock.Stopwatch.Elapsed.Ticks);
+    public static Moment CpuNow {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(CpuClock.ZeroEpochOffsetTicks + CpuClock.Stopwatch.Elapsed.Ticks);
+    }
 
     // AKA Unix Time
     [DataMember(Order = 0)]

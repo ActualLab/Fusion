@@ -9,8 +9,10 @@ public sealed class CpuClock : MomentClock
 
     public static readonly CpuClock Instance = new();
 
-    public override Moment Now
-        => new(ZeroEpochOffsetTicks + Stopwatch.Elapsed.Ticks);
+    public override Moment Now {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(ZeroEpochOffsetTicks + Stopwatch.Elapsed.Ticks);
+    }
 
     private CpuClock() { }
 }

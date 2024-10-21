@@ -24,7 +24,8 @@ public class ConcurrentPool<T>(Func<T> itemFactory, int capacity, int counterPre
             _size.Decrement();
             return new ResourceLease<T>(resource, this);
         }
-        _size.Value = 0;
+
+        _size.Reset();
         return new ResourceLease<T>(_itemFactory(), this);
     }
 

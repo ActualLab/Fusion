@@ -3,6 +3,7 @@
 // ReSharper disable ArrangeConstructorOrDestructorBody
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
+using System.Numerics;
 using System.Reflection.Emit;
 using ActualLab.Internal;
 using MessagePack;
@@ -1048,7 +1049,11 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
             return hashCode;
         }
@@ -1059,7 +1064,11 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
             return hashCode;
         }
@@ -1391,7 +1400,11 @@ public sealed record ArgumentListS2 : ArgumentList2
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
             return hashCode;
         }
@@ -1402,7 +1415,11 @@ public sealed record ArgumentListS2 : ArgumentList2
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
             return hashCode;
         }
@@ -1798,9 +1815,17 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
             return hashCode;
         }
@@ -1811,9 +1836,17 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
             return hashCode;
         }
@@ -2196,9 +2229,17 @@ public sealed record ArgumentListS3 : ArgumentList3
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
             return hashCode;
         }
@@ -2209,9 +2250,17 @@ public sealed record ArgumentListS3 : ArgumentList3
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
             return hashCode;
         }
@@ -2661,11 +2710,23 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
             return hashCode;
         }
@@ -2676,11 +2737,23 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
             return hashCode;
         }
@@ -3114,11 +3187,23 @@ public sealed record ArgumentListS4 : ArgumentList4
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
             return hashCode;
         }
@@ -3129,11 +3214,23 @@ public sealed record ArgumentListS4 : ArgumentList4
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
             return hashCode;
         }
@@ -3639,13 +3736,29 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
             return hashCode;
         }
@@ -3656,13 +3769,29 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
             return hashCode;
         }
@@ -4147,13 +4276,29 @@ public sealed record ArgumentListS5 : ArgumentList5
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
             return hashCode;
         }
@@ -4164,13 +4309,29 @@ public sealed record ArgumentListS5 : ArgumentList5
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
             return hashCode;
         }
@@ -4727,15 +4888,35 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item5 is { } item5 ? item5.GetHashCode() : 0);
             return hashCode;
         }
@@ -4746,15 +4927,35 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
             return hashCode;
         }
@@ -5290,15 +5491,35 @@ public sealed record ArgumentListS6 : ArgumentList6
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item5 is { } item5 ? item5.GetHashCode() : 0);
             return hashCode;
         }
@@ -5309,15 +5530,35 @@ public sealed record ArgumentListS6 : ArgumentList6
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
             return hashCode;
         }
@@ -5925,17 +6166,41 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item5 is { } item5 ? item5.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item6 is { } item6 ? item6.GetHashCode() : 0);
             return hashCode;
         }
@@ -5946,17 +6211,41 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
             return hashCode;
         }
@@ -6543,17 +6832,41 @@ public sealed record ArgumentListS7 : ArgumentList7
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item5 is { } item5 ? item5.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item6 is { } item6 ? item6.GetHashCode() : 0);
             return hashCode;
         }
@@ -6564,17 +6877,41 @@ public sealed record ArgumentListS7 : ArgumentList7
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
             return hashCode;
         }
@@ -7233,19 +7570,47 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item5 is { } item5 ? item5.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item6 is { } item6 ? item6.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item7 is { } item7 ? item7.GetHashCode() : 0);
             return hashCode;
         }
@@ -7256,19 +7621,47 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
             return hashCode;
         }
@@ -7906,19 +8299,47 @@ public sealed record ArgumentListS8 : ArgumentList8
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item5 is { } item5 ? item5.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item6 is { } item6 ? item6.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item7 is { } item7 ? item7.GetHashCode() : 0);
             return hashCode;
         }
@@ -7929,19 +8350,47 @@ public sealed record ArgumentListS8 : ArgumentList8
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
             return hashCode;
         }
@@ -8651,21 +9100,53 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item5 is { } item5 ? item5.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item6 is { } item6 ? item6.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item7 is { } item7 ? item7.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 8) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item8 is { } item8 ? item8.GetHashCode() : 0);
             return hashCode;
         }
@@ -8676,21 +9157,53 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 8) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 8 ? 0 : (Item8 is { } item8 ? item8.GetHashCode() : 0));
             return hashCode;
         }
@@ -9379,21 +9892,53 @@ public sealed record ArgumentListS9 : ArgumentList9
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item5 is { } item5 ? item5.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item6 is { } item6 ? item6.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item7 is { } item7 ? item7.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 8) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item8 is { } item8 ? item8.GetHashCode() : 0);
             return hashCode;
         }
@@ -9404,21 +9949,53 @@ public sealed record ArgumentListS9 : ArgumentList9
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 8) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 8 ? 0 : (Item8 is { } item8 ? item8.GetHashCode() : 0));
             return hashCode;
         }
@@ -10179,23 +10756,59 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item5 is { } item5 ? item5.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item6 is { } item6 ? item6.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item7 is { } item7 ? item7.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 8) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item8 is { } item8 ? item8.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 21) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item9 is { } item9 ? item9.GetHashCode() : 0);
             return hashCode;
         }
@@ -10206,23 +10819,59 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 8) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 8 ? 0 : (Item8 is { } item8 ? item8.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 21) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 9 ? 0 : (Item9 is { } item9 ? item9.GetHashCode() : 0));
             return hashCode;
         }
@@ -10962,23 +11611,59 @@ public sealed record ArgumentListS10 : ArgumentList10
         unchecked {
             var hashCode =
                 (Item0 is { } item0 ? item0.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item1 is { } item1 ? item1.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item2 is { } item2 ? item2.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item3 is { } item3 ? item3.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item4 is { } item4 ? item4.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item5 is { } item5 ? item5.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item6 is { } item6 ? item6.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item7 is { } item7 ? item7.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 8) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item8 is { } item8 ? item8.GetHashCode() : 0);
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 21) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (Item9 is { } item9 ? item9.GetHashCode() : 0);
             return hashCode;
         }
@@ -10989,23 +11674,59 @@ public sealed record ArgumentListS10 : ArgumentList10
         unchecked {
             var hashCode =
                 (skipIndex == 0 ? 0 : (Item0 is { } item0 ? item0.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 13) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 1 ? 0 : (Item1 is { } item1 ? item1.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 26) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 2 ? 0 : (Item2 is { } item2 ? item2.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 7) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 3 ? 0 : (Item3 is { } item3 ? item3.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 20) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 4 ? 0 : (Item4 is { } item4 ? item4.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 1) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 5 ? 0 : (Item5 is { } item5 ? item5.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 14) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 6 ? 0 : (Item6 is { } item6 ? item6.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 27) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 7 ? 0 : (Item7 is { } item7 ? item7.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 8) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 8 ? 0 : (Item8 is { } item8 ? item8.GetHashCode() : 0));
+#if NETCOREAPP3_1_OR_GREATER
+            hashCode = (int)BitOperations.RotateLeft((uint)hashCode, 21) +
+#else
             hashCode = 397*hashCode +
+#endif
                 (skipIndex == 9 ? 0 : (Item9 is { } item9 ? item9.GetHashCode() : 0));
             return hashCode;
         }

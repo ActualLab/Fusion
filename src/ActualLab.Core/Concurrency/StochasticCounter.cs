@@ -14,8 +14,6 @@ public struct StochasticCounter
     public int Value {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _value;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        set => Interlocked.Exchange(ref _value, value);
     }
 
     public readonly int Mask;
@@ -30,6 +28,10 @@ public struct StochasticCounter
         Mask = (int)Bits.GreaterOrEqualPowerOf2((ulong)precisionHint) - 1;
         Precision = Mask + 1;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int Reset(int value = 0)
+        => Interlocked.Exchange(ref _value, value);
 
     // Overloads w/o random
 

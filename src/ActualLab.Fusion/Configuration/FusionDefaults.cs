@@ -38,8 +38,8 @@ public static class FusionDefaults
     {
         var isServer = Mode is FusionMode.Server;
         var cpuCountPo2 = HardwareInfo.ProcessorCountPo2;
-        TimeoutsConcurrencyLevel = (isServer ? cpuCountPo2 : cpuCountPo2 / 16).Clamp(1, isServer ? 256 : 4);
-        ComputedRegistryConcurrencyLevel = cpuCountPo2 * (isServer ? 8 : 1);
+        TimeoutsConcurrencyLevel = (cpuCountPo2 / (isServer ? 2 : 16)).Clamp(1, 256);
+        ComputedRegistryConcurrencyLevel = (cpuCountPo2 * (isServer ? 8 : 1)).Clamp(1, 8192);
         var computedRegistryCapacityBase = (ComputedRegistryConcurrencyLevel * 32).Clamp(256, 8192);
         ComputedRegistryInitialCapacity = PrimeSieve.GetPrecomputedPrime(computedRegistryCapacityBase);
         ComputedGraphPrunerBatchSize = cpuCountPo2 * 512;

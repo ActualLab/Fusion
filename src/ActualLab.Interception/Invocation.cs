@@ -22,6 +22,9 @@ public readonly struct Invocation(
     public string Format()
         => $"{Proxy.GetType().NonProxyType().GetName()}.{Method.Name}{Arguments}";
 
+#if NET5_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#endif
     public void InvokeIntercepted()
     {
         if (InterceptedDelegate is Action<ArgumentList> action)
@@ -30,6 +33,9 @@ public readonly struct Invocation(
             throw Errors.InvalidInterceptedDelegate();
     }
 
+#if NET5_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#endif
     public TResult InvokeIntercepted<TResult>()
         => InterceptedDelegate is Func<ArgumentList, TResult> func
             ? func.Invoke(Arguments)

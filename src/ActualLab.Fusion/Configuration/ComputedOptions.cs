@@ -15,11 +15,13 @@ public record ComputedOptions
         TransientErrorInvalidationDelay = TimeSpan.MaxValue,
     };
 
-    public TimeSpan MinCacheDuration { get; init; }
+    public TimeSpan MinCacheDuration { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
     public TimeSpan TransientErrorInvalidationDelay { get; init; } = TimeSpan.FromSeconds(1);
-    public TimeSpan AutoInvalidationDelay { get; init; } = TimeSpan.MaxValue; // No auto invalidation
-    public TimeSpan InvalidationDelay { get; init; }
-    public RemoteComputedCacheMode RemoteComputedCacheMode { get; init; } = RemoteComputedCacheMode.NoCache;
+    public TimeSpan AutoInvalidationDelay { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
+        = TimeSpan.MaxValue; // No auto invalidation
+    public TimeSpan InvalidationDelay { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
+    public RemoteComputedCacheMode RemoteComputedCacheMode { get; init; }
+        = RemoteComputedCacheMode.NoCache;
     public ComputedCancellationReprocessingOptions CancellationReprocessing { get; init; }
         = ComputedCancellationReprocessingOptions.Default;
 

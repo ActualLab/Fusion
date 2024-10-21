@@ -1,5 +1,4 @@
 using ActualLab.Rpc;
-using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Internal;
 
@@ -86,24 +85,14 @@ public static partial class ComputedImpl
     }
 
     public static T Strip<T>(Computed<T>? computed, ComputeContext context)
-    {
-        if (computed == null)
-            return default!;
-        if (CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting))
-            return default!;
-
-        return computed.Value;
-    }
+        => computed == null || CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting)
+            ? default!
+            : computed.Value;
 
     public static Task<T> StripToTask<T>(Computed<T>? computed, ComputeContext context)
-    {
-        if (computed == null)
-            return TaskCache<T>.DefaultResultTask;
-        if (CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting))
-            return TaskCache<T>.DefaultResultTask;
-
-        return computed.OutputAsTask;
-    }
+        => computed == null || CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting)
+            ? TaskCache<T>.DefaultResultTask
+            : computed.OutputAsTask;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static Task FinalizeAndTryReprocessInternalCancellation<T>(
