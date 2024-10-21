@@ -266,7 +266,11 @@ public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
             throw new ArgumentOutOfRangeException(nameof(priority));
 
         priority ^= MinPriority;
+#if NET8_0_OR_GREATER
         return 64 - unchecked((int)ulong.LeadingZeroCount((ulong)priority));
+#else
+        return priority == 0 ? 0 : 1 + Bits.LeadingBitIndex((ulong)priority);
+#endif
     }
 
     private int GetBucketIndexUnchecked(long priority)
