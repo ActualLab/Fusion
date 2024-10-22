@@ -19,7 +19,7 @@ public sealed record RpcSerializationFormatResolver(
     public static RpcSerializationFormatResolver Default {
         get => _default ??= NewDefault(
             RpcSerializationFormat.MemoryPackV1.Key, // Default server format (should be this one for backward compatibility)
-            RpcSerializationFormat.MemoryPackV2.Key); // Default client format (the newest and fastest one)
+            RpcSerializationFormat.MemoryPackV2.Key); // Default client format (the newest one)
         set => _default = value;
     }
 
