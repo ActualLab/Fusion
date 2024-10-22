@@ -32,15 +32,19 @@ public class RpcWebSocketTest : RpcTestBase
 
     [Theory]
     [InlineData("json")]
+    [InlineData("json-np")]
     [InlineData("njson")]
+    [InlineData("njson-np")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
+    [InlineData("mempack2-np")]
     [InlineData("mempack2c")]
-    [InlineData("mempack2a")]
+    [InlineData("mempack2c-np")]
     [InlineData("msgpack1")]
     [InlineData("msgpack2")]
+    [InlineData("msgpack2-np")]
     [InlineData("msgpack2c")]
-    [InlineData("msgpack2a")]
+    [InlineData("msgpack2c-np")]
     public async Task BasicTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -152,11 +156,9 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("njson")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
-    [InlineData("mempack2a")]
     [InlineData("mempack2c")]
     [InlineData("msgpack1")]
     [InlineData("msgpack2")]
-    [InlineData("msgpack2a")]
     [InlineData("msgpack2c")]
     public async Task PolymorphTest(string serializationFormat)
     {
@@ -206,15 +208,19 @@ public class RpcWebSocketTest : RpcTestBase
 
     [Theory]
     [InlineData("json")]
+    [InlineData("json-np")]
     [InlineData("njson")]
+    [InlineData("njson-np")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
-    [InlineData("mempack2a")]
+    [InlineData("mempack2-np")]
     [InlineData("mempack2c")]
+    [InlineData("mempack2c-np")]
     [InlineData("msgpack1")]
     [InlineData("msgpack2")]
-    [InlineData("msgpack2a")]
+    [InlineData("msgpack2-np")]
     [InlineData("msgpack2c")]
+    [InlineData("msgpack2c-np")]
     public async Task StreamTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -227,6 +233,8 @@ public class RpcWebSocketTest : RpcTestBase
         var stream1 = await client.StreamInt32(expected1.Count);
         (await stream1.ToListAsync()).Should().Equal(expected1);
         await AssertNoCalls(peer, Out);
+        if (SerializationFormat.Value.EndsWith("-np"))
+            return;
 
         var expected2 = Enumerable.Range(0, 500)
             .Select(x => (x & 2) == 0 ? (ITuple)new Tuple<int>(x) : new Tuple<long>(x))
@@ -248,9 +256,24 @@ public class RpcWebSocketTest : RpcTestBase
         await AssertNoCalls(peer, Out);
     }
 
-    [Fact]
-    public async Task StreamInputTest()
+    [Theory]
+    [InlineData("json")]
+    [InlineData("json-np")]
+    [InlineData("njson")]
+    [InlineData("njson-np")]
+    [InlineData("mempack1")]
+    [InlineData("mempack2")]
+    [InlineData("mempack2-np")]
+    [InlineData("mempack2c")]
+    [InlineData("mempack2c-np")]
+    [InlineData("msgpack1")]
+    [InlineData("msgpack2")]
+    [InlineData("msgpack2-np")]
+    [InlineData("msgpack2c")]
+    [InlineData("msgpack2c-np")]
+    public async Task StreamInputTest(string serializationFormat)
     {
+        SerializationFormat = serializationFormat;
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);

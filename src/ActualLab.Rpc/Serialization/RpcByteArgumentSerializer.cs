@@ -7,24 +7,18 @@ using ActualLab.Rpc.Serialization.Internal;
 
 namespace ActualLab.Rpc.Serialization;
 
-public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
+public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bool allowPolymorphism = true)
+    : RpcArgumentSerializer(allowPolymorphism)
 {
-    private readonly IByteSerializer _serializer;
-
-    // ReSharper disable once ConvertToPrimaryConstructor
-    public RpcByteArgumentSerializer(IByteSerializer serializer)
-        => _serializer = serializer;
-
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
     {
-        if (arguments.Length == 0)
-            return default;
-
         var buffer = GetWriteBuffer(sizeHint);
-        var itemSerializer = allowPolymorphism
-            ? (ItemSerializer)new ItemPolymorphicSerializer(_serializer, buffer)
-            : new ItemNonPolymorphicSerializer(_serializer, buffer);
+        var itemSerializer = (ItemSerializer)(AllowPolymorphism
+            ? allowPolymorphism
+                ? new ItemPolymorphicSerializer(baseSerializer, buffer)
+                : new ItemNonPolymorphicSerializer(baseSerializer, buffer)
+            : new ItemValueOnlySerializer(baseSerializer, buffer));
         arguments.Read(itemSerializer);
         return GetWriteBufferMemory(buffer);
     }
@@ -32,13 +26,12 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, ReadOnlyMemory<byte> data)
     {
-        if (data.IsEmpty)
-            return;
-
-        var deserializer = allowPolymorphism
-            ? (ItemDeserializer)new ItemPolymorphicDeserializer(_serializer, data)
-            : new ItemNonPolymorphicDeserializer(_serializer, data);
-        arguments.Write(deserializer);
+        var itemDeserializer = (ItemDeserializer)(AllowPolymorphism
+            ? allowPolymorphism
+                ? new ItemPolymorphicDeserializer(baseSerializer, data)
+                : new ItemNonPolymorphicDeserializer(baseSerializer, data)
+            : new ItemValueOnlyDeserializer(baseSerializer, data));
+        arguments.Write(itemDeserializer);
     }
 
     // ItemSerializer + its variants
@@ -52,8 +45,9 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnStruct<T>(T item, int index)
         {
-            if (typeof(T) != typeof(CancellationToken))
-                Serializer.Write(Buffer, item);
+            var type = typeof(T);
+            if (type != typeof(CancellationToken))
+                Serializer.Write(Buffer, item, type);
         }
     }
 
@@ -109,6 +103,23 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
         }
     }
 
+    private sealed class ItemValueOnlySerializer(
+        IByteSerializer serializer,
+        IBufferWriter<byte> buffer)
+        : ItemSerializer(serializer, buffer)
+    {
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override void OnClass(Type type, object? item, int index)
+            => Serializer.Write(Buffer, item, type);
+
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override void OnAny(Type type, object? item, int index)
+        {
+            if (type != typeof(CancellationToken))
+                Serializer.Write(Buffer, item, type);
+        }
+    }
+
     // ItemDeserializer + its variants
 
     private abstract class ItemDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
@@ -157,6 +168,7 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
             return Serializer.Read(ref Data, type);
         }
 
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnAny(Type type, int index, object? defaultValue)
         {
             if (type.IsValueType)
@@ -167,5 +179,19 @@ public sealed class RpcByteArgumentSerializer : RpcArgumentSerializer
             ByteTypeSerializer.ReadExactItemType(ref Data, type);
             return Serializer.Read(ref Data, type);
         }
+    }
+
+    private sealed class ItemValueOnlyDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
+        : ItemDeserializer(serializer, data)
+    {
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override object? OnClass(Type type, int index)
+            => Serializer.Read(ref Data, type);
+
+        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
+        public override object? OnAny(Type type, int index, object? defaultValue)
+            => type == typeof(CancellationToken)
+                ? defaultValue
+                : Serializer.Read(ref Data, type);
     }
 }

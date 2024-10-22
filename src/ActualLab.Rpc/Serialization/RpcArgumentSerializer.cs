@@ -8,7 +8,7 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Serialization;
 
-public abstract class RpcArgumentSerializer
+public abstract class RpcArgumentSerializer(bool allowPolymorphism)
 {
     [ThreadStatic] private static ArrayPoolBuffer<byte>? _writeBuffer;
     protected static readonly ArrayPool<byte> NoPool = NoArrayPool<byte>.Instance;
@@ -16,6 +16,8 @@ public abstract class RpcArgumentSerializer
     public static int WriteBufferReplaceCapacity { get; set; } = 65536;
     public static int WriteBufferCapacity { get; set; } = 4096;
     public static int CopyThreshold { get; set; } = 1024;
+
+    public bool AllowPolymorphism { get; } = allowPolymorphism;
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint);
