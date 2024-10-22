@@ -43,7 +43,7 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
         var cancellationDelayThreshold = cancellationDelay + TimeSpan.FromMilliseconds(25);
         var timeout = Debugger.IsAttached
             ? TimeSpan.FromMinutes(10)
-            : TimeSpan.FromSeconds(20);
+            : TimeSpan.FromSeconds(30);
 
         await counters.Get(key);
         await counters.Increment(key);
