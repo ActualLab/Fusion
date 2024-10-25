@@ -7,6 +7,14 @@
     <IsServerSideOnly>true</IsServerSideOnly>
   </PropertyGroup>
 
+  <!-- Suppressed warnings -->
+  <PropertyGroup>
+    <!-- EF packages are server-side only, so we can safely suppress all trimming-related warnings -->
+    <!-- IL2060: Call to 'Method' cannot be statically analyzed -->
+    <!-- IL2111: Method 'Method' with parameters or return value with `DynamicallyAccessedMembersAttribute` is accessed via reflection. Trimmer can't guarantee availability of the requirements of the method. -->
+    <NoWarn>$(NoWarn);IL2060;IL2111</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Ulid" />
   </ItemGroup>

@@ -38,6 +38,9 @@
     <NoWarn>$(NoWarn);VSTHRD200;VSTHRD110;VSTHRD103;VSTHRD003;VSTHRD002</NoWarn>
 
     <!-- Testing-specific -->
+    <!-- IL2060: Call to 'Method' cannot be statically analyzed -->
+    <!-- IL2111: Method 'Method' with parameters or return value with `DynamicallyAccessedMembersAttribute` is accessed via reflection. Trimmer can't guarantee availability of the requirements of the method. -->
+    <NoWarn>$(NoWarn);IL2060;IL2111</NoWarn>
     <!-- CA1032: Add the following constructor to WeirdException: ... -->
     <!-- CA1052: Type 'Nested' is a static holder type but is neither static nor NotInheritable -->
     <!-- CA1303: Method M passes a literal string as parameter 'value' of a call to 'void Console.WriteLine(string? value)'. Retrieve the following string(s) from a resource table instead: ... -->

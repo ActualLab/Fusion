@@ -71,9 +71,9 @@ public class CachingStructuresTest(ITestOutputHelper @out) : BenchmarkTestBase(@
         private readonly IEqualityComparer<T> _baseComparer = EqualityComparer<T>.Default;
 
         public bool Equals(T? x, T? y)
-            => _baseComparer.Equals(x, y);
+            => _baseComparer.Equals(x!, y!);
 
-        public int GetHashCode([DisallowNull] T obj)
-            => _baseComparer.GetHashCode(obj) & 1;
+        public int GetHashCode(T obj)
+            => _baseComparer.GetHashCode(obj!) & 1;
     }
 }
