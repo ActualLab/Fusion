@@ -9,7 +9,25 @@ namespace ActualLab.Serialization;
 public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type, bool>? typeFilter = null)
     : ByteSerializerBase
 {
-    public static TypeDecoratingByteSerializer Default { get; set; } = new(ByteSerializer.Default);
+#if NET9_0_OR_GREATER
+    private static readonly Lock StaticLock = new();
+#else
+    private static readonly object StaticLock = new();
+#endif
+    private static TypeDecoratingByteSerializer? _default;
+
+    public static TypeDecoratingByteSerializer Default {
+        get {
+            if (_default is { } value)
+                return value;
+            lock (StaticLock)
+                return _default ??= new(ByteSerializer.Default);
+        }
+        set {
+            lock (StaticLock)
+                _default = value;
+        }
+    }
 
     public IByteSerializer Serializer { get; } = serializer;
     public Func<Type, bool> TypeFilter { get; } = typeFilter ?? (_ => true);

@@ -6,9 +6,9 @@ namespace ActualLab.Rpc;
 public static class RpcCallTypeRegistry
 {
 #if NET9_0_OR_GREATER
-    private static readonly Lock Lock = new();
+    private static readonly Lock StaticLock = new();
 #else
-    private static readonly object Lock = new();
+    private static readonly object StaticLock = new();
 #endif
     private static volatile (Type? InboundCallType, Type? OutboundCallType)[] _callTypes;
 
@@ -47,7 +47,7 @@ public static class RpcCallTypeRegistry
         if (Get(callTypeId) == item)
             return;
 
-        lock (Lock) {
+        lock (StaticLock) {
             var existingItem = Get(callTypeId);
             if (existingItem == item)
                 return;

@@ -27,7 +27,12 @@ public partial class MemoryPackSerialized<T> : ByteSerialized<T>
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override IByteSerializer<T> GetSerializer()
-        => _serializer ??= MemoryPackByteSerializer.Default.ToTyped<T>();
+    {
+        if (_serializer is { } serializer)
+            return serializer;
+        lock (StaticLock)
+            return _serializer ??= MemoryPackByteSerializer.Default.ToTyped<T>();
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator MemoryPackSerialized<T>(T value) => new() { Value = value };

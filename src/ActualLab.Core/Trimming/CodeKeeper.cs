@@ -6,9 +6,9 @@ namespace ActualLab.Trimming;
 public abstract class CodeKeeper
 {
 #if NET9_0_OR_GREATER
-    private static readonly Lock Lock = new();
+    private static readonly Lock StaticLock = new();
 #else
-    private static readonly object Lock = new();
+    private static readonly object StaticLock = new();
 #endif
     private static readonly List<Action> Actions = new();
     private static readonly HashSet<Action> ActionSet = new();
@@ -18,7 +18,7 @@ public abstract class CodeKeeper
 
     public static void AddAction(Action action)
     {
-        lock (Lock) {
+        lock (StaticLock) {
             if (ActionSet.Add(action))
                 Actions.Add(action);
         }
@@ -32,7 +32,7 @@ public abstract class CodeKeeper
 
     public static void RunActions()
     {
-        lock (Lock) {
+        lock (StaticLock) {
             while (Actions.Count != 0) {
                 var actions = Actions.ToArray();
                 Actions.Clear();

@@ -12,6 +12,11 @@ namespace ActualLab.Serialization;
 
 public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IByteSerializer
 {
+#if NET9_0_OR_GREATER
+    private static readonly Lock StaticLock = new();
+#else
+    private static readonly object StaticLock = new();
+#endif
     private readonly ConcurrentDictionary<Type, MemoryPackByteSerializer> _typedSerializerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private static MemoryPackByteSerializer? _default;
@@ -20,13 +25,29 @@ public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IBy
     public static MemoryPackSerializerOptions DefaultOptions { get; set; } = MemoryPackSerializerOptions.Default;
 
     public static MemoryPackByteSerializer Default {
-        get => _default ??= new(DefaultOptions);
-        set => _default = value;
+        get {
+            if (_default is { } value)
+                return value;
+            lock (StaticLock)
+                return _default ??= new(DefaultOptions);
+        }
+        set {
+            lock (StaticLock)
+                _default = value;
+        }
     }
 
     public static TypeDecoratingByteSerializer DefaultTypeDecorating {
-        get => _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
-        set => _defaultTypeDecorating = value;
+        get {
+            if (_defaultTypeDecorating is { } value)
+                return value;
+            lock (StaticLock)
+                return _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
+        }
+        set {
+            lock (StaticLock)
+                _defaultTypeDecorating = value;
+        }
     }
 
     // Instance members

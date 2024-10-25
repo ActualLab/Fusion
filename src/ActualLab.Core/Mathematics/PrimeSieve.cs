@@ -11,9 +11,9 @@ public sealed class PrimeSieve
     ];
 
 #if NET9_0_OR_GREATER
-    private static readonly Lock Lock = new();
+    private static readonly Lock StaticLock = new();
 #else
-    private static readonly object Lock = new();
+    private static readonly object StaticLock = new();
 #endif
     private static PrimeSieve? _instance;
 
@@ -59,7 +59,7 @@ public sealed class PrimeSieve
         if (_instance?.Limit >= limit)
             return _instance;
 
-        lock (Lock) {
+        lock (StaticLock) {
             if (_instance?.Limit >= limit)
                 return _instance;
 

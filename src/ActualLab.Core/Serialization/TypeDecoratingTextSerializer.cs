@@ -15,6 +15,12 @@ namespace ActualLab.Serialization;
 public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type, bool>? typeFilter = null)
     : TextSerializerBase
 {
+#if NET9_0_OR_GREATER
+    private static readonly Lock StaticLock = new();
+#else
+    private static readonly object StaticLock = new();
+#endif
+
     public const string TypeDecoratorPrefix = "/* @type ";
     public const string TypeDecoratorSuffix = " */ ";
     public const char ExactTypeDecorator = '.';
@@ -23,13 +29,29 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
     private static TypeDecoratingTextSerializer? _defaultLegacy;
 
     public static TypeDecoratingTextSerializer Default {
-        get => _default ??= new(TextSerializer.Default);
-        set => _default = value;
+        get {
+            if (_default is { } value)
+                return value;
+            lock (StaticLock)
+                return _default ??= new(TextSerializer.Default);
+        }
+        set {
+            lock (StaticLock)
+                _default = value;
+        }
     }
 
     public static TypeDecoratingTextSerializer DefaultLegacy {
-        get => _defaultLegacy ??= new LegacyTypeDecoratingTextSerializer(TextSerializer.Default);
-        set => _defaultLegacy = value;
+        get {
+            if (_defaultLegacy is { } value)
+                return value;
+            lock (StaticLock)
+                return _defaultLegacy ??= new LegacyTypeDecoratingTextSerializer(TextSerializer.Default);
+        }
+        set {
+            lock (StaticLock)
+                _defaultLegacy = value;
+        }
     }
 
     public ITextSerializer Serializer { get; } = serializer;

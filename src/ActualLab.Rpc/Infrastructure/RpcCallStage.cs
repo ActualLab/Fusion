@@ -3,9 +3,9 @@ namespace ActualLab.Rpc.Infrastructure;
 public static class RpcCallStage
 {
 #if NET9_0_OR_GREATER
-    private static readonly Lock Lock = new();
+    private static readonly Lock StaticLock = new();
 #else
-    private static readonly object Lock = new();
+    private static readonly object StaticLock = new();
 #endif
     private static Dictionary<int, string> _callStageNames = new() {
         { ResultReady, nameof(ResultReady) },
@@ -21,7 +21,7 @@ public static class RpcCallStage
 
     public static void Register(int value, string name)
     {
-        lock (Lock) {
+        lock (StaticLock) {
             var callStageNames = new Dictionary<int, string>(_callStageNames) {
                 { value, name },
                 { value | Unregistered, "*" + name },

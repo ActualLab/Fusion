@@ -9,6 +9,11 @@ namespace ActualLab.Serialization;
 
 public class SystemJsonSerializer : TextSerializerBase
 {
+#if NET9_0_OR_GREATER
+    private static readonly Lock StaticLock = new();
+#else
+    private static readonly object StaticLock = new();
+#endif
     private static SystemJsonSerializer? _pretty;
     private static SystemJsonSerializer? _default;
     private static TypeDecoratingTextSerializer? _defaultTypeDecorating;
@@ -19,18 +24,42 @@ public class SystemJsonSerializer : TextSerializerBase
         = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     public static SystemJsonSerializer Pretty {
-        get => _pretty ??= new(PrettyOptions);
-        set => _pretty = value;
+        get {
+            if (_pretty is { } value)
+                return value;
+            lock (StaticLock)
+                return _pretty ??= new(PrettyOptions);
+        }
+        set {
+            lock (StaticLock)
+                _pretty = value;
+        }
     }
 
     public static SystemJsonSerializer Default {
-        get => _default ??= new(DefaultOptions);
-        set => _default = value;
+        get {
+            if (_default is { } value)
+                return value;
+            lock (StaticLock)
+                return _default ??= new(DefaultOptions);
+        }
+        set {
+            lock (StaticLock)
+                _default = value;
+        }
     }
 
     public static TypeDecoratingTextSerializer DefaultTypeDecorating {
-        get => _defaultTypeDecorating ??= new TypeDecoratingTextSerializer(Default);
-        set => _defaultTypeDecorating = value;
+        get {
+            if (_defaultTypeDecorating is { } value)
+                return value;
+            lock (StaticLock)
+                return _defaultTypeDecorating ??= new TypeDecoratingTextSerializer(Default);
+        }
+        set {
+            lock (StaticLock)
+                _defaultTypeDecorating = value;
+        }
     }
 
     // Instance members

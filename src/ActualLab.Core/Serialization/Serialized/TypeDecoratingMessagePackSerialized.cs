@@ -27,7 +27,12 @@ public partial class TypeDecoratingMessagePackSerialized<T> : ByteSerialized<T>
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override IByteSerializer<T> GetSerializer()
-        => _serializer ??= MessagePackByteSerializer.DefaultTypeDecorating.ToTyped<T>();
+    {
+        if (_serializer is { } serializer)
+            return serializer;
+        lock (StaticLock)
+            return _serializer ??= MessagePackByteSerializer.DefaultTypeDecorating.ToTyped<T>();
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator TypeDecoratingMessagePackSerialized<T>(T value) => new() { Value = value };

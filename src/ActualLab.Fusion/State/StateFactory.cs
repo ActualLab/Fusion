@@ -5,23 +5,23 @@ namespace ActualLab.Fusion;
 public class StateFactory(IServiceProvider services) : IHasServices
 {
 #if NET9_0_OR_GREATER
-    private static readonly Lock Lock = new();
+    private static readonly Lock StaticLock = new();
 #else
-    private static readonly object Lock = new();
+    private static readonly object StaticLock = new();
 #endif
     private static StateFactory? _default;
 
     public static StateFactory Default {
         get {
-            if (_default != null)
-                return _default;
-
-            lock (Lock) {
-                _default ??= new ServiceCollection().AddFusion().Services.BuildServiceProvider().StateFactory();
-                return _default;
-            }
+            if (_default is { } value)
+                return value;
+            lock (StaticLock)
+                return _default ??= new ServiceCollection().AddFusion().Services.BuildServiceProvider().StateFactory();
         }
-        set => _default = value;
+        set {
+            lock (StaticLock)
+                _default = value;
+        }
     }
 
     public IServiceProvider Services { get; } = services;

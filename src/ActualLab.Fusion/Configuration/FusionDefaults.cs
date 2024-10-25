@@ -5,9 +5,9 @@ namespace ActualLab.Fusion;
 public static class FusionDefaults
 {
 #if NET9_0_OR_GREATER
-    private static readonly Lock Lock = new();
+    private static readonly Lock StaticLock = new();
 #else
-    private static readonly object Lock = new();
+    private static readonly object StaticLock = new();
 #endif
     private static FusionMode _mode;
 
@@ -17,7 +17,7 @@ public static class FusionDefaults
             if (value is not (FusionMode.Client or FusionMode.Server))
                 throw new ArgumentOutOfRangeException(nameof(value), value, null);
 
-            lock (Lock) {
+            lock (StaticLock) {
                 _mode = value;
                 Recompute();
             }

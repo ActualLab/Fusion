@@ -10,6 +10,11 @@ namespace ActualLab.Serialization;
 
 public class MessagePackByteSerializer(MessagePackSerializerOptions options) : IByteSerializer
 {
+#if NET9_0_OR_GREATER
+    private static readonly Lock StaticLock = new();
+#else
+    private static readonly object StaticLock = new();
+#endif
     private readonly ConcurrentDictionary<Type, MessagePackByteSerializer> _typedSerializerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private static MessagePackSerializerOptions? _defaultOptions;
@@ -19,18 +24,42 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
     public static IFormatterResolver DefaultResolver { get; set; } = DefaultMessagePackResolver.Instance;
 
     public static MessagePackSerializerOptions DefaultOptions {
-        get => _defaultOptions ??= new(DefaultResolver);
-        set => _defaultOptions = value;
+        get {
+            if (_defaultOptions is { } value)
+                return value;
+            lock (StaticLock)
+                return _defaultOptions ??= new(DefaultResolver);
+        }
+        set {
+            lock (StaticLock)
+                _defaultOptions = value;
+        }
     }
 
     public static MessagePackByteSerializer Default {
-        get => _default ??= new(DefaultOptions);
-        set => _default = value;
+        get {
+            if (_default is { } value)
+                return value;
+            lock (StaticLock)
+                return _default ??= new(DefaultOptions);
+        }
+        set {
+            lock (StaticLock)
+                _default = value;
+        }
     }
 
     public static TypeDecoratingByteSerializer DefaultTypeDecorating {
-        get => _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
-        set => _defaultTypeDecorating = value;
+        get {
+            if (_defaultTypeDecorating is { } value)
+                return value;
+            lock (StaticLock)
+                return _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
+        }
+        set {
+            lock (StaticLock)
+                _defaultTypeDecorating = value;
+        }
     }
 
     // Instance members

@@ -4,9 +4,9 @@ public static class HardwareInfo
 {
     private const int RefreshIntervalTicks = 30_000; // Tick = millisecond
 #if NET9_0_OR_GREATER
-    private static readonly Lock Lock = new();
+    private static readonly Lock StaticLock = new();
 #else
-    private static readonly object Lock = new();
+    private static readonly object StaticLock = new();
 #endif
     private static volatile int _processorCount;
     private static volatile int _processorCountPo2;
@@ -48,7 +48,7 @@ public static class HardwareInfo
         if (now - _lastRefreshTicks < RefreshIntervalTicks)
             return;
 
-        lock (Lock) {
+        lock (StaticLock) {
             if (now - _lastRefreshTicks < RefreshIntervalTicks)
                 return;
 

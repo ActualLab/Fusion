@@ -16,6 +16,11 @@ namespace ActualLab.Serialization;
 #endif
 public class NewtonsoftJsonSerializer : TextSerializerBase
 {
+#if NET9_0_OR_GREATER
+    private static readonly Lock StaticLock = new();
+#else
+    private static readonly object StaticLock = new();
+#endif
     private readonly JsonSerializer _jsonSerializer;
     private static NewtonsoftJsonSerializer? _default;
     private static TypeDecoratingTextSerializer? _defaultTypeDecorating;
@@ -30,14 +35,30 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
     };
 
     public static NewtonsoftJsonSerializer Default {
-        get => _default ??= new(DefaultSettings);
-        set => _default = value;
+        get {
+            if (_default is { } value)
+                return value;
+            lock (StaticLock)
+                return _default ??= new(DefaultSettings);
+        }
+        set {
+            lock (StaticLock)
+                _default = value;
+        }
     }
 
     public static TypeDecoratingTextSerializer DefaultTypeDecorating {
         [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-        get => _defaultTypeDecorating ??= new TypeDecoratingTextSerializer(Default);
-        set => _defaultTypeDecorating = value;
+        get {
+            if (_defaultTypeDecorating is { } value)
+                return value;
+            lock (StaticLock)
+                return _defaultTypeDecorating ??= new TypeDecoratingTextSerializer(Default);
+        }
+        set {
+            lock (StaticLock)
+                _defaultTypeDecorating = value;
+        }
     }
 
     // Instance members
