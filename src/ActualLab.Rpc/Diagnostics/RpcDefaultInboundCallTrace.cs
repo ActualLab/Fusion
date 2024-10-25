@@ -20,9 +20,9 @@ public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Acti
         }
 
         var callStats = new RpcCallSummary(call);
-        if (tracer.InboundCallCounter.Enabled)
+        if (tracer.IsEnabled)
             tracer.RegisterInboundCall(callStats);
-        if (RpcInstruments.InboundCallCounter.Enabled)
+        if (RpcInstruments.IsEnabled)
             RpcInstruments.RegisterInboundCall(callStats);
     }
 }

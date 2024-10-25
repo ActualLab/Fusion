@@ -317,7 +317,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             await WebSocket
                 .SendAsync(part, MessageType, isEndOfMessage, cancellationToken)
                 .ConfigureAwait(false);
-            _meters.OutgoingFrameCounter.Add(1);
+            // _meters.OutgoingFrameCounter.Add(1);
             _meters.OutgoingFrameSizeHistogram.Record(part.Length);
         }
 
@@ -344,7 +344,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                     throw Errors.InvalidWebSocketMessageType(r.MessageType, MessageType);
 
                 readBuffer.Advance(r.Count);
-                _meters.IncomingFrameCounter.Add(1);
+                // _meters.IncomingFrameCounter.Add(1);
                 _meters.IncomingFrameSizeHistogram.Record(r.Count);
                 if (!r.EndOfMessage)
                     continue;
@@ -387,7 +387,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                     throw Errors.InvalidWebSocketMessageType(r.MessageType, MessageType);
 
                 readBuffer.Advance(r.Count);
-                _meters.IncomingFrameCounter.Add(1);
+                // _meters.IncomingFrameCounter.Add(1);
                 _meters.IncomingFrameSizeHistogram.Record(r.Count);
                 if (!r.EndOfMessage)
                     continue;
@@ -593,8 +593,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public readonly ObservableCounter<long> ChannelCounter;
         public readonly Counter<long> IncomingItemCounter;
         public readonly Counter<long> OutgoingItemCounter;
-        public readonly Counter<long> IncomingFrameCounter;
-        public readonly Counter<long> OutgoingFrameCounter;
+        // public readonly Counter<long> IncomingFrameCounter;
+        // public readonly Counter<long> OutgoingFrameCounter;
         public readonly Histogram<int> IncomingFrameSizeHistogram;
         public readonly Histogram<int> OutgoingFrameSizeHistogram;
         public long ChannelCount;
@@ -610,10 +610,10 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 null, "Number of items received via WebSocketChannel.");
             OutgoingItemCounter = m.CreateCounter<long>($"{ms}.outgoing.item.count",
                 null, "Number of items sent via WebSocketChannel.");
-            IncomingFrameCounter = m.CreateCounter<long>($"{ms}.incoming.frame.count",
-                null, "Number of frames received via WebSocketChannel.");
-            OutgoingFrameCounter = m.CreateCounter<long>($"{ms}.outgoing.frame.count",
-                null, "Number of frames sent via WebSocketChannel.");
+            // IncomingFrameCounter = m.CreateCounter<long>($"{ms}.incoming.frame.count",
+            //     null, "Number of frames received via WebSocketChannel.");
+            // OutgoingFrameCounter = m.CreateCounter<long>($"{ms}.outgoing.frame.count",
+            //     null, "Number of frames sent via WebSocketChannel.");
             IncomingFrameSizeHistogram = m.CreateHistogram<int>($"{ms}.incoming.frame.size",
                 "By", "WebSocketChannel's incoming frame size in bytes.");
             OutgoingFrameSizeHistogram = m.CreateHistogram<int>($"{ms}.outgoing.frame.size",

@@ -11,7 +11,7 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcInboundCall : RpcCall
 {
-    private static readonly ConcurrentDictionary<(byte, Type), Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>> FactoryCache
+    private static readonly ConcurrentDictionary<RpcCallTypeKey, Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>> FactoryCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
     protected readonly CancellationTokenSource? CallCancelSource;
@@ -41,7 +41,7 @@ public abstract class RpcInboundCall : RpcCall
             };
         }
 
-        return FactoryCache.GetOrAdd((callTypeId, methodDef.UnwrappedReturnType), static key => {
+        return FactoryCache.GetOrAdd(new(callTypeId, methodDef.UnwrappedReturnType), static key => {
             var (callTypeId, tResult) = key;
             var type = RpcCallTypeRegistry.Resolve(callTypeId)
                 .InboundCallType

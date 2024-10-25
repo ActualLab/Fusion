@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Diagnostics;
 
@@ -12,11 +11,15 @@ public class RpcDefaultCallTracer : RpcCallTracer
     public readonly string InboundCallName;
     public readonly string OutboundCallName;
     public readonly ActivitySource ActivitySource;
-    public readonly Counter<long> InboundCallCounter;
+    // public readonly Counter<long> InboundCallCounter;
     public readonly Counter<long> InboundErrorCounter;
     public readonly Counter<long> InboundCancellationCounter;
     public readonly Counter<long> InboundIncompleteCounter;
     public readonly Histogram<double> InboundDurationHistogram;
+    public bool IsEnabled {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => InboundDurationHistogram.Enabled;
+    }
 
     public RpcDefaultCallTracer(RpcMethodDef method, bool traceInbound = true, bool traceOutbound = true)
         : base(method)
@@ -30,8 +33,8 @@ public class RpcDefaultCallTracer : RpcCallTracer
 
         var m = RpcInstruments.Meter;
         var ms = $"rpc.server.{fullMethodName}";
-        InboundCallCounter = m.CreateCounter<long>($"{ms}.call.count",
-            null, $"Count of inbound {fullMethodName} calls.");
+        // InboundCallCounter = m.CreateCounter<long>($"{ms}.call.count",
+        //     null, $"Count of inbound {fullMethodName} calls.");
         InboundErrorCounter = m.CreateCounter<long>($"{ms}.error.count",
             null, $"Count of inbound {fullMethodName} calls completed with an error.");
         InboundCancellationCounter = m.CreateCounter<long>($"{ms}.cancellation.count",
@@ -71,7 +74,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
 
     public void RegisterInboundCall(in RpcCallSummary callSummary)
     {
-        InboundCallCounter.Add(1);
+        // InboundCallCounter.Add(1);
         var resultKind = callSummary.ResultKind;
         if (resultKind == TaskResultKind.Incomplete) {
             InboundIncompleteCounter.Add(1);

@@ -72,21 +72,17 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         if (call.Id != 0)
             throw new ArgumentOutOfRangeException(nameof(call), "call.Id != 0.");
 
-        while (true) {
-            call.Id = Interlocked.Increment(ref _lastId);
-            if (Calls.TryAdd(call.Id, call)) {
-                // Also register an in-progress call
-                call.StartedAt = CpuTimestamp.Now;
-                _inProgressCalls.TryAdd(call.Id, call);
-                return;
-            }
-        }
+        call.Id = Interlocked.Increment(ref _lastId);
+        call.StartedAt = CpuTimestamp.Now;
+        Calls.TryAdd(call.Id, call); // Must succeed for unique call.Id
+            _inProgressCalls.TryAdd(call.Id, call);  // Must succeed for unique call.Id
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool Complete(RpcOutboundCall call)
+    public bool CompleteKeepRegistered(RpcOutboundCall call)
         => _inProgressCalls.TryRemove(call.Id, call);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Unregister(RpcOutboundCall call)
         => Calls.TryRemove(call.Id, call);
 

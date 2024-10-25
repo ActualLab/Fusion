@@ -7,11 +7,15 @@ public static class RpcInstruments
 {
     public static readonly ActivitySource ActivitySource = new(ThisAssembly.AssemblyName, ThisAssembly.AssemblyVersion);
     public static readonly Meter Meter = new(ThisAssembly.AssemblyName, ThisAssembly.AssemblyVersion);
-    public static readonly Counter<long> InboundCallCounter;
+    // public static readonly Counter<long> InboundCallCounter;
     public static readonly Counter<long> InboundErrorCounter;
     public static readonly Counter<long> InboundCancellationCounter;
     public static readonly Counter<long> InboundIncompleteCounter;
     public static readonly Histogram<double> InboundDurationHistogram;
+    public static bool IsEnabled {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => InboundDurationHistogram.Enabled;
+    }
 
     static RpcInstruments()
     {
@@ -19,8 +23,8 @@ public static class RpcInstruments
         var ms = "rpc";
         var server = $"{ms}.server";
         // See https://opentelemetry.io/docs/specs/semconv/rpc/rpc-metrics/
-        InboundCallCounter = m.CreateCounter<long>($"{server}.call.count",
-            null, "Count of inbound RPC calls.");
+        // InboundCallCounter = m.CreateCounter<long>($"{server}.call.count",
+        //     null, "Count of inbound RPC calls.");
         InboundErrorCounter = m.CreateCounter<long>($"{server}.error.count",
             null, "Count of inbound RPC calls completed with an error.");
         InboundCancellationCounter = m.CreateCounter<long>($"{server}.cancellation.count",
@@ -33,7 +37,7 @@ public static class RpcInstruments
 
     public static void RegisterInboundCall(in RpcCallSummary callSummary)
     {
-        InboundCallCounter.Add(1);
+        // InboundCallCounter.Add(1);
         var resultKind = callSummary.ResultKind;
         if (resultKind == TaskResultKind.Incomplete) {
             InboundIncompleteCounter.Add(1);

@@ -12,7 +12,7 @@ namespace ActualLab.Rpc.Infrastructure;
 public abstract class RpcOutboundCall(RpcOutboundContext context)
     : RpcCall(context.MethodDef!)
 {
-    private static readonly ConcurrentDictionary<(byte, Type), Func<RpcOutboundContext, RpcOutboundCall>> FactoryCache
+    private static readonly ConcurrentDictionary<RpcCallTypeKey, Func<RpcOutboundContext, RpcOutboundCall>> FactoryCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public override string DebugTypeName => "->";
@@ -40,7 +40,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (peer.ConnectionKind == RpcPeerConnectionKind.Local)
             return null;
 
-        return FactoryCache.GetOrAdd((context.CallTypeId, context.MethodDef!.UnwrappedReturnType), static key => {
+        return FactoryCache.GetOrAdd(new(context.CallTypeId, context.MethodDef!.UnwrappedReturnType), static key => {
             var (callTypeId, tResult) = key;
             var type = RpcCallTypeRegistry.Resolve(callTypeId)
                 .OutboundCallType
@@ -183,7 +183,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public void CompleteKeepRegistered()
     {
-        if (!Peer.OutboundCalls.Complete(this))
+        if (!Peer.OutboundCalls.CompleteKeepRegistered(this))
             return;
 
         CallCancelHandler.Dispose();
@@ -196,12 +196,11 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (NoWait)
             throw Errors.InternalError("This method should never be called for NoWait calls.");
 
-        if (!Peer.OutboundCalls.Unregister(this))
-            return; // Already unregistered
-
-        CompleteKeepRegistered();
-        if (notifyCancelled)
-            NotifyCancelled();
+        if (Peer.OutboundCalls.Unregister(this)) {
+            CompleteKeepRegistered();
+            if (notifyCancelled)
+                NotifyCancelled();
+        }
     }
 
     // Protected methods
