@@ -92,7 +92,7 @@ public abstract partial record ArgumentList
 #>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<<#=itemTypes#>>(<#=itemDefs#>)
-        => AllowGenerics
+        => (UseGenerics && !DisableGenerics)
             ? new <#=GenericTypeName(itemCount, true)#>(<#=itemCount > maxGenericItemCount ? argListDefPrefix : ""#><#=items#>)
             : new <#=SimpleTypeName(itemCount)#>(<#=argListDefPrefix#><#=items#>);
 <# } #>

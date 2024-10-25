@@ -72,52 +72,52 @@ public abstract partial record ArgumentList
     public static ArgumentList New() => Empty;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0>(T0 item0)
-        => AllowGenerics
+        => (UseGenerics && !DisableGenerics)
             ? new ArgumentListG1<T0>(item0)
             : new ArgumentListS1(ArgumentListType.Get(typeof(T0)), item0);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1>(T0 item0, T1 item1)
-        => AllowGenerics
+        => (UseGenerics && !DisableGenerics)
             ? new ArgumentListG2<T0, T1>(item0, item1)
             : new ArgumentListS2(ArgumentListType.Get(typeof(T0), typeof(T1)), item0, item1);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2>(T0 item0, T1 item1, T2 item2)
-        => AllowGenerics
+        => (UseGenerics && !DisableGenerics)
             ? new ArgumentListG3<T0, T1, T2>(item0, item1, item2)
             : new ArgumentListS3(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2)), item0, item1, item2);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3>(T0 item0, T1 item1, T2 item2, T3 item3)
-        => AllowGenerics
+        => (UseGenerics && !DisableGenerics)
             ? new ArgumentListG4<T0, T1, T2, T3>(item0, item1, item2, item3)
             : new ArgumentListS4(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3)), item0, item1, item2, item3);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4)
-        => AllowGenerics
+        => (UseGenerics && !DisableGenerics)
             ? new ArgumentListG5<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4)), item0, item1, item2, item3, item4)
             : new ArgumentListS5(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4)), item0, item1, item2, item3, item4);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4, T5>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5)
-        => AllowGenerics
+        => (UseGenerics && !DisableGenerics)
             ? new ArgumentListG6<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5)), item0, item1, item2, item3, item4, item5)
             : new ArgumentListS6(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5)), item0, item1, item2, item3, item4, item5);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6)
-        => AllowGenerics
+        => (UseGenerics && !DisableGenerics)
             ? new ArgumentListG7<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6)), item0, item1, item2, item3, item4, item5, item6)
             : new ArgumentListS7(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6)), item0, item1, item2, item3, item4, item5, item6);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6, T7>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7)
-        => AllowGenerics
+        => (UseGenerics && !DisableGenerics)
             ? new ArgumentListG8<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7)), item0, item1, item2, item3, item4, item5, item6, item7)
             : new ArgumentListS8(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7)), item0, item1, item2, item3, item4, item5, item6, item7);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6, T7, T8>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8)
-        => AllowGenerics
+        => (UseGenerics && !DisableGenerics)
             ? new ArgumentListG9<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8)), item0, item1, item2, item3, item4, item5, item6, item7, item8)
             : new ArgumentListS9(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8)), item0, item1, item2, item3, item4, item5, item6, item7, item8);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9)
-        => AllowGenerics
+        => (UseGenerics && !DisableGenerics)
             ? new ArgumentListG10<T0, T1, T2, T3>(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9)), item0, item1, item2, item3, item4, item5, item6, item7, item8, item9)
             : new ArgumentListS10(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9)), item0, item1, item2, item3, item4, item5, item6, item7, item8, item9);
 

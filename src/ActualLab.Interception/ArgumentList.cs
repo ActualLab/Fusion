@@ -15,8 +15,16 @@ public abstract partial record ArgumentList
         LazySlim<(ArgumentListType, MethodInfo), Func<object?, ArgumentList, object?>>> InvokerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
-    public static readonly bool AllowGenerics
-        = RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods && !OSInfo.IsAnyClient;
+#if NET9_0_OR_GREATER
+    [FeatureSwitchDefinition("ArgumentList.DisableGenerics")]
+    public static bool DisableGenerics { get; }
+        = AppContext.TryGetSwitch("ArgumentList.DisableGenerics", out bool value) && value;
+#else
+    public static bool DisableGenerics => false;
+#endif
+
+    public static readonly bool UseGenerics
+        = !DisableGenerics && RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods && !OSInfo.IsAnyClient;
 
     public static readonly ArgumentList Empty = new ArgumentList0();
 

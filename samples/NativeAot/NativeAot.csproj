@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
+    <RuntimeHostConfigurationOption Include="ArgumentList.DisableGenerics" Value="true" Trim="true" />
   </ItemGroup>
 
   <!-- Fusion packages -->
