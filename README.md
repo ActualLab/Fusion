@@ -18,7 +18,7 @@ You can think of Fusion as:
 - An infinite Excel, where cell names are values like `"service.Method(arg1, arg2, ...)"` constructed for every call to a subset of services in your app, and formulas are the bodies of these methods.
 - MobX, but managing an arbitrarily large state spread across multiple machines rather than a small UI state within a single process.
 
-Fusion reduces complexity for developers, allowing them to build scalable, real-time features without the usual headaches associated with notoriously difficult problems:
+Fusion reduces complexity for developers, allowing them to build scalable, real-time apps without the usual headaches associated with a set of notoriously difficult problems:
 
 - **Real-Time State Synchronization**: Keeps state consistent across multiple clients and servers in real time.
 - **Distributed Caching**: Tracks data dependencies and performs real-time cache invalidation to ensure only necessary values are recomputed.
