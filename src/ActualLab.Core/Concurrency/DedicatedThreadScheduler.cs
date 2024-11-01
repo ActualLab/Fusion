@@ -1,25 +1,29 @@
 namespace ActualLab.Concurrency;
 
-public class SequentialScheduler : TaskScheduler
+public class DedicatedThreadScheduler : TaskScheduler
 {
     private readonly BlockingCollection<Task> _taskQueue = new();
 
     public Thread Thread { get; }
+    public CancellationToken StopToken { get; }
     public override int MaximumConcurrencyLevel => 1;
 
-    public SequentialScheduler(bool useBackgroundThread = true, CancellationToken cancellationToken = default)
+    public DedicatedThreadScheduler(bool useBackgroundThread = true, CancellationToken stopToken = default)
     {
-        Thread = new Thread(() => Run(cancellationToken)) {
-            IsBackground = useBackgroundThread,
-        };
+        StopToken = stopToken;
+        Thread = new Thread(Run) { IsBackground = useBackgroundThread };
         Thread.Start();
     }
 
-    public SequentialScheduler(Thread thread)
-        => Thread = thread;
-
-    public void Run(CancellationToken cancellationToken = default)
+    public DedicatedThreadScheduler(Thread thread, CancellationToken stopToken = default)
     {
+        StopToken = stopToken;
+        Thread = thread;
+    }
+
+    public void Run()
+    {
+        var cancellationToken = StopToken;
         while (!cancellationToken.IsCancellationRequested) {
             try {
                 var task = _taskQueue.Take(cancellationToken);
@@ -34,7 +38,7 @@ public class SequentialScheduler : TaskScheduler
     // Protected & private methods
 
     protected override void QueueTask(Task task)
-        => _taskQueue.Add(task);
+        => _taskQueue.Add(task, StopToken);
 
     protected override IEnumerable<Task> GetScheduledTasks()
         => _taskQueue;

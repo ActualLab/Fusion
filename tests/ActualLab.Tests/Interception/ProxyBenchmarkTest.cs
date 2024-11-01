@@ -22,8 +22,10 @@ public class ProxyBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBase(@out
     {
         var noProxy = new ProxyProxyBenchmarkTester();
         var defaultResultInterceptor = Services.GetRequiredService<DefaultResultInterceptor>();
+        // ReSharper disable once SuspiciousTypeConversion.Global
         var simpleProxy = (IProxyBenchmarkTester)Proxies.New(typeof(IProxyBenchmarkTester), defaultResultInterceptor);
         var passThroughInterceptor = Services.GetRequiredService<PassThroughInterceptor>();
+        // ReSharper disable once SuspiciousTypeConversion.Global
         var passThroughProxy = (IProxyBenchmarkTester)Proxies.New(typeof(IProxyBenchmarkTester), passThroughInterceptor, noProxy);
         var castleGenerator = Services.GetRequiredService<ProxyGenerator>();
         var castleDefaultResultInterceptor = Services.GetRequiredService<CastleDefaultResultInterceptor>();

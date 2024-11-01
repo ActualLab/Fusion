@@ -5,7 +5,7 @@ namespace ActualLab.Tests.Interception;
 #pragma warning disable MA0042
 #pragma warning disable VSTHRD103
 
-public class TypeViewFactoryTest
+public class TypeViewFactoryTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
     public async Task CombinedTest()

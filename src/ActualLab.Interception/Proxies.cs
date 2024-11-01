@@ -41,6 +41,7 @@ public static class Proxies
             // Build-in interceptors
             CodeKeeper.Keep<TypeViewInterceptor>();
             CodeKeeper.Keep<TypedFactoryInterceptor>();
+            CodeKeeper.Keep<SchedulingInterceptor>();
         });
 
     public static IProxy New(

@@ -13,17 +13,16 @@ public static class ConsoleExt
 
     public static TaskScheduler Scheduler {
         get {
-            if (_scheduler == null) {
-                lock (StaticLock)
-                    _scheduler ??= new SequentialScheduler();
-            }
-            return _scheduler;
+            if (_scheduler is { } scheduler)
+                return scheduler;
+            lock (StaticLock)
+                return _scheduler ??= new DedicatedThreadScheduler();
         }
     }
 
     public static Task<string?> ReadLineAsync()
     {
-        var taskFactory = new TaskFactory();
-        return taskFactory.StartNew(ReadLine, CancellationToken.None, TaskCreationOptions.None, Scheduler);
+        var taskFactory = new TaskFactory(Scheduler);
+        return taskFactory.StartNew(ReadLine);
     }
 }

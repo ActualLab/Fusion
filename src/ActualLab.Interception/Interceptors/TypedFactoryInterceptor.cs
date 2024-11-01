@@ -2,8 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Interception.Interceptors;
 
-#pragma warning disable IL2072
-
 public class TypedFactoryInterceptor : Interceptor
 {
     public new record Options : Interceptor.Options
@@ -12,7 +10,8 @@ public class TypedFactoryInterceptor : Interceptor
     }
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public TypedFactoryInterceptor(Options settings, IServiceProvider services) : base(settings, services)
+    public TypedFactoryInterceptor(Options settings, IServiceProvider services)
+        : base(settings, services)
     {
         MustInterceptAsyncCalls = false;
         MustInterceptSyncCalls = true;

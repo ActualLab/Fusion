@@ -19,7 +19,6 @@ public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
         }
 
         void Test(int length, ArgumentList l0) {
-            var cts = new CancellationTokenSource();
             l0.Length.Should().Be(length);
             var l1 = l0.Duplicate();
             for (var i = 0; i < length; i++) {
