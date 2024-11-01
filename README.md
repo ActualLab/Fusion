@@ -8,27 +8,34 @@
 ![Commit Activity](https://img.shields.io/github/commit-activity/m/actuallab/Fusion)
 [![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 
-`ActualLab.Fusion` is a .NET library that implements 🦄 **D**istributed **REA**ctive **M**emoization (**DREAM**) &ndash; 
-a novel abstraction somewhat similar to MobX or Flux, but **designed to deal with an arbitrary large state** 
-spanning across your backend microservices, API servers, and reaching even every client of your app.
-ActualLab.Fusion is a successor of [Stl.Fusion](https://github.com/servicetitan/Stl.Fusion).
+## Overview
 
-Fusion solves a set of infamously hard problems with a single hammer:
+`ActualLab.Fusion` is a successor of [Stl.Fusion](https://github.com/servicetitan/Stl.Fusion) - a distributed reactive memoization library for .NET that simplifies real-time updates, caching, and managing client-side state in complex distributed applications. By using dependency tracking and automated invalidation, Fusion ensures that values are recomputed only when necessary, making your application both efficient and responsive.
 
-| Problem | So you don't need... |
-|-|-|
-| 📇 Caching | Redis, memcached, ... |
-| 🤹 Real-time cache invalidation | No good solutions - <br/>it's an [infamously hard problem](https://martinfowler.com/bliki/TwoHardThings.html) |
-| 🚀 Real-time updates | SignalR, WebSockets, gRPC, ... |
-| 🤬 Network chattiness | A fair amount of code |
-| 🔌 Offline mode support | A fair amount of code |
-| 📱 Client-side state management | MobX, Flux/Redux, Recoil, ... |
-| 💰 Single codebase for Blazor WebAssembly, Server, and Hybrid/MAUI | No good alternatives |
+You can think of Fusion as:
 
-And the best part is: **Fusion does all of that transparently for you,** so Fusion-based code is almost identical to a code that doesn't involve it. All you need is to:
-- "Implement" `IComputeService` (a tagging interface) on your Fusion service to ensure call intercepting proxy is generated for it in compile time.
-- Mark methods requiring "Fusion behavior" with `[ComputeMethod]` + declare them as `virtual`
-- Register the service via `serviceCollection.AddFusion().AddService<MyService>()`
+- `make` or `msbuild`, but operating on functions and their outputs instead of source files and build artifacts.
+- An infinite Excel, where cell names are values like `"service.Method(arg1, arg2, ...)"` constructed for every call to a subset of services in your app, and formulas are the bodies of these methods.
+- MobX, but managing an arbitrarily large state spread across multiple machines rather than a small UI state within a single process.
+
+Fusion reduces complexity for developers, allowing them to build scalable, real-time features without the usual headaches associated with notoriously difficult problems:
+
+- **Real-Time State Synchronization**: Keeps state consistent across multiple clients and servers in real time.
+- **Distributed Caching**: Tracks data dependencies and performs real-time cache invalidation to ensure only necessary values are recomputed.
+- **Persistent Caching**: Fusion-based clients can operate even when offline, providing a seamless experience.
+- **Extremely Efficient RPC**: Fusion's RPC client eliminates unnecessary network round trips by using cached results that aren't marked as stale. The stale-while-revalidate strategy allows Fusion-based clients to rely on speculative execution to pack hundreds of calls into a single transmission frame. As a result, all the data needed for a given UI view is often retrieved via a single network round trip.
+- **UI State Management**: The UI is just one of the application states Fusion manages, removing the need for specialized libraries like Recoil.
+- **Unified Codebase for All Clients**: Fusion allows you to maintain a single codebase for all of your clients, including Blazor Server, Blazor WebAssembly, and Blazor Hybrid/MAUI.
+
+And the best part is: **Fusion does all of that transparently for you,** so Fusion-based code is almost identical to code that does not involve it.
+
+## Usage
+
+To use Fusion, you must:
+- Reference `ActualLab.Fusion` NuGet package
+- "Implement" `IComputeService` (a tagging interface) on your Fusion service to ensure call intercepting proxy is generated for it.
+- Mark methods requiring "Fusion behavior" with `[ComputeMethod]` and declare them as `virtual`
+- Register the service via `serviceCollection.AddFusion().AddComputeService<MyService>()`
 - Resolve and use them usual - i.e., pass them as dependencies, call their methods, etc.
 
 The magic happens when `[ComputeMethod]`-s are invoked:
@@ -106,7 +113,7 @@ Check out [Samples]; some of them are covered further in this document.
 
 ## "What is your evidence?"<sup><a href="https://www.youtube.com/watch?v=7O-aNYTtx44<">*</a></sup>
 
-**All of this sounds way too good to be true, right?** That's why there are lots of visual proofs in the remaining part of this document. But if you'll find anything concerning in Fusion's source code or [samples], please feel free to grill us with questions on [Fusion Place]!
+**All of this sounds way too good to be true, right?** That's why there are lots of visual proofs in the remaining part of this document. But if you'll find anything concerning in Fusion's source code or [samples], please feel free to grill us with questions @ [Fusion Place]!
 
 Let's start with some big guns:
 
