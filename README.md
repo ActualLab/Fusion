@@ -20,9 +20,9 @@ You can think of Fusion as:
 
 Fusion reduces complexity for developers, allowing them to build scalable, real-time apps without the usual headaches associated with a set of notoriously difficult problems:
 
-- **Real-Time State Synchronization**: Keeps state consistent across multiple clients and servers in real time.
-- **Distributed Caching**: Tracks data dependencies and performs real-time cache invalidation to ensure only necessary values are recomputed.
-- **Persistent Caching**: Fusion-based clients can operate even when offline, providing a seamless experience.
+- **Real-Time State Synchronization**.
+- **Distributed Caching and Dependency Tracking**: Fusion tracks data dependencies and performs real-time cache invalidation to ensure only necessary values are recomputed.
+- **Persistent Client-Side Caches**: Fusion-based clients can operate even when offline, providing a seamless experience.
 - **Extremely Efficient RPC**: Fusion's RPC client eliminates unnecessary network round trips by using cached results that aren't marked as stale. The stale-while-revalidate strategy allows Fusion-based clients to rely on speculative execution to pack hundreds of calls into a single transmission frame. As a result, all the data needed for a given UI view is often retrieved via a single network round trip.
 - **UI State Management**: The UI is just one of the application states Fusion manages, removing the need for specialized libraries like Recoil.
 - **Unified Codebase for All Clients**: Fusion allows you to maintain a single codebase for all of your clients, including Blazor Server, Blazor WebAssembly, and Blazor Hybrid/MAUI.
