@@ -12,11 +12,6 @@ public sealed class RpcDefaultOutboundCallTrace(Activity? activity)
             return;
 
         Activity.Finalize(call.UntypedResultTask);
-
-        // Activity wasn't Current, so...
-        var lastActivity = Activity.Current;
-        Activity.Dispose();
-        if (lastActivity != Activity)
-            Activity.Current = lastActivity;
+        Activity.DisposeNonCurrent();
     }
 }

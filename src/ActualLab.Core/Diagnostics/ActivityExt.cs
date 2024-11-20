@@ -4,6 +4,11 @@ namespace ActualLab.Diagnostics;
 
 public static class ActivityExt
 {
+    // ReSharper disable once SuspiciousTypeConversion.Global
+    public static Func<Exception, bool> IsError { get; set; } = static e => e is not INotAnError;
+
+    // Finalize
+
     public static Activity Finalize(this Activity activity, Task errorSource)
     {
         try {
@@ -32,7 +37,7 @@ public static class ActivityExt
 
     public static Activity Finalize(this Activity activity, Exception? error, CancellationToken cancellationToken)
     {
-        if (error == null)
+        if (error == null || !IsError.Invoke(error))
             return activity;
 
         if (error.IsCancellationOf(cancellationToken)) {
@@ -47,7 +52,7 @@ public static class ActivityExt
 
     public static Activity Finalize(this Activity activity, Exception? error, bool detectCancellation = false)
     {
-        if (error == null)
+        if (error == null || !IsError.Invoke(error))
             return activity;
 
         if (detectCancellation && error is OperationCanceledException) {
@@ -60,4 +65,20 @@ public static class ActivityExt
         return activity;
     }
 
+    // DisposeSafely
+
+    public static void DisposeNonCurrent(this Activity activity)
+    {
+        var oldCurrentActivity = Activity.Current;
+        activity.Dispose();
+        if (!ReferenceEquals(oldCurrentActivity, activity)) {
+            // Another activity was current, so we restore it
+            try {
+                Activity.Current = oldCurrentActivity;
+            }
+            catch {
+                // Intended
+            }
+        }
+    }
 }

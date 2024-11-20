@@ -39,6 +39,7 @@ public class ComputeServiceCommandCompletionInvalidator(
         Log.IfEnabled(Settings.LogLevel)
             ?.Log(Settings.LogLevel, "Invalidating: {CommandType}", command.GetType());
 
+        // "Finally" block disposes everything here
         var activity = StartActivity(command);
         var operationItems = operation.Items;
         var oldOperation = context.TryGetOperation();

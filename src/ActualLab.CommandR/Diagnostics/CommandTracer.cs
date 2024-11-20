@@ -24,12 +24,12 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
             return;
         }
 
-        var activity = StartActivity(command, context);
+        using var activity = StartActivity(command, context);
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e) {
-            if (activity == null)
+            if (activity == null || !ActivityExt.IsError(e))
                 throw;
 
             activity.Finalize(e, cancellationToken);
