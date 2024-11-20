@@ -4,24 +4,24 @@ namespace ActualLab.Tests.Interception;
 
 public interface IProxyBenchmarkTester : IRequiresFullProxy
 {
-    void Void();
-    Task Task(CancellationToken cancellationToken);
-    ValueTask ValueTask(CancellationToken cancellationToken);
+    public void Void();
+    public Task Task(CancellationToken cancellationToken);
+    public ValueTask ValueTask(CancellationToken cancellationToken);
 
-    int Int();
-    int Int(int a);
-    int Int(int a, int b);
-    int IntFromObj(object a, object b);
+    public int Int();
+    public int Int(int a);
+    public int Int(int a, int b);
+    public int IntFromObj(object a, object b);
 
-    Task<int> IntTask(CancellationToken cancellationToken);
-    Task<int> IntTask(int a, CancellationToken cancellationToken);
-    Task<int> IntTask(int a, int b, CancellationToken cancellationToken);
+    public Task<int> IntTask(CancellationToken cancellationToken);
+    public Task<int> IntTask(int a, CancellationToken cancellationToken);
+    public Task<int> IntTask(int a, int b, CancellationToken cancellationToken);
 
-    ValueTask<int> IntValueTask(CancellationToken cancellationToken);
-    ValueTask<int> IntValueTask(int a, CancellationToken cancellationToken);
-    ValueTask<int> IntValueTask(int a, int b, CancellationToken cancellationToken);
+    public ValueTask<int> IntValueTask(CancellationToken cancellationToken);
+    public ValueTask<int> IntValueTask(int a, CancellationToken cancellationToken);
+    public ValueTask<int> IntValueTask(int a, int b, CancellationToken cancellationToken);
 
-    Task<Unit> CommandLike(object command, CancellationToken cancellationToken);
+    public Task<Unit> CommandLike(object command, CancellationToken cancellationToken);
 }
 
 public sealed class ProxyProxyBenchmarkTester : IProxyBenchmarkTester

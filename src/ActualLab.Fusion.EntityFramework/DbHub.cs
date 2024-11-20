@@ -10,14 +10,14 @@ namespace ActualLab.Fusion.EntityFramework;
 
 public interface IDbHub : IHasServices
 {
-    HostId HostId { get; }
-    IDbShardResolver ShardResolver { get; }
-    IDbShardRegistry ShardRegistry { get; }
-    IShardDbContextFactory ContextFactory { get; }
-    VersionGenerator<long> VersionGenerator { get; }
-    ChaosMaker ChaosMaker { get; }
-    MomentClockSet Clocks { get; }
-    ICommander Commander { get; }
+    public HostId HostId { get; }
+    public IDbShardResolver ShardResolver { get; }
+    public IDbShardRegistry ShardRegistry { get; }
+    public IShardDbContextFactory ContextFactory { get; }
+    public VersionGenerator<long> VersionGenerator { get; }
+    public ChaosMaker ChaosMaker { get; }
+    public MomentClockSet Clocks { get; }
+    public ICommander Commander { get; }
 
     ValueTask<DbContext> CreateDbContext(CancellationToken cancellationToken = default);
     ValueTask<DbContext> CreateDbContext(bool readWrite, CancellationToken cancellationToken = default);

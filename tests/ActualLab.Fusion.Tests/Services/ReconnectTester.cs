@@ -3,9 +3,9 @@ namespace ActualLab.Fusion.Tests.Services;
 public interface IReconnectTester : IComputeService
 {
     [ComputeMethod]
-    Task<(int, int)> Delay(int delay, int invalidationDelay, CancellationToken cancellationToken = default);
+    public Task<(int, int)> Delay(int delay, int invalidationDelay, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<Moment> GetTime(CancellationToken cancellationToken = default);
+    public Task<Moment> GetTime(CancellationToken cancellationToken = default);
 }
 
 public class ReconnectTester : IReconnectTester

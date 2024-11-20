@@ -88,12 +88,12 @@ async Task RunClient()
 public interface IChat : IComputeService
 {
     [ComputeMethod]
-    Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default);
+    public Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<int> GetWordCount(CancellationToken cancellationToken = default);
+    public Task<int> GetWordCount(CancellationToken cancellationToken = default);
 
     [CommandHandler]
-    Task Post(Chat_Post command, CancellationToken cancellationToken);
+    public Task Post(Chat_Post command, CancellationToken cancellationToken);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]

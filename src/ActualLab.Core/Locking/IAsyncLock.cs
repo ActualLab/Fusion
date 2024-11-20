@@ -2,17 +2,17 @@ namespace ActualLab.Locking;
 
 public interface IAsyncLock
 {
-    LockReentryMode ReentryMode { get; }
-    ValueTask<IAsyncLockReleaser> Lock(CancellationToken cancellationToken = default);
+    public LockReentryMode ReentryMode { get; }
+    public ValueTask<IAsyncLockReleaser> Lock(CancellationToken cancellationToken = default);
 }
 
 public interface IAsyncLock<TReleaser> : IAsyncLock
     where TReleaser : IAsyncLockReleaser
 {
-    new ValueTask<TReleaser> Lock(CancellationToken cancellationToken = default);
+    public new ValueTask<TReleaser> Lock(CancellationToken cancellationToken = default);
 }
 
 public interface IAsyncLockReleaser : IDisposable
 {
-    void MarkLockedLocally();
+    public void MarkLockedLocally();
 }

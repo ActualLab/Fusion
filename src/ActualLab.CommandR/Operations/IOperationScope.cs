@@ -2,11 +2,11 @@ namespace ActualLab.CommandR.Operations;
 
 public interface IOperationScope : IAsyncDisposable
 {
-    CommandContext CommandContext { get; }
-    Operation Operation { get; }
-    bool IsTransient { get; }
-    bool IsUsed { get; }
-    bool? IsCommitted { get; }
+    public CommandContext CommandContext { get; }
+    public Operation Operation { get; }
+    public bool IsTransient { get; }
+    public bool IsUsed { get; }
+    public bool? IsCommitted { get; }
 
-    Task Commit(CancellationToken cancellationToken = default);
+    public Task Commit(CancellationToken cancellationToken = default);
 }

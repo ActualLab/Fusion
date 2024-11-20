@@ -72,19 +72,19 @@ public partial record LogMessageCommand(
 public interface IProductService: IComputeService
 {
     [ComputeMethod]
-    Task<Product?> Get(string id, CancellationToken cancellationToken = default);
+    public Task<Product?> Get(string id, CancellationToken cancellationToken = default);
 
     [CommandHandler]
-    Task Edit(EditCommand<Product> command, CancellationToken cancellationToken = default);
+    public Task Edit(EditCommand<Product> command, CancellationToken cancellationToken = default);
 }
 
 public interface ICartService: IComputeService
 {
     [ComputeMethod]
-    Task<Cart?> Get(string id, CancellationToken cancellationToken = default);
+    public Task<Cart?> Get(string id, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default);
+    public Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default);
 
     [CommandHandler]
-    Task Edit(EditCommand<Cart> command, CancellationToken cancellationToken = default);
+    public Task Edit(EditCommand<Cart> command, CancellationToken cancellationToken = default);
 }

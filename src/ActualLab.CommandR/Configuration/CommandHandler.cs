@@ -4,13 +4,13 @@ namespace ActualLab.CommandR.Configuration;
 
 public interface ICommandHandler
 {
-    Symbol Id { get; }
-    bool IsFilter { get; }
-    double Priority { get; }
+    public Symbol Id { get; }
+    public bool IsFilter { get; }
+    public double Priority { get; }
 
-    Type GetHandlerServiceType();
-    object GetHandlerService(ICommand command, CommandContext context);
-    Task Invoke(ICommand command, CommandContext context, CancellationToken cancellationToken);
+    public Type GetHandlerServiceType();
+    public object GetHandlerService(ICommand command, CommandContext context);
+    public Task Invoke(ICommand command, CommandContext context, CancellationToken cancellationToken);
 }
 
 public abstract record CommandHandler(

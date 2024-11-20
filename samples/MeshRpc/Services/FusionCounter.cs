@@ -8,9 +8,9 @@ namespace Samples.MeshRpc.Services;
 public interface IFusionCounter : IComputeService
 {
     [ComputeMethod]
-    Task<CounterWithOrigin> Get(int key, CancellationToken cancellationToken = default);
+    public Task<CounterWithOrigin> Get(int key, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task<CounterWithOrigin> Increment(FusionCounter_Increment command, CancellationToken cancellationToken);
+    public Task<CounterWithOrigin> Increment(FusionCounter_Increment command, CancellationToken cancellationToken);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]

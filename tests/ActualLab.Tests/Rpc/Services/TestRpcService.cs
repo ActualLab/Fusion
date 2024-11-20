@@ -17,44 +17,44 @@ public partial record HelloCommand(
 
 public interface ITestRpcService : ICommandService
 {
-    Task<int?> Div(int? a, int b);
-    Task<int?> Add(int? a, int b);
-    Task<TimeSpan> Delay(TimeSpan duration, CancellationToken cancellationToken = default);
-    Task<int> GetCancellationCount();
-    Task<byte[]> GetBytes(int count);
-    Task<ReadOnlyMemory<byte>> GetMemory(int count);
+    public Task<int?> Div(int? a, int b);
+    public Task<int?> Add(int? a, int b);
+    public Task<TimeSpan> Delay(TimeSpan duration, CancellationToken cancellationToken = default);
+    public Task<int> GetCancellationCount();
+    public Task<byte[]> GetBytes(int count);
+    public Task<ReadOnlyMemory<byte>> GetMemory(int count);
 
-    Task<string> GetVersion();
+    public Task<string> GetVersion();
 
-    Task<int> PolymorphArg(ITuple argument, CancellationToken cancellationToken = default);
-    Task<ITuple> PolymorphResult(int argument, CancellationToken cancellationToken = default);
+    public Task<int> PolymorphArg(ITuple argument, CancellationToken cancellationToken = default);
+    public Task<ITuple> PolymorphResult(int argument, CancellationToken cancellationToken = default);
 
-    ValueTask<RpcNoWait> MaybeSet(string key, string? value);
-    ValueTask<string?> Get(string key);
+    public ValueTask<RpcNoWait> MaybeSet(string key, string? value);
+    public ValueTask<string?> Get(string key);
 
-    Task<RpcStream<int>> StreamInt32(int count, int failAt = -1, RandomTimeSpan delay = default);
-    Task<RpcStream<ITuple>> StreamTuples(int count, int failAt = -1, RandomTimeSpan delay = default);
-    Task<int> Count(RpcStream<int> items, CancellationToken cancellationToken = default);
-    Task CheckLag(RpcStream<Moment> items, int expectedCount, CancellationToken cancellationToken = default);
+    public Task<RpcStream<int>> StreamInt32(int count, int failAt = -1, RandomTimeSpan delay = default);
+    public Task<RpcStream<ITuple>> StreamTuples(int count, int failAt = -1, RandomTimeSpan delay = default);
+    public Task<int> Count(RpcStream<int> items, CancellationToken cancellationToken = default);
+    public Task CheckLag(RpcStream<Moment> items, int expectedCount, CancellationToken cancellationToken = default);
 
     [CommandHandler]
-    Task<string> OnHello(HelloCommand command, CancellationToken cancellationToken = default);
+    public Task<string> OnHello(HelloCommand command, CancellationToken cancellationToken = default);
 }
 
 [LegacyName(nameof(ITestRpcService), "0.1")]
 [LegacyName(nameof(ITestRpcService))]
 public interface ITestRpcLegacyService : IRpcService
 {
-    Task<string> GetVersion();
+    public Task<string> GetVersion();
     [LegacyName("GetVersion", "0.5")]
-    Task<string> GetVersion0_5();
+    public Task<string> GetVersion0_5();
     [LegacyName("GetVersion", "1.0")]
-    Task<string> GetVersion1_0();
+    public Task<string> GetVersion1_0();
 }
 
 public interface ITestRpcServiceClient : ITestRpcService
 {
-    Task<int> NoSuchMethod(int i1, int i2, int i3, int i4, CancellationToken cancellationToken = default);
+    public Task<int> NoSuchMethod(int i1, int i2, int i3, int i4, CancellationToken cancellationToken = default);
 }
 
 public class TestRpcService(IServiceProvider services) : ITestRpcService

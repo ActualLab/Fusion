@@ -9,7 +9,7 @@ namespace ActualLab.Fusion.Client.Internal;
 public interface IRpcOutboundComputeCall
 {
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    void SetInvalidated(RpcInboundContext context);
+    public void SetInvalidated(RpcInboundContext context);
 }
 
 public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)

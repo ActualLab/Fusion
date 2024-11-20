@@ -2,5 +2,5 @@ namespace ActualLab.Concurrency;
 
 public interface IHasTaskFactory
 {
-    TaskFactory TaskFactory { get; }
+    public TaskFactory TaskFactory { get; }
 }

@@ -11,9 +11,9 @@ namespace ActualLab.Fusion.Operations.Reprocessing;
 /// </summary>
 public interface IOperationReprocessor : ICommandHandler<ICommand>
 {
-    void MarkTransient(Exception error, Transiency transiency);
-    Transiency GetTransiency(IReadOnlyList<Exception> allErrors);
-    bool WillRetry(IReadOnlyList<Exception> allErrors, out Transiency transiency);
+    public void MarkTransient(Exception error, Transiency transiency);
+    public Transiency GetTransiency(IReadOnlyList<Exception> allErrors);
+    public bool WillRetry(IReadOnlyList<Exception> allErrors, out Transiency transiency);
 }
 
 /// <summary>

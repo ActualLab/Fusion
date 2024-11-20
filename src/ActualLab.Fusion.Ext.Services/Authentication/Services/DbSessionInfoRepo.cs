@@ -8,22 +8,22 @@ public interface IDbSessionInfoRepo<in TDbContext, TDbSessionInfo, in TDbUserId>
     where TDbSessionInfo : DbSessionInfo<TDbUserId>, new()
     where TDbUserId : notnull
 {
-    Type SessionInfoEntityType { get; }
+    public Type SessionInfoEntityType { get; }
 
     // Write methods
-    Task<TDbSessionInfo> GetOrCreate(
+    public Task<TDbSessionInfo> GetOrCreate(
         TDbContext dbContext, string sessionId, CancellationToken cancellationToken = default);
-    Task<TDbSessionInfo> Upsert(
+    public Task<TDbSessionInfo> Upsert(
         TDbContext dbContext, string sessionId, SessionInfo sessionInfo, CancellationToken cancellationToken = default);
-    Task<int> Trim(
+    public Task<int> Trim(
         DbShard shard, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default);
 
     // Read methods
-    Task<TDbSessionInfo?> Get(
+    public Task<TDbSessionInfo?> Get(
         DbShard shard, string sessionId, CancellationToken cancellationToken = default);
-    Task<TDbSessionInfo?> Get(
+    public Task<TDbSessionInfo?> Get(
         TDbContext dbContext, string sessionId, bool forUpdate, CancellationToken cancellationToken = default);
-    Task<TDbSessionInfo[]> ListByUser(
+    public Task<TDbSessionInfo[]> ListByUser(
         TDbContext dbContext, TDbUserId userId, CancellationToken cancellationToken = default);
 }
 

@@ -4,22 +4,22 @@ namespace ActualLab.Async;
 
 public interface IAsyncState
 {
-    bool IsFinal { get; }
-    bool HasNext { get; }
-    IAsyncState? Next { get; }
-    IAsyncState Last { get; }
-    Task WhenNext();
-    Task WhenNext(CancellationToken cancellationToken);
+    public bool IsFinal { get; }
+    public bool HasNext { get; }
+    public IAsyncState? Next { get; }
+    public IAsyncState Last { get; }
+    public Task WhenNext();
+    public Task WhenNext(CancellationToken cancellationToken);
 }
 
 public interface IAsyncState<out T> : IAsyncState, IAsyncEnumerable<IAsyncState<T>>
 {
-    T Value { get; }
-    new IAsyncState<T>? Next { get; }
-    new IAsyncState<T> Last { get; }
+    public T Value { get; }
+    public new IAsyncState<T>? Next { get; }
+    public new IAsyncState<T> Last { get; }
 
-    Task<IAsyncState> When(Func<T, bool> predicate, CancellationToken cancellationToken = default);
-    IAsyncEnumerable<T> Changes(CancellationToken cancellationToken = default);
+    public Task<IAsyncState> When(Func<T, bool> predicate, CancellationToken cancellationToken = default);
+    public IAsyncEnumerable<T> Changes(CancellationToken cancellationToken = default);
 }
 
 public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously)

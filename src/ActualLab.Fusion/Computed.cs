@@ -9,19 +9,19 @@ namespace ActualLab.Fusion;
 
 public interface IComputed : IResult, IHasVersion<ulong>
 {
-    ComputedOptions Options { get; }
-    ComputedInput Input { get; }
-    ConsistencyState ConsistencyState { get; }
-    IResult Output { get; }
-    Type OutputType { get; }
-    event Action<Computed> Invalidated;
+    public ComputedOptions Options { get; }
+    public ComputedInput Input { get; }
+    public ConsistencyState ConsistencyState { get; }
+    public IResult Output { get; }
+    public Type OutputType { get; }
+    public event Action<Computed> Invalidated;
 
-    void Invalidate(bool immediately = false);
+    public void Invalidate(bool immediately = false);
 
-    ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
-    ValueTask UseUntyped(CancellationToken cancellationToken = default);
+    public ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
+    public ValueTask UseUntyped(CancellationToken cancellationToken = default);
 
-    TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg);
+    public TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg);
 }
 
 public abstract partial class Computed(ComputedOptions options, ComputedInput input)

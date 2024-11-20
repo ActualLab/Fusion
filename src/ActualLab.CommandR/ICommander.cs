@@ -4,7 +4,7 @@ namespace ActualLab.CommandR;
 
 public interface ICommander : IHasServices
 {
-    CommanderHub Hub { get; }
+    public CommanderHub Hub { get; }
 
-    Task Run(CommandContext context, CancellationToken cancellationToken = default);
+    public Task Run(CommandContext context, CancellationToken cancellationToken = default);
 }

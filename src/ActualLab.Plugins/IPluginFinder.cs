@@ -6,8 +6,8 @@ namespace ActualLab.Plugins;
 
 public interface IPluginFinder
 {
-    PluginSetInfo? FoundPlugins { get; }
+    public PluginSetInfo? FoundPlugins { get; }
 
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
-    Task Run(CancellationToken cancellationToken = default);
+    public Task Run(CancellationToken cancellationToken = default);
 }

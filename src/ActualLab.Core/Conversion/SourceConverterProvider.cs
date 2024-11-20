@@ -2,15 +2,15 @@ namespace ActualLab.Conversion;
 
 public interface ISourceConverterProvider
 {
-    Type SourceType { get; }
-    Converter To(Type targetType);
-    Converter To<TTarget>();
+    public Type SourceType { get; }
+    public Converter To(Type targetType);
+    public Converter To<TTarget>();
 }
 
 public interface ISourceConverterProvider<TSource> : ISourceConverterProvider
 {
-    new Converter<TSource> To(Type targetType);
-    new Converter<TSource, TTarget> To<TTarget>();
+    public new Converter<TSource> To(Type targetType);
+    public new Converter<TSource, TTarget> To<TTarget>();
 }
 
 public abstract class SourceConverterProvider<TSource> : ISourceConverterProvider<TSource>

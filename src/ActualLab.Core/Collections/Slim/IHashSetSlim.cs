@@ -3,16 +3,16 @@ namespace ActualLab.Collections.Slim;
 public interface IHashSetSlim<T>
     where T : notnull
 {
-    int Count { get; }
-    IEnumerable<T> Items { get; }
+    public int Count { get; }
+    public IEnumerable<T> Items { get; }
 
-    bool Contains(T item);
-    bool Add(T item);
-    bool Remove(T item);
-    void Clear();
+    public bool Contains(T item);
+    public bool Add(T item);
+    public bool Remove(T item);
+    public void Clear();
 
-    void Apply<TState>(TState state, Action<TState, T> action);
-    void Aggregate<TState>(ref TState state, Aggregator<TState, T> aggregator);
-    TState Aggregate<TState>(TState state, Func<TState, T, TState> aggregator);
-    void CopyTo(Span<T> target);
+    public void Apply<TState>(TState state, Action<TState, T> action);
+    public void Aggregate<TState>(ref TState state, Aggregator<TState, T> aggregator);
+    public TState Aggregate<TState>(TState state, Func<TState, T, TState> aggregator);
+    public void CopyTo(Span<T> target);
 }

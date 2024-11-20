@@ -5,8 +5,8 @@ namespace ActualLab.Resilience;
 
 public interface IRetryPolicy
 {
-    bool MustRetry(Exception error, out Transiency transiency);
-    Task<T> Apply<T>(
+    public bool MustRetry(Exception error, out Transiency transiency);
+    public Task<T> Apply<T>(
         Func<CancellationToken, Task<T>> taskFactory,
         RetryLogger? retryLogger = null,
         CancellationToken cancellationToken = default);

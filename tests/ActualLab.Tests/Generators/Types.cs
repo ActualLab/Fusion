@@ -6,14 +6,14 @@ namespace ActualLab.Tests.Generators;
 
 public interface ITestInterfaceBase : IRequiresFullProxy
 {
-    Task Proxy1();
-    Task<int> Proxy2(int a, Task<bool> b);
+    public Task Proxy1();
+    public Task<int> Proxy2(int a, Task<bool> b);
 }
 
 public interface ITestInterface : ITestInterfaceBase
 {
-    Task<int> Proxy3();
-    void Proxy4(int a, string b);
+    public Task<int> Proxy3();
+    public void Proxy4(int a, string b);
 }
 
 public class TestClassBase : IRequiresAsyncProxy
@@ -48,10 +48,10 @@ internal class TestClass(int x) : TestClassBase(x), ITestInterface
 
 public interface IInterfaceProxy : IRequiresFullProxy
 {
-    void VoidMethod();
-    Task Method0();
-    Task Method1(CancellationToken cancellationToken);
-    Task Method2(int x, CancellationToken cancellationToken);
+    public void VoidMethod();
+    public Task Method0();
+    public Task Method1(CancellationToken cancellationToken);
+    public Task Method2(int x, CancellationToken cancellationToken);
 }
 
 public class ClassProxy : IInterfaceProxy, INotifyInitialized

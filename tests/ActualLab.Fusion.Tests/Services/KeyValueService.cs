@@ -8,15 +8,16 @@ namespace ActualLab.Fusion.Tests.Services;
 public interface IKeyValueService<TValue> : IComputeService
 {
     [ComputeMethod]
-    Task<Option<TValue>> TryGet(string key, CancellationToken cancellationToken = default);
+    public Task<Option<TValue>> TryGet(string key, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<TValue> Get(string key, CancellationToken cancellationToken = default);
-    Task Set(string key, TValue value, CancellationToken cancellationToken = default);
-    Task Remove(string key, CancellationToken cancellationToken = default);
+    public Task<TValue> Get(string key, CancellationToken cancellationToken = default);
+    public Task Set(string key, TValue value, CancellationToken cancellationToken = default);
+    public Task Remove(string key, CancellationToken cancellationToken = default);
+
     [CommandHandler]
-    Task SetCmd(KeyValueService_Set<TValue> cmd, CancellationToken cancellationToken = default);
+    public Task SetCmd(KeyValueService_Set<TValue> cmd, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task RemoveCmd(KeyValueService_Remove cmd, CancellationToken cancellationToken = default);
+    public Task RemoveCmd(KeyValueService_Remove cmd, CancellationToken cancellationToken = default);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]

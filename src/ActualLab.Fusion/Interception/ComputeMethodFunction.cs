@@ -5,8 +5,8 @@ namespace ActualLab.Fusion.Interception;
 
 public interface IComputeMethodFunction : IComputeFunction
 {
-    ComputeMethodDef MethodDef { get; }
-    ComputedOptions ComputedOptions { get; }
+    public ComputeMethodDef MethodDef { get; }
+    public ComputedOptions ComputedOptions { get; }
 }
 
 public class ComputeMethodFunction<T>(

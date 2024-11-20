@@ -15,14 +15,14 @@ namespace ActualLab.Testing;
 
 public interface ITestWebHost : IDisposable
 {
-    IHost Host { get; }
-    IServiceProvider Services { get; }
-    IServer Server { get; }
-    ILoggerFactory LoggerFactory { get; }
-    Uri ServerUri { get; }
+    public IHost Host { get; }
+    public IServiceProvider Services { get; }
+    public IServer Server { get; }
+    public ILoggerFactory LoggerFactory { get; }
+    public Uri ServerUri { get; }
 
-    Task<IAsyncDisposable> Serve(bool disposeOnStop = true);
-    HttpClient CreateClient();
+    public Task<IAsyncDisposable> Serve(bool disposeOnStop = true);
+    public HttpClient CreateClient();
 }
 
 public abstract class TestWebHostBase : ITestWebHost

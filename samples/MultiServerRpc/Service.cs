@@ -10,12 +10,12 @@ public record ServerId(Symbol Id); // Used just to display the message with Serv
 public interface IChat : IComputeService
 {
     [ComputeMethod]
-    Task<List<string>> GetRecentMessages(Symbol chatId, CancellationToken cancellationToken = default);
+    public Task<List<string>> GetRecentMessages(Symbol chatId, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<int> GetWordCount(Symbol chatId, CancellationToken cancellationToken = default);
+    public Task<int> GetWordCount(Symbol chatId, CancellationToken cancellationToken = default);
 
     [CommandHandler]
-    Task Post(Chat_Post command, CancellationToken cancellationToken);
+    public Task Post(Chat_Post command, CancellationToken cancellationToken);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]

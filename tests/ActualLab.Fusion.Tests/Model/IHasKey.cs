@@ -3,5 +3,5 @@ namespace ActualLab.Fusion.Tests.Model;
 public interface IHasKey<out TKey>
     where TKey : notnull
 {
-    TKey Key { get; }
+    public TKey Key { get; }
 }

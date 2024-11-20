@@ -4,9 +4,9 @@ namespace ActualLab.Plugins;
 
 public interface IPluginHost : IServiceProvider, IAsyncDisposable, IDisposable
 {
-    PluginSetInfo FoundPlugins { get; }
+    public PluginSetInfo FoundPlugins { get; }
     // Return actual IServiceProvider hosting plugins
-    IServiceProvider Services { get; }
+    public IServiceProvider Services { get; }
 }
 
 public class PluginHost(IServiceProvider services) : IPluginHost

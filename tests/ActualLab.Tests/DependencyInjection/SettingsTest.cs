@@ -8,7 +8,7 @@ public class SettingsTest
 {
     public interface ITestSettings
     {
-        string Value { get; set; }
+        public string Value { get; set; }
     }
 
     public class XSettings : ITestSettings

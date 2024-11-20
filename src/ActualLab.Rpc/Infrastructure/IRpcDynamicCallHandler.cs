@@ -4,5 +4,5 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public interface IRpcDynamicCallHandler
 {
-    bool IsValidCall(RpcInboundContext context, ref ArgumentList arguments, ref bool allowPolymorphism);
+    public bool IsValidCall(RpcInboundContext context, ref ArgumentList arguments, ref bool allowPolymorphism);
 }

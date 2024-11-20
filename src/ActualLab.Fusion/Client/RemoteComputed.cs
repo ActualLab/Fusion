@@ -12,8 +12,8 @@ namespace ActualLab.Fusion.Client;
 
 public interface IRemoteComputed : IComputed, IMaybeCachedValue, IDisposable
 {
-    Task WhenCallBound { get; }
-    RpcCacheEntry? CacheEntry { get; }
+    public Task WhenCallBound { get; }
+    public RpcCacheEntry? CacheEntry { get; }
 }
 
 public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed

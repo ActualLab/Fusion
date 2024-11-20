@@ -5,7 +5,7 @@ namespace ActualLab.Fusion.Client;
 
 public interface IRemoteComputedSynchronizer
 {
-    Task WhenSynchronized(Computed computed, CancellationToken cancellationToken);
+    public Task WhenSynchronized(Computed computed, CancellationToken cancellationToken);
 }
 
 public record RemoteComputedSynchronizer : IRemoteComputedSynchronizer

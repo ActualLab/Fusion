@@ -4,5 +4,5 @@ namespace ActualLab.Fusion.Operations;
 
 public interface IOperationCompletionListener
 {
-    Task OnOperationCompleted(Operation operation, CommandContext? commandContext);
+    public Task OnOperationCompleted(Operation operation, CommandContext? commandContext);
 }

@@ -8,9 +8,9 @@ namespace Samples.MeshRpc.Services;
 
 public interface ISimpleCounter : IRpcService
 {
-    Task<CounterWithOrigin> Get(int key, CancellationToken cancellationToken = default);
+    public Task<CounterWithOrigin> Get(int key, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task<CounterWithOrigin> Increment(SimpleCounter_Increment command, CancellationToken cancellationToken);
+    public Task<CounterWithOrigin> Increment(SimpleCounter_Increment command, CancellationToken cancellationToken);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]

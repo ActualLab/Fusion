@@ -6,22 +6,22 @@ public interface IAuth : IComputeService
 {
     // Commands
     [CommandHandler]
-    Task SignOut(Auth_SignOut command, CancellationToken cancellationToken = default);
+    public Task SignOut(Auth_SignOut command, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task EditUser(Auth_EditUser command, CancellationToken cancellationToken = default);
-    Task UpdatePresence(Session session, CancellationToken cancellationToken = default);
+    public Task EditUser(Auth_EditUser command, CancellationToken cancellationToken = default);
+    public Task UpdatePresence(Session session, CancellationToken cancellationToken = default);
 
     // Queries
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<bool> IsSignOutForced(Session session, CancellationToken cancellationToken = default);
+    public Task<bool> IsSignOutForced(Session session, CancellationToken cancellationToken = default);
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<SessionAuthInfo?> GetAuthInfo(Session session, CancellationToken cancellationToken = default);
+    public Task<SessionAuthInfo?> GetAuthInfo(Session session, CancellationToken cancellationToken = default);
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<SessionInfo?> GetSessionInfo(Session session, CancellationToken cancellationToken = default);
+    public Task<SessionInfo?> GetSessionInfo(Session session, CancellationToken cancellationToken = default);
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<User?> GetUser(Session session, CancellationToken cancellationToken = default);
+    public Task<User?> GetUser(Session session, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<ImmutableArray<SessionInfo>> GetUserSessions(Session session, CancellationToken cancellationToken = default);
+    public Task<ImmutableArray<SessionInfo>> GetUserSessions(Session session, CancellationToken cancellationToken = default);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]

@@ -11,5 +11,5 @@ public interface IConvertibleTo<out TTarget>
     /// Converts the implementor of this interface to type <typeparamref name="TTarget"/>.
     /// </summary>
     /// <returns>A newly created instance of type <typeparamref name="TTarget"/>.</returns>
-    TTarget Convert();
+    public TTarget Convert();
 }

@@ -2,5 +2,5 @@ namespace Samples.MeshRpc;
 
 public interface IHasShardRef
 {
-    ShardRef ShardRef { get; }
+    public ShardRef ShardRef { get; }
 }

@@ -1,11 +1,10 @@
-using ActualLab.Concurrency;
 using ActualLab.OS;
 
 namespace ActualLab.Plugins.Internal;
 
 public interface IPluginCache
 {
-    IPluginInstanceHandle GetOrCreate(Type pluginImplementationType);
+    public IPluginInstanceHandle GetOrCreate(Type pluginImplementationType);
 }
 
 public class PluginCache(IServiceProvider services) : IPluginCache

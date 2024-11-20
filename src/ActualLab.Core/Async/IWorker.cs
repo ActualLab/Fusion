@@ -4,8 +4,8 @@ namespace ActualLab.Async;
 
 public interface IWorker : IAsyncDisposable, IDisposable, IHasWhenDisposed, IHostedService
 {
-    Task? WhenRunning { get; }
+    public Task? WhenRunning { get; }
 
-    Task Run();
-    Task Stop();
+    public Task Run();
+    public Task Stop();
 }

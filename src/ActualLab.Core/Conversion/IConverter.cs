@@ -4,11 +4,11 @@ namespace ActualLab.Conversion;
 
 public interface IConverter<in TSource, TTarget>
 {
-    Option<TTarget> TryConvert(TSource source);
+    public Option<TTarget> TryConvert(TSource source);
 #if NETFRAMEWORK || NETSTANDARD2_0
-    TTarget Convert(TSource source);
+    public TTarget Convert(TSource source);
 #else
-    TTarget Convert(TSource source)
+    public TTarget Convert(TSource source)
     {
         var targetOpt = TryConvert(source);
         return targetOpt.HasValue

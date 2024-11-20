@@ -3,21 +3,21 @@ namespace ActualLab.Fusion.Tests.Services;
 public interface ITimeServer : IComputeService
 {
     [ComputeMethod]
-    Task<DateTime> GetTime(CancellationToken cancellationToken = default);
+    public Task<DateTime> GetTime(CancellationToken cancellationToken = default);
     [ComputeMethod]
-    ValueTask<DateTime> GetTimeAsValueTask(CancellationToken cancellationToken = default);
+    public ValueTask<DateTime> GetTimeAsValueTask(CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<DateTime> GetTimeWithDelay(CancellationToken cancellationToken = default);
+    public Task<DateTime> GetTimeWithDelay(CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<string?> GetFormattedTime(string format, CancellationToken cancellationToken = default);
+    public Task<string?> GetFormattedTime(string format, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<DateTime> GetTimeWithOffset(TimeSpan offset);
+    public Task<DateTime> GetTimeWithOffset(TimeSpan offset);
 }
 
 public interface ITimeService : ITimeServer
 {
     [ComputeMethod]
-    Task<DateTime> GetTimeNoMethod(CancellationToken cancellationToken = default);
+    public Task<DateTime> GetTimeNoMethod(CancellationToken cancellationToken = default);
 }
 
 public class TimeService : ITimeService

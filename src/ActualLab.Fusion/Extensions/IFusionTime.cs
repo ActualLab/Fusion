@@ -3,9 +3,9 @@ namespace ActualLab.Fusion.Extensions;
 public interface IFusionTime : IComputeService
 {
     [ComputeMethod]
-    Task<Moment> Now();
+    public Task<Moment> Now();
     [ComputeMethod]
-    Task<Moment> Now(TimeSpan updatePeriod);
+    public Task<Moment> Now(TimeSpan updatePeriod);
     [ComputeMethod]
-    Task<string> GetMomentsAgo(Moment moment);
+    public Task<string> GetMomentsAgo(Moment moment);
 }

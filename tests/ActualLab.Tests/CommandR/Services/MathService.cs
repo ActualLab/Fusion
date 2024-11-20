@@ -1,12 +1,11 @@
 using ActualLab.Interception;
-using ServiceProviderExt = ActualLab.CommandR.ServiceProviderExt;
 
 namespace ActualLab.Tests.CommandR.Services;
 
 public interface IMathService : ICommandService, IRequiresFullProxy
 {
     [CommandHandler(Priority = 1)]
-    Task<double> RecSum(RecSumCommand command, CancellationToken cancellationToken = default);
+    public Task<double> RecSum(RecSumCommand command, CancellationToken cancellationToken = default);
 }
 
 public class MathService(IServiceProvider services) : ServiceBase(services), IMathService

@@ -5,7 +5,7 @@ namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
 public interface IDbLogReader
 {
-    DbLogKind LogKind { get; }
+    public DbLogKind LogKind { get; }
 }
 
 public abstract record DbLogReaderOptions

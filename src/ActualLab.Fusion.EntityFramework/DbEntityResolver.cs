@@ -18,10 +18,10 @@ public interface IDbEntityResolver<TKey, TDbEntity> : IDbEntityResolver
     where TKey : notnull
     where TDbEntity : class
 {
-    Func<TDbEntity, TKey> KeyExtractor { get; init; }
-    Expression<Func<TDbEntity, TKey>> KeyExtractorExpression { get; init; }
+    public Func<TDbEntity, TKey> KeyExtractor { get; init; }
+    public Expression<Func<TDbEntity, TKey>> KeyExtractorExpression { get; init; }
 
-    Task<TDbEntity?> Get(DbShard shard, TKey key, CancellationToken cancellationToken = default);
+    public Task<TDbEntity?> Get(DbShard shard, TKey key, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

@@ -4,5 +4,5 @@ namespace ActualLab.Plugins;
 // and filtering based on capabilities
 public interface IHasCapabilities
 {
-    PropertyBag Capabilities { get; }
+    public PropertyBag Capabilities { get; }
 }

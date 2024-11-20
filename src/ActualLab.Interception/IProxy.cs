@@ -2,5 +2,5 @@ namespace ActualLab.Interception;
 
 public interface IProxy : IRequiresAsyncProxy
 {
-    Interceptor Interceptor { get; set; }
+    public Interceptor Interceptor { get; set; }
 }

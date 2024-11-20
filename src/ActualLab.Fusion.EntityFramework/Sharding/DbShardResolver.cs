@@ -4,14 +4,14 @@ namespace ActualLab.Fusion.EntityFramework;
 
 public interface IDbShardResolver : IHasServices
 {
-    IDbShardRegistry ShardRegistry { get; }
+    public IDbShardRegistry ShardRegistry { get; }
 
-    DbShard Resolve(object source);
+    public DbShard Resolve(object source);
 }
 
 public interface IDbShardResolver<TDbContext> : IDbShardResolver
 {
-    new IDbShardRegistry<TDbContext> ShardRegistry { get; }
+    public new IDbShardRegistry<TDbContext> ShardRegistry { get; }
 }
 
 public abstract class DbShardResolver(IServiceProvider services) : IDbShardResolver

@@ -2,5 +2,5 @@ namespace ActualLab.Interception;
 
 public interface INotifyInitialized
 {
-    void Initialized();
+    public void Initialized();
 }

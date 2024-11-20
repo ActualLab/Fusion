@@ -55,7 +55,7 @@
     // Since this is just an example, the API is declared right here:
     public interface ITypicalTodoApi
     {
-        Task<TodoItem?> GetItem(Ulid id, CancellationToken cancellationToken = default);
-        Task<IAsyncEnumerable<TodoItem>> ObserveItem(CancellationToken cancellationToken = default);
+        public Task<TodoItem?> GetItem(Ulid id, CancellationToken cancellationToken = default);
+        public Task<IAsyncEnumerable<TodoItem>> ObserveItem(CancellationToken cancellationToken = default);
     }
 }

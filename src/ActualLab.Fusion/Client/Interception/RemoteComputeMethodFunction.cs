@@ -18,8 +18,8 @@ namespace ActualLab.Fusion.Client.Interception;
 
 public interface IRemoteComputeMethodFunction : IComputeMethodFunction
 {
-    RpcMethodDef RpcMethodDef { get; }
-    object? LocalTarget { get; }
+    public RpcMethodDef RpcMethodDef { get; }
+    public object? LocalTarget { get; }
 }
 
 public class RemoteComputeMethodFunction<T>(

@@ -5,7 +5,7 @@ namespace ActualLab.DependencyInjection;
 public interface IResolver<in TKey, TValue>
     where TKey : notnull
 {
-    bool TryGet(TKey key, [MaybeNullWhen(false)] out TValue value);
+    public bool TryGet(TKey key, [MaybeNullWhen(false)] out TValue value);
 }
 
 public static class ResolverExt

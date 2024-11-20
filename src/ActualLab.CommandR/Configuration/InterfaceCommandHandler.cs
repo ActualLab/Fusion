@@ -4,7 +4,7 @@ namespace ActualLab.CommandR.Configuration;
 
 public interface IInterfaceCommandHandler : ICommandHandler
 {
-    Type ServiceType { get; }
+    public Type ServiceType { get; }
 }
 
 public sealed record InterfaceCommandHandler<

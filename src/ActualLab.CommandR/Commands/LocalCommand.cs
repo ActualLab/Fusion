@@ -4,7 +4,7 @@ namespace ActualLab.CommandR.Commands;
 
 public interface ILocalCommand : ICommand
 {
-    Task Run(CommandContext context, CancellationToken cancellationToken);
+    public Task Run(CommandContext context, CancellationToken cancellationToken);
 }
 
 public interface ILocalCommand<T> : ICommand<T>, ILocalCommand;

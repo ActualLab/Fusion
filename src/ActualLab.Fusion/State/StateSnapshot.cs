@@ -2,24 +2,24 @@ namespace ActualLab.Fusion;
 
 public interface IStateSnapshot
 {
-    IState State { get; }
-    Computed Computed { get; }
-    Computed LastNonErrorComputed { get; }
-    int UpdateCount { get; }
-    int ErrorCount { get; }
-    int RetryCount { get; }
-    bool IsInitial { get; }
+    public IState State { get; }
+    public Computed Computed { get; }
+    public Computed LastNonErrorComputed { get; }
+    public int UpdateCount { get; }
+    public int ErrorCount { get; }
+    public int RetryCount { get; }
+    public bool IsInitial { get; }
 
-    Task WhenInvalidated(CancellationToken cancellationToken = default);
-    Task WhenUpdating();
-    Task WhenUpdated();
+    public Task WhenInvalidated(CancellationToken cancellationToken = default);
+    public Task WhenUpdating();
+    public Task WhenUpdated();
 }
 
 public interface IStateSnapshot<T> : IStateSnapshot
 {
-    new IState<T> State { get; }
-    new Computed<T> Computed { get; }
-    new Computed<T> LastNonErrorComputed { get; }
+    public new IState<T> State { get; }
+    public new Computed<T> Computed { get; }
+    public new Computed<T> LastNonErrorComputed { get; }
 }
 
 public class StateSnapshot<T> : IStateSnapshot<T>

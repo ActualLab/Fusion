@@ -3,7 +3,7 @@ namespace ActualLab.Fusion.Operations;
 
 public interface IOperationCompletionNotifier
 {
-    Task<bool> NotifyCompleted(Operation operation, CommandContext? commandContext);
+    public Task<bool> NotifyCompleted(Operation operation, CommandContext? commandContext);
 }
 
 public class OperationCompletionNotifier : IOperationCompletionNotifier

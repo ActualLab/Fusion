@@ -4,7 +4,7 @@ namespace ActualLab.Fusion;
 
 public interface IUpdateDelayer
 {
-    Task Delay(int retryCount, CancellationToken cancellationToken = default);
+    public Task Delay(int retryCount, CancellationToken cancellationToken = default);
 }
 
 public sealed record UpdateDelayer(

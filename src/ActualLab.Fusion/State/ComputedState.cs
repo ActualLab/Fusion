@@ -16,16 +16,16 @@ public interface IComputedState : IState, IDisposable, IHasWhenDisposed
 {
     public new interface IOptions : IState.IOptions
     {
-        IUpdateDelayer? UpdateDelayer { get; init; }
+        public IUpdateDelayer? UpdateDelayer { get; init; }
         public bool TryComputeSynchronously { get; init; }
         public bool FlowExecutionContext { get; init; }
         public TimeSpan GracefulDisposeDelay { get; init; }
     }
 
-    IUpdateDelayer UpdateDelayer { get; set; }
-    Task UpdateCycleTask { get; }
-    CancellationToken DisposeToken { get; }
-    CancellationToken GracefulDisposeToken { get; }
+    public IUpdateDelayer UpdateDelayer { get; set; }
+    public Task UpdateCycleTask { get; }
+    public CancellationToken DisposeToken { get; }
+    public CancellationToken GracefulDisposeToken { get; }
 }
 
 public interface IComputedState<T> : IState<T>, IComputedState;

@@ -7,15 +7,15 @@ namespace ActualLab.Fusion.Authentication.Services;
 
 public interface IDbUserIdHandler<TDbUserId>
 {
-    TDbUserId New();
-    TDbUserId None { get; }
+    public TDbUserId New();
+    public TDbUserId None { get; }
 
-    bool IsNone([NotNullWhen(false)] TDbUserId? userId);
-    void Require([NotNull] TDbUserId? userId);
+    public bool IsNone([NotNullWhen(false)] TDbUserId? userId);
+    public void Require([NotNull] TDbUserId? userId);
 
-    Symbol Format(TDbUserId? userId);
-    TDbUserId Parse(Symbol userId, bool allowNone);
-    bool TryParse(Symbol userId, bool allowNone, out TDbUserId result);
+    public Symbol Format(TDbUserId? userId);
+    public TDbUserId Parse(Symbol userId, bool allowNone);
+    public bool TryParse(Symbol userId, bool allowNone, out TDbUserId result);
 }
 
 public class DbUserIdHandler<TDbUserId> : IDbUserIdHandler<TDbUserId>

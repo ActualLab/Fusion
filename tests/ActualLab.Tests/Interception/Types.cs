@@ -4,32 +4,32 @@ namespace ActualLab.Tests.Interception;
 
 public interface IService
 {
-    string One(string source);
-    int Two(string source);
-    JsonString Three();
+    public string One(string source);
+    public int Two(string source);
+    public JsonString Three();
 
-    Task<string> OneAsync(string source);
-    Task<int> TwoAsync(string source);
-    Task<JsonString> ThreeAsync();
+    public Task<string> OneAsync(string source);
+    public Task<int> TwoAsync(string source);
+    public Task<JsonString> ThreeAsync();
 
-    ValueTask<string> OneXAsync(string source);
-    ValueTask<int> TwoXAsync(string source);
-    ValueTask<JsonString> ThreeXAsync();
+    public ValueTask<string> OneXAsync(string source);
+    public ValueTask<int> TwoXAsync(string source);
+    public ValueTask<JsonString> ThreeXAsync();
 }
 
 public interface IView : IRequiresFullProxy
 {
-    string One(string source);
-    string Two(string source);
-    string Three();
+    public string One(string source);
+    public string Two(string source);
+    public string Three();
 
-    Task<string> OneAsync(string source);
-    Task<string> TwoAsync(string source);
-    Task<string> ThreeAsync();
+    public Task<string> OneAsync(string source);
+    public Task<string> TwoAsync(string source);
+    public Task<string> ThreeAsync();
 
-    ValueTask<string> OneXAsync(string source);
-    ValueTask<string> TwoXAsync(string source);
-    ValueTask<string> ThreeXAsync();
+    public ValueTask<string> OneXAsync(string source);
+    public ValueTask<string> TwoXAsync(string source);
+    public ValueTask<string> ThreeXAsync();
 }
 
 #pragma warning disable VSTHRD103

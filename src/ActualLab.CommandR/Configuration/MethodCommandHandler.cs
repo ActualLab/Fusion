@@ -5,10 +5,10 @@ namespace ActualLab.CommandR.Configuration;
 
 public interface IMethodCommandHandler : ICommandHandler
 {
-    Type ServiceType { get; }
-    MethodInfo Method { get; }
-    ParameterInfo[] Parameters { get; }
-    Type[] ParameterTypes { get; }
+    public Type ServiceType { get; }
+    public MethodInfo Method { get; }
+    public ParameterInfo[] Parameters { get; }
+    public Type[] ParameterTypes { get; }
 }
 
 public sealed record MethodCommandHandler<

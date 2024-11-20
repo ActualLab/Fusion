@@ -4,14 +4,10 @@ namespace ActualLab.Plugins.Internal;
 
 public interface IPluginFilter
 {
-    bool IsEnabled(PluginInfo pluginInfo);
+    public bool IsEnabled(PluginInfo pluginInfo);
 }
 
-public class PredicatePluginFilter : IPluginFilter
+public class PredicatePluginFilter(Func<PluginInfo, bool> predicate) : IPluginFilter
 {
-    private readonly Func<PluginInfo, bool> _predicate;
-
-    public bool IsEnabled(PluginInfo pluginInfo) => _predicate(pluginInfo);
-
-    public PredicatePluginFilter(Func<PluginInfo, bool> predicate) => _predicate = predicate;
+    public bool IsEnabled(PluginInfo pluginInfo) => predicate(pluginInfo);
 }

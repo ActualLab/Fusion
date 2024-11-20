@@ -2,9 +2,9 @@ namespace ActualLab.Net;
 
 public interface IRetryDelayer
 {
-    MomentClock Clock { get; }
-    CancellationToken CancelDelaysToken { get; }
+    public MomentClock Clock { get; }
+    public CancellationToken CancelDelaysToken { get; }
 
-    RetryDelay GetDelay(int tryIndex, CancellationToken cancellationToken = default);
-    void CancelDelays();
+    public RetryDelay GetDelay(int tryIndex, CancellationToken cancellationToken = default);
+    public void CancelDelays();
 }

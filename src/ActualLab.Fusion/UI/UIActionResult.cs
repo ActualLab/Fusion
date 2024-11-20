@@ -2,13 +2,13 @@ namespace ActualLab.Fusion.UI;
 
 public interface IUIActionResult : IResult
 {
-    long ActionId { get; }
-    UIAction UntypedAction { get; }
-    ICommand Command { get; }
-    Moment StartedAt { get; }
-    Moment CompletedAt { get; }
-    TimeSpan Duration { get; }
-    CancellationToken CancellationToken { get; }
+    public long ActionId { get; }
+    public UIAction UntypedAction { get; }
+    public ICommand Command { get; }
+    public Moment StartedAt { get; }
+    public Moment CompletedAt { get; }
+    public TimeSpan Duration { get; }
+    public CancellationToken CancellationToken { get; }
 }
 
 public class UIActionResult<TResult> : ResultBox<TResult>, IUIActionResult

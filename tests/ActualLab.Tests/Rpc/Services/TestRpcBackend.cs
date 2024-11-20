@@ -4,7 +4,7 @@ namespace ActualLab.Tests.Rpc;
 
 public interface ITestRpcBackend : ICommandService, IBackendService
 {
-    Task<ITuple> Polymorph(ITuple argument, CancellationToken cancellationToken = default);
+    public Task<ITuple> Polymorph(ITuple argument, CancellationToken cancellationToken = default);
 }
 
 public interface ITestRpcBackendClient : ITestRpcBackend;

@@ -9,5 +9,5 @@ public interface IHasId<out TId>
     /// <summary>
     /// Instance's identifier.
     /// </summary>
-    TId Id { get; }
+    public TId Id { get; }
 }

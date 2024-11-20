@@ -2,8 +2,8 @@ namespace ActualLab.CommandR.Commands;
 
 /// <summary>
 /// A tagging interface for commands that can be initiated by the client
-/// and aren't supposed to make any changes directly - i.e. w/o invoking
-/// other commands.
+/// and aren't supposed to make any changes directly (without invoking
+/// other commands).
 /// </summary>
 /// <remarks>
 /// API commands:

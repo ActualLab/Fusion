@@ -10,8 +10,8 @@ namespace ActualLab.Fusion;
 
 public interface IComputedSource : IComputeFunction
 {
-    ComputedOptions ComputedOptions { get; }
-    Computed Computed { get; }
+    public ComputedOptions ComputedOptions { get; }
+    public Computed Computed { get; }
 }
 
 public class ComputedSource<T> : ComputedInput,

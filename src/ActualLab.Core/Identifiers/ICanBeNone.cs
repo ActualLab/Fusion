@@ -4,7 +4,7 @@ namespace ActualLab.Identifiers;
 
 public interface ICanBeNone
 {
-    bool IsNone { get; }
+    public bool IsNone { get; }
 }
 
 public interface ICanBeNone<out TSelf> : ICanBeNone

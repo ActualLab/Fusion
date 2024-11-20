@@ -4,7 +4,7 @@ namespace ActualLab.Plugins.Internal;
 
 public interface IPluginFactory
 {
-    object? Create(Type pluginType);
+    public object? Create(Type pluginType);
 }
 
 public class PluginFactory(IServiceProvider services) : IPluginFactory

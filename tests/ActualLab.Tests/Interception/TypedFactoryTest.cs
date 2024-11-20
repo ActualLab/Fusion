@@ -4,7 +4,7 @@ namespace ActualLab.Tests.Interception;
 
 public interface ITestTypedFactory : IRequiresFullProxy
 {
-    TestFactoryClass CreateTestClass(int int32);
+    public TestFactoryClass CreateTestClass(int int32);
 }
 
 public class TestFactoryClass(IServiceProvider services, int int32)

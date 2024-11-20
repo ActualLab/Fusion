@@ -5,7 +5,7 @@ namespace ActualLab.Fusion.Client;
 
 public interface IReplicaComputed
 {
-    Computed? Original { get; }
+    public Computed? Original { get; }
 }
 
 public class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaComputed

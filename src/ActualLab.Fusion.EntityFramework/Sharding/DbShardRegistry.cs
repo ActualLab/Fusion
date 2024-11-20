@@ -2,18 +2,18 @@ namespace ActualLab.Fusion.EntityFramework;
 
 public interface IDbShardRegistry
 {
-    bool HasSingleShard { get; }
-    IState<ImmutableHashSet<DbShard>> Shards { get; }
-    IState<ImmutableHashSet<DbShard>> UsedShards { get; }
-    IState<ImmutableHashSet<DbShard>> EventProcessorShards { get; }
-    MutableState<Func<DbShard, bool>> EventProcessorShardFilter { get; }
+    public bool HasSingleShard { get; }
+    public IState<ImmutableHashSet<DbShard>> Shards { get; }
+    public IState<ImmutableHashSet<DbShard>> UsedShards { get; }
+    public IState<ImmutableHashSet<DbShard>> EventProcessorShards { get; }
+    public MutableState<Func<DbShard, bool>> EventProcessorShardFilter { get; }
 
-    bool Add(DbShard shard);
-    bool Remove(DbShard shard);
+    public bool Add(DbShard shard);
+    public bool Remove(DbShard shard);
 
-    DbShard Use(DbShard shard);
-    bool CanUse(DbShard shard);
-    bool TryUse(DbShard shard);
+    public DbShard Use(DbShard shard);
+    public bool CanUse(DbShard shard);
+    public bool TryUse(DbShard shard);
 }
 
 public interface IDbShardRegistry<TContext> : IDbShardRegistry;

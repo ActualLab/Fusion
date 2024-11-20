@@ -4,16 +4,14 @@ namespace ActualLab.Tests.Plugins;
 
 public interface ITestPlugin
 {
-    string GetName();
+    public string GetName();
 }
 
-public interface ITestSingletonPlugin : ITestPlugin, ISingletonPlugin
-{
-}
+public interface ITestSingletonPlugin : ITestPlugin, ISingletonPlugin;
 
 public interface ITestPluginEx : ITestPlugin
 {
-    string GetVersion();
+    public string GetVersion();
 }
 
 [Plugin]

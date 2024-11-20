@@ -2,8 +2,8 @@ namespace ActualLab.Conversion;
 
 public interface IConverterProvider
 {
-    ISourceConverterProvider From(Type sourceType);
-    ISourceConverterProvider<TSource> From<TSource>();
+    public ISourceConverterProvider From(Type sourceType);
+    public ISourceConverterProvider<TSource> From<TSource>();
 }
 
 public abstract class ConverterProvider : IConverterProvider

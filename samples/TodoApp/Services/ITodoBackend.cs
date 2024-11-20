@@ -9,17 +9,17 @@ public interface ITodoBackend : IComputeService
 {
     // Commands
     [CommandHandler]
-    Task<TodoItem> AddOrUpdate(TodoBackend_AddOrUpdate command, CancellationToken cancellationToken = default);
+    public Task<TodoItem> AddOrUpdate(TodoBackend_AddOrUpdate command, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task Remove(TodoBackend_Remove command, CancellationToken cancellationToken = default);
+    public Task Remove(TodoBackend_Remove command, CancellationToken cancellationToken = default);
 
     // Queries
     [ComputeMethod]
-    Task<TodoItem?> Get(string folder, Ulid id, CancellationToken cancellationToken = default);
+    public Task<TodoItem?> Get(string folder, Ulid id, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<Ulid[]> ListIds(string folder, int count, CancellationToken cancellationToken = default);
+    public Task<Ulid[]> ListIds(string folder, int count, CancellationToken cancellationToken = default);
     [ComputeMethod(InvalidationDelay = 0.5)]
-    Task<TodoSummary> GetSummary(string folder, CancellationToken cancellationToken = default);
+    public Task<TodoSummary> GetSummary(string folder, CancellationToken cancellationToken = default);
 }
 
 [DataContract, MemoryPackable, MessagePackObject]

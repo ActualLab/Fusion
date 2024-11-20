@@ -2,5 +2,5 @@ namespace ActualLab.CommandR;
 
 public interface IEventCommand : ICommand<Unit>
 {
-    Symbol ChainId { get; init; }
+    public Symbol ChainId { get; init; }
 }

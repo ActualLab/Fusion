@@ -5,8 +5,8 @@ namespace ActualLab.Fusion.EntityFramework.Internal;
 
 public interface IDbHintFormatter
 {
-    void Configure(IServiceCollection services);
-    IQueryable<T> Apply<T>(DbSet<T> dbSet, ref MemoryBuffer<DbHint> hints)
+    public void Configure(IServiceCollection services);
+    public IQueryable<T> Apply<T>(DbSet<T> dbSet, ref MemoryBuffer<DbHint> hints)
         where T : class;
 }
 

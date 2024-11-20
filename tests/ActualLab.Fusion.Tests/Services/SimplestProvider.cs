@@ -15,23 +15,23 @@ public partial record SetValueCommand : ICommand<Unit>
 public interface ISimpleProviderImpl
 {
     // These two properties are here solely for testing purposes
-    int GetValueCallCount { get; }
-    int GetCharCountCallCount { get; }
+    public int GetValueCallCount { get; }
+    public int GetCharCountCallCount { get; }
 
-    void SetValue(string? value);
+    public void SetValue(string? value);
 }
 
 public interface ISimplestProvider : IComputeService
 {
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<string?> GetValue();
+    public Task<string?> GetValue();
     [ComputeMethod(MinCacheDuration = 0.5, TransientErrorInvalidationDelay = 0.5)]
-    Task<int> GetCharCount();
+    public Task<int> GetCharCount();
     [ComputeMethod(TransientErrorInvalidationDelay = 0.5)]
-    Task<int> Fail(Type exceptionType);
+    public Task<int> Fail(Type exceptionType);
 
     [CommandHandler]
-    Task SetValue(SetValueCommand command, CancellationToken cancellationToken = default);
+    public Task SetValue(SetValueCommand command, CancellationToken cancellationToken = default);
 }
 
 public class SimplestProvider : ISimplestProvider, ISimpleProviderImpl, IHasId<Type>, IHasIsDisposed

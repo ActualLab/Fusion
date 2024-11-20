@@ -5,8 +5,8 @@ namespace ActualLab.Interception;
 
 public interface ITypeViewFactory
 {
-    object CreateView(object implementation, Type viewType);
-    TypeViewFactory<TView> For<TView>()
+    public object CreateView(object implementation, Type viewType);
+    public TypeViewFactory<TView> For<TView>()
         where TView : class;
 }
 

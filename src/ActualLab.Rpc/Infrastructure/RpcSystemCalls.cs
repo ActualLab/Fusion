@@ -11,27 +11,27 @@ namespace ActualLab.Rpc.Infrastructure;
 public interface IRpcSystemCalls : IRpcSystemService
 {
     // Handshake & Reconnected
-    Task<RpcNoWait> Handshake(RpcHandshake handshake);
-    Task<byte[]> Reconnect(
+    public Task<RpcNoWait> Handshake(RpcHandshake handshake);
+    public Task<byte[]> Reconnect(
         int handshakeIndex, Dictionary<int, byte[]> completedStagesData, CancellationToken cancellationToken);
 
     // Regular calls
-    Task<RpcNoWait> Ok(object? result);
-    Task<RpcNoWait> Error(ExceptionInfo error);
-    Task<RpcNoWait> Cancel();
-    Task<RpcNoWait> M(); // Match
-    Task<Unit> NotFound(string serviceName, string methodName);
+    public Task<RpcNoWait> Ok(object? result);
+    public Task<RpcNoWait> Error(ExceptionInfo error);
+    public Task<RpcNoWait> Cancel();
+    public Task<RpcNoWait> M(); // Match
+    public Task<Unit> NotFound(string serviceName, string methodName);
 
     // Objects
-    Task<RpcNoWait> KeepAlive(long[] localIds);
-    Task<RpcNoWait> Disconnect(long[] localIds);
+    public Task<RpcNoWait> KeepAlive(long[] localIds);
+    public Task<RpcNoWait> Disconnect(long[] localIds);
 
     // Streams
-    Task<RpcNoWait> Ack(long nextIndex, Guid hostId = default);
-    Task<RpcNoWait> AckEnd(Guid hostId = default);
-    Task<RpcNoWait> I(long index, object? item);
-    Task<RpcNoWait> B(long index, object? items);
-    Task<RpcNoWait> End(long index, ExceptionInfo error);
+    public Task<RpcNoWait> Ack(long nextIndex, Guid hostId = default);
+    public Task<RpcNoWait> AckEnd(Guid hostId = default);
+    public Task<RpcNoWait> I(long index, object? item);
+    public Task<RpcNoWait> B(long index, object? items);
+    public Task<RpcNoWait> End(long index, ExceptionInfo error);
 }
 
 public class RpcSystemCalls(IServiceProvider services)

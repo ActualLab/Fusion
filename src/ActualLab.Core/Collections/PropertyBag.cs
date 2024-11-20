@@ -6,20 +6,20 @@ namespace ActualLab.Collections;
 
 public interface IReadOnlyPropertyBag
 {
-    int Count { get; }
-    IReadOnlyList<PropertyBagItem> Items { get; }
-    object? this[Symbol key] { get; }
+    public int Count { get; }
+    public IReadOnlyList<PropertyBagItem> Items { get; }
+    public object? this[Symbol key] { get; }
 
-    bool Contains<T>();
-    bool Contains(Symbol key);
-    bool TryGet<T>([MaybeNullWhen(false)] out T value);
-    bool TryGet<T>(Symbol key, [MaybeNullWhen(false)] out T value);
-    T? Get<T>() where T : class;
-    T? Get<T>(Symbol key) where T : class;
-    T GetOrDefault<T>();
-    T GetOrDefault<T>(Symbol key);
-    T GetOrDefault<T>(T @default);
-    T GetOrDefault<T>(Symbol key, T @default);
+    public bool Contains<T>();
+    public bool Contains(Symbol key);
+    public bool TryGet<T>([MaybeNullWhen(false)] out T value);
+    public bool TryGet<T>(Symbol key, [MaybeNullWhen(false)] out T value);
+    public T? Get<T>() where T : class;
+    public T? Get<T>(Symbol key) where T : class;
+    public T GetOrDefault<T>();
+    public T GetOrDefault<T>(Symbol key);
+    public T GetOrDefault<T>(T @default);
+    public T GetOrDefault<T>(Symbol key, T @default);
 }
 
 #pragma warning disable CS0618 // Type or member is obsolete

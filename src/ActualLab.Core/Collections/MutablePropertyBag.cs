@@ -6,20 +6,20 @@ namespace ActualLab.Collections;
 
 public interface IMutablePropertyBag : IReadOnlyPropertyBag
 {
-    event Action? Changed;
+    public event Action? Changed;
 
-    bool Set<T>(T value);
-    bool Set<T>(Symbol key, T value);
-    bool Set(Symbol key, object? value);
-    void SetMany(PropertyBag items);
-    void SetMany(params ReadOnlySpan<PropertyBagItem> items);
-    bool Remove<T>();
-    bool Remove(Symbol key);
-    void Clear();
+    public bool Set<T>(T value);
+    public bool Set<T>(Symbol key, T value);
+    public bool Set(Symbol key, object? value);
+    public void SetMany(PropertyBag items);
+    public void SetMany(params ReadOnlySpan<PropertyBagItem> items);
+    public bool Remove<T>();
+    public bool Remove(Symbol key);
+    public void Clear();
 
-    bool Update(PropertyBag bag);
-    bool Update(Func<PropertyBag, PropertyBag> updater);
-    bool Update<TState>(TState state, Func<TState, PropertyBag, PropertyBag> updater);
+    public bool Update(PropertyBag bag);
+    public bool Update(Func<PropertyBag, PropertyBag> updater);
+    public bool Update<TState>(TState state, Func<TState, PropertyBag, PropertyBag> updater);
 }
 
 #pragma warning disable CS0618 // Type or member is obsolete

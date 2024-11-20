@@ -2,7 +2,7 @@ namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
 public interface IDbLogTrimmer
 {
-    DbLogKind LogKind { get; }
+    public DbLogKind LogKind { get; }
 }
 
 public record DbLogTrimmerOptions

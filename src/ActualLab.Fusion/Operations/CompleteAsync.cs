@@ -5,7 +5,7 @@ namespace ActualLab.Fusion.Operations;
 
 public interface ICompletion : ISystemCommand, IBackendCommand
 {
-    Operation Operation { get; }
+    public Operation Operation { get; }
 }
 
 public interface ICompletion<TCommand> : ICompletion

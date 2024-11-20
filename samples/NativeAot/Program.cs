@@ -72,13 +72,13 @@ public static class Invoker
 
 public interface ITestService : IComputeService
 {
-    Task<Moment> GetTime(CancellationToken cancellationToken = default);
+    public Task<Moment> GetTime(CancellationToken cancellationToken = default);
 
     [ComputeMethod(AutoInvalidationDelay = 1)]
-    Task<Moment> GetTimeComputed(CancellationToken cancellationToken = default);
+    public Task<Moment> GetTimeComputed(CancellationToken cancellationToken = default);
 
     [CommandHandler]
-    Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default);
+    public Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default);
 }
 
 [MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]

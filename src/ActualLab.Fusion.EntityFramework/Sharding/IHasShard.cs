@@ -2,5 +2,5 @@ namespace ActualLab.Fusion.EntityFramework;
 
 public interface IHasShard
 {
-    DbShard Shard { get; }
+    public DbShard Shard { get; }
 }

@@ -7,11 +7,11 @@ public interface IDbEntityConverter<TDbEntity, TModel>
     where TDbEntity : class
     where TModel : notnull
 {
-    TDbEntity NewEntity();
-    TModel NewModel();
+    public TDbEntity NewEntity();
+    public TModel NewModel();
 
-    void UpdateEntity(TModel source, TDbEntity target);
-    TModel UpdateModel(TDbEntity source, TModel target);
+    public void UpdateEntity(TModel source, TDbEntity target);
+    public TModel UpdateModel(TDbEntity source, TModel target);
 
 #if !NETSTANDARD2_0
     [return: NotNullIfNotNull("source")]

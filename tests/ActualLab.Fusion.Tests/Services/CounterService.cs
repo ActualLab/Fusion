@@ -6,13 +6,13 @@ namespace ActualLab.Fusion.Tests.Services;
 public interface ICounterService : IComputeService
 {
     [ComputeMethod(MinCacheDuration = 0.3)]
-    Task<int> Get(string key, CancellationToken cancellationToken = default);
+    public Task<int> Get(string key, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<int> GetFirstNonZero(string key1, string key2, CancellationToken cancellationToken = default);
+    public Task<int> GetFirstNonZero(string key1, string key2, CancellationToken cancellationToken = default);
 
-    Task Set(string key, int value, CancellationToken cancellationToken = default);
-    Task Increment(string key, CancellationToken cancellationToken = default);
-    Task SetOffset(int offset, CancellationToken cancellationToken = default);
+    public Task Set(string key, int value, CancellationToken cancellationToken = default);
+    public Task Increment(string key, CancellationToken cancellationToken = default);
+    public Task SetOffset(int offset, CancellationToken cancellationToken = default);
 }
 
 public class CounterService(StateFactory stateFactory) : ICounterService

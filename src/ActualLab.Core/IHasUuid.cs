@@ -5,5 +5,5 @@ namespace ActualLab;
 /// </summary>
 public interface IHasUuid
 {
-    Symbol Uuid { get; }
+    public Symbol Uuid { get; }
 }

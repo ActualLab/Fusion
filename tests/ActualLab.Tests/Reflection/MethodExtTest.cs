@@ -9,24 +9,24 @@ public class MethodExtTest
     public interface IMethodA
     {
         [DisplayName("IMethodA")]
-        void MethodA();
+        public void MethodA();
     }
 
     public interface IMethodV
     {
         [DisplayName("IMethodV")]
-        void MethodV();
+        public void MethodV();
     }
 
     public interface IMethodG
     {
         [DisplayName("IMethodG")]
-        void MethodG<T1>();
+        public void MethodG<T1>();
     }
 
     public interface IMethodX : IMethodA
     {
-        void MethodX();
+        public void MethodX();
     }
 
     public abstract class A<T> : IMethodX

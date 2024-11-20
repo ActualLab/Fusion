@@ -9,17 +9,17 @@ public interface ITodoApi : IComputeService
 {
     // Commands
     [CommandHandler]
-    Task<TodoItem> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default);
+    public Task<TodoItem> AddOrUpdate(Todos_AddOrUpdate command, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task Remove(Todos_Remove command, CancellationToken cancellationToken = default);
+    public Task Remove(Todos_Remove command, CancellationToken cancellationToken = default);
 
     // Queries
     [ComputeMethod]
-    Task<TodoItem?> Get(Session session, Ulid id, CancellationToken cancellationToken = default);
+    public Task<TodoItem?> Get(Session session, Ulid id, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<Ulid[]> ListIds(Session session, int count, CancellationToken cancellationToken = default);
+    public Task<Ulid[]> ListIds(Session session, int count, CancellationToken cancellationToken = default);
     [ComputeMethod(InvalidationDelay = 0.5)]
-    Task<TodoSummary> GetSummary(Session session, CancellationToken cancellationToken = default);
+    public Task<TodoSummary> GetSummary(Session session, CancellationToken cancellationToken = default);
 }
 
 // Data

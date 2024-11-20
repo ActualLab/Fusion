@@ -2,5 +2,5 @@ namespace ActualLab.DependencyInjection;
 
 public interface IHasServices
 {
-    IServiceProvider Services { get; }
+    public IServiceProvider Services { get; }
 }

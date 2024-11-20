@@ -4,13 +4,13 @@ namespace ActualLab.Async;
 
 public interface IBatchProcessorWorkerPolicy
 {
-    int MinWorkerCount { get; }
-    int MaxWorkerCount { get; }
+    public int MinWorkerCount { get; }
+    public int MaxWorkerCount { get; }
 
-    TimeSpan Cooldown { get; }
-    TimeSpan CollectorCycle { get; }
+    public TimeSpan Cooldown { get; }
+    public TimeSpan CollectorCycle { get; }
 
-    int GetWorkerCountDelta(TimeSpan minQueueTime);
+    public int GetWorkerCountDelta(TimeSpan minQueueTime);
 }
 
 public record BatchProcessorWorkerPolicy : IBatchProcessorWorkerPolicy

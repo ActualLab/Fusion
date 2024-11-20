@@ -4,13 +4,13 @@ namespace ActualLab.Plugins.Internal;
 
 public interface IPluginInstanceHandle : IDisposable
 {
-    object Instance { get; }
+    public object Instance { get; }
 }
 
 public interface IPluginInstanceHandle<out TPluginImpl> : IPluginInstanceHandle
     where TPluginImpl : notnull
 {
-    new TPluginImpl Instance { get; }
+    public new TPluginImpl Instance { get; }
 }
 
 public class PluginInstanceHandle<TPluginImpl> : IPluginInstanceHandle<TPluginImpl>

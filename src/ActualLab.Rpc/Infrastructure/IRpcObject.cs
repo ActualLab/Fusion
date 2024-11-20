@@ -12,17 +12,17 @@ public enum RpcObjectKind
 
 public interface IRpcObject : IHasId<RpcObjectId>
 {
-    RpcObjectKind Kind { get; }
+    public RpcObjectKind Kind { get; }
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    Task Reconnect(CancellationToken cancellationToken);
+    public Task Reconnect(CancellationToken cancellationToken);
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    void Disconnect();
+    public void Disconnect();
 }
 
 public interface IRpcSharedObject : IRpcObject
 {
-    CpuTimestamp LastKeepAliveAt { get; }
-    void KeepAlive();
+    public CpuTimestamp LastKeepAliveAt { get; }
+    public void KeepAlive();
 }
 
 public static class RpcObjectExt

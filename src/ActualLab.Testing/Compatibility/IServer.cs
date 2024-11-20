@@ -13,34 +13,31 @@ namespace ActualLab.Testing;
 public interface IServer : IDisposable
 {
     /// <summary>A collection of HTTP features of the server.</summary>
-    IFeatureCollection Features { get; }
+    public IFeatureCollection Features { get; }
 
     /// <summary>Start the server with an application.</summary>
     /// <param name="application">An instance of <see cref="T:Microsoft.AspNetCore.Hosting.Server.IHttpApplication`1" />.</param>
     /// <typeparam name="TContext">The context associated with the application.</typeparam>
     /// <param name="cancellationToken">Indicates if the server startup should be aborted.</param>
-    Task StartAsync<TContext>(
-    IHttpApplication<TContext> application,
-    CancellationToken cancellationToken);
+    public Task StartAsync<TContext>(
+        IHttpApplication<TContext> application,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Stop processing requests and shut down the server, gracefully if possible.
     /// </summary>
     /// <param name="cancellationToken">Indicates if the graceful shutdown should be aborted.</param>
-    Task StopAsync(CancellationToken cancellationToken);
+    public Task StopAsync(CancellationToken cancellationToken);
 }
 
 public interface IFeatureCollection : IEnumerable<KeyValuePair<Type, object>>, IEnumerable
 {
-    bool IsReadOnly { get; }
+    public bool IsReadOnly { get; }
+    public int Revision { get; }
+    public object? this[Type key] { get; set; }
 
-    int Revision { get; }
-
-    object? this[Type key] { get; set; }
-
-    TFeature Get<TFeature>();
-
-    void Set<TFeature>(TFeature instance);
+    public TFeature Get<TFeature>();
+    public void Set<TFeature>(TFeature instance);
 }
 
    /// <summary>
@@ -160,9 +157,8 @@ public class FeatureCollection : IFeatureCollection
 
 public interface IServerAddressesFeature
 {
-    ICollection<string> Addresses { get; }
-
-    bool PreferHostingUrls { get; set; }
+    public ICollection<string> Addresses { get; }
+    public bool PreferHostingUrls { get; set; }
 }
 
 /// <summary>
@@ -186,16 +182,16 @@ public interface IHttpApplication<TContext>
     /// </summary>
     /// <param name="contextFeatures">A collection of HTTP features to be used for creating the TContext.</param>
     /// <returns>The created TContext.</returns>
-    TContext CreateContext(IFeatureCollection contextFeatures);
+    public TContext CreateContext(IFeatureCollection contextFeatures);
 
     /// <summary>Dispose a given TContext.</summary>
     /// <param name="context">The TContext to be disposed.</param>
     /// <param name="exception">The Exception thrown when processing did not complete successfully, otherwise null.</param>
-    void DisposeContext(TContext context, Exception exception);
+    public void DisposeContext(TContext context, Exception exception);
 
     /// <summary>Asynchronously processes an TContext.</summary>
     /// <param name="context">The TContext that the operation will process.</param>
-    Task ProcessRequestAsync(TContext context);
+    public Task ProcessRequestAsync(TContext context);
 }
 
 internal sealed class HostingApplication : IHttpApplication<HostingApplication.Context>

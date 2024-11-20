@@ -3,15 +3,15 @@ namespace ActualLab.Fusion.Tests.Services;
 public interface IEdgeCaseService : IComputeService
 {
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<string> GetSuffix(CancellationToken cancellationToken = default);
-    Task SetSuffix(string suffix, CancellationToken cancellationToken = default);
+    public Task<string> GetSuffix(CancellationToken cancellationToken = default);
+    public Task SetSuffix(string suffix, CancellationToken cancellationToken = default);
 
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<long?> GetNullable(long source, CancellationToken cancellationToken = default);
+    public Task<long?> GetNullable(long source, CancellationToken cancellationToken = default);
 
     [ComputeMethod(MinCacheDuration = 10)]
-    Task<string> ThrowIfContainsError(string source, CancellationToken cancellationToken = default);
-    Task<string> ThrowIfContainsErrorNonCompute(string source, CancellationToken cancellationToken = default);
+    public Task<string> ThrowIfContainsError(string source, CancellationToken cancellationToken = default);
+    public Task<string> ThrowIfContainsErrorNonCompute(string source, CancellationToken cancellationToken = default);
 }
 
 public class EdgeCaseService(StateFactory stateFactory) : IEdgeCaseService

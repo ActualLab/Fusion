@@ -5,15 +5,15 @@ namespace ActualLab.Fusion.EntityFramework;
 
 public interface IShardDbContextFactory
 {
-    DbContext CreateDbContext(DbShard shard);
-    ValueTask<DbContext> CreateDbContextAsync(DbShard shard, CancellationToken cancellationToken = default);
+    public DbContext CreateDbContext(DbShard shard);
+    public ValueTask<DbContext> CreateDbContextAsync(DbShard shard, CancellationToken cancellationToken = default);
 }
 
 public interface IShardDbContextFactory<TDbContext> : IShardDbContextFactory
     where TDbContext : DbContext
 {
-    new TDbContext CreateDbContext(DbShard shard);
-    new ValueTask<TDbContext> CreateDbContextAsync(DbShard shard, CancellationToken cancellationToken = default);
+    public new TDbContext CreateDbContext(DbShard shard);
+    public new ValueTask<TDbContext> CreateDbContextAsync(DbShard shard, CancellationToken cancellationToken = default);
 }
 
 // ReSharper disable once TypeParameterCanBeVariant

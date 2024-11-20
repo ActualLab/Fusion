@@ -12,29 +12,29 @@ public interface IState : IResult, IHasServices
 {
     public interface IOptions
     {
-        ComputedOptions ComputedOptions { get; init; }
-        Action<IState>? EventConfigurator { get; init; }
-        string? Category { get; init; }
+        public ComputedOptions ComputedOptions { get; init; }
+        public Action<IState>? EventConfigurator { get; init; }
+        public string? Category { get; init; }
     }
 
-    IStateSnapshot Snapshot { get; }
-    Computed Computed { get; }
-    object? LastNonErrorValue { get; }
+    public IStateSnapshot Snapshot { get; }
+    public Computed Computed { get; }
+    public object? LastNonErrorValue { get; }
 
-    event Action<IState, StateEventKind>? Invalidated;
-    event Action<IState, StateEventKind>? Updating;
-    event Action<IState, StateEventKind>? Updated;
+    public event Action<IState, StateEventKind>? Invalidated;
+    public event Action<IState, StateEventKind>? Updating;
+    public event Action<IState, StateEventKind>? Updated;
 }
 
 public interface IState<T> : IState, IResult<T>
 {
-    new StateSnapshot<T> Snapshot { get; }
-    new Computed<T> Computed { get; }
-    new T LastNonErrorValue { get; }
+    public new StateSnapshot<T> Snapshot { get; }
+    public new Computed<T> Computed { get; }
+    public new T LastNonErrorValue { get; }
 
-    new event Action<IState<T>, StateEventKind>? Invalidated;
-    new event Action<IState<T>, StateEventKind>? Updating;
-    new event Action<IState<T>, StateEventKind>? Updated;
+    public new event Action<IState<T>, StateEventKind>? Invalidated;
+    public new event Action<IState<T>, StateEventKind>? Updating;
+    public new event Action<IState<T>, StateEventKind>? Updated;
 }
 
 public abstract class State<T> : ComputedInput,

@@ -7,10 +7,10 @@ namespace Samples.TodoApp.Abstractions;
 
 public interface ISimpleService : IRpcService
 {
-    Task<string> Greet(string name, CancellationToken cancellationToken = default);
-    Task<Table<int>> GetTable(string title, CancellationToken cancellationToken = default);
-    Task<int> Sum(RpcStream<int> stream, CancellationToken cancellationToken = default);
-    Task<RpcNoWait> Ping(string message);
+    public Task<string> Greet(string name, CancellationToken cancellationToken = default);
+    public Task<Table<int>> GetTable(string title, CancellationToken cancellationToken = default);
+    public Task<int> Sum(RpcStream<int> stream, CancellationToken cancellationToken = default);
+    public Task<RpcNoWait> Ping(string message);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]

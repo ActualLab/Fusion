@@ -8,7 +8,7 @@ namespace ActualLab.Fusion.Client.Internal;
 public interface IRpcComputeSystemCalls : IRpcSystemService
 {
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-    Task<RpcNoWait> Invalidate();
+    public Task<RpcNoWait> Invalidate();
 }
 
 public class RpcComputeSystemCalls(IServiceProvider services)

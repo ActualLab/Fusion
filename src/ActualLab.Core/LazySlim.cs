@@ -4,7 +4,7 @@ namespace ActualLab;
 
 public interface ILazySlim<out TValue>
 {
-    TValue Value { get; }
+    public TValue Value { get; }
 }
 
 public static class LazySlim

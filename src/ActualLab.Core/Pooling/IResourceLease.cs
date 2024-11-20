@@ -2,5 +2,5 @@ namespace ActualLab.Pooling;
 
 public interface IResourceLease<out T> : IDisposable
 {
-    T Resource { get; }
+    public T Resource { get; }
 }

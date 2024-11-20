@@ -4,7 +4,7 @@ namespace ActualLab.Fusion.Tests.Services;
 
 public interface IBuggyService : IComputeService, IRequiresFullProxy
 {
-    void Test();
+    public void Test();
 }
 
 public interface IBuggyServiceClient : IBuggyService;

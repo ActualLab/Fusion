@@ -9,20 +9,20 @@ namespace ActualLab.Fusion.Tests.Services;
 public interface IUserService : IComputeService
 {
     [CommandHandler]
-    Task Create(UserService_Add command, CancellationToken cancellationToken = default);
+    public Task Create(UserService_Add command, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task Update(UserService_Update command, CancellationToken cancellationToken = default);
+    public Task Update(UserService_Update command, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task<bool> Delete(UserService_Delete command, CancellationToken cancellationToken = default);
+    public Task<bool> Delete(UserService_Delete command, CancellationToken cancellationToken = default);
 
     [ComputeMethod(MinCacheDuration = 60)]
-    Task<User?> Get(long userId, CancellationToken cancellationToken = default);
+    public Task<User?> Get(long userId, CancellationToken cancellationToken = default);
     [ComputeMethod(MinCacheDuration = 60)]
-    Task<long> Count(CancellationToken cancellationToken = default);
+    public Task<long> Count(CancellationToken cancellationToken = default);
 
     // Not a CommandHandler!
-    Task UpdateDirectly(UserService_Update command, CancellationToken cancellationToken = default);
-    Task Invalidate();
+    public Task UpdateDirectly(UserService_Update command, CancellationToken cancellationToken = default);
+    public Task Invalidate();
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]

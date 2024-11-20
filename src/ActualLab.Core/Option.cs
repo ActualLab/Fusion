@@ -40,11 +40,11 @@ public interface IOption
     /// <summary>
     /// Indicates whether an option has <see cref="Value"/>.
     /// </summary>
-    bool HasValue { get; }
+    public bool HasValue { get; }
     /// <summary>
     /// Retrieves option's value. Throws <see cref="InvalidOperationException"/> in case option doesn't have one.
     /// </summary>
-    object? Value { get; }
+    public object? Value { get; }
 }
 
 #pragma warning disable CA1036

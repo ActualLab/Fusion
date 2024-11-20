@@ -6,16 +6,16 @@ namespace ActualLab.Fusion;
 
 public interface IComputeFunction : IHasServices
 {
-    FusionHub Hub { get; }
+    public FusionHub Hub { get; }
 }
 
 public interface IComputeFunction<T> : IComputeFunction
 {
-    ValueTask<Computed<T>> Invoke(
+    public ValueTask<Computed<T>> Invoke(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken = default);
-    Task<T> InvokeAndStrip(
+    public Task<T> InvokeAndStrip(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken = default);

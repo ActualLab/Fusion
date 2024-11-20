@@ -4,7 +4,7 @@ namespace ActualLab.Identifiers;
 
 public interface ISymbolIdentifier : IHasId<Symbol>, ICanBeNone
 {
-    string Value { get; }
+    public string Value { get; }
 }
 
 #pragma warning disable CA1000
@@ -13,9 +13,9 @@ public interface ISymbolIdentifier<TSelf> : ISymbolIdentifier, IEquatable<TSelf>
     where TSelf : struct, ISymbolIdentifier<TSelf>
 {
 #if NET6_0_OR_GREATER
-    static abstract TSelf Parse(string? s);
-    static abstract TSelf ParseOrNone(string? s);
-    static abstract bool TryParse(string? s, out TSelf result);
+    public static abstract TSelf Parse(string? s);
+    public static abstract TSelf ParseOrNone(string? s);
+    public static abstract bool TryParse(string? s, out TSelf result);
 #endif
 
 #if !NETSTANDARD2_0

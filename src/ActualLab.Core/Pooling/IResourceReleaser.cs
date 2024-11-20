@@ -2,5 +2,5 @@ namespace ActualLab.Pooling;
 
 public interface IResourceReleaser<in T>
 {
-    bool Release(T resource);
+    public bool Release(T resource);
 }

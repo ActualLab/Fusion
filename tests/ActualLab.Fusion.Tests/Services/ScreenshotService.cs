@@ -17,9 +17,9 @@ public partial record Screenshot
 public interface IScreenshotService : IComputeService
 {
     [ComputeMethod, RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.NoCache)]
-    Task<Screenshot> GetScreenshotAlt(int width, CancellationToken cancellationToken = default);
+    public Task<Screenshot> GetScreenshotAlt(int width, CancellationToken cancellationToken = default);
     [ComputeMethod(MinCacheDuration = 0.3)]
-    Task<Screenshot> GetScreenshot(int width, CancellationToken cancellationToken = default);
+    public Task<Screenshot> GetScreenshot(int width, CancellationToken cancellationToken = default);
 }
 
 #pragma warning disable CA1416

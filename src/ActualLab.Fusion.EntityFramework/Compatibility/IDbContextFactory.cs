@@ -21,7 +21,7 @@ public interface IDbContextFactory<out TContext>
     ///     </para>
     /// </summary>
     /// <returns> A new context instance. </returns>
-    TContext CreateDbContext();
+    public TContext CreateDbContext();
 }
 
 #endif

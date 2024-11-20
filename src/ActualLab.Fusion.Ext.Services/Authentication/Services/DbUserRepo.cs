@@ -9,21 +9,21 @@ public interface IDbUserRepo<in TDbContext, TDbUser, TDbUserId>
     where TDbUser : DbUser<TDbUserId>, new()
     where TDbUserId : notnull
 {
-    Type UserEntityType { get; }
+    public Type UserEntityType { get; }
 
     // Write methods
-    Task<TDbUser> Create(TDbContext dbContext, User user, CancellationToken cancellationToken = default);
-    Task<(TDbUser DbUser, bool IsCreated)> GetOrCreateOnSignIn(
+    public Task<TDbUser> Create(TDbContext dbContext, User user, CancellationToken cancellationToken = default);
+    public Task<(TDbUser DbUser, bool IsCreated)> GetOrCreateOnSignIn(
         TDbContext dbContext, User user, CancellationToken cancellationToken = default);
-    Task Edit(
+    public Task Edit(
         TDbContext dbContext, TDbUser dbUser, Auth_EditUser command, CancellationToken cancellationToken = default);
-    Task Remove(
+    public Task Remove(
         TDbContext dbContext, TDbUser dbUser, CancellationToken cancellationToken = default);
 
     // Read methods
-    Task<TDbUser?> Get(DbShard shard, TDbUserId userId, CancellationToken cancellationToken = default);
-    Task<TDbUser?> Get(TDbContext dbContext, TDbUserId userId, bool forUpdate, CancellationToken cancellationToken = default);
-    Task<TDbUser?> GetByUserIdentity(
+    public Task<TDbUser?> Get(DbShard shard, TDbUserId userId, CancellationToken cancellationToken = default);
+    public Task<TDbUser?> Get(TDbContext dbContext, TDbUserId userId, bool forUpdate, CancellationToken cancellationToken = default);
+    public Task<TDbUser?> GetByUserIdentity(
         TDbContext dbContext, UserIdentity userIdentity, bool forUpdate, CancellationToken cancellationToken = default);
 }
 

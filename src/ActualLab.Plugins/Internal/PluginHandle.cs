@@ -7,16 +7,16 @@ namespace ActualLab.Plugins.Internal;
 
 public interface IPluginHandle
 {
-    IEnumerable<object> Instances { get; }
+    public IEnumerable<object> Instances { get; }
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
-    IEnumerable<object> GetInstances(Func<PluginInfo, bool> predicate);
+    public IEnumerable<object> GetInstances(Func<PluginInfo, bool> predicate);
 }
 
 public interface IPluginHandle<out TPlugin> : IPluginHandle
 {
-    new IEnumerable<TPlugin> Instances { get; }
+    public new IEnumerable<TPlugin> Instances { get; }
     [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
-    new IEnumerable<TPlugin> GetInstances(Func<PluginInfo, bool> predicate);
+    public new IEnumerable<TPlugin> GetInstances(Func<PluginInfo, bool> predicate);
 }
 
 public class PluginHandle<TPlugin> : IPluginHandle<TPlugin>

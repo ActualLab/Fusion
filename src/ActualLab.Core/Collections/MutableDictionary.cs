@@ -5,19 +5,19 @@ namespace ActualLab.Collections;
 public interface IReadOnlyMutableDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>
     where TKey : notnull
 {
-    ImmutableDictionary<TKey, TValue> Items { get; }
-    event Action? Changed;
+    public ImmutableDictionary<TKey, TValue> Items { get; }
+    public event Action? Changed;
 }
 
 // ReSharper disable once PossibleInterfaceMemberAmbiguity
 public interface IMutableDictionary<TKey, TValue> : IReadOnlyMutableDictionary<TKey, TValue>, IDictionary<TKey, TValue>
     where TKey : notnull
 {
-    new ImmutableDictionary<TKey, TValue> Items { get; set; }
+    public new ImmutableDictionary<TKey, TValue> Items { get; set; }
 
-    bool Update(ImmutableDictionary<TKey, TValue> items);
-    bool Update(ImmutableDictionary<TKey, TValue> items, ImmutableDictionary<TKey, TValue> expectedItems);
-    bool Update<TState>(TState state, Func<TState, ImmutableDictionary<TKey, TValue>, ImmutableDictionary<TKey, TValue>> updater);
+    public bool Update(ImmutableDictionary<TKey, TValue> items);
+    public bool Update(ImmutableDictionary<TKey, TValue> items, ImmutableDictionary<TKey, TValue> expectedItems);
+    public bool Update<TState>(TState state, Func<TState, ImmutableDictionary<TKey, TValue>, ImmutableDictionary<TKey, TValue>> updater);
 }
 
 public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> items)
