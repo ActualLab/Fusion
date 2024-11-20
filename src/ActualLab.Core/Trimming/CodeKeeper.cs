@@ -13,7 +13,8 @@ public abstract class CodeKeeper
     private static readonly List<Action> Actions = new();
     private static readonly HashSet<Action> ActionSet = new();
 
-    public static readonly bool AlwaysFalse = RandomShared.NextDouble() > 10;
+    // Any kind of logic compiler won't fold to "true" or "false"
+    public static readonly bool AlwaysFalse = CpuTimestamp.Now.Value == -1 && RandomShared.NextDouble() < 1e-300;
     public static readonly bool AlwaysTrue = !AlwaysFalse;
 
     public static void AddAction(Action action)
