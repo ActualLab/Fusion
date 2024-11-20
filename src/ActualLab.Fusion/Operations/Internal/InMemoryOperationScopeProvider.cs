@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Fusion.Operations.Internal;
 
 /// <summary>
@@ -7,13 +9,14 @@ namespace ActualLab.Fusion.Operations.Internal;
 /// </summary>
 public class InMemoryOperationScopeProvider(IServiceProvider services) : ICommandHandler<ICommand>
 {
-    private ILogger? _log;
-    private IOperationCompletionNotifier? _operationCompletionNotifier;
-
     protected IServiceProvider Services { get; } = services;
+
+    [field: AllowNull, MaybeNull]
     protected IOperationCompletionNotifier OperationCompletionNotifier
-        => _operationCompletionNotifier ??= Services.GetRequiredService<IOperationCompletionNotifier>();
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+        => field ??= Services.GetRequiredService<IOperationCompletionNotifier>();
+
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.InMemoryOperationScopeProvider)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)

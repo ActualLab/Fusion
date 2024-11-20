@@ -1,14 +1,14 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 
 namespace ActualLab.Rpc.Infrastructure;
 
 public sealed class RpcSafeCallRouter(IServiceProvider services) : RpcServiceBase(services)
 {
-    private RpcCallRouter? _callRouter;
-
+    [field: AllowNull, MaybeNull]
     public RpcCallRouter CallRouter {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _callRouter ??= Services.GetRequiredService<RpcCallRouter>();
+        get => field ??= Services.GetRequiredService<RpcCallRouter>();
     }
 
     public RpcPeer Invoke(RpcMethodDef methodDef, ArgumentList arguments)

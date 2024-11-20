@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Resilience;
 
 namespace ActualLab.Async;
@@ -10,14 +11,13 @@ public readonly record struct AsyncChain
     public static readonly AsyncChain NeverEnding = new("(never-ending)",
         cancellationToken => TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken));
 
-    private readonly TransiencyResolver? _transiencyResolver;
-
     public string Name { get; init; }
     public Func<CancellationToken, Task> Start { get; init; }
 
+    [field: AllowNull, MaybeNull]
     public TransiencyResolver TransiencyResolver {
-        get => _transiencyResolver ?? TransiencyResolvers.PreferTransient;
-        init => _transiencyResolver = value;
+        get => field ?? TransiencyResolvers.PreferTransient;
+        init;
     }
 
     // Constructor-like methods
@@ -48,7 +48,7 @@ public readonly record struct AsyncChain
     {
         Name = name;
         Start = start;
-        _transiencyResolver = transiencyResolver;
+        TransiencyResolver = transiencyResolver!;
     }
 
     // Conversion

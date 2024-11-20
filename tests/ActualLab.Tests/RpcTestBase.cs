@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Diagnostics;
 using ActualLab.Locking;
 using ActualLab.RestEase;
@@ -21,8 +22,6 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
 
     private IServiceProvider? _services;
     private IServiceProvider? _clientServices;
-    private RpcWebHost? _webHost;
-    private ILogger? _log;
 
     public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
     public RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
@@ -35,8 +34,10 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsy
     public IServiceProvider Services => _services ??= CreateServices();
     public IServiceProvider ClientServices => _clientServices ??= CreateServices(true);
     public IServiceProvider WebServices => WebHost.Services;
-    public RpcWebHost WebHost => _webHost ??= Services.GetRequiredService<RpcWebHost>();
-    public ILogger? Log => (_log ??= Services.LogFor(GetType())).IfEnabled(LogLevel.Debug, IsLogEnabled);
+
+    [field: AllowNull, MaybeNull]
+    public RpcWebHost WebHost => field ??= Services.GetRequiredService<RpcWebHost>();
+    public ILogger? Log => (field ??= Services.LogFor(GetType())).IfEnabled(LogLevel.Debug, IsLogEnabled);
 
     public override async Task InitializeAsync()
     {

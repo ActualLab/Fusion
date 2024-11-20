@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Fusion.UI;
 
 public class UIActionFailureTracker : MutableList<IUIActionResult>
@@ -7,10 +9,9 @@ public class UIActionFailureTracker : MutableList<IUIActionResult>
         public TimeSpan MaxDuplicateRecency { get; init; } = TimeSpan.FromSeconds(1);
     }
 
-    private ILogger? _log;
-
     protected IServiceProvider Services { get; }
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public Options Settings  { get; }
     public Task? WhenRunning { get; protected set; }

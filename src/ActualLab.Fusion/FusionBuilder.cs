@@ -474,11 +474,9 @@ public readonly struct FusionBuilder
 
     public class FusionTag
     {
-        private RpcServiceMode _defaultServiceMode = RpcServiceMode.Local;
-
         public RpcServiceMode DefaultServiceMode {
-            get => _defaultServiceMode;
-            set => _defaultServiceMode = value.Or(RpcServiceMode.Local);
-        }
+            get;
+            set => field = value.Or(RpcServiceMode.Local);
+        } = RpcServiceMode.Local;
     }
 }

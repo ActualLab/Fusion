@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.CommandR.Internal;
 
@@ -7,14 +8,13 @@ public class Commander : ICommander
     private static readonly PropertyInfo ChainIdSetterProperty =
         typeof(IEventCommand).GetProperty(nameof(IEventCommand.ChainId))!;
 
-    private Action<IEventCommand, Symbol>? _chainIdSetter;
-    private ILogger? _log;
-
     public IServiceProvider Services { get; }
     public CommanderHub Hub { get; }
 
-    protected Action<IEventCommand, Symbol> ChainIdSetter => _chainIdSetter ??= ChainIdSetterProperty.GetSetter<Symbol>();
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected Action<IEventCommand, Symbol> ChainIdSetter => field ??= ChainIdSetterProperty.GetSetter<Symbol>();
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public Commander(IServiceProvider services)
     {

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Blazor;
 using ActualLab.Identifiers.Internal;
 using ActualLab.Internal;
@@ -14,8 +15,8 @@ namespace ActualLab.Fusion.EntityFramework;
 [ParameterComparer(typeof(ByValueParameterComparer))]
 public readonly partial struct DbShard : ISymbolIdentifier<DbShard>
 {
-    private static ILogger? _log;
-    private static ILogger Log => _log ??= StaticLog.For<DbShard>();
+    [field: AllowNull, MaybeNull]
+    private static ILogger Log => field ??= StaticLog.For<DbShard>();
 
     public static DbShard None => default;
     public static DbShard Template => new("__template", AssumeValid.Option);

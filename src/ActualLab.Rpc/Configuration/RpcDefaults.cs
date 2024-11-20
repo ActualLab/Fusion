@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 
 namespace ActualLab.Rpc;
@@ -10,42 +11,41 @@ public static class RpcDefaults
     private static readonly object StaticLock = new();
 #endif
 
-    private static RpcMode _mode = OSInfo.IsAnyClient ? RpcMode.Client : RpcMode.Server;
-    private static VersionSet? _apiPeerVersions;
-    private static VersionSet? _backendPeerVersions;
-
     public static RpcMode Mode {
-        get => _mode;
+        get;
         set {
             if (value is not (RpcMode.Client or RpcMode.Server))
                 throw new ArgumentOutOfRangeException(nameof(value), value, null);
+
             lock (StaticLock)
-                _mode = value;
+                field = value;
         }
-    }
+    } = OSInfo.IsAnyClient ? RpcMode.Client : RpcMode.Server;
 
     public static Symbol ApiScope { get; set; } = "Api";
     public static Symbol BackendScope { get; set; } = "Backend";
     public static Version ApiVersion { get; set; } = new(1, 0);
     public static Version BackendVersion { get; set; } = new(1, 0);
 
+    [field: AllowNull, MaybeNull]
     public static VersionSet ApiPeerVersions {
         get {
-            if (_apiPeerVersions?[ApiScope] != ApiVersion)
+            if (field?[ApiScope] != ApiVersion)
                 lock (StaticLock)
-                    if (_apiPeerVersions?[ApiScope] != ApiVersion)
-                        _apiPeerVersions = new(ApiScope, ApiVersion);
-            return _apiPeerVersions;
+                    if (field?[ApiScope] != ApiVersion)
+                        field = new(ApiScope, ApiVersion);
+            return field;
         }
     }
 
+    [field: AllowNull, MaybeNull]
     public static VersionSet BackendPeerVersions {
         get {
-            if (_backendPeerVersions?[BackendScope] != BackendVersion)
+            if (field?[BackendScope] != BackendVersion)
                 lock (StaticLock)
-                    if (_backendPeerVersions?[BackendScope] != BackendVersion)
-                        _backendPeerVersions = new(BackendScope, BackendVersion);
-            return _backendPeerVersions;
+                    if (field?[BackendScope] != BackendVersion)
+                        field = new(BackendScope, BackendVersion);
+            return field;
         }
     }
 }

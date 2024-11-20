@@ -13,10 +13,10 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
     protected static readonly Exception NoMoreItemsTag = new();
 #pragma warning restore CA2201
 
-    private ILogger? _log;
     private long _lastKeepAliveAt = CpuTimestamp.Now.Value;
 
-    protected ILogger Log => _log ??= Peer.Hub.Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Peer.Hub.Services.LogFor(GetType());
 
     public RpcObjectId Id { get; } = stream.Id;
     public RpcObjectKind Kind { get; } = stream.Kind;

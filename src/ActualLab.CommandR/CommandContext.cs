@@ -122,18 +122,18 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
 
 public sealed class CommandContext<TResult> : CommandContext
 {
-    private Result<TResult> _result;
     public ICommand<TResult> Command { get; }
     public Task<TResult> ResultTask => ResultSource.Task;
     public readonly TaskCompletionSource<TResult> ResultSource; // Set at the very end of the pipeline (via Complete)
 
     // Result may change while the pipeline runs
     public Result<TResult> Result {
-        get => _result;
+        get;
         set {
             if (IsCompleted)
                 return;
-            _result = value;
+
+            field = value;
         }
     }
 

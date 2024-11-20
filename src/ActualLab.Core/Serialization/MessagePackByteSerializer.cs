@@ -17,48 +17,48 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
 #endif
     private readonly ConcurrentDictionary<Type, MessagePackByteSerializer> _typedSerializerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static MessagePackSerializerOptions? _defaultOptions;
-    private static MessagePackByteSerializer? _default;
-    private static TypeDecoratingByteSerializer? _defaultTypeDecorating;
 
     public static IFormatterResolver DefaultResolver { get; set; } = DefaultMessagePackResolver.Instance;
 
+    [field: AllowNull, MaybeNull]
     public static MessagePackSerializerOptions DefaultOptions {
         get {
-            if (_defaultOptions is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _defaultOptions ??= new(DefaultResolver);
+                return field ??= new(DefaultResolver);
         }
         set {
             lock (StaticLock)
-                _defaultOptions = value;
+                field = value;
         }
     }
 
+    [field: AllowNull, MaybeNull]
     public static MessagePackByteSerializer Default {
         get {
-            if (_default is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _default ??= new(DefaultOptions);
+                return field ??= new(DefaultOptions);
         }
         set {
             lock (StaticLock)
-                _default = value;
+                field = value;
         }
     }
 
+    [field: AllowNull, MaybeNull]
     public static TypeDecoratingByteSerializer DefaultTypeDecorating {
         get {
-            if (_defaultTypeDecorating is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
+                return field ??= new TypeDecoratingByteSerializer(Default);
         }
         set {
             lock (StaticLock)
-                _defaultTypeDecorating = value;
+                field = value;
         }
     }
 

@@ -7,18 +7,17 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcObjectTracker
 {
-    private RpcPeer _peer = null!;
-
     protected RpcLimits Limits { get; private set; } = null!;
 
+    [field: AllowNull, MaybeNull]
     public RpcPeer Peer {
-        get => _peer;
+        get;
         protected set {
-            if (_peer != null)
+            if (field != null)
                 throw Errors.AlreadyInitialized(nameof(Peer));
 
-            _peer = value;
-            Limits = _peer.Hub.Limits;
+            field = value;
+            Limits = field.Hub.Limits;
         }
     }
 

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Resilience;
 using Errors = ActualLab.Internal.Errors;
@@ -45,20 +46,22 @@ public class OperationReprocessor : IOperationReprocessor
         }
     }
 
-    private TransiencyResolver<IOperationReprocessor>? _transiencyResolver;
-    private MomentClock? _delayClock;
-    private ILogger? _log;
-
     protected Dictionary<Exception, Transiency> KnownTransiencies { get; } = new();
     protected CommandContext CommandContext { get; set; } = null!;
     protected int TryIndex { get; set; }
     protected Exception? LastError { get; set; }
 
     protected IServiceProvider Services { get; }
+
+    [field: AllowNull, MaybeNull]
     protected TransiencyResolver<IOperationReprocessor> TransiencyResolver
-        => _transiencyResolver ??= Services.TransiencyResolver<IOperationReprocessor>();
-    public MomentClock DelayClock => _delayClock ??= Settings.DelayClock ?? Services.Clocks().CpuClock;
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+        => field ??= Services.TransiencyResolver<IOperationReprocessor>();
+
+    [field: AllowNull, MaybeNull]
+    public MomentClock DelayClock => field ??= Settings.DelayClock ?? Services.Clocks().CpuClock;
+
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public Options Settings { get; }
 

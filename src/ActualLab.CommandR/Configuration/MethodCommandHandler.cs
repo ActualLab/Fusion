@@ -19,11 +19,10 @@ public sealed record MethodCommandHandler<
         IMethodCommandHandler
     where TCommand : class, ICommand
 {
-    private ParameterInfo[]? _parameters;
-    private Type[]? _parameterTypes;
-
-    public ParameterInfo[] Parameters => _parameters ??= Method.GetParameters();
-    public Type[] ParameterTypes => _parameterTypes ??= Parameters.Select(p => p.ParameterType).ToArray();
+    [field: AllowNull, MaybeNull]
+    public ParameterInfo[] Parameters => field ??= Method.GetParameters();
+    [field: AllowNull, MaybeNull]
+    public Type[] ParameterTypes => field ??= Parameters.Select(p => p.ParameterType).ToArray();
 
     public override Type GetHandlerServiceType()
         => ServiceType;

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Fusion.EntityFramework;
 
 public interface IDbShardResolver : IHasServices
@@ -28,11 +30,11 @@ public abstract class DbShardResolver(IServiceProvider services) : IDbShardResol
 public class DbShardResolver<TDbContext>(IServiceProvider services)
     : DbShardResolver(services), IDbShardResolver<TDbContext>
 {
-    private IDbShardRegistry<TDbContext>? _shardRegistry;
-
     protected override IDbShardRegistry UntypedShardRegistry => ShardRegistry;
+
+    [field: AllowNull, MaybeNull]
     public IDbShardRegistry<TDbContext> ShardRegistry
-        => _shardRegistry ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
+        => field ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
 
     public override DbShard Resolve(object source)
     {

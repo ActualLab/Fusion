@@ -11,18 +11,17 @@ public sealed class RpcMethodDef : MethodDef
         = new(StringComparer.Ordinal) { "Ack", "AckEnd", "B", "I", "End" };
 
     private string? _toStringCached;
-    private readonly Symbol _name;
 
     public RpcHub Hub { get; }
     public RpcServiceDef Service { get; }
 
     public Symbol Name {
-        get => _name;
+        get;
         init {
             if (value.IsEmpty)
                 throw new ArgumentOutOfRangeException(nameof(value));
 
-            _name = value;
+            field = value;
             FullName = ComposeFullName(Service.Name.Value, value.Value);
             Ref = new RpcMethodRef(FullName.Value, this);
         }

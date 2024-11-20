@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 
@@ -20,11 +21,11 @@ public class ComputedSource<T> : ComputedInput,
     private volatile ComputedSourceComputed<T> _computed;
     private volatile Func<ComputedSource<T>, CancellationToken, ValueTask<T>>? _computer;
     private string? _category;
-    private ILogger? _log;
 
     protected AsyncLock AsyncLock { get; }
     protected object Lock => AsyncLock;
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; }
 

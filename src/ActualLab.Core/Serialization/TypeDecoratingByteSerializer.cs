@@ -14,18 +14,18 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static TypeDecoratingByteSerializer? _default;
 
+    [field: AllowNull, MaybeNull]
     public static TypeDecoratingByteSerializer Default {
         get {
-            if (_default is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _default ??= new(ByteSerializer.Default);
+                return field ??= new(ByteSerializer.Default);
         }
         set {
             lock (StaticLock)
-                _default = value;
+                field = value;
         }
     }
 

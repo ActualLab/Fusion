@@ -11,15 +11,14 @@ public class RpcConfiguration
     private readonly object _lock = new();
 #endif
     private IDictionary<Type, RpcServiceBuilder> _services = new Dictionary<Type, RpcServiceBuilder>();
-    private RpcServiceMode _defaultServiceMode;
 
     public bool IsFrozen { get; private set; }
 
     public RpcServiceMode DefaultServiceMode {
-        get => _defaultServiceMode;
+        get;
         set {
             AssertNotFrozen();
-            _defaultServiceMode = value.Or(RpcServiceMode.Server);
+            field = value.Or(RpcServiceMode.Server);
         }
     }
 

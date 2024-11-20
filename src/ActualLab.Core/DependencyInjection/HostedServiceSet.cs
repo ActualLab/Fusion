@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Hosting;
 
 namespace ActualLab.DependencyInjection;
@@ -11,10 +12,10 @@ public sealed class HostedServiceSet(IServiceProvider services)
 {
     public static TimeSpan WarnTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
-    private ILogger? _log;
-
     public IServiceProvider Services { get; } = services;
-    private ILogger Log => _log ??= Services.LogFor(GetType());
+
+    [field: AllowNull, MaybeNull]
+    private ILogger Log => field ??= Services.LogFor(GetType());
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public IEnumerator<IHostedService> GetEnumerator()

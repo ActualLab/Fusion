@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using ActualLab.Internal;
 
@@ -9,22 +10,22 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
 
     private readonly TaskCompletionSource<Unit> _whenReady = TaskCompletionSourceExt.New<Unit>();
     private volatile int _isPrerendering;
-    private ComponentBase? _rootComponent;
-    private Dispatcher? _dispatcher;
-    private ILogger? _log;
 
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; } = services;
     public long Id { get; } = Interlocked.Increment(ref _lastId);
     public Task WhenReady => _whenReady.Task;
     public bool IsPrerendering => _isPrerendering != 0;
-    public Dispatcher Dispatcher => _dispatcher ??= RootComponent.GetDispatcher();
+    [field: AllowNull, MaybeNull]
+    public Dispatcher Dispatcher => field ??= RootComponent.GetDispatcher();
 
+    [field: AllowNull, MaybeNull]
     public ComponentBase RootComponent {
-        get => _rootComponent ?? throw Errors.NotInitialized(nameof(RootComponent));
+        get => field ?? throw Errors.NotInitialized(nameof(RootComponent));
         set {
-            if (Interlocked.CompareExchange(ref _rootComponent, value, null) != null)
+            if (Interlocked.CompareExchange(ref field, value, null) != null)
                 throw Errors.AlreadyInitialized(nameof(RootComponent));
 
             _whenReady.TrySetResult(default);

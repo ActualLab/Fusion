@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
@@ -9,18 +10,18 @@ public class StateFactory(IServiceProvider services) : IHasServices
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static StateFactory? _default;
 
+    [field: AllowNull, MaybeNull]
     public static StateFactory Default {
         get {
-            if (_default is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _default ??= new ServiceCollection().AddFusion().Services.BuildServiceProvider().StateFactory();
+                return field ??= new ServiceCollection().AddFusion().Services.BuildServiceProvider().StateFactory();
         }
         set {
             lock (StaticLock)
-                _default = value;
+                field = value;
         }
     }
 

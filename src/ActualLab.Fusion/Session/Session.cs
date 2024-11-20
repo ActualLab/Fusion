@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
@@ -19,12 +20,12 @@ public sealed partial class Session : IHasId<Symbol>,
     public static SessionFactory Factory { get; set; } = DefaultSessionFactory.New();
     public static SessionValidator Validator { get; set; } = session => !session.IsDefault();
 
-    private string? _hash;
-
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public Symbol Id { get; }
+
+    [field: AllowNull, MaybeNull]
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
-    public string Hash => _hash ??= ComputeHash();
+    public string Hash => field ??= ComputeHash();
 
     public static Session New()
         => Factory.Invoke();

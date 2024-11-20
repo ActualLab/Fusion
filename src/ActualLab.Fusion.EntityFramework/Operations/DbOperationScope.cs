@@ -1,5 +1,6 @@
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.EntityFramework.LogProcessing;
@@ -48,16 +49,14 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 {
     public new record Options : DbOperationScope.Options;
 
-    private IDbShardRegistry<TDbContext>? _shardRegistry;
-    private IShardDbContextFactory<TDbContext>? _contextFactory;
-    private TDbContext? _masterDbContext;
-
     protected DbHub<TDbContext> DbHub { get; }
     protected HostId HostId { get; }
+    [field: AllowNull, MaybeNull]
     protected IDbShardRegistry<TDbContext> ShardRegistry
-        => _shardRegistry ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
+        => field ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
+    [field: AllowNull, MaybeNull]
     protected IShardDbContextFactory<TDbContext> ContextFactory
-        => _contextFactory ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
+        => field ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
     protected MomentClockSet Clocks { get; }
     protected ILogger Log { get; }
     protected ILogger? DebugLog => Log.IfEnabled(LogLevel.Debug);
@@ -65,9 +64,9 @@ public class DbOperationScope<TDbContext> : DbOperationScope
     protected AsyncLock AsyncLock { get; }
 
     public new TDbContext? MasterDbContext {
-        get => _masterDbContext;
+        get;
         protected set {
-            _masterDbContext = value;
+            field = value;
             base.MasterDbContext = value;
         }
     }

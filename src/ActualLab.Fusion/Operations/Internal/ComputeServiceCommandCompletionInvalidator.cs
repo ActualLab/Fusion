@@ -16,14 +16,13 @@ public class ComputeServiceCommandCompletionInvalidator(
         public LogLevel LogLevel { get; init; } = LogLevel.Debug;
     }
 
-    private CommandHandlerResolver? _commandHandlerResolver;
-    private ILogger? _log;
-
     protected IServiceProvider Services { get; } = services;
     protected Options Settings { get; } = settings;
+    [field: AllowNull, MaybeNull]
     protected CommandHandlerResolver CommandHandlerResolver
-        => _commandHandlerResolver ??= Services.GetRequiredService<CommandHandlerResolver>();
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+        => field ??= Services.GetRequiredService<CommandHandlerResolver>();
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.ComputeServiceCommandCompletionInvalidator)]
     public async Task OnCommand(ICompletion completion, CommandContext context, CancellationToken cancellationToken)

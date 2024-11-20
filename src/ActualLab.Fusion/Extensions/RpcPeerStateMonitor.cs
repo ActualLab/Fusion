@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Extensions;
@@ -5,10 +6,10 @@ namespace ActualLab.Fusion.Extensions;
 public class RpcPeerStateMonitor : WorkerBase
 {
     private MutableState<RpcPeerRawState> _rawState = null!;
-    private ILogger? _log;
 
     protected IServiceProvider Services => RpcHub.Services;
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
     protected Moment Now => RpcHub.Clock.Now;
 
     public RpcHub RpcHub { get; }

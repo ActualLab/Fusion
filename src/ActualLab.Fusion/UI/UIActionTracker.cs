@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Fusion.UI;
 
 public sealed class UIActionTracker(
@@ -10,16 +12,16 @@ public sealed class UIActionTracker(
         public MomentClock? Clock { get; init; }
     }
 
-    private MomentClock? _clock;
-    private ILogger? _log;
     private long _runningActionCount;
     private volatile AsyncState<UIAction?> _lastAction = new(null, true);
     private volatile AsyncState<IUIActionResult?> _lastResult = new(null, true);
 
     public Options Settings { get; } = settings;
     public IServiceProvider Services { get; } = services;
-    public MomentClock Clock => _clock ??= Settings.Clock ?? Services.Clocks().CpuClock;
-    public ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    public MomentClock Clock => field ??= Settings.Clock ?? Services.Clocks().CpuClock;
+    [field: AllowNull, MaybeNull]
+    public ILogger Log => field ??= Services.LogFor(GetType());
 
     public long RunningActionCount => Interlocked.Read(ref _runningActionCount);
     public AsyncState<UIAction?> LastAction => _lastAction;

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Rpc;
 
 public sealed record RpcSerializationFormatResolver(
@@ -9,18 +11,19 @@ public sealed record RpcSerializationFormatResolver(
     // Static members
 
     private static ImmutableArray<RpcSerializationFormat>? _defaultFormats;
-    private static RpcSerializationFormatResolver? _default;
 
     public static ImmutableArray<RpcSerializationFormat> DefaultFormats {
         get => _defaultFormats ??= RpcSerializationFormat.All;
         set => _defaultFormats = value;
     }
 
+    [field: AllowNull, MaybeNull]
     public static RpcSerializationFormatResolver Default {
-        get => _default ??= NewDefault(
-            RpcSerializationFormat.MemoryPackV1.Key, // Default server format (should be this one for backward compatibility)
+        get => field ??= NewDefault(
+            RpcSerializationFormat.MemoryPackV1
+                .Key, // Default server format (should be this one for backward compatibility)
             RpcSerializationFormat.MemoryPackV2.Key); // Default client format (the newest one)
-        set => _default = value;
+        set;
     }
 
     public static RpcSerializationFormatResolver NewDefault(Symbol defaultFormatKey)

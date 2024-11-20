@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq.Expressions;
 using ActualLab.Fusion.Diagnostics;
@@ -68,7 +69,6 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         = new Func<IEnumerable<TKey>, TKey, bool>(Enumerable.Contains).Method;
 
     private ConcurrentDictionary<DbShard, BatchProcessor<TKey, TDbEntity?>>? _batchProcessors;
-    private TransiencyResolver<TDbContext>? _transiencyResolver;
 
     protected Options Settings { get; }
     protected Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>[] Queries { get; init; }
@@ -76,8 +76,9 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
     public Func<TDbEntity, TKey> KeyExtractor { get; init; }
     public Expression<Func<TDbEntity, TKey>> KeyExtractorExpression { get; init; }
+    [field: AllowNull, MaybeNull]
     public TransiencyResolver<TDbContext> TransiencyResolver =>
-        _transiencyResolver ??= Services.GetRequiredService<TransiencyResolver<TDbContext>>();
+        field ??= Services.GetRequiredService<TransiencyResolver<TDbContext>>();
 
     public DbEntityResolver(Options settings, IServiceProvider services) : base(services)
     {

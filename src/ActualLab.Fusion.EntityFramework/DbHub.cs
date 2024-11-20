@@ -1,4 +1,5 @@
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.EntityFramework.Operations;
@@ -31,32 +32,30 @@ public interface IDbHub : IHasServices
 public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
     where TDbContext : DbContext
 {
-    private HostId? _hostId;
-    private IDbShardResolver<TDbContext>? _shardResolver;
-    private IShardDbContextFactory<TDbContext>? _contextFactory;
-    private VersionGenerator<long>? _versionGenerator;
-    private ChaosMaker? _chaosMaker;
-    private MomentClockSet? _clocks;
-    private ICommander? _commander;
-    private ILogger? _log;
-
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; } = services;
-    public HostId HostId => _hostId ??= Commander.Hub.HostId;
-    public IDbShardResolver<TDbContext> ShardResolver => _shardResolver ??= Services.DbShardResolver<TDbContext>();
+    [field: AllowNull, MaybeNull]
+    public HostId HostId => field ??= Commander.Hub.HostId;
+    [field: AllowNull, MaybeNull]
+    public IDbShardResolver<TDbContext> ShardResolver => field ??= Services.DbShardResolver<TDbContext>();
     public IDbShardRegistry<TDbContext> ShardRegistry => ShardResolver.ShardRegistry;
+    [field: AllowNull, MaybeNull]
     public IShardDbContextFactory<TDbContext> ContextFactory
-        => _contextFactory ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
+        => field ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
+    [field: AllowNull, MaybeNull]
     public VersionGenerator<long> VersionGenerator
-        => _versionGenerator ??= Commander.Hub.VersionGenerator;
-
+        => field ??= Commander.Hub.VersionGenerator;
+    [field: AllowNull, MaybeNull]
     public ChaosMaker ChaosMaker
-        => _chaosMaker ??= Commander.Hub.ChaosMaker;
+        => field ??= Commander.Hub.ChaosMaker;
+    [field: AllowNull, MaybeNull]
     public MomentClockSet Clocks
-        => _clocks ??= Services.Clocks();
+        => field ??= Services.Clocks();
+    [field: AllowNull, MaybeNull]
     public ICommander Commander
-        => _commander ??= Services.Commander();
+        => field ??= Services.Commander();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<TDbContext> CreateDbContext(CancellationToken cancellationToken = default)

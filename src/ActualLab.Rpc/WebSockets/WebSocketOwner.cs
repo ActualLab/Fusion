@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net.WebSockets;
 using ActualLab.Internal;
 
@@ -9,15 +10,14 @@ public class WebSocketOwner(
     IServiceProvider services
     ) : SafeAsyncDisposableBase
 {
-    private ILogger? _log;
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; } = services;
     public string Name { get; } = name;
     public WebSocket WebSocket { get; } = webSocket;
     public object? Handler { get; init; }
     public LogLevel LogLevel { get; init; } = LogLevel.Information;
-
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
 
     public virtual Task ConnectAsync(Uri uri, CancellationToken cancellationToken = default)
     {

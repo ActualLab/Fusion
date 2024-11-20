@@ -22,10 +22,11 @@ public partial class JsonString(string value) :
     public static readonly JsonString? Null = null;
     public static readonly JsonString Empty= new("");
 
-    private readonly string? _value = value;
-
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
-    public string Value => _value ?? string.Empty;
+    [field: AllowNull, MaybeNull]
+    public string Value {
+        get => field ?? string.Empty;
+    } = value;
 
     public static JsonString? New(string? value)
         => value == null ? Null : new JsonString(value);

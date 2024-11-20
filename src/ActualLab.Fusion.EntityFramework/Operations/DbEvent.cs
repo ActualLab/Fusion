@@ -16,22 +16,19 @@ public sealed class DbEvent : IDbEventLogEntry
 {
     public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;
 
-    private DateTime _loggedAt;
-    private DateTime _delayUntil;
-
     [Key] public string Uuid { get; set; } = "";
 
     [ConcurrencyCheck]
     public long Version { get; set; }
 
     public DateTime LoggedAt {
-        get => _loggedAt.DefaultKind(DateTimeKind.Utc);
-        set => _loggedAt = value.DefaultKind(DateTimeKind.Utc);
+        get => field.DefaultKind(DateTimeKind.Utc);
+        set => field = value.DefaultKind(DateTimeKind.Utc);
     }
 
     public DateTime DelayUntil {
-        get => _delayUntil.DefaultKind(DateTimeKind.Utc);
-        set => _delayUntil = value.DefaultKind(DateTimeKind.Utc);
+        get => field.DefaultKind(DateTimeKind.Utc);
+        set => field = value.DefaultKind(DateTimeKind.Utc);
     }
 
     public string ValueJson { get; set; } = "";

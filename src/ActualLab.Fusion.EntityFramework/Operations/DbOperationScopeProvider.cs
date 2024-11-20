@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.Operations.Reprocessing;
 using ActualLab.Resilience;
@@ -7,10 +8,9 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 
 public class DbOperationScopeProvider(IServiceProvider services)
 {
-    private ILogger? _log;
-
     protected IServiceProvider Services { get; } = services;
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = FusionEntityFrameworkCommandHandlerPriority.DbOperationScopeProvider)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)

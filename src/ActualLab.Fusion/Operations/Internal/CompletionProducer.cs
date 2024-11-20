@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 
 namespace ActualLab.Fusion.Operations.Internal;
@@ -11,12 +12,11 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
         public LogLevel LogLevel { get; init; } = LogLevel.Information;
     }
 
-    private ILogger? _log;
-
     protected Options Settings { get; } = settings;
     protected ICommander Commander { get; } = commander;
     protected IServiceProvider Services => Commander.Services;
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public virtual Task OnOperationCompleted(Operation operation, CommandContext? commandContext)
     {

@@ -18,10 +18,6 @@ public class MethodDef
         = typeof(MethodDef).GetMethod(nameof(CreateInterceptedAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
     private static int _lastId = 1;
 
-    private string? _fullName;
-    private Func<object, ArgumentList, Task>? _targetAsyncInvoker;
-    private Func<Interceptor, Invocation, Task>? _interceptorAsyncInvoker;
-    private Func<Invocation, Task>? _interceptedAsyncInvoker;
     private readonly LazySlim<MethodDef, object?> _defaultResultLazy;
     private readonly LazySlim<MethodDef, object?> _defaultUnwrappedResultLazy;
 
@@ -33,7 +29,8 @@ public class MethodDef
     public readonly int CancellationTokenIndex;
     public readonly int Id;
 
-    public string FullName => _fullName ??= $"{Type.GetName()}.{Method.Name}";
+    [field: AllowNull, MaybeNull]
+    public string FullName => field ??= $"{Type.GetName()}.{Method.Name}";
     public readonly bool IsAsyncMethod;
     public readonly bool IsAsyncVoidMethod;
     public readonly bool ReturnsTask;
@@ -43,12 +40,15 @@ public class MethodDef
 
     public object? DefaultResult => _defaultResultLazy.Value;
     public object? DefaultUnwrappedResult => _defaultUnwrappedResultLazy.Value;
+    [field: AllowNull, MaybeNull]
     public Func<object, ArgumentList, Task> TargetAsyncInvoker
-        => _targetAsyncInvoker ??= GetAsyncInvoker<Func<object, ArgumentList, Task>>(CreateTargetAsyncInvokerMethod);
+        => field ??= GetAsyncInvoker<Func<object, ArgumentList, Task>>(CreateTargetAsyncInvokerMethod);
+    [field: AllowNull, MaybeNull]
     public Func<Interceptor, Invocation, Task> InterceptorAsyncInvoker
-        => _interceptorAsyncInvoker ??= GetAsyncInvoker<Func<Interceptor, Invocation, Task>>(CreateInterceptorAsyncInvokerMethod);
+        => field ??= GetAsyncInvoker<Func<Interceptor, Invocation, Task>>(CreateInterceptorAsyncInvokerMethod);
+    [field: AllowNull, MaybeNull]
     public Func<Invocation, Task> InterceptedAsyncInvoker
-        => _interceptedAsyncInvoker ??= GetAsyncInvoker<Func<Invocation, Task>>(CreateInterceptedAsyncInvokerMethod);
+        => field ??= GetAsyncInvoker<Func<Invocation, Task>>(CreateInterceptedAsyncInvokerMethod);
 
     // Must be on KeepCodeForResult<,>, but since we can't use any params there...
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Result<>))]

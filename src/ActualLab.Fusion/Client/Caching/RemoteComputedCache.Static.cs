@@ -10,14 +10,13 @@ public partial class RemoteComputedCache
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static Func<ComputeMethodInput, RpcPeer, Task>? _updateDelayer;
 
     public static Func<ComputeMethodInput, RpcPeer, Task>? UpdateDelayer {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _updateDelayer;
+        get;
         set {
             lock (StaticLock)
-                _updateDelayer = value;
+                field = value;
         }
     }
 }

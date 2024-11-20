@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Cysharp.Text;
 using ActualLab.Net;
 
@@ -5,13 +6,12 @@ namespace ActualLab.Rpc;
 
 public class RpcClientPeerReconnectDelayer : RetryDelayer, IHasServices
 {
-    private RpcHub? _hub;
-    private ILogger? _log;
-
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; }
-    public RpcHub Hub => _hub ??= Services.RpcHub();
+    [field: AllowNull, MaybeNull]
+    public RpcHub Hub => field ??= Services.RpcHub();
 
     public RpcClientPeerReconnectDelayer(IServiceProvider services)
     {

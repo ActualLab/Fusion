@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json.Serialization;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
@@ -11,15 +12,14 @@ public static class NewtonsoftJsonSerializationBinder
     private static readonly object StaticLock = new();
 #endif
 
-    private static ISerializationBinder? _default;
-
+    [field: AllowNull, MaybeNull]
     public static ISerializationBinder Default {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
-            if (_default is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _default ??= new JsonSerializer().SerializationBinder;
+                return field ??= new JsonSerializer().SerializationBinder;
         }
     }
 }

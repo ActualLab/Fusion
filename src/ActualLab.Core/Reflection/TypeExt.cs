@@ -36,17 +36,16 @@ public static partial class TypeExt
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly ConcurrentDictionary<Type, object?> DefaultValueCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static Func<Type, Type> _nonProxyTypeResolver = DefaultNonProxyTypeResolver;
 
     public static readonly string SymbolPrefix = "@";
 
     public static Func<Type, Type> NonProxyTypeResolver {
-        get => _nonProxyTypeResolver;
+        get;
         set {
-            _nonProxyTypeResolver = value;
+            field = value;
             NonProxyTypeCache.Clear();
         }
-    }
+    } = DefaultNonProxyTypeResolver;
 
     public static object? GetDefaultValue(this Type type)
     {

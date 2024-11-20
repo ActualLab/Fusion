@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.JSInterop;
 using ActualLab.Fusion.Authentication;
 
@@ -7,19 +8,18 @@ public class ClientAuthHelper(IServiceProvider services) : IHasServices
 {
     public static string SchemasJavaScriptExpression { get; set; } = "window.FusionAuth.schemas";
 
-    private IAuth? _auth;
-    private ISessionResolver? _sessionResolver;
-    private ICommander? _commander;
-    private IJSRuntime? _jsRuntime;
-
     protected (string Schema, string SchemaName)[]? CachedSchemas { get; set; }
 
     public IServiceProvider Services { get; } = services;
-    public IAuth Auth => _auth ??= Services.GetRequiredService<IAuth>();
-    public ISessionResolver SessionResolver => _sessionResolver ??= Services.GetRequiredService<ISessionResolver>();
+    [field: AllowNull, MaybeNull]
+    public IAuth Auth => field ??= Services.GetRequiredService<IAuth>();
+    [field: AllowNull, MaybeNull]
+    public ISessionResolver SessionResolver => field ??= Services.GetRequiredService<ISessionResolver>();
     public Session Session => SessionResolver.Session;
-    public ICommander Commander => _commander ??= Services.Commander();
-    public IJSRuntime JSRuntime => _jsRuntime ??= Services.GetRequiredService<IJSRuntime>();
+    [field: AllowNull, MaybeNull]
+    public ICommander Commander => field ??= Services.Commander();
+    [field: AllowNull, MaybeNull]
+    public IJSRuntime JSRuntime => field ??= Services.GetRequiredService<IJSRuntime>();
 
     public virtual async ValueTask<(string Name, string DisplayName)[]> GetSchemas()
     {

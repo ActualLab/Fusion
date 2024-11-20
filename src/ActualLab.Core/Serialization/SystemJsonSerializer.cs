@@ -14,51 +14,51 @@ public class SystemJsonSerializer : TextSerializerBase
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static SystemJsonSerializer? _pretty;
-    private static SystemJsonSerializer? _default;
-    private static TypeDecoratingTextSerializer? _defaultTypeDecorating;
 
     public static JsonSerializerOptions PrettyOptions { get; set; }
         = new() { WriteIndented = true };
     public static JsonSerializerOptions DefaultOptions { get; set; }
         = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
+    [field: AllowNull, MaybeNull]
     public static SystemJsonSerializer Pretty {
         get {
-            if (_pretty is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _pretty ??= new(PrettyOptions);
+                return field ??= new(PrettyOptions);
         }
         set {
             lock (StaticLock)
-                _pretty = value;
+                field = value;
         }
     }
 
+    [field: AllowNull, MaybeNull]
     public static SystemJsonSerializer Default {
         get {
-            if (_default is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _default ??= new(DefaultOptions);
+                return field ??= new(DefaultOptions);
         }
         set {
             lock (StaticLock)
-                _default = value;
+                field = value;
         }
     }
 
+    [field: AllowNull, MaybeNull]
     public static TypeDecoratingTextSerializer DefaultTypeDecorating {
         get {
-            if (_defaultTypeDecorating is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _defaultTypeDecorating ??= new TypeDecoratingTextSerializer(Default);
+                return field ??= new TypeDecoratingTextSerializer(Default);
         }
         set {
             lock (StaticLock)
-                _defaultTypeDecorating = value;
+                field = value;
         }
     }
 

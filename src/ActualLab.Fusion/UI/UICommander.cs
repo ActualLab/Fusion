@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 
 namespace ActualLab.Fusion.UI;
@@ -9,12 +10,11 @@ public class UICommander(IServiceProvider services) : IHasServices
     private static readonly MethodInfo CreateUIActionTypedMethod = typeof(UICommander)
         .GetMethod(nameof(CreateUIActionTyped), BindingFlags.Static | BindingFlags.NonPublic)!;
 
-    private ICommander? _commander;
-    private UIActionTracker? _uiActionTracker;
-
     public IServiceProvider Services { get; } = services;
-    public ICommander Commander => _commander ??= Services.Commander();
-    public UIActionTracker UIActionTracker => _uiActionTracker ??= Services.GetRequiredService<UIActionTracker>();
+    [field: AllowNull, MaybeNull]
+    public ICommander Commander => field ??= Services.Commander();
+    [field: AllowNull, MaybeNull]
+    public UIActionTracker UIActionTracker => field ??= Services.GetRequiredService<UIActionTracker>();
     public MomentClock Clock => UIActionTracker.Clock;
 
     public async Task<TResult> Call<TResult>(ICommand<TResult> command, CancellationToken cancellationToken = default)

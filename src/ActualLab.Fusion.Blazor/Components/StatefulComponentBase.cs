@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using ActualLab.Internal;
 
@@ -5,11 +6,10 @@ namespace ActualLab.Fusion.Blazor;
 
 public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposable
 {
-    private StateFactory? _stateFactory;
-
     [Inject] protected IServiceProvider Services { get; init; } = null!;
 
-    protected StateFactory StateFactory => _stateFactory ??= Services.StateFactory();
+    [field: AllowNull, MaybeNull]
+    protected StateFactory StateFactory => field ??= Services.StateFactory();
     protected abstract IState UntypedState { get; }
     protected Action<IState, StateEventKind> StateChanged { get; set; }
 

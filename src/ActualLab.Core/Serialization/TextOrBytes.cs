@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.HighPerformance;
 using Cysharp.Text;
 using MessagePack;
@@ -23,11 +24,10 @@ public readonly partial record struct TextOrBytes(
     public static readonly TextOrBytes EmptyBytes = new(DataFormat.Bytes, default!);
     public static readonly TextOrBytes EmptyText = new(DataFormat.Text, default!);
 
-    private readonly byte[]? _data; // This field is used solely to avoid .ToArray() calls in Bytes property
-
     // Computed properties
     [MemoryPackIgnore, IgnoreMember]
-    public byte[] Bytes => _data ?? GetBytes();
+    [field: AllowNull, MaybeNull]
+    public byte[] Bytes => field ?? GetBytes();
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsEmpty => Data.Length == 0;
@@ -36,7 +36,7 @@ public readonly partial record struct TextOrBytes(
         : this(text.AsMemory()) { }
     public TextOrBytes(byte[] bytes)
         : this(DataFormat.Bytes, bytes.AsMemory())
-        => _data = bytes;
+        => Bytes = bytes;
     public TextOrBytes(ReadOnlyMemory<char> text)
         : this(DataFormat.Text, text.Cast<char, byte>()) { }
     public TextOrBytes(ReadOnlyMemory<byte> bytes)

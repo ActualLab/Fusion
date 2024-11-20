@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Versioning;
 
@@ -9,15 +10,14 @@ public abstract class DbShardWorkerBase<TDbContext>(
     ) : WorkerBase(stopTokenSource)
     where TDbContext : DbContext
 {
-    private ILogger? _log;
-    private DbHub<TDbContext>? _dbHub;
-
     protected IServiceProvider Services { get; init; } = services;
-    protected DbHub<TDbContext> DbHub => _dbHub ??= Services.DbHub<TDbContext>();
+    [field: AllowNull, MaybeNull]
+    protected DbHub<TDbContext> DbHub => field ??= Services.DbHub<TDbContext>();
     protected VersionGenerator<long> VersionGenerator => DbHub.VersionGenerator;
     protected MomentClockSet Clocks => DbHub.Clocks;
     protected ICommander Commander => DbHub.Commander;
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     protected virtual IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.UsedShards;
 

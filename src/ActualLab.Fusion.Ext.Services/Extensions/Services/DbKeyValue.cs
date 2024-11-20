@@ -8,13 +8,11 @@ namespace ActualLab.Fusion.Extensions.Services;
 [Index(nameof(ExpiresAt))]
 public class DbKeyValue
 {
-    private DateTime? _expiresAt;
-
     [Key] public string Key { get; set; } = "";
     public string Value { get; set; } = "";
 
     public DateTime? ExpiresAt {
-        get => _expiresAt.DefaultKind(DateTimeKind.Utc);
-        set => _expiresAt = value.DefaultKind(DateTimeKind.Utc);
+        get => field.DefaultKind(DateTimeKind.Utc);
+        set => field = value.DefaultKind(DateTimeKind.Utc);
     }
 }

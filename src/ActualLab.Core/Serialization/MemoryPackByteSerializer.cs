@@ -19,34 +19,34 @@ public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IBy
 #endif
     private readonly ConcurrentDictionary<Type, MemoryPackByteSerializer> _typedSerializerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static MemoryPackByteSerializer? _default;
-    private static TypeDecoratingByteSerializer? _defaultTypeDecorating;
 
     public static MemoryPackSerializerOptions DefaultOptions { get; set; } = MemoryPackSerializerOptions.Default;
 
+    [field: AllowNull, MaybeNull]
     public static MemoryPackByteSerializer Default {
         get {
-            if (_default is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _default ??= new(DefaultOptions);
+                return field ??= new(DefaultOptions);
         }
         set {
             lock (StaticLock)
-                _default = value;
+                field = value;
         }
     }
 
+    [field: AllowNull, MaybeNull]
     public static TypeDecoratingByteSerializer DefaultTypeDecorating {
         get {
-            if (_defaultTypeDecorating is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
+                return field ??= new TypeDecoratingByteSerializer(Default);
         }
         set {
             lock (StaticLock)
-                _defaultTypeDecorating = value;
+                field = value;
         }
     }
 

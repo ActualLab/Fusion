@@ -33,31 +33,30 @@ public static class LazySlim
 public sealed class LazySlim<TValue> : ILazySlim<TValue>
 {
     private Func<TValue>? _factory;
-    private TValue _value;
 
     public TValue Value {
         get {
             // Double-check locking
-            if (_factory == null) return _value;
+            if (_factory == null) return field;
             lock (this) {
-                if (_factory == null) return _value;
-                _value = _factory.Invoke();
+                if (_factory == null) return field;
+                field = _factory.Invoke();
                 _factory = null;
             }
-            return _value;
+            return field;
         }
     }
 
     public LazySlim(TValue value)
     {
         _factory = null;
-        _value = value;
+        Value = value;
     }
 
     public LazySlim(Func<TValue> factory)
     {
         _factory = factory;
-        _value = default!;
+        Value = default!;
     }
 
     public override string ToString()
@@ -68,19 +67,18 @@ public sealed class LazySlim<TArg0, TValue> : ILazySlim<TValue>
 {
     private Func<TArg0, TValue>? _factory;
     private TArg0 _arg0;
-    private TValue _value;
 
     public TValue Value {
         get {
             // Double-check locking
-            if (_factory == null) return _value;
+            if (_factory == null) return field;
             lock (this) {
-                if (_factory == null) return _value;
-                _value = _factory.Invoke(_arg0);
+                if (_factory == null) return field;
+                field = _factory.Invoke(_arg0);
                 _factory = null;
                 _arg0 = default!;
             }
-            return _value;
+            return field;
         }
     }
 
@@ -88,14 +86,14 @@ public sealed class LazySlim<TArg0, TValue> : ILazySlim<TValue>
     {
         _factory = null;
         _arg0 = default!;
-        _value = value;
+        Value = value;
     }
 
     public LazySlim(TArg0 arg0, Func<TArg0, TValue> factory)
     {
         _factory = factory;
         _arg0 = arg0;
-        _value = default!;
+        Value = default!;
     }
 
     public override string ToString()
@@ -107,20 +105,19 @@ public sealed class LazySlim<TArg0, TArg1, TValue> : ILazySlim<TValue>
     private Func<TArg0, TArg1, TValue>? _factory;
     private TArg0 _arg0;
     private TArg1 _arg1;
-    private TValue _value;
 
     public TValue Value {
         get {
             // Double-check locking
-            if (_factory == null) return _value;
+            if (_factory == null) return field;
             lock (this) {
-                if (_factory == null) return _value;
-                _value = _factory.Invoke(_arg0, _arg1);
+                if (_factory == null) return field;
+                field = _factory.Invoke(_arg0, _arg1);
                 _factory = null;
                 _arg0 = default!;
                 _arg1 = default!;
             }
-            return _value;
+            return field;
         }
     }
 
@@ -129,7 +126,7 @@ public sealed class LazySlim<TArg0, TArg1, TValue> : ILazySlim<TValue>
         _factory = null;
         _arg0 = default!;
         _arg1 = default!;
-        _value = value;
+        Value = value;
     }
 
     public LazySlim(TArg0 arg0, TArg1 arg1, Func<TArg0, TArg1, TValue> factory)
@@ -137,7 +134,7 @@ public sealed class LazySlim<TArg0, TArg1, TValue> : ILazySlim<TValue>
         _factory = factory;
         _arg0 = arg0;
         _arg1 = arg1;
-        _value = default!;
+        Value = default!;
     }
 
     public override string ToString()

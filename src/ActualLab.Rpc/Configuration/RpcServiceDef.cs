@@ -12,7 +12,6 @@ public sealed class RpcServiceDef
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private Dictionary<MethodInfo, RpcMethodDef> _methods = null!;
     private Dictionary<Symbol, RpcMethodDef> _methodByName = null!;
-    private object? _server;
     private string? _toStringCached;
 
     internal Dictionary<Symbol, RpcMethodDef> MethodByName => _methodByName;
@@ -24,7 +23,8 @@ public sealed class RpcServiceDef
     public bool IsSystem { get; init; }
     public bool IsBackend { get; init; }
     public bool HasServer => ServerResolver != null;
-    public object Server => _server ??= ServerResolver.Resolve(Hub.Services);
+    [field: AllowNull, MaybeNull]
+    public object Server => field ??= ServerResolver.Resolve(Hub.Services);
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
     public Symbol Scope { get; init; }
     public LegacyNames LegacyNames { get; init; }

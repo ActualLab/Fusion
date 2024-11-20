@@ -9,15 +9,14 @@ namespace ActualLab.Fusion.Client.Internal;
 public sealed class RpcComputeSystemCallSender(IServiceProvider services)
     : RpcServiceBase(services)
 {
-    private IRpcComputeSystemCalls? _client;
-    private RpcServiceDef? _computeSystemCallsServiceDef;
-    private RpcMethodDef? _invalidateMethodDef;
-
-    private IRpcComputeSystemCalls Client => _client
+    [field: AllowNull, MaybeNull]
+    private IRpcComputeSystemCalls Client => field
         ??= Services.GetRequiredService<IRpcComputeSystemCalls>();
-    private RpcServiceDef ComputeSystemCallsServiceDef => _computeSystemCallsServiceDef
+    [field: AllowNull, MaybeNull]
+    private RpcServiceDef ComputeSystemCallsServiceDef => field
         ??= Hub.ServiceRegistry.Get<IRpcComputeSystemCalls>()!;
-    private RpcMethodDef InvalidateMethodDef => _invalidateMethodDef
+    [field: AllowNull, MaybeNull]
+    private RpcMethodDef InvalidateMethodDef => field
         ??= ComputeSystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcComputeSystemCalls.Invalidate)));
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

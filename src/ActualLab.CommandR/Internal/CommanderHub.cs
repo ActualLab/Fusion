@@ -9,25 +9,24 @@ namespace ActualLab.CommandR.Internal;
 
 public sealed class CommanderHub(ICommander commander, IServiceProvider services) : IHasServices
 {
-    private HostId? _hostId;
-    private UuidGenerator? _uuidGenerator;
-    private VersionGenerator<long>? _versionGenerator;
-    private CommandHandlerResolver? _handlerResolver;
-    private ChaosMaker? _chaosMaker;
-    private MomentClockSet? _clocks;
-    private CommandServiceInterceptor? _interceptor;
-
     public ICommander Commander { get; } = commander;
     public IServiceProvider Services { get; } = services;
-    public HostId HostId => _hostId ??= Services.GetRequiredService<HostId>();
-    public UuidGenerator UuidGenerator => _uuidGenerator ??= Services.GetRequiredService<UuidGenerator>();
-    public VersionGenerator<long> VersionGenerator => _versionGenerator ??= Services.VersionGenerator<long>();
-    public CommandHandlerResolver HandlerResolver => _handlerResolver ??= Services.GetRequiredService<CommandHandlerResolver>();
-    public ChaosMaker ChaosMaker => _chaosMaker ??= Services.GetRequiredService<ChaosMaker>();
-    public MomentClockSet Clocks => _clocks ??= Services.Clocks();
 
+    [field: AllowNull, MaybeNull]
+    public HostId HostId => field ??= Services.GetRequiredService<HostId>();
+    [field: AllowNull, MaybeNull]
+    public UuidGenerator UuidGenerator => field ??= Services.GetRequiredService<UuidGenerator>();
+    [field: AllowNull, MaybeNull]
+    public VersionGenerator<long> VersionGenerator => field ??= Services.VersionGenerator<long>();
+    [field: AllowNull, MaybeNull]
+    public CommandHandlerResolver HandlerResolver => field ??= Services.GetRequiredService<CommandHandlerResolver>();
+    [field: AllowNull, MaybeNull]
+    public ChaosMaker ChaosMaker => field ??= Services.GetRequiredService<ChaosMaker>();
+    [field: AllowNull, MaybeNull]
+    public MomentClockSet Clocks => field ??= Services.Clocks();
+    [field: AllowNull, MaybeNull]
     public CommandServiceInterceptor Interceptor
-        => _interceptor ??= Services.GetRequiredService<CommandServiceInterceptor>();
+        => field ??= Services.GetRequiredService<CommandServiceInterceptor>();
 
     public IProxy NewProxy(
         IServiceProvider services,

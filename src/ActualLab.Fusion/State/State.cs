@@ -59,12 +59,12 @@ public abstract class State<T> : ComputedInput,
 
     private volatile StateSnapshot<T>? _snapshot;
     private string? _category;
-    private ILogger? _log;
 
     protected ComputedOptions ComputedOptions { get; private set; } = null!;
     protected AsyncLock AsyncLock { get; } = new(LockReentryMode.CheckedFail);
     protected object Lock => AsyncLock;
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; }
     public StateSnapshot<T> Snapshot => _snapshot!;

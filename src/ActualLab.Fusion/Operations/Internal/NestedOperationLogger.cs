@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Fusion.Operations.Internal;
 
 /// <summary>
@@ -7,14 +9,13 @@ namespace ActualLab.Fusion.Operations.Internal;
 /// </summary>
 public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<ICommand>
 {
-    private ComputeServiceCommandCompletionInvalidator? _postCompletionInvalidator;
-    private ILogger? _log;
-
     protected IServiceProvider Services { get; } = services;
 
+    [field: AllowNull, MaybeNull]
     protected ComputeServiceCommandCompletionInvalidator ComputeServiceCommandCompletionInvalidator
-        => _postCompletionInvalidator ??= Services.GetRequiredService<ComputeServiceCommandCompletionInvalidator>();
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+        => field ??= Services.GetRequiredService<ComputeServiceCommandCompletionInvalidator>();
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.NestedCommandLogger)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)

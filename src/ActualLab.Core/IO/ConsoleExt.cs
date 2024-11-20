@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Concurrency;
 
 namespace ActualLab.IO;
@@ -9,14 +10,14 @@ public static class ConsoleExt
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static TaskScheduler? _scheduler;
 
+    [field: AllowNull, MaybeNull]
     public static TaskScheduler Scheduler {
         get {
-            if (_scheduler is { } scheduler)
+            if (field is { } scheduler)
                 return scheduler;
             lock (StaticLock)
-                return _scheduler ??= new DedicatedThreadScheduler();
+                return field ??= new DedicatedThreadScheduler();
         }
     }
 

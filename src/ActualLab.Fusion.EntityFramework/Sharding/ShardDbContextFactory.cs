@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework;
@@ -27,12 +28,12 @@ public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbConte
     private readonly ConcurrentDictionary<
         DbShard,
         LazySlim<DbShard, ShardDbContextFactory<TDbContext>, IDbContextFactory<TDbContext>>> _factories = new();
-    private ShardDbContextFactoryBuilder<TDbContext>? _shardDbContextBuilder;
 
     protected IServiceProvider Services { get; }
     protected IDbShardRegistry<TDbContext> ShardRegistry { get; }
+    [field: AllowNull, MaybeNull]
     protected ShardDbContextFactoryBuilder<TDbContext> ShardDbContextFactoryBuilder
-        => _shardDbContextBuilder ??= Services.GetRequiredService<ShardDbContextFactoryBuilder<TDbContext>>();
+        => field ??= Services.GetRequiredService<ShardDbContextFactoryBuilder<TDbContext>>();
     protected bool HasSingleShard { get; }
 
     public ShardDbContextFactory(IServiceProvider services)

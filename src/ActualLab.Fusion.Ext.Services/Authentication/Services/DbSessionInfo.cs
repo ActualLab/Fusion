@@ -13,8 +13,6 @@ namespace ActualLab.Fusion.Authentication.Services;
 public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
 {
     private NewtonsoftJsonSerialized<ImmutableOptionSet> _options = ImmutableOptionSet.Empty;
-    private DateTime _createdAt;
-    private DateTime _lastSeenAt;
 
     [Key, StringLength(256)]
     public string Id { get; set; } = "";
@@ -23,12 +21,12 @@ public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
     public long Version { get; set; }
 
     public DateTime CreatedAt {
-        get => _createdAt.DefaultKind(DateTimeKind.Utc);
-        set => _createdAt = value.DefaultKind(DateTimeKind.Utc);
+        get => field.DefaultKind(DateTimeKind.Utc);
+        set => field = value.DefaultKind(DateTimeKind.Utc);
     }
     public DateTime LastSeenAt {
-        get => _lastSeenAt.DefaultKind(DateTimeKind.Utc);
-        set => _lastSeenAt = value.DefaultKind(DateTimeKind.Utc);
+        get => field.DefaultKind(DateTimeKind.Utc);
+        set => field = value.DefaultKind(DateTimeKind.Utc);
     }
 
     public string IPAddress { get; set; } = "";

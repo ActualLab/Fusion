@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 
@@ -27,10 +28,10 @@ public abstract class ComputeFunctionBase<T>(FusionHub hub) : IComputeFunction<T
         get => ComputedRegistry.Instance.InputLocks;
     }
 
-    private ILogger? _log;
     private LazySlim<ILogger?>? _debugLog;
 
-    protected ILogger Log => _log ??= Services.LogFor(GetType());
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Services.LogFor(GetType());
     protected ILogger? DebugLog => (_debugLog ??= LazySlim.New(Log.IfEnabled(LogLevel.Debug))).Value;
 
     IServiceProvider IHasServices.Services => Services;

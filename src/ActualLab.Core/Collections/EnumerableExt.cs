@@ -14,6 +14,7 @@ public static class EnumerableExt
     {
         if (sequences.Length == 0)
             return Enumerable.Empty<T>();
+
         var result = sequences[0];
         for (var i = 1; i < sequences.Length; i++)
             result = result.Concat(sequences[i]);

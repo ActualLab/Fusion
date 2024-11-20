@@ -16,26 +16,24 @@ public sealed partial record VersionSet(
     public static readonly Version ZeroVersion = new();
     public static readonly ListFormat ListFormat = ListFormat.CommaSeparated;
 
-    private string? _value;
-    private int _hashCode;
-
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
-    public string Value => _value ??= Format();
+    [field: AllowNull, MaybeNull]
+    public string Value => field ??= Format();
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public int Count => Items.Count;
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public int HashCode {
         get {
-            if (_hashCode == 0) {
+            if (field == 0) {
                 var hashCode = 0;
                 foreach (var (scope, version) in Items)
                     hashCode ^= System.HashCode.Combine(scope.HashCode, version.GetHashCode());
                 if (hashCode == 0)
                     hashCode = 1;
-                _hashCode = hashCode;
+                field = hashCode;
             }
-            return _hashCode;
+            return field;
         }
     }
 

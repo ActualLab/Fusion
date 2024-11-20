@@ -25,32 +25,31 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
     public const string TypeDecoratorSuffix = " */ ";
     public const char ExactTypeDecorator = '.';
 
-    private static TypeDecoratingTextSerializer? _default;
-    private static TypeDecoratingTextSerializer? _defaultLegacy;
-
+    [field: AllowNull, MaybeNull]
     public static TypeDecoratingTextSerializer Default {
         get {
-            if (_default is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _default ??= new(TextSerializer.Default);
+                return field ??= new(TextSerializer.Default);
         }
         set {
             lock (StaticLock)
-                _default = value;
+                field = value;
         }
     }
 
+    [field: AllowNull, MaybeNull]
     public static TypeDecoratingTextSerializer DefaultLegacy {
         get {
-            if (_defaultLegacy is { } value)
+            if (field is { } value)
                 return value;
             lock (StaticLock)
-                return _defaultLegacy ??= new LegacyTypeDecoratingTextSerializer(TextSerializer.Default);
+                return field ??= new LegacyTypeDecoratingTextSerializer(TextSerializer.Default);
         }
         set {
             lock (StaticLock)
-                _defaultLegacy = value;
+                field = value;
         }
     }
 

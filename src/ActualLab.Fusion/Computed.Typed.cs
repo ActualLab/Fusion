@@ -10,7 +10,6 @@ namespace ActualLab.Fusion;
 public abstract class Computed<T> : Computed, IResult<T>
 {
     private Result<T> _output;
-    private Task<T>? _outputAsTask;
 
     // IComputed properties
 
@@ -29,15 +28,16 @@ public abstract class Computed<T> : Computed, IResult<T>
         }
     }
 
+    [field: AllowNull, MaybeNull]
     public Task<T> OutputAsTask {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
-            if (_outputAsTask != null)
-                return _outputAsTask;
+            if (field != null)
+                return field;
 
             lock (Lock) {
                 this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
-                return _outputAsTask ??= _output.AsTask();
+                return field ??= _output.AsTask();
             }
         }
     }

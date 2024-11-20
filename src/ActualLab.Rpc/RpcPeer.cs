@@ -16,8 +16,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     private volatile ChannelWriter<RpcMessage>? _sender;
     private volatile RpcPeerStopMode _stopMode;
     private bool _resetTryIndex;
-    private RpcCallLogger? _callLogger;
-    private ILogger? _log;
 
     protected IServiceProvider Services => Hub.Services;
 
@@ -26,10 +24,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         get => _sender ?? _connectionState.Value.Sender; // _sender is set after _connectionState, so can be out of sync
     }
 
+    [field: AllowNull, MaybeNull]
     protected internal RpcCallLogger CallLogger
-        => _callLogger ??= Hub.CallLoggerFactory.Invoke(this, Hub.CallLoggerFilter, Log, CallLogLevel);
+        => field ??= Hub.CallLoggerFactory.Invoke(this, Hub.CallLoggerFilter, Log, CallLogLevel);
+    [field: AllowNull, MaybeNull]
     protected internal ILogger Log
-        => _log ??= Services.LogFor(GetType());
+        => field ??= Services.LogFor(GetType());
 
     public RpcHub Hub { get; }
     public RpcPeerRef Ref { get; }
