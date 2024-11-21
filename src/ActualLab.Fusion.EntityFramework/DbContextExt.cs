@@ -71,13 +71,6 @@ public static class DbContextExt
         return dbContext;
     }
 
-    public static TDbContext SuppressExecutionStrategy<TDbContext>(this TDbContext dbContext)
-        where TDbContext : DbContext
-    {
-        ExecutionStrategyExt.Suspend(dbContext);
-        return dbContext;
-    }
-
     public static TDbContext SuppressDispose<TDbContext>(this TDbContext dbContext)
         where TDbContext : DbContext
     {

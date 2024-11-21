@@ -8,6 +8,7 @@ using ActualLab.Locking;
 using ActualLab.Resilience;
 using ActualLab.Versioning;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
@@ -20,6 +21,9 @@ public abstract class DbOperationScope : IOperationScope
 
         public IsolationLevel IsolationLevel { get; init; } = DefaultIsolationLevel;
     }
+
+    protected TaskCompletionSource<Unit>? StrategyOperationTaskSource { get; set; }
+    protected Task? StrategyExecuteTask { get; set; }
 
     public IsolationLevel IsolationLevel { get; protected init; }
     public CommandContext CommandContext { get; protected init; } = null!;
@@ -35,6 +39,7 @@ public abstract class DbOperationScope : IOperationScope
     public DbConnection? Connection { get; protected set; }
     public IDbContextTransaction? Transaction { get; protected set; }
     public string? TransactionId { get; protected set; }
+    public IExecutionStrategy? ExecutionStrategy { get; protected set; }
 
     public static DbOperationScope? TryGet(CommandContext context)
         => context.TryGetOperation()?.Scope as DbOperationScope;
@@ -122,6 +127,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         }
         finally {
             IsCommitted ??= false;
+            await TryDetachExecutionStrategy().ConfigureAwait(false);
             try {
                 if (MasterDbContext is IAsyncDisposable ad)
                     await ad.DisposeAsync().ConfigureAwait(false);
@@ -275,9 +281,10 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             return true;
 
         try {
-            var executionStrategy = MasterDbContext?.Database.CreateExecutionStrategy();
+            var executionStrategy = ExecutionStrategy ?? MasterDbContext?.Database.CreateExecutionStrategy();
             if (executionStrategy is not ExecutionStrategy retryingExecutionStrategy)
                 return false;
+
             var isTransient = retryingExecutionStrategy.ShouldRetryOn(error);
             return isTransient;
         }
@@ -307,6 +314,9 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         try {
             var database = dbContext.ReadWrite().Database;
             database.DisableAutoTransactionsAndSavepoints();
+            // ExecutionStrategy is "attached" here mostly for compatibility/safety reasons -
+            // it works even if the next line is commented out.
+            AttachExecutionStrategy(dbContext.Database);
             var transaction = await database
                 .BeginTransactionAsync(IsolationLevel, cancellationToken)
                 .ConfigureAwait(false);
@@ -326,6 +336,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                 TransactionId, shard, IsolationLevel);
         }
         catch (Exception) {
+            await TryDetachExecutionStrategy().ConfigureAwait(false);
             await dbContext.DisposeAsync().ConfigureAwait(false);
             throw;
         }
@@ -345,6 +356,33 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
         DebugLog?.LogDebug("Transaction #{TransactionId} @ shard '{Shard}': rolling back", TransactionId, Shard);
         await Transaction!.RollbackAsync().ConfigureAwait(false);
+    }
+
+    protected virtual void AttachExecutionStrategy(DatabaseFacade database)
+    {
+        ExecutionStrategy = database.CreateExecutionStrategy();
+        StrategyOperationTaskSource = TaskCompletionSourceExt.New<Unit>(runContinuationsAsynchronously: false);
+        StrategyExecuteTask = ExecutionStrategy.ExecuteAsync(
+            (Task)StrategyOperationTaskSource.Task,
+            static (operationTask, _) => operationTask,
+            default);
+    }
+
+    protected virtual async ValueTask TryDetachExecutionStrategy()
+    {
+        if (ExecutionStrategy == null)
+            return;
+
+        try {
+            StrategyOperationTaskSource?.TrySetResult(default);
+            if (StrategyExecuteTask is { } strategyResultTask)
+                await strategyResultTask.SilentAwait();
+        }
+        finally {
+            StrategyExecuteTask = null;
+            StrategyOperationTaskSource = null;
+            ExecutionStrategy = null;
+        }
     }
 
     // Helpers
