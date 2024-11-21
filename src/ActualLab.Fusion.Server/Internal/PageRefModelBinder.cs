@@ -3,6 +3,8 @@ using ActualLab.Fusion.Extensions;
 
 namespace ActualLab.Fusion.Server.Internal;
 
+#pragma warning disable IL2060
+
 public class PageRefModelBinder : IModelBinder
 {
     private static readonly MethodInfo ParseMethod = typeof(PageRef).GetMethod(nameof(PageRef.Parse))!;

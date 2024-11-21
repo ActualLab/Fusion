@@ -24,6 +24,7 @@ public class Commander : ICommander
 
     public Task Run(CommandContext context, CancellationToken cancellationToken = default)
     {
+#pragma warning disable MA0100
         if (context.UntypedCommand is IEventCommand { ChainId.IsEmpty: true } eventCommand)
             return RunEvent(eventCommand, (CommandContext<Unit>)context, cancellationToken);
 
@@ -37,6 +38,7 @@ public class Commander : ICommander
                 Activity.Current = currentActivity; // We want to restore it even though we suppress the flow here
             return RunCommand(context, cancellationToken);
         }, CancellationToken.None);
+#pragma warning restore MA0100
     }
 
     protected virtual async Task RunCommand(

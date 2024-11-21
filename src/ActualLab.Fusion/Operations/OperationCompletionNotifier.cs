@@ -43,6 +43,7 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
 
     public Task<bool> NotifyCompleted(Operation operation, CommandContext? commandContext)
     {
+#pragma warning disable MA0100
         lock (Lock) {
             if (!RecentlySeenUuids.TryAdd(operation.Uuid, operation.LoggedAt))
                 return TaskExt.FalseTask;
@@ -83,5 +84,6 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
             }
             return true;
         });
+#pragma warning restore MA0100
     }
 }

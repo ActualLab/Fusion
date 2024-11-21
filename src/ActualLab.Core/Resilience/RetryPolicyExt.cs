@@ -1,5 +1,7 @@
 namespace ActualLab.Resilience;
 
+#pragma warning disable MA0100
+
 public static class RetryPolicyExt
 {
     // Apply overloads

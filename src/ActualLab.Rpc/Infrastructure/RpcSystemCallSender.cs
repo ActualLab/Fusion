@@ -188,7 +188,9 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
         using var _ = context.Activate();
         var call = context.PrepareCallForSendNoWait(ItemMethodDef, ArgumentList.New(index, item))!;
+#pragma warning disable MA0100
         return call.SendNoWait(true);
+#pragma warning restore MA0100
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
@@ -197,7 +199,9 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
         using var _ = context.Activate();
         var call = context.PrepareCallForSendNoWait(BatchMethodDef, ArgumentList.New(index, items))!;
+#pragma warning disable MA0100
         return call.SendNoWait(true);
+#pragma warning restore MA0100
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Serialization)]

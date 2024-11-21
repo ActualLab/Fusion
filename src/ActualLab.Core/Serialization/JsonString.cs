@@ -1,11 +1,8 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
 using ActualLab.Serialization.Internal;
 using MessagePack;
-
-#if !NETSTANDARD2_0
-using System.Diagnostics.CodeAnalysis;
-#endif
 
 namespace ActualLab.Serialization;
 
@@ -76,5 +73,4 @@ public partial class JsonString(string value) :
     public static bool operator <=(JsonString left, JsonString right) => left.CompareTo(right) <= 0;
     public static bool operator >(JsonString left, JsonString right) => left.CompareTo(right) > 0;
     public static bool operator >=(JsonString left, JsonString right) => left.CompareTo(right) >= 0;
-
 }

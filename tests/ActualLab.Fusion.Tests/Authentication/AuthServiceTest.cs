@@ -1,5 +1,4 @@
 using System.Security;
-using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.Tests.Model;

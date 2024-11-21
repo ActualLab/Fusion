@@ -27,7 +27,7 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     public RpcServiceRegistry(IServiceProvider services)
         : base(services)
     {
-        var hub = Hub; // The implicit RpcHub resolution here freezes RpcConfiguration
+        var hub = Hub!; // The implicit RpcHub resolution here freezes RpcConfiguration
         foreach (var (_, service) in hub.Configuration.Services) {
             var serviceDef = hub.ServiceDefBuilder.Invoke(hub, service);
             if (_serviceByName.TryGetValue(serviceDef.Name, out var existingServiceDef))

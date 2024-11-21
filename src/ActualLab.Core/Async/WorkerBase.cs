@@ -21,6 +21,7 @@ public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null
         if (_whenRunning != null)
             return _whenRunning;
         lock (Lock) {
+#pragma warning disable MA0100
             if (_whenRunning != null)
                 return _whenRunning;
 
@@ -29,6 +30,7 @@ public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null
                 // In this case _whenRunning would store a task that successfully completed.
                 return _whenRunning = Task.CompletedTask;
             }
+#pragma warning restore MA0100
 
             using var _ = FlowExecutionContext ? default : ExecutionContextExt.TrySuppressFlow();
             Task onStartTask;

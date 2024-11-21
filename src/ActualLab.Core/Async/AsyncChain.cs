@@ -87,6 +87,8 @@ public readonly record struct AsyncChain
     public Task RunIsolated(CancellationToken cancellationToken = default)
     {
         using var _ = ExecutionContextExt.TrySuppressFlow();
+#pragma warning disable MA0100
         return Run(cancellationToken);
+#pragma warning restore MA0100
     }
 }
