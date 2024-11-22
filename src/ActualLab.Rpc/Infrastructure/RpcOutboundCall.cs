@@ -58,6 +58,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         var isStream = methodDef?.IsStream == true;
         var relatedId = context.RelatedId;
+        var completedStageName = CompletedStageName;
         var result = ZString.Concat(
             DebugTypeName,
             isStream ? " ~" : " #",
@@ -65,10 +66,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             ' ',
             methodDef?.FullName.Value ?? "n/a",
             arguments?.ToString() ?? "(n/a)",
-            headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");
-        var completedStageName = CompletedStageName;
-        if (!completedStageName.IsNullOrEmpty())
-            result += $": {completedStageName}";
+            headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",
+            completedStageName.IsNullOrEmpty() ? "" : $" @{completedStageName}");
         return result;
     }
 

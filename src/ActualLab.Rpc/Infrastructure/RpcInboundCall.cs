@@ -77,6 +77,7 @@ public abstract class RpcInboundCall : RpcCall
             : MethodDef.IsStream
                 ? Context.Peer.RemoteObjects.Get(relatedId)
                 : Context.Peer.OutboundCalls.Get(relatedId);
+        var completedStageName = CompletedStageName;
 
         var result = ZString.Concat(
             DebugTypeName,
@@ -86,10 +87,8 @@ public abstract class RpcInboundCall : RpcCall
             MethodDef.FullName,
             arguments,
             headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",
-            relatedObject != null ? $" for {relatedObject}" : "");
-        var completedStageName = CompletedStageName;
-        if (!completedStageName.IsNullOrEmpty())
-            result += $": {completedStageName}";
+            relatedObject != null ? $" for [{relatedObject}]" : "",
+            completedStageName.IsNullOrEmpty() ? "" : $" @{completedStageName}");
         return result;
     }
 
