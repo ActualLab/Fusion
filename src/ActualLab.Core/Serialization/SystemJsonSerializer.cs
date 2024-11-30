@@ -9,11 +9,7 @@ namespace ActualLab.Serialization;
 
 public class SystemJsonSerializer : TextSerializerBase
 {
-#if NET9_0_OR_GREATER
-    private static readonly Lock StaticLock = new();
-#else
-    private static readonly object StaticLock = new();
-#endif
+    private static readonly Lock StaticLock = LockFactory.Create();
 
     public static JsonSerializerOptions PrettyOptions { get; set; }
         = new() { WriteIndented = true };

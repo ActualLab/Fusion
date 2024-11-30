@@ -26,11 +26,7 @@ public abstract record Requirement<
 {
     private const string MustExistFieldOrPropertyName = "MustExist";
     // ReSharper disable once StaticMemberInGenericType
-#if NET9_0_OR_GREATER
-    private static readonly Lock MustExistLock = new();
-#else
-    private static readonly object MustExistLock = new();
-#endif
+    private static readonly Lock MustExistLock = LockFactory.Create();
     private static volatile Requirement<T>? _mustExist;
 
     public static Requirement<T> MustExist {

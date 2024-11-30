@@ -5,11 +5,7 @@ namespace ActualLab.Fusion.Client.Caching;
 
 public partial class RemoteComputedCache
 {
-#if NET9_0_OR_GREATER
-    private static readonly Lock StaticLock = new();
-#else
-    private static readonly object StaticLock = new();
-#endif
+    private static readonly Lock StaticLock = LockFactory.Create();
 
     public static Func<ComputeMethodInput, RpcPeer, Task>? UpdateDelayer {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

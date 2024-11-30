@@ -23,13 +23,8 @@ public static class ByteSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class ByteSerialized<T>
 {
-#if NET9_0_OR_GREATER
     // ReSharper disable once StaticMemberInGenericType
-    protected static readonly Lock StaticLock = new();
-#else
-    // ReSharper disable once StaticMemberInGenericType
-    protected static readonly object StaticLock = new();
-#endif
+    protected static readonly Lock StaticLock = LockFactory.Create();
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public T Value { get; init; } = default!;

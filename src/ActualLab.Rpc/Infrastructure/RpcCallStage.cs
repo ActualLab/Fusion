@@ -2,11 +2,7 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public static class RpcCallStage
 {
-#if NET9_0_OR_GREATER
-    private static readonly Lock StaticLock = new();
-#else
-    private static readonly object StaticLock = new();
-#endif
+    private static readonly Lock StaticLock = LockFactory.Create();
     private static Dictionary<int, string> _callStageNames = new() {
         { ResultReady, nameof(ResultReady) },
         { ResultReady | Unregistered, "*" + nameof(ResultReady) },

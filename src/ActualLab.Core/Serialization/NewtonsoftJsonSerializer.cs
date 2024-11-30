@@ -16,11 +16,7 @@ namespace ActualLab.Serialization;
 #endif
 public class NewtonsoftJsonSerializer : TextSerializerBase
 {
-#if NET9_0_OR_GREATER
-    private static readonly Lock StaticLock = new();
-#else
-    private static readonly object StaticLock = new();
-#endif
+    private static readonly Lock StaticLock = LockFactory.Create();
     private readonly JsonSerializer _jsonSerializer;
 
     public static JsonSerializerSettings DefaultSettings { get; set; } = new() {

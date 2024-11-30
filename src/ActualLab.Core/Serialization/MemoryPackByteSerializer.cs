@@ -12,11 +12,7 @@ namespace ActualLab.Serialization;
 
 public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IByteSerializer
 {
-#if NET9_0_OR_GREATER
-    private static readonly Lock StaticLock = new();
-#else
-    private static readonly object StaticLock = new();
-#endif
+    private static readonly Lock StaticLock = LockFactory.Create();
     private readonly ConcurrentDictionary<Type, MemoryPackByteSerializer> _typedSerializerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 

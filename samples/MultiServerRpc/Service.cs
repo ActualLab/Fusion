@@ -27,7 +27,7 @@ public sealed partial record Chat_Post(
 
 public class Chat(ServerId serverId) : IChat
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly Dictionary<Symbol, List<string>> _chats = new();
 
     private ServerId ServerId { get; } = serverId;

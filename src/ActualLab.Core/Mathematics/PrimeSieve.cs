@@ -10,11 +10,7 @@ public sealed class PrimeSieve
         1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369,
     ];
 
-#if NET9_0_OR_GREATER
-    private static readonly Lock StaticLock = new();
-#else
-    private static readonly object StaticLock = new();
-#endif
+    private static readonly Lock StaticLock = LockFactory.Create();
     private static PrimeSieve? _instance;
 
     private readonly int _limitSqrt;

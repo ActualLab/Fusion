@@ -6,11 +6,7 @@ namespace ActualLab.CommandR.Operations;
 
 public class Operation : IHasUuid, IHasId<Symbol>
 {
-#if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
+    private readonly Lock _lock = LockFactory.Create();
     Symbol IHasId<Symbol>.Id => Uuid;
 
     public long? Index { get; set; }

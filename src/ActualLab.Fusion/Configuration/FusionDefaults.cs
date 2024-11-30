@@ -4,11 +4,7 @@ namespace ActualLab.Fusion;
 
 public static class FusionDefaults
 {
-#if NET9_0_OR_GREATER
-    private static readonly Lock StaticLock = new();
-#else
-    private static readonly object StaticLock = new();
-#endif
+    private static readonly Lock StaticLock = LockFactory.Create();
 
     public static FusionMode Mode {
         get;

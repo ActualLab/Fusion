@@ -4,11 +4,7 @@ namespace ActualLab;
 
 public static class StaticLog
 {
-#if NET9_0_OR_GREATER
-    private static readonly Lock StaticLock = new();
-#else
-    private static readonly object StaticLock = new();
-#endif
+    private static readonly Lock StaticLock = LockFactory.Create();
     private static readonly ConcurrentDictionary<object, ILogger> Cache = new(HardwareInfo.ProcessorCountPo2, 131);
     private static volatile ILoggerFactory _factory = NullLoggerFactory.Instance;
 
