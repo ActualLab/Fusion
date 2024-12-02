@@ -8,6 +8,20 @@
 ![Commit Activity](https://img.shields.io/github/commit-activity/m/actuallab/Fusion)
 [![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Usage](#usage)
+- [Documentation](#documentation)
+- ["What is your evidence?"](#what-is-your-evidence)
+- [Is Fusion fast?](#is-fusion-fast)
+- [Does Fusion scale?](#does-fusion-scale)
+- [Show me the code!](#enough-talk-show-me-the-code)
+- [Why Fusion is a game changer for real-time apps?](#why-fusion-is-a-game-changer-for-real-time-apps)
+- [Why Fusion is a game changer for Blazor apps with complex UI?](#why-fusion-is-a-game-changer-for-blazor-apps-with-complex-ui)
+- [Next Steps](#next-steps)
+- [Posts And Other Content](#posts-and-other-content)
+
 ## Overview
 
 `ActualLab.Fusion` is a successor of [Stl.Fusion](https://github.com/servicetitan/Stl.Fusion) - a distributed reactive memoization library for .NET that simplifies real-time updates, caching, and managing client-side state in complex distributed applications. By using dependency tracking and automated invalidation, Fusion ensures that values are recomputed only when necessary, making your application both efficient and responsive.
