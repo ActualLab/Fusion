@@ -6,11 +6,7 @@ namespace ActualLab.Serialization.Internal;
 
 public static class NewtonsoftJsonSerializationBinder
 {
-#if NET9_0_OR_GREATER
-    private static readonly Lock StaticLock = new();
-#else
-    private static readonly object StaticLock = new();
-#endif
+    private static readonly Lock StaticLock = LockFactory.Create();
 
     [field: AllowNull, MaybeNull]
     public static ISerializationBinder Default {

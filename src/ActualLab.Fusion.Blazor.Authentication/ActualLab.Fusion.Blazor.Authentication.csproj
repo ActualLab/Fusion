@@ -25,5 +25,11 @@
     <ProjectReference Include="..\ActualLab.Fusion.Blazor\ActualLab.Fusion.Blazor.csproj" />
     <ProjectReference Include="..\ActualLab.Fusion.Ext.Contracts\ActualLab.Fusion.Ext.Contracts.csproj" />
   </ItemGroup>
+	
+  <ItemGroup>
+    <Using Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))" Alias="Lock" Include="System.Threading.Lock" />
+    <Using Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))" Alias="Lock" Include="Backport.System.Threading.Lock" />
+    <Using Alias="LockFactory" Include="Backport.System.Threading.LockFactory" />
+  </ItemGroup>	
 
 </Project>
