@@ -1,22 +1,19 @@
 using System.Web;
 using Microsoft.AspNetCore.Components;
-using ActualLab.OS;
 
 namespace ActualLab.Fusion.Blazor;
 
-public class BlazorModeHelper(NavigationManager navigator)
+public class BlazorModeHelper(NavigationManager navigator, JSRuntimeInfo jsRuntimeInfo)
 {
-    public static readonly bool IsBlazorServer = OSInfo.Kind != OSKind.WebAssembly;
-
-    protected NavigationManager Navigator { get; } = navigator;
+    public bool IsBlazorServer = jsRuntimeInfo.IsRemote;
 
     public virtual void ChangeMode(bool isBlazorServer)
     {
         if (IsBlazorServer == isBlazorServer)
             return;
 
-        var switchUrl = GetModeChangeUrl(isBlazorServer, Navigator.Uri);
-        Navigator.NavigateTo(switchUrl, true);
+        var switchUrl = GetModeChangeUrl(isBlazorServer, navigator.Uri);
+        navigator.NavigateTo(switchUrl, true);
     }
 
     public virtual string GetModeChangeUrl(bool isBlazorServer, string? redirectTo = null)

@@ -1,9 +1,8 @@
-@using System.Reflection
 @inject BlazorModeHelper BlazorModeHelper
-@inject IJSRuntime JS
+@inject BlazorCircuitContext BlazorCircuitContext
 
 <BarDropdown Class="@CssClass">
-    <BarDropdownToggle>@(_isPrerendering ? "Loading..." : GetModeName(_isServerSideBlazor))</BarDropdownToggle>
+    <BarDropdownToggle>@GetModeName()</BarDropdownToggle>
     <BarDropdownMenu RightAligned="true">
         @foreach(var mode in new [] {true, false}) {
             <BarDropdownItem Clicked="@(() => BlazorModeHelper.ChangeMode(mode))">@GetModeName(mode)</BarDropdownItem>
@@ -12,24 +11,12 @@
 </BarDropdown>
 
 @code {
-    private bool _isPrerendering;
-    private bool _isServerSideBlazor = BlazorModeHelper.IsBlazorServer;
-
     [Parameter]
     public string CssClass { get; set; } = "";
 
-    protected override void OnInitialized()
-    {
-        var jsRuntimeType = JS.GetType();
-        if (jsRuntimeType.Name != "RemoteJSRuntime") {
-            _isPrerendering = false;
-            return;
-        }
-        var fClientProxy = jsRuntimeType.GetField("_clientProxy", BindingFlags.Instance | BindingFlags.NonPublic);
-        var clientProxy = fClientProxy?.GetValue(JS);
-        _isPrerendering = fClientProxy != null && clientProxy == null;
-    }
+    private string GetModeName()
+        => BlazorCircuitContext.IsPrerendering ? "Loading..." : GetModeName(BlazorCircuitContext.IsServerSide);
 
-    private string GetModeName(bool isServerSideBlazor)
-        => isServerSideBlazor ? "Blazor Server" : "Blazor WASM";
+    private string GetModeName(bool isServerSide)
+        => isServerSide ? "Blazor Server" : "Blazor WASM";
 }

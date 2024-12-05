@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Fusion.UI;
+using Microsoft.JSInterop;
 
 namespace ActualLab.Fusion.Blazor;
 
@@ -25,12 +25,13 @@ public readonly struct FusionBlazorBuilder
 
         // We want above Contains call to run in O(1), so...
         services.Insert(0, AddedTagDescriptor);
-        services.TryAddScoped(c => new UICommander(c));
-        services.TryAddScoped(_ => new UIActionFailureTracker.Options());
-        services.TryAddScoped(c => new UIActionFailureTracker(
+        services.AddScoped(c => new UICommander(c));
+        services.AddScoped(_ => new UIActionFailureTracker.Options());
+        services.AddScoped(c => new UIActionFailureTracker(
             c.GetRequiredService<UIActionFailureTracker.Options>(), c));
-        services.TryAddScoped(c => new BlazorModeHelper(
-            c.GetRequiredService<NavigationManager>()));
-        services.TryAddScoped(c => new BlazorCircuitContext(c));
+        services.AddScoped(c => new JSRuntimeInfo(c.GetRequiredService<IJSRuntime>()));
+        services.AddScoped(c => new BlazorModeHelper(
+            c.GetRequiredService<NavigationManager>(), c.GetRequiredService<JSRuntimeInfo>()));
+        services.AddScoped(c => new BlazorCircuitContext(c));
     }
 }
