@@ -4,9 +4,9 @@ using ActualLab.Fusion.Operations.Internal;
 namespace ActualLab.Fusion.Extensions.Services;
 
 public class InMemoryKeyValueStore(
-        InMemoryKeyValueStore.Options settings,
-        IServiceProvider services
-        ) : WorkerBase, IKeyValueStore
+    InMemoryKeyValueStore.Options settings,
+    IServiceProvider services
+    ) : WorkerBase, IKeyValueStore
 {
     public record Options
     {

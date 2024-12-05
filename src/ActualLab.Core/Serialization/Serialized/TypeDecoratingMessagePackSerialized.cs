@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using MessagePack;
 
 namespace ActualLab.Serialization;
@@ -11,7 +10,6 @@ public static class TypeDecoratingMessagePackSerialized
         => new() { Value = value };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static TypeDecoratingMessagePackSerialized<TValue> New<TValue>(byte[] data)
         => new() { Data = data };
 }
@@ -25,7 +23,6 @@ public partial class TypeDecoratingMessagePackSerialized<T> : ByteSerialized<T>
 {
     private static IByteSerializer<T>? _serializer;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override IByteSerializer<T> GetSerializer()
     {
         if (_serializer is { } serializer)

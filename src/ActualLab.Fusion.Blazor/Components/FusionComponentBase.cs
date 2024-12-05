@@ -11,7 +11,9 @@ public class FusionComponentBase : ComponentBase, IHandleEvent
 
     protected bool MustRenderAfterEvent { get; set; } = true;
     [field: AllowNull, MaybeNull]
+#pragma warning disable IL2072
     protected ComponentInfo ComponentInfo => field ??= ComponentInfo.Get(GetType());
+#pragma warning restore IL2072
     protected int ParameterSetIndex { get; set; }
     [field: AllowNull, MaybeNull]
     internal Action StateHasChangedInvoker => field ??= StateHasChanged;

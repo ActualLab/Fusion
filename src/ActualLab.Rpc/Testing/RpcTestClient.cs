@@ -1,6 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Channels;
-using ActualLab.Internal;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
 
@@ -74,7 +72,6 @@ public class RpcTestClient(
         return peerState;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override async Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
         var channel = await this[clientPeer.Ref].PullClientChannel(cancellationToken).ConfigureAwait(false);

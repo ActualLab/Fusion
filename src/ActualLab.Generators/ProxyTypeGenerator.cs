@@ -12,6 +12,7 @@ public class ProxyTypeGenerator
         "IL2072", // [DynamicallyAccessedMembers] attribute(s) don't match...
         "IL2092", // [DynamicallyAccessedMembers] attribute(s) don't match...
         "IL2111", // Member is accessed via reflection
+        "IL3050", // AOT analysis warning IL3050: member 'M': Using member 'M1' which has 'RequiresDynamicCodeAttribute' can break functionality when AOT compiling.
     }.Select(x => Trivia(
         PragmaWarningDirectiveTrivia(Token(SyntaxKind.DisableKeyword), true)
             .WithErrorCodes(SingletonSeparatedList<ExpressionSyntax>(IdentifierName(x)))))

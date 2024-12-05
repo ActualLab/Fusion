@@ -1,23 +1,18 @@
 using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 
 namespace ActualLab.Serialization;
 
 public interface IByteSerializer
 {
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength);
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void Write(IBufferWriter<byte> bufferWriter, object? value, Type type);
+
     public IByteSerializer<T> ToTyped<T>(Type? serializedType = null);
 }
 
 public interface IByteSerializer<T>
 {
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public T Read(ReadOnlyMemory<byte> data, out int readLength);
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void Write(IBufferWriter<byte> bufferWriter, T value);
 }
 

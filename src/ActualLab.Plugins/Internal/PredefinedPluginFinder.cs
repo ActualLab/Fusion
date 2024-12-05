@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Plugins.Metadata;
 
 namespace ActualLab.Plugins.Internal;
@@ -13,7 +12,7 @@ public class PredefinedPluginFinder : IPluginFinder
 
     public PluginSetInfo FoundPlugins { get; }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
+    // ReSharper disable once ConvertToPrimaryConstructor
     public PredefinedPluginFinder(
         Options settings,
         IPluginInfoProvider pluginInfoProvider)
@@ -25,7 +24,6 @@ public class PredefinedPluginFinder : IPluginFinder
             settings.ResolveIndirectDependencies);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     public Task Run(CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 }

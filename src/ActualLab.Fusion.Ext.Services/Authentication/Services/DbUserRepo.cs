@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
@@ -27,7 +28,9 @@ public interface IDbUserRepo<in TDbContext, TDbUser, TDbUserId>
         TDbContext dbContext, UserIdentity userIdentity, bool forUpdate, CancellationToken cancellationToken = default);
 }
 
-public class DbUserRepo<TDbContext, TDbUser, TDbUserId>(
+public class DbUserRepo<TDbContext,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUser,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>(
     DbAuthService<TDbContext>.Options settings,
     IServiceProvider services
     ) : DbServiceBase<TDbContext>(services), IDbUserRepo<TDbContext, TDbUser, TDbUserId>

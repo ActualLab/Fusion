@@ -47,17 +47,22 @@ public static partial class TypeExt
         }
     } = DefaultNonProxyTypeResolver;
 
-    public static object? GetDefaultValue(this Type type)
+    public static object? GetDefaultValue(
+        [DynamicallyAccessedMembers(
+            DynamicallyAccessedMemberTypes.PublicParameterlessConstructor |
+            DynamicallyAccessedMemberTypes.PublicConstructors |
+            DynamicallyAccessedMemberTypes.NonPublicConstructors)] this Type type)
     {
         if (!type.IsValueType)
             return null;
-
+#pragma warning disable IL2067
         return DefaultValueCache.GetOrAdd(type, static type => {
 #if !NETSTANDARD2_0
             return RuntimeHelpers.GetUninitializedObject(type);
 #else
             return FormatterServices.GetUninitializedObject(type);
 #endif
+#pragma warning restore IL2067
         });
     }
 

@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using ActualLab.OS;
 using Errors = ActualLab.Serialization.Internal.Errors;
 
@@ -57,9 +56,8 @@ public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IBy
     public MemoryPackByteSerializer() : this(DefaultOptions) { }
 
     public IByteSerializer<T> ToTyped<T>(Type? serializedType = null)
-        => (IByteSerializer<T>) GetTypedSerializer(serializedType ?? typeof(T));
+        => (IByteSerializer<T>)GetTypedSerializer(serializedType ?? typeof(T));
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public virtual object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         var serializer = _typedSerializerCache.GetOrAdd(type,
@@ -70,7 +68,6 @@ public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IBy
         return serializer.Read(data, type, out readLength);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public virtual void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
     {
         var serializer = _typedSerializerCache.GetOrAdd(type,
@@ -91,12 +88,12 @@ public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IBy
             this);
 }
 
-public class MemoryPackByteSerializer<T>(MemoryPackSerializerOptions options, Type serializedType)
+public class MemoryPackByteSerializer<T>(
+    MemoryPackSerializerOptions options, Type serializedType)
     : MemoryPackByteSerializer(options), IByteSerializer<T>
 {
     public Type SerializedType { get; } = serializedType;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         if (type != SerializedType)
@@ -106,7 +103,6 @@ public class MemoryPackByteSerializer<T>(MemoryPackSerializerOptions options, Ty
         return Read(data, out readLength);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
     {
         if (type != SerializedType)
@@ -115,19 +111,19 @@ public class MemoryPackByteSerializer<T>(MemoryPackSerializerOptions options, Ty
         Write(bufferWriter, (T)value!);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public T Read(ReadOnlyMemory<byte> data, out int readLength)
     {
 #if !NETSTANDARD2_0
         var result = default(T);
+#pragma warning disable IL2091
         readLength = MemoryPackSerializer.Deserialize(data.Span, ref result, Options);
+#pragma warning restore IL2091
         return result!;
 #else
         return MessagePackSerializer.Deserialize<T>(data, MessagePackByteSerializer.DefaultOptions, out readLength);
 #endif
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void Write(IBufferWriter<byte> bufferWriter, T value)
 #if !NETSTANDARD2_0
         => MemoryPackSerializer.Serialize(bufferWriter, value, Options);

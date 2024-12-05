@@ -1,7 +1,5 @@
 using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.Rpc.Serialization.Internal;
 
@@ -10,7 +8,6 @@ namespace ActualLab.Rpc.Serialization;
 public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bool allowPolymorphism = true)
     : RpcArgumentSerializer(allowPolymorphism)
 {
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
     {
         var buffer = GetWriteBuffer(sizeHint);
@@ -23,7 +20,6 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bo
         return GetWriteBufferMemory(buffer);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, ReadOnlyMemory<byte> data)
     {
         var itemDeserializer = (ItemDeserializer)(AllowPolymorphism
@@ -42,7 +38,6 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bo
         protected readonly IByteSerializer Serializer = serializer;
         protected readonly IBufferWriter<byte> Buffer = buffer;
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnStruct<T>(T item, int index)
         {
             var type = typeof(T);
@@ -54,7 +49,6 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bo
     private sealed class ItemPolymorphicSerializer(IByteSerializer serializer, IBufferWriter<byte> buffer)
         : ItemSerializer(serializer, buffer)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnClass(Type type, object? item, int index)
         {
             var itemType = item?.GetType() ?? type;
@@ -62,7 +56,6 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bo
             Serializer.Write(Buffer, item, itemType);
         }
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnAny(Type type, object? item, int index)
         {
             if (type.IsValueType) {
@@ -82,14 +75,12 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bo
         IBufferWriter<byte> buffer)
         : ItemSerializer(serializer, buffer)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnClass(Type type, object? item, int index)
         {
             Buffer.Append(ByteTypeSerializer.NullTypeSpan);
             Serializer.Write(Buffer, item, type);
         }
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnAny(Type type, object? item, int index)
         {
             if (type.IsValueType) {
@@ -108,11 +99,9 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bo
         IBufferWriter<byte> buffer)
         : ItemSerializer(serializer, buffer)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnClass(Type type, object? item, int index)
             => Serializer.Write(Buffer, item, type);
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnAny(Type type, object? item, int index)
         {
             if (type != typeof(CancellationToken))
@@ -128,7 +117,6 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bo
         protected readonly IByteSerializer Serializer = serializer;
         protected ReadOnlyMemory<byte> Data = data;
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override T OnStruct<T>(int index)
             => typeof(T) == typeof(CancellationToken)
                 ? default!
@@ -138,14 +126,12 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bo
     private sealed class ItemPolymorphicDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
         : ItemDeserializer(serializer, data)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnClass(Type type, int index)
         {
             var itemType = ByteTypeSerializer.ReadDerivedItemType(ref Data, type);
             return Serializer.Read(ref Data, itemType);
         }
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnAny(Type type, int index, object? defaultValue)
         {
             if (type.IsValueType)
@@ -161,14 +147,12 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bo
     private sealed class ItemNonPolymorphicDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
         : ItemDeserializer(serializer, data)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnClass(Type type, int index)
         {
             ByteTypeSerializer.ReadExactItemType(ref Data, type);
             return Serializer.Read(ref Data, type);
         }
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnAny(Type type, int index, object? defaultValue)
         {
             if (type.IsValueType)
@@ -184,11 +168,9 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bo
     private sealed class ItemValueOnlyDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
         : ItemDeserializer(serializer, data)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnClass(Type type, int index)
             => Serializer.Read(ref Data, type);
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnAny(Type type, int index, object? defaultValue)
             => type == typeof(CancellationToken)
                 ? defaultValue

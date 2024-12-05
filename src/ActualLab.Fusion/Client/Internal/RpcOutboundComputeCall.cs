@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
@@ -8,7 +6,6 @@ namespace ActualLab.Fusion.Client.Internal;
 
 public interface IRpcOutboundComputeCall
 {
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void SetInvalidated(RpcInboundContext context);
 }
 
@@ -29,7 +26,6 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
     // ReSharper disable once InconsistentlySynchronizedField
     public Task WhenInvalidated => WhenInvalidatedSource.Task;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override int? GetReconnectStage(bool isPeerChanged)
     {
         lock (Lock) {
@@ -49,7 +45,6 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void SetResult(object? result, RpcInboundContext? context)
     {
         // We always use Lock to update ResultSource in this type
@@ -73,7 +68,6 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void SetMatch(RpcInboundContext? context)
     {
         // We always use Lock to update ResultSource in this type
@@ -97,7 +91,6 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void SetError(Exception error, RpcInboundContext? context, bool assumeCancelled = false)
     {
         // SetError call not only sets the error, but also
@@ -121,7 +114,6 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override bool Cancel(CancellationToken cancellationToken)
     {
         // We always use Lock to update ResultSource in this type
@@ -135,12 +127,10 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void SetInvalidated(RpcInboundContext? context)
         // Let's be pessimistic here and ignore version check here
         => SetInvalidated(false);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void SetInvalidated(bool notifyCancelled)
     {
         lock (Lock) {
@@ -154,7 +144,6 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
 
     // Private methods
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private bool SetInvalidatedUnsafe(bool notifyCancelled)
     {
         if (!WhenInvalidatedSource.TrySetResult(default))

@@ -15,11 +15,13 @@ public class CastleDefaultResultInterceptor : IInterceptor
             if (!t.IsClass)
                 return t == typeof(void) ? VoidTag : Activator.CreateInstance(t);
 
+#pragma warning disable IL2062
             return typeof(Task).IsAssignableFrom(t)
                 ? t.IsGenericType
                     ? TaskExt.FromDefaultResult(t.GenericTypeArguments[0])
                     : Task.CompletedTask
                 : null;
+#pragma warning restore IL2062
         });
         if (!ReferenceEquals(result, VoidTag))
             invocation.ReturnValue = result;

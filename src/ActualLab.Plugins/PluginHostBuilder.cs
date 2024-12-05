@@ -1,6 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Plugins.Internal;
+using Errors = ActualLab.Plugins.Internal.Errors;
 
 namespace ActualLab.Plugins;
 
@@ -38,11 +37,9 @@ public class PluginHostBuilder
             c.LogFor<FileSystemPluginFinder>()));
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     public IPluginHost Build()
         => Task.Run(() => BuildAsync()).Result;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     public virtual async Task<IPluginHost> BuildAsync(CancellationToken cancellationToken = default)
     {
         var services = ServiceProviderFactory(Services);

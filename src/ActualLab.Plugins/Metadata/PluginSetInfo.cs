@@ -1,7 +1,6 @@
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.Plugins.Internal;
-
 namespace ActualLab.Plugins.Metadata;
+
+#pragma warning disable IL2026
 
 public class PluginSetInfo
 {
@@ -25,7 +24,6 @@ public class PluginSetInfo
         TypesByBaseTypeOrderedByDependency = typesByBaseTypeOrderedByDependency;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     public PluginSetInfo(
         IEnumerable<Type> plugins,
         IPluginInfoProvider pluginInfoProvider,
@@ -89,7 +87,6 @@ public class PluginSetInfo
     private static HashSet<TSource> ToHashSet<TSource>(IEnumerable<TSource> source)
         => new(source);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     private static Dictionary<Assembly, HashSet<Assembly>> GetAssemblyDependencies(
         HashSet<Assembly> assemblies,
         bool resolveIndirectDependencies)
@@ -108,7 +105,6 @@ public class PluginSetInfo
                     .Where(x => x != null)))!;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     private static HashSet<Assembly> GetAssemblyDependencies(Assembly assembly, HashSet<Assembly>? result = null)
     {
         result ??= new HashSet<Assembly>();

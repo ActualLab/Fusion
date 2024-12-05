@@ -1,10 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net.WebSockets;
 using System.Text.Encodings.Web;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.WebSockets;
-using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Clients;
 
@@ -71,14 +69,12 @@ public class RpcWebSocketClient(
     public RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; }
         = services.GetRequiredService<RpcWebSocketChannelOptionsProvider>();
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
         var uri = Settings.ConnectionUriResolver(this, clientPeer);
         return ConnectRemote(clientPeer, uri, cancellationToken);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public virtual async Task<RpcConnection> ConnectRemote(
         RpcClientPeer clientPeer, Uri? uri, CancellationToken cancellationToken)
     {

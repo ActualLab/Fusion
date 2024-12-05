@@ -6,9 +6,9 @@ using ActualLab.Fusion.Extensions.Internal;
 namespace ActualLab.Fusion.Extensions.Services;
 
 public partial class SandboxedKeyValueStore<TContext>(
-        SandboxedKeyValueStore<TContext>.Options settings,
-        IServiceProvider services
-        ) : ISandboxedKeyValueStore
+    SandboxedKeyValueStore<TContext>.Options settings,
+    IServiceProvider services
+    ) : ISandboxedKeyValueStore
 {
     public record Options
     {

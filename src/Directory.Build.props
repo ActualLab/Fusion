@@ -4,8 +4,8 @@
 
   <PropertyGroup>
     <!-- Compiler & toolchain -->
-    <PublishConfiguration>Release</PublishConfiguration>
     <IsPackable>true</IsPackable>
+    <IsTrimmable>true</IsTrimmable>
     <!-- PolySharp -->
     <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
     <!-- Signing -->

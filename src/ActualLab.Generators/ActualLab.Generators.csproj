@@ -16,6 +16,8 @@
 
   <!-- Generator-specific settings -->
   <PropertyGroup>
+    <IsTrimmable>false</IsTrimmable>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
     <AnalyzerLanguage>cs</AnalyzerLanguage>
     <IsRoslynComponent>true</IsRoslynComponent>
     <DevelopmentDependency>true</DevelopmentDependency>

@@ -5,7 +5,6 @@ using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Serialization;
 using ActualLab.Rpc.Testing;
 using ActualLab.Rpc.Trimming;
@@ -21,6 +20,7 @@ public readonly struct RpcBuilder
 
     static RpcBuilder() => CodeKeeper.AddFakeAction(
         static () => {
+#pragma warning disable IL2026, IL2111
             CodeKeeper.KeepStatic(typeof(Proxies));
             CodeKeeper.KeepStatic(typeof(RpcDefaultDelegates));
 
@@ -64,9 +64,9 @@ public readonly struct RpcBuilder
             CodeKeeper.Keep<RpcInboundContextFactory>();
             CodeKeeper.Keep<RpcOutboundContext>();
             CodeKeeper.Keep<RpcCacheInfoCapture>();
+#pragma warning restore IL2026, IL2111
         });
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     internal RpcBuilder(
         IServiceCollection services,
         Action<RpcBuilder>? configure,
@@ -166,13 +166,11 @@ public readonly struct RpcBuilder
 
     // AddService & its specific variants
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
         (RpcServiceMode mode = default, Symbol name = default)
         where TService : class
         => AddService(typeof(TService), mode, name);
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
@@ -180,12 +178,10 @@ public readonly struct RpcBuilder
         where TService : class
         where TImplementation : class, TService
         => AddService(typeof(TService), typeof(TImplementation), mode, name);
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         RpcServiceMode mode = default, Symbol name = default)
         => AddService(serviceType, serviceType, mode, name);
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
@@ -202,13 +198,11 @@ public readonly struct RpcBuilder
         };
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
         (Symbol name = default)
         where TService : class
         => AddClient(typeof(TService), typeof(TService), name);
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TProxyBase>
@@ -216,12 +210,10 @@ public readonly struct RpcBuilder
         where TService : class
         where TProxyBase : class, TService
         => AddClient(typeof(TService), typeof(TProxyBase), name);
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         Symbol name = default)
         => AddClient(serviceType, serviceType, name);
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,
@@ -316,7 +308,6 @@ public readonly struct RpcBuilder
         return this;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddDistributedService<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
@@ -324,7 +315,6 @@ public readonly struct RpcBuilder
         where TService : class
         where TImplementation : class, TService
         => AddDistributedService(typeof(TService), typeof(TImplementation), name);
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddDistributedService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
@@ -351,7 +341,6 @@ public readonly struct RpcBuilder
         return this;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddDistributedServicePair<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
@@ -359,7 +348,6 @@ public readonly struct RpcBuilder
         where TService : class
         where TImplementation : class, TService
         => AddDistributedServicePair(typeof(TService), typeof(TImplementation), name);
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcBuilder AddDistributedServicePair(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,

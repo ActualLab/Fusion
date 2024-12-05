@@ -50,8 +50,7 @@ public sealed class RpcServiceDef
             .Select(x => LegacyName.New(x)));
     }
 
-    internal void BuildMethods(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType)
+    internal void BuildMethods(Type serviceType)
     {
         if (serviceType != Type)
             throw new ArgumentOutOfRangeException(nameof(serviceType));

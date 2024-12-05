@@ -1,13 +1,10 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
-using ActualLab.Internal;
 using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
 
 public static class TextSerializerExt
 {
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static object? ReadDelimited(this ITextSerializer serializer, ref ReadOnlyMemory<byte> data, Type type, byte delimiter)
     {
@@ -24,12 +21,10 @@ public static class TextSerializerExt
         return result;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T Read<T>(this ITextSerializer serializer, string data)
         => (T) serializer.Read(data, typeof(T))!;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string Write<T>(this ITextSerializer serializer, T value)
         // ReSharper disable once HeapView.PossibleBoxingAllocation

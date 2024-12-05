@@ -1,6 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Channels;
-using ActualLab.Internal;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
@@ -14,7 +12,6 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
         AllowSynchronousContinuations = true,
     };
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task<RpcConnection> Connect(RpcClientPeer clientPeer, CancellationToken cancellationToken)
         => clientPeer.ConnectionKind switch {
             RpcPeerConnectionKind.Remote => ConnectRemote(clientPeer, cancellationToken),

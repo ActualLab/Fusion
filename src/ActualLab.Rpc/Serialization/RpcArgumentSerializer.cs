@@ -1,7 +1,5 @@
 using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using Errors = ActualLab.Rpc.Internal.Errors;
@@ -19,9 +17,7 @@ public abstract class RpcArgumentSerializer(bool allowPolymorphism)
 
     public bool AllowPolymorphism { get; } = allowPolymorphism;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint);
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, ReadOnlyMemory<byte> data);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 using ActualLab.Rpc.Internal;
 using Errors = ActualLab.Internal.Errors;
-using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -86,7 +85,6 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     public bool Unregister(RpcOutboundCall call)
         => Calls.TryRemove(call.Id, call);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void TryReroute()
     {
         foreach (var call in this)
@@ -94,7 +92,6 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 call.SetRerouteError();
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
     {
         var lastSummaryReportAt = CpuTimestamp.Now;
@@ -158,7 +155,6 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Reconnect(RpcHandshake handshake, bool isPeerChanged, CancellationToken cancellationToken)
     {
         try {
@@ -213,7 +209,6 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Abort(Exception error, bool assumeCancelled)
     {
         var abortedCallIds = new HashSet<long>();

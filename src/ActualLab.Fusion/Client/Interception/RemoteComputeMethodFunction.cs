@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Cysharp.Text;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Internal;
@@ -10,7 +9,6 @@ using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
 using Errors = ActualLab.Fusion.Internal.Errors;
-using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Fusion.Client.Interception;
 
@@ -47,7 +45,6 @@ public class RemoteComputeMethodFunction<T>(
     public override string ToString()
         => _toString ??= ZString.Concat('*', base.ToString());
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override async ValueTask<Computed<T>> Compute(
         ComputedInput input, Computed<T>? existing,
         CancellationToken cancellationToken)
@@ -175,7 +172,6 @@ public class RemoteComputeMethodFunction<T>(
         return computed;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async ValueTask<Computed<T>> ComputeCachedOrRpc(
         ComputeMethodInput input,
         IRemoteComputedCache cache,

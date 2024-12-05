@@ -23,10 +23,13 @@ public class FusionProxyCodeKeeper : ProxyCodeKeeper
     static FusionProxyCodeKeeper()
         => _ = default(FusionBuilder).Services;
 
-    public override void KeepMethodArgument<TArg>(string name = "", int index = -1)
+    public override void KeepMethodArgument<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(string name = "", int index = -1)
         => _commanderProxyCodeKeeper.KeepMethodArgument<TArg>(name, index);
 
-    public override void KeepMethodResult<TResult, TUnwrapped>(string name = "")
+    public override void KeepMethodResult<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(string name = "")
     {
         _commanderProxyCodeKeeper.KeepMethodResult<TResult, TUnwrapped>(name);
         if (AlwaysTrue)

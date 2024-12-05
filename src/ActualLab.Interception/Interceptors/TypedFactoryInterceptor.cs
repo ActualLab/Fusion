@@ -17,7 +17,8 @@ public class TypedFactoryInterceptor : Interceptor
         MustInterceptSyncCalls = true;
     }
 
-    protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
+    protected override MethodDef? CreateMethodDef(MethodInfo method,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType)
     {
         var methodDef = base.CreateMethodDef(method, proxyType);
         if (methodDef?.ReturnType == typeof(void))
@@ -33,7 +34,9 @@ public class TypedFactoryInterceptor : Interceptor
         var parameterTypes = new Type[parameters.Length];
         for (int i = 0; i < parameters.Length; i++)
             parameterTypes[i] = parameters[i].ParameterType;
+#pragma warning disable IL2077
         var factory = ActivatorUtilities.CreateFactory(methodDef.UnwrappedReturnType, parameterTypes);
+#pragma warning restore IL2077
         return invocation => factory.Invoke(Services, invocation.Arguments.ToArray());
     }
 }

@@ -1,6 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
-
 namespace ActualLab.Channels;
 
 public static partial class ChannelExt
@@ -90,7 +87,6 @@ public static partial class ChannelExt
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static Channel<T> WithTextSerializer<T>(
         this Channel<string> downstreamChannel,
         ITextSerializer<T> serializer,
@@ -115,7 +111,6 @@ public static partial class ChannelExt
         return pair.Channel2;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static Channel<T> WithByteSerializer<T>(
         this Channel<ReadOnlyMemory<byte>> downstreamChannel,
         IByteSerializer<T> serializer,

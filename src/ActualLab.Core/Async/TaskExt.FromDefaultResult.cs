@@ -1,6 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 
 namespace ActualLab.Async;
+
+#pragma warning disable IL2067, IL3050
 
 public static partial class TaskExt
 {
@@ -9,7 +12,12 @@ public static partial class TaskExt
 
     // FromDefaultResult
 
-    public static Task FromDefaultResult(Type resultType)
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ValueTask<>))]
+    public static Task FromDefaultResult(
+        [DynamicallyAccessedMembers(
+            DynamicallyAccessedMemberTypes.PublicParameterlessConstructor |
+            DynamicallyAccessedMemberTypes.PublicConstructors |
+            DynamicallyAccessedMemberTypes.NonPublicConstructors)] Type resultType)
         => FromDefaultResultCache.GetOrAdd(resultType,
             static t => {
                 // ReSharper disable once UseCollectionExpression

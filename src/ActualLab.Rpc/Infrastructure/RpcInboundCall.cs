@@ -1,8 +1,6 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
-using ActualLab.Rpc.Internal;
 using Cysharp.Text;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -28,7 +26,6 @@ public abstract class RpcInboundCall : RpcCall
     public Task? WhenProcessed;
     public RpcInboundCallTrace? Trace;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public static RpcInboundCall New(byte callTypeId, RpcInboundContext context, RpcMethodDef? methodDef)
     {
         if (methodDef == null) {
@@ -43,11 +40,13 @@ public abstract class RpcInboundCall : RpcCall
 
         return FactoryCache.GetOrAdd(new(callTypeId, methodDef.UnwrappedReturnType), static key => {
             var (callTypeId, tResult) = key;
+#pragma warning disable IL2055, IL2077, IL3050
             var type = RpcCallTypeRegistry.Resolve(callTypeId)
                 .InboundCallType
                 .MakeGenericType(tResult);
             return (Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>)type
                 .GetConstructorDelegate(typeof(RpcInboundContext), typeof(RpcMethodDef))!;
+#pragma warning restore IL2055, IL2077, IL3050
         }).Invoke(context, methodDef);
     }
 
@@ -123,7 +122,6 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
     public Task<TResult>? ResultTask { get; private set; } = null!;
     public override Task? UntypedResultTask => ResultTask;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
 #pragma warning disable IL2046
     public override Task Process(CancellationToken cancellationToken)
 #pragma warning restore IL2046
@@ -193,7 +191,6 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
 
     // Protected methods
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected virtual Task ProcessStage1Plus(CancellationToken cancellationToken)
     {
         return ResultTask!.IsCompleted
@@ -219,7 +216,6 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         }
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected ArgumentList? DeserializeArguments()
     {
         var peer = Context.Peer;
@@ -275,7 +271,6 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         return (Task<TResult>)methodDef.TargetAsyncInvoker.Invoke(server, Arguments!);
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected Task SendResult()
     {
         var peer = Context.Peer;

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Resilience.Internal;
 
 namespace ActualLab.Resilience;
@@ -20,7 +21,9 @@ public abstract record ChaosMaker
     public static ErrorChaosMaker<TimeoutException> TimeoutError { get; } = Error<TimeoutException>();
     public static ErrorChaosMaker<TransientException> TransientError { get; } = Error<TransientException>();
     public static ErrorChaosMaker<NullReferenceException> NullReferenceError { get; } = Error<NullReferenceException>();
-    public static ErrorChaosMaker<TException> Error<TException>(string? message = null)
+    public static ErrorChaosMaker<TException> Error<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TException>(
+        string? message = null)
         where TException : Exception
         => new(message);
 

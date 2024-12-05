@@ -10,6 +10,8 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
 
     protected IServiceProvider Services { get; } = services;
 
+#pragma warning disable IL2060, IL2075
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(DefaultSourceConverterProvider<>))]
     public override Converter<TSource> To(Type targetType)
         => (Converter<TSource>) _cache.GetOrAdd(targetType, static (targetType1, self) => {
             var mGetConverter = self.GetType()
@@ -17,6 +19,7 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
                 .MakeGenericMethod(targetType1);
             return (Converter) mGetConverter.Invoke(self, [])!;
         }, this);
+#pragma warning restore IL2060, IL2075
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     protected virtual Converter<TSource, TTarget> GetConverter<TTarget>()

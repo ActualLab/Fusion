@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -8,7 +9,10 @@ using ActualLab.Fusion.EntityFramework.Internal;
 namespace ActualLab.Fusion.Authentication;
 
 [StructLayout(LayoutKind.Auto)]
-public readonly struct DbAuthServiceBuilder<TDbContext, TDbSessionInfo, TDbUser, TDbUserId>
+public readonly struct DbAuthServiceBuilder<TDbContext,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbSessionInfo,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUser,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>
     where TDbContext : DbContext
     where TDbSessionInfo : DbSessionInfo<TDbUserId>, new()
     where TDbUser : DbUser<TDbUserId>, new()

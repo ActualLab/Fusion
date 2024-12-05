@@ -27,9 +27,11 @@ public abstract class Interceptor : IHasServices
         public bool IsValidationEnabled { get; init; } = Defaults.IsValidationEnabled;
     }
 
+#pragma warning disable IL2111
     private static readonly MethodInfo CreateTypedHandlerMethod = typeof(Interceptor)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
         .Single(m => string.Equals(m.Name, nameof(CreateHandler), StringComparison.Ordinal));
+#pragma warning restore IL2111
 
     private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandlerUntyped;
     private readonly Func<MethodInfo, Type, MethodDef?> _createMethodDef;
@@ -49,6 +51,10 @@ public abstract class Interceptor : IHasServices
     public bool MustInterceptSyncCalls { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = false;
     public bool MustValidateProxyType { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = true;
 
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Interceptor))]
+    static Interceptor()
+    { }
+
     protected Interceptor(Options settings, IServiceProvider services)
     {
         Services = services;
@@ -61,7 +67,9 @@ public abstract class Interceptor : IHasServices
         ValidationLog = Log.IfEnabled(settings.ValidationLogLevel);
 
         _createHandlerUntyped = CreateHandlerUntyped;
+#pragma warning disable IL2111
         _createMethodDef = CreateMethodDef;
+#pragma warning restore IL2111
         _validateTypeCache = new ConcurrentDictionary<Type, Unit>(
             settings.HandlerCacheConcurrencyLevel, settings.HandlerCacheCapacity);
         _methodDefCache = new ConcurrentDictionary<MethodInfo, MethodDef?>(
@@ -160,7 +168,8 @@ public abstract class Interceptor : IHasServices
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef);
 
-    protected virtual MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
+    protected virtual MethodDef? CreateMethodDef(MethodInfo method,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType)
     {
         var methodDef = new MethodDef(proxyType, method);
         var mustIntercept = methodDef.IsAsyncMethod
@@ -174,7 +183,9 @@ public abstract class Interceptor : IHasServices
         Type type)
     { }
 
-    protected internal virtual void KeepCodeForResult<TResult, TUnwrapped>()
+    protected internal virtual void KeepCodeForResult<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>()
     {
         if (CodeKeeper.AlwaysFalse)
             CreateHandler<TUnwrapped>(default, null!);
@@ -188,8 +199,10 @@ public abstract class Interceptor : IHasServices
         if (methodDef == null)
             return null;
 
+#pragma warning disable IL2060
         return (Func<Invocation, object?>?)CreateTypedHandlerMethod
             .MakeGenericMethod(methodDef.UnwrappedReturnType)
             .Invoke(this, [initialInvocation, methodDef])!;
+#pragma warning restore IL2060
     }
 }

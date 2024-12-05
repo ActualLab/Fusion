@@ -19,9 +19,11 @@ public static class InvocationExt
                     invocation.InvokeIntercepted();
                     return null;
                 }
+#pragma warning disable IL2060
                 : (InterceptedUntypedFunc)InvokeInterceptedUntypedMethod
                     .MakeGenericMethod(returnType)
                     .CreateDelegate(typeof(InterceptedUntypedFunc))
+#pragma warning restore IL2060
         ).Invoke(invocation);
 
     // Private methods

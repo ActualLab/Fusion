@@ -1,6 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Resilience.Internal;
 
-public record ErrorChaosMaker<TException>(string? Message = null, Func<TException>? Factory = null) : ChaosMaker
+public record ErrorChaosMaker<
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TException>(
+    string? Message = null, Func<TException>? Factory = null) : ChaosMaker
     where TException : Exception
 {
     public override string ToString()

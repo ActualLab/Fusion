@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
@@ -75,10 +74,8 @@ public class SystemJsonSerializer : TextSerializerBase
 
     // Read
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(string data, Type type)
         => JsonSerializer.Deserialize(data, type, Options);
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         var reader = new Utf8JsonReader(data.Span);
@@ -87,24 +84,20 @@ public class SystemJsonSerializer : TextSerializerBase
         return result;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(ReadOnlyMemory<char> data, Type type)
         => JsonSerializer.Deserialize(data.Span, type, Options);
 
     // Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override string Write(object? value, Type type)
         => JsonSerializer.Serialize(value, type, Options);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
     {
         var utf8JsonWriter = new Utf8JsonWriter(bufferWriter);
         JsonSerializer.Serialize(utf8JsonWriter, value, type, Options);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(TextWriter textWriter, object? value, Type type)
     {
         var result = JsonSerializer.Serialize(value, type, Options);

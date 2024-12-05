@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.DependencyInjection;
 
 public static class ServiceDescriptorExt
@@ -24,16 +26,19 @@ public static class ServiceDescriptorExt
     private static readonly Func<ServiceDescriptor, Type?> ImplementationTypeGetter;
     private static readonly Action<ServiceDescriptor, object?> ImplementationFactorySetter;
 
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ServiceDescriptor))]
     static ServiceDescriptorExt()
     {
         var bfInstanceNonPublic = BindingFlags.Instance | BindingFlags.NonPublic;
         var type = typeof(ServiceDescriptor);
+#pragma warning disable IL2026
         ImplementationTypeGetter = (Func<ServiceDescriptor, Type?>)type
             .GetMethod("GetImplementationType", bfInstanceNonPublic)!
             .CreateDelegate(typeof(Func<ServiceDescriptor, Type?>));
         ImplementationFactorySetter = type
             .GetField("_implementationFactory", bfInstanceNonPublic)!
             .GetSetter();
+#pragma warning restore IL2026
     }
 
     public static Type? GetImplementationType(this ServiceDescriptor descriptor)

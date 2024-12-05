@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Internal;
 
 namespace ActualLab;
 
@@ -17,6 +18,7 @@ public static class StringExt
         => string.IsNullOrWhiteSpace(source) ? null : source;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static string Interpolate(this string source, params object[] args)
-        => string.Format(new ReflectionFormatProvider(), source, args);
+        => string.Format(ReflectionFormatProvider.Instance, source, args);
 }

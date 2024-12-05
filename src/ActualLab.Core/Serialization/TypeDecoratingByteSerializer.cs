@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using ActualLab.Serialization.Internal;
 using Errors = ActualLab.Serialization.Internal.Errors;
 
@@ -32,7 +31,6 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
     public IByteSerializer Serializer { get; } = serializer;
     public Func<Type, bool> TypeFilter { get; } = typeFilter ?? (_ => true);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         var actualTypeRef = Serializer.Read<TypeRef>(data, out var typeRefLength);
@@ -41,7 +39,9 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
             return null;
         }
 
+#pragma warning disable IL2026
         var actualType = actualTypeRef.Resolve();
+#pragma warning restore IL2026
         if (!type.IsAssignableFrom(actualType))
             throw Errors.UnsupportedSerializedType(actualType);
         if (!TypeFilter.Invoke(actualType))
@@ -53,7 +53,6 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
         return result;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
     {
         if (ReferenceEquals(value, null)) {

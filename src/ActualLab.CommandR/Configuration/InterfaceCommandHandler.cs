@@ -2,6 +2,8 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.CommandR.Configuration;
 
+#pragma warning disable IL2026, IL2060, IL2111, IL3050
+
 public interface IInterfaceCommandHandler : ICommandHandler
 {
     public Type ServiceType { get; }

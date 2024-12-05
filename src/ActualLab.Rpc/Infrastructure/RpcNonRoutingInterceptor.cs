@@ -1,12 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-#if !NET5_0
-[RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-#endif
 public class RpcNonRoutingInterceptor : RpcInterceptorBase
 {
     public readonly object? LocalTarget;

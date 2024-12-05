@@ -4,9 +4,6 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-#if !NET5_0
-[RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-#endif
 public class RpcSwitchInterceptor : RpcInterceptorBase
 {
     public readonly RpcSafeCallRouter CallRouter;
@@ -60,7 +57,6 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
         };
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     private async Task<T> InvokeWithRerouting<T>(
         RpcMethodDef methodDef,
         Func<Invocation, Task<T>> localCallAsyncInvoker,

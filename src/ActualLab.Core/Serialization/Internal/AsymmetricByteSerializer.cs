@@ -1,6 +1,4 @@
 using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 
 namespace ActualLab.Serialization.Internal;
 
@@ -16,11 +14,9 @@ public sealed class AsymmetricByteSerializer(IByteSerializer reader, IByteSerial
 
     // IByteReader, IByteWriter impl.
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
         => Reader.Read(data, type, out readLength);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
         => Writer.Write(bufferWriter, value, type);
 }
@@ -30,11 +26,9 @@ public sealed class AsymmetricByteSerializer<T>(IByteSerializer<T> reader, IByte
     public IByteSerializer<T> Reader { get; } = reader;
     public IByteSerializer<T> Writer { get; } = writer;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public T Read(ReadOnlyMemory<byte> data, out int readLength)
         => Reader.Read(data, out readLength);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void Write(IBufferWriter<byte> bufferWriter, T value)
         => Writer.Write(bufferWriter, value);
 }

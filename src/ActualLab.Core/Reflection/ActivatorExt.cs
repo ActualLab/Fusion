@@ -5,6 +5,8 @@ using ActualLab.Internal;
 
 namespace ActualLab.Reflection;
 
+#pragma warning disable IL2070, IL2080
+
 public static class ActivatorExt
 {
     private static readonly ConcurrentDictionary<Type, bool> HasDefaultCtorCache = new();
@@ -17,7 +19,9 @@ public static class ActivatorExt
 
     // An alternative to "new()" constraint
     public static T New<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
+        [DynamicallyAccessedMembers(
+            DynamicallyAccessedMemberTypes.PublicConstructors |
+            DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(
         bool failIfNoDefaultConstructor = true)
     {
         var type = typeof(T);
@@ -33,7 +37,7 @@ public static class ActivatorExt
     }
 
     public static Delegate? GetConstructorDelegate(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] this Type type)
         => CtorDelegate0Cache.GetOrAdd(
             type,
             static tObject => {

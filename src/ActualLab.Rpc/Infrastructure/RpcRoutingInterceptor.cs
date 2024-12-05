@@ -1,12 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-#if !NET5_0
-[RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-#endif
 public class RpcRoutingInterceptor : RpcInterceptorBase
 {
     public readonly object? LocalTarget;
@@ -55,7 +51,6 @@ public class RpcRoutingInterceptor : RpcInterceptorBase
         };
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     private async Task<T> InvokeWithRerouting<T>(
         Invocation invocation,
         RpcOutboundContext context,

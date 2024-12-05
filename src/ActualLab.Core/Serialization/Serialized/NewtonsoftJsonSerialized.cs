@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using MessagePack;
 
 namespace ActualLab.Serialization;
@@ -11,7 +10,6 @@ public static class NewtonsoftJsonSerialized
         => new() { Value = value };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static NewtonsoftJsonSerialized<TValue> New<TValue>(string data)
         => new() { Data = data };
 }
@@ -25,13 +23,14 @@ public partial class NewtonsoftJsonSerialized<T> : TextSerialized<T>
 {
     private static ITextSerializer<T>? _serializer;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override ITextSerializer<T> GetSerializer()
     {
         if (_serializer is { } serializer)
             return serializer;
         lock (StaticLock)
+#pragma warning disable IL2026
             return _serializer ??= NewtonsoftJsonSerializer.Default.ToTyped<T>();
+#pragma warning restore IL2026
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

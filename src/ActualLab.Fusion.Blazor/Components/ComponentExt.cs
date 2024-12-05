@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
 using Microsoft.AspNetCore.Components;
@@ -43,10 +44,6 @@ public static class ComponentExt
     private static readonly Action<ComponentBase> StateHasChangedInvoker;
     private static readonly Func<RenderHandle, object?> GetOptionalComponentStateGetter;
 #endif
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ComponentInfo GetComponentInfo(this ComponentBase component)
-        => ComponentInfo.Get(component.GetType());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Dispatcher GetDispatcher(this ComponentBase component)
@@ -98,6 +95,8 @@ public static class ComponentExt
     }
 
 #if !(USE_UNSAFE_ACCESSORS && NET8_0_OR_GREATER)
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComponentBase))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RenderHandle))]
     static ComponentExt()
     {
         var bfInstanceNonPublic = BindingFlags.Instance | BindingFlags.NonPublic;
@@ -106,11 +105,13 @@ public static class ComponentExt
         var fRenderHandle = tComponentBase.GetField("_renderHandle", bfInstanceNonPublic)!;
         var mStateHasChanged = tComponentBase.GetMethod("StateHasChanged", bfInstanceNonPublic)!;
 
+#pragma warning disable IL2026
         IsInitializedGetter = fInitialized.GetGetter<ComponentBase, bool>();
         // RenderFragmentGetter = fRenderFragment.GetGetter<ComponentBase, RenderFragment>();
         // RenderFragmentSetter = fRenderFragment.GetSetter<ComponentBase, RenderFragment>();
         RenderHandleGetter = fRenderHandle.GetGetter<ComponentBase, RenderHandle>();
         StateHasChangedInvoker = (Action<ComponentBase>)mStateHasChanged.CreateDelegate(typeof(Action<ComponentBase>));
+#pragma warning restore IL2026
 
         GetOptionalComponentStateGetter = RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? CreateOptionalComponentStateGetterDM()

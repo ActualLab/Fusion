@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Diagnostics;
@@ -52,7 +51,6 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public Scope Activate()
         => new(this, _current);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcOutboundCall? PrepareCall(RpcMethodDef methodDef, ArgumentList arguments)
     {
         if (MethodDef != methodDef) {
@@ -84,7 +82,6 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         return Call;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcOutboundCall? PrepareCallForSendNoWait(RpcMethodDef methodDef, ArgumentList arguments)
     {
         if (MethodDef != methodDef) {
@@ -105,7 +102,6 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         return Call;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcOutboundCall? PrepareReroutedCall()
     {
         if (MethodDef == null || Arguments == null)

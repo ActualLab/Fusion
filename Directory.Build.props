@@ -85,17 +85,12 @@
   </PropertyGroup>
 
   <!-- Analyzers & warnings -->
-  <PropertyGroup Condition="$(IsServerSideProject) and '$(TargetFramework)' != 'netstandard2.0'">
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-  </PropertyGroup>
-  <PropertyGroup Condition="!$(IsServerSideProject) or '$(TargetFramework)' == 'netstandard2.0'">
-    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
-  </PropertyGroup>
   <PropertyGroup>
     <NoLogo>true</NoLogo>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
     <AnalysisLevel>preview</AnalysisLevel>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
     <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
     <WarningLevel>4</WarningLevel>

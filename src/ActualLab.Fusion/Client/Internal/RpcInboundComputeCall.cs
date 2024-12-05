@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
@@ -60,7 +59,6 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override async Task ProcessStage1Plus(CancellationToken cancellationToken)
     {
         await ResultTask!.SilentAwait(false);
@@ -84,7 +82,6 @@ public class RpcInboundComputeCall<TResult> : RpcInboundCall<TResult>, IRpcInbou
         await ProcessStage2(cancellationToken).ConfigureAwait(false);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected async Task ProcessStage2(CancellationToken cancellationToken)
     {
         var mustSendInvalidation = true;

@@ -1,5 +1,7 @@
 namespace ActualLab.Reflection;
 
+#pragma warning disable IL3050
+
 public static class FuncExt
 {
     public static Type GetActionType(Type[] argumentTypes)

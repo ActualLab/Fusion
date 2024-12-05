@@ -16,6 +16,7 @@ public static class Proxies
 
     static Proxies() => CodeKeeper.AddFakeAction(
         static () => {
+#pragma warning disable IL2111
             CodeKeeper.KeepStatic(typeof(ProxyHelper));
 
             // ArgumentList
@@ -42,6 +43,7 @@ public static class Proxies
             CodeKeeper.Keep<TypeViewInterceptor>();
             CodeKeeper.Keep<TypedFactoryInterceptor>();
             CodeKeeper.Keep<SchedulingInterceptor>();
+#pragma warning restore IL2111
         });
 
     public static IProxy New(

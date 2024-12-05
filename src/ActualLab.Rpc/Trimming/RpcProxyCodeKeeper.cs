@@ -12,13 +12,16 @@ public class RpcProxyCodeKeeper : ProxyCodeKeeper
     static RpcProxyCodeKeeper()
         => _ = default(RpcBuilder).Services;
 
-    public override void KeepMethodArgument<TArg>(string name = "", int index = -1)
+    public override void KeepMethodArgument<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(string name = "", int index = -1)
     {
         KeepSerializable<TArg>();
         base.KeepMethodArgument<TArg>(name, index);
     }
 
-    public override void KeepMethodResult<TResult, TUnwrapped>(string name = "")
+    public override void KeepMethodResult<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(string name = "")
     {
         KeepSerializable<TUnwrapped>();
         base.KeepMethodResult<TResult, TUnwrapped>(name);

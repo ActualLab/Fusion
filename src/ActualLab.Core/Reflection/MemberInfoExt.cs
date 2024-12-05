@@ -1,9 +1,12 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
 using ActualLab.Internal;
 using ActualLab.OS;
 
 namespace ActualLab.Reflection;
+
+#pragma warning disable IL3050
 
 public static class MemberInfoExt
 {
@@ -21,24 +24,35 @@ public static class MemberInfoExt
             _ => throw Errors.UnexpectedMemberType(memberInfo.ToString()!)
         };
 
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static Func<TType, TValue> GetGetter<TType, TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
         => (Func<TType, TValue>)GetGetter(propertyOrField, typeof(TType), isValueUntyped);
+
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static Func<object?, TValue> GetGetter<TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
         => (Func<object?, TValue>)GetGetter(propertyOrField, typeof(object), isValueUntyped);
+
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static Func<object?, object?> GetGetter(this MemberInfo propertyOrField)
         => (Func<object?, object?>)GetGetter(propertyOrField, typeof(object), true);
 
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static Action<TType, TValue> GetSetter<TType, TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
         => (Action<TType, TValue>)GetSetter(propertyOrField, typeof(TType), isValueUntyped);
+
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static Action<object?, TValue> GetSetter<TValue>(
         this MemberInfo propertyOrField, bool isValueUntyped = false)
         => (Action<object?, TValue>)GetSetter(propertyOrField, typeof(object), isValueUntyped);
+
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static Action<object?, object?> GetSetter(this MemberInfo propertyOrField)
         => (Action<object?, object?>)GetSetter(propertyOrField, typeof(object), true);
 
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static Delegate GetGetter(this MemberInfo propertyOrField, Type sourceType, bool isValueUntyped = false)
     {
         var key = (propertyOrField, sourceType, isValueUntyped);
@@ -48,6 +62,8 @@ public static class MemberInfoExt
             return CreateGetter(sourceType1, propertyOrField1, valueType);
         });
     }
+
+    // Private methods
 
     private static Delegate GetSetter(this MemberInfo propertyOrField, Type sourceType, bool isValueUntyped = false)
     {

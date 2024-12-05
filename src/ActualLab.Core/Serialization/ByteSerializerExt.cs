@@ -1,7 +1,5 @@
 using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
-using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.Serialization.Internal;
 
@@ -9,12 +7,10 @@ namespace ActualLab.Serialization;
 
 public static class ByteSerializerExt
 {
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static object? Read(this IByteSerializer serializer, ReadOnlyMemory<byte> data, Type type)
         => serializer.Read(data, type, out _);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static object? Read(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data, Type type)
     {
@@ -25,12 +21,10 @@ public static class ByteSerializerExt
 
     // Read w/o Type & readLength arguments
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T Read<T>(this IByteSerializer serializer, ReadOnlyMemory<byte> data)
         => (T)serializer.Read(data, typeof(T), out _)!;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T Read<T>(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data)
     {
@@ -39,19 +33,16 @@ public static class ByteSerializerExt
         return result;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T Read<T>(this IByteSerializer<T> serializer, ReadOnlyMemory<byte> data)
         => serializer.Read(data, out _);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T Read<T>(this IByteSerializer serializer, ReadOnlyMemory<byte> data, out int readLength)
         => (T)serializer.Read(data, typeof(T), out readLength)!;
 
     // Write w/o last Type argument
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Write<T>(this IByteSerializer serializer, IBufferWriter<byte> bufferWriter, T value)
         // ReSharper disable once HeapView.PossibleBoxingAllocation
@@ -59,13 +50,11 @@ public static class ByteSerializerExt
 
     // Write w/o IBufferWriter<byte> argument
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArrayPoolBuffer<byte> Write<T>(this IByteSerializer serializer, T value)
         // ReSharper disable once HeapView.PossibleBoxingAllocation
         => serializer.Write(value, typeof(T));
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static ArrayPoolBuffer<byte> Write(this IByteSerializer serializer, object? value, Type type)
     {
         var bufferWriter = new ArrayPoolBuffer<byte>(false);
@@ -73,7 +62,6 @@ public static class ByteSerializerExt
         return bufferWriter;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static ArrayPoolBuffer<byte> Write<T>(this IByteSerializer<T> serializer, T value)
     {
         var bufferWriter = new ArrayPoolBuffer<byte>(false);

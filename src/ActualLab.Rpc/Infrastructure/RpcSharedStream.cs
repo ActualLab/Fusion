@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Internal;
-using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -27,12 +26,10 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
         set => Interlocked.Exchange(ref _lastKeepAliveAt, value.Value);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     Task IRpcObject.Reconnect(CancellationToken cancellationToken)
         => throw ActualLab.Internal.Errors.InternalError(
             $"This method should never be called on {nameof(RpcSharedStream)}.");
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     void IRpcObject.Disconnect()
         => throw ActualLab.Internal.Errors.InternalError(
             $"This method should never be called on {nameof(RpcSharedStream)}.");
@@ -40,7 +37,6 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
     public void KeepAlive()
         => LastKeepAliveAt = CpuTimestamp.Now;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract Task OnAck(long nextIndex, Guid hostId);
 }
 
@@ -64,7 +60,6 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
     public new RpcStream<T> Stream { get; }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override Task OnAck(long nextIndex, Guid hostId)
     {
         var mustReset = hostId != default;
@@ -90,10 +85,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
     // Protected & private methods
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2046
     protected override async Task OnRun(CancellationToken cancellationToken)
-#pragma warning restore IL2046
     {
         var enumerator = Stream.GetLocalSource().GetAsyncEnumerator(cancellationToken);
         await using var _ = enumerator.ConfigureAwait(false);
@@ -217,15 +209,12 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         return Task.CompletedTask;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private Task SendMissing()
         => _systemCallSender.Disconnect(Peer, [Id.LocalId]);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private Task SendInvalidPosition(long index)
         => Send(index, Result.Error<T>(Errors.RpcStreamInvalidPosition()));
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private Task Send(long index, Result<T> item)
     {
         // Debug.WriteLine($"{Id}: <- #{index} (ack @ {ackIndex})");
@@ -258,7 +247,6 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         private readonly List<T> _items = new(BatchSize / 4); // Our chance to fully fill the batch is low
         private Type? _itemType;
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public async ValueTask Add(long index, Result<T> item)
         {
             if (!item.IsValue(out var vItem)) {
@@ -279,7 +267,6 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
             _items.Add(item);
         }
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public Task Flush(long nextIndex)
         {
             var count = _items.Count;

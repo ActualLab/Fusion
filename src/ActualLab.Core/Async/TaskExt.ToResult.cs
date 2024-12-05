@@ -51,9 +51,11 @@ public static partial class TaskExt
 
         return ToTypedResultCache.GetOrAdd(
             tValue,
+#pragma warning disable IL2060
             static tValue1 => (Func<Task, IResult>)FromTypedTaskInternalMethod
                 .MakeGenericMethod(tValue1)
                 .CreateDelegate(typeof(Func<Task, IResult>))
+#pragma warning restore IL2060
             ).Invoke(task);
     }
 

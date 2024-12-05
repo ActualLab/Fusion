@@ -72,9 +72,11 @@ public static class CommanderExt
                         typeof(bool),
                         typeof(CancellationToken),
                         typeof(Task<>).MakeGenericType(tResult));
+#pragma warning disable IL2060
                 return (Func<ICommander, ICommand, bool, CancellationToken, Task>)TypedCallMethod
                     .MakeGenericMethod(tResult)
                     .CreateDelegate(delegateType);
+#pragma warning restore IL2060
             });
 
     private static async Task<TResult> TypedCall<TResult>(

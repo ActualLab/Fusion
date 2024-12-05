@@ -1,7 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.Plugins.Internal;
+using Errors = ActualLab.Plugins.Internal.Errors;
 
 namespace ActualLab.Plugins.Metadata;
+
+#pragma warning disable IL2026, IL2067, IL2070
 
 public class PluginInfo
 {
@@ -34,7 +35,6 @@ public class PluginInfo
         OrderByDependencyIndex = orderByDependencyIndex;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     public PluginInfo(Type type, PluginSetConstructionInfo constructionInfo, IPluginInfoProvider pluginInfoProvider)
     {
         if (type.IsAbstract)

@@ -8,6 +8,8 @@ using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc;
 
+#pragma warning disable IL2026, IL2070, IL2072
+
 public delegate RpcServiceDef RpcServiceDefBuilder(RpcHub hub, RpcServiceBuilder service);
 public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodInfo method);
 public delegate bool RpcBackendServiceDetector(Type serviceType);

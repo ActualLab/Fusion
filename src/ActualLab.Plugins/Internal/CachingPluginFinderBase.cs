@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Caching;
 using ActualLab.Plugins.Metadata;
 
@@ -31,11 +30,9 @@ public abstract class CachingPluginFinderBase : IPluginFinder
         _lazyCache = new Lazy<IAsyncCache<string, string>>(settings.CacheFactory ?? CreateCache);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     public async Task Run(CancellationToken cancellationToken = default)
         => FoundPlugins = await FindOrGetCachedPlugins(cancellationToken).ConfigureAwait(false);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     protected virtual async Task<PluginSetInfo> FindOrGetCachedPlugins(CancellationToken cancellationToken)
     {
         var cacheKey = GetCacheKey();
@@ -63,16 +60,13 @@ public abstract class CachingPluginFinderBase : IPluginFinder
         return pluginSetInfo;
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected virtual string Serialize(PluginSetInfo source)
         => NewtonsoftJsonSerialized.New(source).Data;
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Serialization)]
     protected virtual PluginSetInfo Deserialize(string source)
         => NewtonsoftJsonSerialized.New<PluginSetInfo?>(source).Value ?? PluginSetInfo.Empty;
 
     protected abstract IAsyncCache<string, string> CreateCache();
     protected abstract string? GetCacheKey();
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     protected abstract Task<PluginSetInfo> FindPlugins(CancellationToken cancellationToken);
 }

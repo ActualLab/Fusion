@@ -1,11 +1,8 @@
 namespace ActualLab.CommandR.Configuration;
 
-public class FuncCommandHandlerFilter : CommandHandlerFilter
+public class FuncCommandHandlerFilter(Func<CommandHandler, Type, bool> filter) : CommandHandlerFilter
 {
-    Func<CommandHandler, Type, bool> Filter { get; }
-
-    public FuncCommandHandlerFilter(Func<CommandHandler, Type, bool> filter)
-        => Filter = filter;
+    public Func<CommandHandler, Type, bool> Filter { get; } = filter;
 
     public override bool IsCommandHandlerUsed(CommandHandler commandHandler, Type commandType)
         => Filter(commandHandler, commandType);

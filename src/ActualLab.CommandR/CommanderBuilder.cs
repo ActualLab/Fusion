@@ -21,6 +21,7 @@ public readonly struct CommanderBuilder
 
     static CommanderBuilder() => CodeKeeper.AddFakeAction(
         static () => {
+#pragma warning disable IL2111
             CodeKeeper.KeepStatic(typeof(Proxies));
 
             // Configuration
@@ -35,9 +36,9 @@ public readonly struct CommanderBuilder
             // Stuff that might be forgotten
             var c = CodeKeeper.Get<ProxyCodeKeeper>();
             c.KeepAsyncMethod<Unit, ICommand<Unit>, CancellationToken>();
+#pragma warning restore IL2111
         });
 
-    [RequiresUnreferencedCode(UnreferencedCode.Commander)]
     internal CommanderBuilder(
         IServiceCollection services,
         Action<CommanderBuilder>? configure)
@@ -106,6 +107,7 @@ public readonly struct CommanderBuilder
 
         var interfaceMethods = new HashSet<MethodInfo>();
 
+#pragma warning disable IL2026, IL2062, IL2072
         // ICommandHandler<TCommand> interfaces
         var tInterfaces = implementationType.GetInterfaces();
         foreach (var tInterface in tInterfaces) {
@@ -119,14 +121,10 @@ public readonly struct CommanderBuilder
                 continue;
 
             var method = implementationType.GetInterfaceMap(tInterface).TargetMethods.Single();
-#pragma warning disable IL2026
             var attr = MethodCommandHandler.GetAttribute(method);
-#pragma warning restore IL2026
             var isFilter = attr?.IsFilter ?? false;
             var order = priorityOverride ?? attr?.Priority ?? 0;
-#pragma warning disable IL2072
             AddHandler(InterfaceCommandHandler.New(serviceType, tCommand, isFilter, order));
-#pragma warning restore IL2072
             interfaceMethods.Add(method);
         }
 
@@ -149,14 +147,13 @@ public readonly struct CommanderBuilder
             if (!typeof(ICommand).IsAssignableFrom(parameters[0].ParameterType))
                 continue;
 
-#pragma warning disable IL2026
             var handler = MethodCommandHandler.TryNew(serviceType, method, priorityOverride);
-#pragma warning restore IL2026
             if (handler == null)
                 continue;
 
             AddHandler(handler);
         }
+#pragma warning restore IL2026, IL2062, IL2072
 
         return this;
     }
@@ -220,7 +217,6 @@ public readonly struct CommanderBuilder
         where TCommand : class, ICommand
         => AddHandler(InterfaceCommandHandler.New<TService, TCommand>(isFilter, priority));
 
-    [RequiresUnreferencedCode(UnreferencedCode.Commander)]
     public CommanderBuilder AddHandler(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         MethodInfo method,

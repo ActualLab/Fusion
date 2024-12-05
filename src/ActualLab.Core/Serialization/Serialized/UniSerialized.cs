@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.Serialization.Internal;
 using MessagePack;
@@ -26,33 +25,25 @@ public readonly partial struct UniSerialized<T>
 
     [JsonInclude, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public string Json {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => SerializeText(Value, SerializerKind.SystemJson);
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         init => Value = DeserializeText(value, SerializerKind.SystemJson);
     }
 
     [JsonIgnore, MemoryPackIgnore, IgnoreMember]
     public string NewtonsoftJson {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => SerializeText(Value, SerializerKind.NewtonsoftJson);
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         init => Value = DeserializeText(value, SerializerKind.NewtonsoftJson);
     }
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, IgnoreMember, MemoryPackOrder(0)]
     public byte[] MemoryPack {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => SerializeBytes(Value, SerializerKind.MemoryPack);
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         init => Value = DeserializeBytes(value, SerializerKind.MemoryPack);
     }
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, DataMember(Order = 0), Key(0)]
     public MessagePackData MessagePack {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => SerializeBytes(Value, SerializerKind.MessagePack);
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         init => Value = DeserializeBytes(value.Data, SerializerKind.MessagePack);
     }
 
@@ -74,14 +65,12 @@ public readonly partial struct UniSerialized<T>
 
     // Private methods
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private static string SerializeText(T value, SerializerKind serializerKind)
     {
         var serializer = (ITextSerializer)serializerKind.GetDefaultSerializer();
         return serializer.Write(value);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private static byte[] SerializeBytes(T value, SerializerKind serializerKind)
     {
         var serializer = serializerKind.GetDefaultSerializer();
@@ -103,14 +92,12 @@ public readonly partial struct UniSerialized<T>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private static T DeserializeText(string text, SerializerKind serializerKind)
     {
         var serializer = (ITextSerializer)serializerKind.GetDefaultSerializer();
         return serializer.Read<T>(text);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private static T DeserializeBytes(byte[] bytes, SerializerKind serializerKind)
     {
         var serializer = serializerKind.GetDefaultSerializer();

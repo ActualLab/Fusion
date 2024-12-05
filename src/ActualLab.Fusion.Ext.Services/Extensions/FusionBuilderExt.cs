@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Fusion.EntityFramework;
@@ -45,7 +46,8 @@ public static class FusionBuilderExt
         where TDbContext : DbContext
         => fusion.AddDbKeyValueStore<TDbContext, DbKeyValue>(keyValueTrimmerOptionsFactory);
 
-    public static FusionBuilder AddDbKeyValueStore<TDbContext, TDbKeyValue>(
+    public static FusionBuilder AddDbKeyValueStore<TDbContext,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbKeyValue>(
         this FusionBuilder fusion,
         Func<IServiceProvider, DbKeyValueTrimmer<TDbContext, TDbKeyValue>.Options>? keyValueTrimmerOptionsFactory = null)
         where TDbContext : DbContext

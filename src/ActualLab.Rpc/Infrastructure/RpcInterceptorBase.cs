@@ -1,12 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-#if !NET5_0
-[RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-#endif
 public abstract class RpcInterceptorBase : Interceptor
 {
     public readonly RpcHub Hub;
@@ -23,6 +19,7 @@ public abstract class RpcInterceptorBase : Interceptor
     public override MethodDef? GetMethodDef(MethodInfo method, Type proxyType)
         => ServiceDef.GetOrFindMethod(method);
 
-    protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
+    protected override MethodDef? CreateMethodDef(MethodInfo method,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType)
         => ServiceDef.GetOrFindMethod(method);
 }

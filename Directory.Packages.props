@@ -31,15 +31,13 @@
     <MicrosoftExtensionsVersion5>[5.0.0,6)</MicrosoftExtensionsVersion5>
     <CSharpVersion>4.4.0</CSharpVersion>
     <!-- EF Core -->
-    <!-- <EntityFrameworkCoreVersion>[9.0.0,)</EntityFrameworkCoreVersion>-->
-    <EntityFrameworkCoreVersion>[8.0.0,)</EntityFrameworkCoreVersion>
+    <EntityFrameworkCoreVersion>[9.0.0,)</EntityFrameworkCoreVersion>
     <EntityFrameworkCoreVersion8>[8.0.0,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion7>[7.0.20,8)</EntityFrameworkCoreVersion7>
     <EntityFrameworkCoreVersion6>[6.0.33,7)</EntityFrameworkCoreVersion6>
     <EntityFrameworkCoreVersion5>[5.0.17,6)</EntityFrameworkCoreVersion5>
     <EntityFrameworkCoreVersion3>[3.1.32,4)</EntityFrameworkCoreVersion3>
-    <!-- <EntityFrameworkCoreNpgsqlVersion>[9.0.0,)</EntityFrameworkCoreNpgsqlVersion>-->
-    <EntityFrameworkCoreNpgsqlVersion>[8.0.0,)</EntityFrameworkCoreNpgsqlVersion>
+    <EntityFrameworkCoreNpgsqlVersion>[9.0.0,)</EntityFrameworkCoreNpgsqlVersion>
     <EntityFrameworkCoreNpgsqlVersion8>[8.0.0,)</EntityFrameworkCoreNpgsqlVersion8>
     <EntityFrameworkCoreNpgsqlVersion7>[7.0.18,8)</EntityFrameworkCoreNpgsqlVersion7>
     <EntityFrameworkCoreNpgsqlVersion6>[6.0.29,7)</EntityFrameworkCoreNpgsqlVersion6>
@@ -51,8 +49,7 @@
     <MySqlConnectorVersion6>2.2.7</MySqlConnectorVersion6>
     <MySqlConnectorVersion5>2.2.7</MySqlConnectorVersion5>
     <MySqlConnectorVersion3>0.69.10</MySqlConnectorVersion3>
-    <!-- <EntityFrameworkCoreMySqlVersion>[9.0.0,)</EntityFrameworkCoreMySqlVersion>-->
-    <EntityFrameworkCoreMySqlVersion>[8.0.0,)</EntityFrameworkCoreMySqlVersion>
+    <EntityFrameworkCoreMySqlVersion>[9.0.0-preview.1,)</EntityFrameworkCoreMySqlVersion>
     <EntityFrameworkCoreMySqlVersion8>[8.0.0,)</EntityFrameworkCoreMySqlVersion8>
     <EntityFrameworkCoreMySqlVersion7>[7.0.0,8)</EntityFrameworkCoreMySqlVersion7>
     <EntityFrameworkCoreMySqlVersion6>[6.0.3,7)</EntityFrameworkCoreMySqlVersion6>
@@ -68,7 +65,7 @@
     <OpenTelemetryVersion>[1.8.1,)</OpenTelemetryVersion>
     <!-- Build & Samples -->
     <BlazoriseVersion>[1.7.0,)</BlazoriseVersion>
-    <FusionVersion>[9.5,)</FusionVersion>
+    <FusionVersion>[9.6,)</FusionVersion>
   </PropertyGroup>
 
   <!-- Dependencies -->

@@ -55,7 +55,7 @@ namespace ActualLab.Interception;
 
 #pragma warning disable MA0012
 #pragma warning disable CA2201, CS0219
-#pragma warning disable IL2046
+#pragma warning disable IL2026, IL2046, IL2080, IL3050
 
 public abstract partial record ArgumentList
 {
@@ -498,7 +498,6 @@ public sealed record <#=className#> : ArgumentList<#=itemCount#>
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
 <# if (simpleItemCount != 0) { #>
@@ -516,7 +515,6 @@ public sealed record <#=className#> : ArgumentList<#=itemCount#>
 <# } #>
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
 <# if (simpleItemCount != 0) { #>

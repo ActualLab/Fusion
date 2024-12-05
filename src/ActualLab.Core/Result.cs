@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using ActualLab.Conversion;
-using ActualLab.Internal;
 using ActualLab.OS;
 using MessagePack;
 
@@ -189,7 +188,6 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
         Error = error;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public Result(T valueOrDefault, ExceptionInfo? exceptionInfo)
     {
@@ -278,9 +276,11 @@ public static class Result
     public static IResult Error(Type resultType, Exception error)
         => ErrorCache.GetOrAdd(
             resultType,
+#pragma warning disable IL2060
             static tResult => (Func<Exception, IResult>)ErrorInternalMethod
                 .MakeGenericMethod(tResult)
                 .CreateDelegate(typeof(Func<Exception, IResult>))
+#pragma warning restore IL2060
             ).Invoke(error);
 
     public static Result<T> FromFunc<T, TState>(TState state, Func<TState, T> func)

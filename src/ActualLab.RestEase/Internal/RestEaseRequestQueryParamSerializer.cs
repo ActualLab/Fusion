@@ -76,7 +76,10 @@ public class RestEaseRequestQueryParamSerializer : RequestQueryParamSerializer
 
         // Complex type
         var prefix = name.IsNullOrEmpty() ? "" : $"{name}.";
-        foreach (var property in value.GetType().GetProperties()) {
+#pragma warning disable IL2075
+        var properties = value.GetType().GetProperties();
+#pragma warning restore IL2075
+        foreach (var property in properties) {
             var pValue = property.GetValue(value, null);
             SerializeComplexType($"{prefix}{property.Name}", pValue, info, map);
         }

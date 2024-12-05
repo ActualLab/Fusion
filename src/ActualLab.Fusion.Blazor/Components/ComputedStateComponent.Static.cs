@@ -40,9 +40,11 @@ public static class ComputedStateComponent
                     && type.GetGenericTypeDefinition() is var gtd
                     && gtd == typeof(ComputedStateComponent<>)) {
                     var stateType = type.GetGenericArguments().Single();
+#pragma warning disable IL2060
                     return (Func<Type, IComputedState.IOptions>)GetDefaultOptionsImplMethod
                         .MakeGenericMethod(stateType)
                         .CreateDelegate(typeof(Func<Type, IComputedState.IOptions>));
+#pragma warning restore IL2060
                 }
                 type = type.BaseType;
             }

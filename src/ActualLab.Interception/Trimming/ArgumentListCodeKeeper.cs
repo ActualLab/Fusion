@@ -1,10 +1,12 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Trimming;
 
 namespace ActualLab.Interception.Trimming;
 
 public class ArgumentListCodeKeeper : CodeKeeper
 {
-    public virtual void KeepArgumentListArgument<TArg>()
+    public virtual void KeepArgumentListArgument<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>()
     {
         if (AlwaysTrue)
             return;
@@ -35,7 +37,9 @@ public class ArgumentListCodeKeeper : CodeKeeper
             new ArgumentListS10(ArgumentListType.Get(false, tArg, tArg, tArg, tArg, tArg, tArg, tArg, tArg, tArg, tArg)));
     }
 
-    public virtual void KeepArgumentListArgument<TList, TArg>(TList list)
+    public virtual void KeepArgumentListArgument<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TList,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(TList list)
         where TList : ArgumentList
     {
         if (AlwaysTrue)

@@ -4,30 +4,32 @@
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
     <RootNamespace>Samples.TodoApp.UI</RootNamespace>
     <AssemblyName>Samples.TodoApp.UI</AssemblyName>
-    <InvariantGlobalization>false</InvariantGlobalization>
+    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
+    <!-- Warnings -->
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-    <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
     <!-- CS8669: The annotation for nullable reference types should only be used in code within a '#nullable' annotations context. Auto-generated code requires an explicit '#nullable' directive in source. -->
     <NoWarn>$(NoWarn);CS8669</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
-    <PublishTrimmed>true</PublishTrimmed>
+    <!-- Normally it should be true, we use false to test French culture here -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- Required for WASM+Server projects -->
+    <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+    <PublishTrimmed>false</PublishTrimmed>
     <TrimMode>partial</TrimMode>
     <IsTrimmable>true</IsTrimmable>
-    <RunAOTCompilation>true</RunAOTCompilation>
-    <!-- Broken for now:
-    - https://github.com/dotnet/runtime/issues/92238
-    - https://github.com/dotnet/runtime/pull/90436
-    -->
+    <RunAOTCompilation>false</RunAOTCompilation>
     <WasmStripILAfterAOT>false</WasmStripILAfterAOT>
+    <!--
+    <WasmEnableWebcil>true</WasmEnableWebcil>
+    <WasmEnableSIMD>true</WasmEnableSIMD>
+    -->
   </PropertyGroup>
 
   <!-- Extra trimming roots -->
   <ItemGroup>
-    <TrimmerRootAssembly Include="System.Security.Cryptography.X509Certificates" />
-    <TrimmerRootAssembly Include="System.Text.Json" />
-    <TrimmerRootAssembly Include="System.Collections.Immutable" />
+    <TrimmerRootAssembly Include="Samples.TodoApp.UI" />
   </ItemGroup>
 
   <ItemGroup>
@@ -48,10 +50,16 @@
     <PackageReference Include="Blazorise.DataGrid" />
     <PackageReference Include="Blazorise.Icons.FontAwesome" />
     <PackageReference Include="Blazorise.Sidebar" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
     <PackageReference Include="UAParser" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" VersionOverride="$(BlazorVersion8)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" VersionOverride="$(BlazorVersion8)" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net7.0'">
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" VersionOverride="$(BlazorVersion7)" />

@@ -50,12 +50,12 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
             isOutermost = true;
 
         var tCommandResult = command.GetResultType();
+#pragma warning disable IL2072, IL3050
         var tContext = CommandContextTypeCache.GetOrAdd(
             tCommandResult,
             static t => typeof(CommandContext<>).MakeGenericType(t));
-#pragma warning disable IL2072
         return (CommandContext)tContext.CreateInstance(commander, command, isOutermost);
-#pragma warning restore IL2072
+#pragma warning restore IL2072, IL3050
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,9 +1,12 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Extensions.Services;
 
-public class DbKeyValueStore<TDbContext, TDbKeyValue>(IServiceProvider services)
+public class DbKeyValueStore<TDbContext,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbKeyValue>(
+    IServiceProvider services)
     : DbServiceBase<TDbContext>(services), IKeyValueStore
     where TDbContext : DbContext
     where TDbKeyValue : DbKeyValue, new()

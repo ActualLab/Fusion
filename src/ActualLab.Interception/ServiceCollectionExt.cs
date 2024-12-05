@@ -29,7 +29,9 @@ public static class ServiceCollectionExt
         this IServiceCollection services,
         ServiceLifetime lifetime = ServiceLifetime.Singleton)
         where TFactory : class, IRequiresAsyncProxy
+#pragma warning disable IL2111
         => services.AddTypedFactory<TFactory, TypedFactoryInterceptor>(lifetime);
+#pragma warning restore IL2111
 
     public static IServiceCollection AddTypedFactory<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TFactory,
@@ -38,13 +40,17 @@ public static class ServiceCollectionExt
         ServiceLifetime lifetime = ServiceLifetime.Singleton)
         where TFactory : class, IRequiresAsyncProxy
         where TInterceptor : Interceptor
+#pragma warning disable IL2111
         => services.AddTypedFactory(typeof(TFactory), typeof(TInterceptor), lifetime);
+#pragma warning restore IL2111
 
     public static IServiceCollection AddTypedFactory(
         this IServiceCollection services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type factoryType,
         ServiceLifetime lifetime = ServiceLifetime.Singleton)
+#pragma warning disable IL2111
         => services.AddTypedFactory(factoryType, typeof(TypedFactoryInterceptor), lifetime);
+#pragma warning restore IL2111
 
     public static IServiceCollection AddTypedFactory(
         this IServiceCollection services,

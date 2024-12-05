@@ -53,15 +53,15 @@ public abstract class CodeKeeper
         where TKeeperImpl : TKeeper, new()
         => Cache<TKeeper>.Instance = new TKeeperImpl();
 
-    public static T Keep<T>(bool ensureInitialized = false)
+    public static T Keep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(bool ensureInitialized = false)
         => ensureInitialized || AlwaysFalse
             ? Get<TypeCodeKeeper>().KeepType<T>(ensureInitialized)
             : default!;
 
-    public static T KeepSerializable<T>()
+    public static T KeepSerializable<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>()
         => Get<SerializableTypeCodeKeeper>().KeepType<T>();
 
-    public static void KeepStatic(Type type)
+    public static void KeepStatic([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
         => KeepStaticTypeImpl(type);
 
     public static T CallSilently<T>(Func<T> func)

@@ -20,6 +20,10 @@
     <ArtifactsPath>$(MSBuildThisFileDirectory)..\artifacts\samples</ArtifactsPath>
     <IsPackable>false</IsPackable>
     <IsPublishable>false</IsPublishable>
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(CanPublish)' == 'true'">
+    <IsPublishable>true</IsPublishable>
   </PropertyGroup>
 
   <!-- Disable some warnings -->

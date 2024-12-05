@@ -10,8 +10,10 @@ public sealed class ComponentParameterInfo
     public bool IsCapturingUnmatchedValues { get; init; }
     public string? CascadingParameterName { get; init; }
     public ParameterComparer Comparer { get; init; } = null!;
+#pragma warning disable IL2026
     [field: AllowNull, MaybeNull]
     public Func<IComponent, object> Getter => field ??= Property.GetGetter<IComponent, object>(true);
     [field: AllowNull, MaybeNull]
     public Action<IComponent, object> Setter => field ??= Property.GetSetter<IComponent, object>(true);
+#pragma warning restore IL2026
 }

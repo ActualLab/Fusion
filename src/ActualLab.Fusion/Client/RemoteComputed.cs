@@ -1,10 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Caching;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Rpc.Caching;
-using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Fusion.Client;
 
@@ -60,11 +58,9 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         StartAutoInvalidation();
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     ~RemoteComputed()
         => Dispose();
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
 #pragma warning disable IL2046
     public void Dispose()
 #pragma warning restore IL2046

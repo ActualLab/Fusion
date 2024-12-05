@@ -1,7 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
 using ActualLab.Fusion.Interception;
-using ActualLab.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
@@ -62,7 +59,6 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
         Set(VersionKey, new RpcCacheValue(expectedData, ""));
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async ValueTask<RpcCacheEntry<T>?> Get<T>(
         ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
     {

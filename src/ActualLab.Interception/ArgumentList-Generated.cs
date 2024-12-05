@@ -1,4 +1,4 @@
-﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
+// ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable ArrangeConstructorOrDestructorBody
 using System.Diagnostics.CodeAnalysis;
@@ -12,7 +12,7 @@ namespace ActualLab.Interception;
 
 #pragma warning disable MA0012
 #pragma warning disable CA2201, CS0219
-#pragma warning disable IL2046
+#pragma warning disable IL2026, IL2046, IL2080, IL3050
 
 public abstract partial record ArgumentList
 {
@@ -368,7 +368,6 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         if (typeof(T0).IsValueType)
@@ -377,7 +376,6 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
             reader.OnClass(typeof(T0), _item0, 0);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         if (typeof(T0).IsValueType)
@@ -658,14 +656,12 @@ public sealed record ArgumentListS1 : ArgumentList1
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
         reader.OnAny(itemTypes[0], _item0, 0);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -992,7 +988,6 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         if (typeof(T0).IsValueType)
@@ -1005,7 +1000,6 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
             reader.OnClass(typeof(T1), _item1, 1);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         if (typeof(T0).IsValueType)
@@ -1352,7 +1346,6 @@ public sealed record ArgumentListS2 : ArgumentList2
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -1360,7 +1353,6 @@ public sealed record ArgumentListS2 : ArgumentList2
         reader.OnAny(itemTypes[1], _item1, 1);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -1746,7 +1738,6 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         if (typeof(T0).IsValueType)
@@ -1763,7 +1754,6 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
             reader.OnClass(typeof(T2), _item2, 2);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         if (typeof(T0).IsValueType)
@@ -2175,7 +2165,6 @@ public sealed record ArgumentListS3 : ArgumentList3
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -2184,7 +2173,6 @@ public sealed record ArgumentListS3 : ArgumentList3
         reader.OnAny(itemTypes[2], _item2, 2);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -2629,7 +2617,6 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         if (typeof(T0).IsValueType)
@@ -2650,7 +2637,6 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
             reader.OnClass(typeof(T3), _item3, 3);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         if (typeof(T0).IsValueType)
@@ -3127,7 +3113,6 @@ public sealed record ArgumentListS4 : ArgumentList4
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -3137,7 +3122,6 @@ public sealed record ArgumentListS4 : ArgumentList4
         reader.OnAny(itemTypes[3], _item3, 3);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -3646,7 +3630,6 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -3669,7 +3652,6 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
         reader.OnAny(itemTypes[4], _item4, 4);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -4210,7 +4192,6 @@ public sealed record ArgumentListS5 : ArgumentList5
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -4221,7 +4202,6 @@ public sealed record ArgumentListS5 : ArgumentList5
         reader.OnAny(itemTypes[4], _item4, 4);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -4792,7 +4772,6 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -4816,7 +4795,6 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
         reader.OnAny(itemTypes[5], _item5, 5);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -5419,7 +5397,6 @@ public sealed record ArgumentListS6 : ArgumentList6
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -5431,7 +5408,6 @@ public sealed record ArgumentListS6 : ArgumentList6
         reader.OnAny(itemTypes[5], _item5, 5);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -6064,7 +6040,6 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -6089,7 +6064,6 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
         reader.OnAny(itemTypes[6], _item6, 6);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -6754,7 +6728,6 @@ public sealed record ArgumentListS7 : ArgumentList7
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -6767,7 +6740,6 @@ public sealed record ArgumentListS7 : ArgumentList7
         reader.OnAny(itemTypes[6], _item6, 6);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -7462,7 +7434,6 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -7488,7 +7459,6 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
         reader.OnAny(itemTypes[7], _item7, 7);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -8215,7 +8185,6 @@ public sealed record ArgumentListS8 : ArgumentList8
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -8229,7 +8198,6 @@ public sealed record ArgumentListS8 : ArgumentList8
         reader.OnAny(itemTypes[7], _item7, 7);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -8986,7 +8954,6 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -9013,7 +8980,6 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
         reader.OnAny(itemTypes[8], _item8, 8);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -9802,7 +9768,6 @@ public sealed record ArgumentListS9 : ArgumentList9
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -9817,7 +9782,6 @@ public sealed record ArgumentListS9 : ArgumentList9
         reader.OnAny(itemTypes[8], _item8, 8);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -10636,7 +10600,6 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -10664,7 +10627,6 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
         reader.OnAny(itemTypes[9], _item9, 9);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;
@@ -11515,7 +11477,6 @@ public sealed record ArgumentListS10 : ArgumentList10
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     {
         var itemTypes = _type.ItemTypes;
@@ -11531,7 +11492,6 @@ public sealed record ArgumentListS10 : ArgumentList10
         reader.OnAny(itemTypes[9], _item9, 9);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     {
         var itemTypes = _type.ItemTypes;

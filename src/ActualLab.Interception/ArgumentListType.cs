@@ -68,6 +68,7 @@ public sealed class ArgumentListType
 
     private ArgumentListType(bool useGenerics, ReadOnlySpan<Type?> key)
     {
+#pragma warning disable IL2055, IL2062, IL2077, IL3050
         Type[] itemTypes = key.ToArray().TakeWhile(x => x != null).ToArray()!;
         ItemTypes = itemTypes;
         ItemCount = itemTypes.Length;
@@ -100,6 +101,7 @@ public sealed class ArgumentListType
             var factory = (Func<ArgumentListType, ArgumentList>)ListType.GetConstructorDelegate(typeof(ArgumentListType))!;
             Factory = () => factory.Invoke(this);
         }
+#pragma warning restore IL2055, IL2062, IL2077, IL3050
     }
 
     public override string ToString()

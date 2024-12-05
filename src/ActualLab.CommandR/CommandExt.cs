@@ -12,7 +12,9 @@ public static class CommandExt
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Type GetResultType(this ICommand command)
+#pragma warning disable IL2072
         => GetResultType(command.GetType());
+#pragma warning restore IL2072
 
     public static Type GetResultType(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type commandType)

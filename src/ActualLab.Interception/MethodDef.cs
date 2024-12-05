@@ -175,7 +175,9 @@ public class MethodDef
 
     // Protected methods
 
-    protected internal virtual void KeepCodeForResult<TResult, TUnwrapped>()
+    protected internal virtual void KeepCodeForResult<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>()
     {
         if (CodeKeeper.AlwaysTrue)
             return;
@@ -203,16 +205,18 @@ public class MethodDef
     // Private methods
 
     private object? GetDefaultResult()
+#pragma warning disable IL2077
         => !IsAsyncMethod
             ? DefaultUnwrappedResult
             : ReturnsValueTask
                 ? IsAsyncVoidMethod ? default(ValueTask) : ValueTaskExt.FromDefaultResult(UnwrappedReturnType)
                 : TaskExt.FromDefaultResult(UnwrappedReturnType);
+#pragma warning restore IL2077
 
     private object? GetDefaultUnwrappedResult()
-        => UnwrappedReturnType.IsClass
-            ? null!
-            : Activator.CreateInstance(UnwrappedReturnType);
+#pragma warning disable IL2077
+        => UnwrappedReturnType.GetDefaultValue();
+#pragma warning restore IL2077
 
     private TResult GetAsyncInvoker<TResult>(MethodInfo methodInfo)
         => (TResult)AsyncInvokerCache.GetOrAdd((methodInfo, UnwrappedReturnType),

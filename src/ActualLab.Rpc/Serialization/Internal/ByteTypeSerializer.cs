@@ -6,6 +6,8 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Serialization.Internal;
 
+#pragma warning disable IL2026
+
 public static class ByteTypeSerializer
 {
     private static readonly ConcurrentDictionary<Type, ByteString> ToBytesCache

@@ -1,7 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Newtonsoft.Json.Linq;
-using ActualLab.Internal;
 
 namespace ActualLab.RestEase.Internal;
 
@@ -9,10 +7,7 @@ public class RestEaseHttpMessageHandler(IServiceProvider services) : DelegatingH
 {
     public IServiceProvider Services { get; } = services;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#pragma warning disable IL2046
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-#pragma warning restore IL2046
     {
         var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.InternalServerError) {
@@ -23,7 +18,6 @@ public class RestEaseHttpMessageHandler(IServiceProvider services) : DelegatingH
         return response;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private static async Task<Exception> DeserializeError(HttpResponseMessage response)
     {
         var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);

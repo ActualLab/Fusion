@@ -1,12 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
-using ActualLab.Internal;
 using ActualLab.OS;
 
 namespace ActualLab.Interception;
 
 #pragma warning disable CA1721
+#pragma warning disable IL3050
 
 public abstract partial record ArgumentList
 {
@@ -66,9 +66,7 @@ public abstract partial record ArgumentList
 
     public abstract Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract void Read(ArgumentListReader reader);
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public abstract void Write(ArgumentListWriter writer);
 
     // Equality
@@ -155,11 +153,9 @@ public sealed record ArgumentList0 : ArgumentList
 
     // Read & Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Read(ArgumentListReader reader)
     { }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(ArgumentListWriter writer)
     { }
 

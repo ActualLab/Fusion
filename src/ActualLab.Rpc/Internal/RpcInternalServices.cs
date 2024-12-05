@@ -38,7 +38,6 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
 
     // NewXxx
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public IProxy NewNonRoutingProxy(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,
@@ -54,7 +53,6 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
         return new RpcNonRoutingInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget, assumeConnected);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public IProxy NewRoutingProxy(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,
@@ -70,7 +68,6 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
         return new RpcRoutingInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget, assumeConnected);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public IProxy NewSwitchProxy(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,

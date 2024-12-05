@@ -4,7 +4,8 @@ namespace ActualLab.Trimming;
 
 public class TypeCodeKeeper : CodeKeeper
 {
-    public virtual T KeepType<T>(bool ensureInitialized = false)
+    public virtual T KeepType<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(
+        bool ensureInitialized = false)
         => ensureInitialized || AlwaysFalse
             ? KeepTypeImpl<T>()
             : default!;
@@ -16,7 +17,7 @@ public class TypeCodeKeeper : CodeKeeper
 
     // Nested types
 
-    private static class TypeKeeper<T>
+    private static class TypeKeeper<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
     {
         public static readonly T Instance;
 

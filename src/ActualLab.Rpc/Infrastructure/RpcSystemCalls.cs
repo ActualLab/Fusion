@@ -1,8 +1,6 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Internal;
 using Errors = ActualLab.Rpc.Internal.Errors;
-using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -81,7 +79,6 @@ public class RpcSystemCalls(IServiceProvider services)
         return Task.FromResult(result);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task<RpcNoWait> Ok(object? result)
     {
         var context = RpcInboundContext.GetCurrent();
@@ -91,7 +88,6 @@ public class RpcSystemCalls(IServiceProvider services)
         return RpcNoWait.Tasks.Completed;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task<RpcNoWait> Error(ExceptionInfo error)
     {
         var context = RpcInboundContext.GetCurrent();
@@ -127,7 +123,6 @@ public class RpcSystemCalls(IServiceProvider services)
     public Task<Unit> NotFound(string serviceName, string methodName)
         => throw Errors.EndpointNotFound(serviceName, methodName);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task<RpcNoWait> KeepAlive(long[] localIds)
     {
         var context = RpcInboundContext.GetCurrent();
@@ -136,7 +131,6 @@ public class RpcSystemCalls(IServiceProvider services)
         return default;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task<RpcNoWait> Disconnect(long[] localIds)
     {
         var context = RpcInboundContext.GetCurrent();
@@ -145,7 +139,6 @@ public class RpcSystemCalls(IServiceProvider services)
         return RpcNoWait.Tasks.Completed;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task<RpcNoWait> Ack(long nextIndex, Guid hostId = default)
     {
         var context = RpcInboundContext.GetCurrent();
@@ -158,11 +151,9 @@ public class RpcSystemCalls(IServiceProvider services)
         return default;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task<RpcNoWait> AckEnd(Guid hostId = default)
         => Ack(long.MaxValue, hostId);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task<RpcNoWait> I(long index, object? item)
     {
         var context = RpcInboundContext.GetCurrent();
@@ -173,7 +164,6 @@ public class RpcSystemCalls(IServiceProvider services)
             : RpcNoWait.Tasks.Completed;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task<RpcNoWait> B(long index, object? items)
     {
         var context = RpcInboundContext.GetCurrent();
@@ -184,7 +174,6 @@ public class RpcSystemCalls(IServiceProvider services)
             : RpcNoWait.Tasks.Completed;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public Task<RpcNoWait> End(long index, ExceptionInfo error)
     {
         var context = RpcInboundContext.GetCurrent();

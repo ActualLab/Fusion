@@ -235,10 +235,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         RpcPeerConnectionState connectionState,
         CancellationToken cancellationToken);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
-#pragma warning disable IL2046
     protected override async Task OnRun(CancellationToken cancellationToken)
-#pragma warning restore IL2046
     {
         if (ConnectionKind == RpcPeerConnectionKind.Local) {
             // It's a fake RpcPeer that exists solely to be "available"
@@ -384,7 +381,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     protected async Task Reset(Exception error, bool isStopped = false)
     {
         RemoteObjects.Abort();

@@ -52,7 +52,6 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void Register(IRpcObject obj)
     {
         obj.RequireKind(RpcObjectKind.Remote);
@@ -97,7 +96,6 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
         return true;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
     {
         try {
@@ -127,14 +125,12 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
         // ReSharper disable once FunctionNeverReturns
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void Disconnect(params long[] localIds)
     {
         foreach (var localId in localIds)
             Get(localId)?.Disconnect();
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public void Abort()
     {
         var objects = _objects.Values.Select(h => h.Target as IRpcObject).ToList();
@@ -230,7 +226,6 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
         // ReSharper disable once FunctionNeverReturns
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public Task KeepAlive(long[] localIds)
     {
         InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, CpuTimestamp.Now.Value);

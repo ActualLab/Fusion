@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using MessagePack;
 
 namespace ActualLab.Serialization;
@@ -11,7 +10,6 @@ public static class ByteSerialized
         => new() { Value = value };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static ByteSerialized<TValue> New<TValue>(byte[] data)
         => new() { Data = data };
 }
@@ -36,9 +34,7 @@ public partial class ByteSerialized<T>
 
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public byte[] Data {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get => Serialize();
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         init => Value = Deserialize(value);
     }
 
@@ -49,7 +45,6 @@ public partial class ByteSerialized<T>
 
     // Private & protected methods
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private byte[] Serialize()
     {
         byte[] data;
@@ -62,13 +57,11 @@ public partial class ByteSerialized<T>
         return data;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private T Deserialize(byte[] data)
         => data.Length == 0
             ? default!
             : GetSerializer().Read(data, out _);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected virtual IByteSerializer<T> GetSerializer()
         => ByteSerializer<T>.Default;
 }

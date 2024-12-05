@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using MessagePack;
 
 namespace ActualLab.Serialization;
@@ -11,7 +10,6 @@ public static class SystemJsonSerialized
         => new() { Value = value };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public static SystemJsonSerialized<TValue> New<TValue>(string data)
         => new() { Data = data };
 }
@@ -25,7 +23,6 @@ public partial class SystemJsonSerialized<T> : TextSerialized<T>
 {
     private static ITextSerializer<T>? _serializer;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected override ITextSerializer<T> GetSerializer()
     {
         if (_serializer is { } serializer)

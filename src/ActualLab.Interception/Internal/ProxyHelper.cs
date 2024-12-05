@@ -2,6 +2,8 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Interception.Internal;
 
+#pragma warning disable IL2072
+
 public static class ProxyHelper
 {
     private static readonly BindingFlags GetMethodInfoBindingFlags =
@@ -18,9 +20,7 @@ public static class ProxyHelper
 
         if (type.IsInterface) {
             foreach (var tInterface in type.GetAllBaseTypes(false, true)) {
-#pragma warning disable IL2072
                 result = GetMethodInfoImpl(tInterface, name, argumentTypes);
-#pragma warning restore IL2072
                 if (result != null)
                     return result;
             }

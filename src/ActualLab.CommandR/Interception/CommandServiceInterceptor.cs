@@ -6,9 +6,6 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.CommandR.Interception;
 
-#if !NET5_0
-[RequiresUnreferencedCode(UnreferencedCode.Commander)]
-#endif
 public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options settings, IServiceProvider services)
     : Interceptor(settings, services)
 {
@@ -74,7 +71,8 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
         };
 
     // We don't need to decorate this method with any dynamic access attributes
-    protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
+    protected override MethodDef? CreateMethodDef(MethodInfo method,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType)
     {
         try {
             var type = proxyType.NonProxyType();

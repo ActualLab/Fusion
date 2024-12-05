@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using ActualLab.OS;
 using ActualLab.Rpc.Infrastructure;
@@ -23,7 +22,6 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public IEnumerator<RpcServiceDef> GetEnumerator() => _serviceByName.Values.GetEnumerator();
 
-    [RequiresUnreferencedCode(UnreferencedCode.Rpc)]
     public RpcServiceRegistry(IServiceProvider services)
         : base(services)
     {

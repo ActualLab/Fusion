@@ -1,6 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Internal;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Serialization.Internal;
 using Cysharp.Text;
@@ -15,7 +13,6 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
     [ThreadStatic] private static Utf8TextWriter? _utf8Buffer;
     public static int Utf8BufferReplaceCapacity { get; set; } = 65536;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
     {
         var writer = _utf8Buffer ??= new Utf8TextWriter();
@@ -42,7 +39,6 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, ReadOnlyMemory<byte> data)
     {
         var itemDeserializer = (ItemDeserializer)(AllowPolymorphism
@@ -61,7 +57,6 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
         protected readonly ITextSerializer Serializer = serializer;
         protected readonly Utf8TextWriter Writer = writer;
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnStruct<T>(T item, int index)
         {
             var type = typeof(T);
@@ -76,7 +71,6 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
     private sealed class ItemPolymorphicSerializer(ITextSerializer serializer, Utf8TextWriter writer)
         : ItemSerializer(serializer, writer)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnClass(Type type, object? item, int index)
         {
             var itemType = item?.GetType() ?? RequireNonAbstract(type);
@@ -85,7 +79,6 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
             Writer.WriteLiteral(Delimiter);
         }
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnAny(Type type, object? item, int index)
         {
             if (type.IsValueType) {
@@ -109,7 +102,6 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
         Utf8TextWriter writer)
         : ItemSerializer(serializer, writer)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnClass(Type type, object? item, int index)
         {
             Writer.WriteLiteral(TextTypeSerializer.NullTypeSpan);
@@ -117,7 +109,6 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
             Writer.WriteLiteral(Delimiter);
         }
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnAny(Type type, object? item, int index)
         {
             if (type.IsValueType) {
@@ -140,14 +131,12 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
         Utf8TextWriter writer)
         : ItemSerializer(serializer, writer)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnClass(Type type, object? item, int index)
         {
             Serializer.Write(Writer, item, RequireNonAbstract(type));
             Writer.WriteLiteral(Delimiter);
         }
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override void OnAny(Type type, object? item, int index)
         {
             if (type == typeof(CancellationToken))
@@ -166,7 +155,6 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
         protected readonly ITextSerializer Serializer = serializer;
         protected ReadOnlyMemory<byte> Data = data;
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override T OnStruct<T>(int index)
         {
             var type = typeof(T);
@@ -179,14 +167,12 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
     private sealed class ItemPolymorphicDeserializer(ITextSerializer serializer, ReadOnlyMemory<byte> data)
         : ItemDeserializer(serializer, data)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnClass(Type type, int index)
         {
             var itemType = TextTypeSerializer.ReadDerivedItemType(ref Data, type);
             return Serializer.ReadDelimited(ref Data, itemType, Delimiter);
         }
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnAny(Type type, int index, object? defaultValue)
         {
             if (type.IsValueType)
@@ -202,14 +188,12 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
     private sealed class ItemNonPolymorphicDeserializer(ITextSerializer serializer, ReadOnlyMemory<byte> data)
         : ItemDeserializer(serializer, data)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnClass(Type type, int index)
         {
             TextTypeSerializer.ReadExactItemType(ref Data, type);
             return Serializer.ReadDelimited(ref Data, type, Delimiter);
         }
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnAny(Type type, int index, object? defaultValue)
         {
             if (type.IsValueType)
@@ -225,11 +209,9 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
     private sealed class ItemValueOnlyDeserializer(ITextSerializer serializer, ReadOnlyMemory<byte> data)
         : ItemDeserializer(serializer, data)
     {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnClass(Type type, int index)
             => Serializer.ReadDelimited(ref Data, type, Delimiter);
 
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         public override object? OnAny(Type type, int index, object? defaultValue)
             => type == typeof(CancellationToken)
                 ? defaultValue

@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.Internal;
 using MessagePack;
 using Errors = ActualLab.Serialization.Internal.Errors;
 
@@ -49,7 +47,6 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
             : $"{GetType().Name}({TypeRef.ToString()}, {JsonFormatter.Format(Message)})";
 #pragma warning restore IL2026
 
-    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public Exception? ToException()
     {
         if (IsNone)
@@ -84,9 +81,9 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 
     // Private methods
 
-    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     private static Exception? TryCreateException(ExceptionInfo exceptionInfo)
     {
+#pragma warning disable IL2026, IL2072, IL2075
         if (exceptionInfo.IsNone)
             return null;
 
@@ -113,6 +110,12 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
         if (!string.Equals("message", parameter?.Name ?? "", StringComparison.Ordinal))
             return null;
 
-        return (Exception)type.CreateInstance(message);
+        try {
+            return (Exception)type.CreateInstance(message);
+        }
+        catch {
+            return null;
+        }
+#pragma warning restore IL2026, IL2072, IL2075
     }
 }

@@ -76,6 +76,7 @@ builder.WebHost.UseDefaultServiceProvider((ctx, options) => {
 // Build & configure app
 var app = builder.Build();
 StaticLog.Factory = app.Services.LoggerFactory();
+var log = StaticLog.For<Program>();
 ConfigureApp();
 
 // Ensure the DB is created
@@ -286,13 +287,14 @@ void ConfigureApp()
     // and set it as this server's content root.
     var baseDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
     var cfgPart = Regex.Match(baseDir, @"[\\/](debug)|(release)(_[\w\d\.]+[\\/])?").Value;
-    var wwwRootPath = Path.Combine(baseDir, "wwwroot");
-    if (!Directory.Exists(Path.Combine(wwwRootPath, "_framework")))
+    var webRootPath = Path.Combine(baseDir, "wwwroot");
+    if (!Directory.Exists(Path.Combine(webRootPath, "_framework")))
         // This is a regular build, not a build produced w/ "publish",
         // so we remap wwwroot to the client's wwwroot folder
-        wwwRootPath = Path.GetFullPath(Path.Combine(baseDir, $"../../UI/{cfgPart}/wwwroot"));
-    env.WebRootPath = wwwRootPath;
+        webRootPath = Path.GetFullPath(Path.Combine(baseDir, $"../../UI/{cfgPart}/wwwroot"));
+    env.WebRootPath = webRootPath;
     env.WebRootFileProvider = new PhysicalFileProvider(env.WebRootPath);
+    log.LogInformation("WebRootPath: {WebRootPath}", webRootPath);
     StaticWebAssetsLoader.UseStaticWebAssets(env, cfg);
     if (env.IsDevelopment()) {
         app.UseDeveloperExceptionPage();
@@ -318,7 +320,7 @@ void ConfigureApp()
 
     // Blazor + static files
     app.UseBlazorFrameworkFiles();
-    app.UseStaticFiles();
+    app.MapStaticAssets();
 
     // API controllers
     app.UseRouting();

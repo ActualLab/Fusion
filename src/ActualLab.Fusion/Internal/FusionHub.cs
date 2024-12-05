@@ -41,7 +41,6 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
         return services.ActivateProxy(serviceType, interceptor, null, initialize);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Fusion)]
     public IProxy NewRemoteComputeServiceProxy(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,

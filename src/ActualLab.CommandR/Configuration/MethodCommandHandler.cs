@@ -3,6 +3,8 @@ using ActualLab.CommandR.Internal;
 
 namespace ActualLab.CommandR.Configuration;
 
+#pragma warning disable IL2026, IL2060, IL2111, IL3050
+
 public interface IMethodCommandHandler : ICommandHandler
 {
     public Type ServiceType { get; }
@@ -78,12 +80,12 @@ public static class MethodCommandHandler
         typeof(MethodCommandHandler)
             .GetMethod(nameof(Create), BindingFlags.Static | BindingFlags.NonPublic)!;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Commander)]
-    public static CommandHandler New(Type serviceType, MethodInfo method, double? priorityOverride = null)
+    public static CommandHandler New(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
+        MethodInfo method, double? priorityOverride = null)
         => TryNew(serviceType, method, priorityOverride)
             ?? throw Errors.InvalidCommandHandlerMethod(method);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Commander)]
     public static CommandHandler? TryNew(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         MethodInfo method,
@@ -128,11 +130,8 @@ public static class MethodCommandHandler
             .Invoke(null, [serviceType, method, isFilter, order])!;
     }
 
-    [RequiresUnreferencedCode(ActualLab.Internal.UnreferencedCode.Reflection)]
     public static CommandHandlerAttribute? GetAttribute(MethodInfo method)
-#pragma warning disable IL2026
         => method.GetAttribute<CommandHandlerAttribute>(true, true);
-#pragma warning restore IL2026
 
     private static MethodCommandHandler<TCommand> Create<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TCommand>(

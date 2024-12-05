@@ -89,7 +89,8 @@ public class ComputeServiceInterceptor : Interceptor
     }
 
     // We don't need to decorate this method with any dynamic access attributes
-    protected override MethodDef? CreateMethodDef(MethodInfo method, Type proxyType)
+    protected override MethodDef? CreateMethodDef(MethodInfo method,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType)
     {
         var type = proxyType.NonProxyType();
 #pragma warning disable IL2072

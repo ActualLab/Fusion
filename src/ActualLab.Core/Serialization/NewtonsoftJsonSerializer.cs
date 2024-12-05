@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using Cysharp.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using ActualLab.Internal;
 using ActualLab.Serialization.Internal;
 using CommunityToolkit.HighPerformance;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
@@ -11,9 +10,6 @@ namespace ActualLab.Serialization;
 
 #pragma warning disable CA2326, CA2327, CA2328, IL2116
 
-#if !NET5_0
-[RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#endif
 public class NewtonsoftJsonSerializer : TextSerializerBase
 {
 #if NET9_0_OR_GREATER
@@ -48,7 +44,6 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
 
     [field: AllowNull, MaybeNull]
     public static TypeDecoratingTextSerializer DefaultTypeDecorating {
-        [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
         get {
             if (field is { } value)
                 return value;
@@ -73,7 +68,6 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
 
     // Read
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(string data, Type type)
     {
         var stringReader = new StringReader(data); // No need to dispose
@@ -81,7 +75,6 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
         return _jsonSerializer.Deserialize(reader, type);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         var streamReader = new StreamReader(data.AsStream()); // No need to dispose
@@ -93,7 +86,6 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
 
     // Write
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override string Write(object? value, Type type)
     {
         using var stringWriter = new ZStringWriter();
@@ -104,7 +96,6 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
         return stringWriter.ToString();
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override void Write(TextWriter textWriter, object? value, Type type)
     {
         using var writer = new JsonTextWriter(textWriter) { CloseOutput = false };

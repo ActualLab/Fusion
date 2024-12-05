@@ -1,6 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using Newtonsoft.Json.Serialization;
-using ActualLab.Internal;
 using ActualLab.Serialization.Internal;
 using Errors = ActualLab.Serialization.Internal.Errors;
 
@@ -8,10 +6,6 @@ namespace ActualLab.Serialization;
 
 #pragma warning disable IL2116, IL2026
 
-#if !NET5_0
-[RequiresUnreferencedCode(UnreferencedCode.Serialization)]
-#endif
-[method: RequiresUnreferencedCode(UnreferencedCode.Serialization)]
 public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type, bool>? typeFilter = null)
     : TextSerializerBase
 {
@@ -56,7 +50,6 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
     public ITextSerializer Serializer { get; } = serializer;
     public Func<Type, bool> TypeFilter { get; } = typeFilter ?? (static _ => true);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override object? Read(string data, Type type)
     {
         if (data.IsNullOrEmpty())
@@ -82,7 +75,6 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
         return Serializer.Read(tail, actualType);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public override string Write(object? value, Type type)
     {
         if (value == null)
@@ -105,7 +97,6 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected object? ReadLegacy(string data, Type type)
     {
         using var p = ListFormat.Default.CreateParser(data);
@@ -126,7 +117,6 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
         return Serializer.Read(p.Item, actualType);
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     protected string WriteLegacy(object? value, Type type)
     {
         if (value == null)

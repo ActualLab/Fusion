@@ -1,11 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Diagnostics;
 using Errors = ActualLab.Rpc.Internal.Errors;
-using UnreferencedCode = ActualLab.Internal.UnreferencedCode;
 
 namespace ActualLab.Rpc.WebSockets;
 
@@ -70,14 +68,12 @@ public sealed class WebSocketChannel<T> : Channel<T>
     public readonly Task WhenWriteCompleted;
     public readonly Task WhenClosed;
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public WebSocketChannel(
         WebSocketOwner webSocketOwner,
         CancellationToken cancellationToken = default)
         : this(Options.Default, webSocketOwner, cancellationToken)
     { }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     public WebSocketChannel(
         Options settings,
         WebSocketOwner webSocketOwner,
@@ -157,7 +153,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
 
     // Private methods
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async Task RunReader(CancellationToken cancellationToken)
     {
         var writer = _readChannel.Writer;
@@ -188,7 +183,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async Task RunWriter(CancellationToken cancellationToken)
     {
         try {
@@ -227,7 +221,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async Task RunWriterWithFrameDelayer(
         ChannelReader<T> reader,
         RpcFrameDelayer frameDelayer,
@@ -327,7 +320,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
             _writeBuffer.Reset();
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async IAsyncEnumerable<T> ReadAll([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var minReadBufferSize = Settings.MinReadBufferSize;
@@ -371,7 +363,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     private async IAsyncEnumerable<T> ReadAllProjecting([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var minReadBufferSize = Settings.MinReadBufferSize;
@@ -437,7 +428,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.NoInlining)]
     private bool TrySerializeBytes(T value, ArrayPoolBuffer<byte> buffer)
     {
@@ -466,7 +456,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.NoInlining)]
     private bool TrySerializeText(T value, ArrayPoolBuffer<byte> buffer)
     {
@@ -488,7 +477,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.NoInlining)]
     private bool TryDeserializeBytes(ref ReadOnlyMemory<byte> bytes, out T value)
     {
@@ -522,7 +510,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.NoInlining)]
     private bool TryProjectingDeserializeBytes(ref ReadOnlyMemory<byte> bytes, out T value, out bool isProjection)
     {
@@ -557,7 +544,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Serialization)]
     [MethodImpl(MethodImplOptions.NoInlining)]
     private bool TryDeserializeText(ReadOnlyMemory<byte> bytes, out T value)
     {

@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
-using ActualLab.Plugins.Internal;
 
 namespace ActualLab.Plugins;
 
@@ -19,10 +18,10 @@ public interface IPluginInfoProvider
         public static readonly Query Instance = new();
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
-    ImmutableHashSet<TypeRef> GetDependencies(Type pluginType);
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
-    PropertyBag GetCapabilities(Type pluginType);
+    public ImmutableHashSet<TypeRef> GetDependencies(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type pluginType);
+    public PropertyBag GetCapabilities(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type pluginType);
 }
 
 public class PluginInfoProvider : IPluginInfoProvider
@@ -30,8 +29,8 @@ public class PluginInfoProvider : IPluginInfoProvider
     private readonly ConcurrentDictionary<Type, LazySlim<Type, object?>> _pluginCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
-    public virtual ImmutableHashSet<TypeRef> GetDependencies(Type pluginType)
+    public virtual ImmutableHashSet<TypeRef> GetDependencies(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type pluginType)
     {
         var plugin = GetPlugin(pluginType);
         if (plugin is not IHasDependencies hasDependencies)
@@ -40,18 +39,17 @@ public class PluginInfoProvider : IPluginInfoProvider
         return dependencies.Select(t => (TypeRef) t).ToImmutableHashSet();
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
-    public virtual PropertyBag GetCapabilities(Type pluginType)
+    public virtual PropertyBag GetCapabilities(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type pluginType)
     {
         var plugin = GetPlugin(pluginType);
-        if (plugin is not IHasCapabilities hasCapabilities)
-            return PropertyBag.Empty;
-        return hasCapabilities.Capabilities;
+        return plugin is IHasCapabilities hasCapabilities
+            ? hasCapabilities.Capabilities
+            : PropertyBag.Empty;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Plugins)]
     protected virtual object? GetPlugin(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type pluginType)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type pluginType)
         => _pluginCache.GetOrAdd(pluginType, static pluginType1 => {
 #pragma warning disable IL2070
             var ctor = pluginType1.GetConstructor([typeof(IPluginInfoProvider.Query)]);

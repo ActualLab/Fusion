@@ -4,6 +4,8 @@ using ActualLab.Interception.Internal;
 
 namespace ActualLab.Interception.Interceptors;
 
+#pragma warning disable IL2060, IL2075
+
 public class TypeViewInterceptor : Interceptor
 {
     public new record Options : Interceptor.Options
@@ -14,6 +16,10 @@ public class TypeViewInterceptor : Interceptor
     private readonly MethodInfo _createConvertingHandlerMethod;
     private readonly MethodInfo _createTaskConvertingHandlerMethod;
     private readonly MethodInfo _createValueTaskConvertingHandlerMethod;
+
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TypeViewInterceptor))]
+    static TypeViewInterceptor()
+    { }
 
     public TypeViewInterceptor(Options settings, IServiceProvider services)
         : base(settings, services)
