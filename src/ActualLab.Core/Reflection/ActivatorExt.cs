@@ -5,8 +5,6 @@ using ActualLab.Internal;
 
 namespace ActualLab.Reflection;
 
-#pragma warning disable IL2070
-
 public static class ActivatorExt
 {
     private static readonly ConcurrentDictionary<Type, bool> HasDefaultCtorCache = new();
@@ -35,8 +33,7 @@ public static class ActivatorExt
     }
 
     public static Delegate? GetConstructorDelegate(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
-        this Type type)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type)
         => CtorDelegate0Cache.GetOrAdd(
             type,
             static tObject => {
@@ -44,7 +41,9 @@ public static class ActivatorExt
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
 
-    public static Delegate? GetConstructorDelegate(this Type type, Type argument1)
+    public static Delegate? GetConstructorDelegate(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type,
+        Type argument1)
         => CtorDelegate1Cache.GetOrAdd(
             (type, argument1),
             static key => {
@@ -53,7 +52,9 @@ public static class ActivatorExt
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
 
-    public static Delegate? GetConstructorDelegate(this Type type, Type argument1, Type argument2)
+    public static Delegate? GetConstructorDelegate(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type,
+        Type argument1, Type argument2)
         => CtorDelegate2Cache.GetOrAdd(
             (type, argument1, argument2),
             static key => {
@@ -62,7 +63,9 @@ public static class ActivatorExt
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
 
-    public static Delegate? GetConstructorDelegate(this Type type, Type argument1, Type argument2, Type argument3)
+    public static Delegate? GetConstructorDelegate(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type,
+        Type argument1, Type argument2, Type argument3)
         => CtorDelegate3Cache.GetOrAdd(
             (type, argument1, argument2, argument3),
             static key => {
@@ -71,7 +74,8 @@ public static class ActivatorExt
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
 
-    public static Delegate? GetConstructorDelegate(this Type type,
+    public static Delegate? GetConstructorDelegate(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type,
         Type argument1, Type argument2, Type argument3, Type argument4)
         => CtorDelegate4Cache.GetOrAdd(
             (type, argument1, argument2, argument3, argument4),
@@ -81,7 +85,8 @@ public static class ActivatorExt
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
 
-    public static Delegate? GetConstructorDelegate(this Type type,
+    public static Delegate? GetConstructorDelegate(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type,
         Type argument1, Type argument2, Type argument3, Type argument4, Type argument5)
         => CtorDelegate5Cache.GetOrAdd(
             (type, argument1, argument2, argument3, argument4, argument5),
