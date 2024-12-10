@@ -27,12 +27,12 @@ public static class EndpointRouteBuilderExt
     public static IEndpointRouteBuilder MapFusionBlazorMode(this IEndpointRouteBuilder endpoints)
     {
         var services = endpoints.ServiceProvider;
-        var handler = services.GetRequiredService<BlazorModeEndpoint>();
+        var handler = services.GetRequiredService<RenderModeEndpoint>();
         endpoints
             .MapGet("/fusion/blazorMode", handler.Invoke)
             .WithGroupName("FusionBlazorMode");
         endpoints
-            .MapGet("/fusion/blazorMode/{isBlazorServer}", handler.Invoke)
+            .MapGet("/fusion/blazorMode/{renderMode}", handler.Invoke)
             .WithGroupName("FusionBlazorMode");
         return endpoints;
     }

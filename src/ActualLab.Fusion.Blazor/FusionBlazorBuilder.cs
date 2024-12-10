@@ -30,8 +30,7 @@ public readonly struct FusionBlazorBuilder
         services.AddScoped(c => new UIActionFailureTracker(
             c.GetRequiredService<UIActionFailureTracker.Options>(), c));
         services.AddScoped(c => new JSRuntimeInfo(c.GetRequiredService<IJSRuntime>()));
-        services.AddScoped(c => new BlazorModeHelper(
-            c.GetRequiredService<NavigationManager>(), c.GetRequiredService<JSRuntimeInfo>()));
+        services.AddScoped(c => new RenderModeHelper(c.GetRequiredService<BlazorCircuitContext>()));
         services.AddScoped(c => new BlazorCircuitContext(c));
     }
 }

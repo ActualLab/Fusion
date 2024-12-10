@@ -46,6 +46,10 @@ public static class ComponentExt
 #endif
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static RenderHandle GetRenderHandle(this ComponentBase component)
+        => RenderHandleGetter(component);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Dispatcher GetDispatcher(this ComponentBase component)
         => RenderHandleGetter(component).Dispatcher;
 

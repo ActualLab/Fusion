@@ -19,7 +19,7 @@ public abstract class ComputedRenderStateComponent<TState> : ComputedStateCompon
             return true;
 
         // Inconsistent state is rare, so we make this check at last
-        return (Options & ComputedStateComponentOptions.ShouldRenderInconsistentState) != 0;
+        return (Options & ComputedStateComponentOptions.RenderInconsistentState) != 0;
     }
 
     protected bool IsRenderStateChanged()

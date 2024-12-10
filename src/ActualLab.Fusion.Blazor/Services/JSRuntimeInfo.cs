@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.JSInterop;
 
 namespace ActualLab.Fusion.Blazor;
@@ -10,6 +9,7 @@ public sealed class JSRuntimeInfo
 
     // ReSharper disable once InconsistentNaming
     public IJSRuntime Runtime { get; init; }
+    public bool IsUnavailable { get; init; }
     public bool IsRemote { get; init; }
     public object? ClientProxy => _clientProxyGetter.Invoke(Runtime);
 
@@ -17,6 +17,7 @@ public sealed class JSRuntimeInfo
     {
         Runtime = runtime;
         var type = runtime.GetType();
+        IsUnavailable = string.Equals(type.Name, "UnsupportedJavaScriptRuntime", StringComparison.Ordinal);
         IsRemote = string.Equals(type.Name, "RemoteJSRuntime", StringComparison.Ordinal);
         if (!IsRemote)
             return;

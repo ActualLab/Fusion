@@ -25,6 +25,8 @@
 
     [Parameter]
     public string SessionId { get; set; } = "";
+    [Parameter]
+    public string RenderModeKey { get; set; } = "";
 
     protected override void OnInitialized()
     {
@@ -32,7 +34,7 @@
             ? Session.Default
             : new Session(SessionId);
         if (!BlazorCircuitContext.IsPrerendering)
-            BlazorCircuitContext.RootComponent = this;
+            BlazorCircuitContext.Initialize(this, RenderModeDef.GetOrDefault(RenderModeKey));
         if (OSInfo.IsWebAssembly) {
             var rootServices = Services.Commander().Services;
             _ = rootServices.HostedServices().Start();

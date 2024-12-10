@@ -21,17 +21,24 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
             if (!mustRecompute)
                 return task;
 
-            if (task.IsCompletedSuccessfully) {
-                _ = State.Recompute();
-                return task;
-            }
+            var mustAwaitForRecompute = (Options & ComputedStateComponentOptions.AwaitForRecomputeOnParameterChange) != 0;
+            if (!task.IsCompletedSuccessfully)
+                return CompleteAsync(task, State, mustAwaitForRecompute);
 
-            return CompleteAsync(task);
+            var recomputeTask = State.Recompute();
+            return mustAwaitForRecompute && !recomputeTask.IsCompleted
+                ? CompleteRecomputeAsync(recomputeTask.AsTask())
+                : Task.CompletedTask;
 
-            async Task CompleteAsync(Task dependency) {
+            static async Task CompleteAsync(Task dependency, IComputedState<TState> state, bool mustAwaitForRecompute1) {
                 await dependency;
-                _ = State.Recompute();
+                var recomputeTask1 = state.Recompute();
+                if (mustAwaitForRecompute1 && !recomputeTask1.IsCompleted)
+                    await recomputeTask1.SilentAwait();
             }
+
+            static async Task CompleteRecomputeAsync(Task recomputeTask1)
+                => await recomputeTask1.SilentAwait();
         }
         catch {
             // We can still conclude whether the parameters were changed or not.
@@ -83,6 +90,6 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
             return true;
 
         // Inconsistent state is rare, so we make this check at last
-        return (Options & ComputedStateComponentOptions.ShouldRenderInconsistentState) != 0;
+        return (Options & ComputedStateComponentOptions.RenderInconsistentState) != 0;
     }
 }

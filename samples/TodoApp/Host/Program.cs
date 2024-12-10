@@ -30,6 +30,7 @@ using Microsoft.Extensions.Hosting;
 using Samples.TodoApp;
 using Samples.TodoApp.Abstractions;
 using Samples.TodoApp.Host;
+using Samples.TodoApp.Host.Components;
 using Samples.TodoApp.Services;
 using Samples.TodoApp.Services.Db;
 using Samples.TodoApp.UI;
@@ -251,10 +252,9 @@ void ConfigureServices()
         o.DisconnectedCircuitMaxRetained = 1;
         o.DisconnectedCircuitRetentionPeriod = TimeSpan.FromSeconds(30);
     });
-    services.AddRazorPages();
-#if NET8_0_OR_GREATER
-    services.AddRazorComponents();
-#endif
+    builder.Services.AddRazorComponents()
+        .AddInteractiveServerComponents()
+        .AddInteractiveWebAssemblyComponents();
     fusion.AddBlazor().AddAuthentication().AddPresenceReporter(); // Must follow services.AddServerSideBlazor()!
     services.AddBlazorCircuitActivitySuppressor();
 }
@@ -281,34 +281,24 @@ void ConfigureShardDbContext(IServiceProvider services, DbShard shard, DbContext
 
 void ConfigureApp()
 {
-    // This server serves static content from Blazor Client,
-    // and since we don't copy it to local wwwroot,
-    // we need to find Client's wwwroot in bin/(Debug/Release) folder
-    // and set it as this server's content root.
-    var baseDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
-    var cfgPart = Regex.Match(baseDir, @"[\\/](debug)|(release)(_[\w\d\.]+[\\/])?").Value;
-    var webRootPath = Path.Combine(baseDir, "wwwroot");
-    if (!Directory.Exists(Path.Combine(webRootPath, "_framework")))
-        // This is a regular build, not a build produced w/ "publish",
-        // so we remap wwwroot to the client's wwwroot folder
-        webRootPath = Path.GetFullPath(Path.Combine(baseDir, $"../../UI/{cfgPart}/wwwroot"));
-    env.WebRootPath = webRootPath;
-    env.WebRootFileProvider = new PhysicalFileProvider(env.WebRootPath);
-    log.LogInformation("WebRootPath: {WebRootPath}", webRootPath);
-    StaticWebAssetsLoader.UseStaticWebAssets(env, cfg);
-    if (env.IsDevelopment()) {
-        app.UseDeveloperExceptionPage();
+    // Configure the HTTP request pipeline
+    if (app.Environment.IsDevelopment()) {
         app.UseWebAssemblyDebugging();
     }
     else {
-        app.UseExceptionHandler("/Error");
+        app.UseExceptionHandler("/Error", createScopeForErrors: true);
+        // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
         app.UseHsts();
     }
     app.UseHttpsRedirection();
+    app.UseStaticFiles();
     app.UseWebSockets(new WebSocketOptions() {
         KeepAliveInterval = TimeSpan.FromSeconds(30),
     });
     app.UseFusionSession();
+    app.UseRouting();
+    app.UseAuthentication();
+    app.UseAntiforgery();
 
     // Change Blazor Server culture
     app.Use(async (_, next) => {
@@ -318,21 +308,15 @@ void ConfigureApp()
         await next().ConfigureAwait(false);
     });
 
-    // Blazor + static files
-    app.UseBlazorFrameworkFiles();
-    app.MapStaticAssets();
-
-    // API controllers
-    app.UseRouting();
-    app.UseAuthentication();
+    app.MapRazorComponents<App>()
+        .AddInteractiveServerRenderMode()
+        .AddInteractiveWebAssemblyRenderMode()
+        .AddAdditionalAssemblies(typeof(Routes).Assembly);
 #pragma warning disable ASP0014
     app.UseEndpoints(endpoints => {
-        endpoints.MapBlazorHub();
         endpoints.MapRpcWebSocketServer();
         endpoints.MapFusionAuth();
         endpoints.MapFusionBlazorMode();
-        // endpoints.MapControllers();
-        endpoints.MapFallbackToPage("/_Host");
     });
 #pragma warning restore ASP0014
 }

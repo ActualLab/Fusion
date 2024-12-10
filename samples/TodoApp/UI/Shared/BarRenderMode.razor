@@ -1,0 +1,15 @@
+@inject RenderModeHelper RenderModeHelper
+
+<BarDropdown Class="@CssClass">
+    <BarDropdownToggle>@RenderModeHelper.GetCurrentModeTitle()</BarDropdownToggle>
+    <BarDropdownMenu RightAligned="true">
+        @foreach(var mode in RenderModeDef.All) {
+            <BarDropdownItem Clicked="@(() => RenderModeHelper.ChangeMode(mode))">@(mode.Title)</BarDropdownItem>
+        }
+    </BarDropdownMenu>
+</BarDropdown>
+
+@code {
+    [Parameter]
+    public string CssClass { get; set; } = "";
+}

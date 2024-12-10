@@ -1,0 +1,61 @@
+﻿@using ActualLab.Fusion.Blazor
+@using ActualLab.Fusion.Server
+@using ActualLab.Fusion.Server.Authentication
+@using ActualLab.Fusion.Server.Endpoints
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>TodoApp: Fusion+Blazor Template</title>
+    <base href="/" />
+    <link rel="icon" type="image/png" href="@Assets["favicon.png"]"/>
+    <link rel="stylesheet" href="@Assets["app.css"]"/>
+    <BlazoriseStyles/>
+    <script src="@Assets["_content/ActualLab.Fusion.Blazor.Authentication/scripts/fusionAuth.js"]"></script>
+    <script>
+        window.FusionAuth.schemas = "@_authSchemas";
+    </script>
+    <HeadOutlet @rendermode="@(_renderMode?.Mode)" />
+</head>
+<body>
+    <Routes @rendermode="@(_renderMode?.Mode)" SessionId="@_sessionId" RenderModeKey="@(_renderMode?.Key)"/>
+    <div id="blazor-error-ui" data-nosnippet>
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">🗙</span>
+    </div>
+    <BlazoriseScripts/>
+    <script src="_framework/blazor.web.js"></script>
+</body>
+</html>
+
+@code {
+    private bool _isInitialized;
+    private RenderModeDef? _renderMode; // Static by default
+    private string _authSchemas = "";
+    private string _sessionId = "";
+
+    [Inject]
+    private ServerAuthHelper ServerAuthHelper { get; init; } = null!;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = null!;
+
+    public override async Task SetParametersAsync(ParameterView parameters)
+    {
+        // We want to postpone the very first render till the moment async code below completes.
+        // That's why we override SetParametersAsync instead of OnInitializedAsync.
+        if (!_isInitialized) {
+            _isInitialized = true;
+            parameters.SetParameterProperties(this); // This call must be executed ASAP
+            if (HttpContext.AcceptsInteractiveRouting())
+                _renderMode = RenderModeEndpoint.GetRenderMode(HttpContext);
+            await ServerAuthHelper.UpdateAuthState(HttpContext);
+            _authSchemas = await ServerAuthHelper.GetSchemas(HttpContext);
+            _sessionId = ServerAuthHelper.Session.Id.Value;
+            // Activity.Current = null; // We don't want to "infect" Blazor circuit with it
+        }
+        await base.SetParametersAsync(parameters);
+    }
+}

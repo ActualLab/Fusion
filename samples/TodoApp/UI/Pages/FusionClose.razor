@@ -1,0 +1,17 @@
+@page "/fusion/close"
+@attribute [ExcludeFromInteractiveRouting]
+@layout NoLayout
+
+<script>
+    setTimeout(function () {
+        window.close();
+    }, 500)
+</script>
+<div class="alert alert-primary">
+    @(Flow) completed, you can close this window.
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "flow")]
+    public string Flow { get; set; } = "";
+}
