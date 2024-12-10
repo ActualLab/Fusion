@@ -10,15 +10,16 @@ public partial record SessionAuthInfo : IRequirementTarget
         (SessionAuthInfo? i) => i?.IsAuthenticated() ?? false,
         new("Session is not authenticated.", m => new SecurityException(m)));
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)] public string SessionHash { get; init; } = "";
+    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)] public string SessionHash { get => field ?? ""; init; }
 
     // Authentication
     [DataMember(Order = 1), MemoryPackOrder(1), Key(1)] public UserIdentity AuthenticatedIdentity { get; init; }
-    [DataMember(Order = 2), MemoryPackOrder(2), Key(2)] public Symbol UserId { get; init; } = Symbol.Empty;
+    [DataMember(Order = 2), MemoryPackOrder(2), Key(2)] public Symbol UserId { get; init; }
     [DataMember(Order = 3), MemoryPackOrder(3), Key(3)] public bool IsSignOutForced { get; init; }
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
-    public SessionAuthInfo() { }
+    public SessionAuthInfo()
+        => SessionHash = "";
     public SessionAuthInfo(Session? session)
         => SessionHash = session?.Hash ?? "";
 

@@ -2,7 +2,7 @@ using MessagePack;
 
 namespace ActualLab.Time;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(SuppressSourceGeneration = true)]
 public partial record RetryDelaySeq(
     [property: DataMember, MemoryPackOrder(0), Key(0)] TimeSpan Min,
     [property: DataMember, MemoryPackOrder(1), Key(1)] TimeSpan Max,

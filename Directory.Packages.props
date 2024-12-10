@@ -58,7 +58,7 @@
     <!-- Serialization -->
     <NewtonsoftJsonVersion>[13.0.3,)</NewtonsoftJsonVersion>
     <MemoryPackVersion>[1.21.3,)</MemoryPackVersion>
-    <MessagePackVersion>[2.5.192,)</MessagePackVersion>
+    <MessagePackVersion>[3.0.308,)</MessagePackVersion>
     <!-- Other -->
     <RedisVersion>[2.8.16,)</RedisVersion>
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>

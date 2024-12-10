@@ -21,7 +21,8 @@ public partial record Cart(
     [property: DataMember, Key(0)] string Id
 ) : IHasId<string>
 {
-    [DataMember] public ImmutableDictionary<string, decimal> Items { get; init; } = ImmutableDictionary<string, decimal>.Empty;
+    [DataMember, Key(1)]
+    public ImmutableDictionary<string, decimal> Items { get; init; } = ImmutableDictionary<string, decimal>.Empty;
 }
 
 [DataContract, MemoryPackable, MessagePackObject]
