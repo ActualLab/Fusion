@@ -1,5 +1,4 @@
 @page "/fusion/close"
-@attribute [ExcludeFromInteractiveRouting]
 @layout NoLayout
 
 <script>
@@ -10,8 +9,3 @@
 <div class="alert alert-primary">
     @(Flow) completed, you can close this window.
 </div>
-
-@code {
-    [SupplyParameterFromQuery(Name = "flow")]
-    public string Flow { get; set; } = "";
-}

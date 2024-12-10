@@ -7,7 +7,7 @@ public sealed record RenderModeDef(
     string Key,
     string Title)
 {
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
     public required IComponentRenderMode Mode { get; init; }
 #else
     public bool IsWebAssembly { get; init; }
@@ -28,7 +28,7 @@ public sealed record RenderModeDef(
     {
         ByKey = null!;
         All = [
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
             new("a", "Auto") { Mode = new InteractiveAutoRenderMode(prerender: true) },
             new("s", "Server") { Mode = new InteractiveServerRenderMode(prerender: true) },
             new("w", "WASM") { Mode = new InteractiveWebAssemblyRenderMode(prerender: true) },
@@ -41,5 +41,5 @@ public sealed record RenderModeDef(
     }
 
     public static RenderModeDef GetOrDefault(string? key)
-        => ByKey.GetValueOrDefault(key ?? "", Default);
+        => ByKey.GetValueOrDefault(key ?? "", Default)!;
 }

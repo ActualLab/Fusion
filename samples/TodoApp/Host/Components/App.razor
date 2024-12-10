@@ -8,10 +8,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>TodoApp: Fusion+Blazor Template</title>
     <base href="/" />
-    <link rel="icon" type="image/png" href="@Assets["favicon.png"]"/>
-    <link rel="stylesheet" href="@Assets["app.css"]"/>
+    <link rel="icon" type="image/png" href="@Asset("favicon.png")"/>
+    <link rel="stylesheet" href="@Asset("app.css")"/>
     <BlazoriseStyles/>
-    <script src="@Assets["_content/ActualLab.Fusion.Blazor.Authentication/scripts/fusionAuth.js"]"></script>
+    <script src="@Asset("_content/ActualLab.Fusion.Blazor.Authentication/scripts/fusionAuth.js")"></script>
     <script>
         window.FusionAuth.schemas = "@_authSchemas";
     </script>
@@ -48,7 +48,7 @@
         if (!_isInitialized) {
             _isInitialized = true;
             parameters.SetParameterProperties(this); // This call must be executed ASAP
-            if (HttpContext.AcceptsInteractiveRouting())
+            if (AcceptsInteractiveRouting())
                 _renderMode = RenderModeEndpoint.GetRenderMode(HttpContext);
             await ServerAuthHelper.UpdateAuthState(HttpContext);
             _authSchemas = await ServerAuthHelper.GetSchemas(HttpContext);
@@ -56,5 +56,25 @@
             // Activity.Current = null; // We don't want to "infect" Blazor circuit with it
         }
         await base.SetParametersAsync(parameters);
+    }
+
+    // Private methods
+
+    private string Asset(string path)
+    {
+#if NET9_0_OR_GREATER
+        return Assets[path];
+#else
+        return path;
+#endif
+    }
+
+    private bool AcceptsInteractiveRouting()
+    {
+#if NET9_0_OR_GREATER
+        return HttpContext.AcceptsInteractiveRouting();
+#else
+        return true;
+#endif
     }
 }
