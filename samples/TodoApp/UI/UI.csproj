@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
-    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
     <RootNamespace>Samples.TodoApp.UI</RootNamespace>
     <AssemblyName>Samples.TodoApp.UI</AssemblyName>
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
@@ -16,11 +15,11 @@
     <InvariantGlobalization>false</InvariantGlobalization>
     <!-- Required for WASM+Server projects -->
     <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
-    <PublishTrimmed>false</PublishTrimmed>
-    <TrimMode>partial</TrimMode>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
     <IsTrimmable>true</IsTrimmable>
     <RunAOTCompilation>false</RunAOTCompilation>
-    <WasmStripILAfterAOT>false</WasmStripILAfterAOT>
+    <WasmStripILAfterAOT>true</WasmStripILAfterAOT>
     <!--
     <WasmEnableWebcil>true</WasmEnableWebcil>
     <WasmEnableSIMD>true</WasmEnableSIMD>
@@ -30,6 +29,12 @@
   <!-- Extra trimming roots -->
   <ItemGroup>
     <TrimmerRootAssembly Include="Samples.TodoApp.UI" />
+    <!-- Blazorise isn't trimmable, so... -->
+    <TrimmerRootAssembly Include="Blazorise" />
+    <TrimmerRootAssembly Include="Blazorise.Bootstrap5" />
+    <TrimmerRootAssembly Include="Blazorise.DataGrid" />
+    <TrimmerRootAssembly Include="Blazorise.Icons.FontAwesome" />
+    <TrimmerRootAssembly Include="Blazorise.Sidebar" />
   </ItemGroup>
 
   <ItemGroup>
