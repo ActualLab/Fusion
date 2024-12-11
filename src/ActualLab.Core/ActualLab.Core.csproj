@@ -22,6 +22,25 @@
     <PackageReference Include="Ulid.MessagePack" />
     <PackageReference Include="ZString" />
   </ItemGroup>
+	
+  <ItemGroup>
+    <PackageReference Include="Backport.System.Threading.Lock">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>analyzers</IncludeAssets>
+    </PackageReference>
+    <Using Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))" Alias="Lock" Include="System.Threading.Lock" />
+    <Using Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))" Alias="Lock" Include="Backport.System.Threading.Lock" />
+    <Using Alias="LockFactory" Include="Backport.System.Threading.LockFactory" />
+    <InternalsVisibleTo Include="ActualLab.CommandR" />
+    <InternalsVisibleTo Include="ActualLab.Fusion.Blazor.Authentication" />
+    <InternalsVisibleTo Include="ActualLab.Fusion.EntityFramework" />
+    <InternalsVisibleTo Include="ActualLab.Fusion" />
+    <InternalsVisibleTo Include="ActualLab.Redis" />
+    <InternalsVisibleTo Include="ActualLab.Rpc" />
+    <InternalsVisibleTo Include="ActualLab.Testing" />
+    <InternalsVisibleTo Include="ActualLab.Fusion.Tests" />
+    <InternalsVisibleTo Include="ActualLab.Tests" />
+  </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
     <PackageReference Include="MemoryPack.Core" />
