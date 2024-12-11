@@ -164,7 +164,7 @@
             var userAgent = UserAgentCache.GetOrAdd(sessionInfo.UserAgent, static ua => Parser.ParseUserAgent(ua));
             var model = new SessionInfoModel() {
                 SessionHash = sessionInfo.SessionHash,
-                IsCurrent = sessionInfo.SessionHash == Session.Hash,
+                IsCurrent = Equals(sessionInfo.SessionHash, Session.Hash),
                 IPAddress = sessionInfo.IPAddress,
                 UserAgent = $"{userAgent.Family} {userAgent.Major}.{userAgent.Minor}",
                 Created = await FusionTime.GetMomentsAgo(sessionInfo.CreatedAt),
