@@ -1,12 +1,13 @@
 using System.ComponentModel;
 using System.Globalization;
 using ActualLab.Time.Internal;
+using MessagePack;
 
 namespace ActualLab.Time;
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
 // [StructLayout(LayoutKind.Auto)]
-[DataContract]
+[DataContract, MessagePackObject]
 [JsonConverter(typeof(MomentJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(MomentNewtonsoftJsonConverter))]
 [TypeConverter(typeof(MomentTypeConverter))]
@@ -28,9 +29,10 @@ public readonly partial struct Moment(long epochOffsetTicks)
     }
 
     // AKA Unix Time
-    [DataMember(Order = 0)]
+    [DataMember(Order = 0), Key(0)]
     public readonly long EpochOffsetTicks = epochOffsetTicks;
 
+    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public TimeSpan EpochOffset {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => new(EpochOffsetTicks);

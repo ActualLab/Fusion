@@ -15,6 +15,7 @@ public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNo
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public readonly ReadOnlyMemory<byte> Utf8Name;
 
+    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsNone {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Name.IsEmpty;

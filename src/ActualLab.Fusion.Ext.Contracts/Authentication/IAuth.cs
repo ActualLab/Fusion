@@ -44,7 +44,7 @@ public partial record Auth_EditUser(
 public partial record Auth_SignOut: ISessionCommand<Unit>
 {
     [DataMember, MemoryPackOrder(0), Key(0)]
-    public Session Session { get; init; } = null!;
+    public Session Session { get; init; }
     [DataMember, MemoryPackOrder(1), Key(1)]
     public string? KickUserSessionHash { get; init; }
     [DataMember, MemoryPackOrder(2), Key(2)]
@@ -65,6 +65,7 @@ public partial record Auth_SignOut: ISessionCommand<Unit>
         Force = force;
     }
 
+    // ReSharper disable once ConvertToPrimaryConstructor
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public Auth_SignOut(
         Session session,
