@@ -99,6 +99,7 @@ public static class ComponentExt
     }
 
 #if !(USE_UNSAFE_ACCESSORS && NET8_0_OR_GREATER)
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "See DynamicDependency below")]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComponentBase))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RenderHandle))]
     static ComponentExt()
@@ -109,13 +110,11 @@ public static class ComponentExt
         var fRenderHandle = tComponentBase.GetField("_renderHandle", bfInstanceNonPublic)!;
         var mStateHasChanged = tComponentBase.GetMethod("StateHasChanged", bfInstanceNonPublic)!;
 
-#pragma warning disable IL2026
         IsInitializedGetter = fInitialized.GetGetter<ComponentBase, bool>();
         // RenderFragmentGetter = fRenderFragment.GetGetter<ComponentBase, RenderFragment>();
         // RenderFragmentSetter = fRenderFragment.GetSetter<ComponentBase, RenderFragment>();
         RenderHandleGetter = fRenderHandle.GetGetter<ComponentBase, RenderHandle>();
         StateHasChangedInvoker = (Action<ComponentBase>)mStateHasChanged.CreateDelegate(typeof(Action<ComponentBase>));
-#pragma warning restore IL2026
 
         GetOptionalComponentStateGetter = RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? CreateOptionalComponentStateGetterDM()

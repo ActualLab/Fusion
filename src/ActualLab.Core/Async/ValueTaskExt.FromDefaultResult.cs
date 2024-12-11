@@ -3,8 +3,6 @@ using ActualLab.OS;
 
 namespace ActualLab.Async;
 
-#pragma warning disable IL2067, IL3050
-
 public static partial class ValueTaskExt
 {
     private static readonly ConcurrentDictionary<Type, object> FromDefaultResultCache
@@ -12,6 +10,8 @@ public static partial class ValueTaskExt
 
     // FromDefaultResult
 
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume ValueTask<T> constructors are preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume Task<T> constructors are preserved")]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ValueTask<>))]
     public static object FromDefaultResult(
         [DynamicallyAccessedMembers(

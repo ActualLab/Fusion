@@ -10,16 +10,16 @@ public static class CancellationTokenSourceExt
 #else
     private static readonly Func<CancellationTokenSource, bool> IsDisposedGetter;
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "See DynamicDependency below")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "See DynamicDependency below")]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CancellationTokenSource))]
     static CancellationTokenSourceExt()
     {
         var tCts = typeof(CancellationTokenSource);
-#pragma warning disable IL2026
         var fIsDisposed =
             tCts.GetField("_disposed", BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? tCts.GetField("m_disposed", BindingFlags.Instance | BindingFlags.NonPublic);
         IsDisposedGetter = fIsDisposed!.GetGetter<CancellationTokenSource, bool>();
-#pragma warning restore IL2026
     }
 #endif
 

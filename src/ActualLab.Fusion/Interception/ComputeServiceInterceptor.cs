@@ -89,17 +89,16 @@ public class ComputeServiceInterceptor : Interceptor
     }
 
     // We don't need to decorate this method with any dynamic access attributes
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume proxy-related code is preserved")]
     protected override MethodDef? CreateMethodDef(MethodInfo method,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType)
     {
         var type = proxyType.NonProxyType();
-#pragma warning disable IL2072
         var options = Hub.ComputedOptionsProvider.GetComputedOptions(type, method);
         if (options == null)
             return null;
 
         var methodDef = new ComputeMethodDef(type, method, this);
-#pragma warning restore IL2072
         return methodDef.IsValid ? methodDef : null;
     }
 

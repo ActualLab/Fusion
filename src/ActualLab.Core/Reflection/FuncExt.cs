@@ -1,7 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Reflection;
 
-#pragma warning disable IL3050
-
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all used Action/Func constructors are preserved")]
 public static class FuncExt
 {
     public static Type GetActionType(Type[] argumentTypes)

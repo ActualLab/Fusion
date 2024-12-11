@@ -4,8 +4,6 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-#pragma warning disable IL2046
-
 public interface IRpcSystemCalls : IRpcSystemService
 {
     // Handshake & Reconnected

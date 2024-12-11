@@ -3,6 +3,9 @@ using ActualLab.Trimming;
 
 namespace ActualLab.Interception.Trimming;
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
 public class ArgumentListCodeKeeper : CodeKeeper
 {
     public virtual void KeepArgumentListArgument<

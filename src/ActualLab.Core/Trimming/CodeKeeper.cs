@@ -3,6 +3,9 @@ using ActualLab.Generators;
 
 namespace ActualLab.Trimming;
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
 public abstract class CodeKeeper
 {
 #if NET9_0_OR_GREATER

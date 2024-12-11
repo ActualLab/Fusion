@@ -1,12 +1,11 @@
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.OS;
 using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Serialization.Internal;
-
-#pragma warning disable IL2026
 
 public static class ByteTypeSerializer
 {
@@ -36,6 +35,7 @@ public static class ByteTypeSerializer
             return buffer.WrittenSpan.ToArray().AsByteString();
         });
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
     public static Type? FromBytes(ByteString bytes)
         => FromBytesCache.GetOrAdd(bytes, static b => {
             var memory = b.Bytes;

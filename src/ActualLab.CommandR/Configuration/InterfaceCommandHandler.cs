@@ -2,8 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.CommandR.Configuration;
 
-#pragma warning disable IL2026, IL2060, IL2111, IL3050
-
 public interface IInterfaceCommandHandler : ICommandHandler
 {
     public Type ServiceType { get; }
@@ -38,6 +36,10 @@ public sealed record InterfaceCommandHandler<
     public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume all command handling code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume all command handling code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all command handling code is preserved")]
 public static class InterfaceCommandHandler
 {
     public static InterfaceCommandHandler<TCommand> New<

@@ -50,6 +50,8 @@ public sealed class RpcServiceDef
             .Select(x => LegacyName.New(x)));
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
     internal void BuildMethods(Type serviceType)
     {
         if (serviceType != Type)
@@ -58,12 +60,10 @@ public sealed class RpcServiceDef
         _methods = new Dictionary<MethodInfo, RpcMethodDef>();
         _methodByName = new Dictionary<Symbol, RpcMethodDef>();
         var bindingFlags = BindingFlags.Instance | BindingFlags.Public;
-#pragma warning disable IL2067, IL2070
         var methods = (Type.IsInterface
                 ? serviceType.GetAllInterfaceMethods(bindingFlags)
                 : serviceType.GetMethods(bindingFlags)
             ).ToList();
-#pragma warning restore IL2067, IL2070
         foreach (var method in methods) {
             if (method.DeclaringType == typeof(object))
                 continue;

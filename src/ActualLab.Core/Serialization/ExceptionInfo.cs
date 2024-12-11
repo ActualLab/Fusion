@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using MessagePack;
 using Errors = ActualLab.Serialization.Internal.Errors;
 
@@ -43,9 +44,7 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
     public override string ToString()
         => IsNone
             ? $"{GetType().Name}()"
-#pragma warning disable IL2026
             : $"{GetType().Name}({TypeRef.ToString()}, {JsonFormatter.Format(Message)})";
-#pragma warning restore IL2026
 
     public Exception? ToException()
     {
@@ -81,9 +80,11 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 
     // Private methods
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "The method returns null in case the exception can't be constructed")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "The method returns null in case the exception can't be constructed")]
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "The method returns null in case the exception can't be constructed")]
     private static Exception? TryCreateException(ExceptionInfo exceptionInfo)
     {
-#pragma warning disable IL2026, IL2072, IL2075
         if (exceptionInfo.IsNone)
             return null;
 
@@ -116,6 +117,5 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
         catch {
             return null;
         }
-#pragma warning restore IL2026, IL2072, IL2075
     }
 }

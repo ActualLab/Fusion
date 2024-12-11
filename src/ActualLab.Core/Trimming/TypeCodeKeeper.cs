@@ -2,6 +2,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Trimming;
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
 public class TypeCodeKeeper : CodeKeeper
 {
     public virtual T KeepType<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(

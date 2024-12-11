@@ -1,7 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Api.Internal;
 
-#pragma warning disable IL2026
-
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Used constructors should be there for sure.")]
 public class ApiArrayJsonConverter : JsonConverterFactory
 {
     private static readonly ConcurrentDictionary<Type, JsonConverter?> ConverterCache = new();

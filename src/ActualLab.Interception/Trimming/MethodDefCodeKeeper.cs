@@ -3,6 +3,9 @@ using ActualLab.Trimming;
 
 namespace ActualLab.Interception.Trimming;
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
 public class MethodDefCodeKeeper : CodeKeeper
 {
     public virtual void KeepCodeForResult<
@@ -12,8 +15,6 @@ public class MethodDefCodeKeeper : CodeKeeper
         if (AlwaysTrue)
             return;
 
-#pragma warning disable IL2111
         Keep<MethodDef>().KeepCodeForResult<TResult, TUnwrapped>();
-#pragma warning restore IL2111
     }
 }

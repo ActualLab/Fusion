@@ -21,21 +21,18 @@ public record MemberwiseCopier<[
     public MemberwiseCopier<T> WithFilter(Func<MemberInfo, bool>? filter)
         => this with { Filter = filter };
 
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "We assume all used fields, getters, and setters are preserved")]
     public T Invoke(T source, T target)
     {
         var oSource = (object) source!;
         var oTarget = (object) target!;
-#pragma warning disable IL2075
         var fields = Type.GetFields(FieldBindingFlags & PropertyOrFieldBindingFlagsMask);
-#pragma warning restore IL2075
         foreach (var field in fields) {
             if (!(Filter?.Invoke(field) ?? true))
                 continue;
             field.SetValue(oTarget, field.GetValue(oSource));
         }
-#pragma warning disable IL2075
         var properties = Type.GetProperties(PropertyBindingFlags & PropertyOrFieldBindingFlagsMask);
-#pragma warning restore IL2075
         foreach (var property in properties) {
             if (!(Filter?.Invoke(property) ?? true))
                 continue;

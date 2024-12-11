@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using RestEase;
 
@@ -46,6 +47,7 @@ public class RestEaseRequestQueryParamSerializer : RequestQueryParamSerializer
         return null;
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "We assume RPC-related code is fully preserved")]
     protected virtual Dictionary<string, string> SerializeComplexType(
         string name, object? value,
         RequestQueryParamSerializerInfo info,
@@ -76,9 +78,7 @@ public class RestEaseRequestQueryParamSerializer : RequestQueryParamSerializer
 
         // Complex type
         var prefix = name.IsNullOrEmpty() ? "" : $"{name}.";
-#pragma warning disable IL2075
         var properties = value.GetType().GetProperties();
-#pragma warning restore IL2075
         foreach (var property in properties) {
             var pValue = property.GetValue(value, null);
             SerializeComplexType($"{prefix}{property.Name}", pValue, info, map);

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 
 namespace ActualLab.Interception;
@@ -11,6 +12,8 @@ public static class InterceptorExt
     private static readonly ConcurrentDictionary<Type, InterceptUntypedFunc> InterceptUntypedCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume InterceptUntypedImpl method is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume InterceptUntypedImpl method is preserved")]
     public static object? InterceptUntyped(this Interceptor interceptor, in Invocation invocation)
         => InterceptUntypedCache.GetOrAdd(invocation.Method.ReturnType,
             static returnType => returnType == typeof(void)
@@ -18,11 +21,9 @@ public static class InterceptorExt
                     interceptor.Intercept(invocation);
                     return null;
                 }
-#pragma warning disable IL2060
                 : (InterceptUntypedFunc)InterceptUntypedMethod
                     .MakeGenericMethod(returnType)
                     .CreateDelegate(typeof(InterceptUntypedFunc))
-#pragma warning restore IL2060
         ).Invoke(interceptor, invocation);
 
     // Private methods

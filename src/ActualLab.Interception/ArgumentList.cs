@@ -6,8 +6,8 @@ using ActualLab.OS;
 namespace ActualLab.Interception;
 
 #pragma warning disable CA1721
-#pragma warning disable IL3050
 
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract partial record ArgumentList
 {
     protected static readonly ConcurrentDictionary<

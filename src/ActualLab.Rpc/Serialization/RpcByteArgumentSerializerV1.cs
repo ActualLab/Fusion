@@ -1,10 +1,9 @@
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Serialization;
-
-#pragma warning disable IL2026
 
 public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, bool allowPolymorphism = true)
     : RpcArgumentSerializer(allowPolymorphism)
@@ -119,6 +118,7 @@ public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, 
     private sealed class ItemPolymorphicDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
         : ItemDeserializer(serializer, data)
     {
+        [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
         public override object? OnClass(Type type, int index)
         {
             var typeRef = Serializer.Read<TypeRef>(ref Data);
@@ -129,6 +129,7 @@ public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, 
             return Serializer.Read(ref Data, itemType);
         }
 
+        [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
         public override object? OnAny(Type type, int index, object? defaultValue)
         {
             if (type.IsValueType)
@@ -145,6 +146,7 @@ public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, 
         }
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
     private sealed class ItemNonPolymorphicDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
         : ItemDeserializer(serializer, data)
     {

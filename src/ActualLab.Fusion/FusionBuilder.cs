@@ -24,9 +24,10 @@ public readonly struct FusionBuilder
     public RpcBuilder Rpc { get; }
     public RpcServiceMode DefaultServiceMode { get; }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
+    [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
     static FusionBuilder() => CodeKeeper.AddFakeAction(
         static () => {
-#pragma warning disable IL2111
             CodeKeeper.Keep<CommanderBuilder>();
             CodeKeeper.Keep<RpcBuilder>();
 
@@ -37,7 +38,6 @@ public readonly struct FusionBuilder
 
             // Other services
             CodeKeeper.Keep<RpcComputeSystemCalls>();
-#pragma warning restore IL2111
         });
 
     internal FusionBuilder(

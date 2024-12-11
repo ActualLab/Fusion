@@ -3,6 +3,8 @@ using ActualLab.Interception.Interceptors;
 
 namespace ActualLab.Interception;
 
+[UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume proxy-related code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume proxy-related code is preserved")]
 public static class ServiceCollectionExt
 {
     // TypeViewFactory
@@ -29,9 +31,7 @@ public static class ServiceCollectionExt
         this IServiceCollection services,
         ServiceLifetime lifetime = ServiceLifetime.Singleton)
         where TFactory : class, IRequiresAsyncProxy
-#pragma warning disable IL2111
         => services.AddTypedFactory<TFactory, TypedFactoryInterceptor>(lifetime);
-#pragma warning restore IL2111
 
     public static IServiceCollection AddTypedFactory<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TFactory,
@@ -40,17 +40,13 @@ public static class ServiceCollectionExt
         ServiceLifetime lifetime = ServiceLifetime.Singleton)
         where TFactory : class, IRequiresAsyncProxy
         where TInterceptor : Interceptor
-#pragma warning disable IL2111
         => services.AddTypedFactory(typeof(TFactory), typeof(TInterceptor), lifetime);
-#pragma warning restore IL2111
 
     public static IServiceCollection AddTypedFactory(
         this IServiceCollection services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type factoryType,
         ServiceLifetime lifetime = ServiceLifetime.Singleton)
-#pragma warning disable IL2111
         => services.AddTypedFactory(factoryType, typeof(TypedFactoryInterceptor), lifetime);
-#pragma warning restore IL2111
 
     public static IServiceCollection AddTypedFactory(
         this IServiceCollection services,
@@ -62,9 +58,7 @@ public static class ServiceCollectionExt
         services.Add(new ServiceDescriptor(factoryType, c => {
             var factoryProxyType = Proxies.GetProxyType(factoryType);
             var interceptor = (Interceptor)c.GetServiceOrCreateInstance(interceptorType);
-#pragma warning disable IL2072
             var proxy = (IProxy)c.GetServiceOrCreateInstance(factoryProxyType);
-#pragma warning restore IL2072
             interceptor.BindTo(proxy);
             return proxy;
         }, lifetime));

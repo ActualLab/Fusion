@@ -12,8 +12,11 @@ namespace ActualLab.Interception;
 
 #pragma warning disable MA0012
 #pragma warning disable CA2201, CS0219
-#pragma warning disable IL2026, IL2046, IL2080, IL3050
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract partial record ArgumentList
 {
     public const int MaxItemCount = 10;
@@ -133,6 +136,10 @@ public abstract partial record ArgumentList
     public virtual T Get9<T>() => throw new IndexOutOfRangeException();
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList1 : ArgumentList
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -142,6 +149,10 @@ public abstract record ArgumentList1 : ArgumentList
         => new Type?[1];
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListG1<T0> : ArgumentList1
 {
     private static ArgumentListType? _cachedType;
@@ -425,6 +436,10 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListS1 : ArgumentList1
 {
     private readonly ArgumentListType _type;
@@ -710,6 +725,10 @@ public sealed record ArgumentListS1 : ArgumentList1
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList2 : ArgumentList
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -719,6 +738,10 @@ public abstract record ArgumentList2 : ArgumentList
         => new Type?[2];
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListG2<T0, T1> : ArgumentList2
 {
     private static ArgumentListType? _cachedType;
@@ -1069,6 +1092,10 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListS2 : ArgumentList2
 {
     private readonly ArgumentListType _type;
@@ -1418,6 +1445,10 @@ public sealed record ArgumentListS2 : ArgumentList2
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList3 : ArgumentList
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -1427,6 +1458,10 @@ public abstract record ArgumentList3 : ArgumentList
         => new Type?[3];
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
 {
     private static ArgumentListType? _cachedType;
@@ -1843,6 +1878,10 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListS3 : ArgumentList3
 {
     private readonly ArgumentListType _type;
@@ -2255,6 +2294,10 @@ public sealed record ArgumentListS3 : ArgumentList3
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList4 : ArgumentList
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -2264,6 +2307,10 @@ public abstract record ArgumentList4 : ArgumentList
         => new Type?[4];
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
 {
     private static ArgumentListType? _cachedType;
@@ -2746,6 +2793,10 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListS4 : ArgumentList4
 {
     private readonly ArgumentListType _type;
@@ -3221,6 +3272,10 @@ public sealed record ArgumentListS4 : ArgumentList4
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList5 : ArgumentList
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -3230,6 +3285,10 @@ public abstract record ArgumentList5 : ArgumentList
         => new Type?[5];
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
 {
     private readonly ArgumentListType _type;
@@ -3780,6 +3839,10 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListS5 : ArgumentList5
 {
     private readonly ArgumentListType _type;
@@ -4318,6 +4381,10 @@ public sealed record ArgumentListS5 : ArgumentList5
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList6 : ArgumentList
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -4327,6 +4394,10 @@ public abstract record ArgumentList6 : ArgumentList
         => new Type?[6];
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
 {
     private readonly ArgumentListType _type;
@@ -4940,6 +5011,10 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListS6 : ArgumentList6
 {
     private readonly ArgumentListType _type;
@@ -5541,6 +5616,10 @@ public sealed record ArgumentListS6 : ArgumentList6
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList7 : ArgumentList
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -5550,6 +5629,10 @@ public abstract record ArgumentList7 : ArgumentList
         => new Type?[7];
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
 {
     private readonly ArgumentListType _type;
@@ -6226,6 +6309,10 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListS7 : ArgumentList7
 {
     private readonly ArgumentListType _type;
@@ -6890,6 +6977,10 @@ public sealed record ArgumentListS7 : ArgumentList7
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList8 : ArgumentList
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -6899,6 +6990,10 @@ public abstract record ArgumentList8 : ArgumentList
         => new Type?[8];
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
 {
     private readonly ArgumentListType _type;
@@ -7638,6 +7733,10 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListS8 : ArgumentList8
 {
     private readonly ArgumentListType _type;
@@ -8365,6 +8464,10 @@ public sealed record ArgumentListS8 : ArgumentList8
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList9 : ArgumentList
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -8374,6 +8477,10 @@ public abstract record ArgumentList9 : ArgumentList
         => new Type?[9];
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
 {
     private readonly ArgumentListType _type;
@@ -9176,6 +9283,10 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListS9 : ArgumentList9
 {
     private readonly ArgumentListType _type;
@@ -9966,6 +10077,10 @@ public sealed record ArgumentListS9 : ArgumentList9
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract record ArgumentList10 : ArgumentList
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -9975,6 +10090,10 @@ public abstract record ArgumentList10 : ArgumentList
         => new Type?[10];
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
 {
     private readonly ArgumentListType _type;
@@ -10840,6 +10959,10 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public sealed record ArgumentListS10 : ArgumentList10
 {
     private readonly ArgumentListType _type;

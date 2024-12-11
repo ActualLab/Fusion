@@ -5,6 +5,7 @@ using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume you know serialization may involve reflection and dynamic invocations")]
 public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type, bool>? typeFilter = null)
     : ByteSerializerBase
 {
@@ -39,9 +40,7 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
             return null;
         }
 
-#pragma warning disable IL2026
         var actualType = actualTypeRef.Resolve();
-#pragma warning restore IL2026
         if (!type.IsAssignableFrom(actualType))
             throw Errors.UnsupportedSerializedType(actualType);
         if (!TypeFilter.Invoke(actualType))

@@ -31,6 +31,8 @@ public interface IDbEntityResolver<TKey, TDbEntity> : IDbEntityResolver
 /// <typeparam name="TDbContext">The type of <see cref="DbContext"/>.</typeparam>
 /// <typeparam name="TKey">The type of entity key.</typeparam>
 /// <typeparam name="TDbEntity">The type of entity to pipeline batch for.</typeparam>
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume server-side code is fully preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume server-side code is fully preserved")]
 public class DbEntityResolver<TDbContext, TKey, TDbEntity>
     : DbServiceBase<TDbContext>, IDbEntityResolver<TKey, TDbEntity>, IAsyncDisposable
     where TDbContext : DbContext
@@ -93,9 +95,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
                 .Properties.Single().Name;
 
             var pEntity = Expression.Parameter(typeof(TDbEntity), "e");
-#pragma warning disable IL2026
             var eBody = Expression.PropertyOrField(pEntity, keyPropertyName);
-#pragma warning restore IL2026
             keyExtractor = Expression.Lambda<Func<TDbEntity, TKey>>(eBody, pEntity);
         }
         KeyExtractorExpression = keyExtractor;
@@ -202,9 +202,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
             .SingleOrDefault(m => Equals(m.Name, nameof(query.Execute))
                 && m.IsGenericMethod
                 && m.GetGenericArguments().Length == 1)
-#pragma warning disable IL2060
             ?.MakeGenericMethod(typeof(TKey[]));
-#pragma warning restore IL2060
         if (mExecute == null)
             throw Errors.CannotCompileQuery();
 
@@ -259,9 +257,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
             .SingleOrDefault(m => Equals(m.Name, nameof(query.Execute))
                 && m.IsGenericMethod
                 && m.GetGenericArguments().Length == batchSize)
-#pragma warning disable IL2060
             ?.MakeGenericMethod(pKeys.Select(p => p.Type).ToArray());
-#pragma warning restore IL2060
         if (mExecute == null)
             throw Errors.BatchSizeIsTooLarge();
 

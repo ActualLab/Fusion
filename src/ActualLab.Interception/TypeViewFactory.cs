@@ -20,11 +20,10 @@ public class TypeViewFactory(TypeViewInterceptor interceptor) : ITypeViewFactory
 
     protected Interceptor Interceptor { get; } = interceptor;
 
-#pragma warning disable IL2092
+    [UnconditionalSuppressMessage("Trimming", "IL2092", Justification = "We assume proxy-related code is preserved")]
     public object CreateView(
         object implementation,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type viewType)
-#pragma warning restore IL2092
     {
         if (!viewType.IsInterface)
             throw new ArgumentOutOfRangeException(nameof(viewType));

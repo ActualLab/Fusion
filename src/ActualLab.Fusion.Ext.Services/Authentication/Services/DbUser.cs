@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Versioning;
 
@@ -18,10 +19,9 @@ public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long>
     [ConcurrencyCheck]
     public long Version { get; set; }
 
-#pragma warning disable IL2026
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume server-side code is fully preserved")]
     [MinLength(3)]
     public string Name { get; set; } = "";
-#pragma warning restore IL2026
 
     public string ClaimsJson {
         get => _claims.Data;
@@ -30,9 +30,7 @@ public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long>
 
     [NotMapped]
     public ImmutableDictionary<string, string> Claims {
-#pragma warning disable IL2026
         get => _claims.Value;
-#pragma warning restore IL2026
         set => _claims = value;
     }
 

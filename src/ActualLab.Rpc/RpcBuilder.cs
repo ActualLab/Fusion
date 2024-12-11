@@ -18,9 +18,10 @@ public readonly struct RpcBuilder
     public RpcConfiguration Configuration { get; }
     public RpcServiceMode DefaultServiceMode { get; }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
+    [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
     static RpcBuilder() => CodeKeeper.AddFakeAction(
         static () => {
-#pragma warning disable IL2026, IL2111
             CodeKeeper.KeepStatic(typeof(Proxies));
             CodeKeeper.KeepStatic(typeof(RpcDefaultDelegates));
 
@@ -64,7 +65,6 @@ public readonly struct RpcBuilder
             CodeKeeper.Keep<RpcInboundContextFactory>();
             CodeKeeper.Keep<RpcOutboundContext>();
             CodeKeeper.Keep<RpcCacheInfoCapture>();
-#pragma warning restore IL2026, IL2111
         });
 
     internal RpcBuilder(

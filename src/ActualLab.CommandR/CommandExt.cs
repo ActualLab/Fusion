@@ -10,12 +10,12 @@ public static class CommandExt
     private static readonly ConcurrentDictionary<(Type, Symbol, string, string), string> OperationNameCache = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly Type CommandWithResultType = typeof(ICommand<>);
 
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all command handling code is preserved")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Type GetResultType(this ICommand command)
-#pragma warning disable IL2072
         => GetResultType(command.GetType());
-#pragma warning restore IL2072
 
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume all command handling code is preserved")]
     public static Type GetResultType(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type commandType)
     {
@@ -23,9 +23,7 @@ public static class CommandExt
             throw new ArgumentNullException(nameof(commandType));
 
         var result = ResultTypeCache.GetOrAdd(commandType, static tCommand => {
-#pragma warning disable IL2070
             foreach (var tInterface in tCommand.GetInterfaces()) {
-#pragma warning restore IL2070
                 if (!tInterface.IsConstructedGenericType)
                     continue;
                 var gInterface = tInterface.GetGenericTypeDefinition();

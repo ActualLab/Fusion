@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
 using ActualLab.OS;
 
@@ -86,6 +87,6 @@ public static partial class TaskExt
     private static IResult FromTypedTaskInternal<T>(Task task)
         // ReSharper disable once HeapView.BoxingAllocation
         => task.IsCompletedSuccessfully()
-            ? Result.Value(((Task<T>) task).Result)
+            ? Result.Value(((Task<T>)task).Result)
             : Result.Error<T>(task.GetBaseException());
 }

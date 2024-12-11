@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Async;
 
 public static partial class TaskExt
@@ -39,6 +41,7 @@ public static partial class TaskExt
 
     // ToTypedResultXxx
 
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "FromTypedTaskInternal is preserved")]
     public static IResult ToTypedResultSynchronously(this Task task)
     {
         var tValue = task.AssertCompleted().GetType().GetTaskOrValueTaskArgument();
@@ -51,11 +54,9 @@ public static partial class TaskExt
 
         return ToTypedResultCache.GetOrAdd(
             tValue,
-#pragma warning disable IL2060
             static tValue1 => (Func<Task, IResult>)FromTypedTaskInternalMethod
                 .MakeGenericMethod(tValue1)
                 .CreateDelegate(typeof(Func<Task, IResult>))
-#pragma warning restore IL2060
             ).Invoke(task);
     }
 

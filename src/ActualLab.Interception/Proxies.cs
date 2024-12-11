@@ -7,8 +7,11 @@ using ActualLab.Trimming;
 
 namespace ActualLab.Interception;
 
-#pragma warning disable IL2026, IL2055, IL2072
-
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume proxy-related code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume proxy-related code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume proxy-related code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume proxy-related code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]
 public static class Proxies
 {
     internal static readonly ConcurrentDictionary<Type, Type?> Cache
@@ -16,7 +19,6 @@ public static class Proxies
 
     static Proxies() => CodeKeeper.AddFakeAction(
         static () => {
-#pragma warning disable IL2111
             CodeKeeper.KeepStatic(typeof(ProxyHelper));
 
             // ArgumentList
@@ -43,7 +45,6 @@ public static class Proxies
             CodeKeeper.Keep<TypeViewInterceptor>();
             CodeKeeper.Keep<TypedFactoryInterceptor>();
             CodeKeeper.Keep<SchedulingInterceptor>();
-#pragma warning restore IL2111
         });
 
     public static IProxy New(

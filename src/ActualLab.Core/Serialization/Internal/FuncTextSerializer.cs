@@ -3,7 +3,10 @@ using Cysharp.Text;
 
 namespace ActualLab.Serialization.Internal;
 
-public class FuncTextSerializer<T>(Func<string, T> reader, Func<T, string> writer) : ITextSerializer<T>
+public class FuncTextSerializer<T>(
+    Func<string, T> reader,
+    Func<T, string> writer
+    ) : ITextSerializer<T>
 {
     public bool PreferStringApi => true;
     public Func<string, T> Reader { get; } = reader;

@@ -127,12 +127,11 @@ public class ComputeServiceCommandCompletionInvalidator(
         return activity;
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume command handling code is preserved")]
     protected static RpcOutboundContext.Scope SuppressRpc()
     {
         var context = new RpcOutboundContext() {
-#pragma warning disable IL2077
             Suppressor = static (method, _) => TaskExt.FromDefaultResult(method.UnwrappedReturnType),
-#pragma warning restore IL2077
         };
         return context.Activate();
     }

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.JSInterop;
 
 namespace ActualLab.Fusion.Blazor;
@@ -13,6 +14,8 @@ public sealed class JSRuntimeInfo
     public bool IsRemote { get; init; }
     public object? ClientProxy => _clientProxyGetter.Invoke(Runtime);
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume server-side code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "We assume server-side code is fully preserved")]
     public JSRuntimeInfo(IJSRuntime runtime)
     {
         Runtime = runtime;
@@ -22,10 +25,8 @@ public sealed class JSRuntimeInfo
         if (!IsRemote)
             return;
 
-#pragma warning disable IL2026, IL2075
         var fClientProxy = type.GetField("_clientProxy", BindingFlags.Instance | BindingFlags.NonPublic);
         if (fClientProxy != null)
             _clientProxyGetter = fClientProxy.GetGetter<object, object?>(true);
-#pragma warning restore IL2026, IL2075
     }
 }

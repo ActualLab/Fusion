@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Blazorise;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using ActualLab.Fusion.Blazor;
@@ -18,8 +19,8 @@ using Samples.TodoApp.UI.Services;
 
 namespace Samples.TodoApp.UI;
 
-#pragma warning disable IL2026
 
+[UnconditionalSuppressMessage("Trimming", "IL2026:RequiresUnreferencedCodeAttribute", Justification = "Fine here")]
 public static class StartupHelper
 {
     public static void ConfigureServices(IServiceCollection services, WebAssemblyHostBuilder builder)

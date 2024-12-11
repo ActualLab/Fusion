@@ -23,6 +23,7 @@ public class ParameterComparerProvider
 #endif
     };
 
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "False positive")]
     public static ParameterComparer Get(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type? comparerType)
     {
@@ -32,9 +33,7 @@ public class ParameterComparerProvider
         return Cache.GetOrAdd(comparerType, static comparerType1 => {
             if (!typeof(ParameterComparer).IsAssignableFrom(comparerType1))
                 throw new ArgumentOutOfRangeException(nameof(comparerType));
-#pragma warning disable IL2067
             return (ParameterComparer)comparerType1.CreateInstance();
-#pragma warning restore IL2067
         });
     }
 

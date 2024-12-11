@@ -4,8 +4,10 @@ using ActualLab.Interception.Internal;
 
 namespace ActualLab.Interception.Interceptors;
 
-#pragma warning disable IL2060, IL2075
-
+[UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume TypeViewInterceptor's methods are preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "We assume TypeViewInterceptor's methods are preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume TypeViewInterceptor's methods are preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]
 public class TypeViewInterceptor : Interceptor
 {
     public new record Options : Interceptor.Options

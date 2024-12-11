@@ -5,8 +5,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Reflection;
 
-#pragma warning disable IL2070, IL2080
-
+[UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume all used constructors are preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume all used constructors are preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume all used constructors are preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all used constructors are preserved")]
 public static class ActivatorExt
 {
     private static readonly ConcurrentDictionary<Type, bool> HasDefaultCtorCache = new();

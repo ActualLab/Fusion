@@ -9,6 +9,8 @@ using MessagePack;
 
 namespace ActualLab.Serialization;
 
+[UnconditionalSuppressMessage("Trimming", "IL2091", Justification = "We assume serializable types are fully preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IByteSerializer
 {
 #if NET9_0_OR_GREATER
@@ -88,6 +90,8 @@ public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IBy
             this);
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2091", Justification = "We assume serializable types are fully preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 public class MemoryPackByteSerializer<T>(
     MemoryPackSerializerOptions options, Type serializedType)
     : MemoryPackByteSerializer(options), IByteSerializer<T>
@@ -115,9 +119,7 @@ public class MemoryPackByteSerializer<T>(
     {
 #if !NETSTANDARD2_0
         var result = default(T);
-#pragma warning disable IL2091
         readLength = MemoryPackSerializer.Deserialize(data.Span, ref result, Options);
-#pragma warning restore IL2091
         return result!;
 #else
         return MessagePackSerializer.Deserialize<T>(data, MessagePackByteSerializer.DefaultOptions, out readLength);

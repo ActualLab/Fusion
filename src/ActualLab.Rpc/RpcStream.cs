@@ -8,7 +8,6 @@ using Errors = ActualLab.Internal.Errors;
 namespace ActualLab.Rpc;
 
 #pragma warning disable MA0055
-#pragma warning disable IL2046
 
 [DataContract]
 public abstract partial class RpcStream : IRpcObject

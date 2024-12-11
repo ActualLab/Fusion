@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using ActualLab.Interception;
 using ActualLab.OS;
@@ -7,8 +8,6 @@ using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc;
-
-#pragma warning disable IL2026, IL2070, IL2072
 
 public delegate RpcServiceDef RpcServiceDefBuilder(RpcHub hub, RpcServiceBuilder service);
 public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodInfo method);
@@ -34,6 +33,9 @@ public delegate RpcCallTracer? RpcCallTracerFactory(RpcMethodDef method);
 public delegate RpcCallLogger RpcCallLoggerFactory(RpcPeer peer, RpcCallLoggerFilter filter, ILogger log, LogLevel logLevel);
 public delegate bool RpcCallLoggerFilter(RpcPeer peer, RpcCall call);
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
 public static class RpcDefaultDelegates
 {
     private static readonly ConcurrentDictionary<Type, bool> IsCommandTypeCache

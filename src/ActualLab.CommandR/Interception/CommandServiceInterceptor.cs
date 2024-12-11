@@ -71,14 +71,13 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
         };
 
     // We don't need to decorate this method with any dynamic access attributes
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all command handling code is preserved")]
     protected override MethodDef? CreateMethodDef(MethodInfo method,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType)
     {
         try {
             var type = proxyType.NonProxyType();
-#pragma warning disable IL2072
             var methodDef = new CommandHandlerMethodDef(type, method);
-#pragma warning restore IL2072
             return methodDef.IsValid ? methodDef : null;
         }
         catch {
@@ -88,6 +87,7 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
         }
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]
     protected override void ValidateTypeInternal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
     {
@@ -101,9 +101,7 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
         foreach (var method in methods) {
             if (method.DeclaringType == typeof(object))
                 continue;
-#pragma warning disable IL2026
             var attr = MethodCommandHandler.GetAttribute(method);
-#pragma warning restore IL2026
             if (attr == null)
                 continue;
 

@@ -4,8 +4,8 @@ using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
 
-#pragma warning disable IL2026
-
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume serializable types are fully preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 public class SystemJsonSerializer : TextSerializerBase
 {
 #if NET9_0_OR_GREATER

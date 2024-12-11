@@ -1,13 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.EntityFramework.LogProcessing;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
-
-#pragma warning disable IL2026
 
 [Table("_Operations")]
 [Index(nameof(Uuid), IsUnique = true)] // "Uuid -> Index" queries

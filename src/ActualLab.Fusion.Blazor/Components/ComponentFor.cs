@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 
@@ -21,12 +22,14 @@ public class ComponentFor : ComponentBase
     public Dictionary<string, object>? Attributes { get; set; }
 
     /// <inheritdoc/>
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume Blazor components' code is fully preserved")]
     protected override void BuildRenderTree(RenderTreeBuilder builder)
     {
         if (Type == null)
             return;
+
         var i = 0;
-#pragma warning disable IL2072, MA0123
+#pragma warning disable MA0123
         builder.OpenComponent(i++, Type);
         if (Attributes != null)
             foreach (var (key, value) in Attributes)

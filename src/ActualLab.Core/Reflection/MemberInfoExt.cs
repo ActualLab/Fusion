@@ -6,8 +6,7 @@ using ActualLab.OS;
 
 namespace ActualLab.Reflection;
 
-#pragma warning disable IL3050
-
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all used fields, getters, and setters are preserved")]
 public static class MemberInfoExt
 {
     private static readonly ConcurrentDictionary<(MemberInfo, Type, bool), Delegate> GetterCache
