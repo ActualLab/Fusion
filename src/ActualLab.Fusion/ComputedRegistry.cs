@@ -24,11 +24,7 @@ public sealed class ComputedRegistry : IDisposable
         public GCHandlePool? GCHandlePool { get; init; } = null;
     }
 
-#if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
+    private readonly Lock _lock = LockFactory.Create();
     private readonly ConcurrentDictionary<ComputedInput, GCHandle> _storage;
     private readonly GCHandlePool _gcHandlePool;
     private StochasticCounter _opCounter;

@@ -5,7 +5,7 @@ namespace ActualLab.Tests.Caching.Alternative;
 public abstract class GrowOnlyCache<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
     where TKey : notnull
 {
-    protected readonly object Lock;
+    protected readonly Lock Lock;
 
     public IEqualityComparer<TKey> Comparer { get; }
 
@@ -22,7 +22,7 @@ public abstract class GrowOnlyCache<TKey, TValue> : IEnumerable<KeyValuePair<TKe
 
     protected GrowOnlyCache(IEqualityComparer<TKey> comparer)
     {
-        Lock = new();
+        Lock = LockFactory.Create();
         Comparer = comparer;
     }
 
