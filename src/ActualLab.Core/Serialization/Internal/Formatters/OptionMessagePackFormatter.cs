@@ -4,7 +4,6 @@ using MessagePack.Formatters;
 namespace ActualLab.Serialization.Internal;
 
 public sealed class OptionMessagePackFormatter<T> : IMessagePackFormatter<Option<T>>
-    where T : struct
 {
     public void Serialize(ref MessagePackWriter writer, Option<T> value, MessagePackSerializerOptions options)
     {
@@ -12,7 +11,7 @@ public sealed class OptionMessagePackFormatter<T> : IMessagePackFormatter<Option
             writer.WriteArrayHeader(0);
         else {
             writer.WriteArrayHeader(1);
-            options.Resolver.GetFormatterWithVerify<T>().Serialize(ref writer, value.ValueOrDefault, options);
+            options.Resolver.GetFormatterWithVerify<T>().Serialize(ref writer, value.ValueOrDefault!, options);
         }
     }
 

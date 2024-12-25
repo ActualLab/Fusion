@@ -26,7 +26,7 @@ public static class ApiNullable8
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 [StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(AllowPrivate = true)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 public readonly partial struct ApiNullable8<T>
@@ -40,10 +40,10 @@ public readonly partial struct ApiNullable8<T>
     private string DebugValue => ToString();
 
     [Obsolete("This member exists solely to make serialization work. Don't use it!")]
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0), JsonIgnore, Newtonsoft.Json.JsonIgnore]
+    [DataMember(Order = 0), MemoryPackOrder(0), JsonIgnore, Newtonsoft.Json.JsonIgnore]
     public long RawHasValue { get; }
 
-    [DataMember(Order = 1), MemoryPackOrder(1), Key(1), JsonIgnore, Newtonsoft.Json.JsonIgnore]
+    [DataMember(Order = 1), MemoryPackOrder(1), JsonIgnore, Newtonsoft.Json.JsonIgnore]
     public T ValueOrDefault { get; }
 
     [JsonInclude, Newtonsoft.Json.JsonProperty, MemoryPackIgnore, IgnoreMember]

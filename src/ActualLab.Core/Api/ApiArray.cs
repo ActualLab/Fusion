@@ -26,13 +26,13 @@ public static class ApiArray
 [CollectionBuilder(typeof(ApiArray), "New")]
 [JsonConverter(typeof(ApiArrayJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(ApiArrayNewtonsoftJsonConverter))]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(AllowPrivate = true)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
 public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArray<T>>
 {
     private static readonly T[] EmptyItems = [];
     public static readonly ApiArray<T> Empty = default!;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0)]
     [field: AllowNull, MaybeNull, IgnoreMember]
     public T[] Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

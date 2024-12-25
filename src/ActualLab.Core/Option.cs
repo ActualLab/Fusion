@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
-using ActualLab.Internal;
 using MessagePack;
+using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab;
 
@@ -50,7 +50,7 @@ public interface IOption
 #pragma warning disable CA1036
 
 [StructLayout(LayoutKind.Sequential)] // Important! Pack = 0 -> Pack = Max(sizeof(bool), sizeof(Value))
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(AllowPrivate = true)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
@@ -64,13 +64,13 @@ public readonly partial struct Option<T>(bool hasValue, T? valueOrDefault)
     public static Option<T> None => default;
 
     /// <inheritdoc />
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0)]
     public bool HasValue { get; } = hasValue;
 
     /// <summary>
     /// Retrieves option's value. Returns <code>default(T)</code> in case option doesn't have one.
     /// </summary>
-    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
+    [DataMember(Order = 1), MemoryPackOrder(1)]
     public T? ValueOrDefault { get; } = valueOrDefault;
 
     /// <summary>
