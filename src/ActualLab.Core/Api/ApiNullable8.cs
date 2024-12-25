@@ -26,7 +26,7 @@ public static class ApiNullable8
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 [StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(AllowPrivate = true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 public readonly partial struct ApiNullable8<T>

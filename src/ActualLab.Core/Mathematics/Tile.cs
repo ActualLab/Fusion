@@ -4,7 +4,7 @@ using MessagePack;
 namespace ActualLab.Mathematics;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(AllowPrivate = true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct Tile<T>
     where T : notnull

@@ -2,6 +2,7 @@ using System.Text;
 using FluentAssertions;
 using Newtonsoft.Json;
 using ActualLab.IO;
+using MessagePack;
 using Xunit.Abstractions;
 
 namespace ActualLab.Testing;
@@ -211,11 +212,13 @@ public static class SerializationTestExt
         var s = new MessagePackByteSerializer().ToTyped<T>();
         using var buffer = s.Write(value);
         var v0 = buffer.WrittenMemory.ToArray();
-        output?.WriteLine($"MessagePackByteSerializer: {v0.AsByteString()}");
+        var json0 = MessagePackSerializer.ConvertToJson(v0, MessagePackByteSerializer.DefaultOptions);
+        output?.WriteLine($"MessagePackByteSerializer: {json0} as {v0.AsByteString()}");
         value = s.Read(v0);
 
         var v1 = MessagePackSerialized.New(value);
-        output?.WriteLine($"MessagePackSerialized: {v1.Data.AsByteString()}");
+        var json1 = MessagePackSerializer.ConvertToJson(v0, MessagePackByteSerializer.DefaultOptions);
+        output?.WriteLine($"MessagePackSerialized: {json1} as {v1.Data.AsByteString()}");
         value = MessagePackSerialized.New<T>(v1.Data).Value;
 
         var v2 = TypeDecoratingMessagePackSerialized.New(value);

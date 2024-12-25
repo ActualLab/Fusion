@@ -3,6 +3,13 @@ namespace ActualLab.Tests.Api;
 public class ApiArrayTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
+    public void SerializationTest()
+    {
+        ApiArray<int>.Empty.AssertPassesThroughAllSerializers(Out);
+        new ApiArray<int>([1, 2]).PassThroughAllSerializers(Out);
+    }
+
+    [Fact]
     public void WithTest()
     {
         var a = Enumerable.Range(0, 5).ToApiArray();

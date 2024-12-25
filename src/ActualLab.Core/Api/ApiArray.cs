@@ -31,6 +31,7 @@ public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArr
     private static readonly T[] EmptyItems = [];
     public static readonly ApiArray<T> Empty = default!;
 
+    [IgnoreMember]
     private readonly T[]? _items;
 
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
