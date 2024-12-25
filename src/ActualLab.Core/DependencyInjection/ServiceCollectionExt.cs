@@ -68,21 +68,21 @@ public static class ServiceCollectionExt
         where TService : class
     {
         services.AddScoped(c => {
-            var service = factory.Invoke(c);
-            return new ScopedOrSingleton<TService>.Scoped(service, c);
+            var lazy = new LazySlim<TService>(() => factory.Invoke(c));
+            return new ScopedOrSingleton<LazySlim<TService>>.Scoped(c, lazy);
         });
         services.AddSingleton(c => {
-            var service = factory.Invoke(c);
-            return new ScopedOrSingleton<TService>.Singleton(service, c);
+            var lazy = new LazySlim<TService>(() => factory.Invoke(c));
+            return new ScopedOrSingleton<LazySlim<TService>>.Singleton(c, lazy);
         });
         services.AddTransient<TService>(c => {
             // Singleton is always available, so we start from it
-            var singleton = c.GetRequiredService<ScopedOrSingleton<TService>.Singleton>();
+            var singleton = c.GetRequiredService<ScopedOrSingleton<LazySlim<TService>>.Singleton>();
             if (ReferenceEquals(singleton.Services, c))
-                return singleton.Service;
+                return singleton.Value.Value;
 
-            var scoped = c.GetRequiredService<ScopedOrSingleton<TService>.Scoped>();
-            return scoped.Service;
+            var scoped = c.GetRequiredService<ScopedOrSingleton<LazySlim<TService>>.Scoped>();
+            return scoped.Value.Value;
         });
         return services;
     }
