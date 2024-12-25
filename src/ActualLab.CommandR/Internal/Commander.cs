@@ -11,10 +11,9 @@ public class Commander : ICommander
     public IServiceProvider Services { get; }
     public CommanderHub Hub { get; }
 
-#pragma warning disable IL2026
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]
     [field: AllowNull, MaybeNull]
     protected Action<IEventCommand, Symbol> ChainIdSetter => field ??= ChainIdSetterProperty.GetSetter<Symbol>();
-#pragma warning restore IL2026
 
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());

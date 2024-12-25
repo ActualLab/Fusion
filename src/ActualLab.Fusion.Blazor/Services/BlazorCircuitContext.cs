@@ -19,14 +19,13 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
     public IServiceProvider Services { get; } = services;
     [field: AllowNull, MaybeNull]
     public JSRuntimeInfo JSRuntimeInfo => field ??= Services.GetRequiredService<JSRuntimeInfo>();
-    public IJSRuntime JSRuntime => JSRuntimeInfo.Runtime;
+    public IJSRuntime? JSRuntime => JSRuntimeInfo.Runtime;
     [field: AllowNull, MaybeNull]
     public Dispatcher Dispatcher => field ??= RootComponent.GetDispatcher();
     [field: AllowNull, MaybeNull]
     public NavigationManager NavigationManager => field ??= Services.GetRequiredService<NavigationManager>();
-    public bool IsStatic => JSRuntimeInfo is { IsUnavailable: true };
+    public bool IsStatic => JSRuntimeInfo.Runtime == null;
     public bool IsPrerendering => JSRuntimeInfo is { IsRemote: true, ClientProxy: null };
-    public bool IsStaticOrPrerendering => IsStatic || IsPrerendering;
 
     public ComponentBase RootComponent {
         get => field ?? throw Errors.NotInitialized();

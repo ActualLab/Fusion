@@ -1,10 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Internal;
 using Cysharp.Text;
 
 namespace ActualLab.Rpc.Serialization.Internal;
-
-#pragma warning disable IL2026
 
 public static class TextTypeSerializer
 {
@@ -25,6 +24,7 @@ public static class TextTypeSerializer
             return new ByteString(sb.AsSpan().ToArray());
         });
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
     public static Type? FromBytes(ByteString bytes)
         => FromBytesCache.GetOrAdd(bytes, static b => {
             var utf8Name = new ByteString(b.Bytes[Prefix.Length..^Suffix.Length]);

@@ -2,8 +2,10 @@ using System.Buffers;
 
 namespace ActualLab.Serialization.Internal;
 
-public sealed class CastingTextSerializer<T>(ITextSerializer untypedSerializer, Type serializedType)
-    : ITextSerializer<T>
+public sealed class CastingTextSerializer<T>(
+    ITextSerializer untypedSerializer,
+    Type serializedType
+    ) : ITextSerializer<T>
 {
     public ITextSerializer UntypedSerializer { get; } = untypedSerializer;
     public Type SerializedType { get; } = serializedType;

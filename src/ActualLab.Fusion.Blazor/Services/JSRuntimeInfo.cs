@@ -1,31 +1,40 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.JSInterop;
 
 namespace ActualLab.Fusion.Blazor;
 
 // ReSharper disable once InconsistentNaming
-public sealed class JSRuntimeInfo
+public class JSRuntimeInfo
 {
-    private readonly Func<object, object?> _clientProxyGetter = _ => null;
-
     // ReSharper disable once InconsistentNaming
-    public IJSRuntime Runtime { get; init; }
-    public bool IsUnavailable { get; init; }
+    public IJSRuntime? Runtime { get; init; }
     public bool IsRemote { get; init; }
-    public object? ClientProxy => _clientProxyGetter.Invoke(Runtime);
+    public Func<object?> ClientProxyGetter { get; init; } = () => null;
+    public object? ClientProxy => ClientProxyGetter.Invoke();
 
-    public JSRuntimeInfo(IJSRuntime runtime)
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume server-side code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "We assume server-side code is fully preserved")]
+    public JSRuntimeInfo(IJSRuntime? runtime)
     {
         Runtime = runtime;
+        if (runtime == null)
+            return;
+
         var type = runtime.GetType();
-        IsUnavailable = string.Equals(type.Name, "UnsupportedJavaScriptRuntime", StringComparison.Ordinal);
+        if (string.Equals(type.Name, "UnsupportedJavaScriptRuntime", StringComparison.Ordinal)) {
+            Runtime = null;
+            return;
+        }
+
         IsRemote = string.Equals(type.Name, "RemoteJSRuntime", StringComparison.Ordinal);
         if (!IsRemote)
             return;
 
-#pragma warning disable IL2026, IL2075
         var fClientProxy = type.GetField("_clientProxy", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (fClientProxy != null)
-            _clientProxyGetter = fClientProxy.GetGetter<object, object?>(true);
-#pragma warning restore IL2026, IL2075
+        if (fClientProxy == null)
+            return;
+
+        var clientProxyGetter = fClientProxy.GetGetter<object?, object?>(true);
+        ClientProxyGetter = () => clientProxyGetter.Invoke(runtime);
     }
 }

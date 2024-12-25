@@ -3,8 +3,9 @@ using ActualLab.Trimming;
 
 namespace ActualLab.Interception.Trimming;
 
-#pragma warning disable IL3050
-
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
 public class ProxyCodeKeeper : CodeKeeper
 {
     protected MethodDefCodeKeeper MethodDefCodeKeeper => Get<MethodDefCodeKeeper>();
@@ -466,9 +467,7 @@ public class ProxyCodeKeeper : CodeKeeper
             return;
 
         MethodDefCodeKeeper.KeepCodeForResult<TResult, TUnwrapped>();
-#pragma warning disable IL2111
         Keep<Interceptor>().KeepCodeForResult<TResult, TUnwrapped>();
-#pragma warning restore IL2111
     }
 
     public virtual void KeepArgumentListArgument<

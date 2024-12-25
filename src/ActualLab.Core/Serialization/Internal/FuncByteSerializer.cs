@@ -2,9 +2,10 @@ using System.Buffers;
 
 namespace ActualLab.Serialization.Internal;
 
-public class FuncByteSerializer<T>(Func<ReadOnlyMemory<byte>, (T Value, int ReadLength)> reader,
-        Action<IBufferWriter<byte>, T> writer)
-    : IByteSerializer<T>
+public class FuncByteSerializer<T>(
+    Func<ReadOnlyMemory<byte>, (T Value, int ReadLength)> reader,
+    Action<IBufferWriter<byte>, T> writer
+    ) : IByteSerializer<T>
 {
     public Func<ReadOnlyMemory<byte>, (T Value, int ReadLength)> Reader { get; } = reader;
     public Action<IBufferWriter<byte>, T> Writer { get; } = writer;

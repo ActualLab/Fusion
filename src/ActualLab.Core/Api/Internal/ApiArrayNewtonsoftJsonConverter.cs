@@ -1,11 +1,13 @@
+using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
 using JsonConverter = Newtonsoft.Json.JsonConverter;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace ActualLab.Api.Internal;
 
-#pragma warning disable IL2026, CA1812
+#pragma warning disable CA1812
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Used constructors should be there for sure.")]
 public class ApiArrayNewtonsoftJsonConverter : JsonConverter
 {
     private static readonly ConcurrentDictionary<Type, JsonConverter?> ConverterCache = new();

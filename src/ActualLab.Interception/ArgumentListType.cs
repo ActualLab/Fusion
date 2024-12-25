@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Collections.Fixed;
 using ActualLab.OS;
 
@@ -66,9 +67,12 @@ public sealed class ArgumentListType
             ? GDefCacheN.GetOrAdd(FixedArray10<Type?>.New(itemTypes!), static key => new ArgumentListType(true, key.ReadOnlySpan))
             : SDefCacheN.GetOrAdd(FixedArray10<Type?>.New(itemTypes!), static key => new ArgumentListType(false, key.ReadOnlySpan));
 
+    [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume ArgumentList code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2062", Justification = "We assume ArgumentList code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume ArgumentList code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is fully preserved")]
     private ArgumentListType(bool useGenerics, ReadOnlySpan<Type?> key)
     {
-#pragma warning disable IL2055, IL2062, IL2077, IL3050
         Type[] itemTypes = key.ToArray().TakeWhile(x => x != null).ToArray()!;
         ItemTypes = itemTypes;
         ItemCount = itemTypes.Length;
@@ -101,7 +105,6 @@ public sealed class ArgumentListType
             var factory = (Func<ArgumentListType, ArgumentList>)ListType.GetConstructorDelegate(typeof(ArgumentListType))!;
             Factory = () => factory.Invoke(this);
         }
-#pragma warning restore IL2055, IL2062, IL2077, IL3050
     }
 
     public override string ToString()

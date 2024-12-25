@@ -15,12 +15,12 @@ public sealed class ComponentInfo
     public ParameterComparisonMode ParameterComparisonMode { get; }
     public IReadOnlyDictionary<string, ComponentParameterInfo> Parameters { get; }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume Blazor components' code is fully preserved")]
     public static ComponentInfo Get(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type componentType)
-#pragma warning disable IL2067
         => ComponentInfoCache.GetOrAdd(componentType, static t => new ComponentInfo(t));
-#pragma warning restore IL2067
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume Blazor components' code is fully preserved")]
     private ComponentInfo(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
     {
@@ -47,9 +47,7 @@ public sealed class ComponentInfo
                     continue; // Not a parameter
             }
 
-#pragma warning disable IL2026
             var comparer = parameterComparerProvider.Get(property);
-#pragma warning restore IL2026
             hasCustomParameterComparers |= comparer is not DefaultParameterComparer;
             var parameter = new ComponentParameterInfo() {
                 Property = property,

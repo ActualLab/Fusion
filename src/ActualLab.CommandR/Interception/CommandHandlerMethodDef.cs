@@ -1,20 +1,19 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
 using ActualLab.Interception;
-using ActualLab.Trimming;
 
 namespace ActualLab.CommandR.Interception;
 
 public sealed class CommandHandlerMethodDef : MethodDef
 {
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all command handling code is preserved")]
     public CommandHandlerMethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
         MethodInfo method
         ) : base(type, method)
     {
-#pragma warning disable IL2026, IL2072
         var commandHandler = MethodCommandHandler.TryNew(method.ReflectedType!, method);
-#pragma warning restore IL2026, IL2072
         if (commandHandler == null) {
             IsValid = false;
             return; // Can be only when attr.IsEnabled == false

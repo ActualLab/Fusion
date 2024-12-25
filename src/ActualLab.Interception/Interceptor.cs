@@ -7,6 +7,10 @@ namespace ActualLab.Interception;
 
 #pragma warning disable CS0420 // A reference to a volatile field will not be treated as volatile
 
+[UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume proxy-related code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume proxy-related code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume proxy-related code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]
 public abstract class Interceptor : IHasServices
 {
     public abstract record Options
@@ -27,11 +31,9 @@ public abstract class Interceptor : IHasServices
         public bool IsValidationEnabled { get; init; } = Defaults.IsValidationEnabled;
     }
 
-#pragma warning disable IL2111
     private static readonly MethodInfo CreateTypedHandlerMethod = typeof(Interceptor)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
         .Single(m => string.Equals(m.Name, nameof(CreateHandler), StringComparison.Ordinal));
-#pragma warning restore IL2111
 
     private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandlerUntyped;
     private readonly Func<MethodInfo, Type, MethodDef?> _createMethodDef;
@@ -67,9 +69,7 @@ public abstract class Interceptor : IHasServices
         ValidationLog = Log.IfEnabled(settings.ValidationLogLevel);
 
         _createHandlerUntyped = CreateHandlerUntyped;
-#pragma warning disable IL2111
         _createMethodDef = CreateMethodDef;
-#pragma warning restore IL2111
         _validateTypeCache = new ConcurrentDictionary<Type, Unit>(
             settings.HandlerCacheConcurrencyLevel, settings.HandlerCacheCapacity);
         _methodDefCache = new ConcurrentDictionary<MethodInfo, MethodDef?>(
@@ -150,9 +150,7 @@ public abstract class Interceptor : IHasServices
         _validateTypeCache.GetOrAdd(type, static (type1, self) => {
             self.ValidationLog?.Log(self.ValidationLogLevel, "Validating: '{Type}'", type1);
             try {
-#pragma warning disable IL2067
                 self.ValidateTypeInternal(type1);
-#pragma warning restore IL2067
             }
             catch (Exception e) {
                 self.Log.LogCritical(e, "Validation of '{Type}' failed", type1);
@@ -199,10 +197,8 @@ public abstract class Interceptor : IHasServices
         if (methodDef == null)
             return null;
 
-#pragma warning disable IL2060
         return (Func<Invocation, object?>?)CreateTypedHandlerMethod
             .MakeGenericMethod(methodDef.UnwrappedReturnType)
             .Invoke(this, [initialInvocation, methodDef])!;
-#pragma warning restore IL2060
     }
 }

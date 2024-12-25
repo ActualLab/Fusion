@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Interception;
 
+[UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume proxy-related code is preserved")]
 public static class ServiceProviderExt
 {
     // ActivateProxy
@@ -13,9 +14,7 @@ public static class ServiceProviderExt
         where TBaseType : class, IRequiresAsyncProxy
     {
         var proxyType = Proxies.GetProxyType<TBaseType>();
-#pragma warning disable IL2072
         var proxy = (TBaseType)services.CreateInstance(proxyType);
-#pragma warning restore IL2072
         interceptor.BindTo(proxy, proxyTarget, initialize);
         return proxy;
     }
@@ -26,9 +25,7 @@ public static class ServiceProviderExt
         Interceptor interceptor, object? proxyTarget = null, bool initialize = true)
     {
         var proxyType = Proxies.GetProxyType(baseType);
-#pragma warning disable IL2072
         var proxy = (IProxy)services.CreateInstance(proxyType);
-#pragma warning restore IL2072
         interceptor.BindTo(proxy, proxyTarget, initialize);
         return proxy;
     }

@@ -25,17 +25,16 @@ public record ComputedOptions
     public ComputedCancellationReprocessingOptions CancellationReprocessing { get; init; }
         = ComputedCancellationReprocessingOptions.Default;
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume attributes on compute methods are fully preserved")]
     public static ComputedOptions? Get(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
         MethodInfo method)
     {
         var isClientServiceMethod = type.IsInterface || typeof(InterfaceProxy).IsAssignableFrom(type);
-#pragma warning disable IL2026
         var cma = method.GetAttribute<ComputeMethodAttribute>(true, true);
         var rma = isClientServiceMethod
             ? method.GetAttribute<RemoteComputeMethodAttribute>(true, true)
             : null;
-#pragma warning restore IL2026
         var a = rma ?? cma;
         if (a == null)
             return null;

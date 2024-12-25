@@ -18,9 +18,7 @@ public static class KeyValueStoreExt
         DbShard shard, string key, T value, Moment? expiresAt,
         CancellationToken cancellationToken = default)
     {
-#pragma warning disable IL2026
         var sValue = NewtonsoftJsonSerialized.New(value).Data;
-#pragma warning restore IL2026
         return keyValueStore.Set(shard, key, sValue, expiresAt, cancellationToken);
     }
 
@@ -70,9 +68,7 @@ public static class KeyValueStoreExt
         CancellationToken cancellationToken = default)
     {
         var sValue = await keyValueStore.Get(shard, key, cancellationToken).ConfigureAwait(false);
-#pragma warning disable IL2026
         return sValue == null ? Option<T>.None : NewtonsoftJsonSerialized.New<T>(sValue).Value;
-#pragma warning restore IL2026
     }
 
     public static async ValueTask<T?> Get<T>(this IKeyValueStore keyValueStore,
@@ -80,9 +76,7 @@ public static class KeyValueStoreExt
         CancellationToken cancellationToken = default)
     {
         var sValue = await keyValueStore.Get(shard, key, cancellationToken).ConfigureAwait(false);
-#pragma warning disable IL2026
         return sValue == null ? default : NewtonsoftJsonSerialized.New<T>(sValue).Value;
-#pragma warning restore IL2026
     }
 
     // ListKeysByPrefix

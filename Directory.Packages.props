@@ -49,7 +49,7 @@
     <MySqlConnectorVersion6>2.2.7</MySqlConnectorVersion6>
     <MySqlConnectorVersion5>2.2.7</MySqlConnectorVersion5>
     <MySqlConnectorVersion3>0.69.10</MySqlConnectorVersion3>
-    <EntityFrameworkCoreMySqlVersion>[9.0.0-preview.1,)</EntityFrameworkCoreMySqlVersion>
+    <EntityFrameworkCoreMySqlVersion>[9.0.0-preview.2.efcore.9.0.0,)</EntityFrameworkCoreMySqlVersion>
     <EntityFrameworkCoreMySqlVersion8>[8.0.0,)</EntityFrameworkCoreMySqlVersion8>
     <EntityFrameworkCoreMySqlVersion7>[7.0.0,8)</EntityFrameworkCoreMySqlVersion7>
     <EntityFrameworkCoreMySqlVersion6>[6.0.3,7)</EntityFrameworkCoreMySqlVersion6>

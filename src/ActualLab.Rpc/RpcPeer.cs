@@ -71,6 +71,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         Ref = peerRef;
         ConnectionKind = peerRef.GetConnectionKind(hub);
         Versions = versions ?? peerRef.GetVersions();
+        // ReSharper disable once VirtualMemberCallInConstructor
         _serverMethodResolver = GetServerMethodResolver(null);
 
         SerializationFormat = Hub.SerializationFormats.Get(peerRef);

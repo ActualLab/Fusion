@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Diagnostics;
@@ -28,6 +29,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public CpuTimestamp StartedAt;
     public CancellationTokenRegistration CallCancelHandler;
 
+    [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
     public static RpcOutboundCall? New(RpcOutboundContext context)
     {
         var peer = context.Peer;
@@ -39,13 +43,11 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         return FactoryCache.GetOrAdd(new(context.CallTypeId, context.MethodDef!.UnwrappedReturnType), static key => {
             var (callTypeId, tResult) = key;
-#pragma warning disable IL2055, IL2077, IL3050
             var type = RpcCallTypeRegistry.Resolve(callTypeId)
                 .OutboundCallType
                 .MakeGenericType(tResult);
             return (Func<RpcOutboundContext, RpcOutboundCall>)type
                 .GetConstructorDelegate(typeof(RpcOutboundContext))!;
-#pragma warning restore IL2055, IL2077, IL3050
         }).Invoke(context);
     }
 

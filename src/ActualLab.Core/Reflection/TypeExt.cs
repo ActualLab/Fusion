@@ -47,6 +47,7 @@ public static partial class TypeExt
         }
     } = DefaultNonProxyTypeResolver;
 
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume all used constructors are preserved")]
     public static object? GetDefaultValue(
         [DynamicallyAccessedMembers(
             DynamicallyAccessedMemberTypes.PublicParameterlessConstructor |
@@ -55,20 +56,19 @@ public static partial class TypeExt
     {
         if (!type.IsValueType)
             return null;
-#pragma warning disable IL2067
         return DefaultValueCache.GetOrAdd(type, static type => {
 #if !NETSTANDARD2_0
             return RuntimeHelpers.GetUninitializedObject(type);
 #else
             return FormatterServices.GetUninitializedObject(type);
 #endif
-#pragma warning restore IL2067
         });
     }
 
     public static Type NonProxyType(this Type type)
         => NonProxyTypeCache.GetOrAdd(type, NonProxyTypeResolver);
 
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume all base types and interfaces are preserved")]
     public static IEnumerable<Type> GetAllBaseTypes(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] this Type type,
         bool addSelf = false, bool addInterfaces = false)
@@ -93,9 +93,7 @@ public static partial class TypeExt
                 yield break;
 
             var orderedInterfaces = interfaces
-#pragma warning disable IL2070
                 .OrderBy(i => -i.GetInterfaces().Length)
-#pragma warning restore IL2070
                 .OrderByDependency(i => interfaces.Where(j => i != j && j.IsAssignableFrom(i)))
                 .Reverse();
             foreach (var @interface in orderedInterfaces)
@@ -105,6 +103,7 @@ public static partial class TypeExt
         yield return typeof(object);
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "We assume all required methods are preserved")]
     public static IEnumerable<MethodInfo> GetAllInterfaceMethods(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] this Type type,
         BindingFlags bindingFlags,
@@ -117,9 +116,7 @@ public static partial class TypeExt
         if (interfaceFilter != null)
             baseTypes = baseTypes.Where(interfaceFilter);
         foreach (var baseType in baseTypes)
-#pragma warning disable IL2075
         foreach (var method in baseType.GetMethods(bindingFlags))
-#pragma warning restore IL2075
             yield return method;
     }
 
@@ -231,6 +228,9 @@ public static partial class TypeExt
             : null;
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume proxy-related code is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume proxy-related code is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]
     public static Type DefaultNonProxyTypeResolver(Type type)
     {
         const string proxyNamespace = "ActualLabProxies";
@@ -247,9 +247,7 @@ public static partial class TypeExt
             var genericProxyType = DefaultNonProxyTypeResolver(genericType);
             return genericType == genericProxyType
                 ? type
-#pragma warning disable IL2055
                 : genericProxyType.MakeGenericType(type.GenericTypeArguments);
-#pragma warning restore IL2055
         }
 
         var name = type.Name;
@@ -271,9 +269,7 @@ public static partial class TypeExt
         var nonProxyNamePrefix = namePrefix[..^proxy.Length];
         var nonProxyName = ZString.Concat(nonProxyNamespacePrefix, nonProxyNamePrefix, nameSuffix);
         try {
-#pragma warning disable IL2026
             return type.Assembly.GetType(nonProxyName) ?? type;
-#pragma warning restore IL2026
         }
         catch {
             return type;

@@ -70,14 +70,14 @@ public class UICommander(IServiceProvider services) : IHasServices
 
     // Private methods
 
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume CreateUIActionTyped method is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume CreateUIActionTyped method is preserved")]
     private static UIAction CreateUIAction(UICommander uiCommander, ICommand command, CancellationToken cancellationToken)
         => CreateUIActionInvokers.GetOrAdd(
             command.GetResultType(),
-#pragma warning disable IL2060
             static tCommand => (Func<UICommander, ICommand, CancellationToken, UIAction>)CreateUIActionTypedMethod
                 .MakeGenericMethod(tCommand)
                 .CreateDelegate(typeof(Func<UICommander, ICommand, CancellationToken, UIAction>))
-#pragma warning restore IL2060
         ).Invoke(uiCommander, command, cancellationToken);
 
     private static UIAction CreateUIActionTyped<TResult>(

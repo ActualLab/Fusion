@@ -6,6 +6,9 @@ using InvalidCastException = System.InvalidCastException;
 
 namespace ActualLab.Interception;
 
+[UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume proxy-related code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume proxy-related code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]
 public class MethodDef
 {
     private static readonly ConcurrentDictionary<(MethodInfo, Type), Func<MethodDef, object>> AsyncInvokerCache
@@ -205,18 +208,14 @@ public class MethodDef
     // Private methods
 
     private object? GetDefaultResult()
-#pragma warning disable IL2077
         => !IsAsyncMethod
             ? DefaultUnwrappedResult
             : ReturnsValueTask
                 ? IsAsyncVoidMethod ? default(ValueTask) : ValueTaskExt.FromDefaultResult(UnwrappedReturnType)
                 : TaskExt.FromDefaultResult(UnwrappedReturnType);
-#pragma warning restore IL2077
 
     private object? GetDefaultUnwrappedResult()
-#pragma warning disable IL2077
         => UnwrappedReturnType.GetDefaultValue();
-#pragma warning restore IL2077
 
     private TResult GetAsyncInvoker<TResult>(MethodInfo methodInfo)
         => (TResult)AsyncInvokerCache.GetOrAdd((methodInfo, UnwrappedReturnType),

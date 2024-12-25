@@ -4,8 +4,8 @@ using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
-#pragma warning disable IL2116, IL2026
-
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume you know serialization may involve reflection and dynamic invocations")]
+[UnconditionalSuppressMessage("Trimming", "IL2116", Justification = "We assume you know serialization may involve reflection and dynamic invocations")]
 public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type, bool>? typeFilter = null)
     : TextSerializerBase
 {

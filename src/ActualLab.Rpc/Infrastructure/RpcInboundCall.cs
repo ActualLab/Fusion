@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
@@ -26,6 +27,9 @@ public abstract class RpcInboundCall : RpcCall
     public Task? WhenProcessed;
     public RpcInboundCallTrace? Trace;
 
+    [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
     public static RpcInboundCall New(byte callTypeId, RpcInboundContext context, RpcMethodDef? methodDef)
     {
         if (methodDef == null) {
@@ -40,13 +44,11 @@ public abstract class RpcInboundCall : RpcCall
 
         return FactoryCache.GetOrAdd(new(callTypeId, methodDef.UnwrappedReturnType), static key => {
             var (callTypeId, tResult) = key;
-#pragma warning disable IL2055, IL2077, IL3050
             var type = RpcCallTypeRegistry.Resolve(callTypeId)
                 .InboundCallType
                 .MakeGenericType(tResult);
             return (Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>)type
                 .GetConstructorDelegate(typeof(RpcInboundContext), typeof(RpcMethodDef))!;
-#pragma warning restore IL2055, IL2077, IL3050
         }).Invoke(context, methodDef);
     }
 
@@ -119,12 +121,10 @@ public abstract class RpcInboundCall : RpcCall
 public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
     : RpcInboundCall(context, methodDef)
 {
-    public Task<TResult>? ResultTask { get; private set; } = null!;
+    public Task<TResult>? ResultTask { get; private set; }
     public override Task? UntypedResultTask => ResultTask;
 
-#pragma warning disable IL2046
     public override Task Process(CancellationToken cancellationToken)
-#pragma warning restore IL2046
     {
         if (NoWait) {
             try {

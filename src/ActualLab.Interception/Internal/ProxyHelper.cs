@@ -2,13 +2,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Interception.Internal;
 
-#pragma warning disable IL2072
-
 public static class ProxyHelper
 {
     private static readonly BindingFlags GetMethodInfoBindingFlags =
         BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "False positive")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MethodInfo GetMethodInfo(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,

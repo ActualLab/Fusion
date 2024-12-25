@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 
 namespace ActualLab.CommandR;
@@ -61,6 +62,8 @@ public static class CommanderExt
 
     // Private methods
 
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume all command handling code is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all command handling code is preserved")]
     private static Func<ICommander, ICommand, bool, CancellationToken, Task> GetTypedCallInvoker(Type commandResultType)
         => TypedCallCache.GetOrAdd(
             commandResultType,
@@ -72,11 +75,9 @@ public static class CommanderExt
                         typeof(bool),
                         typeof(CancellationToken),
                         typeof(Task<>).MakeGenericType(tResult));
-#pragma warning disable IL2060
                 return (Func<ICommander, ICommand, bool, CancellationToken, Task>)TypedCallMethod
                     .MakeGenericMethod(tResult)
                     .CreateDelegate(delegateType);
-#pragma warning restore IL2060
             });
 
     private static async Task<TResult> TypedCall<TResult>(

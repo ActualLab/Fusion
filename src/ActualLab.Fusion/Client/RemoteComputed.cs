@@ -61,9 +61,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
     ~RemoteComputed()
         => Dispose();
 
-#pragma warning disable IL2046
     public void Dispose()
-#pragma warning restore IL2046
     {
         if (!WhenCallBound.IsCompleted)
             return;
@@ -74,7 +72,6 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
 
     public bool BindToCall(RpcOutboundComputeCall<T>? call)
     {
-#pragma warning disable IL2026
         if (!CallSource.TrySetResult(call)) {
             // Another call is already bound
             if (call == null) {
@@ -88,7 +85,6 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
             }
             return false;
         }
-#pragma warning restore IL2026
         // If we're here, the computed is bound to the specified call
 
         if (call != null) // Otherwise the null call originates from OnInvalidated

@@ -60,6 +60,33 @@ public static class ServiceCollectionExt
         return services;
     }
 
+    // AddScopedOrSingleton
+
+    public static IServiceCollection AddScopedOrSingleton<TService>(
+        this IServiceCollection services,
+        Func<IServiceProvider, TService> factory)
+        where TService : class
+    {
+        services.AddScoped(c => {
+            var service = factory.Invoke(c);
+            return new ScopedOrSingleton<TService>.Scoped(service, c);
+        });
+        services.AddSingleton(c => {
+            var service = factory.Invoke(c);
+            return new ScopedOrSingleton<TService>.Singleton(service, c);
+        });
+        services.AddTransient<TService>(c => {
+            // Singleton is always available, so we start from it
+            var singleton = c.GetRequiredService<ScopedOrSingleton<TService>.Singleton>();
+            if (ReferenceEquals(singleton.Services, c))
+                return singleton.Service;
+
+            var scoped = c.GetRequiredService<ScopedOrSingleton<TService>.Scoped>();
+            return scoped.Service;
+        });
+        return services;
+    }
+
     // AddAlias
 
     public static IServiceCollection AddAlias<TAlias, TService>(

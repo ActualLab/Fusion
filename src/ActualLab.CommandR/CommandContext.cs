@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using ActualLab.CommandR.Internal;
 using ActualLab.CommandR.Operations;
@@ -43,6 +44,8 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
 
     // Static methods
 
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all command handling code is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all command handling code is preserved")]
     public static CommandContext New(
         ICommander commander, ICommand command, bool isOutermost)
     {
@@ -50,12 +53,10 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
             isOutermost = true;
 
         var tCommandResult = command.GetResultType();
-#pragma warning disable IL2072, IL3050
         var tContext = CommandContextTypeCache.GetOrAdd(
             tCommandResult,
             static t => typeof(CommandContext<>).MakeGenericType(t));
         return (CommandContext)tContext.CreateInstance(commander, command, isOutermost);
-#pragma warning restore IL2072, IL3050
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

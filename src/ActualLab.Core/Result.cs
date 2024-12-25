@@ -273,14 +273,14 @@ public static class Result
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> Error<T>(Exception error) => new(default!, error);
 
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume ErrorInternal method is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ErrorInternal method is preserved")]
     public static IResult Error(Type resultType, Exception error)
         => ErrorCache.GetOrAdd(
             resultType,
-#pragma warning disable IL2060
             static tResult => (Func<Exception, IResult>)ErrorInternalMethod
                 .MakeGenericMethod(tResult)
                 .CreateDelegate(typeof(Func<Exception, IResult>))
-#pragma warning restore IL2060
             ).Invoke(error);
 
     public static Result<T> FromFunc<T, TState>(TState state, Func<TState, T> func)

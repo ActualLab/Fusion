@@ -45,9 +45,7 @@ public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
 
     [NotMapped]
     public ImmutableOptionSet Options {
-#pragma warning disable IL2026
         get => _options.Value;
-#pragma warning restore IL2026
         set => _options = value;
     }
 }

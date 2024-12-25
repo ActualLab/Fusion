@@ -3,8 +3,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Trimming;
 
-#pragma warning disable IL2026
-
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
 public class SerializableTypeCodeKeeper : CodeKeeper
 {
     public virtual T KeepType<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>()

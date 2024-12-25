@@ -7,6 +7,7 @@ using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 public class MessagePackByteSerializer(MessagePackSerializerOptions options) : IByteSerializer
 {
 #if NET9_0_OR_GREATER
@@ -100,6 +101,7 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
             this);
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 public class MessagePackByteSerializer<T>(MessagePackSerializerOptions options, Type serializedType)
     : MessagePackByteSerializer(options), IByteSerializer<T>
 {

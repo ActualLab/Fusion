@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 
 namespace ActualLab.Fusion.Blazor;
@@ -32,6 +33,8 @@ public static class ComputedStateComponent
     public static string GetMutableStateCategory(Type componentType)
         => StateCategoryCache.GetOrAdd(componentType, static t => $"{t.GetName()}.MutableState");
 
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume GetDefaultOptions method is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume GetDefaultOptions method is preserved")]
     public static IComputedState.IOptions CreateDefaultStateOptions(Type componentType)
         => CreateDefaultStateOptionsCache.GetOrAdd(componentType, static componentType1 => {
             var type = componentType1;
@@ -40,11 +43,9 @@ public static class ComputedStateComponent
                     && type.GetGenericTypeDefinition() is var gtd
                     && gtd == typeof(ComputedStateComponent<>)) {
                     var stateType = type.GetGenericArguments().Single();
-#pragma warning disable IL2060
                     return (Func<Type, IComputedState.IOptions>)GetDefaultOptionsImplMethod
                         .MakeGenericMethod(stateType)
                         .CreateDelegate(typeof(Func<Type, IComputedState.IOptions>));
-#pragma warning restore IL2060
                 }
                 type = type.BaseType;
             }

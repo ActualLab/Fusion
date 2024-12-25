@@ -14,6 +14,10 @@ using ActualLab.Versioning.Providers;
 
 namespace ActualLab.CommandR;
 
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2062", Justification = "We assume all command handling code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all command handling code is preserved")]
+[UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume all command handling code is preserved")]
 public readonly struct CommanderBuilder
 {
     public IServiceCollection Services { get; }
@@ -21,7 +25,6 @@ public readonly struct CommanderBuilder
 
     static CommanderBuilder() => CodeKeeper.AddFakeAction(
         static () => {
-#pragma warning disable IL2111
             CodeKeeper.KeepStatic(typeof(Proxies));
 
             // Configuration
@@ -36,7 +39,6 @@ public readonly struct CommanderBuilder
             // Stuff that might be forgotten
             var c = CodeKeeper.Get<ProxyCodeKeeper>();
             c.KeepAsyncMethod<Unit, ICommand<Unit>, CancellationToken>();
-#pragma warning restore IL2111
         });
 
     internal CommanderBuilder(
@@ -97,6 +99,7 @@ public readonly struct CommanderBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         double? priorityOverride = null)
         => AddHandlers(serviceType, serviceType, priorityOverride);
+
     public CommanderBuilder AddHandlers(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
@@ -107,7 +110,6 @@ public readonly struct CommanderBuilder
 
         var interfaceMethods = new HashSet<MethodInfo>();
 
-#pragma warning disable IL2026, IL2062, IL2072
         // ICommandHandler<TCommand> interfaces
         var tInterfaces = implementationType.GetInterfaces();
         foreach (var tInterface in tInterfaces) {
@@ -153,8 +155,6 @@ public readonly struct CommanderBuilder
 
             AddHandler(handler);
         }
-#pragma warning restore IL2026, IL2062, IL2072
-
         return this;
     }
 

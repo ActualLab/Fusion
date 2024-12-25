@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception.Internal;
 using ActualLab.OS;
 
@@ -7,11 +8,13 @@ public static class InvocationExt
 {
     private delegate object? InterceptedUntypedFunc(in Invocation invocation);
 
-    private static readonly MethodInfo InvokeInterceptedUntypedMethod = typeof(InvocationExt)
+    private static readonly MethodInfo InvokeInterceptedUntypedImplMethod = typeof(InvocationExt)
         .GetMethod(nameof(InvokeInterceptedUntypedImpl), BindingFlags.Static | BindingFlags.NonPublic)!;
     private static readonly ConcurrentDictionary<Type, InterceptedUntypedFunc> InterceptedUntypedCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume InvokeInterceptedUntypedImpl method is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume InvokeInterceptedUntypedImpl method is preserved")]
     public static object? InvokeInterceptedUntyped(in this Invocation invocation)
         => InterceptedUntypedCache.GetOrAdd(invocation.Method.ReturnType,
             static returnType => returnType == typeof(void)
@@ -19,11 +22,9 @@ public static class InvocationExt
                     invocation.InvokeIntercepted();
                     return null;
                 }
-#pragma warning disable IL2060
-                : (InterceptedUntypedFunc)InvokeInterceptedUntypedMethod
+                : (InterceptedUntypedFunc)InvokeInterceptedUntypedImplMethod
                     .MakeGenericMethod(returnType)
                     .CreateDelegate(typeof(InterceptedUntypedFunc))
-#pragma warning restore IL2060
         ).Invoke(invocation);
 
     // Private methods

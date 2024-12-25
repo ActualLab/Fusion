@@ -37,7 +37,7 @@ public class RpcWebSocketServer(
     public RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; }
         = services.GetRequiredService<RpcWebSocketChannelOptionsProvider>();
 
-    public HttpStatusCode Invoke(IOwinContext context, bool isBackend)
+    public virtual HttpStatusCode Invoke(IOwinContext context, bool isBackend)
     {
         // Based on https://stackoverflow.com/questions/41848095/websockets-using-owin
 

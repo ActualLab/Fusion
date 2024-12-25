@@ -28,9 +28,7 @@ public partial class NewtonsoftJsonSerialized<T> : TextSerialized<T>
         if (_serializer is { } serializer)
             return serializer;
         lock (StaticLock)
-#pragma warning disable IL2026
             return _serializer ??= NewtonsoftJsonSerializer.Default.ToTyped<T>();
-#pragma warning restore IL2026
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

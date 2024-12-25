@@ -7,8 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
-#pragma warning disable IL2026
-
 [Table("_Events")]
 [Index(nameof(State), nameof(DelayUntil))] // "!IsProcessed & DelayUntil < now" queries
 [Index(nameof(DelayUntil))] // "DelayUntil < trimAt" queries

@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Serialization.Internal;
 
@@ -21,7 +22,10 @@ public sealed class AsymmetricByteSerializer(IByteSerializer reader, IByteSerial
         => Writer.Write(bufferWriter, value, type);
 }
 
-public sealed class AsymmetricByteSerializer<T>(IByteSerializer<T> reader, IByteSerializer<T> writer) : IByteSerializer<T>
+public sealed class AsymmetricByteSerializer<T>(
+    IByteSerializer<T> reader,
+    IByteSerializer<T> writer
+    ) : IByteSerializer<T>
 {
     public IByteSerializer<T> Reader { get; } = reader;
     public IByteSerializer<T> Writer { get; } = writer;

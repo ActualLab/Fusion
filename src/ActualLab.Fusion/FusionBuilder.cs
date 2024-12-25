@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Conversion;
+using ActualLab.DependencyInjection.Internal;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
@@ -24,9 +25,10 @@ public readonly struct FusionBuilder
     public RpcBuilder Rpc { get; }
     public RpcServiceMode DefaultServiceMode { get; }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
+    [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
     static FusionBuilder() => CodeKeeper.AddFakeAction(
         static () => {
-#pragma warning disable IL2111
             CodeKeeper.Keep<CommanderBuilder>();
             CodeKeeper.Keep<RpcBuilder>();
 
@@ -37,7 +39,6 @@ public readonly struct FusionBuilder
 
             // Other services
             CodeKeeper.Keep<RpcComputeSystemCalls>();
-#pragma warning restore IL2111
         });
 
     internal FusionBuilder(
@@ -79,9 +80,7 @@ public readonly struct FusionBuilder
             c.FusionHub()));
 
         // StateFactory
-        services.AddSingleton(c => new MixedModeService<StateFactory>.Singleton(new StateFactory(c), c));
-        services.AddScoped(c => new MixedModeService<StateFactory>.Scoped(new StateFactory(c), c));
-        services.AddTransient(c => c.GetRequiredMixedModeService<StateFactory>());
+        services.AddScopedOrSingleton(c => new StateFactory(c));
 
         // Update delayer & UI action tracker
         services.AddSingleton(_ => new UIActionTracker.Options());
