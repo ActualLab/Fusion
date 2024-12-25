@@ -35,7 +35,7 @@ public class RpcWebSocketServer(
     public RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; }
         = services.GetRequiredService<RpcWebSocketChannelOptionsProvider>();
 
-    public async Task Invoke(HttpContext context, bool isBackend)
+    public virtual async Task Invoke(HttpContext context, bool isBackend)
     {
         var cancellationToken = context.RequestAborted;
         if (!context.WebSockets.IsWebSocketRequest) {

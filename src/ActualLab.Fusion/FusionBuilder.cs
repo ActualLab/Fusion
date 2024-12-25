@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Conversion;
+using ActualLab.DependencyInjection.Internal;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
@@ -79,9 +80,7 @@ public readonly struct FusionBuilder
             c.FusionHub()));
 
         // StateFactory
-        services.AddSingleton(c => new MixedModeService<StateFactory>.Singleton(new StateFactory(c), c));
-        services.AddScoped(c => new MixedModeService<StateFactory>.Scoped(new StateFactory(c), c));
-        services.AddTransient(c => c.GetRequiredMixedModeService<StateFactory>());
+        services.AddScopedOrSingleton(c => new StateFactory(c));
 
         // Update delayer & UI action tracker
         services.AddSingleton(_ => new UIActionTracker.Options());

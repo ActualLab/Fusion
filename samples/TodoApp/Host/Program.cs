@@ -31,6 +31,7 @@ using Samples.TodoApp;
 using Samples.TodoApp.Abstractions;
 using Samples.TodoApp.Host;
 using Samples.TodoApp.Host.Components;
+using Samples.TodoApp.Host.Components.Pages;
 using Samples.TodoApp.Services;
 using Samples.TodoApp.Services.Db;
 using Samples.TodoApp.UI;
@@ -308,10 +309,10 @@ void ConfigureApp()
         await next().ConfigureAwait(false);
     });
 
-    app.MapRazorComponents<App>()
+    app.MapRazorComponents<RootServerPage>()
         .AddInteractiveServerRenderMode()
         .AddInteractiveWebAssemblyRenderMode()
-        .AddAdditionalAssemblies(typeof(Routes).Assembly);
+        .AddAdditionalAssemblies(typeof(App).Assembly);
 #pragma warning disable ASP0014
     app.UseEndpoints(endpoints => {
         endpoints.MapRpcWebSocketServer();

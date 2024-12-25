@@ -26,7 +26,7 @@ public static class StartupHelper
     public static void ConfigureServices(IServiceCollection services, WebAssemblyHostBuilder builder)
     {
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
-        builder.Logging.AddFilter(typeof(Routes).Namespace, LogLevel.Information);
+        builder.Logging.AddFilter(typeof(App).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(Computed).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(InMemoryRemoteComputedCache).Namespace, LogLevel.Information);
         builder.Logging.AddFilter(typeof(RpcHub).Namespace, LogLevel.Debug);

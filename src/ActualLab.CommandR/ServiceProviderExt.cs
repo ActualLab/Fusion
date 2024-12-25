@@ -14,7 +14,7 @@ public static class ServiceProviderExt
 
     public static bool IsScoped(this IServiceProvider services)
     {
-        services = services.GetRequiredService<IServiceProvider>();
+        services = services.GetRequiredService<IServiceProvider>(); // Required!
         return !ReferenceEquals(services.Commander().Services, services);
     }
 }

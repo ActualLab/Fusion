@@ -71,19 +71,6 @@ public static class ServiceProviderExt
         params object[] arguments)
         => services.GetService(type) ?? services.CreateInstance(type);
 
-    // GetRequiredMixedModeService
-
-    public static T GetRequiredMixedModeService<T>(this IServiceProvider services)
-        where T : class
-    {
-        var singleton = services.GetRequiredService<MixedModeService<T>.Singleton>();
-        if (ReferenceEquals(singleton.Services, services))
-            return singleton.Service;
-
-        var scoped = services.GetRequiredService<MixedModeService<T>.Scoped>();
-        return scoped.Service;
-    }
-
     // Nested types
 
     private sealed class EmptyServiceProvider : IServiceProvider

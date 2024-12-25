@@ -17,7 +17,7 @@ public class SessionResolverTest
         var session = new Session(RandomSymbolGenerator.Default.Next());
 
         // Root
-        var c = (IServiceProvider) services;
+        var c = (IServiceProvider)services;
         c.IsScoped().Should().BeFalse();
 
         var sp = c.GetRequiredService<ISessionResolver>();
