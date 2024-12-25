@@ -32,7 +32,7 @@ public static class ApiOption
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
@@ -46,13 +46,13 @@ public readonly partial struct ApiOption<T>(bool hasValue, T valueOrDefault)
     public static ApiOption<T> None => default;
 
     /// <inheritdoc />
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0)]
     public bool HasValue { get; } = hasValue;
 
     /// <summary>
     /// Retrieves option's value. Returns <code>default(T)</code> in case option doesn't have one.
     /// </summary>
-    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
+    [DataMember(Order = 1), MemoryPackOrder(1)]
     public T? ValueOrDefault { get; } = valueOrDefault;
 
     /// <summary>
@@ -72,6 +72,7 @@ public readonly partial struct ApiOption<T>(bool hasValue, T valueOrDefault)
 
     /// <inheritdoc />
     // ReSharper disable once HeapView.BoxingAllocation
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     object? IOption.Value => Value;
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     private string DebugValue => ToString();

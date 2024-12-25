@@ -8,40 +8,40 @@ using Pastel;
 
 namespace Samples.HelloCart;
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackObject(true)]
 [method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record Product(
-    [property: DataMember, Key(0)] string Id,
-    [property: DataMember, Key(1)] decimal Price
+    [property: DataMember] string Id,
+    [property: DataMember] decimal Price
 ) : IHasId<string>;
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackObject(true)]
 [method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record Cart(
-    [property: DataMember, Key(0)] string Id
+    [property: DataMember] string Id
 ) : IHasId<string>
 {
-    [DataMember, Key(1)]
+    [DataMember]
     public ImmutableDictionary<string, decimal> Items { get; init; } = ImmutableDictionary<string, decimal>.Empty;
 }
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackObject(true)]
 [method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record EditCommand<TItem>(
-    [property: DataMember, Key(0)] string Id,
-    [property: DataMember, Key(1)] TItem? Item
+    [property: DataMember] string Id,
+    [property: DataMember] TItem? Item
 ) : ICommand<Unit>
     where TItem : class, IHasId<string>
 {
     public EditCommand(TItem value) : this(value.Id, value) { }
 }
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackObject(true)]
 [method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record LogMessageCommand(
-    [property: DataMember, Key(0)] Symbol Uuid,
-    [property: DataMember, Key(1)] string Message,
-    [property: DataMember, Key(2)] Moment DelayUntil = default
+    [property: DataMember] Symbol Uuid,
+    [property: DataMember] string Message,
+    [property: DataMember] Moment DelayUntil = default
 ) : ILocalCommand<Unit>, IHasUuid, IHasDelayUntil
 {
     private static long _nextIndex;

@@ -6,7 +6,7 @@ using MessagePack;
 namespace ActualLab.IO;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(FilePathMessagePackFormatter))]
 [JsonConverter(typeof(FilePathJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(FilePathNewtonsoftJsonConverter))]
 [TypeConverter(typeof(FilePathTypeConverter))]

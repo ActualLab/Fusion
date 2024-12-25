@@ -18,10 +18,10 @@ public abstract record PageRef : IHasToStringProducingJson
             : SystemJsonSerializer.Default.Read<PageRef<TKey>>(value);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public partial record PageRef<TKey>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] int Count,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] Option<TKey> After = default
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Count,
+    [property: DataMember(Order = 1), MemoryPackOrder(1)] Option<TKey> After = default
     ) : PageRef
 {
     public override string ToString()

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.Tests.Model;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
 [Index(nameof(Date))]
 public partial record Message : LongKeyedEntity
 {
@@ -17,9 +17,9 @@ public partial record Message : LongKeyedEntity
 
     [Required]
     [DataMember, MemoryPackOrder(3), MessagePack.Key(3)]
-    public User Author { get; init; } = default!;
+    public User Author { get; init; } = null!;
 
     [Required]
     [DataMember, MemoryPackOrder(4), MessagePack.Key(4)]
-    public Chat Chat { get; init; } = default!;
+    public Chat Chat { get; init; } = null!;
 }

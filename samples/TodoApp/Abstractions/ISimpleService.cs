@@ -13,12 +13,12 @@ public interface ISimpleService : IRpcService
     public Task<RpcNoWait> Ping(string message);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public sealed partial record Table<T>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] string Title,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] RpcStream<Row<T>> Rows);
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] string Title,
+    [property: DataMember(Order = 1), MemoryPackOrder(1)] RpcStream<Row<T>> Rows);
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public sealed partial record Row<T>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] int Index,
-    [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] RpcStream<T> Items);
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Index,
+    [property: DataMember(Order = 1), MemoryPackOrder(1)] RpcStream<T> Items);

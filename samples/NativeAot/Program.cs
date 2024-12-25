@@ -81,9 +81,9 @@ public interface ITestService : IComputeService
     public Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default);
 }
 
-[MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public sealed partial record SayHelloCommand(
-    [property: MemoryPackOrder(0), Key(0)] string Name
+    [property: MemoryPackOrder(0)] string Name
 ) : ICommand<string>;
 
 public class TestService : ITestService

@@ -18,11 +18,11 @@ public interface IChat : IComputeService
     public Task Post(Chat_Post command, CancellationToken cancellationToken);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record Chat_Post(
-    [property: DataMember, MemoryPackOrder(0), Key(0)] Symbol ChatId,
-    [property: DataMember, MemoryPackOrder(1), Key(1)] string Message
+    [property: DataMember, MemoryPackOrder(0)] Symbol ChatId,
+    [property: DataMember, MemoryPackOrder(1)] string Message
     ) : ICommand<Unit>;
 
 public class Chat(ServerId serverId) : IChat

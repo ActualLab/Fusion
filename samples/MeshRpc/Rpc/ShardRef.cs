@@ -5,9 +5,9 @@ using MessagePack;
 
 namespace Samples.MeshRpc;
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackObject(true)]
 public readonly partial record struct ShardRef(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] int Key)
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Key)
 {
     public const int ShardCount = MeshSettings.ShardCount;
 

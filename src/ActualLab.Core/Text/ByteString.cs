@@ -9,7 +9,7 @@ using MessagePack;
 namespace ActualLab.Text;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackFormatter(typeof(ByteStringMessagePackFormatter))]
 [JsonConverter(typeof(ByteStringJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(ByteStringNewtonsoftJsonConverter))]
 [TypeConverter(typeof(ByteStringTypeConverter))]

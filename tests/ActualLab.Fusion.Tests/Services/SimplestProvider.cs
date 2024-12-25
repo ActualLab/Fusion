@@ -5,10 +5,10 @@ namespace ActualLab.Fusion.Tests.Services;
 
 #pragma warning disable CA1024, CA1067
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
 public partial record SetValueCommand : ICommand<Unit>
 {
-    [DataMember, MemoryPackOrder(0), Key(0)]
+    [DataMember, MemoryPackOrder(0)]
     public string Value { get; init; } = "";
 }
 

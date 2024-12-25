@@ -19,9 +19,9 @@ public abstract partial class RpcStream : IRpcObject
         AllowSynchronousContinuations = false, // We don't want sync handlers to "clog" the call processing loop
     };
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0)]
     public int AckPeriod { get; init; } = 30;
-    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
+    [DataMember(Order = 1), MemoryPackOrder(1)]
     public int AckAdvance { get; init; } = 61;
 
     // Non-serialized members
@@ -59,7 +59,7 @@ public abstract partial class RpcStream : IRpcObject
     protected abstract void Disconnect();
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [JsonConverter(typeof(RpcStreamJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(RpcStreamNewtonsoftJsonConverter))]
@@ -76,7 +76,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     private bool _isRegistered;
     private bool _isDisconnected;
 
-    [DataMember(Order = 2), MemoryPackOrder(2), Key(2)]
+    [DataMember(Order = 2), MemoryPackOrder(2)]
     public RpcObjectId SerializedId {
         get {
             // This member must be never accessed directly - its only purpose is to be called on serialization

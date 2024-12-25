@@ -24,34 +24,34 @@ public interface ITodoApi : IComputeService
 
 // Data
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackObject(true)]
 [ParameterComparer(typeof(ByValueParameterComparer))]
 public sealed partial record TodoItem(
-    [property: DataMember, Key(0)] Ulid Id,
-    [property: DataMember, Key(1)] string Title,
-    [property: DataMember, Key(2)] bool IsDone = false
+    [property: DataMember] Ulid Id,
+    [property: DataMember] string Title,
+    [property: DataMember] bool IsDone = false
 );
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackObject(true)]
 public sealed partial record TodoSummary(
-    [property: DataMember, Key(0)] int Count,
-    [property: DataMember, Key(1)] int DoneCount)
+    [property: DataMember] int Count,
+    [property: DataMember] int DoneCount)
 {
     public static readonly TodoSummary None = new(0, 0);
 }
 
 // Commands
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record Todos_AddOrUpdate(
-    [property: DataMember, Key(0)] Session Session,
-    [property: DataMember, Key(1)] TodoItem Item
+    [property: DataMember] Session Session,
+    [property: DataMember] TodoItem Item
 ) : ISessionCommand<TodoItem>, IApiCommand;
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record Todos_Remove(
-    [property: DataMember, Key(0)] Session Session,
-    [property: DataMember, Key(1)] Ulid Id
+    [property: DataMember] Session Session,
+    [property: DataMember] Ulid Id
 ) : ISessionCommand<Unit>, IApiCommand;

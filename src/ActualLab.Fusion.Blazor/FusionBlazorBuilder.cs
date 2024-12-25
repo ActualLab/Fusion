@@ -28,7 +28,16 @@ public readonly struct FusionBlazorBuilder
         services.AddScoped(_ => new UIActionFailureTracker.Options());
         services.AddScoped(c => new UIActionFailureTracker(
             c.GetRequiredService<UIActionFailureTracker.Options>(), c));
-        services.AddScopedOrSingleton(c => new JSRuntimeInfo(c.GetService<IJSRuntime>()));
+        services.AddScopedOrSingleton(c => {
+            JSRuntime? jsRuntime = null;
+            try {
+                jsRuntime = c.GetService<JSRuntime>();
+            }
+            catch {
+                // Intended
+            }
+            return new JSRuntimeInfo(jsRuntime);
+        });
         services.AddScoped(c => new RenderModeHelper(c.GetRequiredService<BlazorCircuitContext>()));
         services.AddScoped(c => new BlazorCircuitContext(c));
     }
