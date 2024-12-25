@@ -10,7 +10,7 @@ using Errors = ActualLab.Reflection.Internal.Errors;
 namespace ActualLab.Reflection;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(TypeRefMessagePackFormatter))]
 [JsonConverter(typeof(TypeRefJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(TypeRefNewtonsoftJsonConverter))]
 [TypeConverter(typeof(TypeRefTypeConverter))]

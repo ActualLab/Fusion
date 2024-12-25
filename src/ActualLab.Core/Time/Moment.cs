@@ -7,7 +7,7 @@ namespace ActualLab.Time;
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
 // [StructLayout(LayoutKind.Auto)]
-[DataContract, MessagePackObject]
+[DataContract, MessagePackFormatter(typeof(MomentMessagePackFormatter))]
 [JsonConverter(typeof(MomentJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(MomentNewtonsoftJsonConverter))]
 [TypeConverter(typeof(MomentTypeConverter))]

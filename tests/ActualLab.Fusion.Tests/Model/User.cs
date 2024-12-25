@@ -7,14 +7,14 @@ namespace ActualLab.Fusion.Tests.Model;
 
 [Table("TestUsers")]
 [Index(nameof(Name))]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
 public partial record User : LongKeyedEntity
 {
     [Required, MaxLength(120)]
-    [DataMember, MemoryPackOrder(1), MessagePack.Key(1)]
+    [DataMember, MemoryPackOrder(1)]
     public string Name { get; init; } = "";
 
     [Required, MaxLength(250)]
-    [DataMember, MemoryPackOrder(2), MessagePack.Key(2)]
+    [DataMember, MemoryPackOrder(2)]
     public string Email { get; init; } = "";
 }

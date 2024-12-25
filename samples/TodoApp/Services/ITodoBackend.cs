@@ -22,16 +22,16 @@ public interface ITodoBackend : IComputeService
     public Task<TodoSummary> GetSummary(string folder, CancellationToken cancellationToken = default);
 }
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record TodoBackend_AddOrUpdate(
-    [property: DataMember, Key(0)] string Folder,
-    [property: DataMember, Key(1)] TodoItem Item
+    [property: DataMember] string Folder,
+    [property: DataMember] TodoItem Item
 ) : IBackendCommand<TodoItem>;
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record TodoBackend_Remove(
-    [property: DataMember, Key(0)] string Folder,
-    [property: DataMember, Key(1)] Ulid Id
+    [property: DataMember] string Folder,
+    [property: DataMember] Ulid Id
 ) : IBackendCommand<Unit>;

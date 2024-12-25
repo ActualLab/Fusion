@@ -65,7 +65,7 @@
     <OpenTelemetryVersion>[1.8.1,)</OpenTelemetryVersion>
     <!-- Build & Samples -->
     <BlazoriseVersion>[1.7.0,)</BlazoriseVersion>
-    <FusionVersion>[9.6,)</FusionVersion>
+    <FusionVersion>[9.7,)</FusionVersion>
   </PropertyGroup>
 
   <!-- Dependencies -->
@@ -77,8 +77,8 @@
     <PackageVersion Include="Blazorise.Icons.FontAwesome" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Sidebar" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Bullseye" Version="5.0.0" />
-    <PackageVersion Include="CliWrap" Version="3.6.7" />
-    <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.3.2" />
+    <PackageVersion Include="CliWrap" Version="3.7.0" />
+    <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
     <PackageVersion Include="DataAnnotationsValidatorNetStandard" Version="1.0.3" />
     <PackageVersion Include="MemoryPack" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="MemoryPack.Core" Version="$(MemoryPackVersion)" />
@@ -218,7 +218,7 @@
     <PackageVersion Include="xunit.analyzers" Version="1.17.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.12.19" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.9" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.180" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.183" />
 
     <!-- Generators -->
     <PackageVersion Include="MemoryPack.Generator" Version="$(MemoryPackVersion)" />

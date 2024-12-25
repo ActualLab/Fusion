@@ -8,7 +8,7 @@ using MessagePack;
 namespace ActualLab.Fusion.EntityFramework;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(SymbolIdentifierMessagePackFormatter<DbShard>))]
 [JsonConverter(typeof(SymbolIdentifierJsonConverter<DbShard>))]
 [Newtonsoft.Json.JsonConverter(typeof(SymbolIdentifierNewtonsoftJsonConverter<DbShard>))]
 [TypeConverter(typeof(SymbolIdentifierTypeConverter<DbShard>))]

@@ -1,3 +1,4 @@
+
 namespace ActualLab.Tests.Api;
 
 public class ApiArrayTest(ITestOutputHelper @out) : TestBase(@out)
@@ -5,8 +6,11 @@ public class ApiArrayTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void SerializationTest()
     {
-        ApiArray<int>.Empty.AssertPassesThroughAllSerializers(Out);
-        new ApiArray<int>([1, 2]).PassThroughAllSerializers(Out);
+        void Equal(ApiArray<int> x, ApiArray<int> v) => x.Should().Equal(v);
+
+        ApiArray<int>.Empty.AssertPassesThroughAllSerializers(Equal, Out);
+        new ApiArray<int>([1]).AssertPassesThroughAllSerializers(Equal, Out);
+        new ApiArray<int>([1, 2]).AssertPassesThroughAllSerializers(Equal, Out);
     }
 
     [Fact]

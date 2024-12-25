@@ -5,11 +5,11 @@ namespace ActualLab.Fusion.Authentication;
 #pragma warning disable CA1036
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public readonly partial record struct UserIdentity(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] Symbol Id
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] Symbol Id
     ) : IComparable<UserIdentity>
 {
     private static readonly ListFormat IdFormat = ListFormat.SlashSeparated;

@@ -5,7 +5,7 @@ using Errors = ActualLab.Serialization.Internal.Errors;
 namespace ActualLab.Serialization;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 {
     private static readonly Type[] ExceptionCtorArgumentTypes1 = { typeof(string), typeof(Exception) };
@@ -14,12 +14,10 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
     public static readonly ExceptionInfo None = default;
     public static Func<TypeRef, Type>? UnknownExceptionTypeResolver { get; set; } = null;
 
-    private readonly string _message;
-
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0)]
     public TypeRef TypeRef { get; }
-    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
-    public string Message => _message ?? "";
+    [DataMember(Order = 1), MemoryPackOrder(1)]
+    public string Message => field ?? "";
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsNone => TypeRef.AssemblyQualifiedName.IsEmpty;
 
@@ -27,17 +25,17 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
     public ExceptionInfo(TypeRef typeRef, string? message)
     {
         TypeRef = typeRef;
-        _message = message ?? "";
+        Message = message ?? "";
     }
 
     public ExceptionInfo(Exception? exception)
     {
         if (exception == null) {
             TypeRef = default;
-            _message = "";
+            Message = "";
         } else {
             TypeRef = new TypeRef(exception.GetType()).WithoutAssemblyVersions();
-            _message = exception.Message;
+            Message = exception.Message;
         }
     }
 

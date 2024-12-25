@@ -1,10 +1,11 @@
 using System.Globalization;
 using ActualLab.OS;
+using ActualLab.Serialization.Internal;
 using MessagePack;
 
 namespace ActualLab;
 
-[DataContract, MemoryPackable, MessagePackObject]
+[DataContract, MemoryPackable, MessagePackFormatter(typeof(HostIdMessagePackFormatter))]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record HostId(

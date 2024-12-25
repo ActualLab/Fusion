@@ -7,7 +7,7 @@ using MessagePack;
 
 namespace ActualLab.Fusion.Authentication;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarget
 {
@@ -21,13 +21,13 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
 
     private Lazy<ClaimsPrincipal>? _claimsPrincipalLazy;
 
-    [DataMember, MemoryPackOrder(0), Key(0)]
+    [DataMember, MemoryPackOrder(0)]
     public Symbol Id { get; init; }
-    [DataMember, MemoryPackOrder(1), Key(1)]
+    [DataMember, MemoryPackOrder(1)]
     public string Name { get; init; }
-    [DataMember, MemoryPackOrder(2), Key(2)]
+    [DataMember, MemoryPackOrder(2)]
     public long Version { get; init; }
-    [DataMember, MemoryPackOrder(3), Key(3)]
+    [DataMember, MemoryPackOrder(3)]
     public ApiMap<string, string> Claims { get; init; }
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]

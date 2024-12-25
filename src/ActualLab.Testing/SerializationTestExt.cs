@@ -59,6 +59,28 @@ public static class SerializationTestExt
         return v;
     }
 
+    public static T AssertPassesThroughAllSerializers<T>(this T value, Action<T, T> assertion, ITestOutputHelper? output = null)
+    {
+        var v = value;
+        v = v.PassThroughSystemJsonSerializer(output);
+        assertion.Invoke(v, value);
+        v = v.PassThroughNewtonsoftJsonSerializer(output);
+        assertion.Invoke(v, value);
+        v = v.PassThroughMessagePackByteSerializer(output);
+        assertion.Invoke(v, value);
+        v = v.PassThroughMemoryPackByteSerializer(output);
+        assertion.Invoke(v, value);
+        v = v.PassThroughTypeDecoratingTextSerializer(output);
+        assertion.Invoke(v, value);
+        v = v.PassThroughTypeDecoratingByteSerializer(output);
+        assertion.Invoke(v, value);
+        v = v.PassThroughUniSerialized(output);
+        assertion.Invoke(v, value);
+        v = v.PassThroughTypeDecoratingUniSerialized(output);
+        assertion.Invoke(v, value);
+        return v;
+    }
+
     public static T2 AssertPassesThroughAllSerializers<T1, T2>(this T1 value, Action<T2, T1> assertion, ITestOutputHelper? output = null)
     {
         var mp1 = MemoryPackSerialized.New(value);

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using ActualLab.Api.Internal;
 using MessagePack;
@@ -25,19 +26,17 @@ public static class ApiArray
 [CollectionBuilder(typeof(ApiArray), "New")]
 [JsonConverter(typeof(ApiArrayJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(ApiArrayNewtonsoftJsonConverter))]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(AllowPrivate = true)]
 public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArray<T>>
 {
     private static readonly T[] EmptyItems = [];
     public static readonly ApiArray<T> Empty = default!;
 
-    [IgnoreMember]
-    private readonly T[]? _items;
-
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [field: AllowNull, MaybeNull, IgnoreMember]
     public T[] Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _items ?? EmptyItems;
+        get => field ?? EmptyItems;
     }
 
     [MemoryPackIgnore, IgnoreMember]
@@ -68,7 +67,7 @@ public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArr
 
     [method: MemoryPackConstructor, SerializationConstructor]
     internal ApiArray(T[] items)
-        => _items = items is { Length: 0 } ? null : items;
+        => Items = items is { Length: 0 } ? null! : items;
 
     public ApiArray(IReadOnlyCollection<T> source)
         : this(source.Count == 0 ? EmptyItems : source.ToArray())

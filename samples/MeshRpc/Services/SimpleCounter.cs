@@ -13,10 +13,10 @@ public interface ISimpleCounter : IRpcService
     public Task<CounterWithOrigin> Increment(SimpleCounter_Increment command, CancellationToken cancellationToken);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record SimpleCounter_Increment(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] int Key
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] int Key
 ) : ICommand<CounterWithOrigin>, IHasShardRef
 {
     [IgnoreDataMember, MemoryPackIgnore]

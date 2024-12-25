@@ -24,32 +24,32 @@ public interface IAuth : IComputeService
     public Task<ImmutableArray<SessionInfo>> GetUserSessions(Session session, CancellationToken cancellationToken = default);
 }
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record AuthBackend_SetSessionOptions(
-    [property: DataMember, MemoryPackOrder(0), Key(0)] Session Session,
-    [property: DataMember, MemoryPackOrder(1), Key(1)] ImmutableOptionSet Options,
-    [property: DataMember, MemoryPackOrder(2), Key(2)] long? ExpectedVersion = null
+    [property: DataMember, MemoryPackOrder(0)] Session Session,
+    [property: DataMember, MemoryPackOrder(1)] ImmutableOptionSet Options,
+    [property: DataMember, MemoryPackOrder(2)] long? ExpectedVersion = null
 ) : ISessionCommand<Unit>;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record Auth_EditUser(
-    [property: DataMember, MemoryPackOrder(0), Key(0)] Session Session,
-    [property: DataMember, MemoryPackOrder(1), Key(1)] string? Name
+    [property: DataMember, MemoryPackOrder(0)] Session Session,
+    [property: DataMember, MemoryPackOrder(1)] string? Name
 ) : ISessionCommand<Unit>;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record Auth_SignOut: ISessionCommand<Unit>
 {
-    [DataMember, MemoryPackOrder(0), Key(0)]
+    [DataMember, MemoryPackOrder(0)]
     public Session Session { get; init; }
-    [DataMember, MemoryPackOrder(1), Key(1)]
+    [DataMember, MemoryPackOrder(1)]
     public string? KickUserSessionHash { get; init; }
-    [DataMember, MemoryPackOrder(2), Key(2)]
+    [DataMember, MemoryPackOrder(2)]
     public bool KickAllUserSessions { get; init; }
-    [DataMember, MemoryPackOrder(3), Key(3)]
+    [DataMember, MemoryPackOrder(3)]
     public bool Force { get; init; }
 
     public Auth_SignOut(Session session, bool force = false)
