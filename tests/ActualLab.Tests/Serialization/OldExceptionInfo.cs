@@ -5,7 +5,7 @@ using MessagePack;
 
 namespace ActualLab.Tests.Serialization;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
 {
@@ -17,11 +17,11 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
 
     private readonly string _message;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0)]
     public TypeRef TypeRef { get; }
-    [DataMember(Order = 1), MemoryPackOrder(1), Key(1)]
+    [DataMember(Order = 1), MemoryPackOrder(1)]
     public string Message => _message ?? "";
-    [DataMember(Order = 2), MemoryPackOrder(2), Key(2)]
+    [DataMember(Order = 2), MemoryPackOrder(2)]
     public TypeRef WrappedTypeRef { get; }
 
     [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
