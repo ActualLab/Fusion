@@ -4,12 +4,17 @@ using MessagePack;
 namespace ActualLab.Mathematics;
 
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(AllowPrivate = true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+#if NET8_0_OR_GREATER
+[MessagePackObject(true, AllowPrivate = true)]
+#else
+[MessagePackObject(true)]
+#endif
 public readonly partial struct Tile<T>
     where T : notnull
 {
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0)]
     public Range<T> Range { get; }
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]

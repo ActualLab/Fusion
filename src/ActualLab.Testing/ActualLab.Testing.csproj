@@ -26,7 +26,6 @@
 
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
-    <PackageReference Include="MessagePack" />
     <PackageReference Include="System.CommandLine" />
     <PackageReference Include="System.Net.Http" />
     <PackageReference Include="xunit" />

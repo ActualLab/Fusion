@@ -59,6 +59,7 @@
     <NewtonsoftJsonVersion>[13.0.3,)</NewtonsoftJsonVersion>
     <MemoryPackVersion>[1.21.3,)</MemoryPackVersion>
     <MessagePackVersion>[3.1.0,)</MessagePackVersion>
+    <MessagePackVersion2>[2.5.192,)</MessagePackVersion2>
     <!-- Other -->
     <RedisVersion>[2.8.16,)</RedisVersion>
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>
@@ -78,7 +79,7 @@
     <PackageVersion Include="Blazorise.Sidebar" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Bullseye" Version="5.0.0" />
     <PackageVersion Include="CliWrap" Version="3.7.0" />
-    <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
+    <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.3.2" />
     <PackageVersion Include="DataAnnotationsValidatorNetStandard" Version="1.0.3" />
     <PackageVersion Include="MemoryPack" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="MemoryPack.Core" Version="$(MemoryPackVersion)" />

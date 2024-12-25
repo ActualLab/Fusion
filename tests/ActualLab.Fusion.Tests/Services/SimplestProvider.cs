@@ -5,7 +5,12 @@ namespace ActualLab.Fusion.Tests.Services;
 
 #pragma warning disable CA1024, CA1067
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+#if NET8_0_OR_GREATER
+[MessagePackObject(true, SuppressSourceGeneration = true)]
+#else
+[MessagePackObject(true)]
+#endif
 public partial record SetValueCommand : ICommand<Unit>
 {
     [DataMember, MemoryPackOrder(0)]

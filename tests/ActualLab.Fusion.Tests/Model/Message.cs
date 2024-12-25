@@ -4,7 +4,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.Tests.Model;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+#if NET8_0_OR_GREATER
+[MessagePackObject(true, SuppressSourceGeneration = true)]
+#else
+[MessagePackObject(true)]
+#endif
 [Index(nameof(Date))]
 public partial record Message : LongKeyedEntity
 {

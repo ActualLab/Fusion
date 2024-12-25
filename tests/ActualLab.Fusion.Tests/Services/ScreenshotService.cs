@@ -5,7 +5,12 @@ using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Services;
 
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+#if NET8_0_OR_GREATER
+[MessagePackObject(true, SuppressSourceGeneration = true)]
+#else
+[MessagePackObject(true)]
+#endif
 public partial record Screenshot
 {
     [DataMember, MemoryPackOrder(0), Key(0)] public int Width { get; init; }

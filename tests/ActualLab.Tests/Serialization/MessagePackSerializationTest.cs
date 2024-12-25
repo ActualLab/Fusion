@@ -24,6 +24,15 @@ public class MessagePackSerializationTest(ITestOutputHelper @out) : TestBase(@ou
         Test(default(CpuTimestamp), "0");
         Test(new CpuTimestamp(1), "1");
 
+        // Range
+        Test(default(Range<int>), "[0,0]");
+        Test(new Range<int>(1,2), "[1,2]");
+
+        // Tile
+        var stack = new TileStack<int>(0, 1, 2, 10);
+        Test(default(Tile<int>), "{\"Range\":[0,0]}");
+        Test(new Tile<int>(1, 2, stack.FirstLayer), "{\"Range\":[1,2]}");
+
         // Option
         Test(default(Option<int>), "[]");
         Test(Option.Some(1), "[1]");

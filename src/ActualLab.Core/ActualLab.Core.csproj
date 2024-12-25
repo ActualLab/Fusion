@@ -14,7 +14,6 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.HighPerformance" />
-    <PackageReference Include="MessagePack" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="System.Reactive" />
@@ -29,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
+    <PackageReference Include="MessagePack" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
@@ -40,6 +40,7 @@
     <PackageReference Include="System.Threading.Channels" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
+    <PackageReference Include="MessagePack" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion8)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="$(MicrosoftExtensionsVersion8)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion8)" />
@@ -51,6 +52,7 @@
     <PackageReference Include="System.Threading.Channels" VersionOverride="$(MicrosoftExtensionsVersion8)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
+    <PackageReference Include="MessagePack" VersionOverride="$(MessagePackVersion2)" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion7)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="$(MicrosoftExtensionsVersion7)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion7)" />
@@ -62,6 +64,7 @@
     <PackageReference Include="System.Threading.Channels" VersionOverride="$(MicrosoftExtensionsVersion7)" />
   </ItemGroup>
   <ItemGroup Condition="!($(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
+    <PackageReference Include="MessagePack" VersionOverride="$(MessagePackVersion2)" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion6)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="$(MicrosoftExtensionsVersion6)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion6)" />

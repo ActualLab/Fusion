@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ActualLab.Api.Internal;
 using ActualLab.Conversion;
 using MessagePack;
 
@@ -26,8 +27,13 @@ public static class ApiNullable8
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 [StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+#if NET8_0_OR_GREATER
+[MessagePackObject(true, SuppressSourceGeneration = true)]
+#else
+[MessagePackFormatter(typeof(ApiNullable8MessagePackFormatter<>))]
+#endif
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 public readonly partial struct ApiNullable8<T>
     : IEquatable<ApiNullable8<T>>, IComparable<ApiNullable8<T>>,

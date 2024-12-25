@@ -26,7 +26,12 @@ public static class ApiArray
 [CollectionBuilder(typeof(ApiArray), "New")]
 [JsonConverter(typeof(ApiArrayJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(ApiArrayNewtonsoftJsonConverter))]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+#if NET8_0_OR_GREATER
+[MessagePackObject(true, SuppressSourceGeneration = true)]
+#else
+[MessagePackFormatter(typeof(ApiArrayMessagePackFormatter<>))]
+#endif
 public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArray<T>>
 {
     private static readonly T[] EmptyItems = [];

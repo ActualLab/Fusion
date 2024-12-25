@@ -10,5 +10,5 @@ public sealed class SymbolIdentifierMessagePackFormatter<TIdentifier> : IMessage
         => options.Resolver.GetFormatterWithVerify<string>().Serialize(ref writer, value.Value, options);
 
     public TIdentifier Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)
-        => TIdentifier.Parse(options.Resolver.GetFormatterWithVerify<string>().Deserialize(ref reader, options));
+        => SymbolIdentifier.Parse<TIdentifier>(options.Resolver.GetFormatterWithVerify<string>().Deserialize(ref reader, options));
 }

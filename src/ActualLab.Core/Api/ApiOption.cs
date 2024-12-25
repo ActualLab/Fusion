@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Api.Internal;
 using ActualLab.Conversion;
 using ActualLab.Internal;
 using MessagePack;
@@ -32,8 +33,13 @@ public static class ApiOption
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true, SuppressSourceGeneration = true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+#if NET8_0_OR_GREATER
+[MessagePackObject(true, SuppressSourceGeneration = true)]
+#else
+[MessagePackFormatter(typeof(ApiOptionMessagePackFormatter<>))]
+#endif
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
