@@ -24,11 +24,7 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
     : IMutableDictionary<TKey, TValue>
     where TKey : notnull
 {
-#if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
+    private readonly Lock _lock = LockFactory.Create();
     private volatile ImmutableDictionary<TKey, TValue> _items = items;
 
     public ImmutableDictionary<TKey, TValue> Items {
