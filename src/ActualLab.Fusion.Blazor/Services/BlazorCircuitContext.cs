@@ -19,13 +19,10 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
     public IServiceProvider Services { get; } = services;
     [field: AllowNull, MaybeNull]
     public JSRuntimeInfo JSRuntimeInfo => field ??= Services.GetRequiredService<JSRuntimeInfo>();
-    public IJSRuntime? JSRuntime => JSRuntimeInfo.Runtime;
     [field: AllowNull, MaybeNull]
     public Dispatcher Dispatcher => field ??= RootComponent.GetDispatcher();
     [field: AllowNull, MaybeNull]
     public NavigationManager NavigationManager => field ??= Services.GetRequiredService<NavigationManager>();
-    public bool IsStatic => JSRuntimeInfo.Runtime == null;
-    public bool IsPrerendering => JSRuntimeInfo is { IsRemote: true, ClientProxy: null };
 
     public ComponentBase RootComponent {
         get => field ?? throw Errors.NotInitialized();
@@ -40,7 +37,14 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
     // ReSharper disable once InconsistentlySynchronizedField
     public Task WhenInitialized => _whenInitialized.Task;
 
-    public void Initialize(ComponentBase rootComponent, RenderModeDef renderMode)
+    // Shortcuts
+    public IJSRuntime? JSRuntime => JSRuntimeInfo.Runtime;
+    public bool IsPrerendering => JSRuntimeInfo.IsPrerendering;
+    public bool IsInteractive => JSRuntimeInfo.IsInteractive;
+
+    public void Initialize(
+        ComponentBase rootComponent,
+        RenderModeDef renderMode)
     {
         lock (_whenInitialized) {
             if (_whenInitialized.Task.IsCompleted)

@@ -30,15 +30,18 @@
 
     protected override void OnInitialized()
     {
-        SessionResolver.Session = OSInfo.IsWebAssembly
-            ? Session.Default
-            : new Session(SessionId);
-        if (!BlazorCircuitContext.IsPrerendering)
-            BlazorCircuitContext.Initialize(this, RenderModeDef.GetOrDefault(RenderModeKey));
         if (OSInfo.IsWebAssembly) {
+            // RPC auto-substitutes Session.Default to cookie-based one on the server side for every call
+            SessionResolver.Session = Session.Default;
+            // That's how WASM app starts hosted services
             var rootServices = Services.Commander().Services;
             _ = rootServices.HostedServices().Start();
         }
+        else {
+            SessionResolver.Session = new Session(SessionId);
+        }
+        if (BlazorCircuitContext.IsInteractive)
+            BlazorCircuitContext.Initialize(this, RenderModeDef.GetOrDefault(RenderModeKey));
     }
 
     public void Dispose()

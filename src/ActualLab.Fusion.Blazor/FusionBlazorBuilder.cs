@@ -29,9 +29,9 @@ public readonly struct FusionBlazorBuilder
         services.AddScoped(c => new UIActionFailureTracker(
             c.GetRequiredService<UIActionFailureTracker.Options>(), c));
         services.AddScopedOrSingleton(c => {
-            JSRuntime? jsRuntime = null;
+            IJSRuntime? jsRuntime = null;
             try {
-                jsRuntime = c.GetService<JSRuntime>();
+                jsRuntime = c.GetService<IJSRuntime>();
             }
             catch {
                 // Intended

@@ -27,7 +27,7 @@ public static class OSInfo
     static OSInfo()
     {
 #if NET5_0_OR_GREATER
-        // WebAssembly w/ .NET 5.0
+        // WebAssembly w/ .NET 5.0+
         if (OperatingSystem.IsBrowser()) {
             Kind = OSKind.WebAssembly;
             UserHomePath = "";
