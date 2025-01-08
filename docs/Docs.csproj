@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A8028FF0-3D37-4C74-9A64-9197B46E3D0F}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>docs</RootNamespace>
+    <AssemblyName>docs</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Class1.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="tutorial\Internal\IsExternalInit.cs" />
+    <Compile Include="tutorial\Part01.cs" />
+    <Compile Include="tutorial\Part02.cs" />
+    <Compile Include="tutorial\Part03.cs" />
+    <Compile Include="tutorial\Part04.cs" />
+    <Compile Include="tutorial\Part05.cs" />
+    <Compile Include="tutorial\Part09.cs" />
+    <Compile Include="tutorial\Program.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="faq\How does Fusion work.md" />
+    <None Include="faq\What is Fusion.md" />
+    <None Include="img-src\Build.cmd" />
+    <None Include="img-src\Build.ps1" />
+    <None Include="img-src\Computed-Classes.mmd" />
+    <None Include="img-src\Computed-Gantt.mmd" />
+    <None Include="img-src\Computed-Static.mmd" />
+    <None Include="img-src\ComputedReplica-Gantt.mmd" />
+    <None Include="img-src\ConsistencyState.mmd" />
+    <None Include="img-src\GreetingService-Dependencies.mmd" />
+    <None Include="img-src\GreetingService-ProxyCallSequence-Dark.mmd" />
+    <None Include="img-src\GreetingService-ProxyCallSequence.mmd" />
+    <None Include="img-src\GreetingService-TypicalProxyCallSequence.mmd" />
+    <None Include="img-src\IComputed-Class-Simple.mmd" />
+    <None Include="img-src\IComputed-Class.mmd" />
+    <None Include="img-src\LiveState-Classes.mmd" />
+    <None Include="img-src\WebApi-Fusion.mmd" />
+    <None Include="img-src\WebApi-Regular.mmd" />
+    <None Include="img\ChatService.pdn" />
+    <None Include="img\CounterRazor.pdn" />
+    <None Include="img\CounterService.pdn" />
+    <None Include="img\Performance.pdn" />
+    <None Include="img\TimeService.pdn" />
+    <None Include="performance-test-results\Build.cmd" />
+    <None Include="performance-test-results\Build.ps1" />
+    <None Include="performance-test-results\Computed-Classes.mmd" />
+    <None Include="performance-test-results\Computed-Gantt.mmd" />
+    <None Include="performance-test-results\Computed-Static.mmd" />
+    <None Include="performance-test-results\ComputedReplica-Gantt.mmd" />
+    <None Include="performance-test-results\ConsistencyState.mmd" />
+    <None Include="performance-test-results\GreetingService-Dependencies.mmd" />
+    <None Include="performance-test-results\GreetingService-ProxyCallSequence-Dark.mmd" />
+    <None Include="performance-test-results\GreetingService-ProxyCallSequence.mmd" />
+    <None Include="performance-test-results\GreetingService-TypicalProxyCallSequence.mmd" />
+    <None Include="performance-test-results\IComputed-Class-Simple.mmd" />
+    <None Include="performance-test-results\IComputed-Class.mmd" />
+    <None Include="performance-test-results\LiveState-Classes.mmd" />
+    <None Include="performance-test-results\WebApi-Fusion.mmd" />
+    <None Include="performance-test-results\WebApi-Regular.mmd" />
+    <None Include="tutorial\Fusion-Cheat-Sheet.md" />
+    <None Include="tutorial\Intro.md" />
+    <None Include="tutorial\mdsource\mdsnippets.json" />
+    <None Include="tutorial\mdsource\Part00.source.md" />
+    <None Include="tutorial\mdsource\Part01.source.md" />
+    <None Include="tutorial\mdsource\Part02.source.md" />
+    <None Include="tutorial\mdsource\Part03.source.md" />
+    <None Include="tutorial\mdsource\Part04.source.md" />
+    <None Include="tutorial\mdsource\Part05.source.md" />
+    <None Include="tutorial\mdsource\Part06.source.md" />
+    <None Include="tutorial\mdsource\Part07.source.md" />
+    <None Include="tutorial\mdsource\Part08.source.md" />
+    <None Include="tutorial\mdsource\Part09.source.md" />
+    <None Include="tutorial\mdsource\Part10.source.md" />
+    <None Include="tutorial\mdsource\Part11.source.md" />
+    <None Include="tutorial\mdsource\Part12.source.md" />
+    <None Include="tutorial\mdsource\Part13.source.md" />
+    <None Include="tutorial\PartFF.md" />
+    <None Include="tutorial\QuickStart.md" />
+    <None Include="tutorial\README.md" />
+    <None Include="tutorial\tables\MediatR-vs-CommandR.md1" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="img\ActualLab-Fusion-Chat-Sample.gif" />
+    <Content Include="img\ActualLab-Fusion-HelloBlazorServer-Counter-Sample.gif" />
+    <Content Include="img\ActualLab-Fusion-HelloBlazorServer-SimpleChat-Sample.gif" />
+    <Content Include="img\ActualLab-Fusion-Server-Screen-Sample.gif" />
+    <Content Include="img\Banner.gif" />
+    <Content Include="img\Blazor.jpg" />
+    <Content Include="img\Caching.gif" />
+    <Content Include="img\ChatNetworking.gif" />
+    <Content Include="img\ChatService.gif" />
+    <Content Include="img\CounterRazor.gif" />
+    <Content Include="img\CounterService.gif" />
+    <Content Include="img\Dependencies-Example.png" />
+    <Content Include="img\FusionHeaders.gif" />
+    <Content Include="img\FusionSlides.jpg" />
+    <Content Include="img\GetTile.jpg" />
+    <Content Include="img\InconsistencyPeriod.gif" />
+    <Content Include="img\Invalidate-Update.gif" />
+    <Content Include="img\Invisiboard.jpg" />
+    <Content Include="img\LetsFight.gif" />
+    <Content Include="img\Logo.jpg" />
+    <Content Include="img\Logo128.jpg" />
+    <Content Include="img\Logo512.jpg" />
+    <Content Include="img\MissingPiece.jpg" />
+    <Content Include="img\Performance.jpg" />
+    <Content Include="img\Samples-Blazor-DualMode.gif" />
+    <Content Include="img\SwaggerDoc.jpg" />
+    <Content Include="img\TimeService.gif" />
+    <Content Include="tutorial\diagrams\consistency-state\instances.dio.svg" />
+    <Content Include="tutorial\diagrams\consistency-state\transitions.dio.svg" />
+    <Content Include="tutorial\diagrams\state\states-classes.dio.svg" />
+    <Content Include="tutorial\diagrams\state\states-table.dio.svg" />
+    <Content Include="tutorial\img\Computed-Gantt.jpg" />
+    <Content Include="tutorial\img\Computed-Static.jpg" />
+    <Content Include="tutorial\img\ComputedReplica-Gantt.jpg" />
+    <Content Include="tutorial\img\ConsistencyState.jpg" />
+    <Content Include="tutorial\img\IComputed-Class-Simple.jpg" />
+    <Content Include="tutorial\img\IComputed-Class.jpg" />
+    <Content Include="tutorial\img\IComputed-Features.jpg" />
+    <Content Include="tutorial\img\Invalidate-Update.gif" />
+    <Content Include="tutorial\img\IState-Classes.jpg" />
+    <Content Include="tutorial\img\IState-Features.jpg" />
+    <Content Include="tutorial\img\MediatR-vs-CommandR.jpg" />
+    <Content Include="tutorial\img\Part1-Screenshot.jpg" />
+    <Content Include="tutorial\img\Part2-Screenshot.jpg" />
+    <Content Include="tutorial\img\Part3-Screenshot.jpg" />
+    <Content Include="tutorial\img\Part4-Screenshot.jpg" />
+    <Content Include="tutorial\img\Samples-HelloCart.gif" />
+    <Content Include="tutorial\img\SwaggerPost.jpg" />
+    <Content Include="tutorial\img\WebApi-Fusion.jpg" />
+    <Content Include="tutorial\img\WebApi-Regular.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="img\NewFolder1\" />
+    <Folder Include="img\NewFolder2\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
