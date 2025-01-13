@@ -508,7 +508,7 @@ If we switch to Fusion terms, you've just learned about:
 * [Compute Services] - services allowed to have Compute Methods.
   Such methods are decorated with `[ComputeMethod]` attribute and
   are provided with ...
-* [`IComputed<T>] AKA [Computed Values] behind the scenes.
+* [`IComputed<T>`] AKA [Computed Values] behind the scenes.
   
 There are a few more interesting concepts though, and [Replica Services]
 is the next important one:
