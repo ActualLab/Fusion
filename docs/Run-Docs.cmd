@@ -1,3 +1,3 @@
 dotnet build Docs.csproj
 mdsnippets
-npm run docs:build && npm run docs:preview
+npm i && npm run docs:build && npm run docs:preview
