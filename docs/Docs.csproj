@@ -18,13 +18,6 @@
   <ItemGroup>
     <PackageReference Include="ActualLab.Generators" PrivateAssets="all" />
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
-    <PackageReference Include="PolySharp" />
   </ItemGroup>
-
-  <!-- 
-  <Target Name="RunMDSnippets" AfterTargets="Build">
-    <Exec Command="mdsnippets" />
-  </Target>
-  -->
 
 </Project>
