@@ -268,7 +268,7 @@ A few tips on how to use it:
   compute methods &ndash; and C# 9 records come quite handy here.
 
 **P.S.** If you love algorithms and data structures, check out
-[ConcurrentTimerSet<TTimer>](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Time/ConcurrentTimerSet.cs) -
+[ConcurrentTimerSet<TTimer/>](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Time/ConcurrentTimerSet.cs) -
 Fusion uses its own implementation of timers to ensure they
 scale much better than `Task.Delay` (which relies on
 [TimerQueue](https://referencesource.microsoft.com/#mscorlib/system/threading/timer.cs,29)),
