@@ -132,9 +132,8 @@ public class DbKeyValueStore<TDbContext,
                 : query.Where(e => string.Compare(e.Key, after) < 0);
         */
         var result = await query
-            .Select(e => e.Key)
             .Take(pageRef.Count)
-            .Select(k => k.Substring(prefix.Length))
+            .Select(e => e.Key.Substring(prefix.Length))
             .ToArrayAsync(cancellationToken).ConfigureAwait(false);
         return result;
     }

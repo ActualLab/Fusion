@@ -48,8 +48,8 @@ public class DbKeyValueTrimmer<TDbContext,
             var keys = await dbContext.Set<TDbKeyValue>().AsQueryable()
                 .Where(o => o.ExpiresAt < minExpiresAt)
                 .OrderBy(o => o.ExpiresAt)
-                .Select(o => o.Key)
                 .Take(Settings.BatchSize)
+                .Select(o => o.Key)
                 .ToArrayAsync(cancellationToken1).ConfigureAwait(false);
             if (keys.Length == 0)
                 return;
