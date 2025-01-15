@@ -75,7 +75,7 @@ public static IServiceProvider CreateServices()
     return services.BuildServiceProvider();
 }
 ```
-<sup><a href='/tutorial/Part05.cs#L11-L31' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Service1' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part05.cs#L7-L27' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Service1' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 First, `IComputed` instances aren't "cached" by default - they're just
@@ -93,7 +93,7 @@ WriteLine("GC.Collect()");
 WriteLine(await service.Get("a"));
 WriteLine(await service.Get("a"));
 ```
-<sup><a href='/tutorial/Part05.cs#L35-L44' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Caching1' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part05.cs#L31-L40' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Caching1' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -131,7 +131,7 @@ WriteLine("GC.Collect()");
 WriteLine(await service.Get("a"));
 WriteLine(await service.Get("a"));
 ```
-<sup><a href='/tutorial/Part05.cs#L49-L58' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Caching2' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part05.cs#L45-L54' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Caching2' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -175,7 +175,7 @@ public class Service2 : IComputeService
     }
 }
 ```
-<sup><a href='/tutorial/Part05.cs#L61-L78' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Service2' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part05.cs#L57-L74' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Service2' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 <!-- snippet: Part05_Caching3 -->
@@ -194,7 +194,7 @@ WriteLine(await service.Get("a"));
 WriteLine(await service.Get("b"));
 WriteLine(await service.Combine("a", "c"));
 ```
-<sup><a href='/tutorial/Part05.cs#L82-L95' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Caching3' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part05.cs#L78-L91' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Caching3' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -236,7 +236,7 @@ GC.Collect();
 WriteLine("GC.Collect() completed");
 WriteLine(await service.Combine("a", "b"));
 ```
-<sup><a href='/tutorial/Part05.cs#L100-L108' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Caching4' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part05.cs#L96-L104' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Caching4' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -337,7 +337,7 @@ public class Service3 : IComputeService
     }
 }
 ```
-<sup><a href='/tutorial/Part05.cs#L111-L128' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Service3' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part05.cs#L107-L124' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Service3' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 And run this code:
@@ -361,7 +361,7 @@ WriteLine(await service.Combine("a", "b"));
 WriteLine(await service.Get("a"));
 WriteLine(await service.Get("x"));
 ```
-<sup><a href='/tutorial/Part05.cs#L132-L148' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Caching5' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part05.cs#L128-L144' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part05_Caching5' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:

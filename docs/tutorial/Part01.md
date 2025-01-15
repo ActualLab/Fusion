@@ -48,7 +48,7 @@ public static IServiceProvider CreateServices()
     return services.BuildServiceProvider();
 }
 ```
-<sup><a href='/tutorial/Part01.cs#L12-L22' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_CreateServices' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part01.cs#L7-L17' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_CreateServices' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 Now we're ready to declare our first Compute Service:
@@ -76,7 +76,7 @@ public class CounterService : IComputeService
     }
 }
 ```
-<sup><a href='/tutorial/Part01.cs#L24-L44' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_CounterService' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part01.cs#L19-L39' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_CounterService' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 For now, please ignore the fact `Get` is declared as asynchronous method,
@@ -91,7 +91,7 @@ var counters = CreateServices().GetRequiredService<CounterService>();
 WriteLine(await counters.Get("a"));
 WriteLine(await counters.Get("b"));
 ```
-<sup><a href='/tutorial/Part01.cs#L48-L52' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterService1' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part01.cs#L43-L47' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterService1' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output should be:
@@ -112,7 +112,7 @@ var counters = CreateServices().GetRequiredService<CounterService>();
 WriteLine(await counters.Get("a"));
 WriteLine(await counters.Get("a"));
 ```
-<sup><a href='/tutorial/Part01.cs#L57-L61' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterService2' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part01.cs#L52-L56' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterService2' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output looks weird now:
@@ -141,7 +141,7 @@ WriteLine(await counters.Get("a"));
 counters.Increment("a");
 WriteLine(await counters.Get("a"));
 ```
-<sup><a href='/tutorial/Part01.cs#L66-L71' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterService3' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part01.cs#L61-L66' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterService3' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -180,7 +180,7 @@ public class CounterSumService : IComputeService
     }
 }
 ```
-<sup><a href='/tutorial/Part01.cs#L74-L88' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_CounterSumService' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part01.cs#L69-L83' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_CounterSumService' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 And use it:
@@ -193,7 +193,7 @@ var counterSum = services.GetRequiredService<CounterSumService>();
 WriteLine(await counterSum.Sum("a", "b"));
 WriteLine(await counterSum.Sum("a", "b"));
 ```
-<sup><a href='/tutorial/Part01.cs#L92-L97' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterSumService1' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part01.cs#L87-L92' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterSumService1' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -222,7 +222,7 @@ WriteLine(await counterSum.Sum("b", "a"));
 WriteLine("Everything is cached:");
 WriteLine(await counterSum.Sum("a", "b"));
 ```
-<sup><a href='/tutorial/Part01.cs#L102-L111' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterSumService2' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part01.cs#L97-L106' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterSumService2' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -256,7 +256,7 @@ WriteLine(await counterSum.Sum("a", "b"));
 counters.Increment("a");
 WriteLine(await counterSum.Sum("a", "b"));
 ```
-<sup><a href='/tutorial/Part01.cs#L116-L123' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterSumService3' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part01.cs#L111-L118' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseCounterSumService3' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -312,7 +312,7 @@ public class HelloService : IComputeService
     }
 }
 ```
-<sup><a href='/tutorial/Part01.cs#L126-L138' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_HelloService' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part01.cs#L121-L133' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_HelloService' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 As you see, `Hello` method simply returns a formatted "Hello, X!" message,
@@ -332,7 +332,7 @@ WriteLine(t2.Result);
 WriteLine(t3.Result);
 WriteLine(t4.Result);
 ```
-<sup><a href='/tutorial/Part01.cs#L142-L153' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseHelloService1' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part01.cs#L137-L148' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_UseHelloService1' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:

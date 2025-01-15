@@ -17,7 +17,7 @@
   <!-- Output -->
   <PropertyGroup>
     <UseArtifactsOutput>true</UseArtifactsOutput>
-    <ArtifactsPath>$(MSBuildThisFileDirectory)..\artifacts\samples</ArtifactsPath>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)..\artifacts\docs</ArtifactsPath>
     <IsPackable>false</IsPackable>
     <IsPublishable>false</IsPublishable>
     <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
@@ -39,10 +39,12 @@
     <NoWarn>$(NoWarn);IL2026;BL0007;NETSDK1206;OCL0039</NoWarn>
     <NoWarn>$(NoWarn);MA0002;MA0004;MA0009;MA0011;MA0015;MA0016;MA0048;MA0051</NoWarn>
     <!--
+    CS1591: Missing XML comment for publicly visible type or member
+    CS1998: Async method lacks 'await' operators and will run synchronously
     CA2007: Consider calling ConfigureAwait on the awaited task
     VSTHRD200: Missing "Async" suffix warning
     -->
-    <NoWarn>$(NoWarn);CA2007;VSTHRD200</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;CS1998;CA2007;VSTHRD200</NoWarn>
   </PropertyGroup>
 
   <!-- Warnings - they're lowered for the simplicity here -->
@@ -54,7 +56,6 @@
 
   <PropertyGroup>
     <UseFusion>true</UseFusion>
-    <UseFusion Condition="$(Project.Contains('HelloRpc'))">false</UseFusion>
   </PropertyGroup>
 
   <!-- Global usings -->

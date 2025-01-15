@@ -87,7 +87,7 @@ public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
     }
 }
 ```
-<sup><a href='/tutorial/Part09.cs#L17-L35' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_PrintCommandSession' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part09.cs#L8-L26' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_PrintCommandSession' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 Using CommandR and MediatR is quite similar:
@@ -106,7 +106,7 @@ var commander = services.Commander(); // Same as .GetRequiredService<ICommander>
 await commander.Call(new PrintCommand() { Message = "Are you operational?" });
 await commander.Call(new PrintCommand() { Message = "Are you operational?" });
 ```
-<sup><a href='/tutorial/Part09.cs#L39-L50' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_PrintCommandSession2' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part09.cs#L30-L41' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_PrintCommandSession2' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -192,7 +192,7 @@ public class RecSumCommandHandler
     }
 }
 ```
-<sup><a href='/tutorial/Part09.cs#L53-L104' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_RecSumCommandSession' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part09.cs#L44-L95' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_RecSumCommandSession' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 <!-- snippet: Part09_RecSumCommandSession2 -->
@@ -208,7 +208,7 @@ var services = serviceBuilder.BuildServiceProvider();
 var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
 WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2, 3 }}));
 ```
-<sup><a href='/tutorial/Part09.cs#L108-L118' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_RecSumCommandSession2' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part09.cs#L99-L109' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_RecSumCommandSession2' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -384,7 +384,7 @@ public class RecSumCommandService : ICommandService
     }
 }
 ```
-<sup><a href='/tutorial/Part09.cs#L121-L163' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_RecSumCommandServiceSession' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part09.cs#L112-L154' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_RecSumCommandServiceSession' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 Such services has to be registered via `AddCommandService` method
@@ -405,7 +405,7 @@ WriteLine(recSumService.GetType());
 WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2 }}));
 WriteLine(await recSumService.RecSum(new RecSumCommand() { Numbers = new [] { 3L, 4 }}));
 ```
-<sup><a href='/tutorial/Part09.cs#L167-L179' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_RecSumCommandServiceSession2' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part09.cs#L158-L170' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part09_RecSumCommandServiceSession2' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:

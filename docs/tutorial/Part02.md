@@ -51,7 +51,7 @@ public static IServiceProvider CreateServices()
     return services.BuildServiceProvider();
 }
 ```
-<sup><a href='/tutorial/Part02.cs#L12-L40' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_CounterService' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part02.cs#L7-L35' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_CounterService' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 First, let's try to "pull" `Computed<T>` instance created behind the
@@ -66,7 +66,7 @@ WriteLine($"Computed: {computed}");
 WriteLine($"- IsConsistent(): {computed.IsConsistent()}");
 WriteLine($"- Value:          {computed.Value}");
 ```
-<sup><a href='/tutorial/Part02.cs#L44-L50' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_CaptureComputed' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part02.cs#L39-L45' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_CaptureComputed' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -221,7 +221,7 @@ WriteLine($"computed: {computed}");
 var newComputed = await computed.Update();
 WriteLine($"newComputed: {newComputed}");
 ```
-<sup><a href='/tutorial/Part02.cs#L55-L64' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_InvalidateComputed1' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part02.cs#L50-L59' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_InvalidateComputed1' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -250,7 +250,7 @@ WriteLine($"computed: {computed}");
 var newComputed = await Computed.Capture(() => counters.Get("a")); // <- This line
 WriteLine($"newComputed: {newComputed}");
 ```
-<sup><a href='/tutorial/Part02.cs#L69-L79' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_InvalidateComputed2' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part02.cs#L64-L74' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_InvalidateComputed2' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -294,7 +294,7 @@ for (var i = 0; i < 5; i++) {
     WriteLine($"{DateTime.Now}: {computed.Value}");
 }
 ```
-<sup><a href='/tutorial/Part02.cs#L84-L101' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_IncrementCounter' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part02.cs#L79-L96' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_IncrementCounter' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:

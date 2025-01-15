@@ -61,7 +61,7 @@ public interface ICounterService : IComputeService
     Task SetOffset(int offset, CancellationToken cancellationToken = default);
 }
 ```
-<sup><a href='/tutorial/Part04.cs#L20-L32' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part04_CommonServices' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part04.cs#L11-L23' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part04_CommonServices' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 2. Web host services (don't run this code yet):
@@ -102,7 +102,7 @@ public class CounterService : ICounterService
     }
 }
 ```
-<sup><a href='/tutorial/Part04.cs#L34-L67' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part04_HostServices' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part04.cs#L25-L58' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part04_HostServices' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 3. `CreateHost` and `CreateClientServices` methods (don't run this code yet):
@@ -114,7 +114,7 @@ public static IHost CreateHost()
 {
     var builder = Host.CreateDefaultBuilder();
     builder.ConfigureHostConfiguration(cfg =>
-        cfg.AddInMemoryCollection(new Dictionary<string, string>() {{"Environment", "Development"}}));
+        cfg.AddInMemoryCollection(new Dictionary<string, string>() {{"Environment", "Development"}}!));
     builder.ConfigureLogging(logging =>
         logging.ClearProviders().SetMinimumLevel(LogLevel.Information).AddDebug());
     builder.ConfigureServices((b, services) => {
@@ -149,7 +149,7 @@ public static IServiceProvider CreateClientServices()
     return services.BuildServiceProvider();
 }
 ```
-<sup><a href='/tutorial/Part04.cs#L76-L115' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part04_CreateXxx' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part04.cs#L67-L106' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part04_CreateXxx' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 And finally, we're ready to try our Compute Service client:
@@ -190,7 +190,7 @@ await Task.Delay(200);
 stopCts.Cancel();
 await host.StopAsync();
 ```
-<sup><a href='/tutorial/Part04.cs#L119-L152' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part04_ReplicaService' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part04.cs#L110-L143' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part04_ReplicaService' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -262,7 +262,7 @@ await Task.Delay(2000);
 
 await host.StopAsync();
 ```
-<sup><a href='/tutorial/Part04.cs#L157-L185' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part04_LiveStateFromReplica' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part04.cs#L148-L176' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part04_LiveStateFromReplica' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:

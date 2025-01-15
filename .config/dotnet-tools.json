@@ -6,7 +6,15 @@
       "version": "2.3.1",
       "commands": [
         "t4"
-      ]
+      ],
+      "rollForward": false
+    },
+    "markdownsnippets.tool": {
+      "version": "27.0.2",
+      "commands": [
+        "mdsnippets"
+      ],
+      "rollForward": false
     }
   }
 }

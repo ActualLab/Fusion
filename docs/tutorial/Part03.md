@@ -134,7 +134,7 @@ public static IServiceProvider CreateServices()
     return services.BuildServiceProvider();
 }
 ```
-<sup><a href='/tutorial/Part03.cs#L12-L40' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part03_CounterService' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part03.cs#L7-L35' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part03_CounterService' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 Here is how you use `MutableState<T>`:
@@ -151,7 +151,7 @@ state.Value = 2;
 WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 WriteLine($"Old computed: {computed}"); // Should be invalidated
 ```
-<sup><a href='/tutorial/Part03.cs#L44-L53' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part03_MutableState' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part03.cs#L39-L48' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part03_MutableState' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -187,7 +187,7 @@ catch (ApplicationException) {
 WriteLine($"LastNonErrorValue: {state.LastNonErrorValue}");
 WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}");
 ```
-<sup><a href='/tutorial/Part03.cs#L58-L73' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part03_MutableStateError' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part03.cs#L53-L68' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part03_MutableStateError' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -239,7 +239,7 @@ counters.Increment("a");
 await Task.Delay(2000);
 WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 ```
-<sup><a href='/tutorial/Part03.cs#L78-L102' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part03_LiveState' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part03.cs#L73-L97' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part03_LiveState' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:

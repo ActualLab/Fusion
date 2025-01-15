@@ -1,16 +1,7 @@
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using ActualLab.Fusion;
 using ActualLab.Fusion.Server;
 using ActualLab.Rpc.Server;
 using static System.Console;
@@ -78,7 +69,7 @@ namespace Tutorial
         {
             var builder = Host.CreateDefaultBuilder();
             builder.ConfigureHostConfiguration(cfg =>
-                cfg.AddInMemoryCollection(new Dictionary<string, string>() {{"Environment", "Development"}}));
+                cfg.AddInMemoryCollection(new Dictionary<string, string>() {{"Environment", "Development"}}!));
             builder.ConfigureLogging(logging =>
                 logging.ClearProviders().SetMinimumLevel(LogLevel.Information).AddDebug());
             builder.ConfigureServices((b, services) => {

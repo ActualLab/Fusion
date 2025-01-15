@@ -100,15 +100,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Fusion.Ext.Servic
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Fusion.Blazor.Authentication", "src\ActualLab.Fusion.Blazor.Authentication\ActualLab.Fusion.Blazor.Authentication.csproj", "{5A8530A3-E69B-4BD3-B7A7-01A916D166EB}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{91471F20-7F3C-471C-B34B-CAD21D464C95}"
-	ProjectSection(SolutionItems) = preProject
-		docs\Overview.md = docs\Overview.md
-		docs\QA.md = docs\QA.md
-		docs\README.md = docs\README.md
-		docs\Story.md = docs\Story.md
-		docs\Tasks.md = docs\Tasks.md
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiniRpc", "samples\MiniRpc\MiniRpc.csproj", "{99131CAD-DDC3-4B1A-ABB8-63E0FF32B03E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultiServerRpc", "samples\MultiServerRpc\MultiServerRpc.csproj", "{DDD38FE8-3105-44E6-9128-921B0713FF64}"
@@ -122,6 +113,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspireHost", "samples\TodoApp\AspireHost\AspireHost.csproj", "{5E8954E0-F43F-4515-B8CC-1DFDADDE2D35}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Fusion.Tests.RpcTestRunner", "tests\ActualLab.Fusion.Tests.RpcTestRunner\ActualLab.Fusion.Tests.RpcTestRunner.csproj", "{9DF21080-E55A-4686-9EA7-9FC95958E737}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Docs", "docs\Docs.csproj", "{EAB11325-7FA3-4D34-9B87-39A4BCADE18A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -279,6 +272,10 @@ Global
 		{9DF21080-E55A-4686-9EA7-9FC95958E737}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9DF21080-E55A-4686-9EA7-9FC95958E737}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9DF21080-E55A-4686-9EA7-9FC95958E737}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EAB11325-7FA3-4D34-9B87-39A4BCADE18A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EAB11325-7FA3-4D34-9B87-39A4BCADE18A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EAB11325-7FA3-4D34-9B87-39A4BCADE18A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EAB11325-7FA3-4D34-9B87-39A4BCADE18A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
