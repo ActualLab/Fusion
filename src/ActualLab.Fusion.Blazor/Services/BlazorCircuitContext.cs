@@ -9,8 +9,7 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
 {
     private static long _lastId;
 
-    private readonly TaskCompletionSource<Unit> _whenInitialized = TaskCompletionSourceExt.New<Unit>();
-
+    protected readonly TaskCompletionSource<Unit> WhenInitializedSource = TaskCompletionSourceExt.New<Unit>();
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
@@ -33,7 +32,7 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
     } = null!;
 
     // ReSharper disable once InconsistentlySynchronizedField
-    public Task WhenInitialized => _whenInitialized.Task;
+    public Task WhenInitialized => WhenInitializedSource.Task;
 
     // Shortcuts
     public IJSRuntime? JSRuntime => JSRuntimeInfo.Runtime;
@@ -44,8 +43,8 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
         Dispatcher dispatcher,
         RenderModeDef renderMode)
     {
-        lock (_whenInitialized) {
-            if (_whenInitialized.Task.IsCompleted) {
+        lock (WhenInitializedSource) {
+            if (WhenInitializedSource.Task.IsCompleted) {
                 if (Dispatcher == dispatcher && RenderMode == renderMode)
                     return;
 
@@ -54,7 +53,7 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
 
             Dispatcher = dispatcher;
             RenderMode = renderMode;
-            _whenInitialized.TrySetResult(default);
+            WhenInitializedSource.TrySetResult(default);
         }
     }
 }
