@@ -20,18 +20,16 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
     [field: AllowNull, MaybeNull]
     public JSRuntimeInfo JSRuntimeInfo => field ??= Services.GetRequiredService<JSRuntimeInfo>();
     [field: AllowNull, MaybeNull]
-    public Dispatcher Dispatcher => field ??= RootComponent.GetDispatcher();
-    [field: AllowNull, MaybeNull]
     public NavigationManager NavigationManager => field ??= Services.GetRequiredService<NavigationManager>();
 
-    public ComponentBase RootComponent {
+    public Dispatcher Dispatcher {
         get => field ?? throw Errors.NotInitialized();
-        private set;
+        protected set;
     } = null!;
 
     public RenderModeDef RenderMode {
         get => field ?? throw Errors.NotInitialized();
-        private set;
+        protected set;
     } = null!;
 
     // ReSharper disable once InconsistentlySynchronizedField
@@ -42,15 +40,19 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
     public bool IsPrerendering => JSRuntimeInfo.IsPrerendering;
     public bool IsInteractive => JSRuntimeInfo.IsInteractive;
 
-    public void Initialize(
-        ComponentBase rootComponent,
+    public virtual void Initialize(
+        Dispatcher dispatcher,
         RenderModeDef renderMode)
     {
         lock (_whenInitialized) {
-            if (_whenInitialized.Task.IsCompleted)
-                throw Errors.AlreadyInitialized();
+            if (_whenInitialized.Task.IsCompleted) {
+                if (Dispatcher == dispatcher && RenderMode == renderMode)
+                    return;
 
-            RootComponent = rootComponent;
+                throw Errors.AlreadyInitialized();
+            }
+
+            Dispatcher = dispatcher;
             RenderMode = renderMode;
             _whenInitialized.TrySetResult(default);
         }

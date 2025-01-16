@@ -41,7 +41,7 @@
             SessionResolver.Session = new Session(SessionId);
         }
         if (BlazorCircuitContext.IsInteractive)
-            BlazorCircuitContext.Initialize(this, RenderModeDef.GetOrDefault(RenderModeKey));
+            BlazorCircuitContext.Initialize(this.GetDispatcher(), RenderModeDef.GetOrDefault(RenderModeKey));
     }
 
     public void Dispose()
