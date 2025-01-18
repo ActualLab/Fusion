@@ -309,10 +309,13 @@ void ConfigureApp()
         await next().ConfigureAwait(false);
     });
 
+    // Razor components
     app.MapRazorComponents<RootServerPage>()
         .AddInteractiveServerRenderMode()
         .AddInteractiveWebAssemblyRenderMode()
         .AddAdditionalAssemblies(typeof(App).Assembly);
+
+    // Fusion endpoints
     app.MapRpcWebSocketServer();
     app.MapFusionAuthEndpoints();
     app.MapFusionRenderModeEndpoints();

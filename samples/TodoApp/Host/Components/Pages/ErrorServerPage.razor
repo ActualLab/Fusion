@@ -3,15 +3,14 @@
 
 <PageTitle>Error</PageTitle>
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
-
-@if (ShowRequestId)
-{
-    <p>
+<h1 class="text-danger">Error</h1>
+<p class="text-danger">
+    <strong>An error occurred while processing your request.</strong>
+    @if (ShowRequestId) {
+        <br/>
         <strong>Request ID:</strong> <code>@RequestId</code>
-    </p>
-}
+    }
+</p>
 
 <h3>Development Mode</h3>
 <p>
@@ -24,9 +23,9 @@
     and restarting the app.
 </p>
 
-@code{
+@code {
     [CascadingParameter]
-    private HttpContext? HttpContext { get; set; }
+    private HttpContext HttpContext { get; set; } = null!;
 
     private string? RequestId { get; set; }
     private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);

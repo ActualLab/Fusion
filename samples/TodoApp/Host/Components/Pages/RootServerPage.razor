@@ -48,7 +48,7 @@
         if (!_isInitialized) {
             _isInitialized = true;
             parameters.SetParameterProperties(this); // This call must be executed ASAP
-            if (AcceptsInteractiveRouting())
+            if (HttpContext.AcceptsInteractiveRouting())
                 _renderMode = RenderModeEndpoint.GetRenderMode(HttpContext);
             await ServerAuthHelper.UpdateAuthState(HttpContext);
             _authSchemas = await ServerAuthHelper.GetSchemas(HttpContext);
@@ -61,20 +61,5 @@
     // Private methods
 
     private string Asset(string path)
-    {
-#if NET9_0_OR_GREATER
-        return Assets[path];
-#else
-        return path;
-#endif
-    }
-
-    private bool AcceptsInteractiveRouting()
-    {
-#if NET9_0_OR_GREATER
-        return HttpContext.AcceptsInteractiveRouting();
-#else
-        return true;
-#endif
-    }
+        => Assets[path];
 }
