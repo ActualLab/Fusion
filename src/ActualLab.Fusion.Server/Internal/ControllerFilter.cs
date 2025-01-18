@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 
 namespace ActualLab.Fusion.Server.Internal;
 
-public class ControllerFilter(Func<TypeInfo, bool> filter) : ControllerFeatureProvider
+public sealed class ControllerFilter(Func<TypeInfo, bool> filter) : ControllerFeatureProvider
 {
     private Func<TypeInfo, bool> Filter { get; } = filter;
 
