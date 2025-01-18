@@ -7,5 +7,5 @@ public sealed class ControllerFilter(Func<TypeInfo, bool> filter) : ControllerFe
     private Func<TypeInfo, bool> Filter { get; } = filter;
 
     protected override bool IsController(TypeInfo typeInfo)
-        => Filter.Invoke(typeInfo) && base.IsController(typeInfo);
+        => base.IsController(typeInfo) && Filter.Invoke(typeInfo);
 }
