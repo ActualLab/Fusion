@@ -2,16 +2,10 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 
 namespace ActualLab.Fusion.Server.Internal;
 
-public class ControllerFilter : ControllerFeatureProvider
+public class ControllerFilter(Func<TypeInfo, bool> filter) : ControllerFeatureProvider
 {
-    private Func<TypeInfo, bool> Filter { get; }
+    private Func<TypeInfo, bool> Filter { get; } = filter;
 
-    public ControllerFilter(Func<TypeInfo, bool> filter)
-        => Filter = filter;
-
-    protected override bool IsController(TypeInfo typeInfo) {
-        if (!Filter(typeInfo))
-            return false;
-        return base.IsController(typeInfo);
-    }
+    protected override bool IsController(TypeInfo typeInfo)
+        => Filter.Invoke(typeInfo) && base.IsController(typeInfo);
 }
