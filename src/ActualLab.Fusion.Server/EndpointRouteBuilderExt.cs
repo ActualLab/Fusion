@@ -8,7 +8,7 @@ namespace ActualLab.Fusion.Server;
 
 public static class EndpointRouteBuilderExt
 {
-    public static IEndpointRouteBuilder MapFusionAuth(this IEndpointRouteBuilder endpoints)
+    public static IEndpointRouteBuilder MapFusionAuthEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var services = endpoints.ServiceProvider;
         var handler = services.GetRequiredService<AuthEndpoints>();
@@ -24,16 +24,16 @@ public static class EndpointRouteBuilderExt
         return endpoints;
     }
 
-    public static IEndpointRouteBuilder MapFusionBlazorMode(this IEndpointRouteBuilder endpoints)
+    public static IEndpointRouteBuilder MapFusionRenderModeEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var services = endpoints.ServiceProvider;
         var handler = services.GetRequiredService<RenderModeEndpoint>();
         endpoints
-            .MapGet("/fusion/blazorMode", handler.Invoke)
-            .WithGroupName("FusionBlazorMode");
+            .MapGet("/fusion/renderMode", handler.Invoke)
+            .WithGroupName("FusionRenderMode");
         endpoints
-            .MapGet("/fusion/blazorMode/{renderMode}", handler.Invoke)
-            .WithGroupName("FusionBlazorMode");
+            .MapGet("/fusion/renderMode/{renderMode}", handler.Invoke)
+            .WithGroupName("FusionRenderMode");
         return endpoints;
     }
 }

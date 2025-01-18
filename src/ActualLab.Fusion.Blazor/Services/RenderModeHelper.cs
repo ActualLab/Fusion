@@ -40,6 +40,6 @@ public class RenderModeHelper(BlazorCircuitContext circuitContext)
     public virtual string GetModeChangeUrl(string renderModeKey, string? redirectTo = null)
     {
         redirectTo ??= "/";
-        return $"/fusion/blazorMode/{HttpUtility.UrlEncode(renderModeKey)}?redirectTo={HttpUtility.UrlEncode(redirectTo)}";
+        return $"/fusion/renderMode/{HttpUtility.UrlEncode(renderModeKey)}?redirectTo={HttpUtility.UrlEncode(redirectTo)}";
     }
 }

@@ -313,11 +313,7 @@ void ConfigureApp()
         .AddInteractiveServerRenderMode()
         .AddInteractiveWebAssemblyRenderMode()
         .AddAdditionalAssemblies(typeof(App).Assembly);
-#pragma warning disable ASP0014
-    app.UseEndpoints(endpoints => {
-        endpoints.MapRpcWebSocketServer();
-        endpoints.MapFusionAuth();
-        endpoints.MapFusionBlazorMode();
-    });
-#pragma warning restore ASP0014
+    app.MapRpcWebSocketServer();
+    app.MapFusionAuthEndpoints();
+    app.MapFusionRenderModeEndpoints();
 }
