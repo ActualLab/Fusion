@@ -35,13 +35,18 @@ Most likely you declare interfaces for any of such services to consume them on t
 
 **2.** Decorate any non-primitive type which "travels" between the client & server with `MemoryPack` serialization attributes and make them `partial`. E.g. if you had:
 
+<!-- snippet: Part13_PostCommand -->
+<a id='snippet-Part13_PostCommand'></a>
 ```cs
-// In pre-v6.1 such commands are typically nested into IXxxService
-public record PostCommand(string Name, string Text) : ICommand<Unit>;
+public record PostCommand(string Name,string Text) : ICommand<Unit>;
 ```
+<sup><a href='/tutorial/Part13.cs#L19-L21' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part13_PostCommand' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 You should convert it to ~ this:
 
+<!-- snippet: Part13_Chat_Post -->
+<a id='snippet-Part13_Chat_Post'></a>
 ```cs
 // 1. MemoryPack doesn't support nested types, so it has to be moved out of IXxxService; Rider/ReSharper has a refactoring for this, as for VS.NET, I am not sure.
 // 2. All `[MemoryPackable]` types must be declared as `partial`
@@ -53,6 +58,8 @@ public partial record Chat_Post(
     [property: DataMember, MemoryPackOrder(1)] string Text
     ) : ICommand<Unit>;
 ```
+<sup><a href='/tutorial/Part13.cs#L7-L17' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part13_Chat_Post' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 Note that any assembly which declares such types should reference `MemoryPack.Generator` package.
 

@@ -40,9 +40,7 @@ its Fusion-specific behaviors.
 
 1. Add the following `DbSet` to your `DbContext` (`AppDbContext` further):
 
-```cs
-public DbSet<DbOperation> Operations { get; protected set; } = null!;
-```
+snippet: Part10_DbSet
 
 2. Add the following code to your server-side IoC container
    configuration block

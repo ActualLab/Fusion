@@ -28,32 +28,11 @@ unless was already assigned. And in addition to that, it attaches its
 own event handler (`StateChanged` delegate - don't confuse it with Blazor's
 `StateHasChanged` method) to all `State`'s events (by default):
 
-```cs
-protected override void OnInitialized()
-{
-    // ReSharper disable once ConstantNullCoalescingCondition
-    State ??= CreateState();
-    UntypedState.AddEventHandler(StateEventKind.All, StateChanged);
-}
-
-protected virtual TState CreateState()
-    => Services.GetRequiredService<TState>();
-```
+snippet: Part06_Initialize
 
 And this is how the default `StateChanged` handler looks:
 
-```cs
-protected StateEventKind StateHasChangedTriggers { get; set; } = StateEventKind.Updated;
-
-protected StatefulComponentBase()
-{
-    StateChanged = (_, eventKind) => {
-        if ((eventKind & StateHasChangedTriggers) == 0)
-            return;
-        this.NotifyStateHasChanged();
-    };
-}
-```
+snippet: Part06_StateEventKind
 
 As you see, by default any `StatefulComponentBase` triggers `StateHasChanged`
 once its `State` gets updated.

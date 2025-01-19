@@ -47,9 +47,13 @@ its Fusion-specific behaviors.
 
 1. Add the following `DbSet` to your `DbContext` (`AppDbContext` further):
 
+<!-- snippet: Part10_DbSet -->
+<a id='snippet-Part10_DbSet'></a>
 ```cs
 public DbSet<DbOperation> Operations { get; protected set; } = null!;
 ```
+<sup><a href='/tutorial/Part10.cs#L10-L12' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part10_DbSet' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 2. Add the following code to your server-side IoC container
    configuration block

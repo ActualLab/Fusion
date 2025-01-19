@@ -118,6 +118,8 @@ services.AddDbContextServices<FusionDbContext>(dbContext => {
 Our `DbContext` needs to contain `DbSet`-s for the classes provided here as type parameters.
 The `DbSessionInfo` and `DbUser` classes are very simple entities provided by Fusion for storing authentication data.
 
+<!-- snippet: Part11_AppDbContext -->
+<a id='snippet-Part11_AppDbContext'></a>
 ```cs
 public class AppDbContext : DbContextBase
 {
@@ -130,8 +132,9 @@ public class AppDbContext : DbContextBase
 
     public AppDbContext(DbContextOptions options) : base(options) { }
 }
-
 ```
+<sup><a href='/tutorial/Part11.cs#L42-L54' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part11_AppDbContext' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 And that's how these entity types look:
 
