@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using static System.Console;
 
 namespace Tutorial;
+
 public static class Part11{
     public class Startup
     {

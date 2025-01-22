@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using static System.Console;
 
 namespace Tutorial;
+
 public static class Part10{
     public class AppDbContext(DbContextOptions options) : DbContextBase(options)
     {

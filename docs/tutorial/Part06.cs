@@ -1,5 +1,6 @@
 using ActualLab.Fusion.Blazor;
 using static System.Console;
+
 namespace Tutorial;
 
 public static class Part06{

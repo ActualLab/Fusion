@@ -2,6 +2,7 @@ using Microsoft.Extensions.Hosting;
 using static System.Console;
 
 namespace Tutorial;
+
 public static class Part08{
     // Host GetHost(string tenantId, string userIdOrIP) => Hoststs
     // .Select(host => (
