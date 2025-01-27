@@ -32,11 +32,7 @@ public interface IDbHub : IHasServices, IDisposable, IAsyncDisposable
 public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
     where TDbContext : DbContext
 {
-#if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
+    private readonly Lock _lock = LockFactory.Create();
     private TDbContext? _templateDbContext;
 
     [field: AllowNull, MaybeNull]

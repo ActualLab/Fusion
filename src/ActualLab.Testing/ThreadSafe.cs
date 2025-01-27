@@ -2,12 +2,7 @@ namespace ActualLab.Testing;
 
 public class ThreadSafe<T>(T value)
 {
-#if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
-
+    private readonly Lock _lock = LockFactory.Create();
     public T Value {
         get {
             lock (_lock)
