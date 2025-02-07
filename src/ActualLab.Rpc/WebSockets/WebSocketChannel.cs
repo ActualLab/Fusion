@@ -415,8 +415,10 @@ public sealed class WebSocketChannel<T> : Channel<T>
         if (error != null) {
             status = WebSocketCloseStatus.InternalServerError;
             message = "Internal Server Error.";
-            ErrorLog?.LogWarning(error, "WebSocket is closing after an error");
+            Log?.LogInformation(error, "WebSocket is closing after an error");
         }
+        if (WebSocket.State is WebSocketState.Closed or WebSocketState.Aborted)
+            return; // ClientWebSocket throws an exception on closing a closed WebSocket - we don't want that
 
         try {
             await WebSocket.CloseAsync(status, message, default)
