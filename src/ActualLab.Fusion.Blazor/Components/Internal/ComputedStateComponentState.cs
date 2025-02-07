@@ -1,24 +1,30 @@
 namespace ActualLab.Fusion.Blazor.Internal;
 
-public sealed class ComputedStateComponentState<T>(
+public abstract class ComputedStateComponentState<T>(
     ComputedState<T>.Options settings,
-    Func<CancellationToken, Task<T>> computer,
+    ComputedStateComponent<T> component,
     IServiceProvider services
     ) : ComputedState<T>(settings, services, false), IHasInitialize
 {
-    public readonly Func<CancellationToken, Task<T>> Computer = computer;
+    protected ComputedStateComponent<T> Component { get; } = component;
+
+    public static ComputedStateComponentState<T> New(
+        ComputedStateDispatchMode dispatchMode,
+        Options settings,
+        ComputedStateComponent<T> component,
+        IServiceProvider services)
+        => dispatchMode switch {
+            ComputedStateDispatchMode.None
+                => new NonDispatchingComputedStateComponentState<T>(settings, component, services),
+            ComputedStateDispatchMode.Dispatch
+                => new DispatchingComputedStateComponentStateNoExecutionContextFlow<T>(settings, component, services),
+            ComputedStateDispatchMode.DispatchWithExecutionContextFlow
+                => new DispatchingComputedStateComponentStateWithExecutionContextFlow<T>(settings, component, services),
+            _ => throw new ArgumentOutOfRangeException(nameof(dispatchMode), dispatchMode, null)
+        };
+
+    public abstract ComputedStateDispatchMode DispatchMode { get; }
 
     void IHasInitialize.Initialize(object? settings)
         => base.Initialize((Options)settings!);
-
-    protected override Task<T> Compute(CancellationToken cancellationToken)
-    {
-        if (IsDisposed) {
-            // Once the state is disposed, any update will take indefinitely long time
-            return TaskExt
-                .NewNeverEndingUnreferenced<T>()
-                .WaitAsync(cancellationToken);
-        }
-        return Computer.Invoke(cancellationToken);
-    }
 }

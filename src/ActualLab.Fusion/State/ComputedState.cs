@@ -28,6 +28,7 @@ public interface IComputedState : IState, IDisposable, IHasWhenDisposed
     public CancellationToken GracefulDisposeToken { get; }
 }
 
+// ReSharper disable once PossibleInterfaceMemberAmbiguity
 public interface IComputedState<T> : IState<T>, IComputedState;
 
 public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTimeoutHandler
@@ -121,21 +122,22 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
 
     protected virtual async Task UpdateCycle()
     {
-        var cancellationToken = DisposeToken;
         try {
-            await Computed.Update(cancellationToken).ConfigureAwait(false);
+            await Computed.Update(DisposeToken).ConfigureAwait(false);
             while (true) {
                 var snapshot = Snapshot;
                 var computed = snapshot.Computed;
                 if (!computed.IsInvalidated())
-                    await computed.WhenInvalidated(cancellationToken).ConfigureAwait(false);
-                await UpdateDelayer.Delay(snapshot.RetryCount, cancellationToken).ConfigureAwait(false);
+                    await computed.WhenInvalidated(DisposeToken).ConfigureAwait(false);
+                await UpdateDelayer.Delay(snapshot.RetryCount, DisposeToken).ConfigureAwait(false);
                 if (!snapshot.WhenUpdated().IsCompleted)
+                    // GracefulDisposeToken here allows Update to take some extra after DisposeToken cancellation.
+                    // This, in particular, lets RPC calls to complete, cache entries to populate, etc.
                     await computed.Update(GracefulDisposeToken).ConfigureAwait(false);
             }
         }
         catch (Exception e) {
-            if (!e.IsCancellationOf(cancellationToken))
+            if (!e.IsCancellationOf(DisposeToken))
                 Log.LogError(e, "UpdateCycle() failed and stopped for {Category}", Category);
         }
         finally {
@@ -162,5 +164,17 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
         // This method is called inside lock (Lock)
         _computingComputed = null;
         base.OnSetSnapshot(snapshot, prevSnapshot);
+    }
+
+    protected Task<T>? ComputeTaskIfDisposed()
+    {
+#pragma warning disable MA0022, RCS1210
+        if (!IsDisposed)
+            return null;
+
+        return DisposeToken.IsCancellationRequested
+            ? Task.FromCanceled<T>(DisposeToken)
+            : TaskExt.NewNeverEndingUnreferenced<T>().WaitAsync(DisposeToken);
+#pragma warning restore MA0022, RCS1210
     }
 }

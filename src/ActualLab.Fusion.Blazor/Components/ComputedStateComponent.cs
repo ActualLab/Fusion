@@ -60,28 +60,16 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
         // Synchronizes ComputeState call as per:
         // https://github.com/servicetitan/Stl.Fusion/issues/202
         var stateOptions = GetStateOptions();
-        Func<CancellationToken, Task<TState>> computer =
-            Options.CanComputeStateOnThreadPool()
-                ? ComputeState
-                : stateOptions.FlowExecutionContext && DispatcherInfo.IsExecutionContextFlowSupported(this)
-                    ? DispatchComputeState
-                    : DispatchComputeStateWithManualExecutionContextFlow;
-        return (new ComputedStateComponentState<TState>(stateOptions, computer, Services), stateOptions);
-
-        Task<TState> DispatchComputeState(CancellationToken cancellationToken)
-            => this.GetDispatcher().InvokeAsync(() => ComputeState(cancellationToken));
-
-        Task<TState> DispatchComputeStateWithManualExecutionContextFlow(CancellationToken cancellationToken) {
-            var executionContext = ExecutionContext.Capture();
-            var dispatcher = this.GetDispatcher();
-            var taskFactory = () => ComputeState(cancellationToken);
-            return executionContext == null
-                ? dispatcher.InvokeAsync(taskFactory)
-                : dispatcher.InvokeAsync(() => ExecutionContextExt.Start(executionContext, taskFactory));
-        }
+        var dispatchMode = Options.CanComputeStateOnThreadPool()
+            ? ComputedStateDispatchMode.None
+            : stateOptions.FlowExecutionContext && DispatcherInfo.IsExecutionContextFlowSupported(this)
+                ? ComputedStateDispatchMode.Dispatch
+                : ComputedStateDispatchMode.DispatchWithExecutionContextFlow;
+        var state = ComputedStateComponentState<TState>.New(dispatchMode, stateOptions, this, Services);
+        return (state, stateOptions);
     }
 
-    protected abstract Task<TState> ComputeState(CancellationToken cancellationToken);
+    protected internal abstract Task<TState> ComputeState(CancellationToken cancellationToken);
 
     protected override bool ShouldRender()
     {
