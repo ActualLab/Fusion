@@ -478,9 +478,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             else {
                 var e = newState.Error;
                 if (e != null)
-                    Log.LogWarning(e, "'{PeerRef}': Disconnected: {ErrorMessage}", Ref, e.Message);
+                    Log.LogInformation(e, "'{PeerRef}': Disconnected: {ErrorMessage}", Ref, e.Message);
                 else
-                    Log.LogWarning("'{PeerRef}': Disconnected", Ref);
+                    Log.LogInformation("'{PeerRef}': Disconnected", Ref);
             }
         }
     }
