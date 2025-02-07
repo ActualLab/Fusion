@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.CommandLine.IO;
+using FluentAssertions.Execution;
 using FluentAssertions.Primitives;
 using Xunit.Abstractions;
 
@@ -37,5 +38,5 @@ public class TestConsole : IConsole
     }
 
     public StringAssertions Should()
-        => new(ToString());
+        => new(ToString(), AssertionChain.GetOrCreate());
 }

@@ -41,7 +41,7 @@ public class BitsTest(ITestOutputHelper @out) : TestBase(@out)
         void Test(ulong value, Span<byte> buffer) {
             buffer.Clear();
             var size = Bits.Write7BitEncoded(value, buffer);
-            size.Should().BeLessOrEqualTo(buffer.Length);
+            size.Should().BeLessThanOrEqualTo(buffer.Length);
             Out.WriteLine($"{value} -> {size} bytes");
 
             var readBuffer = buffer[..size];

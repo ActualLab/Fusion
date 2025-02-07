@@ -20,7 +20,7 @@ public class TickSourceTest(ITestOutputHelper @out) : TestBase(@out)
             for (var i = 0; i < 50; i++) {
                 await tickSource.WhenNextTick();
                 var elapsed = lastNow.Elapsed;
-                elapsed.Should().BeGreaterOrEqualTo(delay - maxShrinkage);
+                elapsed.Should().BeGreaterThanOrEqualTo(delay - maxShrinkage);
                 if (i < 5)
                     Out.WriteLine($"- {elapsed.TotalMilliseconds:F3}ms");
                 if (i > 1)

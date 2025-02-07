@@ -62,22 +62,22 @@ public class ArrayBufferTest
         try {
             for (var i = 0; i < 3; i++) {
                 var capacity = b.Capacity;
-                capacity.Should().BeGreaterOrEqualTo(minCapacity);
+                capacity.Should().BeGreaterThanOrEqualTo(minCapacity);
                 var numbers = Enumerable.Range(0, capacity + 1).ToArray();
                 b.AddSpan(numbers.AsSpan());
-                b.Capacity.Should().BeGreaterOrEqualTo(capacity << 1);
+                b.Capacity.Should().BeGreaterThanOrEqualTo(capacity << 1);
             }
 
             b.Clear();
-            b.Capacity.Should().BeGreaterOrEqualTo(minCapacity);
+            b.Capacity.Should().BeGreaterThanOrEqualTo(minCapacity);
 
             // Same test, but with .AddRange(IEnumerable<T>)
             for (var i = 0; i < 3; i++) {
                 var capacity = b.Capacity;
-                capacity.Should().BeGreaterOrEqualTo(minCapacity);
+                capacity.Should().BeGreaterThanOrEqualTo(minCapacity);
                 var numbers = Enumerable.Range(0, capacity + 1);
                 b.AddRange(numbers);
-                b.Capacity.Should().BeGreaterOrEqualTo(capacity << 1);
+                b.Capacity.Should().BeGreaterThanOrEqualTo(capacity << 1);
             }
         }
         finally {

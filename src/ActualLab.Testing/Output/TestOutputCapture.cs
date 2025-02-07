@@ -1,5 +1,6 @@
 using System.CommandLine.IO;
 using System.Text;
+using FluentAssertions.Execution;
 using FluentAssertions.Primitives;
 using Xunit.Abstractions;
 
@@ -61,5 +62,6 @@ public class TestOutputCapture(TestTextWriter? downstream = null)
         }
     }
 
-    public StringAssertions Should() => new(ToString());
+    public StringAssertions Should()
+        => new(ToString(), AssertionChain.GetOrCreate());
 }

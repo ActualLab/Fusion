@@ -164,11 +164,11 @@ public class TileStackTest(ITestOutputHelper @out) : TestBase(@out)
             }
 
             var startGap = range.Start - union.Start;
-            startGap.Should().BeGreaterOrEqualTo(0);
+            startGap.Should().BeGreaterThanOrEqualTo(0);
             startGap.Should().BeLessThan(s.MinTileSize);
 
             var endGap = union.End - range.End;
-            endGap.Should().BeGreaterOrEqualTo(0);
+            endGap.Should().BeGreaterThanOrEqualTo(0);
             endGap.Should().BeLessThan(s.MinTileSize);
         }
     }

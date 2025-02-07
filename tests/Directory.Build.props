@@ -75,9 +75,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="AutoFixture.AutoMoq" />
     <PackageReference Include="coverlet.collector" PrivateAssets="all" />
-    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="ILogger.Moq" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Moq" />
