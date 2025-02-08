@@ -25,13 +25,15 @@ public static class StartupHelper
 {
     public static void ConfigureServices(IServiceCollection services, WebAssemblyHostBuilder builder)
     {
-        builder.Logging.SetMinimumLevel(LogLevel.Warning);
-        builder.Logging.AddFilter(typeof(App).Namespace, LogLevel.Information);
-        builder.Logging.AddFilter(typeof(Computed).Namespace, LogLevel.Information);
-        builder.Logging.AddFilter(typeof(InMemoryRemoteComputedCache).Namespace, LogLevel.Information);
-        builder.Logging.AddFilter(typeof(RpcHub).Namespace, LogLevel.Debug);
-        builder.Logging.AddFilter(typeof(CommandHandlerResolver).Namespace, LogLevel.Debug);
-        builder.Logging.AddFilter(typeof(IRemoteComputedCache).Namespace, LogLevel.Debug);
+        var logging = builder.Logging;
+        logging.SetMinimumLevel(LogLevel.Warning);
+        logging.AddFilter(typeof(App).Namespace, LogLevel.Information);
+        logging.AddFilter(typeof(Computed).Namespace, LogLevel.Information);
+        logging.AddFilter(typeof(InMemoryRemoteComputedCache).Namespace, LogLevel.Information);
+        logging.AddFilter(typeof(RpcHub).Namespace, LogLevel.Debug);
+        logging.AddFilter(typeof(CommandHandlerResolver).Namespace, LogLevel.Debug);
+        logging.AddFilter(typeof(IRemoteComputedCache).Namespace, LogLevel.Debug);
+        logging.AddFilter(typeof(ComponentInfo).Namespace, LogLevel.Debug);
 #if DEBUG // Log cache entry updates in debug mode to see if our serialization results are identical for the same output
         RemoteComputeServiceInterceptor.Options.Default = new() {
             LogCacheEntryUpdateSettings = (LogLevel.Warning, int.MaxValue),
