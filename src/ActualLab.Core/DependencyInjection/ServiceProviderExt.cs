@@ -32,7 +32,7 @@ public static class ServiceProviderExt
     }
 
     public static ILogger<T> LogFor<T>(this IServiceProvider services)
-        => new Logger<T>(services.LoggerFactory());
+        => new Logger<T>(services.LoggerFactory()); // See ILoggerFactory.CreateLogger<T>()
     public static ILogger LogFor(this IServiceProvider services, Type type)
         => services.LoggerFactory().CreateLogger(type.NonProxyType());
     public static ILogger LogFor(this IServiceProvider services, string category)

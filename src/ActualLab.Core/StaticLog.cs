@@ -27,7 +27,7 @@ public static class StaticLog
 
     public static ILogger<T> For<T>()
         => (ILogger<T>)Cache.GetOrAdd(typeof(T),
-            static key => (ILogger)typeof(Logger<>).MakeGenericType((Type)key).CreateInstance(Factory));
+            static _ => new Logger<T>(Factory)); // See ILoggerFactory.CreateLogger<T>()
 
     public static ILogger For(Type type)
         => Cache.GetOrAdd(type.NonProxyType(),
