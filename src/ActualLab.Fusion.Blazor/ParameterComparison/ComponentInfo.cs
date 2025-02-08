@@ -10,6 +10,8 @@ public sealed class ComponentInfo
     private static readonly ConcurrentDictionary<Type, LazySlim<Type, ComponentInfo>> ComponentInfoCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
+    public static ILogger? DebugLog { get; set; }
+
     public Type Type { get; }
     public bool HasCustomParameterComparers { get; }
     public ParameterComparisonMode ParameterComparisonMode { get; }
@@ -26,6 +28,8 @@ public sealed class ComponentInfo
     {
         if (!typeof(IComponent).IsAssignableFrom(type))
             throw new ArgumentOutOfRangeException(nameof(type));
+
+        DebugLog?.LogDebug("[+] ComponentInfo({Type})", type.GetName());
 
         ComponentInfo? parentComponentInfo = null;
         if (typeof(IComponent).IsAssignableFrom(type.BaseType))
