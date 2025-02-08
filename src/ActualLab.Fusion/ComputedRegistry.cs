@@ -12,8 +12,8 @@ namespace ActualLab.Fusion;
 
 public sealed class ComputedRegistry : IDisposable
 {
-    public static ComputedRegistry Instance { get; set; } = new();
-    internal static readonly MeterSet Metrics = new();
+    internal static readonly MeterSet Metrics;
+    public static ComputedRegistry Instance { get; set; }
 
     public sealed record Options
     {
@@ -32,17 +32,26 @@ public sealed class ComputedRegistry : IDisposable
     private readonly ConcurrentDictionary<ComputedInput, GCHandle> _storage;
     private readonly GCHandlePool _gcHandlePool;
     private StochasticCounter _opCounter;
-    private ComputedGraphPruner _graphPruner = null!;
+    private ComputedGraphPruner? _graphPruner;
     private int _pruneOpCounterThreshold;
     private Task? _pruneTask;
 
     public IEnumerable<ComputedInput> Keys => _storage.Select(p => p.Key);
     public AsyncLockSet<ComputedInput> InputLocks { get; }
-    public ComputedGraphPruner GraphPruner => _graphPruner;
+    public ComputedGraphPruner? GraphPruner => _graphPruner;
 
     public event Action<Computed>? OnRegister;
     public event Action<Computed>? OnUnregister;
     public event Action<Computed, bool>? OnAccess;
+
+    static ComputedRegistry()
+    {
+        Metrics = new();
+        Instance = new ComputedRegistry();
+        var computedGraphPruner = new ComputedGraphPruner(ComputedGraphPruner.Options.Default);
+        if (!computedGraphPruner.Settings.AutoActivate)
+            computedGraphPruner.Start();
+    }
 
     public ComputedRegistry() : this(new()) { }
     public ComputedRegistry(Options settings)
@@ -63,11 +72,6 @@ public sealed class ComputedRegistry : IDisposable
             Math.Max(1, settings.InitialCapacity / 4),
             ComputedInput.EqualityComparer);
         UpdatePruneCounterThreshold(out _);
-        _ = Task.Delay(TimeSpan.FromSeconds(5)).ContinueWith(
-            // It's important to run this code once ComputedRegistry constructor completes:
-            // it uses ComputedRegistry.Instance, which can be null otherwise.
-            _ => ChangeGraphPruner(new ComputedGraphPruner(ComputedGraphPruner.Options.Default), null!),
-            TaskScheduler.Default);
     }
 
     public void Dispose()
@@ -178,15 +182,15 @@ public sealed class ComputedRegistry : IDisposable
         }
     }
 
-    public ComputedGraphPruner ChangeGraphPruner(
-        ComputedGraphPruner graphPruner,
-        ComputedGraphPruner expectedGraphPruner)
+    public ComputedGraphPruner? ChangeGraphPruner(
+        ComputedGraphPruner? graphPruner,
+        ComputedGraphPruner? expectedGraphPruner)
     {
         var oldGraphPruner = Interlocked.CompareExchange(ref _graphPruner, graphPruner, expectedGraphPruner);
         if (oldGraphPruner != expectedGraphPruner)
             return oldGraphPruner;
 
-        graphPruner.Start();
+        graphPruner?.Start();
         return graphPruner;
     }
 

@@ -16,7 +16,7 @@ public sealed class ComputedGraphPruner : WorkerBase
     }
 
     internal static readonly ComputedRegistry.MeterSet Metrics = ComputedRegistry.Metrics;
-    private readonly TaskCompletionSource<Unit> _whenActivatedSource;
+    private readonly TaskCompletionSource<Unit> _whenActivatedSource = TaskCompletionSourceExt.New<Unit>();
 
     public Options Settings { get; init; }
     public MomentClock Clock { get; init; }
@@ -33,7 +33,6 @@ public sealed class ComputedGraphPruner : WorkerBase
         Settings = settings;
         Clock = clocks.CpuClock;
         Log = log ?? StaticLog.For(GetType());
-        _whenActivatedSource = TaskCompletionSourceExt.New<Unit>();
 
         if (settings.AutoActivate)
             this.Start();
@@ -50,10 +49,11 @@ public sealed class ComputedGraphPruner : WorkerBase
         if (Settings.AutoActivate) {
             // This prevents race condition when two pruners are assigned at almost
             // the same time - they'll both may end up activate themselves here
-            var oldGraphPruner = computedRegistry.GraphPruner;
-            while (oldGraphPruner != this) {
-                await oldGraphPruner.WhenActivated.ConfigureAwait(false);
-                oldGraphPruner = computedRegistry.ChangeGraphPruner(this, oldGraphPruner);
+            var prevGraphPruner = computedRegistry.GraphPruner;
+            while (prevGraphPruner != this) {
+                if (prevGraphPruner != null)
+                    await prevGraphPruner.WhenActivated.ConfigureAwait(false);
+                prevGraphPruner = computedRegistry.ChangeGraphPruner(this, prevGraphPruner);
             }
         }
         else if (computedRegistry.GraphPruner != this) {
