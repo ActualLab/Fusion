@@ -164,7 +164,7 @@ public readonly struct FusionBuilder
         bool makeDefault = false)
         => new(this, serviceMode, makeDefault);
 
-    // ComputeService
+    // AddXxx - Service, Client, ComputeService, Server, DistributedService, DistributedServicePair
 
     public FusionBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>(
