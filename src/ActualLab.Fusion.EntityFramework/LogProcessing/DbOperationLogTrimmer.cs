@@ -100,7 +100,9 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
             dbContext.EnableChangeTracking(false);
 
             var lastCandidate = await dbContext.Set<TDbEntry>(DbHintSet.UpdateSkipLocked)
-                .FirstOrDefaultAsync(e => e.LoggedAt < minLoggedAt, cancellationToken)
+                .Where(e => e.LoggedAt < minLoggedAt)
+                .OrderByDescending(e => e.LoggedAt)
+                .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
             if (lastCandidate == null)
                 return 0;
