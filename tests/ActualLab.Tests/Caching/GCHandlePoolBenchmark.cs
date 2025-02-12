@@ -41,7 +41,7 @@ public class GCHandlePoolBenchmark(ITestOutputHelper @out) : BenchmarkTestBase(@
                 pool.Release(handles[i], i);
         });
 
-        await Benchmark("(GCHandle.Alloc(), Free())*N", IterationCount, n => {
+        await Benchmark("(GCHandlePool.Acquire(), Release())*N", IterationCount, n => {
             var o = new object();
             var pool = new GCHandlePool(GCHandleType.Weak);
             for (var i = 0; i < n; i++) {
