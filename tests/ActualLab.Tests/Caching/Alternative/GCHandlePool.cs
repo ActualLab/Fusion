@@ -1,6 +1,8 @@
+using System.Collections.Concurrent;
+using ActualLab.Concurrency;
 using ActualLab.Generators;
 
-namespace ActualLab.Concurrency;
+namespace ActualLab.Tests.Caching.Alternative;
 
 // ReSharper disable once InconsistentNaming
 public sealed class GCHandlePool(GCHandlePool.Options settings) : IDisposable

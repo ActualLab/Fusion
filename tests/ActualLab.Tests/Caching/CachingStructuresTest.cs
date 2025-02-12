@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Tests.Caching.Alternative;
 
 namespace ActualLab.Tests.Caching;
@@ -7,6 +6,7 @@ namespace ActualLab.Tests.Caching;
 public class CachingStructuresTest(ITestOutputHelper @out) : BenchmarkTestBase(@out)
 {
     private static readonly int[] DefaultVariants = [0, 1, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000, 10_000];
+
     [Fact]
     public void GrowOnlyCacheTest()
     {

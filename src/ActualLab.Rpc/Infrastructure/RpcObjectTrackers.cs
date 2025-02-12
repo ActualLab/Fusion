@@ -29,11 +29,6 @@ public abstract class RpcObjectTracker
 
 public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 {
-    // ReSharper disable once InconsistentNaming
-    public static GCHandlePool GCHandlePool { get; set; } = new(new GCHandlePool.Options() {
-        Capacity = HardwareInfo.GetProcessorCountPo2Factor(16),
-    });
-
     private readonly ConcurrentDictionary<long, GCHandle> _objects = new(HardwareInfo.ProcessorCountPo2, 17);
 
     public override int Count => _objects.Count;
@@ -73,7 +68,7 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
                 existingObj.Disconnect(); // This call must unregister it
             }
 
-            handle = GCHandlePool.Acquire(obj, obj.GetHashCode());
+            handle = GCHandle.Alloc(obj, GCHandleType.Weak);
             if (_objects.TryAdd(id.LocalId, handle))
                 return;
         }
@@ -92,7 +87,7 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
         if (!_objects.TryRemove(localId, handle))
             return false; // Concurrent Unregister won
 
-        GCHandlePool.Release(handle);
+        handle.Free();
         return true;
     }
 
@@ -155,7 +150,7 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 
             foreach (var (id, handle) in purgeBuffer)
                 if (_objects.TryRemove(id, handle))
-                    GCHandlePool.Release(handle);
+                    handle.Free();
             return buffer.ToArray();
         }
         finally {
