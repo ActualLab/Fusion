@@ -9,13 +9,13 @@ public class ProxyTypeGenerator
         "CS0618", // Obsolete member access
         "CS0672", // Obsolete member access
         "CS1591", // No XML comment
-        "IL2026", // Using member 'M' which has 'RequiresUnreferencedCodeAttribute' can break functionality when trimming application code. The type might be removed.
     }.Select(x => Trivia(
         PragmaWarningDirectiveTrivia(Token(SyntaxKind.DisableKeyword), true)
             .WithErrorCodes(SingletonSeparatedList<ExpressionSyntax>(IdentifierName(x)))))
     .ToArray();
 
     private static readonly AttributeListSyntax[] UnconditionalSuppressMessageAttributes = new [] {
+        "IL2026", // Using member 'M' which has 'RequiresUnreferencedCodeAttribute' can break functionality when trimming application code. The type might be removed.
         "IL2072", // [DynamicallyAccessedMembers] attribute(s) don't match...
         "IL2092", // [DynamicallyAccessedMembers] attribute(s) don't match...
         "IL2111", // Member is accessed via reflection
