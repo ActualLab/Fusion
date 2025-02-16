@@ -11,7 +11,7 @@ public abstract class RpcMiddlewares<TMiddleware>
     {
         var instances = services.GetRequiredService<IEnumerable<TMiddleware>>();
         Instances = instances.OrderByDescending(x => x.Priority).ToArray();
-        InstancesReversed = Instances.Reverse().ToArray();
+        InstancesReversed = Instances.AsEnumerable().Reverse().ToArray();
         HasInstances = Instances.Length != 0;
     }
 }
