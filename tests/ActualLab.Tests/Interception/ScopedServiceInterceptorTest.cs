@@ -13,25 +13,42 @@ public interface IScopedServiceTestService : IRequiresFullProxy
     ValueTask<int> ValueTaskIntMethod();
 }
 
-public class ScopedServiceTestService : IScopedServiceTestService
+public class ScopedServiceTestService(IServiceProvider services) : IScopedServiceTestService
 {
     public void VoidMethod()
-    { }
+    {
+        services.IsScoped().Should().BeTrue();
+    }
 
     public int IntMethod()
-        => 1;
+    {
+        services.IsScoped().Should().BeTrue();
+        return 1;
+    }
 
     public Task TaskMethod()
-        => Task.CompletedTask;
+    {
+        services.IsScoped().Should().BeTrue();
+        return Task.CompletedTask;
+    }
 
     public Task<int> TaskIntMethod()
-        => Task.FromResult(1);
+    {
+        services.IsScoped().Should().BeTrue();
+        return Task.FromResult(1);
+    }
 
     public ValueTask ValueTaskMethod()
-        => default;
+    {
+        services.IsScoped().Should().BeTrue();
+        return default;
+    }
 
     public ValueTask<int> ValueTaskIntMethod()
-        => new(1);
+    {
+        services.IsScoped().Should().BeTrue();
+        return new ValueTask<int>(1);
+    }
 }
 
 public class ScopedInterceptorTest(ITestOutputHelper @out) : TestBase(@out)
@@ -41,6 +58,7 @@ public class ScopedInterceptorTest(ITestOutputHelper @out) : TestBase(@out)
     {
         // Preps
         var services = new ServiceCollection()
+            .AddCommander().Services // Required to make .IsScoped() work
             .AddScoped<IScopedServiceTestService, ScopedServiceTestService>()
             .BuildServiceProvider();
         var interceptorOptions = ScopedServiceInterceptor.Options.Default;
