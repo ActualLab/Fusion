@@ -28,6 +28,7 @@ public sealed class RpcServiceDef
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
     public Symbol Scope { get; init; }
     public LegacyNames LegacyNames { get; init; }
+    public PropertyBag Properties { get; init; }
 
     public RpcMethodDef this[MethodInfo method] => GetMethod(method) ?? throw Errors.NoMethod(Type, method);
     public RpcMethodDef this[Symbol methodName] => GetMethod(methodName) ?? throw Errors.NoMethod(Type, methodName);
