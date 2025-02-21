@@ -3,7 +3,7 @@ using ActualLab.Concurrency;
 
 namespace ActualLab.Interception.Interceptors;
 
-public class SchedulingInterceptor : Interceptor
+public sealed class SchedulingInterceptor : Interceptor
 {
     public new record Options : Interceptor.Options
     {

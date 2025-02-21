@@ -23,7 +23,7 @@ public class SchedulingTestService : IRequiresAsyncProxy, IHasTaskFactory
     {
         var scheduler = TaskScheduler.Current;
         scheduler.Should().Be(Schedulers.ConcurrentScheduler);
-        return Task.FromResult(0);
+        return Task.FromResult(1);
     }
 
     public virtual ValueTask ValueTaskMethod()
@@ -37,7 +37,7 @@ public class SchedulingTestService : IRequiresAsyncProxy, IHasTaskFactory
     {
         var scheduler = TaskScheduler.Current;
         scheduler.Should().Be(Schedulers.ConcurrentScheduler);
-        return default;
+        return new(1);
     }
 
     public virtual Task NonScheduledTaskMethod()
@@ -50,25 +50,25 @@ public class SchedulingTestService : IRequiresAsyncProxy, IHasTaskFactory
 
 public class SchedulingInterceptorTest(ITestOutputHelper @out) : TestBase(@out)
 {
-    private static readonly IServiceProvider Services = new ServiceCollection()
-        .AddSingleton(_ => SchedulingInterceptor.Options.Default)
-        .BuildServiceProvider();
-
     [Fact]
     public async Task BasicTest()
     {
-        var interceptorOptions = Services.GetRequiredService<SchedulingInterceptor.Options>();
-        var interceptor = new SchedulingInterceptor(interceptorOptions, Services) {
+        // Preps
+        var services = new ServiceCollection().BuildServiceProvider();
+        var interceptorOptions = SchedulingInterceptor.Options.Default;
+        var interceptor = new SchedulingInterceptor(interceptorOptions, services) {
             TaskFactoryResolver = static invocation => invocation.Method.Name.StartsWith("NonScheduled")
                 ? null
                 : (invocation.Proxy as IHasTaskFactory)?.TaskFactory,
         };
         // ReSharper disable once SuspiciousTypeConversion.Global
         var proxy = (SchedulingTestService)Proxies.New(typeof(SchedulingTestService), interceptor);
+
+        // Actual test
         await proxy.TaskMethod();
-        await proxy.TaskIntMethod();
+        (await proxy.TaskIntMethod()).Should().Be(1);
         await proxy.ValueTaskMethod();
-        await proxy.ValueTaskIntMethod();
+        (await proxy.ValueTaskIntMethod()).Should().Be(1);
         await proxy.NonScheduledTaskMethod();
     }
 }
