@@ -136,6 +136,8 @@ public readonly struct RpcBuilder
             AddClient<IRpcSystemCalls>(RpcSystemCalls.Name);
             Service<IRpcSystemCalls>().HasServer<RpcSystemCalls>();
         }
+
+        configure?.Invoke(this);
     }
 
     // WebSocket client

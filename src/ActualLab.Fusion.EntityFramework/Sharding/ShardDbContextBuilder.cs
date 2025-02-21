@@ -27,6 +27,7 @@ public readonly struct ShardDbContextBuilder<TDbContext>
         services.TryAddSingleton<IShardDbContextFactory<TDbContext>, ShardDbContextFactory<TDbContext>>();
         services.TryAddSingleton<ShardDbContextFactoryBuilder<TDbContext>>(
             _ => (c, _) => c.GetRequiredService<IDbContextFactory<TDbContext>>());
+
         configure?.Invoke(this);
     }
 

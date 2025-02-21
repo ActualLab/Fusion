@@ -21,6 +21,7 @@ public readonly struct RpcWebSocketServerBuilder
         services.AddSingleton(_ => RpcWebSocketServerDefaultDelegates.PeerRefFactory);
         services.AddSingleton(_ => RpcWebSocketServer.Options.Default);
         services.AddSingleton(c => new RpcWebSocketServer(c.GetRequiredService<RpcWebSocketServer.Options>(), c));
+
         configure?.Invoke(this);
     }
 

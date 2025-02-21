@@ -40,5 +40,7 @@ public readonly struct FusionBlazorBuilder
         });
         services.AddScoped(c => new RenderModeHelper(c.GetRequiredService<BlazorCircuitContext>()));
         services.AddScoped(c => new BlazorCircuitContext(c));
+
+        configure?.Invoke(this);
     }
 }
