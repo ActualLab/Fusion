@@ -40,7 +40,7 @@ public static class ArraySegmentCompatExt
 
     private static class Static<T>
     {
-        public static readonly ArraySegment<T> Empty = new ArraySegment<T>([]);
+        public static readonly ArraySegment<T> Empty = new([]);
     }
 }
 
