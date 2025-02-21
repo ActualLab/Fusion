@@ -1,9 +1,12 @@
 using ActualLab.Interception;
 using ActualLab.Interception.Interceptors;
+using ActualLab.Rpc;
 
 namespace ActualLab.Tests.Interception;
 
-public interface IScopedServiceTestService : IRequiresFullProxy
+public interface IScopedServiceTestService :
+    IRpcService,
+    IRequiresFullProxy // Required only for this specific test (it also checks sync method calls)
 {
     void VoidMethod();
     int IntMethod();
@@ -13,12 +16,20 @@ public interface IScopedServiceTestService : IRequiresFullProxy
     ValueTask<int> ValueTaskIntMethod();
 }
 
-public class ScopedServiceTestService(IServiceProvider services) : IScopedServiceTestService
+public class ScopedServiceTestService(IServiceProvider services) : IScopedServiceTestService, IDisposable
 {
-    public void VoidMethod()
+    private int _callCount;
+
+    public static ThreadSafe<bool> IsDisposeCheckFailed { get; } = new();
+
+    public void Dispose()
     {
-        services.IsScoped().Should().BeTrue();
+        if (Interlocked.Decrement(ref _callCount) != -1)
+            IsDisposeCheckFailed.Value = true;
     }
+
+    public void VoidMethod()
+        => services.IsScoped().Should().BeTrue();
 
     public int IntMethod()
     {
@@ -26,28 +37,38 @@ public class ScopedServiceTestService(IServiceProvider services) : IScopedServic
         return 1;
     }
 
-    public Task TaskMethod()
+    public async Task TaskMethod()
     {
         services.IsScoped().Should().BeTrue();
-        return Task.CompletedTask;
+        Interlocked.Increment(ref _callCount);
+        await Task.Delay(200);
+        Interlocked.Decrement(ref _callCount);
     }
 
-    public Task<int> TaskIntMethod()
+    public async Task<int> TaskIntMethod()
     {
         services.IsScoped().Should().BeTrue();
-        return Task.FromResult(1);
+        Interlocked.Increment(ref _callCount);
+        await Task.Delay(200);
+        Interlocked.Decrement(ref _callCount);
+        return 1;
     }
 
-    public ValueTask ValueTaskMethod()
+    public async ValueTask ValueTaskMethod()
     {
         services.IsScoped().Should().BeTrue();
-        return default;
+        Interlocked.Increment(ref _callCount);
+        await Task.Delay(200);
+        Interlocked.Decrement(ref _callCount);
     }
 
-    public ValueTask<int> ValueTaskIntMethod()
+    public async ValueTask<int> ValueTaskIntMethod()
     {
         services.IsScoped().Should().BeTrue();
-        return new ValueTask<int>(1);
+        Interlocked.Increment(ref _callCount);
+        await Task.Delay(200);
+        Interlocked.Decrement(ref _callCount);
+        return 1;
     }
 }
 
@@ -58,23 +79,36 @@ public class ScopedInterceptorTest(ITestOutputHelper @out) : TestBase(@out)
     {
         // Preps
         var services = new ServiceCollection()
-            .AddCommander().Services // Required to make .IsScoped() work
+            .AddCommander(_ => {}) // Required to make .IsScoped() work
+            .AddSingleton(ScopedServiceInterceptor.Options.Default)
             .AddScoped<IScopedServiceTestService, ScopedServiceTestService>()
+            .AddRpc(rpc => {
+                // That's how you can register a server w/ custom resolver in RPC - in this case
+                // it's a proxy for IScopedServiceTestService which uses ScopedServiceInterceptor.
+                rpc.Service<IScopedServiceTestService>().HasServer(
+                    ServiceResolver.New<IScopedServiceTestService>(c => {
+                        var interceptorOptions = c.GetRequiredService<ScopedServiceInterceptor.Options>();
+                        var interceptor = new ScopedServiceInterceptor(interceptorOptions, c) {
+                            ScopedServiceType = typeof(IScopedServiceTestService),
+                            MustInterceptSyncCalls = true, // Needed only for this specific test
+                        };
+                        var proxy = Proxies.New(typeof(IScopedServiceTestService), interceptor);
+                        // ReSharper disable once SuspiciousTypeConversion.Global
+                        return (IScopedServiceTestService)proxy;
+                    }));
+            })
             .BuildServiceProvider();
-        var interceptorOptions = ScopedServiceInterceptor.Options.Default;
-        var interceptor = new ScopedServiceInterceptor(interceptorOptions, services) {
-            ScopedServiceType = typeof(IScopedServiceTestService),
-            MustInterceptSyncCalls = true,
-        };
-        // ReSharper disable once SuspiciousTypeConversion.Global
-        var proxy = (IScopedServiceTestService)Proxies.New(typeof(IScopedServiceTestService), interceptor);
+
+        var serviceDef = services.RpcHub().ServiceRegistry.Get<IScopedServiceTestService>()!;
+        var service = (IScopedServiceTestService)serviceDef.Server;
 
         // Actual test
-        proxy.IntMethod().Should().Be(1);
-        proxy.VoidMethod();
-        await proxy.TaskMethod();
-        (await proxy.TaskIntMethod()).Should().Be(1);
-        await proxy.ValueTaskMethod();
-        (await proxy.ValueTaskIntMethod()).Should().Be(1);
+        service.IntMethod().Should().Be(1);
+        service.VoidMethod();
+        await service.TaskMethod();
+        (await service.TaskIntMethod()).Should().Be(1);
+        await service.ValueTaskMethod();
+        (await service.ValueTaskIntMethod()).Should().Be(1);
+        ScopedServiceTestService.IsDisposeCheckFailed.Value.Should().BeFalse();
     }
 }
