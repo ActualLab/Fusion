@@ -203,7 +203,10 @@ public class ServerAuthHelper : IHasServices
         User? user, ClaimsPrincipal httpUser, string schema)
     {
         var httpUserIdentityName = httpUser.Identity?.Name ?? "";
-        var claims = httpUser.Claims.ToApiMap(c => c.Type, c => c.Value, StringComparer.Ordinal);
+        var claims = httpUser.Claims
+            .GroupBy(c => c.Type, StringComparer.Ordinal)
+            .Select(g => (g.Key, Value: g.Select(c => c.Value).ToDelimitedString("\n")))
+            .ToApiMap(x => x.Key, x => x.Value, StringComparer.Ordinal);
         var id = FirstClaimOrDefault(claims, Settings.IdClaimKeys) ?? httpUserIdentityName;
         var name = FirstClaimOrDefault(claims, Settings.NameClaimKeys) ?? httpUserIdentityName;
         var identity = new UserIdentity(schema, id);
