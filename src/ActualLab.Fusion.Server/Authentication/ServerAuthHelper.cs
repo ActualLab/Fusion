@@ -193,7 +193,10 @@ public class ServerAuthHelper : IHasServices
             return false;
 
         var httpUserIdentityName = httpUser.Identity?.Name ?? "";
-        var claims = httpUser.Claims.ToImmutableDictionary(c => c.Type, c => c.Value);
+        var claims = httpUser.Claims
+            .GroupBy(c => c.Type, StringComparer.Ordinal)
+            .Select(g => (g.Key, Value: g.Select(c => c.Value).ToDelimitedString("\n")))
+            .ToImmutableDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
         var id = FirstClaimOrDefault(claims, Settings.IdClaimKeys) ?? httpUserIdentityName;
         var identity = new UserIdentity(schema, id);
         return user.Identities.ContainsKey(identity);
