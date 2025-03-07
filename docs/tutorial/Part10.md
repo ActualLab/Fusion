@@ -52,7 +52,7 @@ its Fusion-specific behaviors.
 ```cs
 public DbSet<DbOperation> Operations { get; protected set; } = null!;
 ```
-<sup><a href='/tutorial/Part10.cs#L10-L12' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part10_DbSet' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part10.cs#L11-L13' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part10_DbSet' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 2. Add the following code to your server-side IoC container

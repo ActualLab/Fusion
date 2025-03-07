@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "Fusion",
-  description: "This site is for fusion documents",
+  description: "Fusion is a reactive framework for building scalable, real-time applications. This site hosts Fusion documentation.",
   srcExclude: ['mdsource/**'],
   ignoreDeadLinks: true,
   themeConfig: {

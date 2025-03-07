@@ -133,7 +133,7 @@ public class AppDbContext : DbContextBase
     public AppDbContext(DbContextOptions options) : base(options) { }
 }
 ```
-<sup><a href='/tutorial/Part11.cs#L42-L54' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part11_AppDbContext' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part11.cs#L43-L55' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part11_AppDbContext' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 And that's how these entity types look:

@@ -46,7 +46,7 @@ protected override void OnInitialized(){
 protected virtual TState CreateState()
 => Services.GetRequiredService<TState>();
 ```
-<sup><a href='/tutorial/Part06.cs#L9-L17' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part06_Initialize' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part06.cs#L10-L18' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part06_Initialize' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 And this is how the default `StateChanged` handler looks:
@@ -66,7 +66,7 @@ protected StatefulComponentBase()
     };
 }
 ```
-<sup><a href='/tutorial/Part06.cs#L19-L31' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part06_StateEventKind' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part06.cs#L20-L32' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part06_StateEventKind' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 As you see, by default any `StatefulComponentBase` triggers `StateHasChanged`
