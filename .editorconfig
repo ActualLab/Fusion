@@ -28,6 +28,7 @@ csharp_indent_block_contents = true
 csharp_indent_braces = false
 csharp_indent_switch_labels = true
 dotnet_diagnostic.xUnit1031.severity = none
+dotnet_diagnostic.CS9113.severity = none  # File-scoped namespace warning
 
 # New line preferences
 # https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference#c-formatting-settings
