@@ -7,8 +7,8 @@ hero:
   tagline: ''
   actions:
     - theme: brand
-      text: Home
-      link: /
+      text: Tutorial
+      link: /README
     - theme: alt
       text: QuickStart
       link: /QuickStart
