@@ -35,32 +35,39 @@ unless was already assigned. And in addition to that, it attaches its
 own event handler (`StateChanged` delegate - don't confuse it with Blazor's
 `StateHasChanged` method) to all `State`'s events (by default):
 
+<!-- snippet: Part06_Initialize -->
+<a id='snippet-Part06_Initialize'></a>
 ```cs
-protected override void OnInitialized()
-{
-    // ReSharper disable once ConstantNullCoalescingCondition
-    State ??= CreateState();
-    UntypedState.AddEventHandler(StateEventKind.All, StateChanged);
+protected TState State {get;private set;} = null;
+protected override void OnInitialized(){
+     State ??=CreateState();
+    UntypedState.AddEventHandler(StateEventKind.All,StateChanged);
 }
-
 protected virtual TState CreateState()
-    => Services.GetRequiredService<TState>();
+=> Services.GetRequiredService<TState>();
 ```
+<sup><a href='/tutorial/Part06.cs#L9-L17' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part06_Initialize' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 And this is how the default `StateChanged` handler looks:
 
+<!-- snippet: Part06_StateEventKind -->
+<a id='snippet-Part06_StateEventKind'></a>
 ```cs
-protected StateEventKind StateHasChangedTriggers { get; set; } = StateEventKind.Updated;
+protected StateEventKind StateHasChangedTriggers {get;set;} =
+StateEventKind.Updated;
 
 protected StatefulComponentBase()
 {
-    StateChanged = (_, eventKind) => {
-        if ((eventKind & StateHasChangedTriggers) == 0)
-            return;
+    StateChanged = (_,eventKind) => {
+        if((eventKind & StateHasChangedTriggers) == 0)
+        return;
         this.NotifyStateHasChanged();
     };
 }
 ```
+<sup><a href='/tutorial/Part06.cs#L19-L31' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part06_StateEventKind' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 As you see, by default any `StatefulComponentBase` triggers `StateHasChanged`
 once its `State` gets updated.

@@ -109,33 +109,7 @@ And finally, there are a few important methods:
 
 A bit of code to help remembering this:
 
-```cs
-interface IResult<T> {
-  T ValueOrDefault { get; } // Never throws an error
-  T Value { get; } // Throws Error when HasError
-  Exception? Error { get; }
-  bool HasValue { get; } // Error == null
-  bool HasError { get; } // Error != null
-
-  void Deconstruct(out T value, out Exception? error);
-  bool IsValue(out T value);
-  bool IsValue(out T value, out Exception error);
-  
-  Result<T> AsResult();  // Result<T> is a struct implementing IResult<T>
-  Result<TOther> Cast<TOther>();
-}
-
-// CancellationToken argument is removed everywhere for simplicity
-interface Computed<T> : IResult<T> {
-  ConsistencyState ConsistencyState { get; } 
-  
-  event Action Invalidated; // Event, triggered on the invalidation
-  Task WhenInvalidated(); // Async way to await for the invalidation
-  void Invalidate();
-  Task<Computed<T>> Update(); // Notice it returns a new instance!
-  Task<T> Use();
-}
-```
+snippet: Part02_Interface
 
 A diagram showing how `ConsistencyState` transition works:
 

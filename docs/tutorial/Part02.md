@@ -51,7 +51,7 @@ public static IServiceProvider CreateServices()
     return services.BuildServiceProvider();
 }
 ```
-<sup><a href='/tutorial/Part02.cs#L7-L35' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_CounterService' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part02.cs#L35-L63' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_CounterService' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 First, let's try to "pull" `Computed<T>` instance created behind the
@@ -66,7 +66,7 @@ WriteLine($"Computed: {computed}");
 WriteLine($"- IsConsistent(): {computed.IsConsistent()}");
 WriteLine($"- Value:          {computed.Value}");
 ```
-<sup><a href='/tutorial/Part02.cs#L39-L45' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_CaptureComputed' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part02.cs#L67-L73' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_CaptureComputed' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -158,33 +158,37 @@ And finally, there are a few important methods:
 
 A bit of code to help remembering this:
 
+<!-- snippet: Part02_Interface -->
+<a id='snippet-Part02_Interface'></a>
 ```cs
 interface IResult<T> {
-  T ValueOrDefault { get; } // Never throws an error
-  T Value { get; } // Throws Error when HasError
-  Exception? Error { get; }
-  bool HasValue { get; } // Error == null
-  bool HasError { get; } // Error != null
+    T ValueOrDefault { get; } // Never throws an error
+    T Value { get; } // Throws Error when HasError
+    Exception? Error { get; }
+    bool HasValue { get; } // Error == null
+    bool HasError { get; } // Error != null
 
-  void Deconstruct(out T value, out Exception? error);
-  bool IsValue(out T value);
-  bool IsValue(out T value, out Exception error);
-  
-  Result<T> AsResult();  // Result<T> is a struct implementing IResult<T>
-  Result<TOther> Cast<TOther>();
+    void Deconstruct(out T value, out Exception? error);
+    bool IsValue(out T value);
+    bool IsValue(out T value, out Exception error);
+    
+    Result<T> AsResult();  // Result<T> is a struct implementing IResult<T>
+    Result<TOther> Cast<TOther>();
 }
 
 // CancellationToken argument is removed everywhere for simplicity
-interface Computed<T> : IResult<T> {
-  ConsistencyState ConsistencyState { get; } 
-  
-  event Action Invalidated; // Event, triggered on the invalidation
-  Task WhenInvalidated(); // Async way to await for the invalidation
-  void Invalidate();
-  Task<Computed<T>> Update(); // Notice it returns a new instance!
-  Task<T> Use();
+interface IComputed<T> : IResult<T> {
+    ConsistencyState ConsistencyState { get; } 
+    
+    event Action Invalidated; // Event, triggered on the invalidation
+    Task WhenInvalidated(); // Async way to await for the invalidation
+    void Invalidate();
+    Task<Computed<T>> Update(); // Notice it returns a new instance!
+    Task<T> Use();
 }
 ```
+<sup><a href='/tutorial/Part02.cs#L7-L33' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_Interface' title='Start of snippet'>anchor</a></sup>
+<!-- endSnippet -->
 
 A diagram showing how `ConsistencyState` transition works:
 
@@ -221,7 +225,7 @@ WriteLine($"computed: {computed}");
 var newComputed = await computed.Update();
 WriteLine($"newComputed: {newComputed}");
 ```
-<sup><a href='/tutorial/Part02.cs#L50-L59' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_InvalidateComputed1' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part02.cs#L78-L87' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_InvalidateComputed1' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -250,7 +254,7 @@ WriteLine($"computed: {computed}");
 var newComputed = await Computed.Capture(() => counters.Get("a")); // <- This line
 WriteLine($"newComputed: {newComputed}");
 ```
-<sup><a href='/tutorial/Part02.cs#L64-L74' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_InvalidateComputed2' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part02.cs#L92-L102' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_InvalidateComputed2' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
@@ -294,7 +298,7 @@ for (var i = 0; i < 5; i++) {
     WriteLine($"{DateTime.Now}: {computed.Value}");
 }
 ```
-<sup><a href='/tutorial/Part02.cs#L79-L96' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_IncrementCounter' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/tutorial/Part02.cs#L107-L124' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part02_IncrementCounter' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The output:
