@@ -2,19 +2,13 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <AssemblyName>Tutorial</AssemblyName>
-    <RootNamespace>Tutorial</RootNamespace>
+    <AssemblyName>Docs</AssemblyName>
+    <RootNamespace>Docs</RootNamespace>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.CommandLine" />
-    <PackageReference Include="System.CommandLine.DragonFruit" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
   </ItemGroup>
-
 
   <!-- Roslyn generators/analyzers -->
   <ItemGroup>
