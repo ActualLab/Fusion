@@ -13,7 +13,6 @@ Fusion is built around three key abstractions:
 Here's a simple counter service that demonstrates Fusion's basic capabilities:
 
 <!-- snippet: Part01_Declare_Service -->
-<a id='snippet-Part01_Declare_Service'></a>
 ```cs
 public class CounterService : IComputeService // This is a tagging interface any compute service must "implement"
 {
@@ -49,13 +48,11 @@ public class CounterService : IComputeService // This is a tagging interface any
     }
 }
 ```
-<sup><a href='/Part01.cs#L6-L40' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_Declare_Service' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 To use this service, first register it with dependency injection:
 
 <!-- snippet: Part01_Register_Services -->
-<a id='snippet-Part01_Register_Services'></a>
 ```cs
 var services = new ServiceCollection();
 var fusion = services.AddFusion(); // You can also use services.AddFusion(fusion => ...) pattern
@@ -65,7 +62,6 @@ var sp = services.BuildServiceProvider();
 // And that's how we get our first compute service:
 var counters = sp.GetRequiredService<CounterService>();
 ```
-<sup><a href='/Part01.cs#L46-L54' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_Register_Services' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 Let's look at how `CounterService` behavior differs from what you'd expect:
@@ -73,56 +69,47 @@ Let's look at how `CounterService` behavior differs from what you'd expect:
 ### 1. Automatic Caching
 
 <!-- snippet: Part01_Automatic_Caching -->
-<a id='snippet-Part01_Automatic_Caching'></a>
 ```cs
 await counters.Get("a"); // Prints: Get(a) = 0
 await counters.Get("a"); // Prints nothing -- it's a cache hit; the result is 0
 await counters.Get("b"); // Prints: Get(b) = 0
 await counters.Get("b"); // Prints nothing -- it's a cache hit; the result is 0
 ```
-<sup><a href='/Part01.cs#L57-L62' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_Automatic_Caching' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### 2. Automatic Dependency Capture
 
 <!-- snippet: Part01_Automatic_Dependency_Tracking -->
-<a id='snippet-Part01_Automatic_Dependency_Tracking'></a>
 ```cs
 await counters.Sum("a", "b"); // Prints: Sum(a, b) = 0
 await counters.Sum("a", "b"); // Prints nothing -- it's a cache hit; the result is 0
 ```
-<sup><a href='/Part01.cs#L65-L68' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_Automatic_Dependency_Tracking' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### 3. Invalidation
 
 <!-- snippet: Part01_Invalidation -->
-<a id='snippet-Part01_Invalidation'></a>
 ```cs
 counters.Increment("a"); // Prints: Increment(a) + invalidates Get(a) call result
 await counters.Get("a"); // Prints: Get(a) = 1
 await counters.Get("b"); // Prints nothing -- Get(b) call wasn't invalidated, so it's a cache hit
 ```
-<sup><a href='/Part01.cs#L71-L75' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_Invalidation' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### 4. Cascading Invalidation
 
 <!-- snippet: Part01_Cascading_Invalidation -->
-<a id='snippet-Part01_Cascading_Invalidation'></a>
 ```cs
 counters.Increment("a"); // Prints: Increment(a)
 await counters.Sum("a", "b"); // Prints: Get(a) = 2, Sum(a, b) = 2
 await counters.Sum("a", "b"); // Prints nothing - it's a cache hit; the result is 0
 await counters.Sum("b", "a"); // Prints: Sum(b, a) = 2 -- Get(b) and Get(a) results are already cached
 ```
-<sup><a href='/Part01.cs#L78-L83' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_Cascading_Invalidation' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### 5. Capturing `Computed<T>` for a given call and using it
 
 <!-- snippet: Part01_Accessing_Computed_Values -->
-<a id='snippet-Part01_Accessing_Computed_Values'></a>
 ```cs
 var computedForGetA = await Computed.Capture(() => counters.Get("a"));
 WriteLine(computedForGetA.IsConsistent()); // True
@@ -158,13 +145,11 @@ WriteLine(newComputedForSumAB == await computedForSumAB.Update()); // True
 WriteLine(computedForSumAB.IsConsistent()); // False
 WriteLine(computedForSumAB.Value); // 2
 ```
-<sup><a href='/Part01.cs#L86-L120' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_Accessing_Computed_Values' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 ### 6. Reactive update on invalidation
 
 <!-- snippet: Part01_Reactive_Updates -->
-<a id='snippet-Part01_Reactive_Updates'></a>
 ```cs
 _ = Task.Run(async () => {
     // This is going to be our update loop
@@ -183,7 +168,6 @@ for (var i = 0; i < 5; i++) {
     WriteLine($"{stopwatch.Elapsed.TotalSeconds:F1}s: {computed}, Value = {computed.Value}");
 }
 ```
-<sup><a href='/Part01.cs#L123-L140' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part01_Reactive_Updates' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 #### [Next: Part 02 &raquo;](./Part02.md) | [Documentation Home](./README.md) 
