@@ -1,13 +1,13 @@
 {
   "name": "docs",
   "version": "1.0.0",
-  "description": "Fusion documentation.",
+  "description": "ActualLab.Fusion Documentation",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "docs:dev": "vitepress dev tutorial",
-    "docs:build": "vitepress build tutorial",
-    "docs:preview": "vitepress preview tutorial"
+    "docs:dev": "vitepress dev .",
+    "docs:build": "vitepress build .",
+    "docs:preview": "vitepress preview ."
   },
   "author": "",
   "license": "MIT",

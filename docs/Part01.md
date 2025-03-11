@@ -126,5 +126,24 @@ WriteLine(computedForSumAB.IsConsistent()); // False
 WriteLine(computedForSumAB.Value); // 2
 ```
 
-#### [Next: Part 02 &raquo;](./Fusion02.md) | [Documentation Home](./README.md) 
+### 6. Reactive update on invalidation
 
+```csharp
+_ = Task.Run(async () => {
+    // This is going to be our update loop
+    for (var i = 0; i <= 5; i++) {
+        await Task.Delay(1000);
+        counters.Increment("a");
+    }
+});
+
+var computed = await Computed.Capture(() => counters.Sum("a", "b")));
+WriteLine($"{DateTime.Now}: {computed.Value}");
+for (var i = 0; i < 5; i++) {
+    await computed.WhenInvalidated();
+    computed = await computed.Update();
+    WriteLine($"{DateTime.Now}: {computed.Value}");
+}
+```
+
+#### [Next: Part 02 &raquo;](./Part02.md) | [Documentation Home](./README.md) 

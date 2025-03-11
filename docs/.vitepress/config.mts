@@ -2,23 +2,35 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  lang: 'en-US',
   title: "ActualLab.Fusion Documentation",
   description: "Fusion is a reactive framework for building scalable, real-time applications. This site hosts Fusion documentation.",
-  srcExclude: ['mdsource/**'],
-  ignoreDeadLinks: true,
+  srcExclude: [
+    'code', 
+    'diagrams', 
+    'img*',
+    'mdsource',
+    'node-modules',
+    'outdated', 
+    'performance-test-results', 
+    'tables', 
+    'to-be-used', 
+    'tutorial', 
+  ],
+  ignoreDeadLinks: false,
   themeConfig: {
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Tutorial', link: '/README' }
+      { text: 'Documentation', link: '/README' }
     ],
     sidebar: [
       {
-        text: 'Tutorial',
+        text: 'Documentation',
         items: [
           { text: 'QuickStart', link: '/QuickStart' },
           { text: 'Part 0: NuGet packages', link: '/Part00' },
-          { text: 'Part 1: Compute Services', link: '/Part01' },
-          { text: 'Part 2: Computed Values: Computed<T>', link: '/Part02' },
+          { text: 'Part 1: Core Concepts', link: '/Part01' },
+          /*
           { text: 'Part 3: State: IState<T> and Its Flavors', link: '/Part03' },
           { text: 'Part 4: Compute Service Clients', link: '/Part04' },
           { text: 'Part 5: Fusion on Server-Side Only', link: '/Part05' },
@@ -30,7 +42,7 @@ export default defineConfig({
           { text: 'Part 11: Authentication in Fusion', link: '/Part11' },
           { text: 'Part 12: ActualLab.Rpc in Fusion 6.1+', link: '/Part12' },
           { text: 'Part 13: Migration to Fusion 6.1+', link: '/Part13' },
-          { text: 'Epilogue', link: '/PartFF' }
+          */
         ]
       }
     ],

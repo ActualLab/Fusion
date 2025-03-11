@@ -30,7 +30,7 @@ Yes, you can use it to implement the same real-time update logic there.
 The only difference here is that you don't need API controllers supporting
 Fusion publication in this case, i.e. your models might depend right on the 
 *server-side compute services* (that's an abstraction you primarily deal with, 
-that "hides" all the complexities of dealing with `IComputed` 
+that "hides" all the complexities of dealing with `Computed<T>` 
 and does it transparently for you).
 
 > Q: Can I use Fusion *without* Blazor at all?
@@ -46,7 +46,7 @@ you still need a counterpart in Blazor that e.g. exports the "live state"
 maintained by Fusion to the JavaScript part of the app after every update.
 
 There is a good chance we (or someone else) will develop a native 
-JavaScript client for Fusion in future.
+JavaScript client for Fusion in the future.
 
 > Q: Are there any benefits of using Fusion on server-side only?
 

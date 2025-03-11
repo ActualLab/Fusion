@@ -152,4 +152,4 @@ computed.Invalidated += c => Console.WriteLine("Invalidated!");
 
 To be continued.
 
-#### [&gt; Back to Tutorial](./README.md) | [Documentation Home](../index.md)
+#### [&gt; Back to Tutorial](./README.md) | [Documentation Home](./)
