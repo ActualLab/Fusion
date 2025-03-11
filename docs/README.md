@@ -61,13 +61,12 @@ to build and run everything.
 ## Credits
 
 Indirect contributors & everyone else who made Fusion possible:
-- [ServiceTitan](https://www.servicetitan.com/) &ndash; Fusion was originally created there. 
-- [Quora](https://www.quora.com/) — a huge part of the inspiration for Fusion was Quora's LiveNode framework
+- [ServiceTitan](https://www.servicetitan.com) &ndash; Fusion was originally created there. 
+- [Quora](https://www.quora.com) — a huge part of the inspiration for Fusion was Quora's LiveNode framework
 - [Microsoft](https://microsoft.com) &ndash; for .NET Core and Blazor.
 
 
 [Fusion]: https://github.com/ActualLab/Fusion
 [Fusion Place]: https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo
 [Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6
-[Docker]: https://www.docker.com/
 [Fusion Samples]: https://github.com/ActualLab/Fusion.Samples
