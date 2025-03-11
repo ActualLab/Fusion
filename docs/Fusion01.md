@@ -10,9 +10,7 @@ Fusion is built around three key abstractions:
 
 ## Your First Compute Service
 
-Here's a simple counter service that demonstrates Fusion's basic capabilities:
-
-```csharp
+Here's a simple counter service that demonstrates Fusion's basic capabilities:```csharp
 public class CounterService : IComputeService // This is a tagging interface any compute service must "implement"
 {
     private readonly ConcurrentDictionary<string, int> _counters = new();
@@ -128,17 +126,5 @@ WriteLine(computedForSumAB.IsConsistent()); // False
 WriteLine(computedForSumAB.Value); // 2
 ```
 
-## What's Next?
+#### [Next: Part 02 &raquo;](./Fusion02.md) | [Documentation Home](./README.md) 
 
-- Learn about real-time UI updates with Fusion
-- Explore distributed caching capabilities
-- Understand dependency tracking in depth
-- Work with Fusion in Blazor applications
-
-## Sample Projects
-
-Check out our samples to see Fusion in action:
-- [Caching Sample](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Caching)
-- [Blazor Sample](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Blazor)
-
-#### [Next: Fusion 02 &raquo;](./Fusion02.md) | [Tutorial Home](./README.md) 
