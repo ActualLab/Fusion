@@ -48,7 +48,7 @@ public static class Part01
         var fusion = services.AddFusion(); // You can also use services.AddFusion(fusion => ...) pattern
         fusion.AddComputeService<CounterService>();
         var sp = services.BuildServiceProvider();
-        
+
         // And that's how we get our first compute service:
         var counters = sp.GetRequiredService<CounterService>();
         #endregion
@@ -57,14 +57,13 @@ public static class Part01
         #region Part01_Automatic_Caching
         await counters.Get("a"); // Prints: Get(a) = 0
         await counters.Get("a"); // Prints nothing -- it's a cache hit; the result is 0
-        await counters.Get("b"); // Prints: Get(b) = 0
-        await counters.Get("b"); // Prints nothing -- it's a cache hit; the result is 0
         #endregion
 
         WriteLine($"{Environment.NewLine}Automatic Dependency Tracking:");
         #region Part01_Automatic_Dependency_Tracking
-        await counters.Sum("a", "b"); // Prints: Sum(a, b) = 0
+        await counters.Sum("a", "b"); // Prints: Get(b) = 0, Sum(a, b) = 0 -- Get(b) was called from Sum(a, b)
         await counters.Sum("a", "b"); // Prints nothing -- it's a cache hit; the result is 0
+        await counters.Get("b");      // Prints nothing -- it's a cache hit; the result is 0
         #endregion
 
         WriteLine($"{Environment.NewLine}Invalidation:");

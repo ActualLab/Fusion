@@ -72,8 +72,6 @@ Let's look at how `CounterService` behavior differs from what you'd expect:
 ```cs
 await counters.Get("a"); // Prints: Get(a) = 0
 await counters.Get("a"); // Prints nothing -- it's a cache hit; the result is 0
-await counters.Get("b"); // Prints: Get(b) = 0
-await counters.Get("b"); // Prints nothing -- it's a cache hit; the result is 0
 ```
 <!-- endSnippet -->
 
@@ -81,8 +79,9 @@ await counters.Get("b"); // Prints nothing -- it's a cache hit; the result is 0
 
 <!-- snippet: Part01_Automatic_Dependency_Tracking -->
 ```cs
-await counters.Sum("a", "b"); // Prints: Sum(a, b) = 0
+await counters.Sum("a", "b"); // Prints: Get(b) = 0, Sum(a, b) = 0 -- Get(b) was called from Sum(a, b)
 await counters.Sum("a", "b"); // Prints nothing -- it's a cache hit; the result is 0
+await counters.Get("b");      // Prints nothing -- it's a cache hit; the result is 0
 ```
 <!-- endSnippet -->
 
