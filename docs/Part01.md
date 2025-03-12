@@ -329,6 +329,7 @@ WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}
 var stateFactory = sp.StateFactory();
 var clock = Stopwatch.StartNew();
 
+// We'll use this state as a dependency for the computed state
 var mutableState = stateFactory.NewMutable("x");
 
 // ComputedState<T> instances must be disposed, otherwise they'll never stop recomputing!
