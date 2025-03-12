@@ -322,20 +322,22 @@ WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}
 
 ## Computed State
 
-`ComputedState<T>` is also fairly easy to use:
+`ComputedState<T>` is slightly more complex:
 
 <!-- snippet: Part01_ComputedState -->
 ```cs
 var stateFactory = sp.StateFactory();
 var clock = Stopwatch.StartNew();
 
+var mutableState = stateFactory.NewMutable("x");
+
 // ComputedState<T> instances must be disposed, otherwise they'll never stop recomputing!
-using var state = stateFactory.NewComputed(
+using var computedState = stateFactory.NewComputed(
     new ComputedState<string>.Options() {
         InitialValue = "<initial>",
         UpdateDelayer = FixedDelayer.Get(1), // 1 second update delay
-        // You can attach event handlers later as well, EventConfigurator allows to set them up
-        // right on construction, i.e. before any of these events can occur.
+        // You can attach event handlers later as well. EventConfigurator allows setting them up
+        // right on construction, i.e., before any of these events can occur.
         EventConfigurator = state => {
             // A shortcut to attach 3 event handlers: Invalidated, Updating, Updated
             state.AddEventHandler(
@@ -343,30 +345,39 @@ using var state = stateFactory.NewComputed(
                 (s, e) => WriteLine($"{clock.Elapsed:g}s: {e}, Value: {s.Value}, Computed: {s.Computed}"));
         },
     },
+    // This lambda describes how the computed state gets computed - in fact, it's a compute method
     async (state, cancellationToken) => {
-        await Task.Delay(100); // We intentionally delay the computation here to show how initial value works
+        // We intentionally delay the computation here to show how initial value works
+        await Task.Delay(100, cancellationToken);
         var counter = await counters.Get("a");
-        return $"counters.Get(a) -> {counter}";
+        // state.Use() is required to track the state usage inside a compute method
+        var mutableValue = await mutableState.Use(cancellationToken);
+        return $"({counter}, {mutableValue})";
     });
 
-WriteLine($"{clock.Elapsed:g}s: State is created, Value: {state.Value}, Computed: {state.Computed}");
-await state.Update(); // This ensures the very first value is computed
-WriteLine($"{clock.Elapsed:g}s: State is updated, Value: {state.Value}, Computed: {state.Computed}");
+WriteLine($"{clock.Elapsed:g}s: CREATED, Value: {computedState.Value}, Computed: {computedState.Computed}");
+await computedState.Update(); // This ensures the very first value is computed
+WriteLine($"{clock.Elapsed:g}s: UPDATED, Value: {computedState.Value}, Computed: {computedState.Computed}");
 
 counters.Increment("a");
 await Task.Delay(2000);
+mutableState.Value = "y";
+await Task.Delay(2000);
 
 /* The output:
-0:00:00.0074207s: Invalidated, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.10u, State: Invalidated)
-0:00:00.0118151s: Updating, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.10u, State: Invalidated)
-0:00:00.0149848s: State is created, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.10u, State: Invalidated)
-0:00:00.115031s: Updated, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Consistent)
-0:00:00.1157417s: State is updated, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Consistent)
+0:00:00.0080204s: Invalidated, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)
+0:00:00.0126295s: Updating, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)
+0:00:00.0161148s: CREATED, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)
+0:00:00.1297889s: Updated, Value: (6, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.10t, State: Consistent)
+0:00:00.1305231s: UPDATED, Value: (6, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.10t, State: Consistent)
 Increment(a)
-0:00:00.116053s: Invalidated, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Invalidated)
-0:00:01.1264099s: Updating, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Invalidated)
+0:00:00.130874s: Invalidated, Value: (6, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.10t, State: Invalidated)
+0:00:01.1392269s: Updating, Value: (6, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.10t, State: Invalidated)
 Get(a) = 7
-0:00:01.2353011s: Updated, Value: counters.Get(a) -> 7, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.d5, State: Consistent)
+0:00:01.2481635s: Updated, Value: (7, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.14t, State: Consistent)
+0:00:02.1347489s: Invalidated, Value: (7, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.14t, State: Invalidated)
+0:00:03.1433923s: Updating, Value: (7, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.14t, State: Invalidated)
+0:00:03.2524918s: Updated, Value: (7, y), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.gq, State: Consistent)
 */
 ```
 <!-- endSnippet -->
