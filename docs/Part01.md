@@ -227,31 +227,13 @@ for (var i = 0; i <= 3; i++) {
 
 ## `State<T>` and its variants
 
-Computed state, or simply a "state", is the last missing piece of a puzzle. 
+State is the last missing piece of a puzzle. 
 If you are familiar with [Knockout.js](https://knockoutjs.com/) 
 or [MobX](https://mobx.js.org/), state would correspond
 to their versions of "computed observables". 
 
 Every state tracks the most recent version of some `Computed<T>`.
 That's why states are so useful for reactive updates.
-
-There are two implementations of `State<T>`:
-- `MutableState<T>` is, in fact, a variable with a `Computed<T>` envelope.
-  Its `Computed` property returns an always-consistent computed, which gets
-  replaced once the `MutableState.Value` (or `Error`, etc.) is set;
-  the old computed gets invalidated.
-  If you have such a state, you can use it in one of the compute methods
-  to make its output dependent on it, or similarly use it in other
-  computed states. But describing client-side state of UI components (e.g.
-  a value entered into a search box) is its most frequent use case.
-- `ComputedState<T>` is a state that triggers its own update after a certain delay following invalidation.
-  The delay is just a `Task` provided by `IUpdateDelayer` bound to this state,
-  so it can vary from state to state, from time to time, or even end instantly
-  when e.g. a user action happens - to make every state instantly reflect the change.
-
-Here is a brief description of key differences between these two states:
-
-![](./diagrams/state/states-table.dio.svg)
 
 Any `State<T>`:
 - Has `Computed` property, which points to the most recent version of `Computed<T>` it tracks.
@@ -275,6 +257,28 @@ Any `State<T>`:
   by forwarding all calls to its `Computed` property.
 - Similar to `IEnumerable<T>` \ `IEnumerable`, there are typed
   and untyped versions of any `IState` interface.
+
+There are two implementations of `State<T>`:
+1. `MutableState<T>` is a mutable value (variable) in `Computed<T>` envelope.
+  Its `Computed` property returns an always-consistent computed, which gets
+  replaced once the `MutableState.Value` (or `Error`, etc.) is set;
+  the old computed gets invalidated.
+  You can use mutable states in compute methods or computed states -
+  since any state tracks some `Computed<T>`, it can be a dependency 
+  of another computed value.
+  Typically such states are used to describe the client-side state 
+  of certain UI elements (e.g. a value entered into a search box).
+1. `ComputedState<T>` is, in fact, a compute method and an update loop that
+  triggers the recomputation after a certain delay following invalidation.
+  The delay is just a `Task` provided by `IUpdateDelayer` bound to this state,
+  so it can vary from state to state, from time to time, or even end instantly
+  when, for example, a user action occurs - to make every state instantly reflect the change.
+
+`ComputedState<T>` powers the UI updates in Fusion+Blazor apps. It is used by `ComputedStateComponent<T>`, a Blazor component that automatically re-renders when changes occur in its computed state.
+
+Here is a brief description of key differences between these two states:
+
+![](./diagrams/state/states-table.dio.svg)
 
 ### Constructing States
 
@@ -322,7 +326,7 @@ WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}
 
 ## Computed State
 
-`ComputedState<T>` is slightly more complex:
+Here is an example showing `ComputedState<T>` and `MutableState<T>` can do together:
 
 <!-- snippet: Part01_ComputedState -->
 ```cs
@@ -346,7 +350,7 @@ using var computedState = stateFactory.NewComputed(
                 (s, e) => WriteLine($"{clock.Elapsed:g}s: {e}, Value: {s.Value}, Computed: {s.Computed}"));
         },
     },
-    // This lambda describes how the computed state gets computed - in fact, it's a compute method
+    // This lambda describes how the computed state is computed - essentially, it's a compute method written as a lambda.
     async (state, cancellationToken) => {
         // We intentionally delay the computation here to show how initial value works
         await Task.Delay(100, cancellationToken);
