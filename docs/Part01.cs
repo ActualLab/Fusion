@@ -193,6 +193,7 @@ public static class Part01
 
         {
             WriteLine($"{Environment.NewLine}ComputedState:");
+            #region Part01_ComputedState
             var stateFactory = sp.StateFactory();
             var clock = Stopwatch.StartNew();
 
@@ -235,6 +236,7 @@ public static class Part01
             Get(a) = 7
             0:00:01.2353011s: Updated, Value: counters.Get(a) -> 7, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.d5, State: Consistent)
             */
+            #endregion
         }
     }
 }

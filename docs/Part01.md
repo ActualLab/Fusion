@@ -208,19 +208,19 @@ Now we are ready to write a basic reactive update loop:
 ```cs
 _ = Task.Run(async () => {
     // This is going to be our update loop
-    for (var i = 0; i <= 5; i++) {
+    for (var i = 0; i <= 3; i++) {
         await Task.Delay(1000);
         counters.Increment("a");
     }
 });
 
-var stopwatch = Stopwatch.StartNew();
+var clock = Stopwatch.StartNew();
 var computed = await Computed.Capture(() => counters.Sum("a", "b"));
-WriteLine($"{stopwatch.Elapsed.TotalSeconds:F1}s: {computed}, Value = {computed.Value}");
-for (var i = 0; i < 5; i++) {
+WriteLine($"{clock.Elapsed:g}s: {computed}, Value = {computed.Value}");
+for (var i = 0; i <= 3; i++) {
     await computed.WhenInvalidated();
     computed = await computed.Update();
-    WriteLine($"{stopwatch.Elapsed.TotalSeconds:F1}s: {computed}, Value = {computed.Value}");
+    WriteLine($"{clock.Elapsed:g}s: {computed}, Value = {computed.Value}");
 }
 ```
 <!-- endSnippet -->
@@ -324,6 +324,51 @@ WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}
 
 `ComputedState<T>` is also fairly easy to use:
 
-snippet: Part03_ComputedState
+<!-- snippet: Part01_ComputedState -->
+```cs
+var stateFactory = sp.StateFactory();
+var clock = Stopwatch.StartNew();
+
+// ComputedState<T> instances must be disposed, otherwise they'll never stop recomputing!
+using var state = stateFactory.NewComputed(
+    new ComputedState<string>.Options() {
+        InitialValue = "<initial>",
+        UpdateDelayer = FixedDelayer.Get(1), // 1 second update delay
+        // You can attach event handlers later as well, EventConfigurator allows to set them up
+        // right on construction, i.e. before any of these events can occur.
+        EventConfigurator = state => {
+            // A shortcut to attach 3 event handlers: Invalidated, Updating, Updated
+            state.AddEventHandler(
+                StateEventKind.All,
+                (s, e) => WriteLine($"{clock.Elapsed:g}s: {e}, Value: {s.Value}, Computed: {s.Computed}"));
+        },
+    },
+    async (state, cancellationToken) => {
+        await Task.Delay(100); // We intentionally delay the computation here to show how initial value works
+        var counter = await counters.Get("a");
+        return $"counters.Get(a) -> {counter}";
+    });
+
+WriteLine($"{clock.Elapsed:g}s: State is created, Value: {state.Value}, Computed: {state.Computed}");
+await state.Update(); // This ensures the very first value is computed
+WriteLine($"{clock.Elapsed:g}s: State is updated, Value: {state.Value}, Computed: {state.Computed}");
+
+counters.Increment("a");
+await Task.Delay(2000);
+
+/* The output:
+0:00:00.0074207s: Invalidated, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.10u, State: Invalidated)
+0:00:00.0118151s: Updating, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.10u, State: Invalidated)
+0:00:00.0149848s: State is created, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.10u, State: Invalidated)
+0:00:00.115031s: Updated, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Consistent)
+0:00:00.1157417s: State is updated, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Consistent)
+Increment(a)
+0:00:00.116053s: Invalidated, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Invalidated)
+0:00:01.1264099s: Updating, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Invalidated)
+Get(a) = 7
+0:00:01.2353011s: Updated, Value: counters.Get(a) -> 7, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.d5, State: Consistent)
+*/
+```
+<!-- endSnippet -->
 
 #### [Next: Part 02 &raquo;](./Part02.md) | [Documentation Home](./README.md) 
