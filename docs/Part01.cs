@@ -142,19 +142,19 @@ public static class Part01
             #region Part01_Reactive_Updates
             _ = Task.Run(async () => {
                 // This is going to be our update loop
-                for (var i = 0; i <= 5; i++) {
+                for (var i = 0; i <= 3; i++) {
                     await Task.Delay(1000);
                     counters.Increment("a");
                 }
             });
 
-            var stopwatch = Stopwatch.StartNew();
+            var clock = Stopwatch.StartNew();
             var computed = await Computed.Capture(() => counters.Sum("a", "b"));
-            WriteLine($"{stopwatch.Elapsed.TotalSeconds:F1}s: {computed}, Value = {computed.Value}");
-            for (var i = 0; i < 5; i++) {
+            WriteLine($"{clock.Elapsed:g}s: {computed}, Value = {computed.Value}");
+            for (var i = 0; i <= 3; i++) {
                 await computed.WhenInvalidated();
                 computed = await computed.Update();
-                WriteLine($"{stopwatch.Elapsed.TotalSeconds:F1}s: {computed}, Value = {computed.Value}");
+                WriteLine($"{clock.Elapsed:g}s: {computed}, Value = {computed.Value}");
             }
             #endregion
         }
@@ -167,15 +167,74 @@ public static class Part01
             var oldComputed = state.Computed;
 
             WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
-            // Value: 1, Computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=38350642 v.155, State: Consistent)
+            // Value: 1, Computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=39252654 v.d2, State: Consistent)
 
             state.Value = 2;
             WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
-            // Value: 2, Computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=38350642 v.195, State: Consistent)
+            // Value: 2, Computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=39252654 v.h2, State: Consistent)
 
             WriteLine($"Old computed: {oldComputed}"); // Should be invalidated
-            // Old computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=38350642 v.155, State: Invalidated)
+            // Old computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=39252654 v.d2, State: Invalidated)
+
+            state.Error = new ApplicationException("Just a test");
+            try {
+                WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
+                // Accessing state.Value throws ApplicationException
+            }
+            catch (ApplicationException) {
+                WriteLine($"Error: {state.Error.GetType()}, Computed: {state.Computed}");
+            }
+            WriteLine($"LastNonErrorValue: {state.LastNonErrorValue}");
+            // LastNonErrorValue: 2
+            WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}");
+            // Snapshot.LastNonErrorComputed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=39252654 v.h2, State: Invalidated)
             #endregion
+        }
+
+        {
+            WriteLine($"{Environment.NewLine}ComputedState:");
+            var stateFactory = sp.StateFactory();
+            var clock = Stopwatch.StartNew();
+
+            // ComputedState<T> instances must be disposed, otherwise they'll never stop recomputing!
+            using var state = stateFactory.NewComputed(
+                new ComputedState<string>.Options() {
+                    InitialValue = "<initial>",
+                    UpdateDelayer = FixedDelayer.Get(1), // 1 second update delay
+                    // You can attach event handlers later as well, EventConfigurator allows to set them up
+                    // right on construction, i.e. before any of these events can occur.
+                    EventConfigurator = state => {
+                        // A shortcut to attach 3 event handlers: Invalidated, Updating, Updated
+                        state.AddEventHandler(
+                            StateEventKind.All,
+                            (s, e) => WriteLine($"{clock.Elapsed:g}s: {e}, Value: {s.Value}, Computed: {s.Computed}"));
+                    },
+                },
+                async (state, cancellationToken) => {
+                    await Task.Delay(100); // We intentionally delay the computation here to show how initial value works
+                    var counter = await counters.Get("a");
+                    return $"counters.Get(a) -> {counter}";
+                });
+
+            WriteLine($"{clock.Elapsed:g}s: State is created, Value: {state.Value}, Computed: {state.Computed}");
+            await state.Update(); // This ensures the very first value is computed
+            WriteLine($"{clock.Elapsed:g}s: State is updated, Value: {state.Value}, Computed: {state.Computed}");
+
+            counters.Increment("a");
+            await Task.Delay(2000);
+
+            /* The output:
+            0:00:00.0074207s: Invalidated, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.10u, State: Invalidated)
+            0:00:00.0118151s: Updating, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.10u, State: Invalidated)
+            0:00:00.0149848s: State is created, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.10u, State: Invalidated)
+            0:00:00.115031s: Updated, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Consistent)
+            0:00:00.1157417s: State is updated, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Consistent)
+            Increment(a)
+            0:00:00.116053s: Invalidated, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Invalidated)
+            0:00:01.1264099s: Updating, Value: counters.Get(a) -> 6, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.14u, State: Invalidated)
+            Get(a) = 7
+            0:00:01.2353011s: Updated, Value: counters.Get(a) -> 7, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=55733920 v.d5, State: Consistent)
+            */
         }
     }
 }
