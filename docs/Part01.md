@@ -372,7 +372,7 @@ await Task.Delay(2000);
 0:00:00.1297889s: Updated, Value: (6, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.10t, State: Consistent)
 0:00:00.1305231s: UPDATED, Value: (6, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.10t, State: Consistent)
 Increment(a)
-0:00:00.130874s: Invalidated, Value: (6, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.10t, State: Invalidated)
+0:00:00.1308741s: Invalidated, Value: (6, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.10t, State: Invalidated)
 0:00:01.1392269s: Updating, Value: (6, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.10t, State: Invalidated)
 Get(a) = 7
 0:00:01.2481635s: Updated, Value: (7, x), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.14t, State: Consistent)
