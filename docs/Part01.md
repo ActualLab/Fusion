@@ -153,6 +153,13 @@ await counters.Sum("b", "a"); // Prints: Sum(b, a) = 2 -- Get(b) and Get(a) resu
 You already know that compute methods produce computed values (`Computed<T>` instances) 
 behind the scenes.
 
+Computed values follow a simple lifecycle: 
+- They start as mutable objects in the `Computing` state while being computed; you can observe a `Computed<T>` in this state by calling `Computed.GetCurrent()` inside a compute method
+- Once the computation ends, they become `Consistent` and immutable
+- Finally, they may eventually turn `Inconsistent`.
+ 
+At any given time, there can be only one `Consistent` version of a computed value that corresponds to a certain computation, even though older `Inconsistent` versions may still reside in memory.
+
 Let's pull a `Computed<T>` instance that is associated with a given call and play with it:
 
 <!-- snippet: Part01_Accessing_Computed_Values -->
@@ -193,7 +200,7 @@ WriteLine(computedForSumAB.Value); // 2
 ```
 <!-- endSnippet -->
 
-## Reactive Updates on Invalidation
+### Reactive Updates on Invalidation
 
 Now we are ready to write a basic reactive update loop:
 
@@ -217,5 +224,88 @@ for (var i = 0; i < 5; i++) {
 }
 ```
 <!-- endSnippet -->
+
+## `State<T>` and its variants
+
+Computed state, or simply a "state", is the last missing piece of a puzzle. 
+If you are familiar with [Knockout.js](https://knockoutjs.com/) 
+or [MobX](https://mobx.js.org/), state would correspond
+to their versions of "computed observables". 
+
+Every state tracks the most recent version of some `Computed<T>`.
+That's why states are so useful for reactive updates.
+
+There are two implementations of `State<T>`:
+- `MutableState<T>` is, in fact, a variable with a `Computed<T>` envelope.
+  Its `Computed` property returns an always-consistent computed, which gets
+  replaced once the `MutableState.Value` (or `Error`, etc.) is set;
+  the old computed gets invalidated.
+  If you have such a state, you can use it in one of the compute methods
+  to make its output dependent on it, or similarly use it in other
+  computed states. But describing client-side state of UI components (e.g.
+  a value entered into a search box) is its most frequent use case.
+- `ComputedState<T>` is a state that triggers its own update after a certain delay following invalidation.
+  The delay is just a `Task` provided by `IUpdateDelayer` bound to this state,
+  so it can vary from state to state, from time to time, or even end instantly
+  when e.g. a user action happens - to make every state instantly reflect the change.
+
+Here is a brief description of key differences between these two states:
+
+![](./diagrams/state/states-table.dio.svg)
+
+Any `State<T>`:
+- Has `Computed` property, which points to the most recent version of `Computed<T>` it tracks.
+- Has a `Snapshot` property of `StateSnapshot<T>` type.
+  This property is updated atomically and returns an immutable object describing the current "state" of the `State<T>`. If you
+  ever need a "consistent" view of the state, `Snapshot` is
+  the way to get it. A good example of where you'd need it is
+  this one:
+  - You read `state.HasValue` first, it returns `true`
+  - But a subsequent attempt to read `state.Value` fails because
+    the state was updated right between these two reads.
+- Both `State<T>` and `StateSnapshot<T>` expose
+  `LastNonErrorValue` and `LastNonErrorComputed` properties - these
+  allow access to the last valid `Value` and its `Computed<T>`
+  exposed by the state. In other words, when a state exposes
+  an `Error`, `LastNonErrorValue` still exposes the previous `Value`.
+  This feature is quite handy when you need to access both
+  the last "correct" value (to e.g. bind it to the UI)
+  and the newly observed `Error` (to display it separately).
+- Similar to `Computed<T>`, any state implements `IResult<T>`
+  by forwarding all calls to its `Computed` property.
+- Similar to `IEnumerable<T>` \ `IEnumerable`, there are typed
+  and untyped versions of any `IState` interface.
+
+### Constructing States
+
+States are constructed using `StateFactory` - one of the singletons that
+`.AddFusion()` injects into `IServiceProvider`.
+
+There is also `StateFactory.Default`, which is intended to be used
+mainly in tests. Unless you set it to a specific state factory,
+it will use its own "minimal" service provider.
+
+### Mutable State
+
+Let's play with `MutableState<int>`:
+
+<!-- snippet: Part01_MutableState -->
+```cs
+var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<IStateFactory>()
+var state = stateFactory.NewMutable(1);
+var oldComputed = state.Computed;
+
+WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
+// Value: 1, Computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=38350642 v.155, State: Consistent)
+
+state.Value = 2;
+WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
+// Value: 2, Computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=38350642 v.195, State: Consistent)
+
+WriteLine($"Old computed: {oldComputed}"); // Should be invalidated
+// Old computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=38350642 v.155, State: Invalidated)
+```
+<!-- endSnippet -->
+
 
 #### [Next: Part 02 &raquo;](./Part02.md) | [Documentation Home](./README.md) 

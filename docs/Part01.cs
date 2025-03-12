@@ -53,100 +53,129 @@ public static class Part01
         var counters = sp.GetRequiredService<CounterService>();
         #endregion
 
-        WriteLine("Automatic Caching:");
-        #region Part01_Automatic_Caching
-        await counters.Get("a"); // Prints: Get(a) = 0
-        await counters.Get("a"); // Prints nothing -- it's a cache hit; the result is 0
-        #endregion
-
-        WriteLine($"{Environment.NewLine}Automatic Dependency Tracking:");
-        #region Part01_Automatic_Dependency_Tracking
-        await counters.Sum("a", "b"); // Prints: Get(b) = 0, Sum(a, b) = 0 -- Get(b) was called from Sum(a, b)
-        await counters.Sum("a", "b"); // Prints nothing -- it's a cache hit; the result is 0
-        await counters.Get("b");      // Prints nothing -- it's a cache hit; the result is 0
-        #endregion
-
-        WriteLine($"{Environment.NewLine}Invalidation:");
-        #region Part01_Invalidation
-        counters.Increment("a"); // Prints: Increment(a) + invalidates Get(a) call result
-        await counters.Get("a"); // Prints: Get(a) = 1
-        await counters.Get("b"); // Prints nothing -- Get(b) call wasn't invalidated, so it's a cache hit
-        #endregion
-
-        WriteLine($"{Environment.NewLine}Cascading Invalidation:");
-        #region Part01_Cascading_Invalidation
-        counters.Increment("a"); // Prints: Increment(a)
-
-        // Increment(a) invalidated Get(a), but since invalidations are cascading,
-        // and Sum(a, b) depends on Get(a), it's also invalidated.
-        // That's why Sum(a, b) is going to be recomputed on the next call, as well as Get(a),
-        // which is called by Sum(a, b).
-        await counters.Sum("a", "b"); // Prints: Get(a) = 2, Sum(a, b) = 2
-        await counters.Sum("a", "b"); // Prints nothing - it's a cache hit; the result is 0
-
-        // Even though we expect Sum(a, b) == Sum(b, a), Fusion doesn't know that.
-        // Remember, "cache key" for any compute method call is (service, method, args...),
-        // and arguments are different in this case: (a, b) != (b, a).
-        // So Fusion will have to compute Sum(b, a) from scratch.
-        // But note that Get(a) and Get(b) calls it makes are still resolved from cache.
-        await counters.Sum("b", "a"); // Prints: Sum(b, a) = 2 -- Get(b) and Get(a) results are already cached
-        #endregion
-
-        WriteLine($"{Environment.NewLine}Accessing Computed Values:");
-        #region Part01_Accessing_Computed_Values
-        var computedForGetA = await Computed.Capture(() => counters.Get("a"));
-        WriteLine(computedForGetA.IsConsistent()); // True
-        WriteLine(computedForGetA.Value);          // 2
-
-        var computedForSumAB = await Computed.Capture(() => counters.Sum("a", "b"));
-        WriteLine(computedForSumAB.IsConsistent()); // True
-        WriteLine(computedForSumAB.Value);          // 2
-
-        // Adding invalidation handler; you can also use WhenInvalidated
-        computedForSumAB.Invalidated += _ => WriteLine("Sum(a, b) is invalidated");
-
-        // Manually invalidate computedForGetA, i.e. the result of counters.Get("a") call
-        computedForGetA.Invalidate(); // Prints: Sum(a, b) is invalidated
-        WriteLine(computedForGetA.IsConsistent());  // False
-        WriteLine(computedForSumAB.IsConsistent()); // False - invalidation is always cascading
-
-        // Manually update computedForSumAB
-        var newComputedForSumAB = await computedForSumAB.Update();
-        // Prints:
-        // Get(a) = 2 - we invalidated it, so it was of Sum(a, b)
-        // Sum(a, b) = 2 - .Update() call above actually triggered this call
-
-        WriteLine(newComputedForSumAB.IsConsistent()); // True
-        WriteLine(newComputedForSumAB.Value); // 2
-
-        // Calling .Update() for consistent Computed<T> returns the same instance
-        WriteLine(computedForSumAB == newComputedForSumAB); // False
-        WriteLine(newComputedForSumAB == await computedForSumAB.Update()); // True
-
-        // Since `Computed<T>` are almost immutable,
-        // the outdated computed instance is still usable:
-        WriteLine(computedForSumAB.IsConsistent()); // False
-        WriteLine(computedForSumAB.Value); // 2
-        #endregion
-
-        WriteLine($"{Environment.NewLine}Reactive updates:");
-        #region Part01_Reactive_Updates
-        _ = Task.Run(async () => {
-            // This is going to be our update loop
-            for (var i = 0; i <= 5; i++) {
-                await Task.Delay(1000);
-                counters.Increment("a");
-            }
-        });
-
-        var stopwatch = Stopwatch.StartNew();
-        var computed = await Computed.Capture(() => counters.Sum("a", "b"));
-        WriteLine($"{stopwatch.Elapsed.TotalSeconds:F1}s: {computed}, Value = {computed.Value}");
-        for (var i = 0; i < 5; i++) {
-            await computed.WhenInvalidated();
-            computed = await computed.Update();
-            WriteLine($"{stopwatch.Elapsed.TotalSeconds:F1}s: {computed}, Value = {computed.Value}");
+        {
+            WriteLine("Automatic Caching:");
+            #region Part01_Automatic_Caching
+            await counters.Get("a"); // Prints: Get(a) = 0
+            await counters.Get("a"); // Prints nothing -- it's a cache hit; the result is 0
+            #endregion
         }
-        #endregion
+
+        {
+            WriteLine($"{Environment.NewLine}Automatic Dependency Tracking:");
+            #region Part01_Automatic_Dependency_Tracking
+            await counters.Sum("a", "b"); // Prints: Get(b) = 0, Sum(a, b) = 0 -- Get(b) was called from Sum(a, b)
+            await counters.Sum("a", "b"); // Prints nothing -- it's a cache hit; the result is 0
+            await counters.Get("b");      // Prints nothing -- it's a cache hit; the result is 0
+            #endregion
+        }
+
+        {
+            WriteLine($"{Environment.NewLine}Invalidation:");
+            #region Part01_Invalidation
+            counters.Increment("a"); // Prints: Increment(a) + invalidates Get(a) call result
+            await counters.Get("a"); // Prints: Get(a) = 1
+            await counters.Get("b"); // Prints nothing -- Get(b) call wasn't invalidated, so it's a cache hit
+            #endregion
+        }
+
+        {
+            WriteLine($"{Environment.NewLine}Cascading Invalidation:");
+            #region Part01_Cascading_Invalidation
+            counters.Increment("a"); // Prints: Increment(a)
+
+            // Increment(a) invalidated Get(a), but since invalidations are cascading,
+            // and Sum(a, b) depends on Get(a), it's also invalidated.
+            // That's why Sum(a, b) is going to be recomputed on the next call, as well as Get(a),
+            // which is called by Sum(a, b).
+            await counters.Sum("a", "b"); // Prints: Get(a) = 2, Sum(a, b) = 2
+            await counters.Sum("a", "b"); // Prints nothing - it's a cache hit; the result is 0
+
+            // Even though we expect Sum(a, b) == Sum(b, a), Fusion doesn't know that.
+            // Remember, "cache key" for any compute method call is (service, method, args...),
+            // and arguments are different in this case: (a, b) != (b, a).
+            // So Fusion will have to compute Sum(b, a) from scratch.
+            // But note that Get(a) and Get(b) calls it makes are still resolved from cache.
+            await counters.Sum("b", "a"); // Prints: Sum(b, a) = 2 -- Get(b) and Get(a) results are already cached
+            #endregion
+
+            WriteLine($"{Environment.NewLine}Accessing Computed Values:");
+            #region Part01_Accessing_Computed_Values
+            var computedForGetA = await Computed.Capture(() => counters.Get("a"));
+            WriteLine(computedForGetA.IsConsistent()); // True
+            WriteLine(computedForGetA.Value);          // 2
+
+            var computedForSumAB = await Computed.Capture(() => counters.Sum("a", "b"));
+            WriteLine(computedForSumAB.IsConsistent()); // True
+            WriteLine(computedForSumAB.Value);          // 2
+
+            // Adding invalidation handler; you can also use WhenInvalidated
+            computedForSumAB.Invalidated += _ => WriteLine("Sum(a, b) is invalidated");
+
+            // Manually invalidate computedForGetA, i.e. the result of counters.Get("a") call
+            computedForGetA.Invalidate(); // Prints: Sum(a, b) is invalidated
+            WriteLine(computedForGetA.IsConsistent());  // False
+            WriteLine(computedForSumAB.IsConsistent()); // False - invalidation is always cascading
+
+            // Manually update computedForSumAB
+            var newComputedForSumAB = await computedForSumAB.Update();
+            // Prints:
+            // Get(a) = 2 - we invalidated it, so it was of Sum(a, b)
+            // Sum(a, b) = 2 - .Update() call above actually triggered this call
+
+            WriteLine(newComputedForSumAB.IsConsistent()); // True
+            WriteLine(newComputedForSumAB.Value); // 2
+
+            // Calling .Update() for consistent Computed<T> returns the same instance
+            WriteLine(computedForSumAB == newComputedForSumAB); // False
+            WriteLine(newComputedForSumAB == await computedForSumAB.Update()); // True
+
+            // Since `Computed<T>` are almost immutable,
+            // the outdated computed instance is still usable:
+            WriteLine(computedForSumAB.IsConsistent()); // False
+            WriteLine(computedForSumAB.Value); // 2
+            #endregion
+        }
+
+        {
+            WriteLine($"{Environment.NewLine}Reactive updates:");
+            #region Part01_Reactive_Updates
+            _ = Task.Run(async () => {
+                // This is going to be our update loop
+                for (var i = 0; i <= 5; i++) {
+                    await Task.Delay(1000);
+                    counters.Increment("a");
+                }
+            });
+
+            var stopwatch = Stopwatch.StartNew();
+            var computed = await Computed.Capture(() => counters.Sum("a", "b"));
+            WriteLine($"{stopwatch.Elapsed.TotalSeconds:F1}s: {computed}, Value = {computed.Value}");
+            for (var i = 0; i < 5; i++) {
+                await computed.WhenInvalidated();
+                computed = await computed.Update();
+                WriteLine($"{stopwatch.Elapsed.TotalSeconds:F1}s: {computed}, Value = {computed.Value}");
+            }
+            #endregion
+        }
+
+        {
+            WriteLine($"{Environment.NewLine}MutableState:");
+            #region Part01_MutableState
+            var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<IStateFactory>()
+            var state = stateFactory.NewMutable(1);
+            var oldComputed = state.Computed;
+
+            WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
+            // Value: 1, Computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=38350642 v.155, State: Consistent)
+
+            state.Value = 2;
+            WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
+            // Value: 2, Computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=38350642 v.195, State: Consistent)
+
+            WriteLine($"Old computed: {oldComputed}"); // Should be invalidated
+            // Old computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=38350642 v.155, State: Invalidated)
+            #endregion
+        }
     }
 }
