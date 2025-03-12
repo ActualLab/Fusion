@@ -8,7 +8,7 @@ Fusion is built around three key abstractions:
 2. **Compute Services** are services exposing **Computed Methods**. Such methods look very similar to regular methods but produce computed values behind the scenes. You may think of them as "parameterized recipes" for computed values. When you call such a method, it either produces a new `Computed<T>` bound to this specific call (i.e. to the `(service, method, arguments)` triplet) behind the scenes, or pulls the matching one from cache. If the cached value is still consistent (not invalidated yet), the call is resolved without actual computation.
 3. Finally, **Computed States** are objects encapsulating a computed value and its auto-update loop. Any computed value knows how to produce the most up-to-date version, but doesn't do this automatically, and that's intentional. For example, if such a value is used in the UI, in some cases you may want to update it instantly (e.g. if we know the user just performed an action, so we want to show its result immediately), but in many other cases it makes sense to throttle down the update rate. Computed states solve exactly this problem: they combine a computed value and its update policy (`IUpdateDelayer`).
 
-## Your First Compute Service
+## 1. Compute Services and Compute Methods
 
 Here's a simple counter service that demonstrates Fusion's basic capabilities:
 
@@ -148,7 +148,7 @@ await counters.Sum("b", "a"); // Prints: Sum(b, a) = 2 -- Get(b) and Get(a) resu
 ```
 <!-- endSnippet -->
 
-## Computed values
+## 2. Computed Values
 
 You already know that compute methods produce computed values (`Computed<T>` instances) 
 behind the scenes.
@@ -225,7 +225,7 @@ for (var i = 0; i <= 3; i++) {
 ```
 <!-- endSnippet -->
 
-## `State<T>` and its variants
+## 3. `State<T>` and Its Variants
 
 State is the last missing piece of a puzzle. 
 If you are familiar with [Knockout.js](https://knockoutjs.com/) 
@@ -326,7 +326,7 @@ WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}
 
 ## Computed State
 
-Here is an example showing `ComputedState<T>` and `MutableState<T>` can do together:
+Here is an example showing what `ComputedState<T>` and `MutableState<T>` can do together:
 
 <!-- snippet: Part01_ComputedState -->
 ```cs
