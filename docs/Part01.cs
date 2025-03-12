@@ -76,8 +76,19 @@ public static class Part01
         WriteLine($"{Environment.NewLine}Cascading Invalidation:");
         #region Part01_Cascading_Invalidation
         counters.Increment("a"); // Prints: Increment(a)
+
+        // Increment(a) invalidated Get(a), but since invalidations are cascading,
+        // and Sum(a, b) depends on Get(a), it's also invalidated.
+        // That's why Sum(a, b) is going to be recomputed on the next call, as well as Get(a),
+        // which is called by Sum(a, b).
         await counters.Sum("a", "b"); // Prints: Get(a) = 2, Sum(a, b) = 2
         await counters.Sum("a", "b"); // Prints nothing - it's a cache hit; the result is 0
+
+        // Even though we expect Sum(a, b) == Sum(b, a), Fusion doesn't know that.
+        // Remember, "cache key" for any compute method call is (service, method, args...),
+        // and arguments are different in this case: (a, b) != (b, a).
+        // So Fusion will have to compute Sum(b, a) from scratch.
+        // But note that Get(a) and Get(b) calls it makes are still resolved from cache.
         await counters.Sum("b", "a"); // Prints: Sum(b, a) = 2 -- Get(b) and Get(a) results are already cached
         #endregion
 

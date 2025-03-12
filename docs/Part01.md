@@ -64,9 +64,9 @@ var counters = sp.GetRequiredService<CounterService>();
 ```
 <!-- endSnippet -->
 
-Let's look at how `CounterService` behavior differs from what you'd expect:
+Let's see how the behavior of compute methods in `CounterService` differs from the expected one:
 
-### 1. Automatic Caching
+### Automatic Caching
 
 <!-- snippet: Part01_Automatic_Caching -->
 ```cs
@@ -75,7 +75,9 @@ await counters.Get("a"); // Prints nothing -- it's a cache hit; the result is 0
 ```
 <!-- endSnippet -->
 
-### 2. Automatic Dependency Capture
+Moreover, it works even when compute methods call each other. 
+Notice that the `Sum("a", "b")` call here calls `Get("a")`, which gets resolved without an actual computation.
+On the other hand, `Get("b")` gets computed. But once we call it again, it also gets resolved from the cache.
 
 <!-- snippet: Part01_Automatic_Dependency_Tracking -->
 ```cs
@@ -85,7 +87,24 @@ await counters.Get("b");      // Prints nothing -- it's a cache hit; the result 
 ```
 <!-- endSnippet -->
 
-### 3. Invalidation
+### Invalidation
+
+Invalidation means marking a certain computed value as "outdated". 
+If you have a `Computed<T>` instance, you can do this directly.
+But if it's about invalidating a value that corresponds to a certain compute method call,
+you can also do this by making this call inside `using (Invalidation.Begin()) { ... }` block:
+
+```csharp
+using (Invalidation.Begin())  {
+    // Any call to a compute method here:
+    // - Won't execute the body of the compute method
+    // - Will complete synchronously by returning a completed (Value)Task<T> with Result = default(T)
+    // - Will invalidate the cached Computed<T> instance (if it exists) corresponding to the call
+}
+```
+
+And if you look at the code of the `CounterService.Increment` method, that's exactly what happens
+there to invalidate the `Get(key)` call on every increment.
 
 <!-- snippet: Part01_Invalidation -->
 ```cs
@@ -95,18 +114,46 @@ await counters.Get("b"); // Prints nothing -- Get(b) call wasn't invalidated, so
 ```
 <!-- endSnippet -->
 
-### 4. Cascading Invalidation
+### Automatic Dependency Tracking and Cascading Invalidation
+
+We know that when a compute method gets called, it builds or uses an existing `Computed<T>` instance,
+which stores the cached call result and tracks its invalidation. But there is one other thing `Computed<T>` does: it tracks dependencies of a computation that produced this computed value.
+
+Each `Computed<T>` instance knows all other `Computed<T>` instances that were "used" to produce it,
+and vice versa - each computed value can enumerate every other computed value that depends on it, directly or indirectly.
+
+Mathematically speaking, computed values form a Directed Acyclic Graph (DAG) of dependencies between each other. And this graph evolves at runtime:
+- When a compute method gets called, it produces a new node (`Computed<T>` instance) in this graph. The edges of this node point to every other node it "uses"; they're added when the compute method runs - specifically, when it calls other compute methods.
+- When `Computed<T>` gets invalidated, all of its dependencies (i.e. nodes that use it directly or indirectly) get invalidated as well. Any invalidated node is implicitly removed from the graph, because there can be no edges pointing to it.
+
+Let's see all of this in action:
 
 <!-- snippet: Part01_Cascading_Invalidation -->
 ```cs
 counters.Increment("a"); // Prints: Increment(a)
+
+// Increment(a) invalidated Get(a), but since invalidations are cascading,
+// and Sum(a, b) depends on Get(a), it's also invalidated.
+// That's why Sum(a, b) is going to be recomputed on the next call, as well as Get(a),
+// which is called by Sum(a, b).
 await counters.Sum("a", "b"); // Prints: Get(a) = 2, Sum(a, b) = 2
 await counters.Sum("a", "b"); // Prints nothing - it's a cache hit; the result is 0
+
+// Even though we expect Sum(a, b) == Sum(b, a), Fusion doesn't know that.
+// Remember, "cache key" for any compute method call is (service, method, args...),
+// and arguments are different in this case: (a, b) != (b, a).
+// So Fusion will have to compute Sum(b, a) from scratch.
+// But note that Get(a) and Get(b) calls it makes are still resolved from cache.
 await counters.Sum("b", "a"); // Prints: Sum(b, a) = 2 -- Get(b) and Get(a) results are already cached
 ```
 <!-- endSnippet -->
 
-### 5. Capturing `Computed<T>` for a given call and using it
+## Computed values
+
+You already know that compute methods produce computed values (`Computed<T>` instances) 
+behind the scenes.
+
+Let's pull a `Computed<T>` instance that is associated with a given call and play with it:
 
 <!-- snippet: Part01_Accessing_Computed_Values -->
 ```cs
@@ -146,7 +193,9 @@ WriteLine(computedForSumAB.Value); // 2
 ```
 <!-- endSnippet -->
 
-### 6. Reactive update on invalidation
+## Reactive Updates on Invalidation
+
+Now we are ready to write a basic reactive update loop:
 
 <!-- snippet: Part01_Reactive_Updates -->
 ```cs
