@@ -249,6 +249,7 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
     public override CancellationToken GetCancellationToken(int index)
         => index switch {
             0 => Item0 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -539,6 +540,7 @@ public sealed record ArgumentListS1 : ArgumentList1
     public override CancellationToken GetCancellationToken(int index)
         => index switch {
             0 => Item0 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -863,6 +865,7 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
         => index switch {
             0 => Item0 is CancellationToken value ? value : default!,
             1 => Item1 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -1221,6 +1224,7 @@ public sealed record ArgumentListS2 : ArgumentList2
         => index switch {
             0 => Item0 is CancellationToken value ? value : default!,
             1 => Item1 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -1607,6 +1611,7 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
             0 => Item0 is CancellationToken value ? value : default!,
             1 => Item1 is CancellationToken value ? value : default!,
             2 => Item2 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -2032,6 +2037,7 @@ public sealed record ArgumentListS3 : ArgumentList3
             0 => Item0 is CancellationToken value ? value : default!,
             1 => Item1 is CancellationToken value ? value : default!,
             2 => Item2 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -2480,6 +2486,7 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
             1 => Item1 is CancellationToken value ? value : default!,
             2 => Item2 is CancellationToken value ? value : default!,
             3 => Item3 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -2972,6 +2979,7 @@ public sealed record ArgumentListS4 : ArgumentList4
             1 => Item1 is CancellationToken value ? value : default!,
             2 => Item2 is CancellationToken value ? value : default!,
             3 => Item3 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -3485,6 +3493,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
             2 => Item2 is CancellationToken value ? value : default!,
             3 => Item3 is CancellationToken value ? value : default!,
             4 => Item4 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -4043,6 +4052,7 @@ public sealed record ArgumentListS5 : ArgumentList5
             2 => Item2 is CancellationToken value ? value : default!,
             3 => Item3 is CancellationToken value ? value : default!,
             4 => Item4 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -4619,6 +4629,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
             3 => Item3 is CancellationToken value ? value : default!,
             4 => Item4 is CancellationToken value ? value : default!,
             5 => Item5 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -5240,6 +5251,7 @@ public sealed record ArgumentListS6 : ArgumentList6
             3 => Item3 is CancellationToken value ? value : default!,
             4 => Item4 is CancellationToken value ? value : default!,
             5 => Item5 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -5879,6 +5891,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
             4 => Item4 is CancellationToken value ? value : default!,
             5 => Item5 is CancellationToken value ? value : default!,
             6 => Item6 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -6563,6 +6576,7 @@ public sealed record ArgumentListS7 : ArgumentList7
             4 => Item4 is CancellationToken value ? value : default!,
             5 => Item5 is CancellationToken value ? value : default!,
             6 => Item6 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -7265,6 +7279,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
             5 => Item5 is CancellationToken value ? value : default!,
             6 => Item6 is CancellationToken value ? value : default!,
             7 => Item7 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -8012,6 +8027,7 @@ public sealed record ArgumentListS8 : ArgumentList8
             5 => Item5 is CancellationToken value ? value : default!,
             6 => Item6 is CancellationToken value ? value : default!,
             7 => Item7 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -8777,6 +8793,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
             6 => Item6 is CancellationToken value ? value : default!,
             7 => Item7 is CancellationToken value ? value : default!,
             8 => Item8 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -9587,6 +9604,7 @@ public sealed record ArgumentListS9 : ArgumentList9
             6 => Item6 is CancellationToken value ? value : default!,
             7 => Item7 is CancellationToken value ? value : default!,
             8 => Item8 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -10415,6 +10433,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
             7 => Item7 is CancellationToken value ? value : default!,
             8 => Item8 is CancellationToken value ? value : default!,
             9 => Item9 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 
@@ -11288,6 +11307,7 @@ public sealed record ArgumentListS10 : ArgumentList10
             7 => Item7 is CancellationToken value ? value : default!,
             8 => Item8 is CancellationToken value ? value : default!,
             9 => Item9 is CancellationToken value ? value : default!,
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 

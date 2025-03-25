@@ -337,6 +337,7 @@ public sealed record <#=className#> : ArgumentList<#=itemCount#>
 <# for (var t = 0; t < itemCount; t++) { #>
             <#=t#> => Item<#=t#> is CancellationToken value ? value : default!,
 <# } #>
+            -1 => default,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
 

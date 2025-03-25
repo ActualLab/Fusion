@@ -166,6 +166,17 @@ public abstract class Interceptor : IHasServices
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef);
 
+    protected virtual Func<Invocation, object?>? CreateHandlerUntyped(MethodInfo method, Invocation initialInvocation)
+    {
+        var methodDef = GetMethodDef(method, initialInvocation.Proxy.GetType());
+        if (methodDef == null)
+            return null;
+
+        return (Func<Invocation, object?>?)CreateTypedHandlerMethod
+            .MakeGenericMethod(methodDef.UnwrappedReturnType)
+            .Invoke(this, [initialInvocation, methodDef])!;
+    }
+
     protected virtual MethodDef? CreateMethodDef(MethodInfo method,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType)
     {
@@ -187,18 +198,5 @@ public abstract class Interceptor : IHasServices
     {
         if (CodeKeeper.AlwaysFalse)
             CreateHandler<TUnwrapped>(default, null!);
-    }
-
-    // Private methods
-
-    private Func<Invocation, object?>? CreateHandlerUntyped(MethodInfo method, Invocation initialInvocation)
-    {
-        var methodDef = GetMethodDef(method, initialInvocation.Proxy.GetType());
-        if (methodDef == null)
-            return null;
-
-        return (Func<Invocation, object?>?)CreateTypedHandlerMethod
-            .MakeGenericMethod(methodDef.UnwrappedReturnType)
-            .Invoke(this, [initialInvocation, methodDef])!;
     }
 }

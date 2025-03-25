@@ -36,56 +36,20 @@ public class ComputeServiceInterceptor : Interceptor
         => GetHandler(invocation) ?? CommandServiceInterceptor.SelectHandler(invocation);
 
     protected override Func<Invocation, object?>? CreateHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
-        (Invocation initialInvocation, MethodDef methodDef)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
+        Invocation initialInvocation, MethodDef methodDef)
+        => throw ActualLab.Internal.Errors.NotSupported($"Use {nameof(CreateHandlerUntyped)}.");
+
+    protected override Func<Invocation, object?>? CreateHandlerUntyped(MethodInfo method, Invocation initialInvocation)
     {
-        var function = new ComputeMethodFunction<TUnwrapped>((ComputeMethodDef)methodDef, Hub);
-        return CreateHandler(function);
-    }
+        var methodDef = GetMethodDef(method, initialInvocation.Proxy.GetType()) as ComputeMethodDef;
+        if (methodDef == null)
+            return null;
 
-    protected static Func<Invocation, object?> CreateHandler<TUnwrapped>(ComputeMethodFunction<TUnwrapped> function)
-    {
-        var methodDef = function.MethodDef;
-        var ctIndex = methodDef.CancellationTokenIndex;
-        return ctIndex >= 0
-            ? RegularHandler
-            : NoCancellationTokenHandler;
-
-        object? NoCancellationTokenHandler(Invocation invocation) {
-            var input = new ComputeMethodInput(function, methodDef, invocation);
-            // Inlined:
-            // var task = function.InvokeAndStrip(input, ComputeContext.Current, default);
-            var context = ComputeContext.Current;
-            var computed = ComputedRegistry.Instance.Get(input) as Computed<TUnwrapped>; // = input.GetExistingComputed()
-            var task = ComputedImpl.TryUseExisting(computed, context)
-                ? ComputedImpl.StripToTask(computed, context)
-                : function.TryRecompute(input, context, default);
-            // ReSharper disable once HeapView.BoxingAllocation
-            return methodDef.ReturnsValueTask ? new ValueTask<TUnwrapped>(task) : task;
-        }
-
-        object? RegularHandler(Invocation invocation) {
-            var input = new ComputeMethodInput(function, methodDef, invocation);
-            var arguments = invocation.Arguments;
-            var cancellationToken = arguments.GetCancellationToken(ctIndex);
-            try {
-                // Inlined:
-                // var task = function.InvokeAndStrip(input, ComputeContext.Current, cancellationToken);
-                var context = ComputeContext.Current;
-                var computed = ComputedRegistry.Instance.Get(input) as Computed<TUnwrapped>; // = input.GetExistingComputed()
-                var task = ComputedImpl.TryUseExisting(computed, context)
-                    ? ComputedImpl.StripToTask(computed, context)
-                    : function.TryRecompute(input, context, cancellationToken);
-                // ReSharper disable once HeapView.BoxingAllocation
-                return methodDef.ReturnsValueTask ? new ValueTask<TUnwrapped>(task) : task;
-            }
-            finally {
-                if (cancellationToken.CanBeCanceled)
-                    // ComputedInput is stored in ComputeRegistry, so we remove CancellationToken there
-                    // to prevent memory leaks + possible unexpected cancellations on .Update calls.
-                    arguments.SetCancellationToken(ctIndex, default);
-            }
-        }
+        var function = (IComputeMethodFunction)typeof(ComputeMethodFunction<>)
+            .MakeGenericType(methodDef.UnwrappedReturnType)
+            .CreateInstance(methodDef, Hub);
+        return function.ComputeServiceInterceptorHandler;
     }
 
     // We don't need to decorate this method with any dynamic access attributes

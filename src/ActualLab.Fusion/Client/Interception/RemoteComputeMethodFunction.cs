@@ -16,8 +16,13 @@ namespace ActualLab.Fusion.Client.Interception;
 
 public interface IRemoteComputeMethodFunction : IComputeMethodFunction
 {
+    public RpcHub RpcHub { get; }
     public RpcMethodDef RpcMethodDef { get; }
+    public RpcSafeCallRouter RpcCallRouter { get; }
+    public IRemoteComputedCache? RemoteComputedCache { get; }
     public object? LocalTarget { get; }
+
+    public object? RemoteComputeServiceInterceptorHandler(Invocation invocation);
 }
 
 public class RemoteComputeMethodFunction<T>(
@@ -29,21 +34,62 @@ public class RemoteComputeMethodFunction<T>(
 {
     private string? _toString;
 
-    RpcMethodDef IRemoteComputeMethodFunction.RpcMethodDef => RpcMethodDef;
-    object? IRemoteComputeMethodFunction.LocalTarget => LocalTarget;
-
     protected readonly (LogLevel LogLevel, int MaxDataLength) LogCacheEntryUpdateSettings =
         hub.RemoteComputeServiceInterceptorOptions.LogCacheEntryUpdateSettings;
     protected ILogger CacheLog => Hub.RemoteComputedCacheLog;
 
-    public readonly RpcHub RpcHub = hub.RpcHub;
-    public readonly RpcMethodDef RpcMethodDef = rpcMethodDef;
-    public readonly RpcSafeCallRouter RpcCallRouter = hub.RpcHub.InternalServices.CallRouter;
-    public readonly IRemoteComputedCache? RemoteComputedCache = hub.RemoteComputedCache;
-    public readonly object? LocalTarget = localTarget;
+    public RpcHub RpcHub { get; } = hub.RpcHub;
+    public RpcMethodDef RpcMethodDef { get; } = rpcMethodDef;
+    public RpcSafeCallRouter RpcCallRouter { get; } = hub.RpcHub.InternalServices.CallRouter;
+    public IRemoteComputedCache? RemoteComputedCache { get; } = hub.RemoteComputedCache;
+    public object? LocalTarget { get; } = localTarget;
 
     public override string ToString()
         => _toString ??= ZString.Concat('*', base.ToString());
+
+    public object? RemoteComputeServiceInterceptorHandler(Invocation invocation)
+    {
+        var input = new ComputeMethodInput(this, MethodDef, invocation);
+        var cancellationToken = invocation.Arguments.GetCancellationToken(CancellationTokenIndex); // Auto-handles -1 index
+        try {
+            // Inlined:
+            // var task = function.InvokeAndStrip(input, ComputeContext.Current, cancellationToken);
+            var context = ComputeContext.Current;
+            var computed = ComputedRegistry.Instance.Get(input) as Computed<T>; // = input.GetExistingComputed()
+            var synchronizer = RemoteComputedSynchronizer.Current;
+            var task = !ReferenceEquals(synchronizer, null) && (context.CallOptions & CallOptions.GetExisting) == 0
+                ? UseOrComputeWithSynchronizer()
+                : ComputedImpl.TryUseExisting(computed, context)
+                    ? ComputedImpl.StripToTask(computed, context)
+                    : TryRecompute(input, context, cancellationToken);
+            // ReSharper disable once HeapView.BoxingAllocation
+            return MethodDef.ReturnsValueTask ? new ValueTask<T>(task) : task;
+
+            async Task<T> UseOrComputeWithSynchronizer() {
+                // If we're here, (context.CallOptions & CallOptions.GetExisting) == 0,
+                // which means that only CallOptions.Capture can be used.
+
+                if (computed == null || !computed.IsConsistent())
+                    computed = await TryRecomputeForSyncAwaiter(input, cancellationToken).ConfigureAwait(false);
+                var whenSynchronized = synchronizer.WhenSynchronized(computed, cancellationToken);
+                if (!whenSynchronized.IsCompletedSuccessfully()) {
+                    await whenSynchronized.ConfigureAwait(false);
+                    if (!computed.IsConsistent())
+                        computed = await computed.Update(cancellationToken).ConfigureAwait(false);
+                }
+
+                // Note that until this moment UseNew(...) wasn't called for computed!
+                ComputedImpl.UseNew(computed, context);
+                return computed.Value;
+            }
+        }
+        finally {
+            if (cancellationToken.CanBeCanceled)
+                // ComputedInput is stored in ComputeRegistry, so we remove CancellationToken there
+                // to prevent memory leaks + possible unexpected cancellations on .Update calls.
+                invocation.Arguments.SetCancellationToken(CancellationTokenIndex, default);
+        }
+    }
 
     protected override async ValueTask<Computed<T>> Compute(
         ComputedInput input, Computed<T>? existing,

@@ -5,23 +5,45 @@ namespace ActualLab.Fusion.Interception;
 
 public interface IComputeMethodFunction : IComputeFunction
 {
-    public ComputeMethodDef MethodDef { get; }
-    public ComputedOptions ComputedOptions { get; }
+    ComputeMethodDef MethodDef { get; }
+    ComputedOptions ComputedOptions { get; }
+    int CancellationTokenIndex { get; }
+
+    object? ComputeServiceInterceptorHandler(Invocation invocation);
 }
 
-public class ComputeMethodFunction<T>(
-    ComputeMethodDef methodDef,
-    FusionHub hub
-    ) : ComputeFunctionBase<T>(hub), IComputeMethodFunction
+public class ComputeMethodFunction<T>(ComputeMethodDef methodDef, FusionHub hub)
+    : ComputeFunctionBase<T>(hub), IComputeMethodFunction
 {
-    ComputeMethodDef IComputeMethodFunction.MethodDef => MethodDef;
-    ComputedOptions IComputeMethodFunction.ComputedOptions => ComputedOptions;
-
-    public readonly ComputeMethodDef MethodDef = methodDef;
-    public readonly ComputedOptions ComputedOptions = methodDef.ComputedOptions;
+    public ComputeMethodDef MethodDef { get; } = methodDef;
+    public ComputedOptions ComputedOptions { get; } = methodDef.ComputedOptions;
+    public int CancellationTokenIndex { get; } = methodDef.CancellationTokenIndex;
 
     public override string ToString()
         => MethodDef.FullName;
+
+    public object? ComputeServiceInterceptorHandler(Invocation invocation)
+    {
+        var input = new ComputeMethodInput(this, MethodDef, invocation);
+        var cancellationToken = invocation.Arguments.GetCancellationToken(CancellationTokenIndex); // Auto-handles -1 index
+        try {
+            // Inlined:
+            // var task = function.InvokeAndStrip(input, ComputeContext.Current, cancellationToken);
+            var context = ComputeContext.Current;
+            var computed = ComputedRegistry.Instance.Get(input) as Computed<T>; // = input.GetExistingComputed()
+            var task = ComputedImpl.TryUseExisting(computed, context)
+                ? ComputedImpl.StripToTask(computed, context)
+                : TryRecompute(input, context, cancellationToken);
+            // ReSharper disable once HeapView.BoxingAllocation
+            return MethodDef.ReturnsValueTask ? new ValueTask<T>(task) : task;
+        }
+        finally {
+            if (cancellationToken.CanBeCanceled)
+                // ComputedInput is stored in ComputeRegistry, so we remove CancellationToken there
+                // to prevent memory leaks + possible unexpected cancellations on .Update calls.
+                invocation.Arguments.SetCancellationToken(CancellationTokenIndex, default);
+        }
+    }
 
     protected override async ValueTask<Computed<T>> Compute(
         ComputedInput input, Computed<T>? existing,
