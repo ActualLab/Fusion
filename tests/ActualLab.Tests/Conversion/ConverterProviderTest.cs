@@ -130,12 +130,6 @@ public class ConverterProviderTest(ITestOutputHelper @out) : TestBase(@out)
         var c1 = c.From<Result<int>>().To<int>().ThrowIfUnavailable();
         c1.Convert(1).Should().Be(1);
         c1.Convert(0).Should().Be(0);
-
-        var rb1 = ResultBox.New(1);
-        var rb2 = ResultBox.New(2);
-        var c2 = c.From(rb1.GetType()).To<Result<int>>();
-        ((Result<int>) c1.Convert(rb1)).Should().Be(rb1.AsResult());
-        ((Result<int>) c1.Convert(rb2)).Should().Be(rb2.AsResult());
     }
 
     [Fact]

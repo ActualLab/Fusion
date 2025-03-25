@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 
 namespace ActualLab;
@@ -7,6 +8,64 @@ namespace ActualLab;
 /// </summary>
 public static class ResultExt
 {
+    // IsValueUntyped, IsValue
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsValueUntyped(this Result result, out object? value)
+    {
+        (value, var error) = result;
+        return error == null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsValueUntyped(this IResult result, out object? value)
+    {
+        (value, var error) = result;
+        return error == null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsValueUntyped(this Result result, out object? value, [NotNullWhen(false)] out Exception? error)
+    {
+        (value, error) = result;
+        return error == null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsValueUntyped(this IResult result, out object? value, [NotNullWhen(false)] out Exception? error)
+    {
+        (value, error) = result;
+        return error == null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsValue<T>(this Result<T> result, [MaybeNullWhen(false)] out T value)
+    {
+        (value, var error) = result;
+        return error == null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsValue<T>(this IResult<T> result, [MaybeNullWhen(false)] out T value)
+    {
+        (value, var error) = result;
+        return error == null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsValue<T>(this Result<T> result, [MaybeNullWhen(false)] out T value, [NotNullWhen(false)] out Exception? error)
+    {
+        (value, error) = result;
+        return error == null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsValue<T>(this IResult<T> result, [MaybeNullWhen(false)] out T value, [NotNullWhen(false)] out Exception? error)
+    {
+        (value, error) = result;
+        return error == null;
+    }
+
     // AsUntyped
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
