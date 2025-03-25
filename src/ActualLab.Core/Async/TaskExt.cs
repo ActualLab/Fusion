@@ -87,6 +87,6 @@ public static partial class TaskExt
     private static IResult FromTypedTaskInternal<T>(Task task)
         // ReSharper disable once HeapView.BoxingAllocation
         => task.IsCompletedSuccessfully()
-            ? Result.Value(((Task<T>)task).Result)
-            : Result.Error<T>(task.GetBaseException());
+            ? new Result<T>(((Task<T>)task).Result)
+            : new Result<T>(default!, task.GetBaseException());
 }

@@ -144,7 +144,7 @@ public sealed class Connector<TConnection> : WorkerBase
                 }
 
                 if (error != null) {
-                    IsConnected = IsConnected.SetNext(Result.Error<bool>(error));
+                    IsConnected = IsConnected.SetNext(Result.NewError<bool>(error));
                     Log?.LogError(error, "{LogTag}: Disconnected", LogTag);
                 }
                 else {
@@ -190,7 +190,8 @@ public sealed class Connector<TConnection> : WorkerBase
             _state.SetFinal(StopToken); // StopToken is cancelled here
             prevState.Value.Dispose();
 
-            if (IsConnected.Value.IsValue(out var isConnected) && isConnected)
+            var (isConnected, error) = IsConnected.Value;
+            if (error != null && isConnected)
                 IsConnected = IsConnected.SetNext(false);
             IsConnected.SetFinal(Errors.AlreadyDisposed(GetType()));
         }

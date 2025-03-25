@@ -173,7 +173,6 @@ interface IResult<T> {
     bool IsValue(out T value, out Exception error);
     
     Result<T> AsResult();  // Result<T> is a struct implementing IResult<T>
-    Result<TOther> Cast<TOther>();
 }
 
 // CancellationToken argument is removed everywhere for simplicity

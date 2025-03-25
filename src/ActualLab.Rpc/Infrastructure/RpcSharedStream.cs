@@ -159,12 +159,12 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                             whenMovedNextAsTask = null; // Must go after SafeMoveNext call (which may fail)
                         }
                         else {
-                            item = Result.Error<T>(NoMoreItemsTag);
+                            item = Result.NewError<T>(NoMoreItemsTag);
                             isFullyBuffered = true;
                         }
                     }
                     catch (Exception e) {
-                        item = Result.Error<T>(e.IsCancellationOf(cancellationToken)
+                        item = Result.NewError<T>(e.IsCancellationOf(cancellationToken)
                             ? Errors.RpcStreamNotFound()
                             : e);
                         isFullyBuffered = true;
@@ -213,15 +213,17 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         => _systemCallSender.Disconnect(Peer, [Id.LocalId]);
 
     private Task SendInvalidPosition(long index)
-        => Send(index, Result.Error<T>(Errors.RpcStreamInvalidPosition()));
+        => Send(index, Result.NewError<T>(Errors.RpcStreamInvalidPosition()));
 
     private Task Send(long index, Result<T> item)
     {
         // Debug.WriteLine($"{Id}: <- #{index} (ack @ {ackIndex})");
-        if (item.IsValue(out var value))
+        var (value, error) = item;
+        if (error == null)
             return _systemCallSender.Item(Peer, Id.LocalId, index, value, _sizeHintProvider?.Invoke(value) ?? 0);
 
-        var error = ReferenceEquals(item.Error, NoMoreItemsTag) ? null : item.Error;
+        if (ReferenceEquals(item.Error, NoMoreItemsTag))
+            error = null;
         return _systemCallSender.End(Peer, Id.LocalId, index, error);
     }
 
@@ -249,14 +251,15 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
         public async ValueTask Add(long index, Result<T> item)
         {
-            if (!item.IsValue(out var vItem)) {
+            var (value, error) = item;
+            if (error != null) {
                 await Flush(index).ConfigureAwait(false);
                 await stream.Send(index, item).ConfigureAwait(false);
                 return;
             }
 
             if (_isPolymorphic) {
-                var itemType = vItem?.GetType();
+                var itemType = value?.GetType();
                 if (_items.Count >= BatchSize || (itemType != null && itemType != _itemType))
                     await Flush(index).ConfigureAwait(false);
                 _itemType ??= itemType;

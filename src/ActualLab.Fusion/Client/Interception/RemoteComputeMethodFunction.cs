@@ -415,7 +415,7 @@ public class RemoteComputeMethodFunction<T>(
             return (result, call);
         }
         catch (Exception e) {
-            return (Result.Error<T>(e), call);
+            return (Result.NewError<T>(e), call);
         }
     }
 

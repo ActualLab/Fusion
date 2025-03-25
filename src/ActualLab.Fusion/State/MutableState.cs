@@ -22,16 +22,16 @@ public class MutableState<T> : State<T>, IMutableState<T>
 
     public new T Value {
         get => base.Value;
-        set => Set(Result.Value(value));
+        set => Set(Result.New(value));
     }
     public new Exception? Error {
         get => base.Error;
-        set => Set(Result.Error<T>(value!));
+        set => Set(Result.NewError<T>(value!));
     }
     object? IMutableResult.UntypedValue {
         // ReSharper disable once HeapView.PossibleBoxingAllocation
         get => Value;
-        set => Set(Result.Value((T) value!));
+        set => Set(Result.New((T)value!));
     }
 
     public MutableState(Options settings, IServiceProvider services, bool initialize = true)
@@ -46,8 +46,9 @@ public class MutableState<T> : State<T>, IMutableState<T>
 
     // Set overloads
 
-    void IMutableResult.Set(IResult result)
-        => Set(result.Cast<T>());
+    public void Set(Result result)
+        => Set(result.AsTyped<T>());
+
     public void Set(Result<T> result)
     {
         lock (Lock) {
@@ -73,15 +74,12 @@ public class MutableState<T> : State<T>, IMutableState<T>
     {
         lock (Lock) {
             var snapshot = Snapshot;
-            T result;
+            Result<T> result;
             try {
                 result = updater.Invoke(snapshot.Computed.Output);
             }
-            catch (Exception e) {
-                if (throwOnError)
-                    throw;
-
-                result = Result.Error<T>(e);
+            catch (Exception e) when (!throwOnError) {
+                result = Result.NewError<T>(e);
             }
             NextOutput = result;
             snapshot.Computed.Invalidate();
@@ -92,15 +90,12 @@ public class MutableState<T> : State<T>, IMutableState<T>
     {
         lock (Lock) {
             var snapshot = Snapshot;
-            T result;
+            Result<T> result;
             try {
                 result = updater.Invoke(state, snapshot.Computed.Output);
             }
-            catch (Exception e) {
-                if (throwOnError)
-                    throw;
-
-                result = Result.Error<T>(e);
+            catch (Exception e) when (!throwOnError) {
+                result = Result.NewError<T>(e);
             }
             NextOutput = result;
             snapshot.Computed.Invalidate();

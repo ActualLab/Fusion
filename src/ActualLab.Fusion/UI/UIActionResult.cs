@@ -1,3 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
+using ActualLab.Conversion;
+
 namespace ActualLab.Fusion.UI;
 
 public interface IUIActionResult : IResult
@@ -11,10 +14,12 @@ public interface IUIActionResult : IResult
     public CancellationToken CancellationToken { get; }
 }
 
-public class UIActionResult<TResult> : ResultBox<TResult>, IUIActionResult
+public class UIActionResult<T>(UIAction<T> action, Result<T> result, Moment completedAt)
+    : IResult<T>, IUIActionResult
 {
-    public UIAction<TResult> Action { get; }
-    public Moment CompletedAt { get; }
+    public UIAction<T> Action { get; } = action;
+    public Result<T> Result { get; } = result;
+    public Moment CompletedAt { get; } = completedAt;
 
     // Computed properties
     public long ActionId => Action.ActionId;
@@ -24,15 +29,23 @@ public class UIActionResult<TResult> : ResultBox<TResult>, IUIActionResult
     public TimeSpan Duration => CompletedAt - StartedAt;
     public CancellationToken CancellationToken => Action.CancellationToken;
 
-    public UIActionResult(UIAction<TResult> action, Result<TResult> result, Moment completedAt)
-        : base(result)
-    {
-        Action = action;
-        CompletedAt = completedAt;
-    }
+    // IResult<T> implementation
+    public T Value => Result.Value;
+    public T? ValueOrDefault => Result.ValueOrDefault;
+    public object? UntypedValue => Result.Value;
+    public Exception? Error => Result.Error;
+    public bool HasValue => Result.HasValue;
+    public bool HasError => Result.HasError;
 
-    // Conversion
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Deconstruct(out T value, out Exception? error)
+        => Result.Deconstruct(out value, out error);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    void IResult.Deconstruct(out object? untypedValue, out Exception? error)
+        => ((IResult)Result).Deconstruct(out untypedValue, out error);
+    T IConvertibleTo<T>.Convert() => Result.Value;
+    public object? GetUntypedValueOrErrorBox() => Result.GetUntypedValueOrErrorBox();
 
     public override string ToString()
-        => $"{GetType().GetName()}(#{ActionId}: {AsResult()}, Duration = {Duration.ToShortString()})";
+        => $"{GetType().GetName()}(#{ActionId}: {Result}, Duration = {Duration.ToShortString()})";
 }

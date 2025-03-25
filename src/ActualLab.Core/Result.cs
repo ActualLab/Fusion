@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using ActualLab.Conversion;
+using ActualLab.Internal;
 using ActualLab.OS;
 using MessagePack;
 
@@ -13,31 +14,37 @@ namespace ActualLab;
 public interface IResult
 {
     /// <summary>
-    /// Indicates whether the result is successful (its <see cref="Error"/> is <code>null</code>).
-    /// Same as <code>!HasError</code>.
-    /// </summary>
-    public bool HasValue { get; }
-    /// <summary>
-    /// Retrieves result's value. Throws an <see cref="Error"/> when <see cref="HasError"/>.
+    /// Retrieves the result's value. Throws an <see cref="Error"/> when <see cref="HasError"/>.
     /// </summary>
     public object? UntypedValue { get; }
-
-    /// <summary>
-    /// Indicates whether the result is error (its <see cref="Error"/> is not <code>null</code>).
-    /// Same as <code>!HasValue</code>.
-    /// </summary>
-    public bool HasError { get; }
     /// <summary>
     /// Retrieves result's error (if any).
     /// </summary>
     public Exception? Error { get; }
 
     /// <summary>
-    /// Casts result to another result type.
+    /// Indicates whether the result is successful (its <see cref="Error"/> is <code>null</code>).
+    /// Same as <code>!HasError</code>.
     /// </summary>
-    /// <typeparam name="TOther">Another result type.</typeparam>
-    /// <returns>A result of the specified type.</returns>
-    public Result<TOther> Cast<TOther>();
+    public bool HasValue { get; }
+    /// <summary>
+    /// Indicates whether the result is error (its <see cref="Error"/> is not <code>null</code>).
+    /// Same as <code>!HasValue</code>.
+    /// </summary>
+    public bool HasError { get; }
+
+    /// <summary>
+    /// Deconstructs the result.
+    /// </summary>
+    /// <param name="untypedValue">Gets <see cref="UntypedValue"/> value.</param>
+    /// <param name="error">Gets <see cref="Error"/> value.</param>
+    public void Deconstruct(out object? untypedValue, out Exception? error);
+
+    /// <summary>
+    /// Gets the value or <see cref="ErrorBox"/> instance.
+    /// </summary>
+    /// <returns>Untyped value or <see cref="ErrorBox"/> instance.</returns>
+    public object? GetUntypedValueOrErrorBox();
 }
 
 /// <summary>
@@ -53,11 +60,12 @@ public interface IMutableResult : IResult
     /// Retrieves or sets mutable result's error.
     /// </summary>
     public new Exception? Error { get; set; }
+
     /// <summary>
     /// Sets mutable result's value and error from the provided <paramref name="result"/>.
     /// </summary>
     /// <param name="result">The result to set value and error from.</param>
-    public void Set(IResult result);
+    public void Set(Result result);
 }
 
 /// <summary>
@@ -65,7 +73,7 @@ public interface IMutableResult : IResult
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 // ReSharper disable once PossibleInterfaceMemberAmbiguity
-public interface IResult<T> : IResult, IConvertibleTo<T>, IConvertibleTo<Result<T>>
+public interface IResult<T> : IResult, IConvertibleTo<T>
 {
     /// <summary>
     /// Retrieves result's value. Returns <code>default</code> when <see cref="IResult.HasError"/>.
@@ -82,14 +90,6 @@ public interface IResult<T> : IResult, IConvertibleTo<T>, IConvertibleTo<Result<
     /// <param name="value">Gets <see cref="ValueOrDefault"/> value.</param>
     /// <param name="error">Gets <see cref="Error"/> value.</param>
     public void Deconstruct(out T value, out Exception? error);
-    public bool IsValue([MaybeNullWhen(false)] out T value);
-    public bool IsValue([MaybeNullWhen(false)] out T value, [MaybeNullWhen(true)] out Exception error);
-
-    /// <summary>
-    /// Casts a custom-typed result to <see cref="Result{T}"/> (struct).
-    /// </summary>
-    /// <returns><see cref="Result{T}"/> struct.</returns>
-    public Result<T> AsResult();
 }
 
 /// <summary>
@@ -125,6 +125,115 @@ public interface IMutableResult<T> : IResult<T>, IMutableResult
     /// <param name="throwOnError"><c>true</c> if exception in <paramref name="updater"/> must be rethrown
     /// without settings the <see cref="Value"/>; otherwise, <c>false</c>.</param>
     public void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater, bool throwOnError = false);
+}
+
+/// <summary>
+/// Untyped result of a computation and some helper methods related to <see cref="Result{T}"/> type.
+/// </summary>
+[StructLayout(LayoutKind.Auto)]
+[DebuggerDisplay("({" + nameof(UntypedValue) + "}, Error = {" + nameof(Error) + "})")]
+public readonly struct Result : IResult
+{
+    private static readonly ConcurrentDictionary<Type, Func<Exception, IResult>> ErrorCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly MethodInfo ErrorInternalMethod
+        = typeof(Result).GetMethod(nameof(ErrorInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<T> New<T>(T value, Exception? error = null) => new(value, error);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<T> NewError<T>(Exception error) => new(default!, error);
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume ErrorInternal method is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ErrorInternal method is preserved")]
+    public static IResult NewError(Type resultType, Exception error)
+        => ErrorCache.GetOrAdd(
+            resultType,
+            static tResult => (Func<Exception, IResult>)ErrorInternalMethod
+                .MakeGenericMethod(tResult)
+                .CreateDelegate(typeof(Func<Exception, IResult>))
+            ).Invoke(error);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result NewUntyped(object? untypedValueOrErrorBox) => new(untypedValueOrErrorBox);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result NewUntyped(object? untypedValue, Exception? error) => new(untypedValue, error);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result NewUntypedError(Exception error) => new(new ErrorBox(error));
+
+    private readonly object? _valueOrErrorBox;
+
+    /// <inheritdoc />
+    public object? UntypedValue {
+        get {
+            if (_valueOrErrorBox is ErrorBox e)
+                ExceptionDispatchInfo.Capture(e.Error).Throw();
+            return _valueOrErrorBox;
+        }
+    }
+
+    /// <inheritdoc />
+    public Exception? Error {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _valueOrErrorBox is ErrorBox e ? e.Error : null;
+    }
+
+    /// <inheritdoc />
+    public bool HasValue {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _valueOrErrorBox is not ErrorBox;
+    }
+
+    /// <inheritdoc />
+    public bool HasError {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _valueOrErrorBox is ErrorBox;
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="untypedValueOrErrorBox">Untyped value or <see cref="ErrorBox"/>.</param>
+    public Result(object? untypedValueOrErrorBox)
+        => _valueOrErrorBox = untypedValueOrErrorBox;
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="untypedValue">Untyped value.</param>
+    /// <param name="error">Error, if it's an error.</param>
+    public Result(object? untypedValue, Exception? error)
+        => _valueOrErrorBox = error == null ? untypedValue : new ErrorBox(error);
+
+    /// <inheritdoc />
+    public void Deconstruct(out object? untypedValue, out Exception? error)
+    {
+        if (_valueOrErrorBox is ErrorBox e) {
+            untypedValue = null;
+            error = e.Error;
+        }
+        else {
+            untypedValue = _valueOrErrorBox;
+            error = null;
+        }
+    }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        var errorBox = _valueOrErrorBox as ErrorBox;
+        return $"{nameof(Result)}({(errorBox != null ? $"Error: {errorBox.Error}" : _valueOrErrorBox?.ToString())})";
+    }
+
+    /// <inheritdoc />
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public object? GetUntypedValueOrErrorBox()
+        => _valueOrErrorBox;
+
+    // Private methods
+
+    private static IResult ErrorInternal<T>(Exception error)
+        // ReSharper disable once HeapView.BoxingAllocation
+        => new Result<T>(default!, error);
 }
 
 /// <summary>
@@ -180,7 +289,7 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
     /// </summary>
     /// <param name="valueOrDefault"><see cref="ValueOrDefault"/> value.</param>
     /// <param name="error"><see cref="Error"/> value.</param>
-    public Result(T valueOrDefault, Exception? error)
+    public Result(T valueOrDefault, Exception? error = null)
     {
         if (error != null)
             valueOrDefault = default!;
@@ -201,9 +310,7 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
         }
     }
 
-    public override string ToString()
-        => $"{GetType().GetName()}({(HasError ? $"Error: {Error}" : Value?.ToString())})";
-
+    /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Deconstruct(out T value, out Exception? error)
     {
@@ -211,37 +318,34 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
         error = Error;
     }
 
+    /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsValue([MaybeNullWhen(false)] out T value)
+    void IResult.Deconstruct(out object? untypedValue, out Exception? error)
     {
-        value = HasError ? default! : ValueOrDefault!;
-        return !HasError;
+        untypedValue = ValueOrDefault;
+        error = Error;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsValue([MaybeNullWhen(false)] out T value, [MaybeNullWhen(true)] out Exception error)
-    {
-        error = Error!;
-        // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-        var hasValue = error == null!;
-        value = hasValue ? ValueOrDefault : default!;
-        return hasValue;
-    }
+    /// <inheritdoc />
+    public override string ToString()
+        => $"{GetType().GetName()}({(HasError ? $"Error: {Error}" : Value?.ToString())})";
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Result<T> AsResult() => this;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Result<TOther> Cast<TOther>() => new((TOther) (object) ValueOrDefault!, Error);
+    /// <inheritdoc />
     T IConvertibleTo<T>.Convert() => Value;
-    Result<T> IConvertibleTo<Result<T>>.Convert() => AsResult();
+
+    /// <inheritdoc />
+    public object? GetUntypedValueOrErrorBox()
+        => Error is { } error ? new ErrorBox(error) : ValueOrDefault;
 
     // Equality
 
+    /// <inheritdoc />
     public bool Equals(Result<T> other)
         => Error == other.Error && EqualityComparer<T>.Default.Equals(ValueOrDefault!, other.ValueOrDefault!);
+    /// <inheritdoc />
     public override bool Equals(object? obj)
         => obj is Result<T> o && Equals(o);
+    /// <inheritdoc />
     public override int GetHashCode() => (ValueOrDefault?.GetHashCode() ?? 0) ^ (Error?.GetHashCode() ?? 0);
     public static bool operator ==(Result<T> left, Result<T> right) => left.Equals(right);
     public static bool operator !=(Result<T> left, Result<T> right) => !left.Equals(right);
@@ -254,58 +358,4 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
     public static implicit operator Result<T>(T source) => new(source, null);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator Result<T>((T Value, Exception? Error) source) => new(source.Value, source.Error);
-}
-
-/// <summary>
-/// Helper methods related to <see cref="Result{T}"/> type.
-/// </summary>
-public static class Result
-{
-    private static readonly ConcurrentDictionary<Type, Func<Exception, IResult>> ErrorCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly MethodInfo ErrorInternalMethod
-        = typeof(Result).GetMethod(nameof(ErrorInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result<T> New<T>(T value, Exception? error = null) => new(value, error);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result<T> Value<T>(T value) => new(value, null);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result<T> Error<T>(Exception error) => new(default!, error);
-
-    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume ErrorInternal method is preserved")]
-    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ErrorInternal method is preserved")]
-    public static IResult Error(Type resultType, Exception error)
-        => ErrorCache.GetOrAdd(
-            resultType,
-            static tResult => (Func<Exception, IResult>)ErrorInternalMethod
-                .MakeGenericMethod(tResult)
-                .CreateDelegate(typeof(Func<Exception, IResult>))
-            ).Invoke(error);
-
-    public static Result<T> FromFunc<T, TState>(TState state, Func<TState, T> func)
-    {
-        try {
-            return Value(func(state));
-        }
-        catch (Exception e) {
-            return Error<T>(e);
-        }
-    }
-
-    public static Result<T> FromFunc<T>(Func<T> func)
-    {
-        try {
-            return Value(func());
-        }
-        catch (Exception e) {
-            return Error<T>(e);
-        }
-    }
-
-    // Private methods
-
-    private static IResult ErrorInternal<T>(Exception error)
-        // ReSharper disable once HeapView.BoxingAllocation
-        => new Result<T>(default!, error);
 }

@@ -358,7 +358,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                     return MoveNext(ackTask);
             }
             catch (Exception e) {
-                _current = Result.Error<T>(e);
+                _current = Result.NewError<T>(e);
                 _isEnded = true;
             }
 
@@ -385,7 +385,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                     return true;
                 }
                 catch (Exception e) {
-                    _current = Result.Error<T>(e);
+                    _current = Result.NewError<T>(e);
                     _nextIndex++;
                     _isEnded = true;
                     return true;

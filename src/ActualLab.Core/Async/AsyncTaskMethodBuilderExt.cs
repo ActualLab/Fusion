@@ -98,17 +98,19 @@ public static partial class AsyncTaskMethodBuilderExt
 
     public static void SetFromResult<T>(this AsyncTaskMethodBuilder<T> target, Result<T> result)
     {
-        if (result.IsValue(out var v, out var e))
-            target.SetResult(v);
+        var (value, error) = result;
+        if (error == null)
+            target.SetResult(value);
         else
-            target.SetException(e);
+            target.SetException(error);
     }
 
     public static void TrySetFromResult<T>(this AsyncTaskMethodBuilder<T> target, Result<T> result)
     {
-        if (result.IsValue(out var v, out var e))
-            target.TrySetResult(v);
+        var (value, error) = result;
+        if (error == null)
+            target.TrySetResult(value);
         else
-            target.TrySetException(e);
+            target.TrySetException(error);
     }
 }

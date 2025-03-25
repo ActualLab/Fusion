@@ -54,8 +54,8 @@ public class MethodDef
         => field ??= GetAsyncInvoker<Func<Invocation, Task>>(CreateInterceptedAsyncInvokerMethod);
 
     // Must be on KeepCodeForResult<,>, but since we can't use any params there...
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Result))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Result<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ResultBox<>))]
     public MethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
         MethodInfo method)
@@ -187,12 +187,10 @@ public class MethodDef
 
         CodeKeeper.Keep<TResult>();
         CodeKeeper.Keep<TUnwrapped>();
+        CodeKeeper.Keep<Result>();
         CodeKeeper.Keep<Result<TUnwrapped>>();
         CodeKeeper.Keep<Result<Task<TUnwrapped>>>();
         CodeKeeper.Keep<Result<ValueTask<TUnwrapped>>>();
-        CodeKeeper.Keep<ResultBox<TUnwrapped>>();
-        CodeKeeper.Keep<ResultBox<Task<TUnwrapped>>>();
-        CodeKeeper.Keep<ResultBox<ValueTask<TUnwrapped>>>();
 
         WrapResult<TUnwrapped>(default!);
         WrapAsyncInvokerResult<TUnwrapped>(default!);

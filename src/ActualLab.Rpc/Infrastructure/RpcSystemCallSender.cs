@@ -72,9 +72,12 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         RpcPeer peer, RpcInboundCall inboundCall, Result<TResult> result,
         bool allowPolymorphism,
         RpcHeader[]? headers = null)
-        => result.IsValue(out var value)
+    {
+        var (value, error) = result;
+        return error == null
             ? Ok(peer, inboundCall, value, allowPolymorphism, headers)
             : Error(peer, inboundCall, result.Error!, headers);
+    }
 
     public Task Ok<TResult>(
         RpcPeer peer, RpcInboundCall inboundCall, TResult result,

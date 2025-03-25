@@ -1,6 +1,7 @@
 using ActualLab.Collections.Slim;
 using ActualLab.Fusion.Internal;
 using ActualLab.Fusion.Operations.Internal;
+using ActualLab.Internal;
 using ActualLab.Resilience;
 using ActualLab.Versioning;
 using Errors = ActualLab.Fusion.Internal.Errors;
@@ -20,8 +21,6 @@ public interface IComputed : IResult, IHasVersion<ulong>
 
     public ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
     public ValueTask UseUntyped(CancellationToken cancellationToken = default);
-
-    public TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg);
 }
 
 public abstract partial class Computed(ComputedOptions options, ComputedInput input)
@@ -71,11 +70,10 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
     ulong IHasVersion<ulong>.Version => Version;
 
     // IResult implementation
-    public abstract bool HasValue { get; }
     public abstract object? UntypedValue { get; }
-    public abstract bool HasError { get; }
     public abstract Exception? Error { get; }
-    public abstract Result<TOther> Cast<TOther>();
+    public abstract bool HasValue { get; }
+    public abstract bool HasError { get; }
 
     public event Action<Computed> Invalidated {
         add {
@@ -99,6 +97,17 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
             }
         }
     }
+
+    // IResult implementation
+
+    void IResult.Deconstruct(out object? untypedValue, out Exception? error)
+    {
+        untypedValue = UntypedValue;
+        error = Error;
+    }
+
+    public object? GetUntypedValueOrErrorBox()
+        => Error != null ? new ErrorBox(Error) : UntypedValue;
 
     // Invalidation
 
@@ -184,10 +193,6 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     public abstract ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
     public abstract ValueTask UseUntyped(CancellationToken cancellationToken = default);
-
-    // Handy helper: Apply
-
-    public abstract TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg);
 
     // Protected internal methods - you can call them via ComputedImpl
 

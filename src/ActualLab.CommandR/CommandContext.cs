@@ -24,7 +24,7 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
 #pragma warning disable CA2119
     public abstract ICommand UntypedCommand { get; }
     public abstract Task UntypedResultTask { get; }
-    public abstract Result<object> UntypedResult { get; }
+    public abstract Result UntypedResult { get; }
     public abstract bool IsCompleted { get; }
 #pragma warning restore CA2119
 
@@ -142,7 +142,7 @@ public sealed class CommandContext<TResult> : CommandContext
 
     public override ICommand UntypedCommand => Command;
     public override Task UntypedResultTask => ResultTask;
-    public override Result<object> UntypedResult => Result.Cast<object>();
+    public override Result UntypedResult => Result.AsUntyped();
 
     public CommandContext(ICommander commander, ICommand command, bool isOutermost)
         : base(commander)

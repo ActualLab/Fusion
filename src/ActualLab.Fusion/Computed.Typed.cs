@@ -49,19 +49,10 @@ public abstract class Computed<T> : Computed, IResult<T>
     public sealed override bool HasValue => Output.HasValue;
     public sealed override bool HasError => Output.HasError;
     public sealed override object? UntypedValue => Output.Value;
-    public sealed override Result<TOther> Cast<TOther>()
-        => Output.Cast<TOther>();
 
     // IResult<T> methods
 
-    public bool IsValue([MaybeNullWhen(false)] out T value)
-        => Output.IsValue(out value);
-    public bool IsValue([MaybeNullWhen(false)] out T value, [MaybeNullWhen(true)] out Exception error)
-        => Output.IsValue(out value, out error!);
-    public Result<T> AsResult()
-        => Output.AsResult();
     T IConvertibleTo<T>.Convert() => Value;
-    Result<T> IConvertibleTo<Result<T>>.Convert() => AsResult();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected Computed(ComputedOptions options, ComputedInput input)
@@ -130,11 +121,6 @@ public abstract class Computed<T> : Computed, IResult<T>
         var computed = await Function.Invoke(Input, context, cancellationToken).ConfigureAwait(false);
         return computed.Value;
     }
-
-    // Apply
-
-    public override TResult Apply<TArg, TResult>(IComputedApplyHandler<TArg, TResult> handler, TArg arg)
-        => handler.Apply(this, arg);
 
     // Protected internal methods - you can call them via ComputedImpl
 

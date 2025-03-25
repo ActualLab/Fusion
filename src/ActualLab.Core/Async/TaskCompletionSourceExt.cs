@@ -105,19 +105,21 @@ public static partial class TaskCompletionSourceExt
 
     public static void SetFromResult<T>(this TaskCompletionSource<T> target, Result<T> result)
     {
-        if (result.IsValue(out var v, out var e))
-            target.SetResult(v);
-        else if (e is OperationCanceledException)
+        var (value, error) = result;
+        if (error == null)
+            target.SetResult(value);
+        else if (error is OperationCanceledException)
             target.SetCanceled();
         else
-            target.SetException(e);
+            target.SetException(error);
     }
 
     public static void SetFromResult<T>(this TaskCompletionSource<T> target, Result<T> result, CancellationToken cancellationToken)
     {
-        if (result.IsValue(out var v, out var e))
-            target.SetResult(v);
-        else if (e is OperationCanceledException) {
+        var (value, error) = result;
+        if (error == null)
+            target.SetResult(value);
+        else if (error is OperationCanceledException) {
 #if NET5_0_OR_GREATER
             if (cancellationToken.IsCancellationRequested)
                 target.SetCanceled(cancellationToken);
@@ -129,22 +131,28 @@ public static partial class TaskCompletionSourceExt
 #endif
         }
         else
-            target.SetException(e);
+            target.SetException(error);
     }
 
     public static bool TrySetFromResult<T>(this TaskCompletionSource<T> target, Result<T> result)
-        => result.IsValue(out var v, out var e)
-            ? target.TrySetResult(v)
-            : e is OperationCanceledException
+    {
+        var (value, error) = result;
+        return error == null
+            ? target.TrySetResult(value)
+            : error is OperationCanceledException
                 ? target.TrySetCanceled()
-                : target.TrySetException(e);
+                : target.TrySetException(error);
+    }
 
     public static bool TrySetFromResult<T>(this TaskCompletionSource<T> target, Result<T> result, CancellationToken cancellationToken)
-        => result.IsValue(out var v, out var e)
-            ? target.TrySetResult(v)
-            : e is OperationCanceledException
+    {
+        var (value, error) = result;
+        return error == null
+            ? target.TrySetResult(value)
+            : error is OperationCanceledException
                 ? cancellationToken.IsCancellationRequested
                     ? target.TrySetCanceled(cancellationToken)
                     : target.TrySetCanceled()
-                : target.TrySetException(e);
+                : target.TrySetException(error);
+    }
 }

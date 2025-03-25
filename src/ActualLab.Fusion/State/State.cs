@@ -96,10 +96,10 @@ public abstract class State<T> : ComputedInput,
 
     public T? ValueOrDefault => Computed.ValueOrDefault;
     public T Value => Computed.Value;
+    public T LastNonErrorValue => Snapshot.LastNonErrorComputed.Value;
     public Exception? Error => Computed.Error;
     public bool HasValue => Computed.HasValue;
     public bool HasError => Computed.HasError;
-    public T LastNonErrorValue => Snapshot.LastNonErrorComputed.Value;
 
     IStateSnapshot IState.Snapshot => Snapshot;
     Computed<T> IState<T>.Computed => Computed;
@@ -138,20 +138,17 @@ public abstract class State<T> : ComputedInput,
 #pragma warning restore CA2214
     }
 
+    // IResult<T> implementation
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Deconstruct(out T value, out Exception? error)
         => Computed.Deconstruct(out value, out error);
-
-    public bool IsValue(out T value)
-        => Computed.IsValue(out value!);
-    public bool IsValue([MaybeNullWhen(false)] out T value, [MaybeNullWhen(true)] out Exception error)
-        => Computed.IsValue(out value, out error);
-
-    public Result<T> AsResult()
-        => Computed.AsResult();
-    public Result<TOther> Cast<TOther>()
-        => Computed.Cast<TOther>();
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    void IResult.Deconstruct(out object? untypedValue, out Exception? error)
+        => ((IResult)Computed).Deconstruct(out untypedValue, out error);
     T IConvertibleTo<T>.Convert() => Value;
-    Result<T> IConvertibleTo<Result<T>>.Convert() => AsResult();
+    public object? GetUntypedValueOrErrorBox()
+        => Computed.GetUntypedValueOrErrorBox();
 
     // Equality
 
