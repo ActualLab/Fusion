@@ -105,7 +105,7 @@ public abstract class KeyValueStoreTestBase : FusionTestBase
         (await kvs.Get(shard, "4")).Should().Be("4v");
 
         clock.Settings = new TestClockSettings(TimeSpan.FromMinutes(6));
-        await Delay(3); // Let trimmer to kick in
+        await Delay(3); // Let trimmer kick in
         ComputedRegistry.Instance.InvalidateEverything();
 
         (await kvs.Get(shard, "1")).Should().Be(null);
