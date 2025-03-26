@@ -98,9 +98,10 @@ public class ComputedSource<T> : ComputedInput,
     public override bool Equals(object? other)
         => ReferenceEquals(this, other);
 
-    // IFunction<T> & IFunction
+    // IComputedFunction
 
     FusionHub IComputeFunction.Hub => Services.GetRequiredService<FusionHub>();
+    public Type OutputType => typeof(T);
 
     ValueTask<Computed<T>> IComputeFunction<T>.Invoke(
         ComputedInput input,

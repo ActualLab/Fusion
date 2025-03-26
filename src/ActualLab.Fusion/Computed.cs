@@ -13,7 +13,7 @@ public interface IComputed : IResult, IHasVersion<ulong>
     public ComputedOptions Options { get; }
     public ComputedInput Input { get; }
     public ConsistencyState ConsistencyState { get; }
-    public IResult Output { get; }
+    public Result Output { get; }
     public Type OutputType { get; }
     public event Action<Computed> Invalidated;
 
@@ -48,25 +48,20 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     public readonly ComputedOptions Options = options;
     public readonly ComputedInput Input = input;
+    public readonly Result Output = default!;
     public readonly ulong Version = ComputedVersion.Next();
 
     public ConsistencyState ConsistencyState {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => (ConsistencyState)_state;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal set => _state = (int)value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (ConsistencyState)_state;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] internal set => _state = (int)value;
     }
 
-    public IResult Output {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => this;
-    }
-
-    public abstract Type OutputType { get; }
+    public Type OutputType => Input.Function.OutputType;
 
     // IComputed implementation
     ComputedOptions IComputed.Options => Options;
     ComputedInput IComputed.Input => Input;
+    Result IComputed.Output => Output;
     ulong IHasVersion<ulong>.Version => Version;
 
     // IResult implementation

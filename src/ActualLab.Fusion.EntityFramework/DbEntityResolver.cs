@@ -357,7 +357,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
                 foreach (var item in batch) {
                     var entity = entities.GetValueOrDefault(item.Input);
                     // ReSharper disable once MethodSupportsCancellation
-                    item.SetResult(entity);
+                    item.TrySetResult(entity);
                 }
                 return;
             }

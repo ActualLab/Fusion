@@ -22,11 +22,10 @@ public interface IAsyncState<out T> : IAsyncState, IAsyncEnumerable<IAsyncState<
     public IAsyncEnumerable<T> Changes(CancellationToken cancellationToken = default);
 }
 
-public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously)
+public sealed class AsyncState<T>(T value)
     : IAsyncState<T>, IAsyncEnumerable<AsyncState<T>>
 {
-    private readonly TaskCompletionSource<AsyncState<T>> _next
-        = TaskCompletionSourceExt.New<AsyncState<T>>(runContinuationsAsynchronously);
+    private readonly AsyncTaskMethodBuilder<AsyncState<T>> _next = AsyncTaskMethodBuilderExt.New<AsyncState<T>>();
 
     public T Value { get; } = value;
     public bool IsFinal => _next.Task.IsFaultedOrCancelled();
@@ -123,30 +122,26 @@ public sealed class AsyncState<T>(T value, bool runContinuationsAsynchronously)
 
     public AsyncState<T> SetNext(T value)
     {
-        var next = new AsyncState<T>(value, runContinuationsAsynchronously);
+        var next = new AsyncState<T>(value);
+        // ReSharper disable once PossiblyImpureMethodCallOnReadonlyVariable
         _next.SetResult(next);
         return next;
     }
 
     public AsyncState<T> TrySetNext(T value)
     {
-        var next = new AsyncState<T>(value, runContinuationsAsynchronously);
+        var next = new AsyncState<T>(value);
         return _next.TrySetResult(next) ? next : this;
     }
 
     // SetFinal & TrySetFinal
 
     public void SetFinal(Exception error)
+        // ReSharper disable once PossiblyImpureMethodCallOnReadonlyVariable
         => _next.SetException(error);
 
     public void SetFinal(CancellationToken cancellationToken)
-    {
-#if NET5_0_OR_GREATER
-        _next.SetCanceled(cancellationToken);
-#else
-        _next.SetCanceled();
-#endif
-    }
+        => _next.TrySetCanceled(cancellationToken);
 
     public bool TrySetFinal(Exception error)
         => _next.TrySetException(error);

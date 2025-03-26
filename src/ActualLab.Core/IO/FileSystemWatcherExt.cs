@@ -29,17 +29,11 @@ public static class FileSystemWatcherExt
         return o1.Merge(o2).Publish().RefCount();
     }
 
-    public static Task<FileSystemEventArgs> GetFirstEvent(
-        this FileSystemWatcher watcher,
-        CancellationToken cancellationToken = default)
-        => GetFirstEvent(watcher, TaskCreationOptions.None, cancellationToken);
-
     public static async Task<FileSystemEventArgs> GetFirstEvent(
         this FileSystemWatcher watcher,
-        TaskCreationOptions taskCreationOptions,
         CancellationToken cancellationToken = default)
     {
-        var tcs = TaskCompletionSourceExt.New<FileSystemEventArgs>(taskCreationOptions);
+        var tcs = AsyncTaskMethodBuilderExt.New<FileSystemEventArgs>(runContinuationsAsynchronously: false);
         var handler = (FileSystemEventHandler) ((_, args) => tcs.TrySetResult(args));
         try {
             watcher.Changed += handler;

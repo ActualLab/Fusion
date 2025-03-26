@@ -5,12 +5,27 @@ public static partial class AsyncTaskMethodBuilderExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static AsyncTaskMethodBuilder<T> New<T>()
     {
-        var result = AsyncTaskMethodBuilder<T>.Create();
-        _ = result.Task;
-        return result;
+        var builder = AsyncTaskMethodBuilder<T>.Create();
+        var task = builder.Task; // This is super important, otherwise any of future calls will modify the local struct only
+        TaskExt.SetRunContinuationsAsynchronouslyFlag(task);
+        return builder;
     }
 
-    // TrySetResult / TrySetException
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AsyncTaskMethodBuilder<T> New<T>(bool runContinuationsAsynchronously)
+    {
+        var builder = AsyncTaskMethodBuilder<T>.Create();
+        var task = builder.Task; // This is super important, otherwise any of future calls will modify the local struct only
+        if (runContinuationsAsynchronously)
+            TaskExt.SetRunContinuationsAsynchronouslyFlag(task);
+        return builder;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SetCanceled<T>(this AsyncTaskMethodBuilder<T> target, CancellationToken cancellationToken)
+        => target.SetException(new OperationCanceledException(cancellationToken));
+
+    // TrySetXxx
 
     public static bool TrySetResult<T>(this AsyncTaskMethodBuilder<T> target, T result)
     {
@@ -42,6 +57,21 @@ public static partial class AsyncTaskMethodBuilderExt
         }
     }
 
+    public static bool TrySetCanceled<T>(this AsyncTaskMethodBuilder<T> target, CancellationToken cancellationToken)
+    {
+        var task = target.Task;
+        if (task.IsCompleted)
+            return false;
+
+        try {
+            target.SetException(new OperationCanceledException(cancellationToken));
+            return true;
+        }
+        catch (InvalidOperationException) {
+            return false;
+        }
+    }
+
     // WithXxx
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -55,6 +85,13 @@ public static partial class AsyncTaskMethodBuilderExt
     public static AsyncTaskMethodBuilder<T> WithException<T>(this AsyncTaskMethodBuilder<T> target, Exception error)
     {
         target.SetException(error);
+        return target;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AsyncTaskMethodBuilder<T> WithCancellation<T>(this AsyncTaskMethodBuilder<T> target, CancellationToken cancellationToken)
+    {
+        target.SetException(new OperationCanceledException(cancellationToken));
         return target;
     }
 
@@ -105,12 +142,11 @@ public static partial class AsyncTaskMethodBuilderExt
             target.SetException(error);
     }
 
-    public static void TrySetFromResult<T>(this AsyncTaskMethodBuilder<T> target, Result<T> result)
+    public static bool TrySetFromResult<T>(this AsyncTaskMethodBuilder<T> target, Result<T> result)
     {
         var (value, error) = result;
-        if (error == null)
-            target.TrySetResult(value);
-        else
-            target.TrySetException(error);
+        return error == null
+            ? target.TrySetResult(value)
+            : target.TrySetException(error);
     }
 }

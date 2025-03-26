@@ -8,14 +8,34 @@ namespace ActualLab.Async;
 
 public static partial class TaskExt
 {
-    private static readonly MethodInfo FromTypedTaskInternalMethod
-        = typeof(TaskExt).GetMethod(nameof(FromTypedTaskInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly ConcurrentDictionary<Type, Func<Task, IResult>> ToTypedResultCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
+#if USE_UNSAFE_ACCESSORS
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_stateFlags")]
+    private static extern ref int StateFlagsGetter(Task task);
+#else
+    private static readonly Action<Task, int> StateFlagsSetter;
+#endif
 
-    public static readonly Task<Unit> UnitTask = Task.FromResult(Unit.Default);
-    public static readonly Task<bool> TrueTask = Task.FromResult(true);
-    public static readonly Task<bool> FalseTask = Task.FromResult(false);
+    private static readonly MethodInfo FromTypedTaskInternalMethod;
+    private static readonly ConcurrentDictionary<Type, Func<Task, IResult>> ToTypedResultCache;
+
+    public static readonly Task<Unit> UnitTask;
+    public static readonly Task<bool> TrueTask;
+    public static readonly Task<bool> FalseTask;
+
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume Task class is fully preserved")]
+    static TaskExt()
+    {
+        UnitTask = Task.FromResult(Unit.Default);
+        TrueTask = Task.FromResult(true);
+        FalseTask = Task.FromResult(false);
+        FromTypedTaskInternalMethod = typeof(TaskExt).GetMethod(nameof(FromTypedTaskInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
+        ToTypedResultCache = new ConcurrentDictionary<Type, Func<Task, IResult>>(HardwareInfo.ProcessorCountPo2, 131);
+#if !USE_UNSAFE_ACCESSORS
+        StateFlagsSetter = typeof(Task)
+            .GetField("m_stateFlags", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetSetter<Task, int>();
+#endif
+    }
 
     // NewNeverEndingUnreferenced
 
@@ -81,6 +101,19 @@ public static partial class TaskExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task<T> AssertCompleted<T>(this Task<T> task)
         => !task.IsCompleted ? throw Errors.TaskIsNotCompleted() : task;
+
+    // Internal methods
+
+    internal static void SetRunContinuationsAsynchronouslyFlag(Task task)
+    {
+        // 0x2000400 = (int)TaskStateFlags.WaitingForActivation | (int)InternalTaskOptions.PromiseTask;
+        const int stateFlags = 0x2000400 | (int)TaskContinuationOptions.RunContinuationsAsynchronously;
+#if USE_UNSAFE_ACCESSORS
+        StateFlagsGetter(task) = stateFlags;
+#else
+        StateFlagsSetter.Invoke(task, stateFlags);
+#endif
+    }
 
     // Private methods
 

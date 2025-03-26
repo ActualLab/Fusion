@@ -14,9 +14,11 @@ using ActualLab.Fusion.Tests.Model;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Fusion.Tests.UIModels;
 using ActualLab.Locking;
+using ActualLab.OS;
 using ActualLab.Rpc;
 using ActualLab.Testing.Collections;
 using ActualLab.Tests;
+using CommunityToolkit.HighPerformance;
 using User = ActualLab.Fusion.Tests.Model.User;
 
 namespace ActualLab.Fusion.Tests;
@@ -51,13 +53,25 @@ public abstract class FusionTestBase : RpcTestBase
         "Server=localhost;Database=fusion_tests;Port=3306;User=root;Password=mariadb";
     public string SqlServerConnectionString { get; protected set; } =
         "Server=localhost,1433;Database=fusion_tests;MultipleActiveResultSets=true;TrustServerCertificate=true;User Id=sa;Password=SqlServer1";
+    public string RedisKeyPrefix { get; protected set; } = "Fusion.Tests";
 
     protected FusionTestBase(ITestOutputHelper @out) : base(@out)
     {
         var appTempDir = TestRunnerInfo.IsGitHubAction()
             ? new FilePath(Environment.GetEnvironmentVariable("RUNNER_TEMP"))
             : FilePath.GetApplicationTempDirectory("", true);
-        SqliteDbPath = appTempDir & FilePath.GetHashedName($"{GetType().Name}_{GetType().Namespace}.db");
+        var testType = GetType();
+        var dotNetVersion = RuntimeInfo.DotNet.VersionString ?? "";
+        var dotNetVersionHash = Convert.ToBase64String(BitConverter.GetBytes(dotNetVersion.GetDjb2HashCode()))[..4];
+        SqliteDbPath = appTempDir & FilePath.GetHashedName($"{testType.Name}_{testType.Namespace}_{dotNetVersion}.db");
+        PostgreSqlConnectionString = ReplaceDbName(PostgreSqlConnectionString);
+        MariaDbConnectionString = ReplaceDbName(MariaDbConnectionString);
+        SqlServerConnectionString = ReplaceDbName(SqlServerConnectionString);
+        RedisKeyPrefix = $"{RedisKeyPrefix}_{dotNetVersionHash}";
+        return;
+
+        string ReplaceDbName(string connectionString)
+            => connectionString.Replace("fusion_tests;", $"fusion_tests_{dotNetVersionHash};");
     }
 
     public override async Task InitializeAsync()
@@ -198,7 +212,7 @@ public abstract class FusionTestBase : RpcTestBase
             services.AddDbContextServices<TestDbContext>(db => {
                 var useRedis = UseOperationLogChangeTracking && UseRedisOperationLogChangeTracking;
                 if (useRedis)
-                    db.AddRedisDb("localhost", "Fusion.Tests");
+                    db.AddRedisDb("localhost", RedisKeyPrefix);
                 db.AddOperations(operations => {
                     if (!UseOperationLogChangeTracking)
                         return;

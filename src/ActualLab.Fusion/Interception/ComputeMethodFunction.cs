@@ -6,18 +6,19 @@ namespace ActualLab.Fusion.Interception;
 public interface IComputeMethodFunction : IComputeFunction
 {
     ComputeMethodDef MethodDef { get; }
-    ComputedOptions ComputedOptions { get; }
-    int CancellationTokenIndex { get; }
 
     object? ComputeServiceInterceptorHandler(Invocation invocation);
 }
 
-public class ComputeMethodFunction<T>(ComputeMethodDef methodDef, FusionHub hub)
-    : ComputeFunctionBase<T>(hub), IComputeMethodFunction
+public class ComputeMethodFunction<T>(FusionHub hub, ComputeMethodDef methodDef)
+    : ComputeFunctionBase<T>(hub, methodDef.UnwrappedReturnType), IComputeMethodFunction
 {
-    public ComputeMethodDef MethodDef { get; } = methodDef;
-    public ComputedOptions ComputedOptions { get; } = methodDef.ComputedOptions;
-    public int CancellationTokenIndex { get; } = methodDef.CancellationTokenIndex;
+    public readonly ComputeMethodDef MethodDef = methodDef;
+    public readonly ComputedOptions ComputedOptions = methodDef.ComputedOptions;
+    public readonly int CancellationTokenIndex = methodDef.CancellationTokenIndex;
+
+    // IComputeMethodFunction implementation
+    ComputeMethodDef IComputeMethodFunction.MethodDef => MethodDef;
 
     public override string ToString()
         => MethodDef.FullName;

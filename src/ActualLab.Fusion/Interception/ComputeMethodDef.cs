@@ -9,7 +9,7 @@ public sealed class ComputeMethodDef : MethodDef
     public readonly bool IsDisposable;
 
     public ComputeMethodDef(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]Type type,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
         MethodInfo method,
         ComputeServiceInterceptor interceptor
         ) : base(type, method)

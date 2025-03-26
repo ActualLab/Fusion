@@ -11,7 +11,7 @@ public class RpcTestConnection
 #else
     private readonly object _lock = new();
 #endif
-    private volatile AsyncState<ChannelPair<RpcMessage>?> _channels = new(null, true);
+    private volatile AsyncState<ChannelPair<RpcMessage>?> _channels = new(null);
 
     public RpcTestClient TestClient { get; }
     public RpcHub Hub => TestClient.Hub;

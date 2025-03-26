@@ -14,6 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{35F39E26-0FDB-44
 		LICENSE = LICENSE
 		Directory.Packages.props = Directory.Packages.props
 		global.json = global.json
+		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{F92C91E5-07F7-435E-B1A8-720C4F2F3766}"

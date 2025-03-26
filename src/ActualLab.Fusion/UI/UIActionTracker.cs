@@ -13,8 +13,8 @@ public sealed class UIActionTracker(
     }
 
     private long _runningActionCount;
-    private volatile AsyncState<UIAction?> _lastAction = new(null, true);
-    private volatile AsyncState<IUIActionResult?> _lastResult = new(null, true);
+    private volatile AsyncState<UIAction?> _lastAction = new(null);
+    private volatile AsyncState<IUIActionResult?> _lastResult = new(null);
 
     public Options Settings { get; } = settings;
     public IServiceProvider Services { get; } = services;

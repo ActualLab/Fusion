@@ -4,7 +4,7 @@ namespace ActualLab.Rpc;
 
 public class RpcClientPeer : RpcPeer
 {
-    private volatile AsyncState<Moment> _reconnectAt = new(default, true);
+    private volatile AsyncState<Moment> _reconnectAt = new(default);
 
     public Symbol ClientId { get; protected init; }
     public RpcClientPeerReconnectDelayer ReconnectDelayer { get; init; }

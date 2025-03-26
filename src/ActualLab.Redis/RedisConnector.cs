@@ -10,7 +10,7 @@ public class RedisConnector
     protected readonly object Lock = new();
 #endif
     protected readonly Func<Task<IConnectionMultiplexer>> MultiplexerFactory;
-    protected volatile AsyncState<Task<Temporary<IConnectionMultiplexer>>?> State = new(null, false);
+    protected volatile AsyncState<Task<Temporary<IConnectionMultiplexer>>?> State = new(null);
     protected volatile CancellationTokenSource? GoneTokenSource;
 
     public RetryDelaySeq ReconnectDelays { get; init; } = RetryDelaySeq.Exp(0.5, 3, 0.33);

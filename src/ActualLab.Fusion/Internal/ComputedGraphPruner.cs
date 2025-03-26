@@ -16,13 +16,13 @@ public sealed class ComputedGraphPruner : WorkerBase
     }
 
     internal static readonly ComputedRegistry.MeterSet Metrics = ComputedRegistry.Metrics;
-    private readonly TaskCompletionSource<Unit> _whenActivatedSource = TaskCompletionSourceExt.New<Unit>();
+    private readonly AsyncTaskMethodBuilder _whenActivatedSource = AsyncTaskMethodBuilderExt.New();
 
     public Options Settings { get; init; }
     public MomentClock Clock { get; init; }
     public ILogger Log { get; init; }
 
-    public Task<Unit> WhenActivated => _whenActivatedSource.Task;
+    public Task WhenActivated => _whenActivatedSource.Task;
 
     public ComputedGraphPruner(Options settings, ILogger<ComputedGraphPruner>? log = null)
         : this(settings, MomentClockSet.Default, log) { }
@@ -60,7 +60,7 @@ public sealed class ComputedGraphPruner : WorkerBase
             Log.LogWarning("Terminating: ComputedRegistry.Instance.GraphPruner != this");
             return;
         }
-        _whenActivatedSource.TrySetResult(default);
+        _whenActivatedSource.TrySetResult();
 
         await Clock.Delay(Settings.CheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
         var chain = CreatePruneOnceChain()

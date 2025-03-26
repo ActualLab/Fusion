@@ -1,4 +1,3 @@
-using StackExchange.Redis;
 using ActualLab.Redis;
 using ActualLab.Testing.Collections;
 

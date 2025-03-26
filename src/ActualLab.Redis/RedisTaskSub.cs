@@ -1,5 +1,4 @@
 using StackExchange.Redis;
-using ActualLab.Internal;
 
 namespace ActualLab.Redis;
 

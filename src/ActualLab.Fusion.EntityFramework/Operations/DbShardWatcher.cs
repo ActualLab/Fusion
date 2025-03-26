@@ -2,7 +2,7 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 
 public abstract class DbShardWatcher(DbShard shard) : ProcessorBase
 {
-    private volatile AsyncState<Unit> _state = new(default, true);
+    private volatile AsyncState<Unit> _state = new(default);
 
     public DbShard Shard { get; } = shard;
     public Task WhenChanged => _state.WhenNext();

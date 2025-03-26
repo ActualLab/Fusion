@@ -230,9 +230,10 @@ public abstract class State<T> : ComputedInput,
     public override Computed? GetExistingComputed()
         => _snapshot?.Computed;
 
-    // IFunction<T>
+    // IComputedFunction implementation
 
     FusionHub IComputeFunction.Hub => Services.GetRequiredService<FusionHub>();
+    public Type OutputType => typeof(T);
 
     ValueTask<Computed<T>> IComputeFunction<T>.Invoke(
         ComputedInput input,

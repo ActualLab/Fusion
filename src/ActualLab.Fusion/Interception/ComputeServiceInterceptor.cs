@@ -48,7 +48,7 @@ public class ComputeServiceInterceptor : Interceptor
 
         var function = (IComputeMethodFunction)typeof(ComputeMethodFunction<>)
             .MakeGenericType(methodDef.UnwrappedReturnType)
-            .CreateInstance(methodDef, Hub);
+            .CreateInstance(Hub, methodDef);
         return function.ComputeServiceInterceptorHandler;
     }
 

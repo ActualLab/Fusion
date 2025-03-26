@@ -21,12 +21,13 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
                 foreach (var item in batch) {
                     if (item.Input == -1000)
                         throw new InvalidOperationException();
-                    item.SetResult((bi, item.Input), cancellationToken);
+                    item.TrySetResult((bi, item.Input));
                 }
             }
         };
 
         async Task Reset() {
+            // ReSharper disable once AccessToDisposedClosure
             await processor.Reset();
             Interlocked.Exchange(ref batchIndex, 0);
         }
@@ -105,7 +106,7 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
             Implementation = async (batch, cancellationToken) => {
                 await Task.Delay(batchDelay, cancellationToken).ConfigureAwait(false);
                 foreach (var item in batch)
-                    item.SetResult(item.Input);
+                    item.TrySetResult(item.Input);
             },
             Log = services.LogFor<BatchProcessor<int, int>>(),
         };

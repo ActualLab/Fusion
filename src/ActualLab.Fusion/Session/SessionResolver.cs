@@ -15,7 +15,7 @@ public interface ISessionResolver : IHasServices
 
 public class SessionResolver(IServiceProvider services) : ISessionResolver
 {
-    protected readonly TaskCompletionSource<Session> SessionSource = TaskCompletionSourceExt.New<Session>();
+    protected readonly AsyncTaskMethodBuilder<Session> SessionSource = AsyncTaskMethodBuilderExt.New<Session>();
 
     public IServiceProvider Services { get; } = services;
     public Task<Session> SessionTask => SessionSource.Task;

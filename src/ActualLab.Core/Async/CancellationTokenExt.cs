@@ -73,60 +73,54 @@ public static class CancellationTokenExt
 
     // ToTask
 
-    public static Disposable<Task, (TaskCompletionSource<Unit>, CancellationTokenRegistration)> ToTask(
+    public static Disposable<Task, (AsyncTaskMethodBuilder, CancellationToken, CancellationTokenRegistration)> ToTask(
         this CancellationToken token,
-        TaskCreationOptions taskCreationOptions = default)
+        bool runContinuationsAsynchronously = true)
     {
-        var tcs = TaskCompletionSourceExt.New<Unit>(taskCreationOptions);
+        var tcs = AsyncTaskMethodBuilderExt.New(runContinuationsAsynchronously);
         var r = token.Register(() => tcs.TrySetCanceled(token));
+        return Disposable.New(tcs.Task, (tcs, token, r), (_, state) => {
 #if NETSTANDARD
-        return Disposable.New((Task)tcs.Task, (tcs, r), (_, state) => {
             state.r.Dispose();
-            state.tcs.TrySetCanceled();
-        });
 #else
-        return Disposable.New((Task)tcs.Task, (tcs, r), (_, state) => {
             state.r.Unregister();
-            state.tcs.TrySetCanceled();
-        });
 #endif
+            state.tcs.TrySetCanceled(state.token);
+        });
     }
 
-    public static Disposable<Task<T>, (TaskCompletionSource<T>, CancellationTokenRegistration)> ToTask<T>(
+    public static Disposable<Task<T>, (AsyncTaskMethodBuilder<T>, CancellationToken, CancellationTokenRegistration)> ToTask<T>(
         this CancellationToken token,
-        TaskCreationOptions taskCreationOptions = default)
+        bool runContinuationsAsynchronously = true)
     {
-        var tcs = TaskCompletionSourceExt.New<T>(taskCreationOptions);
+        var tcs = AsyncTaskMethodBuilderExt.New<T>(runContinuationsAsynchronously);
         var r = token.Register(() => tcs.TrySetCanceled(token));
+        return Disposable.New(tcs.Task, (tcs, token, r), (_, state) => {
 #if NETSTANDARD
-        return Disposable.New(tcs.Task, (tcs, r), (_, state) => {
             state.r.Dispose();
-            state.tcs.TrySetCanceled();
-        });
 #else
-        return Disposable.New(tcs.Task, (tcs, r), (_, state) => {
             state.r.Unregister();
-            state.tcs.TrySetCanceled();
-        });
 #endif
+            state.tcs.TrySetCanceled(state.token);
+        });
     }
 
     // ToTaskUnsafe
 
     internal static Task ToTaskUnsafe(
         this CancellationToken token,
-        TaskCreationOptions taskCreationOptions = default)
+        bool runContinuationsAsynchronously = true)
     {
-        var tcs = TaskCompletionSourceExt.New<Unit>(taskCreationOptions);
+        var tcs = AsyncTaskMethodBuilderExt.New(runContinuationsAsynchronously);
         token.Register(() => tcs.TrySetCanceled(token));
         return tcs.Task;
     }
 
     internal static Task<T> ToTaskUnsafe<T>(
         this CancellationToken token,
-        TaskCreationOptions taskCreationOptions = default)
+        bool runContinuationsAsynchronously = true)
     {
-        var tcs = TaskCompletionSourceExt.New<T>(taskCreationOptions);
+        var tcs = AsyncTaskMethodBuilderExt.New<T>(runContinuationsAsynchronously);
         token.Register(() => tcs.TrySetCanceled(token));
         return tcs.Task;
     }

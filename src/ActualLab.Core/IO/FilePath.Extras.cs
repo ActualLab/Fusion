@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using CommunityToolkit.HighPerformance;
 
 namespace ActualLab.IO;
 
@@ -34,7 +35,7 @@ public readonly partial struct FilePath
 
         var mustAddHash = alwaysHash || !string.Equals(result, key, StringComparison.Ordinal);
         if (mustAddHash || result.Length > maxLength) {
-            var hash = Convert.ToBase64String(BitConverter.GetBytes(key.GetDeterministicHashCode()));
+            var hash = Convert.ToBase64String(BitConverter.GetBytes(key.GetDjb2HashCode()));
             hash = NonAlphaOrNumberRe.Replace(hash, "_");
             hash = LeadingUnderscoresRe.Replace(hash, "");
             hash = TrailingUnderscoresRe.Replace(hash, "");

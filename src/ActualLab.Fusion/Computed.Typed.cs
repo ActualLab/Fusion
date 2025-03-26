@@ -15,11 +15,6 @@ public abstract class Computed<T> : Computed, IResult<T>
 
     public IComputeFunction<T> Function => (IComputeFunction<T>)Input.Function;
 
-    public sealed override Type OutputType {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => typeof(T);
-    }
-
     public new Result<T> Output {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {

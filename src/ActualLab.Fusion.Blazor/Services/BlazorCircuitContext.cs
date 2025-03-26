@@ -9,7 +9,7 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
 {
     private static long _lastId;
 
-    protected readonly TaskCompletionSource<Unit> WhenInitializedSource = TaskCompletionSourceExt.New<Unit>();
+    protected readonly AsyncTaskMethodBuilder WhenInitializedSource = AsyncTaskMethodBuilderExt.New();
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
@@ -43,7 +43,10 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
         Dispatcher dispatcher,
         RenderModeDef renderMode)
     {
-        lock (WhenInitializedSource) {
+        lock (Lock) {
+            if (IsDisposed)
+                throw Errors.AlreadyDisposed();
+
             if (WhenInitializedSource.Task.IsCompleted) {
                 if (Dispatcher == dispatcher && RenderMode == renderMode)
                     return;
@@ -53,7 +56,7 @@ public class BlazorCircuitContext(IServiceProvider services) : ProcessorBase
 
             Dispatcher = dispatcher;
             RenderMode = renderMode;
-            WhenInitializedSource.TrySetResult(default);
+            WhenInitializedSource.TrySetResult();
         }
     }
 }

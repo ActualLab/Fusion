@@ -11,10 +11,6 @@ public static partial class TaskCompletionSourceExt
         => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TaskCompletionSource<T> NewSynchronous<T>()
-        => new();
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TaskCompletionSource<T> New<T>(bool runContinuationsAsynchronously)
         => runContinuationsAsynchronously
             ? new(TaskCreationOptions.RunContinuationsAsynchronously)
@@ -27,6 +23,13 @@ public static partial class TaskCompletionSourceExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TaskCompletionSource<T> New<T>(object? state, TaskCreationOptions taskCreationOptions)
         => new(state, taskCreationOptions);
+
+#if !NET5_0_OR_GREATER
+    // TrySetCanceled overload for pre-NET5
+
+    public static bool TrySetCanceled<T>(this TaskCompletionSource<T> target, CancellationToken cancellationToken)
+        => target.TrySetCanceled();
+#endif
 
     // WithXxx
 
@@ -44,7 +47,7 @@ public static partial class TaskCompletionSourceExt
         return target;
     }
 
-    public static TaskCompletionSource<T> WithCancellation<T>(this TaskCompletionSource<T> target, CancellationToken cancellationToken = default)
+    public static TaskCompletionSource<T> WithCancellation<T>(this TaskCompletionSource<T> target, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
             target.TrySetCanceled(cancellationToken);

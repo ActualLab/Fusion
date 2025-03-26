@@ -13,10 +13,6 @@ public static partial class TaskCompletionSourceExt
         => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TaskCompletionSource NewSynchronous()
-        => new();
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TaskCompletionSource New(bool runContinuationsAsynchronously)
         => runContinuationsAsynchronously
             ? new(TaskCreationOptions.RunContinuationsAsynchronously)
@@ -49,7 +45,7 @@ public static partial class TaskCompletionSourceExt
         return target;
     }
 
-    public static TaskCompletionSource WithCancellation(this TaskCompletionSource target, CancellationToken cancellationToken = default)
+    public static TaskCompletionSource WithCancellation(this TaskCompletionSource target, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
             target.TrySetCanceled(cancellationToken);

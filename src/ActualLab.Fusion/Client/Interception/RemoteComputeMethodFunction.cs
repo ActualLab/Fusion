@@ -26,11 +26,11 @@ public interface IRemoteComputeMethodFunction : IComputeMethodFunction
 }
 
 public class RemoteComputeMethodFunction<T>(
+    FusionHub hub,
     ComputeMethodDef methodDef,
     RpcMethodDef rpcMethodDef,
-    FusionHub hub,
     object? localTarget
-    ) : ComputeMethodFunction<T>(methodDef, hub), IRemoteComputeMethodFunction
+    ) : ComputeMethodFunction<T>(hub, methodDef), IRemoteComputeMethodFunction
 {
     private string? _toString;
 
@@ -38,11 +38,18 @@ public class RemoteComputeMethodFunction<T>(
         hub.RemoteComputeServiceInterceptorOptions.LogCacheEntryUpdateSettings;
     protected ILogger CacheLog => Hub.RemoteComputedCacheLog;
 
-    public RpcHub RpcHub { get; } = hub.RpcHub;
-    public RpcMethodDef RpcMethodDef { get; } = rpcMethodDef;
-    public RpcSafeCallRouter RpcCallRouter { get; } = hub.RpcHub.InternalServices.CallRouter;
-    public IRemoteComputedCache? RemoteComputedCache { get; } = hub.RemoteComputedCache;
-    public object? LocalTarget { get; } = localTarget;
+    public readonly RpcHub RpcHub = hub.RpcHub;
+    public readonly RpcMethodDef RpcMethodDef = rpcMethodDef;
+    public readonly RpcSafeCallRouter RpcCallRouter = hub.RpcHub.InternalServices.CallRouter;
+    public readonly IRemoteComputedCache? RemoteComputedCache = hub.RemoteComputedCache;
+    public readonly object? LocalTarget = localTarget;
+
+    // IRemoteComputeMethodFunction implementation
+    RpcHub IRemoteComputeMethodFunction.RpcHub => RpcHub;
+    RpcMethodDef IRemoteComputeMethodFunction.RpcMethodDef => RpcMethodDef;
+    RpcSafeCallRouter IRemoteComputeMethodFunction.RpcCallRouter => RpcCallRouter;
+    IRemoteComputedCache? IRemoteComputeMethodFunction.RemoteComputedCache => RemoteComputedCache;
+    object? IRemoteComputeMethodFunction.LocalTarget => LocalTarget;
 
     public override string ToString()
         => _toString ??= ZString.Concat('*', base.ToString());

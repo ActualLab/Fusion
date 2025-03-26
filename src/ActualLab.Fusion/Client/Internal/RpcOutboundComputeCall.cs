@@ -12,8 +12,7 @@ public interface IRpcOutboundComputeCall
 public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
     : RpcOutboundCall<TResult>(context), IRpcOutboundComputeCall
 {
-    protected readonly TaskCompletionSource<Unit> WhenInvalidatedSource
-        = TaskCompletionSourceExt.New<Unit>(); // Must not allow synchronous continuations!
+    protected readonly AsyncTaskMethodBuilder WhenInvalidatedSource = AsyncTaskMethodBuilderExt.New(); // Must not allow synchronous continuations!
 
     public override string DebugTypeName => "=>";
     public override int CompletedStage
@@ -121,7 +120,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             var isResultSet = ResultSource.TrySetCanceled(cancellationToken);
             if (isResultSet)
                 Context.CacheInfoCapture?.CaptureValue(cancellationToken);
-            WhenInvalidatedSource.TrySetResult(default);
+            WhenInvalidatedSource.TrySetResult();
             CompleteAndUnregister(notifyCancelled: true);
             return isResultSet;
         }
@@ -146,7 +145,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
 
     private bool SetInvalidatedUnsafe(bool notifyCancelled)
     {
-        if (!WhenInvalidatedSource.TrySetResult(default))
+        if (!WhenInvalidatedSource.TrySetResult())
             return false;
 
         CompleteAndUnregister(notifyCancelled);

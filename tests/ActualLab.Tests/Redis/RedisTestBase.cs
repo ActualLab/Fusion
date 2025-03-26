@@ -1,4 +1,8 @@
+using ActualLab.IO;
+using ActualLab.OS;
 using ActualLab.Redis;
+using ActualLab.Reflection;
+using CommunityToolkit.HighPerformance;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
@@ -32,7 +36,12 @@ public class RedisTestBase(ITestOutputHelper @out) : TestBase(@out)
                     LogFilter));
 #pragma warning restore CS0618
         });
-        services.AddRedisDb("localhost", $"actual-lab.fusion.tests.{GetType().Name}");
+
+        var testType = GetType();
+        var dotNetVersion = RuntimeInfo.DotNet.VersionString ?? "";
+        var dotNetVersionHash = Convert.ToBase64String(BitConverter.GetBytes(dotNetVersion.GetDjb2HashCode()))[..4];
+        var keyPrefix = $"Redis.Tests.{testType.GetName()}_{dotNetVersionHash}";
+        services.AddRedisDb("localhost", keyPrefix);
 
         var c = services.BuildServiceProvider();
         var redisDb = c.GetRequiredService<RedisDb>();

@@ -7,6 +7,7 @@ namespace ActualLab.Fusion;
 public interface IComputeFunction : IHasServices
 {
     public FusionHub Hub { get; }
+    public Type OutputType { get; }
 }
 
 public interface IComputeFunction<T> : IComputeFunction
@@ -21,7 +22,7 @@ public interface IComputeFunction<T> : IComputeFunction
         CancellationToken cancellationToken = default);
 }
 
-public abstract class ComputeFunctionBase<T>(FusionHub hub) : IComputeFunction<T>
+public abstract class ComputeFunctionBase<T>(FusionHub hub, Type outputType) : IComputeFunction<T>
 {
     protected static AsyncLockSet<ComputedInput> InputLocks {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -34,11 +35,14 @@ public abstract class ComputeFunctionBase<T>(FusionHub hub) : IComputeFunction<T
     protected ILogger Log => field ??= Services.LogFor(GetType());
     protected ILogger? DebugLog => (_debugLog ??= LazySlim.New(Log.IfEnabled(LogLevel.Debug))).Value;
 
-    IServiceProvider IHasServices.Services => Services;
-    FusionHub IComputeFunction.Hub => Hub;
-
     public readonly FusionHub Hub = hub;
     public readonly IServiceProvider Services = hub.Services;
+    public readonly Type OutputType = outputType;
+
+    // IComputeFunction implementation
+    IServiceProvider IHasServices.Services => Services;
+    FusionHub IComputeFunction.Hub => Hub;
+    Type IComputeFunction.OutputType => OutputType;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual async ValueTask<Computed<T>> Invoke(

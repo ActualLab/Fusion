@@ -10,7 +10,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 {
     public static LogLevel DefaultCallLogLevel { get; set; } = LogLevel.None;
 
-    private volatile AsyncState<RpcPeerConnectionState> _connectionState = new(RpcPeerConnectionState.Disconnected, true);
+    private volatile AsyncState<RpcPeerConnectionState> _connectionState = new(RpcPeerConnectionState.Disconnected);
     private volatile RpcHandshake? _handshake;
     private volatile RpcMethodResolver _serverMethodResolver;
     private volatile ChannelWriter<RpcMessage>? _sender;

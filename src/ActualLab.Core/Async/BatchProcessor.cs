@@ -231,7 +231,7 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
                     }
                     item.DequeuedAt = CpuTimestamp.Now;
                     if (item.IsMeasureOnlyItem) {
-                        item.SetResult(default(TResult)!);
+                        item.TrySetResult(default(TResult)!);
                         continue;
                     }
                     var queueTime = item.DequeuedAt - item.QueuedAt;
@@ -273,7 +273,7 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
             if (!item.CancellationToken.IsCancellationRequested)
                 continue;
 
-            item.ResultSource.TrySetCanceled();
+            item.ResultSource.TrySetCanceled(item.CancellationToken);
             batch.RemoveAt(i);
         }
         if (batch.Count == 0)
@@ -311,27 +311,27 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
         if (error is OperationCanceledException oce) {
             var cancellationToken = oce.CancellationToken;
             foreach (var item in batch)
-                item.SetCancelled(cancellationToken);
+                item.TrySetCanceled(cancellationToken);
         }
         else
             foreach (var item in batch)
-                item.SetError(error);
+                item.TrySetError(error);
         batch.Clear();
         return Task.CompletedTask;
     }
 
     // Nested types
 
-    public class Item(T input, TaskCompletionSource<TResult> resultSource, CancellationToken cancellationToken)
+    public class Item(T input, AsyncTaskMethodBuilder<TResult> resultSource, CancellationToken cancellationToken)
     {
-        private static readonly TaskCompletionSource<TResult> WorkerKillSource
-            = TaskCompletionSourceExt.New<TResult>()
+        private static readonly AsyncTaskMethodBuilder<TResult> WorkerKillSource
+            = AsyncTaskMethodBuilderExt.New<TResult>()
                 .WithException(Errors.InternalError("Something is off: you should never see the WorkerKiller item in batches."));
 
         public static readonly Item WorkerKiller = new(default!, WorkerKillSource, default);
 
         public readonly T Input = input;
-        public readonly TaskCompletionSource<TResult> ResultSource = resultSource;
+        public readonly AsyncTaskMethodBuilder<TResult> ResultSource = resultSource;
         public readonly CancellationToken CancellationToken = cancellationToken;
         public readonly CpuTimestamp QueuedAt = CpuTimestamp.Now;
         public CpuTimestamp DequeuedAt;
@@ -339,39 +339,19 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
         public bool IsMeasureOnlyItem;
 
         public Item(T input, CancellationToken cancellationToken)
-            : this(input, TaskCompletionSourceExt.New<TResult>(), cancellationToken)
+            : this(input, AsyncTaskMethodBuilderExt.New<TResult>(), cancellationToken)
         { }
 
         public override string ToString()
             => $"{GetType().GetName()}({Input}) -> {ResultTask}";
 
-        public void SetResult(TResult result)
+        public bool TrySetResult(TResult result)
             => ResultSource.TrySetResult(result);
-        public void SetResult(Result<TResult> result)
+        public bool TrySetResult(Result<TResult> result)
             => ResultSource.TrySetFromResult(result);
-        public void SetResult(Result<TResult> result, CancellationToken cancellationToken)
-            => ResultSource.TrySetFromResult(result, cancellationToken);
-
-        public void SetError(Exception error)
+        public bool TrySetError(Exception error)
             => ResultSource.TrySetException(error);
-
-        public void SetCancelled(CancellationToken cancellationToken = default)
-        {
-            if (cancellationToken.IsCancellationRequested)
-                ResultSource.TrySetCanceled(cancellationToken);
-            else
-#pragma warning disable CA2016
-                ResultSource.TrySetCanceled();
-#pragma warning restore CA2016
-        }
-
-        public bool SetCancelledIfCancelled()
-        {
-            if (!CancellationToken.IsCancellationRequested)
-                return false;
-
-            ResultSource.TrySetCanceled(CancellationToken);
-            return true;
-        }
+        public bool TrySetCanceled(CancellationToken cancellationToken)
+            => ResultSource.TrySetCanceled(cancellationToken);
     }
 }

@@ -5,7 +5,7 @@ namespace ActualLab.Rpc;
 public class RpcServerPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions = null)
     : RpcPeer(hub, peerRef, versions)
 {
-    private volatile AsyncState<RpcConnection?> _nextConnection = new(null, true);
+    private volatile AsyncState<RpcConnection?> _nextConnection = new(null);
 
     public void SetConnection(RpcConnection connection)
     {

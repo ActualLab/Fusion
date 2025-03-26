@@ -54,13 +54,13 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
             // Proxy is a Distributed service & non-RPC method is called
             var function = (IComputeMethodFunction)typeof(ComputeMethodFunction<>)
                 .MakeGenericType(methodDef.UnwrappedReturnType)
-                .CreateInstance(methodDef, Hub);
+                .CreateInstance(Hub, methodDef);
             return function.ComputeServiceInterceptorHandler;
         }
         else {
             var function = (IRemoteComputeMethodFunction)typeof(RemoteComputeMethodFunction<>)
                 .MakeGenericType(methodDef.UnwrappedReturnType)
-                .CreateInstance(methodDef, rpcMethodDef, Hub, LocalTarget);
+                .CreateInstance(Hub, methodDef, rpcMethodDef, LocalTarget);
             return function.RemoteComputeServiceInterceptorHandler;
         }
     }
