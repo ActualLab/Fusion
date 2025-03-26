@@ -14,7 +14,7 @@ using Xunit.DependencyInjection.Logging;
 namespace ActualLab.Tests;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
-public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out), IAsyncLifetime
+public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
     protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.GetDefaultPeerRef();

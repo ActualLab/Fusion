@@ -58,14 +58,10 @@ public class CommandRTestBase(ITestOutputHelper @out) : TestBase(@out)
         if (CommandHandlerFilter != null)
             commander.AddHandlerFilter(CommandHandlerFilter);
 
-        var fusion = services.AddFusion();
-
+        services.AddFusion();
         if (UseDbContext) {
-            var testType = GetType();
-            var appTempDir = FilePath.GetApplicationTempDirectory("", true);
-            var dbPath = appTempDir & FilePath.GetHashedName($"{testType.Name}_{testType.Namespace}.db");
             services.AddTransientDbContextFactory<TestDbContext>(db => {
-                db.UseSqlite($"Data Source={dbPath}", sqlite => { });
+                db.UseSqlite($"Data Source={GetTestSqliteFilePath()}", sqlite => { });
             });
             services.AddDbContextServices<TestDbContext>(db => {
                 db.AddOperations();

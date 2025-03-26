@@ -36,12 +36,7 @@ public class RedisTestBase(ITestOutputHelper @out) : TestBase(@out)
                     LogFilter));
 #pragma warning restore CS0618
         });
-
-        var testType = GetType();
-        var dotNetVersion = RuntimeInfo.DotNet.VersionString ?? "";
-        var dotNetVersionHash = Convert.ToBase64String(BitConverter.GetBytes(dotNetVersion.GetDjb2HashCode()))[..4];
-        var keyPrefix = $"Redis.Tests.{testType.GetName()}_{dotNetVersionHash}";
-        services.AddRedisDb("localhost", keyPrefix);
+        services.AddRedisDb("localhost", GetTestRedisKeyPrefix());
 
         var c = services.BuildServiceProvider();
         var redisDb = c.GetRequiredService<RedisDb>();

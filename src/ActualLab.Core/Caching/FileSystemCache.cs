@@ -116,23 +116,21 @@ public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, T
             : JsonConvert.SerializeObject(source);
 }
 
-public class FileSystemCache<TKey, TValue> : FileSystemCacheBase<TKey, TValue>
+public class FileSystemCache<TKey, TValue>(
+    FilePath cacheDirectory,
+    string? extension = null,
+    Func<TKey, string>? keyToFileNameConverter = null
+    ) : FileSystemCacheBase<TKey, TValue>
     where TKey : notnull
 {
-    protected static readonly string DefaultExtension = ".tmp";
-    protected static readonly Func<TKey, FilePath> DefaultKeyToFileNameConverter =
+    // ReSharper disable once StaticMemberInGenericType
+    protected static readonly string DefaultFileExtension = ".tmp";
+    protected static readonly Func<TKey, string> DefaultKeyToFileNameConverter =
         key => FilePath.GetHashedName(key?.ToString() ?? "0_0");
 
-    public string CacheDirectory { get; }
-    public string FileExtension { get; }
-    public Func<TKey, FilePath> KeyToFileNameConverter { get; }
-
-    public FileSystemCache(FilePath cacheDirectory, string? extension = null, Func<TKey, FilePath>? keyToFileNameConverter = null)
-    {
-        CacheDirectory = cacheDirectory;
-        FileExtension = extension ?? DefaultExtension;
-        KeyToFileNameConverter = keyToFileNameConverter ?? DefaultKeyToFileNameConverter;
-    }
+    public string CacheDirectory { get; } = cacheDirectory;
+    public string FileExtension { get; } = extension ?? DefaultFileExtension;
+    public Func<TKey, string> KeyToFileNameConverter { get; } = keyToFileNameConverter ?? DefaultKeyToFileNameConverter;
 
     public void Clear()
     {
@@ -146,5 +144,5 @@ public class FileSystemCache<TKey, TValue> : FileSystemCacheBase<TKey, TValue>
     }
 
     protected override FilePath GetFileName(TKey key)
-        => CacheDirectory & (KeyToFileNameConverter(key) + FileExtension);
+        => CacheDirectory & new FilePath(KeyToFileNameConverter(key) + FileExtension);
 }

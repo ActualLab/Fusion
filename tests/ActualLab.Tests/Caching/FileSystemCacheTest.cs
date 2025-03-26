@@ -33,6 +33,6 @@ public class FileSystemCacheTest(ITestOutputHelper @out) : TestBase(@out)
     {
         assembly ??= Assembly.GetCallingAssembly();
         var subdirectory = FilePath.GetHashedName($"{id}_{assembly.FullName}_{assembly.Location}");
-        return Path.GetTempPath() & subdirectory;
+        return FilePath.GetTempPath() & subdirectory;
     }
 }

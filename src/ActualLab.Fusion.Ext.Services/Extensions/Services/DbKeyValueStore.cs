@@ -33,9 +33,7 @@ public class DbKeyValueStore<TDbContext,
 
         var keys = items.Select(i => i.Key).ToList();
         var dbKeyValues = await dbContext.Set<TDbKeyValue>().AsQueryable()
-#pragma warning disable MA0002
-            .Where(e => keys.Contains(e.Key))
-#pragma warning restore MA0002
+            .Where(e => keys.Any(k => k.Equals(e.Key)))
             .ToDictionaryAsync(e => e.Key, cancellationToken)
             .ConfigureAwait(false);
         foreach (var item in items) {
@@ -69,11 +67,7 @@ public class DbKeyValueStore<TDbContext,
         dbContext.EnableChangeTracking(false); // Just to speed up things a bit
 
         var dbKeyValues = await dbContext.Set<TDbKeyValue>().AsQueryable()
-#if NET9_0_OR_GREATER
             .Where(e => keys.Any(k => k.Equals(e.Key)))
-#else
-            .Where(e => keys.Contains(e.Key))
-#endif
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         foreach (var dbKeyValue in dbKeyValues)

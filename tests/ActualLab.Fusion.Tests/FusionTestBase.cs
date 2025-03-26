@@ -46,6 +46,7 @@ public abstract class FusionTestBase : RpcTestBase
     public bool UseRemoteComputedCache { get; set; }
     public LogLevel RpcCallLogLevel { get; set; } = LogLevel.None;
 
+    public string RedisKeyPrefix { get; protected set; }
     public FilePath SqliteDbPath { get; protected set; }
     public string PostgreSqlConnectionString { get; protected set; } =
         "Server=localhost;Database=fusion_tests;Port=5432;User Id=postgres;Password=postgres;Enlist=false";
@@ -53,25 +54,18 @@ public abstract class FusionTestBase : RpcTestBase
         "Server=localhost;Database=fusion_tests;Port=3306;User=root;Password=mariadb";
     public string SqlServerConnectionString { get; protected set; } =
         "Server=localhost,1433;Database=fusion_tests;MultipleActiveResultSets=true;TrustServerCertificate=true;User Id=sa;Password=SqlServer1";
-    public string RedisKeyPrefix { get; protected set; } = "Fusion.Tests";
 
     protected FusionTestBase(ITestOutputHelper @out) : base(@out)
     {
-        var appTempDir = TestRunnerInfo.IsGitHubAction()
-            ? new FilePath(Environment.GetEnvironmentVariable("RUNNER_TEMP"))
-            : FilePath.GetApplicationTempDirectory("", true);
-        var testType = GetType();
-        var dotNetVersion = RuntimeInfo.DotNet.VersionString ?? "";
-        var dotNetVersionHash = Convert.ToBase64String(BitConverter.GetBytes(dotNetVersion.GetDjb2HashCode()))[..4];
-        SqliteDbPath = appTempDir & FilePath.GetHashedName($"{testType.Name}_{testType.Namespace}_{dotNetVersion}.db");
-        PostgreSqlConnectionString = ReplaceDbName(PostgreSqlConnectionString);
-        MariaDbConnectionString = ReplaceDbName(MariaDbConnectionString);
-        SqlServerConnectionString = ReplaceDbName(SqlServerConnectionString);
-        RedisKeyPrefix = $"{RedisKeyPrefix}_{dotNetVersionHash}";
+        RedisKeyPrefix = GetTestRedisKeyPrefix(suffix: DotNetVersionHash);
+        SqliteDbPath = GetTestSqliteFilePath(suffix: DotNetVersionHash);
+        PostgreSqlConnectionString = FixConnectionString(PostgreSqlConnectionString);
+        MariaDbConnectionString = FixConnectionString(MariaDbConnectionString);
+        SqlServerConnectionString = FixConnectionString(SqlServerConnectionString);
         return;
 
-        string ReplaceDbName(string connectionString)
-            => connectionString.Replace("fusion_tests;", $"fusion_tests_{dotNetVersionHash};");
+        string FixConnectionString(string connectionString)
+            => GetTestDbConnectionString(connectionString, "fusion_tests", DotNetVersionHash);
     }
 
     public override async Task InitializeAsync()

@@ -24,6 +24,7 @@ public class DbOperationTest : CommandRTestBase
         await services.Commander().Call(command);
 
         var f = services.GetRequiredService<IDbContextFactory<TestDbContext>>();
+        // ReSharper disable once MethodHasAsyncOverload
         await using var dbContext = f.CreateDbContext().ReadWrite(false);
         (await dbContext.Users.AsQueryable().CountAsync()).Should().Be(2);
         (await dbContext.Operations.AsQueryable().CountAsync()).Should().Be(1);
@@ -45,6 +46,7 @@ public class DbOperationTest : CommandRTestBase
         });
 
         var f = services.GetRequiredService<IDbContextFactory<TestDbContext>>();
+        // ReSharper disable once MethodHasAsyncOverload
         await using var dbContext = f.CreateDbContext().ReadWrite(false);
         (await dbContext.Users.AsQueryable().CountAsync()).Should().Be(0);
         (await dbContext.Operations.AsQueryable().CountAsync()).Should().Be(0);
