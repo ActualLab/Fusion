@@ -38,21 +38,19 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
         var services = CreateServices();
         var serverCounters = services.GetRequiredService<CounterService>();
         var counters = useClient ? services.GetRequiredService<ICounterService>() : serverCounters;
-        var key = useClient ? "wait250" : "wait125";
+        var waitSuffix = "-wait250";
         var cancellationDelay = TimeSpan.FromMilliseconds(50);
         var cancellationDelayThreshold = cancellationDelay + TimeSpan.FromMilliseconds(25);
         var timeout = Debugger.IsAttached
             ? TimeSpan.FromMinutes(10)
             : TimeSpan.FromSeconds(30);
 
-        await counters.Get(key);
-        await counters.Increment(key);
-
-        await Enumerable.Range(0, 1000)
+        await Enumerable.Range(0, 1_000)
             .Select(i => Task.Run(() => Test(i)))
             .Collect();
 
         async Task<Unit> Test(int index) {
+            var key = $"{index % 10}-{waitSuffix}";
             var mustCancel = RandomShared.NextDouble() < 0.5;
             await Task.Delay(TimeSpan.FromMilliseconds(RandomShared.NextDouble() * 30));
             var callStartedAt = CpuTimestamp.Now;
