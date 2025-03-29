@@ -1,6 +1,5 @@
 using ActualLab.Rpc;
 using ActualLab.Rpc.Diagnostics;
-using ActualLab.Time.Internal;
 
 namespace ActualLab.Fusion.Internal;
 

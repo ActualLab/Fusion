@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Internal;
 
@@ -26,19 +25,17 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
     public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
         => GetHandler(invocation) ?? (LocalTarget as Interceptor)?.SelectHandler(invocation);
 
-    protected override Func<Invocation, object?>? CreateHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
-        (Invocation initialInvocation, MethodDef methodDef)
+    protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)
     {
         var rpcMethodDef = (RpcMethodDef)methodDef;
         var proxy = initialInvocation.Proxy;
-        var localCallAsyncInvoker = methodDef.SelectAsyncInvoker<TUnwrapped>(proxy, LocalTarget)
+        var localCallAsyncInvoker = methodDef.SelectAsyncInvokerUntyped(proxy, LocalTarget)
             ?? throw Errors.NoLocalCallInvoker();
-        var remoteCallAsyncInvoker = methodDef.SelectAsyncInvoker<TUnwrapped>(proxy, RemoteTarget)
+        var remoteCallAsyncInvoker = methodDef.SelectAsyncInvokerUntyped(proxy, RemoteTarget)
             ?? throw Errors.NoRemoteCallInvoker();
         return invocation => {
             var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
-            Task<TUnwrapped> resultTask;
+            Task resultTask;
             if (peer.Ref.CanBeRerouted)
                 resultTask = InvokeWithRerouting(rpcMethodDef, localCallAsyncInvoker, remoteCallAsyncInvoker, invocation, peer);
             else if (peer.ConnectionKind == RpcPeerConnectionKind.Local) {
@@ -53,14 +50,14 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
                 invocation = invocation.With(context);
                 resultTask = remoteCallAsyncInvoker.Invoke(invocation);
             }
-            return rpcMethodDef.WrapAsyncInvokerResultOfAsyncMethod(resultTask);
+            return rpcMethodDef.UniversalAsyncResultWrapper.Invoke(resultTask);
         };
     }
 
-    private async Task<T> InvokeWithRerouting<T>(
+    private async Task<object?> InvokeWithRerouting(
         RpcMethodDef methodDef,
-        Func<Invocation, Task<T>> localCallAsyncInvoker,
-        Func<Invocation, Task<T>> remoteCallAsyncInvoker,
+        Func<Invocation, Task> localCallAsyncInvoker,
+        Func<Invocation, Task> remoteCallAsyncInvoker,
         Invocation invocation,
         RpcPeer? peer)
     {
@@ -68,7 +65,7 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
         while (true) {
             peer ??= CallRouter.Invoke(methodDef, invocation.Arguments);
             try {
-                Task<T> resultTask;
+                Task resultTask;
                 if (peer.ConnectionKind == RpcPeerConnectionKind.Local) {
                     resultTask = localCallAsyncInvoker.Invoke(invocation);
                 }
@@ -77,7 +74,7 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
                     invocation = invocation.With(context);
                     resultTask = remoteCallAsyncInvoker.Invoke(invocation);
                 }
-                return await resultTask.ConfigureAwait(false);
+                return await methodDef.TaskToUntypedValueTaskConverter.Invoke(resultTask).ConfigureAwait(false);
             }
             catch (RpcRerouteException) {
                 var ctIndex = methodDef.CancellationTokenIndex;

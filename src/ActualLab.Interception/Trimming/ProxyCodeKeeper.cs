@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Caching;
 using ActualLab.Trimming;
 
 namespace ActualLab.Interception.Trimming;
@@ -465,6 +466,12 @@ public class ProxyCodeKeeper : CodeKeeper
     {
         if (AlwaysTrue)
             return;
+
+        Keep<IGenericInstanceFactory<TUnwrapped>>();
+        Keep<TaskExt.TaskFromExceptionFactory<TUnwrapped>>();
+        Keep<TaskExt.ToTypedValueTaskFactory<TUnwrapped>>();
+        Keep<TaskExt.ToUntypedValueTaskFactory<TUnwrapped>>();
+        Keep<TaskExt.ToTypedResultSynchronouslyFactory<TUnwrapped>>();
 
         MethodDefCodeKeeper.KeepCodeForResult<TResult, TUnwrapped>();
         Keep<Interceptor>().KeepCodeForResult<TResult, TUnwrapped>();

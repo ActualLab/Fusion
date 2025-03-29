@@ -12,23 +12,24 @@ public interface IComputed : IResult, IHasVersion<ulong>
 {
     public ComputedOptions Options { get; }
     public ComputedInput Input { get; }
-    public ConsistencyState ConsistencyState { get; }
-    public Result Output { get; }
     public Type OutputType { get; }
+    public ConsistencyState ConsistencyState { get; }
+    public Result UntypedOutput { get; }
     public event Action<Computed> Invalidated;
 
-    public void Invalidate(bool immediately = false);
-
+    public Task GetValuePromise();
     public ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
-    public ValueTask UseUntyped(CancellationToken cancellationToken = default);
+    public Task UseUntyped(CancellationToken cancellationToken = default);
+    public void Invalidate(bool immediately = false);
 }
 
-public abstract partial class Computed(ComputedOptions options, ComputedInput input)
+public abstract partial class Computed(ComputedOptions options, ComputedInput input, Result output = default)
     : IComputed, IGenericTimeoutHandler
 {
     private volatile int _state;
     private volatile ComputedFlags _flags;
     private volatile int _lastKeepAliveSlot;
+    private Result _untypedOutput = output;
     private RefHashSetSlim3<Computed> _dependencies;
     private HashSetSlim3<(ComputedInput Input, ulong Version)> _dependants;
     // ReSharper disable once InconsistentNaming
@@ -48,27 +49,31 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     public readonly ComputedOptions Options = options;
     public readonly ComputedInput Input = input;
-    public readonly Result Output = default!;
     public readonly ulong Version = ComputedVersion.Next();
+    private Task? _untypedOutputPromise;
+
+    // IComputed properties
+
+    public Type OutputType => Input.Function.OutputType;
 
     public ConsistencyState ConsistencyState {
         [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (ConsistencyState)_state;
         [MethodImpl(MethodImplOptions.AggressiveInlining)] internal set => _state = (int)value;
     }
 
-    public Type OutputType => Input.Function.OutputType;
+    public Result UntypedOutput {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get {
+            this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
+            return _untypedOutput;
+        }
+    }
 
     // IComputed implementation
+
     ComputedOptions IComputed.Options => Options;
     ComputedInput IComputed.Input => Input;
-    Result IComputed.Output => Output;
     ulong IHasVersion<ulong>.Version => Version;
-
-    // IResult implementation
-    public abstract object? UntypedValue { get; }
-    public abstract Exception? Error { get; }
-    public abstract bool HasValue { get; }
-    public abstract bool HasError { get; }
 
     public event Action<Computed> Invalidated {
         add {
@@ -95,6 +100,26 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     // IResult implementation
 
+    public object? UntypedValue {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => UntypedOutput.UntypedValue;
+    }
+
+    public Exception? Error {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => UntypedOutput.Error;
+    }
+
+    public bool HasValue {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => UntypedOutput.HasValue;
+    }
+
+    public bool HasError {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => UntypedOutput.HasError;
+    }
+
     void IResult.Deconstruct(out object? untypedValue, out Exception? error)
     {
         untypedValue = UntypedValue;
@@ -104,7 +129,54 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
     public object? GetUntypedValueOrErrorBox()
         => Error != null ? new ErrorBox(Error) : UntypedValue;
 
-    // Invalidation
+    // ToString & GetHashCode
+
+    public override string ToString()
+        => $"{GetType().GetName()}({Input} v.{Version.FormatVersion()}, State: {ConsistencyState})";
+
+    public override int GetHashCode()
+        => unchecked((int)Version);
+
+    // GetValuePromise, UpdateUntyped & UseUntyped
+
+    public Task GetValuePromise()
+    {
+        if (_untypedOutputPromise != null)
+            return _untypedOutputPromise;
+
+        lock (Lock)
+            return _untypedOutputPromise ??= UntypedOutput.AsTask(OutputType);
+    }
+
+    public async ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default)
+    {
+        if (this.IsConsistent())
+            return this;
+
+        using var scope = BeginIsolation();
+        return await Input.GetOrProduceComputed(scope.Context, cancellationToken).ConfigureAwait(false)!;
+    }
+
+    public Task UseUntyped(CancellationToken cancellationToken = default)
+    {
+        var context = ComputeContext.Current;
+        if ((context.CallOptions & CallOptions.GetExisting) != 0) // Neither GetExisting nor Invalidate can be used here
+            throw Errors.InvalidContextCallOptions(context.CallOptions);
+
+        // Slightly faster version of this.TryUseExistingFromLock(context)
+        if (this.IsConsistent()) {
+            // It can become inconsistent here, but we don't care, since...
+            ComputedImpl.UseNew(this, context);
+            // it can also become inconsistent here & later, and UseNew handles this.
+            // So overall, Use(...) guarantees the dependency chain will be there even
+            // if computed is invalidated right after above "if".
+            return GetValuePromise();
+        }
+
+        return Input.GetOrProduceValuePromise(context, cancellationToken);
+    }
+
+    // Invalidate
 
     void IGenericTimeoutHandler.OnTimeout()
         => Invalidate(true);
@@ -181,15 +253,42 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         }
     }
 
+    // Protected methods
+
     protected virtual void OnInvalidated()
         => CancelTimeouts();
 
-    // Update & Use
-
-    public abstract ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
-    public abstract ValueTask UseUntyped(CancellationToken cancellationToken = default);
-
     // Protected internal methods - you can call them via ComputedImpl
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected internal bool TrySetOutput(object? output)
+        => TrySetOutput(Result.NewUntyped(output));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected internal bool TrySetOutput(Exception exception)
+        => TrySetOutput(Result.NewUntypedError(exception));
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    protected internal bool TrySetOutput(Result output)
+    {
+        ComputedFlags flags;
+        lock (Lock) {
+            if (ConsistencyState != ConsistencyState.Computing)
+                return false;
+
+            ConsistencyState = ConsistencyState.Consistent;
+            _untypedOutput = output;
+            flags = Flags;
+        }
+
+        if ((flags & ComputedFlags.InvalidateOnSetOutput) != 0) {
+            Invalidate((flags & ComputedFlags.InvalidateOnSetOutputImmediately) != 0);
+            return true;
+        }
+
+        StartAutoInvalidation();
+        return true;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected internal virtual void InvalidateFromCall()

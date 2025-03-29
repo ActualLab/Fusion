@@ -363,7 +363,7 @@ public class ProxyTypeGenerator
                     MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
                         CodeKeeperTypeName,
-                        AddActionMethodName))
+                        AddFakeActionMethodName))
                 .WithArgumentList(
                     ArgumentList(
                         SingletonSeparatedList(

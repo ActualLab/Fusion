@@ -5,6 +5,19 @@ namespace ActualLab.Fusion;
 
 public static partial class ComputedExt
 {
+    // Update & Use
+
+    public static async ValueTask<Computed<T>> Update<T>(
+        this Computed computed,
+        CancellationToken cancellationToken = default)
+    {
+        var newComputed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
+        return (Computed<T>)newComputed;
+    }
+
+    public static Task<T> Use<T>(this Computed computed, CancellationToken cancellationToken = default)
+        => (Task<T>)computed.UseUntyped(cancellationToken);
+
     // Invalidate
 
     public static void Invalidate(this Computed computed, TimeSpan delay, bool? usePreciseTimer = null)
@@ -19,8 +32,8 @@ public static partial class ComputedExt
 
         var bPrecise = usePreciseTimer ?? delay <= Computed.PreciseInvalidationDelayThreshold;
         if (!bPrecise) {
-            Timeouts.Generic.AddOrUpdateToEarlier((IGenericTimeoutHandler)computed, Timeouts.Clock.Now + delay);
-            computed.Invalidated += static c => Timeouts.Generic.Remove((IGenericTimeoutHandler)c);
+            Timeouts.Generic.AddOrUpdateToEarlier(computed, Timeouts.Clock.Now + delay);
+            computed.Invalidated += static c => Timeouts.Generic.Remove(c);
             return;
         }
 
@@ -131,43 +144,6 @@ public static partial class ComputedExt
         // No way to cancel / unregister the handler here
         computed.Invalidated += _ => tcs.TrySetResult();
         return tcs.Task;
-    }
-
-    // Updates N computed so that all of them are in consistent state
-
-    public static async ValueTask<(Computed<T1>, Computed<T2>)> Update<T1, T2>(
-        Computed<T1> c1,
-        Computed<T2> c2,
-        CancellationToken cancellationToken = default)
-    {
-        while (true) {
-            if (c1.IsConsistent() && c2.IsConsistent())
-                return (c1, c2);
-
-            var t1 = c1.Update(cancellationToken);
-            var t2 = c2.Update(cancellationToken);
-            c1 = await t1.ConfigureAwait(false);
-            c2 = await t2.ConfigureAwait(false);
-        }
-    }
-
-    public static async ValueTask<(Computed<T1>, Computed<T2>, Computed<T3>)> Update<T1, T2, T3>(
-        Computed<T1> c1,
-        Computed<T2> c2,
-        Computed<T3> c3,
-        CancellationToken cancellationToken = default)
-    {
-        while (true) {
-            if (c1.IsConsistent() && c2.IsConsistent() && c3.IsConsistent())
-                return (c1, c2, c3);
-
-            var t1 = c1.Update(cancellationToken);
-            var t2 = c2.Update(cancellationToken);
-            var t3 = c3.Update(cancellationToken);
-            c1 = await t1.ConfigureAwait(false);
-            c2 = await t2.ConfigureAwait(false);
-            c3 = await t3.ConfigureAwait(false);
-        }
     }
 
     // When

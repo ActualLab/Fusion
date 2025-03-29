@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using ActualLab.Fusion.Authentication;
 
 namespace ActualLab.Fusion.Tests.Services;
 

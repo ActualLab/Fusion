@@ -3,9 +3,11 @@ using ActualLab.Internal;
 
 namespace ActualLab.Fusion.Client;
 
-public interface IReplicaComputed
+public interface IReplicaComputed : IComputed
 {
     public Computed? Original { get; }
+
+    public void CaptureOriginal();
 }
 
 public class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaComputed
@@ -20,9 +22,6 @@ public class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaComputed
 
     protected ReplicaComputed(ComputedOptions options, ComputeMethodInput input, Result<T> output, bool isConsistent = true)
         : base(options, input, output, isConsistent)
-    { }
-
-    public void Dispose()
     { }
 
     public void CaptureOriginal()

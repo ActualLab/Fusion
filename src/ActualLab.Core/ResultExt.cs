@@ -18,27 +18,6 @@ public static class ResultExt
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsValueUntyped(this IResult result, out object? value)
-    {
-        (value, var error) = result;
-        return error == null;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsValueUntyped(this Result result, out object? value, [NotNullWhen(false)] out Exception? error)
-    {
-        (value, error) = result;
-        return error == null;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsValueUntyped(this IResult result, out object? value, [NotNullWhen(false)] out Exception? error)
-    {
-        (value, error) = result;
-        return error == null;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsValue<T>(this Result<T> result, [MaybeNullWhen(false)] out T value)
     {
         (value, var error) = result;
@@ -80,7 +59,10 @@ public static class ResultExt
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> AsTyped<T>(this Result result)
-        => new((T)result.UntypedValue!, result.Error);
+    {
+        var (untypedValue, error) = result;
+        return new Result<T>((T)untypedValue!, error);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> AsTyped<T>(this Result<T> result)
@@ -88,11 +70,16 @@ public static class ResultExt
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> AsTyped<T>(this IResult result)
-        => new((T)result.UntypedValue!, result.Error);
+    {
+        var (untypedValue, error) = result;
+        return new Result<T>((T)untypedValue!, error);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> AsTyped<T>(this IResult<T> result)
-        => new(result.ValueOrDefault!, result.Error);
+    {
+        return new Result<T>(result.ValueOrDefault!, result.Error);
+    }
 
     // AsTask
 
@@ -126,6 +113,14 @@ public static class ResultExt
         return error == null
             ? Task.FromResult(value)
             : Task.FromException<T>(error);
+    }
+
+    public static Task AsTask(this Result result, Type resultType)
+    {
+        var (value, error) = result;
+        return error == null
+            ? TaskExt.FromResult(value, resultType)
+            : TaskExt.FromException(error, resultType);
     }
 
     // AsValueTask

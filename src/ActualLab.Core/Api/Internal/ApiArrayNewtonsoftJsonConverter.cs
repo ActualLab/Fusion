@@ -10,6 +10,7 @@ namespace ActualLab.Api.Internal;
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Used constructors should be there for sure.")]
 public class ApiArrayNewtonsoftJsonConverter : JsonConverter
 {
+    // TODO: Replace w/ GenericInstanceCache
     private static readonly ConcurrentDictionary<Type, JsonConverter?> ConverterCache = new();
 
     public override bool CanConvert(Type objectType)

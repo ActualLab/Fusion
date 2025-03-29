@@ -23,7 +23,6 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public long RelatedId;
     public int SizeHint;
     public RpcCacheInfoCapture? CacheInfoCapture;
-    public Func<RpcMethodDef, Invocation, Task>? Suppressor;
     public RpcOutboundCallTrace? Trace;
 
     public static RpcOutboundContext GetCurrent()

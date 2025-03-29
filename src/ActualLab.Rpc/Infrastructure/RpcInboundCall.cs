@@ -20,7 +20,7 @@ public abstract class RpcInboundCall : RpcCall
     public readonly RpcInboundContext Context;
     public readonly CancellationToken CallCancelToken;
     public ArgumentList? Arguments;
-    public abstract Task? UntypedResultTask { get; }
+    public abstract Task? UntypedResultTask { get; set; }
     public RpcHeader[]? ResultHeaders;
     public virtual int CompletedStage => UntypedResultTask is { IsCompleted: true } ? 1 : 0;
     public virtual string CompletedStageName => CompletedStage == 0 ? "" : "ResultReady";
@@ -42,14 +42,15 @@ public abstract class RpcInboundCall : RpcCall
             };
         }
 
-        return FactoryCache.GetOrAdd(new(callTypeId, methodDef.UnwrappedReturnType), static key => {
-            var (callTypeId, tResult) = key;
-            var type = RpcCallTypeRegistry.Resolve(callTypeId)
-                .InboundCallType
-                .MakeGenericType(tResult);
-            return (Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>)type
-                .GetConstructorDelegate(typeof(RpcInboundContext), typeof(RpcMethodDef))!;
-        }).Invoke(context, methodDef);
+        return FactoryCache.GetOrAdd(new(callTypeId, methodDef.UnwrappedReturnType),
+            static key => {
+                var (callTypeId, tResult) = key;
+                var type = RpcCallTypeRegistry.Resolve(callTypeId)
+                    .InboundCallType
+                    .MakeGenericType(tResult);
+                return (Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>)type
+                    .GetConstructorDelegate(typeof(RpcInboundContext), typeof(RpcMethodDef))!;
+            }).Invoke(context, methodDef);
     }
 
     protected RpcInboundCall(RpcInboundContext context, RpcMethodDef methodDef)
@@ -93,38 +94,7 @@ public abstract class RpcInboundCall : RpcCall
         return result;
     }
 
-    public abstract Task Process(CancellationToken cancellationToken);
-
-    public abstract Task? TryReprocess(int completedStage, CancellationToken cancellationToken);
-
-    public void Cancel()
-        => CallCancelSource.CancelAndDisposeSilently();
-
-    // Protected methods
-
-    protected bool Unregister()
-    {
-        lock (Lock)
-            return UnregisterFromLock();
-    }
-
-    protected bool UnregisterFromLock()
-    {
-        if (!Context.Peer.InboundCalls.Unregister(this))
-            return false; // Already completed or NoWait
-
-        CallCancelSource.DisposeSilently();
-        return true;
-    }
-}
-
-public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
-    : RpcInboundCall(context, methodDef)
-{
-    public Task<TResult>? ResultTask { get; private set; }
-    public override Task? UntypedResultTask => ResultTask;
-
-    public override Task Process(CancellationToken cancellationToken)
+    public virtual Task Process(CancellationToken cancellationToken)
     {
         if (NoWait) {
             try {
@@ -138,7 +108,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
                 return InvokeTarget(); // NoWait calls must complete fast & be cheap, so cancellationToken isn't passed
             }
             catch (Exception error) {
-                return Task.FromException<TResult>(error);
+                return TaskExt.FromException(error, MethodDef.UnwrappedReturnType);
             }
         }
 
@@ -164,22 +134,22 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
                     peer.CallLogger.LogInbound(this);
 
                 // Call
-                ResultTask = inboundMiddlewares != null
+                UntypedResultTask = inboundMiddlewares != null
                     ? InvokeTarget(inboundMiddlewares)
                     : InvokeTarget();
             }
             catch (Exception error) {
-                ResultTask = Task.FromException<TResult>(error);
+                UntypedResultTask = TaskExt.FromException(error, MethodDef.UnwrappedReturnType);
             }
             return WhenProcessed = ProcessStage1Plus(cancellationToken);
         }
     }
 
-    public override Task? TryReprocess(int completedStage, CancellationToken cancellationToken)
+    public virtual Task? TryReprocess(int completedStage, CancellationToken cancellationToken)
     {
         lock (Lock) {
             var existingCall = Context.Peer.InboundCalls.Get(Id);
-            if (existingCall != this || ResultTask == null)
+            if (existingCall != this || UntypedResultTask == null)
                 return null;
 
             return WhenProcessed = completedStage switch {
@@ -191,14 +161,24 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
 
     // Protected methods
 
+    protected virtual Task InvokeTarget()
+    {
+        var methodDef = MethodDef;
+        var server = methodDef.Service.Server;
+        return methodDef.TargetAsyncInvoker.Invoke(server, Arguments!);
+    }
+
+    protected abstract Task InvokeTarget(RpcInboundMiddlewares middlewares);
+    protected abstract Task SendResult();
+
     protected virtual Task ProcessStage1Plus(CancellationToken cancellationToken)
     {
-        return ResultTask!.IsCompleted
+        return UntypedResultTask!.IsCompleted
             ? Complete()
             : CompleteAsync();
 
         async Task CompleteAsync() {
-            await ResultTask!.SilentAwait(false);
+            await UntypedResultTask!.SilentAwait(false);
             await Complete().ConfigureAwait(false);
         }
 
@@ -247,12 +227,32 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         return arguments;
     }
 
-    protected async Task<TResult> InvokeTarget(RpcInboundMiddlewares middlewares)
+    public void Cancel()
+        => CallCancelSource.CancelAndDisposeSilently();
+
+    protected bool Unregister()
+    {
+        lock (Lock)
+            return UnregisterFromLock();
+    }
+
+    protected bool UnregisterFromLock()
+    {
+        if (!Context.Peer.InboundCalls.Unregister(this))
+            return false; // Already completed or NoWait
+
+        CallCancelSource.DisposeSilently();
+        return true;
+    }
+
+    // Default implementations of InvokeTarget and SendResult
+
+    protected async Task<TResult> DefaultInvokeTarget<TResult>(RpcInboundMiddlewares middlewares)
     {
         await middlewares.OnBeforeCall(this).ConfigureAwait(false);
         Task<TResult> resultTask = null!;
         try {
-            resultTask = InvokeTarget();
+            resultTask = (Task<TResult>)InvokeTarget();
             return await resultTask.ConfigureAwait(false);
         }
         catch (Exception e) {
@@ -264,18 +264,11 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         }
     }
 
-    protected virtual Task<TResult> InvokeTarget()
-    {
-        var methodDef = MethodDef;
-        var server = methodDef.Service.Server;
-        return (Task<TResult>)methodDef.TargetAsyncInvoker.Invoke(server, Arguments!);
-    }
-
-    protected Task SendResult()
+    protected Task DefaultSendResult<TResult>(Task<TResult>? resultTask)
     {
         var peer = Context.Peer;
         Result<TResult> result;
-        if (ResultTask is not { IsCompleted: true } resultTask)
+        if (resultTask is not { IsCompleted: true })
             result = InvocationIsStillInProgressErrorResult();
         else if (resultTask.Exception is { } error)
             result = new Result<TResult>(default!, error.GetBaseException());
@@ -288,11 +281,26 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
 
         var systemCallSender = Hub.SystemCallSender;
         return systemCallSender.Complete(peer, this, result, MethodDef.AllowResultPolymorphism, ResultHeaders);
+
+        static Result<TResult> InvocationIsStillInProgressErrorResult()
+            => new(default!, ActualLab.Internal.Errors.InternalError(
+                "Something is off: remote method isn't completed yet, but the result is requested to be sent."));
+    }
+}
+
+public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
+    : RpcInboundCall(context, methodDef)
+{
+    public Task<TResult>? ResultTask { get; private set; }
+
+    public override Task? UntypedResultTask {
+        get => ResultTask;
+        set => ResultTask = (Task<TResult>)value!;
     }
 
-    // Private methods
+    protected override Task<TResult> InvokeTarget(RpcInboundMiddlewares middlewares)
+        => DefaultInvokeTarget<TResult>(middlewares);
 
-    private static Result<TResult> InvocationIsStillInProgressErrorResult() =>
-        new(default!, ActualLab.Internal.Errors.InternalError(
-            "Something is off: remote method isn't completed yet, but the result is requested to be sent."));
+    protected override Task SendResult()
+        => DefaultSendResult(ResultTask);
 }

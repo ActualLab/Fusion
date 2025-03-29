@@ -13,9 +13,8 @@ public class SharedRemoteComputedCache : IRemoteComputedCache
         // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
         => Instance ??= instanceFactory.Invoke();
 
-    public ValueTask<RpcCacheEntry<T>?> Get<T>(
-        ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
-        => Instance.Get<T>(input, key, cancellationToken);
+    public ValueTask<RpcCacheEntry?> Get(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
+        => Instance.Get(input, key, cancellationToken);
     public ValueTask<RpcCacheValue> Get(RpcCacheKey key, CancellationToken cancellationToken = default)
         => Instance.Get(key, cancellationToken);
 

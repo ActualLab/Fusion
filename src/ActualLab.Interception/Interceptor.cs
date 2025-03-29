@@ -33,7 +33,7 @@ public abstract class Interceptor : IHasServices
 
     private static readonly MethodInfo CreateTypedHandlerMethod = typeof(Interceptor)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-        .Single(m => string.Equals(m.Name, nameof(CreateHandler), StringComparison.Ordinal));
+        .Single(m => string.Equals(m.Name, nameof(CreateUntypedHandler), StringComparison.Ordinal));
 
     private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandlerUntyped;
     private readonly Func<MethodInfo, Type, MethodDef?> _createMethodDef;
@@ -46,6 +46,7 @@ public abstract class Interceptor : IHasServices
     protected readonly ILogger? ValidationLog;
     protected readonly LogLevel LogLevel;
     protected readonly LogLevel ValidationLogLevel;
+    protected bool UsesUntypedHandlers { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
 
     public IServiceProvider Services { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
     public bool IsValidationEnabled { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
@@ -68,7 +69,7 @@ public abstract class Interceptor : IHasServices
         DefaultLog = Log.IfEnabled(settings.LogLevel);
         ValidationLog = Log.IfEnabled(settings.ValidationLogLevel);
 
-        _createHandlerUntyped = CreateHandlerUntyped;
+        _createHandlerUntyped = CreateHandler;
         _createMethodDef = CreateMethodDef;
         _validateTypeCache = new ConcurrentDictionary<Type, Unit>(
             settings.HandlerCacheConcurrencyLevel, settings.HandlerCacheCapacity);
@@ -95,9 +96,6 @@ public abstract class Interceptor : IHasServices
     /// Invoked for intercepted calls returning <see cref="Void"/> type.
     /// </summary>
     /// <param name="invocation">Invocation descriptor.</param>
-#if NET5_0_OR_GREATER
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-#endif
     public void Intercept(Invocation invocation)
     {
         var handler = SelectHandler(invocation);
@@ -113,9 +111,6 @@ public abstract class Interceptor : IHasServices
     /// <param name="invocation"></param>
     /// <typeparam name="TResult">The type of method call result.</typeparam>
     /// <returns>Method call result.</returns>
-#if NET5_0_OR_GREATER
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-#endif
     public TResult Intercept<TResult>(Invocation invocation)
     {
         var handler = SelectHandler(invocation);
@@ -124,12 +119,25 @@ public abstract class Interceptor : IHasServices
             : invocation.InvokeIntercepted<TResult>();
     }
 
-    public virtual Func<Invocation, object?>? SelectHandler(in Invocation invocation)
-        => GetHandler(invocation);
-
+    /// <summary>
+    /// Invoked for intercepted calls returning any type.
+    /// </summary>
+    /// <param name="invocation"></param>
+    /// <returns>Method call result.</returns>
 #if NET5_0_OR_GREATER
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
 #endif
+    public object? InterceptUntyped(Invocation invocation)
+    {
+        var handler = SelectHandler(invocation);
+        return handler != null
+            ? handler.Invoke(invocation)!
+            : invocation.InvokeInterceptedUntyped();
+    }
+
+    public virtual Func<Invocation, object?>? SelectHandler(in Invocation invocation)
+        => GetHandler(invocation);
+
     public Func<Invocation, object?>? GetHandler(in Invocation invocation)
     {
         if (_handlerCache.TryGetValue(invocation.Method, out var handler))
@@ -162,15 +170,33 @@ public abstract class Interceptor : IHasServices
 
     // Protected methods
 
-    protected internal abstract Func<Invocation, object?>? CreateHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
-        Invocation initialInvocation, MethodDef methodDef);
+    protected internal virtual Func<Invocation, object?>? CreateUntypedHandler(
+        Invocation initialInvocation, MethodDef methodDef)
+    {
+        if (!UsesUntypedHandlers)
+            throw ActualLab.Internal.Errors.NotSupported($"{GetType().Name} uses typed handlers.");
 
-    protected virtual Func<Invocation, object?>? CreateHandlerUntyped(MethodInfo method, Invocation initialInvocation)
+        throw ActualLab.Internal.Errors.InternalError($"{GetType().Name} requires this method to be implemented.");
+    }
+
+    protected internal virtual Func<Invocation, object?>? CreateTypedHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
+        Invocation initialInvocation, MethodDef methodDef)
+    {
+        if (UsesUntypedHandlers)
+            throw ActualLab.Internal.Errors.NotSupported($"{GetType().Name} uses untyped handlers.");
+
+        throw ActualLab.Internal.Errors.InternalError($"{GetType().Name} requires this method to be implemented.");
+    }
+
+    protected Func<Invocation, object?>? CreateHandler(MethodInfo method, Invocation initialInvocation)
     {
         var methodDef = GetMethodDef(method, initialInvocation.Proxy.GetType());
         if (methodDef == null)
             return null;
+
+        if (UsesUntypedHandlers)
+            return CreateUntypedHandler(initialInvocation, methodDef);
 
         return (Func<Invocation, object?>?)CreateTypedHandlerMethod
             .MakeGenericMethod(methodDef.UnwrappedReturnType)
@@ -197,6 +223,6 @@ public abstract class Interceptor : IHasServices
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>()
     {
         if (CodeKeeper.AlwaysFalse)
-            CreateHandler<TUnwrapped>(default, null!);
+            CreateTypedHandler<TUnwrapped>(default, null!);
     }
 }

@@ -6,6 +6,7 @@ namespace ActualLab.Rpc.Serialization.Internal;
 
 public class RpcStreamNewtonsoftJsonConverter : JsonConverter
 {
+    // TODO: Replace w/ GenericInstanceCache
     private static readonly ConcurrentDictionary<Type, JsonConverter?> ConverterCache = new();
 
     public override bool CanConvert(Type objectType)

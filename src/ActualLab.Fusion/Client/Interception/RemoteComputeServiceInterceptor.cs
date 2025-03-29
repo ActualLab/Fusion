@@ -43,22 +43,18 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
         => GetHandler(invocation) // Compute service method
             ?? NonComputeCallInterceptor.SelectHandler(invocation); // Regular or command service method
 
-    protected override Func<Invocation, object?>? CreateHandlerUntyped(MethodInfo method, Invocation initialInvocation)
+    protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)
     {
-        var methodDef = GetMethodDef(method, initialInvocation.Proxy.GetType()) as ComputeMethodDef;
-        if (methodDef == null)
-            return null;
-
         var rpcMethodDef = RpcServiceDef.GetOrFindMethod(initialInvocation.Method);
         if (rpcMethodDef == null) {
             // Proxy is a Distributed service & non-RPC method is called
-            var function = (IComputeMethodFunction)typeof(ComputeMethodFunction<>)
+            var function = (ComputeMethodFunction)typeof(ComputeMethodFunction<>)
                 .MakeGenericType(methodDef.UnwrappedReturnType)
                 .CreateInstance(Hub, methodDef);
             return function.ComputeServiceInterceptorHandler;
         }
         else {
-            var function = (IRemoteComputeMethodFunction)typeof(RemoteComputeMethodFunction<>)
+            var function = (RemoteComputeMethodFunction)typeof(RemoteComputeMethodFunction<>)
                 .MakeGenericType(methodDef.UnwrappedReturnType)
                 .CreateInstance(Hub, methodDef, rpcMethodDef, LocalTarget);
             return function.RemoteComputeServiceInterceptorHandler;

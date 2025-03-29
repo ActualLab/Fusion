@@ -4,20 +4,23 @@ public static class ComputedSourceExt
 {
     // Computed-like methods
 
-    public static ValueTask<T> Use<T>(
+    public static ValueTask Update(
+        this IComputedSource source, CancellationToken cancellationToken = default)
+    {
+        var valueTask = source.Computed.UpdateUntyped(cancellationToken);
+        if (!valueTask.IsCompleted)
+            return new ValueTask(valueTask.AsTask());
+
+        _ = valueTask.Result;
+        return default;
+    }
+
+    public static Task<T> Use<T>(
         this ComputedSource<T> source, CancellationToken cancellationToken = default)
         => source.Computed.Use(cancellationToken);
 
     public static void Invalidate(this IComputedSource source, bool immediately = false)
         => source.Computed.Invalidate(immediately);
-
-    public static async ValueTask<TComputedSource> Update<TComputedSource>(
-        this TComputedSource source, CancellationToken cancellationToken = default)
-        where TComputedSource : class, IComputedSource
-    {
-        await source.Computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
-        return source;
-    }
 
     // When
 

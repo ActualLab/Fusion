@@ -125,15 +125,25 @@ public abstract partial record ArgumentList
             : new ArgumentListS10(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9)), item0, item1, item2, item3, item4, item5, item6, item7, item8, item9);
 
     public virtual T Get0<T>() => throw new IndexOutOfRangeException();
+    public virtual object Get0Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get1<T>() => throw new IndexOutOfRangeException();
+    public virtual object Get1Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get2<T>() => throw new IndexOutOfRangeException();
+    public virtual object Get2Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get3<T>() => throw new IndexOutOfRangeException();
+    public virtual object Get3Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get4<T>() => throw new IndexOutOfRangeException();
+    public virtual object Get4Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get5<T>() => throw new IndexOutOfRangeException();
+    public virtual object Get5Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get6<T>() => throw new IndexOutOfRangeException();
+    public virtual object Get6Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get7<T>() => throw new IndexOutOfRangeException();
+    public virtual object Get7Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get8<T>() => throw new IndexOutOfRangeException();
+    public virtual object Get8Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get9<T>() => throw new IndexOutOfRangeException();
+    public virtual object Get9Untyped() => throw new IndexOutOfRangeException();
 }
 
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
@@ -232,6 +242,8 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
 
     public override T Get<T>(int index)
         => index switch {
@@ -249,8 +261,7 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
     public override CancellationToken GetCancellationToken(int index)
         => index switch {
             0 => Item0 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -282,9 +293,7 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
         switch (index) {
         case 0:
             _item0 = item is T0 item0 ? item0 : default!;
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -523,6 +532,8 @@ public sealed record ArgumentListS1 : ArgumentList1
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
 
     public override T Get<T>(int index)
         => index switch {
@@ -540,8 +551,7 @@ public sealed record ArgumentListS1 : ArgumentList1
     public override CancellationToken GetCancellationToken(int index)
         => index switch {
             0 => Item0 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -573,9 +583,7 @@ public sealed record ArgumentListS1 : ArgumentList1
         switch (index) {
         case 0:
             _item0 = _type.CastItem(0, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -843,7 +851,11 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
 
     public override T Get<T>(int index)
         => index switch {
@@ -865,8 +877,7 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
         => index switch {
             0 => Item0 is CancellationToken value ? value : default!,
             1 => Item1 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -904,12 +915,10 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
         switch (index) {
         case 0:
             _item0 = item is T0 item0 ? item0 : default!;
-            break;
+            return;
         case 1:
             _item1 = item is T1 item1 ? item1 : default!;
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -1202,7 +1211,11 @@ public sealed record ArgumentListS2 : ArgumentList2
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
 
     public override T Get<T>(int index)
         => index switch {
@@ -1224,8 +1237,7 @@ public sealed record ArgumentListS2 : ArgumentList2
         => index switch {
             0 => Item0 is CancellationToken value ? value : default!,
             1 => Item1 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -1263,12 +1275,10 @@ public sealed record ArgumentListS2 : ArgumentList2
         switch (index) {
         case 0:
             _item0 = _type.CastItem(0, item);
-            break;
+            return;
         case 1:
             _item1 = _type.CastItem(1, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -1584,8 +1594,14 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
 
     public override T Get<T>(int index)
         => index switch {
@@ -1611,8 +1627,7 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
             0 => Item0 is CancellationToken value ? value : default!,
             1 => Item1 is CancellationToken value ? value : default!,
             2 => Item2 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -1656,15 +1671,13 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
         switch (index) {
         case 0:
             _item0 = item is T0 item0 ? item0 : default!;
-            break;
+            return;
         case 1:
             _item1 = item is T1 item1 ? item1 : default!;
-            break;
+            return;
         case 2:
             _item2 = item is T2 item2 ? item2 : default!;
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -2010,8 +2023,14 @@ public sealed record ArgumentListS3 : ArgumentList3
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
 
     public override T Get<T>(int index)
         => index switch {
@@ -2037,8 +2056,7 @@ public sealed record ArgumentListS3 : ArgumentList3
             0 => Item0 is CancellationToken value ? value : default!,
             1 => Item1 is CancellationToken value ? value : default!,
             2 => Item2 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -2082,15 +2100,13 @@ public sealed record ArgumentListS3 : ArgumentList3
         switch (index) {
         case 0:
             _item0 = _type.CastItem(0, item);
-            break;
+            return;
         case 1:
             _item1 = _type.CastItem(1, item);
-            break;
+            return;
         case 2:
             _item2 = _type.CastItem(2, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -2454,9 +2470,17 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
 
     public override T Get<T>(int index)
         => index switch {
@@ -2486,8 +2510,7 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
             1 => Item1 is CancellationToken value ? value : default!,
             2 => Item2 is CancellationToken value ? value : default!,
             3 => Item3 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -2537,18 +2560,16 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
         switch (index) {
         case 0:
             _item0 = item is T0 item0 ? item0 : default!;
-            break;
+            return;
         case 1:
             _item1 = item is T1 item1 ? item1 : default!;
-            break;
+            return;
         case 2:
             _item2 = item is T2 item2 ? item2 : default!;
-            break;
+            return;
         case 3:
             _item3 = item is T3 item3 ? item3 : default!;
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -2947,9 +2968,17 @@ public sealed record ArgumentListS4 : ArgumentList4
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
 
     public override T Get<T>(int index)
         => index switch {
@@ -2979,8 +3008,7 @@ public sealed record ArgumentListS4 : ArgumentList4
             1 => Item1 is CancellationToken value ? value : default!,
             2 => Item2 is CancellationToken value ? value : default!,
             3 => Item3 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -3030,18 +3058,16 @@ public sealed record ArgumentListS4 : ArgumentList4
         switch (index) {
         case 0:
             _item0 = _type.CastItem(0, item);
-            break;
+            return;
         case 1:
             _item1 = _type.CastItem(1, item);
-            break;
+            return;
         case 2:
             _item2 = _type.CastItem(2, item);
-            break;
+            return;
         case 3:
             _item3 = _type.CastItem(3, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -3456,10 +3482,20 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
 
     public override T Get<T>(int index)
         => index switch {
@@ -3493,8 +3529,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
             2 => Item2 is CancellationToken value ? value : default!,
             3 => Item3 is CancellationToken value ? value : default!,
             4 => Item4 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -3550,21 +3585,19 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
         switch (index) {
         case 0:
             _item0 = item is T0 item0 ? item0 : default!;
-            break;
+            return;
         case 1:
             _item1 = item is T1 item1 ? item1 : default!;
-            break;
+            return;
         case 2:
             _item2 = item is T2 item2 ? item2 : default!;
-            break;
+            return;
         case 3:
             _item3 = item is T3 item3 ? item3 : default!;
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -4015,10 +4048,20 @@ public sealed record ArgumentListS5 : ArgumentList5
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
 
     public override T Get<T>(int index)
         => index switch {
@@ -4052,8 +4095,7 @@ public sealed record ArgumentListS5 : ArgumentList5
             2 => Item2 is CancellationToken value ? value : default!,
             3 => Item3 is CancellationToken value ? value : default!,
             4 => Item4 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -4109,21 +4151,19 @@ public sealed record ArgumentListS5 : ArgumentList5
         switch (index) {
         case 0:
             _item0 = _type.CastItem(0, item);
-            break;
+            return;
         case 1:
             _item1 = _type.CastItem(1, item);
-            break;
+            return;
         case 2:
             _item2 = _type.CastItem(2, item);
-            break;
+            return;
         case 3:
             _item3 = _type.CastItem(3, item);
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -4587,11 +4627,23 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get5Untyped() => Item5;
 
     public override T Get<T>(int index)
         => index switch {
@@ -4629,8 +4681,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
             3 => Item3 is CancellationToken value ? value : default!,
             4 => Item4 is CancellationToken value ? value : default!,
             5 => Item5 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -4692,24 +4743,22 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
         switch (index) {
         case 0:
             _item0 = item is T0 item0 ? item0 : default!;
-            break;
+            return;
         case 1:
             _item1 = item is T1 item1 ? item1 : default!;
-            break;
+            return;
         case 2:
             _item2 = item is T2 item2 ? item2 : default!;
-            break;
+            return;
         case 3:
             _item3 = item is T3 item3 ? item3 : default!;
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
+            return;
         case 5:
             _item5 = _type.CastItem(5, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -5209,11 +5258,23 @@ public sealed record ArgumentListS6 : ArgumentList6
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get5Untyped() => Item5;
 
     public override T Get<T>(int index)
         => index switch {
@@ -5251,8 +5312,7 @@ public sealed record ArgumentListS6 : ArgumentList6
             3 => Item3 is CancellationToken value ? value : default!,
             4 => Item4 is CancellationToken value ? value : default!,
             5 => Item5 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -5314,24 +5374,22 @@ public sealed record ArgumentListS6 : ArgumentList6
         switch (index) {
         case 0:
             _item0 = _type.CastItem(0, item);
-            break;
+            return;
         case 1:
             _item1 = _type.CastItem(1, item);
-            break;
+            return;
         case 2:
             _item2 = _type.CastItem(2, item);
-            break;
+            return;
         case 3:
             _item3 = _type.CastItem(3, item);
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
+            return;
         case 5:
             _item5 = _type.CastItem(5, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -5844,12 +5902,26 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get6Untyped() => Item6;
 
     public override T Get<T>(int index)
         => index switch {
@@ -5891,8 +5963,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
             4 => Item4 is CancellationToken value ? value : default!,
             5 => Item5 is CancellationToken value ? value : default!,
             6 => Item6 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -5960,27 +6031,25 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
         switch (index) {
         case 0:
             _item0 = item is T0 item0 ? item0 : default!;
-            break;
+            return;
         case 1:
             _item1 = item is T1 item1 ? item1 : default!;
-            break;
+            return;
         case 2:
             _item2 = item is T2 item2 ? item2 : default!;
-            break;
+            return;
         case 3:
             _item3 = item is T3 item3 ? item3 : default!;
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
+            return;
         case 5:
             _item5 = _type.CastItem(5, item);
-            break;
+            return;
         case 6:
             _item6 = _type.CastItem(6, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -6529,12 +6598,26 @@ public sealed record ArgumentListS7 : ArgumentList7
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get6Untyped() => Item6;
 
     public override T Get<T>(int index)
         => index switch {
@@ -6576,8 +6659,7 @@ public sealed record ArgumentListS7 : ArgumentList7
             4 => Item4 is CancellationToken value ? value : default!,
             5 => Item5 is CancellationToken value ? value : default!,
             6 => Item6 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -6645,27 +6727,25 @@ public sealed record ArgumentListS7 : ArgumentList7
         switch (index) {
         case 0:
             _item0 = _type.CastItem(0, item);
-            break;
+            return;
         case 1:
             _item1 = _type.CastItem(1, item);
-            break;
+            return;
         case 2:
             _item2 = _type.CastItem(2, item);
-            break;
+            return;
         case 3:
             _item3 = _type.CastItem(3, item);
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
+            return;
         case 5:
             _item5 = _type.CastItem(5, item);
-            break;
+            return;
         case 6:
             _item6 = _type.CastItem(6, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -7227,13 +7307,29 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get7Untyped() => Item7;
 
     public override T Get<T>(int index)
         => index switch {
@@ -7279,8 +7375,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
             5 => Item5 is CancellationToken value ? value : default!,
             6 => Item6 is CancellationToken value ? value : default!,
             7 => Item7 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -7354,30 +7449,28 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
         switch (index) {
         case 0:
             _item0 = item is T0 item0 ? item0 : default!;
-            break;
+            return;
         case 1:
             _item1 = item is T1 item1 ? item1 : default!;
-            break;
+            return;
         case 2:
             _item2 = item is T2 item2 ? item2 : default!;
-            break;
+            return;
         case 3:
             _item3 = item is T3 item3 ? item3 : default!;
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
+            return;
         case 5:
             _item5 = _type.CastItem(5, item);
-            break;
+            return;
         case 6:
             _item6 = _type.CastItem(6, item);
-            break;
+            return;
         case 7:
             _item7 = _type.CastItem(7, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -7975,13 +8068,29 @@ public sealed record ArgumentListS8 : ArgumentList8
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get7Untyped() => Item7;
 
     public override T Get<T>(int index)
         => index switch {
@@ -8027,8 +8136,7 @@ public sealed record ArgumentListS8 : ArgumentList8
             5 => Item5 is CancellationToken value ? value : default!,
             6 => Item6 is CancellationToken value ? value : default!,
             7 => Item7 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -8102,30 +8210,28 @@ public sealed record ArgumentListS8 : ArgumentList8
         switch (index) {
         case 0:
             _item0 = _type.CastItem(0, item);
-            break;
+            return;
         case 1:
             _item1 = _type.CastItem(1, item);
-            break;
+            return;
         case 2:
             _item2 = _type.CastItem(2, item);
-            break;
+            return;
         case 3:
             _item3 = _type.CastItem(3, item);
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
+            return;
         case 5:
             _item5 = _type.CastItem(5, item);
-            break;
+            return;
         case 6:
             _item6 = _type.CastItem(6, item);
-            break;
+            return;
         case 7:
             _item7 = _type.CastItem(7, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -8736,14 +8842,32 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get7Untyped() => Item7;
     public override T Get8<T>() => Item8 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get8Untyped() => Item8;
 
     public override T Get<T>(int index)
         => index switch {
@@ -8793,8 +8917,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
             6 => Item6 is CancellationToken value ? value : default!,
             7 => Item7 is CancellationToken value ? value : default!,
             8 => Item8 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -8874,33 +8997,31 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
         switch (index) {
         case 0:
             _item0 = item is T0 item0 ? item0 : default!;
-            break;
+            return;
         case 1:
             _item1 = item is T1 item1 ? item1 : default!;
-            break;
+            return;
         case 2:
             _item2 = item is T2 item2 ? item2 : default!;
-            break;
+            return;
         case 3:
             _item3 = item is T3 item3 ? item3 : default!;
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
+            return;
         case 5:
             _item5 = _type.CastItem(5, item);
-            break;
+            return;
         case 6:
             _item6 = _type.CastItem(6, item);
-            break;
+            return;
         case 7:
             _item7 = _type.CastItem(7, item);
-            break;
+            return;
         case 8:
             _item8 = _type.CastItem(8, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -9547,14 +9668,32 @@ public sealed record ArgumentListS9 : ArgumentList9
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get7Untyped() => Item7;
     public override T Get8<T>() => Item8 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get8Untyped() => Item8;
 
     public override T Get<T>(int index)
         => index switch {
@@ -9604,8 +9743,7 @@ public sealed record ArgumentListS9 : ArgumentList9
             6 => Item6 is CancellationToken value ? value : default!,
             7 => Item7 is CancellationToken value ? value : default!,
             8 => Item8 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -9685,33 +9823,31 @@ public sealed record ArgumentListS9 : ArgumentList9
         switch (index) {
         case 0:
             _item0 = _type.CastItem(0, item);
-            break;
+            return;
         case 1:
             _item1 = _type.CastItem(1, item);
-            break;
+            return;
         case 2:
             _item2 = _type.CastItem(2, item);
-            break;
+            return;
         case 3:
             _item3 = _type.CastItem(3, item);
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
+            return;
         case 5:
             _item5 = _type.CastItem(5, item);
-            break;
+            return;
         case 6:
             _item6 = _type.CastItem(6, item);
-            break;
+            return;
         case 7:
             _item7 = _type.CastItem(7, item);
-            break;
+            return;
         case 8:
             _item8 = _type.CastItem(8, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -10371,15 +10507,35 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get7Untyped() => Item7;
     public override T Get8<T>() => Item8 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get8Untyped() => Item8;
     public override T Get9<T>() => Item9 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get9Untyped() => Item9;
 
     public override T Get<T>(int index)
         => index switch {
@@ -10433,8 +10589,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
             7 => Item7 is CancellationToken value ? value : default!,
             8 => Item8 is CancellationToken value ? value : default!,
             9 => Item9 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -10520,36 +10675,34 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
         switch (index) {
         case 0:
             _item0 = item is T0 item0 ? item0 : default!;
-            break;
+            return;
         case 1:
             _item1 = item is T1 item1 ? item1 : default!;
-            break;
+            return;
         case 2:
             _item2 = item is T2 item2 ? item2 : default!;
-            break;
+            return;
         case 3:
             _item3 = item is T3 item3 ? item3 : default!;
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
+            return;
         case 5:
             _item5 = _type.CastItem(5, item);
-            break;
+            return;
         case 6:
             _item6 = _type.CastItem(6, item);
-            break;
+            return;
         case 7:
             _item7 = _type.CastItem(7, item);
-            break;
+            return;
         case 8:
             _item8 = _type.CastItem(8, item);
-            break;
+            return;
         case 9:
             _item9 = _type.CastItem(9, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 
@@ -11245,15 +11398,35 @@ public sealed record ArgumentListS10 : ArgumentList10
     // Get
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get7Untyped() => Item7;
     public override T Get8<T>() => Item8 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get8Untyped() => Item8;
     public override T Get9<T>() => Item9 is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get9Untyped() => Item9;
 
     public override T Get<T>(int index)
         => index switch {
@@ -11307,8 +11480,7 @@ public sealed record ArgumentListS10 : ArgumentList10
             7 => Item7 is CancellationToken value ? value : default!,
             8 => Item8 is CancellationToken value ? value : default!,
             9 => Item9 is CancellationToken value ? value : default!,
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -11394,36 +11566,34 @@ public sealed record ArgumentListS10 : ArgumentList10
         switch (index) {
         case 0:
             _item0 = _type.CastItem(0, item);
-            break;
+            return;
         case 1:
             _item1 = _type.CastItem(1, item);
-            break;
+            return;
         case 2:
             _item2 = _type.CastItem(2, item);
-            break;
+            return;
         case 3:
             _item3 = _type.CastItem(3, item);
-            break;
+            return;
         case 4:
             _item4 = _type.CastItem(4, item);
-            break;
+            return;
         case 5:
             _item5 = _type.CastItem(5, item);
-            break;
+            return;
         case 6:
             _item6 = _type.CastItem(6, item);
-            break;
+            return;
         case 7:
             _item7 = _type.CastItem(7, item);
-            break;
+            return;
         case 8:
             _item8 = _type.CastItem(8, item);
-            break;
+            return;
         case 9:
             _item9 = _type.CastItem(9, item);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
+            return;
         }
     }
 

@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Caching;
 using ActualLab.Interception.Internal;
-using ActualLab.OS;
 using ActualLab.Trimming;
 using InvalidCastException = System.InvalidCastException;
 
@@ -9,16 +9,8 @@ namespace ActualLab.Interception;
 [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume proxy-related code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume proxy-related code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]
-public class MethodDef
+public partial class MethodDef
 {
-    private static readonly ConcurrentDictionary<(MethodInfo, Type), Func<MethodDef, object>> AsyncInvokerCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly MethodInfo CreateTargetAsyncInvokerMethod
-        = typeof(MethodDef).GetMethod(nameof(CreateTargetAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly MethodInfo CreateInterceptorAsyncInvokerMethod
-        = typeof(MethodDef).GetMethod(nameof(CreateInterceptorAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly MethodInfo CreateInterceptedAsyncInvokerMethod
-        = typeof(MethodDef).GetMethod(nameof(CreateInterceptedAsyncInvoker), BindingFlags.Static | BindingFlags.NonPublic)!;
     private static int _lastId = 1;
 
     private readonly LazySlim<MethodDef, object?> _defaultResultLazy;
@@ -38,6 +30,7 @@ public class MethodDef
     public readonly bool IsAsyncVoidMethod;
     public readonly bool ReturnsTask;
     public readonly bool ReturnsValueTask;
+    public readonly Type? AsyncReturnTypeArgument;
     public readonly Type UnwrappedReturnType;
     public bool IsValid { get; init; } = true;
 
@@ -45,13 +38,29 @@ public class MethodDef
     public object? DefaultUnwrappedResult => _defaultUnwrappedResultLazy.Value;
     [field: AllowNull, MaybeNull]
     public Func<object, ArgumentList, Task> TargetAsyncInvoker
-        => field ??= GetAsyncInvoker<Func<object, ArgumentList, Task>>(CreateTargetAsyncInvokerMethod);
+        => field ??= GetCachedFunc<Func<object, ArgumentList, Task>>(typeof(TargetAsyncInvokerFactory<>));
     [field: AllowNull, MaybeNull]
     public Func<Interceptor, Invocation, Task> InterceptorAsyncInvoker
-        => field ??= GetAsyncInvoker<Func<Interceptor, Invocation, Task>>(CreateInterceptorAsyncInvokerMethod);
+        => field ??= GetCachedFunc<Func<Interceptor, Invocation, Task>>(typeof(InterceptorAsyncInvokerFactory<>));
     [field: AllowNull, MaybeNull]
     public Func<Invocation, Task> InterceptedAsyncInvoker
-        => field ??= GetAsyncInvoker<Func<Invocation, Task>>(CreateInterceptedAsyncInvokerMethod);
+        => field ??= GetCachedFunc<Func<Invocation, Task>>(typeof(InterceptedAsyncInvokerFactory<>));
+    [field: AllowNull, MaybeNull]
+    public Func<object, ArgumentList, ValueTask<object?>> TargetObjectAsyncInvoker
+        => field ??= GetCachedFunc<Func<object, ArgumentList, ValueTask<object?>>>(typeof(TargetObjectAsyncInvokerFactory<>));
+    [field: AllowNull, MaybeNull]
+    public Func<Interceptor, Invocation, ValueTask<object?>> InterceptorObjectAsyncInvoker
+        => field ??= GetCachedFunc<Func<Interceptor, Invocation, ValueTask<object?>>>(typeof(InterceptorObjectAsyncInvokerFactory<>));
+    [field: AllowNull, MaybeNull]
+    public Func<Invocation, ValueTask<object?>> InterceptedObjectAsyncInvoker
+        => field ??= GetCachedFunc<Func<Invocation, ValueTask<object?>>>(typeof(InterceptedObjectAsyncInvokerFactory<>));
+    [field: AllowNull, MaybeNull]
+    public Func<Task, object?> UniversalAsyncResultWrapper
+        => field ??= GetCachedFunc<Func<Task, object?>>(typeof(UniversalAsyncResultWrapperFactory<>));
+    [field: AllowNull, MaybeNull]
+    public Func<Task, ValueTask<object?>> TaskToUntypedValueTaskConverter
+        => field ??= GenericInstanceCache
+            .Get<Func<Task, ValueTask<object?>>>(typeof(TaskExt.ToUntypedValueTaskFactory<>), UnwrappedReturnType);
 
     // Must be on KeepCodeForResult<,>, but since we can't use any params there...
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Result))]
@@ -95,9 +104,13 @@ public class MethodDef
             IsAsyncMethod = ReturnsTask || ReturnsValueTask;
             IsAsyncVoidMethod = false;
         }
-        UnwrappedReturnType = IsAsyncMethod
-            ? IsAsyncVoidMethod ? typeof(Unit) : ReturnType.GetGenericArguments()[0]
-            : ReturnType == typeof(void) ? typeof(Unit) : ReturnType;
+        AsyncReturnTypeArgument = IsAsyncMethod
+            ? IsAsyncVoidMethod ? typeof(void) : ReturnType.GetGenericArguments()[0]
+            : null;
+        UnwrappedReturnType = AsyncReturnTypeArgument ?? ReturnType;
+        if (UnwrappedReturnType == typeof(void))
+            UnwrappedReturnType = typeof(Unit);
+
         _defaultResultLazy = new LazySlim<MethodDef, object?>(this, static self => self.GetDefaultResult());
         _defaultUnwrappedResultLazy = new LazySlim<MethodDef, object?>(this, static self => self.GetDefaultUnwrappedResult());
     }
@@ -152,6 +165,12 @@ public class MethodDef
                 ? ((Task)resultTask).ToValueTask()
                 : resultTask.ToValueTask();
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public object? WrapAsyncInvokerResultOfAsyncMethodUntyped(Task untypedResultTask)
+        => ReturnsTask
+            ? untypedResultTask
+            : untypedResultTask.ToTypedValueTask(AsyncReturnTypeArgument!);
+
     public Func<Invocation, Task<TUnwrapped>>? SelectAsyncInvoker<TUnwrapped>(
         object proxy,
         object? target = null)
@@ -171,6 +190,30 @@ public class MethodDef
         // No target -> invoke intercepted method
         if (proxy is not InterfaceProxy)
             return (Func<Invocation, Task<TUnwrapped>>)InterceptedAsyncInvoker;
+
+        // Nothing to invoke
+        return null;
+    }
+
+    public Func<Invocation, Task>? SelectAsyncInvokerUntyped(
+        object proxy,
+        object? target = null)
+    {
+        if (target is Interceptor interceptor) {
+            // Interceptor is available -> invoke it
+            var invoker = InterceptorAsyncInvoker;
+            return invocation => invoker.Invoke(interceptor, invocation);
+        }
+
+        if (!ReferenceEquals(target, null) && !ReferenceEquals(target, proxy)) {
+            // There is target & target is not proxy -> invoke its method
+            var invoker = TargetAsyncInvoker;
+            return invocation => invoker.Invoke(target, invocation.Arguments);
+        }
+
+        // No target -> invoke intercepted method
+        if (proxy is not InterfaceProxy)
+            return InterceptedAsyncInvoker;
 
         // Nothing to invoke
         return null;
@@ -197,10 +240,15 @@ public class MethodDef
         WrapResultOfAsyncMethod<TUnwrapped>(default!);
         WrapAsyncInvokerResultOfAsyncMethod<TUnwrapped>(default!);
         SelectAsyncInvoker<TUnwrapped>(null!);
-        GetAsyncInvoker<TUnwrapped>(null!);
-        CreateTargetAsyncInvoker<TUnwrapped>(null!);
-        CreateInterceptorAsyncInvoker<TUnwrapped>(null!);
-        CreateInterceptedAsyncInvoker<TUnwrapped>(null!);
+        GetCachedFunc<TUnwrapped>(null!);
+
+        CodeKeeper.Keep<TargetAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<InterceptorAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<InterceptedAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<TargetObjectAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<InterceptorObjectAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<InterceptedObjectAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<UniversalAsyncResultWrapperFactory<TUnwrapped>>();
     }
 
     // Private methods
@@ -215,93 +263,6 @@ public class MethodDef
     private object? GetDefaultUnwrappedResult()
         => UnwrappedReturnType.GetDefaultValue();
 
-    private TResult GetAsyncInvoker<TResult>(MethodInfo methodInfo)
-        => (TResult)AsyncInvokerCache.GetOrAdd((methodInfo, UnwrappedReturnType),
-            static key => {
-                var (methodInfo1, returnType) = key;
-                return (Func<MethodDef, object>)methodInfo1
-                    .MakeGenericMethod(returnType)
-                    .CreateDelegate(typeof(Func<MethodDef, object>), null);
-            }).Invoke(this);
-
-    private static Func<object, ArgumentList, Task<TUnwrapped>> CreateTargetAsyncInvoker<TUnwrapped>(MethodDef methodDef)
-    {
-        if (methodDef.ReturnsTask) {
-            if (methodDef.IsAsyncVoidMethod)
-                return (service, args) => {
-                    var result = ((Task)args.GetInvoker(methodDef.Method).Invoke(service, args)!).ToUnitTask();
-                    return result as Task<TUnwrapped> ?? throw new InvalidCastException();
-                };
-            return (service, args) => (Task<TUnwrapped>)args.GetInvoker(methodDef.Method).Invoke(service, args)!;
-        }
-
-        if (methodDef.ReturnsValueTask) {
-            if (methodDef.IsAsyncVoidMethod)
-                return (service, args) => {
-                    var result = ((ValueTask)args.GetInvoker(methodDef.Method).Invoke(service, args)!).ToUnitTask();
-                    return result as Task<TUnwrapped> ?? throw new InvalidCastException();
-                };
-            return (service, args) => ((ValueTask<TUnwrapped>)args.GetInvoker(methodDef.Method).Invoke(service, args)!).AsTask();
-        }
-
-        // Non-async method
-        return (service, args) => {
-            var result = Task.FromResult(args.GetInvoker(methodDef.Method).Invoke(service, args));
-            return result as Task<TUnwrapped> ?? throw new InvalidCastException();
-        };
-    }
-
-    private static Func<Interceptor, Invocation, Task<TUnwrapped>> CreateInterceptorAsyncInvoker<TUnwrapped>(MethodDef methodDef)
-    {
-        if (methodDef.ReturnsTask)
-            return methodDef.IsAsyncVoidMethod
-                ? (interceptor, invocation) => {
-                    var result = interceptor.Intercept<Task>(invocation).ToUnitTask();
-                    return result as Task<TUnwrapped> ?? throw new InvalidCastException();
-                }
-                : (interceptor, invocation) => interceptor.Intercept<Task<TUnwrapped>>(invocation);
-
-        if (methodDef.ReturnsValueTask)
-            return methodDef.IsAsyncVoidMethod
-                ? (interceptor, invocation) => {
-                    var result = interceptor.Intercept<ValueTask>(invocation).ToUnitTask();
-                    return result as Task<TUnwrapped> ?? throw new InvalidCastException();
-                }
-                : (interceptor, invocation) => interceptor.Intercept<ValueTask<TUnwrapped>>(invocation).AsTask();
-
-        if (methodDef.ReturnType == typeof(void))
-            return (interceptor, invocation) => {
-                interceptor.Intercept(invocation);
-                return TaskExt.UnitTask as Task<TUnwrapped> ?? throw new InvalidCastException();
-            };
-
-        return (interceptor, invocation) => Task.FromResult(interceptor.Intercept<TUnwrapped>(invocation));
-    }
-
-    private static Func<Invocation, Task<TUnwrapped>> CreateInterceptedAsyncInvoker<TUnwrapped>(MethodDef methodDef)
-    {
-        if (methodDef.ReturnsTask)
-            return methodDef.IsAsyncVoidMethod
-                ? invocation => {
-                    var result = invocation.InvokeIntercepted<Task>().ToUnitTask();
-                    return result as Task<TUnwrapped> ?? throw new InvalidCastException();
-                }
-                : invocation => invocation.InvokeIntercepted<Task<TUnwrapped>>();
-
-        if (methodDef.ReturnsValueTask)
-            return methodDef.IsAsyncVoidMethod
-                ? invocation => {
-                    var result = invocation.InvokeIntercepted<ValueTask>().ToUnitTask();
-                    return result as Task<TUnwrapped> ?? throw new InvalidCastException();
-                }
-                : invocation => invocation.InvokeIntercepted<ValueTask<TUnwrapped>>().AsTask();
-
-        if (methodDef.ReturnType == typeof(void))
-            return invocation => {
-                invocation.InvokeIntercepted();
-                return TaskExt.UnitTask as Task<TUnwrapped> ?? throw new InvalidCastException();
-            };
-
-        return invocation => Task.FromResult(invocation.InvokeIntercepted<TUnwrapped>());
-    }
+    private TResult GetCachedFunc<TResult>(Type factoryType)
+        => GenericInstanceCache.Get<Func<MethodDef, TResult>>(factoryType, UnwrappedReturnType).Invoke(this);
 }

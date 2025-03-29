@@ -1,22 +1,15 @@
 using ActualLab.Rpc;
-using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Client.Internal;
 
-public interface IRpcOutboundComputeCall
-{
-    public void SetInvalidated(RpcInboundContext context);
-}
-
-public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
-    : RpcOutboundCall<TResult>(context), IRpcOutboundComputeCall
+public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOutboundCall(context)
 {
     protected readonly AsyncTaskMethodBuilder WhenInvalidatedSource = AsyncTaskMethodBuilderExt.New(); // Must not allow synchronous continuations!
 
     public override string DebugTypeName => "=>";
     public override int CompletedStage
-        => UntypedResultTask.IsCompleted
+        => ResultTask.IsCompleted
             ? WhenInvalidated.IsCompleted
                 ? RpcCallStage.Invalidated | RpcCallStage.Unregistered
                 : RpcCallStage.ResultReady
@@ -52,15 +45,9 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             // except the Unregister call in the end.
             // We don't unregister the call here, coz
             // we'll need to await for invalidation
-            var typedResult = default(TResult)!;
-            try {
-                if (result != null)
-                    typedResult = (TResult)result;
-            }
-            catch (InvalidCastException) {
-                // Intended
-            }
-            if (ResultSource.TrySetResult(typedResult)) {
+            if (result == null || !MethodDef.UnwrappedReturnType.IsInstanceOfType(result))
+                result = MethodDef.DefaultResult;
+            if (ResultSource.TrySetResult(result)) {
                 CompleteKeepRegistered();
                 Context.CacheInfoCapture?.CaptureValue(context!.Message);
             }
@@ -75,7 +62,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             // except the Unregister call in the end.
             // We don't unregister the call here, coz
             // we'll need to await for invalidation
-            var cacheEntry = Context.CacheInfoCapture?.CacheEntry as RpcCacheEntry<TResult>;
+            var cacheEntry = Context.CacheInfoCapture?.CacheEntry;
             if (cacheEntry == null) {
                 var error = Rpc.Internal.Errors.MatchButNoCachedEntry();
                 SetError(error, context: null);
@@ -83,7 +70,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
                     "Got 'Match', but the outbound call has no cached entry: {Call}", this);
                 return;
             }
-            if (ResultSource.TrySetResult(cacheEntry.Result)) {
+            if (ResultSource.TrySetResult(cacheEntry.DeserializedValue)) {
                 CompleteKeepRegistered();
                 Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
             }
@@ -136,7 +123,7 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
             if (!SetInvalidatedUnsafe(notifyCancelled))
                 return;
 
-            if (ResultSource.TrySetCanceled())
+            if (ResultSource.TrySetCanceled(CancellationTokenExt.Canceled))
                 Context.CacheInfoCapture?.CaptureValue(CancellationToken.None);
         }
     }
@@ -151,4 +138,10 @@ public class RpcOutboundComputeCall<TResult>(RpcOutboundContext context)
         CompleteAndUnregister(notifyCancelled);
         return true;
     }
+}
+
+public sealed class RpcOutboundComputeCall<TResult> : RpcOutboundComputeCall
+{
+    public RpcOutboundComputeCall(RpcOutboundContext context) : base(context)
+        => ResultSource = NewResultSource<TResult>();
 }

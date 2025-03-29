@@ -27,7 +27,7 @@ public class TypedFactoryInterceptor : Interceptor
     }
 
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume all necessary methods are preserved")]
-    protected internal override Func<Invocation, object?>? CreateHandler<
+    protected internal override Func<Invocation, object?>? CreateTypedHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef)
     {

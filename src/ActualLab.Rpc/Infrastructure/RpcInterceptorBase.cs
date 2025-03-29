@@ -14,6 +14,7 @@ public abstract class RpcInterceptorBase : Interceptor
     {
         Hub = services.RpcHub();
         ServiceDef = serviceDef;
+        UsesUntypedHandlers = true;
     }
 
     public override MethodDef? GetMethodDef(MethodInfo method, Type proxyType)

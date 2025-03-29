@@ -20,7 +20,7 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
 
     public readonly ICommander Commander = services.Commander();
 
-    protected override Func<Invocation, object?>? CreateHandler<
+    protected override Func<Invocation, object?>? CreateTypedHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
         (Invocation initialInvocation, MethodDef methodDef)
         => invocation => {

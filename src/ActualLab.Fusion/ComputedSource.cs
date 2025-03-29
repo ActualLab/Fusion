@@ -5,7 +5,6 @@ using ActualLab.Locking;
 namespace ActualLab.Fusion;
 
 #pragma warning disable CA1721
-
 #pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
 
 public interface IComputedSource : IComputeFunction
@@ -14,9 +13,7 @@ public interface IComputedSource : IComputeFunction
     public Computed Computed { get; }
 }
 
-public class ComputedSource<T> : ComputedInput,
-    IComputeFunction<T>, IComputedSource,
-    IEquatable<ComputedSource<T>>
+public class ComputedSource<T> : ComputedInput, IComputedSource, IEquatable<ComputedSource<T>>
 {
     private volatile ComputedSourceComputed<T> _computed;
     private volatile Func<ComputedSource<T>, CancellationToken, ValueTask<T>>? _computer;
@@ -103,7 +100,7 @@ public class ComputedSource<T> : ComputedInput,
     FusionHub IComputeFunction.Hub => Services.GetRequiredService<FusionHub>();
     public Type OutputType => typeof(T);
 
-    ValueTask<Computed<T>> IComputeFunction<T>.Invoke(
+    Task<Computed> IComputeFunction.ProduceComputed(
         ComputedInput input,
         ComputeContext context,
         CancellationToken cancellationToken)
@@ -115,17 +112,13 @@ public class ComputedSource<T> : ComputedInput,
         return Invoke(context, cancellationToken);
     }
 
-    private async ValueTask<Computed<T>> Invoke(
+    private async Task<Computed> Invoke(
         ComputeContext context,
         CancellationToken cancellationToken)
     {
-        var computed = Computed;
-        if (ComputedImpl.TryUseExisting(computed, context))
-            return computed!;
-
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
-        computed = Computed;
+        var computed = Computed;
         if (ComputedImpl.TryUseExistingFromLock(computed, context))
             return computed!;
 
@@ -135,45 +128,7 @@ public class ComputedSource<T> : ComputedInput,
         return computed;
     }
 
-    Task<T> IComputeFunction<T>.InvokeAndStrip(
-        ComputedInput input,
-        ComputeContext context,
-        CancellationToken cancellationToken)
-    {
-        if (!ReferenceEquals(input, this))
-            // This "Function" supports just a single input == this
-            throw new ArgumentOutOfRangeException(nameof(input));
-
-        return InvokeAndStrip(context, cancellationToken);
-    }
-
-    private Task<T> InvokeAndStrip(
-        ComputeContext context,
-        CancellationToken cancellationToken)
-    {
-        var result = Computed;
-        return ComputedImpl.TryUseExisting(result, context)
-            ? ComputedImpl.StripToTask(result, context)
-            : TryRecompute(context, cancellationToken);
-    }
-
     // Private methods
-
-    private async Task<T> TryRecompute(
-        ComputeContext context,
-        CancellationToken cancellationToken)
-    {
-        using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
-
-        var computed = Computed;
-        if (ComputedImpl.TryUseExistingFromLock(computed, context))
-            return ComputedImpl.Strip(computed, context);
-
-        releaser.MarkLockedLocally();
-        computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        ComputedImpl.UseNew(computed, context);
-        return computed.Value;
-    }
 
     private async ValueTask<ComputedSourceComputed<T>> GetComputed(CancellationToken cancellationToken)
     {
@@ -185,7 +140,7 @@ public class ComputedSource<T> : ComputedInput,
             try {
                 using var _ = Fusion.Computed.BeginCompute(computed);
                 var value = await Computer.Invoke(this, cancellationToken).ConfigureAwait(false);
-                computed.TrySetOutput(Result.New(value));
+                computed.TrySetOutput(Result.NewUntyped(value));
                 break;
             }
             catch (Exception e) {

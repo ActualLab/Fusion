@@ -4,7 +4,7 @@ namespace ActualLab.Fusion;
 
 public abstract record FixedDelayer(RetryDelaySeq RetryDelays) : IUpdateDelayer
 {
-    private static readonly ConcurrentDictionary<TimeSpan, FixedDelayer> Cache = new();
+    private static readonly ConcurrentDictionary<long, FixedDelayer> Cache = new();
 
     public static ZeroFixedDelayer NoneUnsafe { get; set; } = new(Defaults.RetryDelays);
     public static YieldFixedDelayer YieldUnsafe { get; set; } = new(Defaults.RetryDelays);
@@ -14,8 +14,8 @@ public abstract record FixedDelayer(RetryDelaySeq RetryDelays) : IUpdateDelayer
     public static FixedDelayer Get(double updateDelay)
         => Get(TimeSpan.FromSeconds(updateDelay));
     public static FixedDelayer Get(TimeSpan updateDelay)
-        => Cache.GetOrAdd(TimeSpanExt.Max(updateDelay, Defaults.MinDelay),
-            static d => new TaskDelayFixedDelayer(d, Defaults.RetryDelays));
+        => Cache.GetOrAdd(TimeSpanExt.Max(updateDelay, Defaults.MinDelay).Ticks,
+            static ticks => new TaskDelayFixedDelayer(TimeSpan.FromTicks(ticks), Defaults.RetryDelays));
 
     public abstract Task Delay(int retryCount, CancellationToken cancellationToken = default);
 

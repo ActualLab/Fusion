@@ -25,7 +25,7 @@ public sealed record InterfaceCommandHandler<
         ICommand command, CommandContext context,
         CancellationToken cancellationToken)
     {
-        var handler = (ICommandHandler<TCommand>) GetHandlerService(command, context);
+        var handler = (ICommandHandler<TCommand>)GetHandlerService(command, context);
         return handler.OnCommand((TCommand)command, context, cancellationToken);
     }
 

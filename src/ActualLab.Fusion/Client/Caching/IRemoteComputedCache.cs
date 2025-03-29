@@ -7,8 +7,7 @@ public interface IRemoteComputedCache
 {
     public Task WhenInitialized { get; }
 
-    public ValueTask<RpcCacheEntry<T>?> Get<T>(
-        ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken);
+    public ValueTask<RpcCacheEntry?> Get(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken);
     public ValueTask<RpcCacheValue> Get(RpcCacheKey key, CancellationToken cancellationToken = default);
 
     public void Set(RpcCacheKey key, RpcCacheValue value);

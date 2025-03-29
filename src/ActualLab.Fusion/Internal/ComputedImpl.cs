@@ -5,7 +5,7 @@ public static partial class ComputedImpl
     // TrySetOutput
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TrySetOutput<T>(Computed<T> computed, Result<T> output)
+    public static bool TrySetOutput<T>(Computed<T> computed, Result output)
         => computed.TrySetOutput(output);
 
     // Invalidation
