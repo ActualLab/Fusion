@@ -28,37 +28,25 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
     public RpcCacheEntry? CacheEntry { get; }
     public Task WhenSynchronized => SynchronizedSource.Task;
 
-    // Called when computed is populated from cache
-    public RemoteComputed(
-        ComputedOptions options,
-        ComputeMethodInput input,
-        Result<T> output,
-        RpcCacheEntry? cacheEntry)
-        : base(options, input, output, true, SkipComputedRegistration.Option)
-    {
-        CallSource = AsyncTaskMethodBuilderExt.New<RpcOutboundComputeCall?>();
-        CacheEntry = cacheEntry;
-        SynchronizedSource = AsyncTaskMethodBuilderExt.New();
-        ComputedRegistry.Instance.Register(this);
-        StartAutoInvalidation();
-    }
-
     // Called when computed is populated after RPC call
     public RemoteComputed(
         ComputedOptions options,
         ComputeMethodInput input,
         Result<T> output,
         RpcCacheEntry? cacheEntry,
-        RpcOutboundComputeCall call)
+        RpcOutboundComputeCall? call)
         : base(options, input, output, true, SkipComputedRegistration.Option)
     {
-        CallSource = AsyncTaskMethodBuilderExt.New<RpcOutboundComputeCall?>().WithResult(call);
+        CallSource = AsyncTaskMethodBuilderExt.New<RpcOutboundComputeCall?>();
+        if (call != null)
+            CallSource.SetResult(call);
         CacheEntry = cacheEntry;
         SynchronizedSource = AlwaysSynchronized.Source;
         ComputedRegistry.Instance.Register(this);
 
         // This should go after .Register(this)
-        BindWhenInvalidatedToCall(call);
+        if (call != null)
+            BindWhenInvalidatedToCall(call);
         StartAutoInvalidation();
     }
 
