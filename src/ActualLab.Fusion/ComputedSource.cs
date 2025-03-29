@@ -140,7 +140,7 @@ public class ComputedSource<T> : ComputedInput, IComputedSource, IEquatable<Comp
             try {
                 using var _ = Fusion.Computed.BeginCompute(computed);
                 var value = await Computer.Invoke(this, cancellationToken).ConfigureAwait(false);
-                computed.TrySetOutput(Result.NewUntyped(value));
+                computed.TrySetValue(value);
                 break;
             }
             catch (Exception e) {

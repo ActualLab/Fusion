@@ -131,7 +131,7 @@ public abstract class RemoteComputeMethodFunction(
                     // - or a Distributed mode service, so its base.Method should be invoked
                     try {
                         var result = await typedInput.InvokeInterceptedUntyped(cancellationToken).ConfigureAwait(false);
-                        computed.TrySetOutput(result);
+                        computed.TrySetValue(result);
                         return computed;
                     }
                     catch (Exception e) {
