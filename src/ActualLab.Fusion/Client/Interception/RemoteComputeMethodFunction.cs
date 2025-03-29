@@ -26,6 +26,34 @@ public class RemoteComputeMethodFunction<T>(
 
     protected override Computed NewReplicaComputed(ComputeMethodInput input)
         => new ReplicaComputed<T>(ComputedOptions, input);
+
+    protected override Computed NewRemoteComputed(ComputedOptions options, ComputeMethodInput input, Result output, RpcCacheEntry? cacheEntry, RpcOutboundComputeCall? call = null)
+        => new RemoteComputed<T>(options, input, output.AsTyped<T>(), cacheEntry, call);
+
+    protected override async Task<T> GetProduceValuePromiseWithSynchronizer(
+        ComputedInput input,
+        ComputeContext context,
+        IRemoteComputedSynchronizer synchronizer,
+        CancellationToken cancellationToken)
+    {
+        // If we're here, (context.CallOptions & CallOptions.GetExisting) == 0,
+        // which means that only CallOptions.Capture can be used.
+
+        var computed = input.GetExistingComputed();
+        if (computed == null || !computed.IsConsistent())
+            computed = await ProduceComputed(input, ComputeContext.None, cancellationToken).ConfigureAwait(false);
+
+        var whenSynchronized = synchronizer.WhenSynchronized(computed, cancellationToken);
+        if (!whenSynchronized.IsCompletedSuccessfully()) {
+            await whenSynchronized.ConfigureAwait(false);
+            if (!computed.IsConsistent())
+                computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
+        }
+
+        // Note that until this moment UseNew(...) wasn't called - we were using ComputeContext.None!
+        ComputedImpl.UseNew(computed, context);
+        return ((Computed<T>)computed).Value;
+    }
 }
 
 public abstract class RemoteComputeMethodFunction(
@@ -56,30 +84,11 @@ public abstract class RemoteComputeMethodFunction(
         var cancellationToken = invocation.Arguments.GetCancellationToken(CancellationTokenIndex); // Auto-handles -1 index
         try {
             var context = ComputeContext.Current;
-            var computed = ComputedRegistry.Instance.Get(input); // = input.GetExistingComputed()
             var synchronizer = RemoteComputedSynchronizer.Current;
             var task = !ReferenceEquals(synchronizer, null) && (context.CallOptions & CallOptions.GetExisting) == 0
-                ? UseOrComputeWithSynchronizer()
-                : this.ProduceValuePromise(input, ComputeContext.Current, cancellationToken);
+                ? GetProduceValuePromiseWithSynchronizer(input, context, synchronizer, cancellationToken)
+                : input.GetOrProduceValuePromise(context, cancellationToken);
             return MethodDef.WrapAsyncInvokerResultOfAsyncMethodUntyped(task);
-
-            async Task UseOrComputeWithSynchronizer() {
-                // If we're here, (context.CallOptions & CallOptions.GetExisting) == 0,
-                // which means that only CallOptions.Capture can be used.
-
-                if (computed == null || !computed.IsConsistent())
-                    computed = await TryRecomputeForSynchronizer(input, cancellationToken).ConfigureAwait(false);
-                var whenSynchronized = synchronizer.WhenSynchronized(computed, cancellationToken);
-                if (!whenSynchronized.IsCompletedSuccessfully()) {
-                    await whenSynchronized.ConfigureAwait(false);
-                    if (!computed.IsConsistent())
-                        computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
-                }
-
-                // Note that until this moment UseNew(...) wasn't called for computed!
-                ComputedImpl.UseNew(computed, context);
-                return computed.Value;
-            }
         }
         finally {
             if (cancellationToken.CanBeCanceled)
@@ -202,10 +211,7 @@ public abstract class RemoteComputeMethodFunction(
             }
         }
 
-        var computed = new RemoteComputed<T>(
-            input.MethodDef.ComputedOptions,
-            input, result,
-            cacheEntry, call!);
+        var computed = NewRemoteComputed(input.MethodDef.ComputedOptions, input, result, cacheEntry, call);
         existingRemoteComputed?.SynchronizedSource.TrySetResult();
         return computed;
     }
@@ -235,10 +241,8 @@ public abstract class RemoteComputeMethodFunction(
             // No cacheResult wasn't captured -> perform RPC call & update cache
             return await ComputeRpc(input, cache, null, peer, cancellationToken).ConfigureAwait(false);
 
-        var cachedComputed = new RemoteComputed<T>(
-            input.MethodDef.ComputedOptions,
-            input, cacheEntry.Result,
-            cacheEntry);
+        var cachedComputed = NewRemoteComputed(
+            input.MethodDef.ComputedOptions, input, Result.NewUntyped(cacheEntry.DeserializedValue), cacheEntry);
 
         // We suppress execution context flow here to ensure that
         // "true" computed won't be registered as a dependency -
@@ -341,10 +345,7 @@ public abstract class RemoteComputeMethodFunction(
         }
 
         // 8. Create the new computed - it invalidates the cached one upon registering
-        var computed = new RemoteComputed<T>(
-            input.MethodDef.ComputedOptions,
-            input, result,
-            cacheEntry, call);
+        var computed = NewRemoteComputed(input.MethodDef.ComputedOptions, input, result, cacheEntry, call);
         computed.RenewTimeouts(true);
         remoteCachedComputed.SynchronizedSource.TrySetResult();
     }
@@ -521,4 +522,17 @@ public abstract class RemoteComputeMethodFunction(
     // Abstract methods
 
     protected abstract Computed NewReplicaComputed(ComputeMethodInput input);
+
+    protected abstract Computed NewRemoteComputed(
+        ComputedOptions options,
+        ComputeMethodInput input,
+        Result output,
+        RpcCacheEntry? cacheEntry,
+        RpcOutboundComputeCall? call = null);
+
+    protected abstract Task GetProduceValuePromiseWithSynchronizer(
+        ComputedInput input,
+        ComputeContext context,
+        IRemoteComputedSynchronizer synchronizer,
+        CancellationToken cancellationToken);
 }

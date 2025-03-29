@@ -25,7 +25,7 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
         var input = new ComputeMethodInput(this, MethodDef, invocation);
         var cancellationToken = invocation.Arguments.GetCancellationToken(CancellationTokenIndex); // Auto-handles -1 index
         try {
-            var task = this.ProduceValuePromise(input, ComputeContext.Current, cancellationToken);
+            var task = input.GetOrProduceValuePromise(ComputeContext.Current, cancellationToken);
             return MethodDef.WrapAsyncInvokerResultOfAsyncMethodUntyped(task);
         }
         finally {
