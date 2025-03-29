@@ -46,12 +46,10 @@ public abstract partial record ArgumentList
     public virtual object? GetUntyped(int index)
         => throw new ArgumentOutOfRangeException(nameof(index));
 
-    // Virtual non-generic method for frequent operation, auto-handles -1 index
+    // Virtual non-generic method for frequent operation
     [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual CancellationToken GetCancellationToken(int index)
-        => index == -1
-            ? default
-            : throw new ArgumentOutOfRangeException(nameof(index));
+        => default;
 
     public virtual void Set<T>(int index, T value)
          => throw new ArgumentOutOfRangeException(nameof(index));
@@ -61,7 +59,7 @@ public abstract partial record ArgumentList
     // Virtual non-generic method for frequent operation
     [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual void SetCancellationToken(int index, CancellationToken item)
-        => throw new ArgumentOutOfRangeException(nameof(index));
+    { }
 
     public virtual void SetFrom(ArgumentList other)
     { }

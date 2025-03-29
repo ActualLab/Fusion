@@ -40,7 +40,7 @@ public interface IState<T> : IState, IResult<T>
 public abstract class State<T> : ComputedInput,
     IState<T>,
     IEquatable<State<T>>,
-    IComputeFunction<T>
+    IComputeFunction
 {
     public record Options : IState.IOptions
     {
@@ -286,7 +286,7 @@ public abstract class State<T> : ComputedInput,
     {
         var result = Computed;
         return ComputedImpl.TryUseExisting(result, context)
-            ? ComputedImpl.StripToTask(result, context)
+            ? ComputedImpl.GetValueOrDefaultAsTask(result, context)
             : TryRecompute(context, cancellationToken);
     }
 
@@ -298,7 +298,7 @@ public abstract class State<T> : ComputedInput,
 
         var computed = Computed;
         if (ComputedImpl.TryUseExistingFromLock(computed, context))
-            return ComputedImpl.Strip(computed, context);
+            return ComputedImpl.GetValueOrDefault(computed, context);
 
         releaser.MarkLockedLocally();
         OnUpdating(computed);

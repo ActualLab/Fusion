@@ -143,18 +143,18 @@ public class MutableState<T> : State<T>, IMutableState<T>
     {
         var computed = Computed;
         if (ComputedImpl.TryUseExisting(computed, context))
-            return ComputedImpl.StripToTask(computed, context);
+            return ComputedImpl.GetValueOrDefaultAsTask(computed, context);
 
         // Double-check locking
         lock (Lock) {
             computed = Computed;
             if (ComputedImpl.TryUseExistingFromLock(computed, context))
-                return ComputedImpl.StripToTask(computed, context);
+                return ComputedImpl.GetValueOrDefaultAsTask(computed, context);
 
             OnUpdating(computed);
             computed = CreateComputed();
             ComputedImpl.UseNew(computed, context);
-            return ComputedImpl.StripToTask(computed, context);
+            return ComputedImpl.GetValueOrDefaultAsTask(computed, context);
         }
     }
 

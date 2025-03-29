@@ -10,17 +10,21 @@ namespace ActualLab.Fusion.Client;
 
 public interface IRemoteComputed : IComputed, IMaybeCachedValue, IDisposable
 {
+    public AsyncTaskMethodBuilder<RpcOutboundComputeCall?> CallSource { get; }
+    public AsyncTaskMethodBuilder SynchronizedSource { get; }
     public Task WhenCallBound { get; }
     public RpcCacheEntry? CacheEntry { get; }
+
+    public bool BindToCall(RpcOutboundComputeCall? call);
 }
 
 public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
 {
-    internal readonly AsyncTaskMethodBuilder<RpcOutboundComputeCall<T>?> CallSource;
-    internal readonly AsyncTaskMethodBuilder SynchronizedSource;
+    public AsyncTaskMethodBuilder<RpcOutboundComputeCall?> CallSource { get; }
+    public AsyncTaskMethodBuilder SynchronizedSource { get; }
 
     Task IRemoteComputed.WhenCallBound => CallSource.Task;
-    public Task<RpcOutboundComputeCall<T>?> WhenCallBound => CallSource.Task;
+    public Task<RpcOutboundComputeCall?> WhenCallBound => CallSource.Task;
     public RpcCacheEntry? CacheEntry { get; }
     public Task WhenSynchronized => SynchronizedSource.Task;
 
@@ -32,7 +36,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         RpcCacheEntry? cacheEntry)
         : base(options, input, output, true, SkipComputedRegistration.Option)
     {
-        CallSource = AsyncTaskMethodBuilderExt.New<RpcOutboundComputeCall<T>?>();
+        CallSource = AsyncTaskMethodBuilderExt.New<RpcOutboundComputeCall?>();
         CacheEntry = cacheEntry;
         SynchronizedSource = AsyncTaskMethodBuilderExt.New();
         ComputedRegistry.Instance.Register(this);
@@ -45,10 +49,10 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         ComputeMethodInput input,
         Result<T> output,
         RpcCacheEntry? cacheEntry,
-        RpcOutboundComputeCall<T> call)
+        RpcOutboundComputeCall call)
         : base(options, input, output, true, SkipComputedRegistration.Option)
     {
-        CallSource = AsyncTaskMethodBuilderExt.New<RpcOutboundComputeCall<T>?>().WithResult(call);
+        CallSource = AsyncTaskMethodBuilderExt.New<RpcOutboundComputeCall?>().WithResult(call);
         CacheEntry = cacheEntry;
         SynchronizedSource = AlwaysSynchronized.Source;
         ComputedRegistry.Instance.Register(this);
@@ -70,7 +74,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         call?.CompleteAndUnregister(notifyCancelled: !this.IsInvalidated());
     }
 
-    public bool BindToCall(RpcOutboundComputeCall<T>? call)
+    public bool BindToCall(RpcOutboundComputeCall? call)
     {
         if (!CallSource.TrySetResult(call)) {
             // Another call is already bound
@@ -92,7 +96,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         return true;
     }
 
-    public void BindWhenInvalidatedToCall(RpcOutboundComputeCall<T> call)
+    public void BindWhenInvalidatedToCall(RpcOutboundComputeCall call)
     {
         var whenInvalidated = call.WhenInvalidated;
         if (whenInvalidated.IsCompleted) {

@@ -14,16 +14,26 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     private static readonly ConcurrentDictionary<RpcCallTypeKey, Func<RpcOutboundContext, RpcOutboundCall>> FactoryCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
+    protected AsyncTaskMethodBuilder<object?> ResultSource;
+
     public override string DebugTypeName => "->";
 
     public readonly RpcOutboundContext Context = context;
     public readonly RpcPeer Peer = context.Peer!;
     public readonly RpcCacheInfoCaptureMode CacheInfoCaptureMode = context.CacheInfoCapture?.CaptureMode ?? default;
-    public abstract Task UntypedResultTask { get; }
-    public virtual int CompletedStage
-        => UntypedResultTask.IsCompleted
+
+    public Task<object?> ResultTask {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => ResultSource.Task;
+    }
+
+    public virtual int CompletedStage {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => ResultSource.Task.IsCompleted
             ? RpcCallStage.ResultReady | RpcCallStage.Unregistered
             : 0;
+    }
+
     public string CompletedStageName => RpcCallStage.GetName(CompletedStage);
 
     public CpuTimestamp StartedAt;
@@ -41,14 +51,14 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (peer.ConnectionKind == RpcPeerConnectionKind.Local)
             return null;
 
-        return FactoryCache.GetOrAdd(new(context.CallTypeId, context.MethodDef!.UnwrappedReturnType), static key => {
-            var (callTypeId, tResult) = key;
-            var type = RpcCallTypeRegistry.Resolve(callTypeId)
-                .OutboundCallType
-                .MakeGenericType(tResult);
-            return (Func<RpcOutboundContext, RpcOutboundCall>)type
-                .GetConstructorDelegate(typeof(RpcOutboundContext))!;
-        }).Invoke(context);
+        return FactoryCache.GetOrAdd(new(context.CallTypeId, context.MethodDef!.UnwrappedReturnType),
+            static key => {
+                var type = RpcCallTypeRegistry.Resolve(key.CallTypeId)
+                    .OutboundCallType
+                    .MakeGenericType(key.CallResultType);
+                return (Func<RpcOutboundContext, RpcOutboundCall>)type
+                    .GetConstructorDelegate(typeof(RpcOutboundContext))!;
+            }).Invoke(context);
     }
 
     public override string ToString()
@@ -71,6 +81,41 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",
             completedStageName.IsNullOrEmpty() ? "" : $" @{completedStageName}");
         return result;
+    }
+
+    public Task<object?> Invoke(bool assumeConnected)
+    {
+        if (CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly) {
+            RegisterCacheKeyOnly();
+            return ResultTask;
+        }
+
+        if (NoWait) {
+            // NoWait always means "send immediately, even if disconnected"
+            _ = SendNoWait(MethodDef.AllowArgumentPolymorphism);
+            return ResultTask;
+        }
+
+        Register();
+        var sender = (ChannelWriter<RpcMessage>?)null;
+        if (assumeConnected || Peer.IsConnected(out _, out sender)) {
+            _ = SendRegistered(true, sender); // Fast path
+            return ResultTask;
+        }
+        return CompleteAsync(); // Slow path
+
+        async Task<object?> CompleteAsync() {
+            try {
+                var (_, sender1) = await Peer
+                    .WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CallCancelToken)
+                    .ConfigureAwait(false);
+                _ = SendRegistered(true, sender1);
+            }
+            catch (Exception error) {
+                SetError(error, null);
+            }
+            return await ResultTask.ConfigureAwait(false);
+        }
     }
 
     public void Register()
@@ -153,10 +198,57 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         return (message, hash);
     }
 
-    public abstract void SetResult(object? result, RpcInboundContext? context);
-    public abstract void SetMatch(RpcInboundContext context);
-    public abstract void SetError(Exception error, RpcInboundContext? context, bool assumeCancelled = false);
-    public abstract bool Cancel(CancellationToken cancellationToken);
+    public virtual void SetResult(object? result, RpcInboundContext? context)
+    {
+        if (result == null || !MethodDef.UnwrappedReturnType.IsInstanceOfType(result))
+            result = MethodDef.DefaultResult;
+        if (ResultSource.TrySetResult(result)) {
+            CompleteAndUnregister(notifyCancelled: false);
+            if (context != null)
+                Context.CacheInfoCapture?.CaptureValue(context.Message);
+        }
+    }
+
+    public virtual void SetMatch(RpcInboundContext? context)
+    {
+        var cacheEntry = Context.CacheInfoCapture?.CacheEntry;
+        if (cacheEntry == null) {
+            SetError(Internal.Errors.MatchButNoCachedEntry(), null);
+            return;
+        }
+
+        if (ResultSource.TrySetResult(cacheEntry.DeserializedValue)) {
+            CompleteAndUnregister(notifyCancelled: false);
+            if (context != null)
+                Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
+        }
+    }
+
+    public virtual void SetError(Exception error, RpcInboundContext? context, bool assumeCancelled = false)
+    {
+        var oce = error as OperationCanceledException;
+        if (error is RpcRerouteException)
+            oce = null; // RpcRerouteException is OperationCanceledException, but must be exposed as-is here
+        var cancellationToken = oce?.CancellationToken ?? default;
+        var isResultSet = oce != null
+            ? ResultSource.TrySetCanceled(cancellationToken)
+            : ResultSource.TrySetException(error);
+        if (!isResultSet)
+            return;
+
+        CompleteAndUnregister(notifyCancelled: context == null && !assumeCancelled);
+        Context.CacheInfoCapture?.CaptureValue(oce != null, error, cancellationToken);
+    }
+
+    public virtual bool Cancel(CancellationToken cancellationToken)
+    {
+        var isResultSet = ResultSource.TrySetCanceled(cancellationToken);
+        if (isResultSet) {
+            CompleteAndUnregister(notifyCancelled: true);
+            Context.CacheInfoCapture?.CaptureValue(cancellationToken);
+        }
+        return isResultSet;
+    }
 
     public virtual int? GetReconnectStage(bool isPeerChanged)
     {
@@ -191,6 +283,20 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
     }
 
+    // Helpers
+
+    public bool IsPeerChanged()
+        => Peer != MethodDef.Hub.CallRouter.Invoke(MethodDef, Context.Arguments!);
+
+    public void SetRerouteError()
+    {
+        var error = RpcRerouteException.MustReroute();
+        // This SetError call not only sets the error, but also
+        // invalidates computed method calls awaiting the invalidation.
+        // See RpcOutboundComputeCall.SetError / when it calls SetInvalidatedUnsafe.
+        SetError(error, context: null, assumeCancelled: true);
+    }
+
     // Protected methods
 
     protected void NotifyCancelled()
@@ -212,126 +318,22 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
     }
 
-    public bool IsPeerChanged()
-        => Peer != MethodDef.Hub.CallRouter.Invoke(MethodDef, Context.Arguments!);
+    protected AsyncTaskMethodBuilder<object?> NewResultSource<TResult>()
+        => NoWait || CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly
+            ? Cache<TResult>.NoWaitResultSource
+            : AsyncTaskMethodBuilderExt.New<object?>();
 
-    public void SetRerouteError()
+    // Nested types
+
+    protected static class Cache<TResult>
     {
-        var error = RpcRerouteException.MustReroute();
-        // This SetError call not only sets the error, but also
-        // invalidates computed method calls awaiting the invalidation.
-        // See RpcOutboundComputeCall.SetError / when it calls SetInvalidatedUnsafe.
-        SetError(error, context: null, assumeCancelled: true);
+        public static readonly AsyncTaskMethodBuilder<object?> NoWaitResultSource
+            = AsyncTaskMethodBuilderExt.New<object?>().WithResult(default(TResult));
     }
 }
 
 public class RpcOutboundCall<TResult> : RpcOutboundCall
 {
-    private static readonly TaskCompletionSource<TResult> CompletedDefaultResultSource
-        = new TaskCompletionSource<TResult>().WithResult(default!);
-
-    protected readonly TaskCompletionSource<TResult> ResultSource;
-
-    public override Task UntypedResultTask => ResultSource.Task;
-    public Task<TResult> ResultTask => ResultSource.Task;
-
     public RpcOutboundCall(RpcOutboundContext context) : base(context)
-    {
-        ResultSource = NoWait || CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly
-            ? CompletedDefaultResultSource
-            : new TaskCompletionSource<TResult>();
-    }
-
-    public Task<TResult> Invoke(bool assumeConnected)
-    {
-        if (CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly) {
-            RegisterCacheKeyOnly();
-            return ResultTask;
-        }
-
-        if (NoWait) {
-            // NoWait always means "send immediately, even if disconnected"
-            _ = SendNoWait(MethodDef.AllowArgumentPolymorphism);
-            return ResultTask;
-        }
-
-        Register();
-        var sender = (ChannelWriter<RpcMessage>?)null;
-        if (assumeConnected || Peer.IsConnected(out _, out sender)) {
-            _ = SendRegistered(true, sender); // Fast path
-            return ResultTask;
-        }
-        return CompleteAsync(); // Slow path
-
-        async Task<TResult> CompleteAsync() {
-            try {
-                var (_, sender1) = await Peer
-                    .WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CallCancelToken)
-                    .ConfigureAwait(false);
-                _ = SendRegistered(true, sender1);
-            }
-            catch (Exception error) {
-                SetError(error, null);
-            }
-            return await ResultTask.ConfigureAwait(false);
-        }
-    }
-
-    public override void SetResult(object? result, RpcInboundContext? context)
-    {
-        var typedResult = default(TResult)!;
-        try {
-            if (result != null)
-                typedResult = (TResult)result;
-        }
-        catch (InvalidCastException) {
-            // Intended
-        }
-        if (ResultSource.TrySetResult(typedResult)) {
-            CompleteAndUnregister(notifyCancelled: false);
-            if (context != null)
-                Context.CacheInfoCapture?.CaptureValue(context.Message);
-        }
-    }
-
-    public override void SetMatch(RpcInboundContext? context)
-    {
-        var cacheEntry = Context.CacheInfoCapture?.CacheEntry as RpcCacheEntry<TResult>;
-        if (cacheEntry == null) {
-            SetError(Rpc.Internal.Errors.MatchButNoCachedEntry(), null);
-            return;
-        }
-
-        if (ResultSource.TrySetResult(cacheEntry.Result)) {
-            CompleteAndUnregister(notifyCancelled: false);
-            if (context != null)
-                Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
-        }
-    }
-
-    public override void SetError(Exception error, RpcInboundContext? context, bool assumeCancelled = false)
-    {
-        var oce = error as OperationCanceledException;
-        if (error is RpcRerouteException)
-            oce = null; // RpcRerouteException is OperationCanceledException, but must be exposed as-is here
-        var cancellationToken = oce?.CancellationToken ?? default;
-        var isResultSet = oce != null
-            ? ResultSource.TrySetCanceled(cancellationToken)
-            : ResultSource.TrySetException(error);
-        if (!isResultSet)
-            return;
-
-        CompleteAndUnregister(notifyCancelled: context == null && !assumeCancelled);
-        Context.CacheInfoCapture?.CaptureValue(oce != null, error, cancellationToken);
-    }
-
-    public override bool Cancel(CancellationToken cancellationToken)
-    {
-        var isResultSet = ResultSource.TrySetCanceled(cancellationToken);
-        if (isResultSet) {
-            CompleteAndUnregister(notifyCancelled: true);
-            Context.CacheInfoCapture?.CaptureValue(cancellationToken);
-        }
-        return isResultSet;
-    }
+        => ResultSource = NewResultSource<TResult>();
 }

@@ -15,21 +15,18 @@ public static partial class TaskExt
     private static readonly Action<Task, int> StateFlagsSetter;
 #endif
 
-    private static readonly MethodInfo FromTypedTaskInternalMethod;
-    private static readonly ConcurrentDictionary<Type, Func<Task, IResult>> ToTypedResultCache;
-
     public static readonly Task<Unit> UnitTask;
     public static readonly Task<bool> TrueTask;
     public static readonly Task<bool> FalseTask;
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume Task class is fully preserved")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TaskExt))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Task<>))]
     static TaskExt()
     {
         UnitTask = Task.FromResult(Unit.Default);
         TrueTask = Task.FromResult(true);
         FalseTask = Task.FromResult(false);
-        FromTypedTaskInternalMethod = typeof(TaskExt).GetMethod(nameof(FromTypedTaskInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
-        ToTypedResultCache = new ConcurrentDictionary<Type, Func<Task, IResult>>(HardwareInfo.ProcessorCountPo2, 131);
 #if !USE_UNSAFE_ACCESSORS
         StateFlagsSetter = typeof(Task)
             .GetField("m_stateFlags", BindingFlags.Instance | BindingFlags.NonPublic)!
@@ -114,12 +111,4 @@ public static partial class TaskExt
         StateFlagsSetter.Invoke(task, stateFlags);
 #endif
     }
-
-    // Private methods
-
-    private static IResult FromTypedTaskInternal<T>(Task task)
-        // ReSharper disable once HeapView.BoxingAllocation
-        => task.IsCompletedSuccessfully()
-            ? new Result<T>(((Task<T>)task).Result)
-            : new Result<T>(default!, task.GetBaseException());
 }

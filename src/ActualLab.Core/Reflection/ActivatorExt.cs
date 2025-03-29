@@ -11,13 +11,13 @@ namespace ActualLab.Reflection;
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all used constructors are preserved")]
 public static class ActivatorExt
 {
-    private static readonly ConcurrentDictionary<Type, bool> HasDefaultCtorCache = new();
-    private static readonly ConcurrentDictionary<Type, Delegate?> CtorDelegate0Cache = new();
-    private static readonly ConcurrentDictionary<(Type, Type), Delegate?> CtorDelegate1Cache = new();
-    private static readonly ConcurrentDictionary<(Type, Type, Type), Delegate?> CtorDelegate2Cache = new();
-    private static readonly ConcurrentDictionary<(Type, Type, Type, Type), Delegate?> CtorDelegate3Cache = new();
-    private static readonly ConcurrentDictionary<(Type, Type, Type, Type, Type), Delegate?> CtorDelegate4Cache = new();
-    private static readonly ConcurrentDictionary<(Type, Type, Type, Type, Type, Type), Delegate?> CtorDelegate5Cache = new();
+    private static readonly ConcurrentDictionary<object, bool> HasDefaultCtorCache = new();
+    private static readonly ConcurrentDictionary<object, object?> CtorDelegate0Cache = new();
+    private static readonly ConcurrentDictionary<(object, object), object?> CtorDelegate1Cache = new();
+    private static readonly ConcurrentDictionary<(object, object, object), object?> CtorDelegate2Cache = new();
+    private static readonly ConcurrentDictionary<(object, object, object, object), object?> CtorDelegate3Cache = new();
+    private static readonly ConcurrentDictionary<(object, object, object, object, object), object?> CtorDelegate4Cache = new();
+    private static readonly ConcurrentDictionary<(object, object, object, object, object, object), object?> CtorDelegate5Cache = new();
 
     // An alternative to "new()" constraint
     public static T New<
@@ -30,7 +30,7 @@ public static class ActivatorExt
         if (type.IsValueType)
             return default!;
         var hasDefaultCtor = HasDefaultCtorCache.GetOrAdd(type,
-            type1 => type1.GetConstructor(Type.EmptyTypes) != null);
+            key => ((Type)key).GetConstructor(Type.EmptyTypes) != null);
         if (hasDefaultCtor)
             return (T)type.CreateInstance();
         if (failIfNoDefaultConstructor)
@@ -38,66 +38,82 @@ public static class ActivatorExt
         return default!;
     }
 
-    public static Delegate? GetConstructorDelegate(
+    public static object? GetConstructorDelegate(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] this Type type)
         => CtorDelegate0Cache.GetOrAdd(
             type,
-            static tObject => {
+            static key => {
+                var tObject = (Type)key;
                 var argTypes = Type.EmptyTypes;
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
 
-    public static Delegate? GetConstructorDelegate(
+    public static object? GetConstructorDelegate(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type,
         Type argument1)
         => CtorDelegate1Cache.GetOrAdd(
             (type, argument1),
             static key => {
-                var (tObject, tArg1) = key;
+                var tObject = (Type)key.Item1;
+                var tArg1 = (Type)key.Item2;
                 var argTypes = new[] { tArg1 };
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
 
-    public static Delegate? GetConstructorDelegate(
+    public static object? GetConstructorDelegate(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type,
         Type argument1, Type argument2)
         => CtorDelegate2Cache.GetOrAdd(
             (type, argument1, argument2),
             static key => {
-                var (tObject, tArg1, tArg2) = key;
+                var tObject = (Type)key.Item1;
+                var tArg1 = (Type)key.Item2;
+                var tArg2 = (Type)key.Item3;
                 var argTypes = new[] { tArg1, tArg2 };
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
 
-    public static Delegate? GetConstructorDelegate(
+    public static object? GetConstructorDelegate(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type,
         Type argument1, Type argument2, Type argument3)
         => CtorDelegate3Cache.GetOrAdd(
             (type, argument1, argument2, argument3),
             static key => {
-                var (tObject, tArg1, tArg2, tArg3) = key;
+                var tObject = (Type)key.Item1;
+                var tArg1 = (Type)key.Item2;
+                var tArg2 = (Type)key.Item3;
+                var tArg3 = (Type)key.Item4;
                 var argTypes = new[] { tArg1, tArg2, tArg3 };
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
 
-    public static Delegate? GetConstructorDelegate(
+    public static object? GetConstructorDelegate(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type,
         Type argument1, Type argument2, Type argument3, Type argument4)
         => CtorDelegate4Cache.GetOrAdd(
             (type, argument1, argument2, argument3, argument4),
             static key => {
-                var (tObject, tArg1, tArg2, tArg3, tArg4) = key;
+                var tObject = (Type)key.Item1;
+                var tArg1 = (Type)key.Item2;
+                var tArg2 = (Type)key.Item3;
+                var tArg3 = (Type)key.Item4;
+                var tArg4 = (Type)key.Item5;
                 var argTypes = new[] { tArg1, tArg2, tArg3, tArg4 };
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
 
-    public static Delegate? GetConstructorDelegate(
+    public static object? GetConstructorDelegate(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type,
         Type argument1, Type argument2, Type argument3, Type argument4, Type argument5)
         => CtorDelegate5Cache.GetOrAdd(
             (type, argument1, argument2, argument3, argument4, argument5),
             static key => {
-                var (tObject, tArg1, tArg2, tArg3, tArg4, tArg5) = key;
+                var tObject = (Type)key.Item1;
+                var tArg1 = (Type)key.Item2;
+                var tArg2 = (Type)key.Item3;
+                var tArg3 = (Type)key.Item4;
+                var tArg4 = (Type)key.Item5;
+                var tArg5 = (Type)key.Item6;
                 var argTypes = new[] { tArg1, tArg2, tArg3, tArg4, tArg5 };
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
@@ -149,21 +165,28 @@ public static class ActivatorExt
         return ctor.Invoke(argument1, argument2, argument3, argument4, argument5);
     }
 
-    // Private methods
-
-    private static Delegate? CreateConstructorDelegate(ConstructorInfo? ctor, params Type[] argumentTypes)
+    public static Delegate? CreateConstructorDelegate(ConstructorInfo? ctor, params Type[] argumentTypes)
         =>  ctor == null
             ? null
             : RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
                 ? CreateConstructorDelegateDM(ctor, argumentTypes)
                 : CreateConstructorDelegateET(ctor, argumentTypes);
 
+    // Private methods
+
     private static Delegate CreateConstructorDelegateDM(ConstructorInfo ctor, params Type[] argumentTypes)
     {
+        var ctorParams = ctor.GetParameters();
+        if (ctorParams.Length != argumentTypes.Length)
+            throw new ArgumentOutOfRangeException(nameof(argumentTypes),
+                "Count of arguments should match the count of constructor paramters.");
+
         var m = new DynamicMethod("_Ctor", ctor.DeclaringType, argumentTypes, true);
         var il = m.GetILGenerator();
-        for (var i = 0; i < argumentTypes.Length; i++)
+        for (var i = 0; i < argumentTypes.Length; i++) {
             il.Emit(OpCodes.Ldarg, i);
+            il.MaybeEmitCast(argumentTypes[i], ctorParams[i].ParameterType);
+        }
         il.Emit(OpCodes.Newobj, ctor);
         il.Emit(OpCodes.Ret);
         var tDelegate = FuncExt.GetFuncType(argumentTypes, ctor.DeclaringType!);
@@ -172,12 +195,20 @@ public static class ActivatorExt
 
     private static Delegate CreateConstructorDelegateET(ConstructorInfo ctor, params Type[] argumentTypes)
     {
+        var ctorParams = ctor.GetParameters();
+        if (ctorParams.Length != argumentTypes.Length)
+            throw new ArgumentOutOfRangeException(nameof(argumentTypes),
+                "Count of arguments should match the count of constructor paramters.");
+
         var parameters = new ParameterExpression[argumentTypes.Length];
-        for (var i = 0; i < argumentTypes.Length; i++)
+        var callParameters = new Expression[argumentTypes.Length];
+        for (var i = 0; i < argumentTypes.Length; i++) {
             parameters[i] = Expression.Parameter(argumentTypes[i]);
+            callParameters[i] = ExpressionExt.MaybeConvert(parameters[i], ctorParams[i].ParameterType);
+        }
         return Expression
             // ReSharper disable once CoVariantArrayConversion
-            .Lambda(Expression.New(ctor, parameters), parameters)
+            .Lambda(Expression.New(ctor, callParameters), parameters)
             .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
     }
 }

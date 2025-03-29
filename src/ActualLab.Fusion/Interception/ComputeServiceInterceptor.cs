@@ -27,26 +27,15 @@ public class ComputeServiceInterceptor : Interceptor
     {
         Hub = hub;
         CommandServiceInterceptor = Hub.CommanderHub.Interceptor;
+        UsesUntypedHandlers = true;
     }
 
-#if NET5_0_OR_GREATER
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-#endif
     public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
         => GetHandler(invocation) ?? CommandServiceInterceptor.SelectHandler(invocation);
 
-    protected override Func<Invocation, object?>? CreateHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
-        Invocation initialInvocation, MethodDef methodDef)
-        => throw ActualLab.Internal.Errors.NotSupported($"Use {nameof(CreateHandlerUntyped)}.");
-
-    protected override Func<Invocation, object?>? CreateHandlerUntyped(MethodInfo method, Invocation initialInvocation)
+    protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)
     {
-        var methodDef = GetMethodDef(method, initialInvocation.Proxy.GetType()) as ComputeMethodDef;
-        if (methodDef == null)
-            return null;
-
-        var function = (IComputeMethodFunction)typeof(ComputeMethodFunction<>)
+        var function = (ComputeMethodFunction)typeof(ComputeMethodFunction<>)
             .MakeGenericType(methodDef.UnwrappedReturnType)
             .CreateInstance(Hub, methodDef);
         return function.ComputeServiceInterceptorHandler;

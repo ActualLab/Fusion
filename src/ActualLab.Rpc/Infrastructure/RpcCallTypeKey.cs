@@ -1,24 +1,24 @@
 namespace ActualLab.Rpc.Infrastructure;
 
-public readonly struct RpcCallTypeKey(byte callTypeId, Type type) : IEquatable<RpcCallTypeKey>
+public readonly struct RpcCallTypeKey(byte callTypeId, Type callResultType) : IEquatable<RpcCallTypeKey>
 {
     public readonly byte CallTypeId = callTypeId;
-    public readonly Type Type = type;
+    public readonly Type CallResultType = callResultType;
 
     public void Deconstruct(out byte callTypeId, out Type type)
     {
         callTypeId = CallTypeId;
-        type = Type;
+        type = CallResultType;
     }
 
     // Equality
 
     public bool Equals(RpcCallTypeKey other)
-        => Type == other.Type && CallTypeId == other.CallTypeId;
+        => ReferenceEquals(CallResultType, other.CallResultType) && CallTypeId == other.CallTypeId;
 
     public override bool Equals(object? obj)
         => obj is RpcCallTypeKey other && Equals(other);
 
     public override int GetHashCode()
-        => Type.GetHashCode() + CallTypeId;
+        => CallResultType.GetHashCode() + CallTypeId;
 }

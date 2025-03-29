@@ -59,8 +59,7 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
         Set(VersionKey, new RpcCacheValue(expectedData, ""));
     }
 
-    public async ValueTask<RpcCacheEntry<T>?> Get<T>(
-        ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
+    public async ValueTask<RpcCacheEntry?> Get(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
     {
         var methodDef = AnyMethodResolver[key.Name];
         if (methodDef == null)
@@ -79,7 +78,7 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
             DefaultLog?.Log(Settings.LogLevel, "[?] {Key} -> hit", key);
             var resultList = methodDef.ResultListType.Factory.Invoke();
             ArgumentSerializer.Deserialize(ref resultList, methodDef.AllowResultPolymorphism, entry.Data);
-            return new RpcCacheEntry<T>(key, entry, resultList.Get0<T>());
+            return new RpcCacheEntry(key, entry, resultList.Get0Untyped());
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
             Log.LogError(e, "Cached result read failed");

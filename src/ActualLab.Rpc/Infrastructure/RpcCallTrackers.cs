@@ -102,7 +102,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 var inProgressCallCount = 0;
                 foreach (var call in this) {
                     callCount++;
-                    if (call.UntypedResultTask.IsCompleted)
+                    if (call.ResultTask.IsCompleted)
                         continue;
 
                     inProgressCallCount++;

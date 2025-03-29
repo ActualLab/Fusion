@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Async;
 
 public static partial class TaskExt
@@ -38,30 +36,4 @@ public static partial class TaskExt
             return new Result<T>(default!, e);
         }
     }
-
-    // ToTypedResultXxx
-
-    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "FromTypedTaskInternal is preserved")]
-    public static IResult ToTypedResultSynchronously(this Task task)
-    {
-        var tValue = task.AssertCompleted().GetType().GetTaskOrValueTaskArgument();
-        if (tValue == null) {
-            // ReSharper disable once HeapView.BoxingAllocation
-            return task.IsCompletedSuccessfully()
-                ? new Result<Unit>()
-                : new Result<Unit>(default, task.GetBaseException());
-        }
-
-        return ToTypedResultCache.GetOrAdd(
-            tValue,
-            static tValue1 => (Func<Task, IResult>)FromTypedTaskInternalMethod
-                .MakeGenericMethod(tValue1)
-                .CreateDelegate(typeof(Func<Task, IResult>))
-            ).Invoke(task);
-    }
-
-    public static Task<IResult> ToTypedResultAsync(this Task task)
-        => task.ContinueWith(
-            t => t.ToTypedResultSynchronously(),
-            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 }

@@ -11,7 +11,7 @@ public sealed class RpcDefaultOutboundCallTrace(Activity? activity)
         if (Activity == null)
             return;
 
-        Activity.Finalize(call.UntypedResultTask);
+        Activity.Finalize(call.ResultTask);
         Activity.DisposeNonCurrent();
     }
 }

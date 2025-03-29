@@ -16,7 +16,7 @@ public sealed class PassThroughInterceptor : Interceptor
         MustInterceptAsyncCalls = false;
     }
 
-    protected override Func<Invocation, object?>? CreateHandler<
+    protected override Func<Invocation, object?>? CreateTypedHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef)
         => _ => throw new InvalidOperationException("Should never get to this point.");

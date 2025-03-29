@@ -47,7 +47,29 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
     public static bool operator !=(ComputedInput? left, ComputedInput? right)
         => !Equals(left, right);
 
-    // Equality comparer
+    // Static helpers
+
+    public ValueTask<Computed?> GetOrProduceComputed(
+        ComputeContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var computed = GetExistingComputed();
+        return ComputedImpl.TryUseExisting(computed, context)
+            ? new ValueTask<Computed?>(computed)
+            : (ValueTask<Computed?>)Function.ProduceComputed(this, context, cancellationToken).ToValueTask()!;
+    }
+
+    public Task GetOrProduceValuePromise(
+        ComputeContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var computed = GetExistingComputed();
+        return ComputedImpl.TryUseExisting(computed, context)
+            ? ComputedImpl.GetValueOrDefaultAsTask(computed, context, Function.OutputType)
+            : Function.ProduceValuePromise(this, context, cancellationToken);
+    }
+
+    // Nested types
 
     private sealed class EqualityComparerImpl : IEqualityComparer<ComputedInput>
     {
@@ -59,5 +81,4 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
         public int GetHashCode(ComputedInput obj)
             => obj.HashCode;
     }
-
 }

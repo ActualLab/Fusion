@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -20,25 +19,17 @@ public class RpcNonRoutingInterceptor : RpcInterceptorBase
         AssumeConnected = assumeConnected;
     }
 
-    protected override Func<Invocation, object?>? CreateHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
-        (Invocation initialInvocation, MethodDef methodDef)
+    protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)
     {
         var rpcMethodDef = (RpcMethodDef)methodDef;
         return invocation => {
-            Task<TUnwrapped> resultTask;
             var context = invocation.Context as RpcOutboundContext ?? RpcOutboundContext.Current ?? new();
-            if (context.Suppressor is { } suppressor) {
-                resultTask = (Task<TUnwrapped>)suppressor.Invoke(rpcMethodDef, invocation);
-                return rpcMethodDef.WrapAsyncInvokerResultOfAsyncMethod(resultTask);
-            }
-
-            var call = (RpcOutboundCall<TUnwrapped>?)context.PrepareCall(rpcMethodDef, invocation.Arguments);
+            var call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
             if (call == null)
                 throw RpcRerouteException.MustRerouteToLocal();
 
-            resultTask = call.Invoke(AssumeConnected);
-            return rpcMethodDef.WrapAsyncInvokerResultOfAsyncMethod(resultTask);
+            var resultTask = call.Invoke(AssumeConnected);
+            return rpcMethodDef.UniversalAsyncResultWrapper.Invoke(resultTask);
         };
     }
 }

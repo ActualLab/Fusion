@@ -104,6 +104,7 @@ public abstract partial record ArgumentList
     for (var t = 0; t < maxItemCount; t++) {
 #>
     public virtual T Get<#=t#><T>() => throw new IndexOutOfRangeException();
+    public virtual object Get<#=t#>Untyped() => throw new IndexOutOfRangeException();
 <#
     }
 #>
@@ -311,6 +312,8 @@ public sealed record <#=className#> : ArgumentList<#=itemCount#>
     for (var t = 0; t < itemCount; t++) {
 #>
     public override T Get<#=t#><T>() => Item<#=t#> is T value ? value : default!;
+    // ReSharper disable once HeapView.PossibleBoxingAllocation
+    public override object Get<#=t#>Untyped() => Item<#=t#>;
 <#
     }
 #>
@@ -337,8 +340,7 @@ public sealed record <#=className#> : ArgumentList<#=itemCount#>
 <# for (var t = 0; t < itemCount; t++) { #>
             <#=t#> => Item<#=t#> is CancellationToken value ? value : default!,
 <# } #>
-            -1 => default,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
+            _ => default,
         };
 
     // Set
@@ -387,10 +389,8 @@ public sealed record <#=className#> : ArgumentList<#=itemCount#>
 <# } else { #>
             _item<#=t#> = _type.CastItem(<#=t#>, item);
 <# } #>
-            break;
+            return;
 <# } #>
-        default:
-            throw new ArgumentOutOfRangeException(nameof(index));
         }
     }
 

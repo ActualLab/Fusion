@@ -19,7 +19,7 @@ public sealed class SchedulingInterceptor : Interceptor
         : base(settings, services)
     { }
 
-    protected internal override Func<Invocation, object?>? CreateHandler<
+    protected internal override Func<Invocation, object?>? CreateTypedHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef)
     {

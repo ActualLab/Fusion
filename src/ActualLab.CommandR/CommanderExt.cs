@@ -1,15 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.OS;
+using ActualLab.Caching;
 
 namespace ActualLab.CommandR;
 
 public static class CommanderExt
 {
-    private static readonly ConcurrentDictionary<Type, Func<ICommander, ICommand, bool, CancellationToken, Task>> TypedCallCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly MethodInfo TypedCallMethod = typeof(CommanderExt)
-        .GetMethod(nameof(TypedCall), BindingFlags.Static | BindingFlags.NonPublic)!;
-
     // Start overloads
 
     public static CommandContext Start(this ICommander commander,
@@ -42,7 +37,7 @@ public static class CommanderExt
 
     public static Task<TResult> Call<TResult>(this ICommander commander,
         ICommand<TResult> command, bool isOutermost, CancellationToken cancellationToken = default)
-        => TypedCall<TResult>(commander, command, isOutermost, cancellationToken);
+        => TypedCallFactory<TResult>.TypedCall(commander, command, isOutermost, cancellationToken);
 
     public static Task Call(this ICommander commander,
         ICommand command, bool isOutermost, CancellationToken cancellationToken = default)
@@ -52,7 +47,7 @@ public static class CommanderExt
     public static Task<TResult> Call<TResult>(this ICommander commander,
         ICommand<TResult> command,
         CancellationToken cancellationToken = default)
-        => TypedCall<TResult>(commander, command, false, cancellationToken);
+        => TypedCallFactory<TResult>.TypedCall(commander, command, false, cancellationToken);
 
     public static Task Call(this ICommander commander,
         ICommand command,
@@ -60,34 +55,29 @@ public static class CommanderExt
         => GetTypedCallInvoker(command.GetResultType())
             .Invoke(commander, command, false, cancellationToken);
 
-    // Private methods
+    public static Func<ICommander, ICommand, bool, CancellationToken, Task> GetTypedCallInvoker(Type commandResultType)
+        => GenericInstanceCache
+            .Get<Func<ICommander, ICommand, bool, CancellationToken, Task>>(
+                typeof(TypedCallFactory<>),
+                commandResultType);
 
-    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume all command handling code is preserved")]
-    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all command handling code is preserved")]
-    private static Func<ICommander, ICommand, bool, CancellationToken, Task> GetTypedCallInvoker(Type commandResultType)
-        => TypedCallCache.GetOrAdd(
-            commandResultType,
-            tResult => {
-                var delegateType = typeof(Func<,,,,>)
-                    .MakeGenericType(
-                        typeof(ICommander),
-                        typeof(ICommand),
-                        typeof(bool),
-                        typeof(CancellationToken),
-                        typeof(Task<>).MakeGenericType(tResult));
-                return (Func<ICommander, ICommand, bool, CancellationToken, Task>)TypedCallMethod
-                    .MakeGenericMethod(tResult)
-                    .CreateDelegate(delegateType);
-            });
+    // Nested types
 
-    private static async Task<TResult> TypedCall<TResult>(
-        ICommander commander,
-        ICommand command,
-        bool isOutermost,
-        CancellationToken cancellationToken = default)
+    public sealed class TypedCallFactory<TResult> : GenericInstanceFactory, IGenericInstanceFactory<TResult>
     {
-        var context = await commander.Run(command, isOutermost, cancellationToken).ConfigureAwait(false);
-        var typedContext = (CommandContext<TResult>)context;
-        return await typedContext.ResultSource.Task.ConfigureAwait(false);
+        public static async Task<TResult> TypedCall(
+            ICommander commander,
+            ICommand command,
+            bool isOutermost,
+            CancellationToken cancellationToken = default)
+        {
+            var context = await commander.Run(command, isOutermost, cancellationToken).ConfigureAwait(false);
+            var typedContext = (CommandContext<TResult>)context;
+            return await typedContext.ResultSource.Task.ConfigureAwait(false);
+        }
+
+        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume Task<T> methods are preserved")]
+        public override Func<ICommander, ICommand, bool, CancellationToken, Task> Generate()
+            => TypedCall;
     }
 }

@@ -4,6 +4,15 @@ namespace ActualLab.Async;
 
 public static class CancellationTokenExt
 {
+    public static readonly CancellationToken Canceled;
+
+    static CancellationTokenExt()
+    {
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+        Canceled = cts.Token;
+    }
+
     public static string Format(this CancellationToken cancellationToken)
         => cancellationToken.CanBeCanceled
             ? $"ct-{(uint)cancellationToken.GetHashCode():x}"
