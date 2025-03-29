@@ -115,14 +115,14 @@ public static partial class ComputedImpl
     {
         if (error is not OperationCanceledException) {
             // Not a cancellation
-            computed.TrySetOutput(error);
+            computed.TrySetError(error);
             return SpecialTasks.MustReturn;
         }
 
         if (cancellationToken.IsCancellationRequested || error is RpcRerouteException) {
             // !!! Cancellation of our own token & RpcRerouteException always "pass through"
             computed.Invalidate(true); // Instant invalidation on cancellation
-            computed.TrySetOutput(error);
+            computed.TrySetError(error);
             return SpecialTasks.MustThrow;
         }
 
@@ -130,7 +130,7 @@ public static partial class ComputedImpl
         if (++tryIndex > cancellationReprocessingOptions.MaxTryCount
             || startedAt.Elapsed > cancellationReprocessingOptions.MaxDuration) {
             // All of reprocessing attempts are exhauseted
-            computed.TrySetOutput(error);
+            computed.TrySetError(error);
             return SpecialTasks.MustReturn;
         }
 
@@ -139,7 +139,7 @@ public static partial class ComputedImpl
         // - we must reprocess it w/ a delay.
 
         computed.Invalidate(true); // Instant invalidation on cancellation
-        computed.TrySetOutput(error);
+        computed.TrySetError(error);
         var delay = cancellationReprocessingOptions.RetryDelays[tryIndex];
         log.LogWarning(error,
             "{Method} #{TryIndex} for {Category} was cancelled internally, will retry in {Delay}",
@@ -157,13 +157,13 @@ public static partial class ComputedImpl
     {
         if (error is not OperationCanceledException) {
             // Not a cancellation
-            computed.TrySetOutput(error);
+            computed.TrySetError(error);
             return true;
         }
 
         // Cancellation
         computed.Invalidate(true); // Instant invalidation on cancellation
-        computed.TrySetOutput(error);
+        computed.TrySetError(error);
         return !(cancellationToken.IsCancellationRequested || error is RpcRerouteException);
     }
 }

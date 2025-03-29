@@ -261,11 +261,11 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
     // Protected internal methods - you can call them via ComputedImpl
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected internal bool TrySetOutput(object? output)
+    protected internal bool TrySetValue(object? output)
         => TrySetOutput(Result.NewUntyped(output));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected internal bool TrySetOutput(Exception exception)
+    protected internal bool TrySetError(Exception exception)
         => TrySetOutput(Result.NewUntypedError(exception));
 
     [MethodImpl(MethodImplOptions.NoInlining)]

@@ -317,7 +317,7 @@ public abstract class State<T> : ComputedInput,
             try {
                 using var _ = Fusion.Computed.BeginCompute(computed);
                 var value = await Compute(cancellationToken).ConfigureAwait(false);
-                computed.TrySetOutput(Result.New(value));
+                computed.TrySetValue(value);
                 break;
             }
             catch (Exception e) {

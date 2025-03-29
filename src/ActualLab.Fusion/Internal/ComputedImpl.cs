@@ -5,7 +5,15 @@ public static partial class ComputedImpl
     // TrySetOutput
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TrySetOutput<T>(Computed<T> computed, Result output)
+    public static bool TrySetValue(Computed computed, object? output)
+        => computed.TrySetOutput(Result.NewUntyped(output));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TrySetError(Computed computed, Exception exception)
+        => computed.TrySetOutput(Result.NewUntypedError(exception));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TrySetOutput(Computed computed, Result output)
         => computed.TrySetOutput(output);
 
     // Invalidation

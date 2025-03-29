@@ -33,7 +33,7 @@ public class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaComputed
         lock (Lock)
             _original = original;
 
-        TrySetOutput(original.Output);
+        TrySetOutput(original.UntypedOutput);
     }
 
     protected override void OnInvalidated()

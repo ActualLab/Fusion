@@ -47,7 +47,7 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
             try {
                 using var _ = Computed.BeginCompute(computed);
                 var result = await typedInput.InvokeInterceptedUntyped(cancellationToken).ConfigureAwait(false);
-                computed.TrySetOutput(result);
+                computed.TrySetValue(result);
                 return computed;
             }
             catch (Exception e) {
