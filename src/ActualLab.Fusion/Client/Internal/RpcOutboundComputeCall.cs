@@ -1,5 +1,6 @@
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Fusion.Client.Internal;
 
@@ -45,8 +46,12 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
             // except the Unregister call in the end.
             // We don't unregister the call here, coz
             // we'll need to await for invalidation
-            if (result == null || !MethodDef.UnwrappedReturnType.IsInstanceOfType(result))
-                result = MethodDef.DefaultResult;
+            if (!MethodDef.IsInstanceOfUnwrappedReturnType(result)) {
+                var error = Errors.InvalidResultType(MethodDef.UnwrappedReturnType, result?.GetType());
+                SetError(error, context);
+                Peer.InternalServices.Log.LogError(error, "Got incorrect call result type: {Call}", this);
+                return;
+            }
             if (ResultSource.TrySetResult(result)) {
                 CompleteKeepRegistered();
                 Context.CacheInfoCapture?.CaptureValue(context!.Message);
@@ -64,13 +69,22 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
             // we'll need to await for invalidation
             var cacheEntry = Context.CacheInfoCapture?.CacheEntry;
             if (cacheEntry == null) {
-                var error = Rpc.Internal.Errors.MatchButNoCachedEntry();
+                var error = Errors.MatchButNoCachedEntry();
                 SetError(error, context: null);
                 Peer.InternalServices.Log.LogError(error,
                     "Got 'Match', but the outbound call has no cached entry: {Call}", this);
                 return;
             }
-            if (ResultSource.TrySetResult(cacheEntry.DeserializedValue)) {
+
+            var result = cacheEntry.DeserializedValue;
+            if (!MethodDef.IsInstanceOfUnwrappedReturnType(result)) {
+                var error = Errors.InvalidResultType(MethodDef.UnwrappedReturnType, result?.GetType());
+                SetError(error, context);
+                Peer.InternalServices.Log.LogError(error,
+                    "Got 'Match', but cache entry's serialized value has incorrect type type: {Call}", this);
+                return;
+            }
+            if (ResultSource.TrySetResult(result)) {
                 CompleteKeepRegistered();
                 Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
             }
@@ -143,5 +157,5 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
 public sealed class RpcOutboundComputeCall<TResult> : RpcOutboundComputeCall
 {
     public RpcOutboundComputeCall(RpcOutboundContext context) : base(context)
-        => ResultSource = NewResultSource<TResult>();
+        => ResultSource = CreateResultSource<TResult>();
 }

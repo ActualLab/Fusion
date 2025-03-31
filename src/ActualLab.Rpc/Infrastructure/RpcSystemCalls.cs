@@ -91,7 +91,12 @@ public class RpcSystemCalls(IServiceProvider services)
         var context = RpcInboundContext.GetCurrent();
         var peer = context.Peer;
         var outboundCallId = context.Message.RelatedId;
-        peer.OutboundCalls.Get(outboundCallId)?.SetError(error.ToException()!, context);
+        var exception = error.ToException()!;
+        if (exception is RpcRerouteException) {
+            exception = Errors.GotRpcRerouteExceptionFromRemotePeer();
+            Log.LogError(exception, "Error(...) got RpcRerouteException from remote peer");
+        }
+        peer.OutboundCalls.Get(outboundCallId)?.SetError(exception, context);
         return RpcNoWait.Tasks.Completed;
     }
 

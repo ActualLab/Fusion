@@ -200,8 +200,12 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public virtual void SetResult(object? result, RpcInboundContext? context)
     {
-        if (result == null || !MethodDef.UnwrappedReturnType.IsInstanceOfType(result))
-            result = MethodDef.DefaultResult;
+        if (!MethodDef.IsInstanceOfUnwrappedReturnType(result)) {
+            var error = Internal.Errors.InvalidResultType(MethodDef.UnwrappedReturnType, result?.GetType());
+            SetError(error, context);
+            Peer.Log.LogError(error, "Got incorrect call result type: {Call}", this);
+            return;
+        }
         if (ResultSource.TrySetResult(result)) {
             CompleteAndUnregister(notifyCancelled: false);
             if (context != null)
@@ -217,7 +221,15 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             return;
         }
 
-        if (ResultSource.TrySetResult(cacheEntry.DeserializedValue)) {
+        var result = cacheEntry.DeserializedValue;
+        if (!MethodDef.IsInstanceOfUnwrappedReturnType(result)) {
+            var error = Internal.Errors.InvalidResultType(MethodDef.UnwrappedReturnType, result?.GetType());
+            SetError(error, context);
+            Peer.Log.LogError(error,
+                "Got 'Match', but cache entry's serialized value has incorrect type type: {Call}", this);
+            return;
+        }
+        if (ResultSource.TrySetResult(result)) {
             CompleteAndUnregister(notifyCancelled: false);
             if (context != null)
                 Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
@@ -318,7 +330,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
     }
 
-    protected AsyncTaskMethodBuilder<object?> NewResultSource<TResult>()
+    protected AsyncTaskMethodBuilder<object?> CreateResultSource<TResult>()
         => NoWait || CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly
             ? Cache<TResult>.NoWaitResultSource
             : AsyncTaskMethodBuilderExt.New<object?>();
@@ -335,5 +347,5 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 public class RpcOutboundCall<TResult> : RpcOutboundCall
 {
     public RpcOutboundCall(RpcOutboundContext context) : base(context)
-        => ResultSource = NewResultSource<TResult>();
+        => ResultSource = CreateResultSource<TResult>();
 }
