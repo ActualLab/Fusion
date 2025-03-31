@@ -106,12 +106,6 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         RpcPeer peer, RpcInboundCall inboundCall, Exception error,
         RpcHeader[]? headers = null)
     {
-#if false
-        if (error is RpcRerouteException) {
-            Log.LogError("Error(...) got RpcRerouteException, which should never happen");
-            error = new TaskCanceledException();
-        }
-#endif
         if (peer.StopToken.IsCancellationRequested) {
             // The peer is stopping, we may omit sending call result here
             var stopMode = RpcPeerStopModeExt.ComputeFor(peer);

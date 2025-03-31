@@ -32,6 +32,7 @@ public partial class MethodDef
     public readonly bool ReturnsValueTask;
     public readonly Type? AsyncReturnTypeArgument;
     public readonly Type UnwrappedReturnType;
+    public readonly bool IsUnwrappedReturnTypeClassOrNullable;
     public bool IsValid { get; init; } = true;
 
     public object? DefaultResult => _defaultResultLazy.Value;
@@ -110,6 +111,8 @@ public partial class MethodDef
         UnwrappedReturnType = AsyncReturnTypeArgument ?? ReturnType;
         if (UnwrappedReturnType == typeof(void))
             UnwrappedReturnType = typeof(Unit);
+        IsUnwrappedReturnTypeClassOrNullable = UnwrappedReturnType.IsClass
+            || (UnwrappedReturnType.IsGenericType && UnwrappedReturnType.GetGenericTypeDefinition() == typeof(Nullable<>));
 
         _defaultResultLazy = new LazySlim<MethodDef, object?>(this, static self => self.GetDefaultResult());
         _defaultUnwrappedResultLazy = new LazySlim<MethodDef, object?>(this, static self => self.GetDefaultUnwrappedResult());
@@ -120,6 +123,12 @@ public partial class MethodDef
 
     public sealed override int GetHashCode()
         => Id;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsInstanceOfUnwrappedReturnType(object? candidate)
+        => candidate == null
+            ? IsUnwrappedReturnTypeClassOrNullable
+            : UnwrappedReturnType.IsInstanceOfType(candidate);
 
     public object? WrapResult<TUnwrapped>(TUnwrapped result)
     {

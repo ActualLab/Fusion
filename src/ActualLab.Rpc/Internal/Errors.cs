@@ -64,8 +64,10 @@ public static class Errors
     public static Exception CannotDeserializeUnexpectedPolymorphicArgumentType(Type expectedType, Type actualType)
         => new SerializationException($"Cannot deserialize polymorphic argument type: " +
             $"expected '{expectedType.GetName()}' or its descendant, got '{actualType.GetName()}'.");
-    public static Exception InvalidSerializedDataFormat()
-        => new SerializationException("Invalid serialized data format.");
+    public static Exception InvalidResultType(Type expectedType, object? actualResult)
+        => new SerializationException(
+            $"Got invalid RPC call result type: " +
+            $"expected '{expectedType.GetName()}', got '{actualResult?.GetType().GetName() ?? "null"}'.");
 
     public static Exception ConnectTimeout(RpcPeerRef peerRef, TimeSpan? timeout = null)
         => ConnectTimeout(peerRef.GetRemotePartyName());
@@ -119,4 +121,8 @@ public static class Errors
     public static Exception NoRemoteCallInvoker()
         => new InvalidOperationException(
             $"{nameof(RpcSwitchInterceptor)} is misconfigured: it can't route remote calls.");
+
+    public static Exception GotRpcRerouteExceptionFromRemotePeer()
+        => new InvalidOperationException(
+            "Got RpcRerouteException from remote peer, which should never happen.");
 }
