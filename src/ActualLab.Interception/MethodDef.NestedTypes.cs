@@ -10,25 +10,22 @@ public partial class MethodDef
     {
         public override Func<MethodDef, Func<object, ArgumentList, Task<T>>> Generate()
             => methodDef => {
-                if (methodDef.ReturnsTask) {
-                    if (methodDef.IsAsyncVoidMethod)
-                        return (service, args) => {
+                if (methodDef.ReturnsTask)
+                    return methodDef.IsAsyncVoidMethod
+                        ? (service, args) => {
                             var result = ((Task)args.GetInvoker(methodDef.Method).Invoke(service, args)!).ToUnitTask();
                             return result as Task<T> ?? throw new InvalidCastException();
-                        };
-                    return (service, args) => (Task<T>)args.GetInvoker(methodDef.Method).Invoke(service, args)!;
-                }
+                        }
+                        : (service, args) => (Task<T>)args.GetInvoker(methodDef.Method).Invoke(service, args)!;
 
                 if (methodDef.ReturnsValueTask) {
-                    if (methodDef.IsAsyncVoidMethod)
-                        return (service, args) => {
-                            var result = ((ValueTask)args.GetInvoker(methodDef.Method).Invoke(service, args)!).ToUnitTask();
+                    return methodDef.IsAsyncVoidMethod
+                        ? (service, args) => {
+                            var result = ((ValueTask)args.GetInvoker(methodDef.Method).Invoke(service, args)!)
+                                .ToUnitTask();
                             return result as Task<T> ?? throw new InvalidCastException();
-                        };
-                    return (service, args) => ((ValueTask<T>)args
-                        .GetInvoker(methodDef.Method)
-                        .Invoke(service, args)!
-                        ).AsTask();
+                        }
+                        : (service, args) => ((ValueTask<T>)args.GetInvoker(methodDef.Method).Invoke(service, args)!).AsTask();
                 }
 
                 // Non-async method
@@ -60,13 +57,12 @@ public partial class MethodDef
                         : (interceptor, invocation) =>
                             interceptor.Intercept<ValueTask<T>>(invocation).AsTask();
 
-                if (methodDef.ReturnType == typeof(void))
-                    return (interceptor, invocation) => {
+                return methodDef.ReturnType == typeof(void)
+                    ? (interceptor, invocation) => {
                         interceptor.Intercept(invocation);
                         return TaskExt.UnitTask as Task<T> ?? throw new InvalidCastException();
-                    };
-
-                return (interceptor, invocation) => Task.FromResult(interceptor.Intercept<T>(invocation));
+                    }
+                    : (interceptor, invocation) => Task.FromResult(interceptor.Intercept<T>(invocation));
             };
     }
 
@@ -90,13 +86,12 @@ public partial class MethodDef
                         }
                         : invocation => invocation.InvokeIntercepted<ValueTask<T>>().AsTask();
 
-                if (methodDef.ReturnType == typeof(void))
-                    return invocation => {
+                return methodDef.ReturnType == typeof(void)
+                    ? invocation => {
                         invocation.InvokeIntercepted();
                         return TaskExt.UnitTask as Task<T> ?? throw new InvalidCastException();
-                    };
-
-                return invocation => Task.FromResult(invocation.InvokeIntercepted<T>());
+                    }
+                    : invocation => Task.FromResult(invocation.InvokeIntercepted<T>());
             };
     }
 
@@ -105,34 +100,51 @@ public partial class MethodDef
         public override Func<MethodDef, Func<object, ArgumentList, ValueTask<object?>>> Generate()
             => methodDef => {
                 if (methodDef.ReturnsTask) {
-                    if (methodDef.IsAsyncVoidMethod)
-                        return async (service, args) => {
-                            await ((Task)args.GetInvoker(methodDef.Method).Invoke(service, args)!)
-                                .ConfigureAwait(false);
-                            return null;
+                    return methodDef.IsAsyncVoidMethod
+                        ? (service, args) => {
+                            var task = (Task)args.GetInvoker(methodDef.Method).Invoke(service, args)!;
+                            var resultTask = task.ContinueWith(
+                                static t => {
+                                    t.GetAwaiter().GetResult();
+                                    return (object?)null;
+                                },
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
+                        }
+                        : (service, args) => {
+                            var task = (Task<T>)args.GetInvoker(methodDef.Method).Invoke(service, args)!;
+                            var resultTask = task.ContinueWith(
+                                static t => (object?)t.GetAwaiter().GetResult(),
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
                         };
-
-                    return async (service, args) => {
-                        var result = await ((Task<T>)args.GetInvoker(methodDef.Method).Invoke(service, args)!)
-                            .ConfigureAwait(false);
-                        return result;
-                    };
                 }
 
                 if (methodDef.ReturnsValueTask) {
-                    if (methodDef.IsAsyncVoidMethod)
-                        return async (service, args) => {
-                            await ((ValueTask)args.GetInvoker(methodDef.Method).Invoke(service, args)!)
-                                .ConfigureAwait(false);
-                            return null;
-                        };
+                    return methodDef.IsAsyncVoidMethod
+                        ? (service, args) => {
+                            var valueTask = (ValueTask)args.GetInvoker(methodDef.Method).Invoke(service, args)!;
+                            if (valueTask.IsCompletedSuccessfully)
+                                return default;
 
-                    return async (service, args) => {
-                        var result = await ((ValueTask<T>)args
-                            .GetInvoker(methodDef.Method).Invoke(service, args)!)
-                            .ConfigureAwait(false);
-                        return result;
-                    };
+                            var resultTask = valueTask.AsTask().ContinueWith(
+                                static t => {
+                                    t.GetAwaiter().GetResult();
+                                    return (object?)null;
+                                },
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
+                        }
+                        : (service, args) => {
+                            var valueTask = (ValueTask<T>)args.GetInvoker(methodDef.Method).Invoke(service, args)!;
+                            if (valueTask.IsCompletedSuccessfully)
+                                return new ValueTask<object?>(valueTask.Result);
+
+                            var resultTask = valueTask.AsTask().ContinueWith(
+                                static t => (object?)t.GetAwaiter().GetResult(),
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
+                        };
                 }
 
                 // Non-async method
@@ -149,36 +161,59 @@ public partial class MethodDef
             => methodDef => {
                 if (methodDef.ReturnsTask)
                     return methodDef.IsAsyncVoidMethod
-                        ? async (interceptor, invocation) => {
-                            await interceptor.Intercept<Task>(invocation).ConfigureAwait(false);
-                            return null;
+                        ?  (interceptor, invocation) => {
+                            var task = interceptor.Intercept<Task>(invocation)!;
+                            var resultTask = task.ContinueWith(
+                                static t => {
+                                    t.GetAwaiter().GetResult();
+                                    return (object?)null;
+                                },
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
                         }
-                        : async (interceptor, invocation) => {
-                            var result = await interceptor.Intercept<Task<T>>(invocation).ConfigureAwait(false);
-                            return result;
+                        :  (interceptor, invocation) => {
+                            var task = interceptor.Intercept<Task<T>>(invocation)!;
+                            var resultTask = task.ContinueWith(
+                                static t => (object?)t.GetAwaiter().GetResult(),
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
                         };
 
                 if (methodDef.ReturnsValueTask)
                     return methodDef.IsAsyncVoidMethod
-                        ? async (interceptor, invocation) => {
-                            await interceptor.Intercept<ValueTask>(invocation).ConfigureAwait(false);
-                            return null;
+                        ? (interceptor, invocation) => {
+                            var valueTask = interceptor.Intercept<ValueTask>(invocation);
+                            if (valueTask.IsCompletedSuccessfully)
+                                return default;
+
+                            var resultTask = valueTask.AsTask().ContinueWith(
+                                static t => {
+                                    t.GetAwaiter().GetResult();
+                                    return (object?)null;
+                                },
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
                         }
-                        : async (interceptor, invocation) => {
-                            var result = await interceptor.Intercept<ValueTask<T>>(invocation).ConfigureAwait(false);
-                            return result;
+                        : (interceptor, invocation) => {
+                            var valueTask = interceptor.Intercept<ValueTask<T>>(invocation);
+                            if (valueTask.IsCompletedSuccessfully)
+                                return new ValueTask<object?>(valueTask.Result);
+
+                            var resultTask = valueTask.AsTask().ContinueWith(
+                                static t => (object?)t.GetAwaiter().GetResult(),
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
                         };
 
-                if (methodDef.ReturnType == typeof(void))
-                    return (interceptor, invocation) => {
+                return methodDef.ReturnType == typeof(void)
+                    ? (interceptor, invocation) => {
                         interceptor.Intercept(invocation);
-                        return new ValueTask<object?>((object?)null);
+                        return default;
+                    }
+                    : (interceptor, invocation) => {
+                        var result = interceptor.Intercept<T>(invocation);
+                        return new ValueTask<object?>(result);
                     };
-
-                return (interceptor, invocation) => {
-                    var result = interceptor.Intercept<T>(invocation);
-                    return new ValueTask<object?>(result);
-                };
             };
     }
 
@@ -188,37 +223,59 @@ public partial class MethodDef
             => methodDef => {
                 if (methodDef.ReturnsTask)
                     return methodDef.IsAsyncVoidMethod
-                        ? async invocation => {
-                            await invocation.InvokeIntercepted<Task>().ConfigureAwait(false);
-                            return null;
+                        ? invocation => {
+                            var task = invocation.InvokeIntercepted<Task>();
+                            var resultTask = task.ContinueWith(
+                                static t => {
+                                    t.GetAwaiter().GetResult();
+                                    return (object?)null;
+                                },
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
                         }
-                        : async invocation => {
-                            var result = await invocation.InvokeIntercepted<Task<T>>().ConfigureAwait(false);
-                            return result;
+                        : invocation => {
+                            var task = invocation.InvokeIntercepted<Task<T>>();
+                            var resultTask = task.ContinueWith(
+                                static t => (object?)t.GetAwaiter().GetResult(),
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
                         };
 
                 if (methodDef.ReturnsValueTask)
                     return methodDef.IsAsyncVoidMethod
-                        ? async invocation => {
-                            await invocation.InvokeIntercepted<ValueTask>().ConfigureAwait(false);
-                            return null;
+                        ? invocation => {
+                            var valueTask = invocation.InvokeIntercepted<ValueTask>();
+                            if (valueTask.IsCompletedSuccessfully)
+                                return default;
+
+                            var resultTask = valueTask.AsTask().ContinueWith(
+                                static t => {
+                                    t.GetAwaiter().GetResult();
+                                    return (object?)null;
+                                },
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
                         }
-                        : async invocation => {
-                            var result = await invocation.InvokeIntercepted<ValueTask<T>>()
-                                .ConfigureAwait(false);
-                            return result;
+                        : invocation => {
+                            var valueTask = invocation.InvokeIntercepted<ValueTask<T>>();
+                            if (valueTask.IsCompletedSuccessfully)
+                                return new ValueTask<object?>(valueTask.Result);
+
+                            var resultTask = valueTask.AsTask().ContinueWith(
+                                static t => (object?)t.GetAwaiter().GetResult(),
+                                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                            return new ValueTask<object?>(resultTask);
                         };
 
-                if (methodDef.ReturnType == typeof(void))
-                    return invocation => {
+                return methodDef.ReturnType == typeof(void)
+                    ? invocation => {
                         invocation.InvokeIntercepted();
-                        return new ValueTask<object?>((object?)null);
+                        return default;
+                    }
+                    : invocation => {
+                        var result = invocation.InvokeIntercepted<T>();
+                        return new ValueTask<object?>(result);
                     };
-
-                return invocation => {
-                    var result = invocation.InvokeIntercepted<T>();
-                    return new ValueTask<object?>(result);
-                };
             };
     }
 
@@ -231,11 +288,11 @@ public partial class MethodDef
 
                 if (methodDef.ReturnsTask)
                     return methodDef.IsAsyncVoidMethod
-                        ? task => task // No conversion needed
+                        ? static task => task // No conversion needed
                         : ToTypedTask;
 
                 return methodDef.IsAsyncVoidMethod
-                    ? task => task.ToValueTask()
+                    ? static task => task.ToValueTask()
                     : ToTypedValueTask;
 
                 static Task<T> ToTypedTask(Task task) {
@@ -244,10 +301,13 @@ public partial class MethodDef
 
                     return ToTypedTaskAsync((Task<object?>)task);
 
-                    static async Task<T> ToTypedTaskAsync(Task<object?> task) {
-                        var result = await task.ConfigureAwait(false);
-                        return (T)result!;
-                    }
+                    static Task<T> ToTypedTaskAsync(Task<object?> task)
+                        => task.ContinueWith(
+                            static t => {
+                                var result = t.GetAwaiter().GetResult();
+                                return (T)result!;
+                            },
+                            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                 }
 
                 static object ToTypedValueTask(Task task) {
@@ -256,9 +316,17 @@ public partial class MethodDef
 
                     return ToTypedValueTaskAsync((Task<object?>)task);
 
-                    static async ValueTask<T> ToTypedValueTaskAsync(Task<object?> task) {
-                        var result = await task.ConfigureAwait(false);
-                        return (T)result!;
+                    static ValueTask<T> ToTypedValueTaskAsync(Task<object?> task) {
+                        if (task.IsCompletedSuccessfully)
+                            return new ValueTask<T>((T)task.Result!);
+
+                        var resultTask = task.ContinueWith(
+                            static t => {
+                                var result = t.GetAwaiter().GetResult();
+                                return (T)result!;
+                            },
+                            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                        return new ValueTask<T>(resultTask);
                     }
                 }
             };

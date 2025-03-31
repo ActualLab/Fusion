@@ -26,7 +26,7 @@ public class UICommander(IServiceProvider services) : IHasServices
     public async Task<object?> Call(ICommand command, CancellationToken cancellationToken = default)
     {
         var result = await Run(command, cancellationToken).ConfigureAwait(false);
-        return result.UntypedValue;
+        return result.Value;
     }
 
     public Task<UIActionResult<TResult>> Run<TResult>(ICommand<TResult> command, CancellationToken cancellationToken = default)

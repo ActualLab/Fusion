@@ -17,7 +17,7 @@ public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
         Debug.WriteLine("0");
         await stm.Update();
         Debug.WriteLine("1");
-        await c.Update();
+        await c.UpdateUntyped();
         Debug.WriteLine("2");
 
         c = stm.Computed;
@@ -53,7 +53,7 @@ public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
         Debug.WriteLine("0");
         await stm.Update();
         Debug.WriteLine("1");
-        await c.Update();
+        await c.UpdateUntyped();
         Debug.WriteLine("2");
 
         c = stm.Computed;

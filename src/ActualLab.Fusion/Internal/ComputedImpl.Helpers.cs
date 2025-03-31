@@ -95,7 +95,7 @@ public static partial class ComputedImpl
     public static object? GetValueOrDefaultUntyped(Computed? computed, ComputeContext context, Type outputType)
         => computed == null || CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting)
             ? outputType.GetDefaultValue()!
-            : computed.UntypedValue;
+            : computed.Value;
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume Task<T> constructors are preserved")]
     public static Task GetValueOrDefaultAsTask(Computed? computed, ComputeContext context, Type outputType)

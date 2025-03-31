@@ -17,14 +17,14 @@
 
 @code {
     private readonly Action<IState, StateEventKind> _stateOfStateChangedHandler;
-    private volatile IStateSnapshot? _snapshot = null!;
+    private volatile StateSnapshot? _snapshot = null!;
 
 #pragma warning disable BL0007
     [Parameter]
     public IState? State {
-        get => _snapshot?.State;
+        get => _snapshot?.UntypedState;
         set {
-            var oldState = _snapshot?.State;
+            var oldState = _snapshot?.UntypedState;
             if (ReferenceEquals(oldState, value))
                 return;
 
@@ -38,7 +38,7 @@
 
     public bool IsLoading => _snapshot == null || _snapshot.UpdateCount == 0;
     public bool IsUpdating => _snapshot is { } s && s.WhenUpdating().IsCompleted;
-    public bool IsInvalidated => _snapshot is { } s && s.Computed.IsInvalidated();
+    public bool IsInvalidated => _snapshot is { } s && s.UntypedComputed.IsInvalidated();
 
     public StateOfStateText()
         => _stateOfStateChangedHandler = (_, _) => InvokeAsync(OnStateOfStateChanged);
@@ -48,7 +48,7 @@
 
     private void OnStateOfStateChanged()
     {
-        _snapshot = _snapshot?.State.Snapshot;
+        _snapshot = _snapshot?.UntypedState.Snapshot;
         StateHasChanged();
     }
 }

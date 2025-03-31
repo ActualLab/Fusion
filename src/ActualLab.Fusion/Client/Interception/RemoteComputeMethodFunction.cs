@@ -28,7 +28,7 @@ public class RemoteComputeMethodFunction<T>(
         => new ReplicaComputed<T>(ComputedOptions, input);
 
     protected override Computed NewRemoteComputed(ComputedOptions options, ComputeMethodInput input, Result output, RpcCacheEntry? cacheEntry, RpcOutboundComputeCall? call = null)
-        => new RemoteComputed<T>(options, input, output.AsTyped<T>(), cacheEntry, call);
+        => new RemoteComputed<T>(options, input, output.ToTypedResult<T>(), cacheEntry, call);
 
     protected override async Task<T> GetProduceValuePromiseWithSynchronizer(
         ComputedInput input,
@@ -410,7 +410,7 @@ public abstract class RemoteComputeMethodFunction(
 
             var resultTask = call.ResultTask;
             if (resultTask.IsCompletedSuccessfully())
-                return (Result.NewUntyped(resultTask.Result), call);
+                return (Result.NewUntyped(resultTask.GetAwaiter().GetResult()), call);
 
             var result = await resultTask.ConfigureAwait(false);
             return (Result.NewUntyped(result), call);

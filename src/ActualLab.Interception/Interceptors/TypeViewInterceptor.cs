@@ -138,7 +138,7 @@ public class TypeViewInterceptor : Interceptor
             var untypedResult = mTarget.Invoke(target, invocation.Arguments.ToArray());
             var result = (Task<TTarget>) untypedResult!;
             return result.ContinueWith(
-                t => converter.Convert(t.Result),
+                t => converter.Convert(t.GetAwaiter().GetResult()),
                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         };
     }
@@ -159,7 +159,7 @@ public class TypeViewInterceptor : Interceptor
             return result
                 .AsTask()
                 .ContinueWith(
-                    t => converter.Convert(t.Result),
+                    t => converter.Convert(t.GetAwaiter().GetResult()),
                     CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default)
                 .ToValueTask();
         };

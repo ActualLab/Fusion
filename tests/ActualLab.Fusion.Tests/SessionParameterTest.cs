@@ -43,23 +43,23 @@ public class SessionParameterTest(ITestOutputHelper @out) : SimpleFusionTestBase
 
         session = sessionA;
         await counters.Increment("a", session);
-        (await aaComputed.Update()).Value.Should().Be(1);
-        (await abComputed.Update()).Value.Should().Be(0);
-        (await baComputed.Update()).Value.Should().Be(0);
+        (await aaComputed.UpdateUntyped()).Value.Should().Be(1);
+        (await abComputed.UpdateUntyped()).Value.Should().Be(0);
+        (await baComputed.UpdateUntyped()).Value.Should().Be(0);
         await counters.Increment("b", session);
-        (await aaComputed.Update()).Value.Should().Be(1);
-        (await abComputed.Update()).Value.Should().Be(1);
-        (await baComputed.Update()).Value.Should().Be(0);
+        (await aaComputed.UpdateUntyped()).Value.Should().Be(1);
+        (await abComputed.UpdateUntyped()).Value.Should().Be(1);
+        (await baComputed.UpdateUntyped()).Value.Should().Be(0);
 
         session = sessionB;
         await counters.Increment("a", session);
-        (await aaComputed.Update()).Value.Should().Be(1);
-        (await abComputed.Update()).Value.Should().Be(1);
-        (await baComputed.Update()).Value.Should().Be(1);
+        (await aaComputed.UpdateUntyped()).Value.Should().Be(1);
+        (await abComputed.UpdateUntyped()).Value.Should().Be(1);
+        (await baComputed.UpdateUntyped()).Value.Should().Be(1);
         await counters.Increment("b", session);
-        (await aaComputed.Update()).Value.Should().Be(1);
-        (await abComputed.Update()).Value.Should().Be(1);
-        (await baComputed.Update()).Value.Should().Be(1);
+        (await aaComputed.UpdateUntyped()).Value.Should().Be(1);
+        (await abComputed.UpdateUntyped()).Value.Should().Be(1);
+        (await baComputed.UpdateUntyped()).Value.Should().Be(1);
 
         stopCts.Cancel();
     }

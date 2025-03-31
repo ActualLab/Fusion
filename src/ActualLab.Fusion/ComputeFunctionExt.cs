@@ -33,8 +33,10 @@ public static class ComputeFunctionExt
     // Private methods
 
     private static Task<T> CompleteProduceValuePromise<T>(Task<Computed> task)
-        => task.ContinueWith(t => {
-            var computed = t.Result;
-            return (T)computed.UntypedOutput.UntypedValue!;
-        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        => task.ContinueWith(
+            static t => {
+                var computed = t.GetAwaiter().GetResult();
+                return (T)computed.Output.Value!;
+            },
+            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 }

@@ -4,8 +4,7 @@ public static class ComputedSourceExt
 {
     // Computed-like methods
 
-    public static ValueTask Update(
-        this IComputedSource source, CancellationToken cancellationToken = default)
+    public static ValueTask Update(this IComputedSource source, CancellationToken cancellationToken = default)
     {
         var valueTask = source.Computed.UpdateUntyped(cancellationToken);
         if (!valueTask.IsCompleted)
@@ -15,12 +14,17 @@ public static class ComputedSourceExt
         return default;
     }
 
-    public static Task<T> Use<T>(
-        this ComputedSource<T> source, CancellationToken cancellationToken = default)
-        => source.Computed.Use(cancellationToken);
+    public static Task<T> Use<T>(this ComputedSource<T> source, CancellationToken cancellationToken = default)
+        => (Task<T>)source.Computed.UseUntyped(cancellationToken);
 
     public static void Invalidate(this IComputedSource source, bool immediately = false)
         => source.Computed.Invalidate(immediately);
+
+    public static ValueTask Recompute(this IComputedSource source, CancellationToken cancellationToken = default)
+    {
+        source.Computed.Invalidate(true);
+        return source.Update(cancellationToken);
+    }
 
     // When
 

@@ -11,7 +11,7 @@ public static partial class TaskExt
 
     public static Result<T> ToResultSynchronously<T>(this Task<T> task)
         => task.AssertCompleted().IsCompletedSuccessfully()
-            ? task.Result
+            ? task.GetAwaiter().GetResult()
             : new Result<T>(default!, task.GetBaseException());
 
     // ToResultAsync

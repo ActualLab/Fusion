@@ -58,7 +58,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         if (!WhenCallBound.IsCompleted)
             return;
 
-        var call = WhenCallBound.Result;
+        var call = WhenCallBound.GetAwaiter().GetResult();
         call?.CompleteAndUnregister(notifyCancelled: !this.IsInvalidated());
     }
 
@@ -68,7 +68,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
             // Another call is already bound
             if (call == null) {
                 // Call from OnInvalidated - we need to cancel the old call
-                var boundCall = WhenCallBound.Result;
+                var boundCall = WhenCallBound.GetAwaiter().GetResult();
                 boundCall?.SetInvalidated(true);
             }
             else {

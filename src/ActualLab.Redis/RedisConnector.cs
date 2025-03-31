@@ -56,7 +56,7 @@ public class RedisConnector
                 if (!multiplexerTask.IsCompletedSuccessfully())
                     return;
 
-                var (multiplexer, _) = multiplexerTask.Result;
+                var (multiplexer, _) = multiplexerTask.GetAwaiter().GetResult();
                 if (failedMultiplexer != null && !ReferenceEquals(failedMultiplexer, multiplexer))
                     return;
             }

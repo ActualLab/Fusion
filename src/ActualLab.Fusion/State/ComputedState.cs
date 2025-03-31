@@ -123,7 +123,7 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
     protected virtual async Task UpdateCycle()
     {
         try {
-            await Computed.Update(DisposeToken).ConfigureAwait(false);
+            await Computed.UpdateUntyped(DisposeToken).ConfigureAwait(false);
             while (true) {
                 var snapshot = Snapshot;
                 var computed = snapshot.Computed;
@@ -133,7 +133,7 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
                 if (!snapshot.WhenUpdated().IsCompleted)
                     // GracefulDisposeToken here allows Update to take some extra after DisposeToken cancellation.
                     // This, in particular, lets RPC calls to complete, cache entries to populate, etc.
-                    await computed.Update(GracefulDisposeToken).ConfigureAwait(false);
+                    await computed.UpdateUntyped(GracefulDisposeToken).ConfigureAwait(false);
             }
         }
         catch (Exception e) {

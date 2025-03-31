@@ -96,7 +96,7 @@ public class ScreenshotServiceClientWithCacheTest : FusionTestBase
         Out.WriteLine($"Invalidated in: {sw.ElapsedMilliseconds}ms");
 
         sw.Restart();
-        c2 = (RemoteComputed<Screenshot>)await c2.Update().ConfigureAwait(false);
+        c2 = (RemoteComputed<Screenshot>)await c2.UpdateUntyped().ConfigureAwait(false);
         Out.WriteLine($"Updated in: {sw.ElapsedMilliseconds}ms");
         c2.Output.Value.Should().NotBeNull();
         c2.WhenSynchronized().IsCompleted.Should().BeTrue();

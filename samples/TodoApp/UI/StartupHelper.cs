@@ -120,7 +120,7 @@ public static class StartupHelper
                     : TimeSpan.FromMinutes(1).ToRandom(0.25),
                 CollectPeriod = TimeSpan.FromSeconds(isWasm ? 3 : 60),
                 AccessFilter = isWasm
-                    ? static computed => computed.Input.Function is IRemoteComputeMethodFunction
+                    ? static computed => computed.Input.Function is RemoteComputeMethodFunction
                     : static _ => true,
                 AccessStatisticsPreprocessor = StatisticsPreprocessor,
                 RegistrationStatisticsPreprocessor = StatisticsPreprocessor,

@@ -22,7 +22,9 @@ public class SessionResolver(IServiceProvider services) : ISessionResolver
     public bool HasSession => SessionTask.IsCompleted;
 
     public Session Session {
-        get => HasSession ? SessionTask.Result : throw ActualLab.Internal.Errors.NotInitialized(nameof(Session));
+        get => HasSession
+            ? SessionTask.Result
+            : throw ActualLab.Internal.Errors.NotInitialized(nameof(Session));
         set {
             if (!Services.IsScoped())
                 throw Errors.SessionResolverSessionCannotBeSetForRootInstance();

@@ -57,21 +57,23 @@ public sealed class UIActionTracker(
             }
         }
 
-        _ = action.WhenCompleted().ContinueWith(_ => {
-            lock (Lock) {
-                if (StopToken.IsCancellationRequested)
-                    return;
+        _ = action.WhenCompleted().ContinueWith(
+            _ => {
+                lock (Lock) {
+                    if (StopToken.IsCancellationRequested)
+                        return;
 
-                Interlocked.Decrement(ref _runningActionCount);
+                    Interlocked.Decrement(ref _runningActionCount);
 
-                var result = action.UntypedResult;
-                if (result == null) {
-                    Log.LogError("UI action has completed w/o a result: {Action}", action);
-                    return;
+                    var result = action.UntypedResult;
+                    if (result == null) {
+                        Log.LogError("UI action has completed w/o a result: {Action}", action);
+                        return;
+                    }
+                    _lastResult = _lastResult.TrySetNext(result);
                 }
-                _lastResult = _lastResult.TrySetNext(result);
-            }
-        }, default, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            },
+            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 
     public bool AreInstantUpdatesEnabled()

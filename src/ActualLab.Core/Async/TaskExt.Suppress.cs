@@ -40,6 +40,6 @@ public static partial class TaskExt
 
     public static Task<T> SuppressCancellation<T>(this Task<T> task)
         => task.ContinueWith(
-            t => t.IsCanceled ? default! : t.Result,
+            t => t.IsCanceled ? default! : t.GetAwaiter().GetResult(),
             CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 }

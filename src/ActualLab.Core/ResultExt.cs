@@ -45,45 +45,45 @@ public static class ResultExt
         return error == null;
     }
 
-    // AsUntyped
+    // ToUntypedResult
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result AsUntyped(this Result result)
+    public static Result ToUntypedResult(this Result result)
         => result;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result AsUntyped(this IResult result)
+    public static Result ToUntypedResult(this IResult result)
         => new(result.GetUntypedValueOrErrorBox());
 
-    // AsTyped
+    // ToTypedResult
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result<T> AsTyped<T>(this Result result)
+    public static Result<T> ToTypedResult<T>(this Result result)
     {
         var (untypedValue, error) = result;
         return new Result<T>((T)untypedValue!, error);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result<T> AsTyped<T>(this Result<T> result)
+    public static Result<T> ToTypedResult<T>(this Result<T> result)
         => result;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result<T> AsTyped<T>(this IResult result)
+    public static Result<T> ToTypedResult<T>(this IResult result)
     {
         var (untypedValue, error) = result;
         return new Result<T>((T)untypedValue!, error);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result<T> AsTyped<T>(this IResult<T> result)
+    public static Result<T> ToTypedResult<T>(this IResult<T> result)
     {
         return new Result<T>(result.ValueOrDefault!, result.Error);
     }
 
-    // AsTask
+    // ToTask
 
-    public static Task<T> AsTask<T>(this Result result)
+    public static Task<T> ToTask<T>(this Result result)
     {
         var (value, error) = result;
         return error == null
@@ -91,7 +91,7 @@ public static class ResultExt
             : Task.FromException<T>(error);
     }
 
-    public static Task<T> AsTask<T>(this Result<T> result)
+    public static Task<T> ToTask<T>(this Result<T> result)
     {
         var (value, error) = result;
         return error == null
@@ -99,7 +99,7 @@ public static class ResultExt
             : Task.FromException<T>(error);
     }
 
-    public static Task<T> AsTask<T>(this IResult result)
+    public static Task<T> ToTask<T>(this IResult result)
     {
         var (value, error) = result;
         return error == null
@@ -107,7 +107,7 @@ public static class ResultExt
             : Task.FromException<T>(error);
     }
 
-    public static Task<T> AsTask<T>(this IResult<T> result)
+    public static Task<T> ToTask<T>(this IResult<T> result)
     {
         var (value, error) = result;
         return error == null
@@ -115,7 +115,7 @@ public static class ResultExt
             : Task.FromException<T>(error);
     }
 
-    public static Task AsTask(this Result result, Type resultType)
+    public static Task ToTask(this Result result, Type resultType)
     {
         var (value, error) = result;
         return error == null
@@ -123,9 +123,9 @@ public static class ResultExt
             : TaskExt.FromException(error, resultType);
     }
 
-    // AsValueTask
+    // ToValueTask
 
-    public static ValueTask<T> AsValueTask<T>(this Result result)
+    public static ValueTask<T> ToValueTask<T>(this Result result)
     {
         var (value, error) = result;
         return error == null
@@ -133,7 +133,7 @@ public static class ResultExt
             : ValueTaskExt.FromException<T>(error);
     }
 
-    public static ValueTask<T> AsValueTask<T>(this Result<T> result)
+    public static ValueTask<T> ToValueTask<T>(this Result<T> result)
     {
         var (value, error) = result;
         return error == null
@@ -141,7 +141,7 @@ public static class ResultExt
             : ValueTaskExt.FromException<T>(error);
     }
 
-    public static ValueTask<T> AsValueTask<T>(this IResult result)
+    public static ValueTask<T> ToValueTask<T>(this IResult result)
     {
         var (value, error) = result;
         return error == null
@@ -149,7 +149,7 @@ public static class ResultExt
             : ValueTaskExt.FromException<T>(error);
     }
 
-    public static ValueTask<T> AsValueTask<T>(this IResult<T> result)
+    public static ValueTask<T> ToValueTask<T>(this IResult<T> result)
     {
         var (value, error) = result;
         return error == null

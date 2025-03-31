@@ -4,7 +4,7 @@ namespace ActualLab.Fusion;
 
 public abstract class Computed<T> : Computed, IResult<T>
 {
-    public Result<T> Output => UntypedOutput.AsTyped<T>();
+    public new Result<T> Output => base.Output.ToTypedResult<T>();
     public T Value => Output.Value;
     public T? ValueOrDefault => Output.ValueOrDefault;
 
@@ -17,7 +17,7 @@ public abstract class Computed<T> : Computed, IResult<T>
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected Computed(ComputedOptions options, ComputedInput input, Result<T> output, bool isConsistent)
-        : base(options, input, output.AsUntyped())
+        : base(options, input, output.ToUntypedResult())
         => ConsistencyState = isConsistent ? ConsistencyState.Consistent : ConsistencyState.Invalidated;
 
     public new Task<T> GetValuePromise()

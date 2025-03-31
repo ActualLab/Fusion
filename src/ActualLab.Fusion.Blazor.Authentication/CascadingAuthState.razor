@@ -36,26 +36,28 @@
 
     private void OnAuthenticationStateChanged(Task<AuthenticationState> newAuthStateTask)
     {
-        _ = newAuthStateTask.ContinueWith(t => {
-            if (!t.IsCompletedSuccessfully)
-                return; // Will react to the next change
+        _ = newAuthStateTask.ContinueWith(
+            t => {
+                if (!t.IsCompletedSuccessfully)
+                    return; // Will react to the next change
 
-            var authState = (AuthState)t.Result;
-            if (!authState.IsSignOutForced)
-                return;
+                var authState = (AuthState)t.GetAwaiter().GetResult();
+                if (!authState.IsSignOutForced)
+                    return;
 
-            // Current Session is unusable due to forced sign-out.
-            // The only way to get an usable one is to reload the page.
-            _ = InvokeAsync(() => {
-                var nav = Services.GetRequiredService<NavigationManager>();
-                nav.NavigateTo(nav.Uri, true);
-            });
-        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Current);
+                // Current Session is unusable due to forced sign-out.
+                // The only way to get an usable one is to reload the page.
+                _ = InvokeAsync(() => {
+                    var nav = Services.GetRequiredService<NavigationManager>();
+                    nav.NavigateTo(nav.Uri, true);
+                });
+            },
+            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Current);
     }
 
     private Task<AuthState> GetAuthState()
         => AuthStateProvider.GetAuthenticationStateAsync()
             .ContinueWith(
-                t => (AuthState)t.Result,
+                t => (AuthState)t.GetAwaiter().GetResult(),
                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Current);
 }
