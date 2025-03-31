@@ -33,9 +33,9 @@ public abstract class Interceptor : IHasServices
 
     private static readonly MethodInfo CreateTypedHandlerMethod = typeof(Interceptor)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-        .Single(m => string.Equals(m.Name, nameof(CreateUntypedHandler), StringComparison.Ordinal));
+        .Single(m => string.Equals(m.Name, nameof(CreateTypedHandler), StringComparison.Ordinal));
 
-    private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandlerUntyped;
+    private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandler;
     private readonly Func<MethodInfo, Type, MethodDef?> _createMethodDef;
     private readonly ConcurrentDictionary<Type, Unit> _validateTypeCache;
     private readonly ConcurrentDictionary<MethodInfo, MethodDef?> _methodDefCache;
@@ -69,7 +69,7 @@ public abstract class Interceptor : IHasServices
         DefaultLog = Log.IfEnabled(settings.LogLevel);
         ValidationLog = Log.IfEnabled(settings.ValidationLogLevel);
 
-        _createHandlerUntyped = CreateHandler;
+        _createHandler = CreateHandler;
         _createMethodDef = CreateMethodDef;
         _validateTypeCache = new ConcurrentDictionary<Type, Unit>(
             settings.HandlerCacheConcurrencyLevel, settings.HandlerCacheCapacity);
@@ -143,7 +143,7 @@ public abstract class Interceptor : IHasServices
         if (_handlerCache.TryGetValue(invocation.Method, out var handler))
             return handler;
 
-        return _handlerCache.GetOrAdd(invocation.Method, _createHandlerUntyped, invocation);
+        return _handlerCache.GetOrAdd(invocation.Method, _createHandler, invocation);
     }
 
     public virtual MethodDef? GetMethodDef(MethodInfo method, Type proxyType)
