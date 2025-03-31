@@ -17,7 +17,7 @@ public interface IState : IResult, IHasServices
         public string? Category { get; init; }
     }
 
-    public IStateSnapshot Snapshot { get; }
+    public StateSnapshot Snapshot { get; }
     public Computed Computed { get; }
     public object? LastNonErrorValue { get; }
 
@@ -101,13 +101,13 @@ public abstract class State<T> : ComputedInput,
     public bool HasValue => Computed.HasValue;
     public bool HasError => Computed.HasError;
 
-    IStateSnapshot IState.Snapshot => Snapshot;
+    StateSnapshot IState.Snapshot => Snapshot;
     Computed<T> IState<T>.Computed => Computed;
     Computed IState.Computed => Computed;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
     object? IState.LastNonErrorValue => LastNonErrorValue;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    object? IResult.UntypedValue => Computed.Value;
+    object? IResult.Value => Computed.Value;
 
     public event Action<IState<T>, StateEventKind>? Invalidated;
     public event Action<IState<T>, StateEventKind>? Updating;
@@ -173,7 +173,7 @@ public abstract class State<T> : ComputedInput,
         if (_snapshot != null)
             return; // CreateComputed sets Computed, if overriden (e.g. in MutableState)
 
-        computed.TrySetOutput(settings.InitialOutput);
+        computed.TrySetOutput(settings.InitialOutput.ToUntypedResult());
         Computed = computed;
         computed.Invalidate();
     }
@@ -235,29 +235,20 @@ public abstract class State<T> : ComputedInput,
     FusionHub IComputeFunction.Hub => Services.GetRequiredService<FusionHub>();
     public Type OutputType => typeof(T);
 
-    ValueTask<Computed<T>> IComputeFunction<T>.Invoke(
-        ComputedInput input,
-        ComputeContext context,
-        CancellationToken cancellationToken)
+    Task<Computed> IComputeFunction.ProduceComputed(ComputedInput input, ComputeContext context, CancellationToken cancellationToken = default)
     {
         if (!ReferenceEquals(input, this))
             // This "Function" supports just a single input == this
             throw new ArgumentOutOfRangeException(nameof(input));
 
-        return Invoke(context, cancellationToken);
+        return ProduceComputed(context, cancellationToken);
     }
 
-    protected virtual async ValueTask<Computed<T>> Invoke(
-        ComputeContext context,
-        CancellationToken cancellationToken)
+    protected virtual async Task<Computed> ProduceComputed(ComputeContext context, CancellationToken cancellationToken = default)
     {
-        var computed = Computed;
-        if (ComputedImpl.TryUseExisting(computed, context))
-            return computed;
-
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
 
-        computed = Computed;
+        var computed = Computed;
         if (ComputedImpl.TryUseExistingFromLock(computed, context))
             return computed;
 
@@ -266,45 +257,6 @@ public abstract class State<T> : ComputedInput,
         computed = await GetComputed(cancellationToken).ConfigureAwait(false);
         ComputedImpl.UseNew(computed, context);
         return computed;
-    }
-
-    Task<T> IComputeFunction<T>.InvokeAndStrip(
-        ComputedInput input,
-        ComputeContext context,
-        CancellationToken cancellationToken)
-    {
-        if (!ReferenceEquals(input, this))
-            // This "Function" supports just a single input == this
-            throw new ArgumentOutOfRangeException(nameof(input));
-
-        return InvokeAndStrip(context, cancellationToken);
-    }
-
-    protected virtual Task<T> InvokeAndStrip(
-        ComputeContext context,
-        CancellationToken cancellationToken)
-    {
-        var result = Computed;
-        return ComputedImpl.TryUseExisting(result, context)
-            ? ComputedImpl.GetValueOrDefaultAsTask(result, context)
-            : TryRecompute(context, cancellationToken);
-    }
-
-    protected async Task<T> TryRecompute(
-        ComputeContext context,
-        CancellationToken cancellationToken)
-    {
-        using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
-
-        var computed = Computed;
-        if (ComputedImpl.TryUseExistingFromLock(computed, context))
-            return ComputedImpl.GetValueOrDefault(computed, context);
-
-        releaser.MarkLockedLocally();
-        OnUpdating(computed);
-        computed = await GetComputed(cancellationToken).ConfigureAwait(false);
-        ComputedImpl.UseNew(computed, context);
-        return computed.Value;
     }
 
     protected async ValueTask<StateBoundComputed<T>> GetComputed(CancellationToken cancellationToken)

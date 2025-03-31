@@ -13,7 +13,7 @@ public static class CounterStorage
         return state.Value;
     }
 
-    public static ValueTask<Counter> Use(int key, CancellationToken cancellationToken = default)
+    public static Task<Counter> Use(int key, CancellationToken cancellationToken = default)
     {
         MutableState<Counter>? state;
         lock (Lock)

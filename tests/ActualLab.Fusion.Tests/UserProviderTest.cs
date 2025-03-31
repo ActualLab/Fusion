@@ -91,13 +91,14 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         };
         await commander.Call(new UserService_Add(u));
 
-        using var sText = await stateFactory.NewComputed<string>(
+        using var sText = stateFactory.NewComputed<string>(
             FixedDelayer.YieldUnsafe,
             async ct => {
                 var norris = await users.Get(int.MaxValue, ct).ConfigureAwait(false);
                 var now = await time.GetTime().ConfigureAwait(false);
                 return $"@ {now:hh:mm:ss.fff}: {norris?.Name ?? "(none)"}";
-            }).Update();
+            });
+        await sText.Update();
         sText.Updated += (s, _) => Log?.LogInformation($"{s.Value}");
 
         for (var i = 1; i <= 10; i += 1) {
@@ -119,23 +120,28 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var count2 = 0;
 
 #pragma warning disable 1998
-        var s1 = await stateFactory.NewComputed(
+        using var s1 = stateFactory.NewComputed(
             FixedDelayer.YieldUnsafe,
             async _ => count1++
-        ).Update();
-        var s2 = await stateFactory.NewComputed<int>(
+        );
+        await s1.Update();
+
+        using var s2 = stateFactory.NewComputed(
             FixedDelayer.YieldUnsafe,
             async _ => count2++
-        ).Update();
+        );
+        await s2.Update();
 #pragma warning restore 1998
-        var s12 = await stateFactory.NewComputed<(int, int)>(
+
+        using var s12 = stateFactory.NewComputed<(int, int)>(
             FixedDelayer.YieldUnsafe,
             async ct => {
                 var a = await s1.Use(ct);
                 using var _ = Computed.BeginIsolation();
                 var b = await s2.Use(ct);
                 return (a, b);
-            }).Update();
+            });
+        await s12.Update();
 
         var v12a = await s12.Use();
         s1.Computed.Invalidate(); // Should increment c1 & impact c12

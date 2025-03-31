@@ -48,7 +48,7 @@ public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
         await Delay(0.2);
         c.IsConsistent().Should().BeFalse();
         using var cts = new CancellationTokenSource(1000);
-        var c1 = await c.Update(cts.Token);
+        var c1 = await c.UpdateUntyped(cts.Token);
         c1.Version.Should().NotBe(c.Version);
         c1.Value.Should().Be(null);
     }

@@ -31,8 +31,8 @@ public class UIActionResult<T>(UIAction<T> action, Result<T> result, Moment comp
 
     // IResult<T> implementation
     public T Value => Result.Value;
+    object? IResult.Value => Result.Value;
     public T? ValueOrDefault => Result.ValueOrDefault;
-    public object? UntypedValue => Result.Value;
     public Exception? Error => Result.Error;
     public bool HasValue => Result.HasValue;
     public bool HasError => Result.HasError;

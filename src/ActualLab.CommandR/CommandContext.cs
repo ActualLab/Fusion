@@ -142,7 +142,7 @@ public sealed class CommandContext<TResult> : CommandContext
 
     public override ICommand UntypedCommand => Command;
     public override Task UntypedResultTask => ResultTask;
-    public override Result UntypedResult => Result.AsUntyped();
+    public override Result UntypedResult => Result.ToUntypedResult();
 
     public CommandContext(ICommander commander, ICommand command, bool isOutermost)
         : base(commander)

@@ -129,7 +129,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         var c2 = await Computed.Capture(() => client.GetTime());
         c2.Should().BeSameAs(c1);
         c2.Invalidate();
-        var c2a = await c2.Update();
+        var c2a = await c2.UpdateUntyped();
         c2a.Value.Should().Be(c1.Value);
     }
 

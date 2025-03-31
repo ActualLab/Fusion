@@ -63,7 +63,7 @@ public class ComputedStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
 
         c.Invalidate();
         c.IsConsistent().Should().BeFalse();
-        await Assert.ThrowsAsync<InvalidOperationException>(() => s.Use().AsTask());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => s.Use());
         c = s.Computed;
         c.IsConsistent().Should().BeTrue();
         c.Error!.Message.Should().Be("3");

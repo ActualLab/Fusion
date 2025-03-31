@@ -98,11 +98,21 @@ public static partial class TaskExt
     {
         public override Func<Task, ValueTask<object?>> Generate()
             => typeof(T) == typeof(ValueVoid)
-                ? static async source => {
-                    await source.ConfigureAwait(false);
-                    return null;
+                ? static source => {
+                    var task = source.ContinueWith(
+                        static t => {
+                            t.GetAwaiter().GetResult();
+                            return (object?)null;
+                        },
+                        CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    return new ValueTask<object?>(task);
                 }
-                : static async source => await ((Task<T>)source).ConfigureAwait(false);
+                : static source => {
+                    var task = source.ContinueWith(
+                        static t => (object?)((Task<T>)t).GetAwaiter().GetResult(),
+                        CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    return new ValueTask<object?>(task);
+                };
     }
 
     public sealed class ToTypedResultSynchronouslyFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
@@ -116,7 +126,7 @@ public static partial class TaskExt
         private static IResult Convert(Task task)
             // ReSharper disable once HeapView.BoxingAllocation
             => task.IsCompletedSuccessfully()
-                ? new Result<T>(((Task<T>)task).Result)
+                ? new Result<T>(((Task<T>)task).GetAwaiter().GetResult())
                 : new Result<T>(default!, task.AssertCompleted().GetBaseException());
 
         public override Func<Task, IResult> Generate()

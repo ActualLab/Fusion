@@ -54,7 +54,7 @@ public sealed class RedisComponent<T>(RedisConnector connector, Func<IConnection
         if (!resultTask.IsCompletedSuccessfully())
             return true;
 
-        var (_, goneToken) = resultTask.Result;
+        var (_, goneToken) = resultTask.GetAwaiter().GetResult();
         return !goneToken.IsCancellationRequested;
     }
 

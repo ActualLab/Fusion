@@ -183,7 +183,7 @@ public sealed class ComputedRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ReportAccess(Computed computed, bool isNew)
     {
-        if (OnAccess != null && computed.Input.Function is IComputeMethodFunction)
+        if (OnAccess != null && computed.Input.Function is ComputeMethodFunction)
             OnAccess.Invoke(computed, isNew);
     }
 

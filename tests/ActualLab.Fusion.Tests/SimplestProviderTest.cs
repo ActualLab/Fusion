@@ -138,7 +138,7 @@ public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         c1 = await Computed.Capture(() => p.Fail(typeof(ServiceException)));
         c1.Error.Should().BeOfType<ServiceException>();
         await Delay(1);
-        var c2 = await c1.Update();
+        var c2 = await c1.UpdateUntyped();
         c2.Should().BeSameAs(c1);
     }
 

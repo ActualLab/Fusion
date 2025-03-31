@@ -114,10 +114,12 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
 
             var task = Task.Run(() => Reprocess(shard, key, mustDiscard, cancellationToken), CancellationToken.None);
             ReprocessTasks[fullKey] = task;
-            _ = task.ContinueWith(_ => {
-                lock (ReprocessTasks)
-                    ReprocessTasks.Remove(fullKey);
-            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            _ = task.ContinueWith(
+                _ => {
+                    lock (ReprocessTasks)
+                        ReprocessTasks.Remove(fullKey);
+                },
+                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
     }
 

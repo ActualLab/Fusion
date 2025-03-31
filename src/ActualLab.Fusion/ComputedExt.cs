@@ -8,14 +8,14 @@ public static partial class ComputedExt
     // Update & Use
 
     public static async ValueTask<Computed<T>> Update<T>(
-        this Computed computed,
+        this Computed<T> computed,
         CancellationToken cancellationToken = default)
     {
         var newComputed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
         return (Computed<T>)newComputed;
     }
 
-    public static Task<T> Use<T>(this Computed computed, CancellationToken cancellationToken = default)
+    public static Task<T> Use<T>(this Computed<T> computed, CancellationToken cancellationToken = default)
         => (Task<T>)computed.UseUntyped(cancellationToken);
 
     // Invalidate
@@ -160,7 +160,7 @@ public static partial class ComputedExt
     {
         while (true) {
             if (!computed.IsConsistent())
-                computed = await computed.Update(cancellationToken).ConfigureAwait(false);
+                computed = await computed.Update<T>(cancellationToken).ConfigureAwait(false);
             if (predicate.Invoke(computed.Value))
                 return computed;
 
@@ -181,7 +181,7 @@ public static partial class ComputedExt
     {
         while (true) {
             if (!computed.IsConsistent())
-                computed = await computed.Update(cancellationToken).ConfigureAwait(false);
+                computed = (Computed<T>)await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
             var (value, error) = computed;
             if (predicate.Invoke(value, error))
                 return computed;
@@ -239,7 +239,7 @@ public static partial class ComputedExt
     {
         var retryCount = 0;
         while (true) {
-            computed = await computed.Update(cancellationToken).ConfigureAwait(false);
+            computed = (Computed<T>)await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
             yield return computed;
 
             await computed.WhenInvalidated(cancellationToken).ConfigureAwait(false);
@@ -270,9 +270,9 @@ public static partial class ComputedExt
             if (snapshot.IsInitial)
                 return WhenUpdatedAndSynchronized(snapshot, cancellationToken);
 
-            static async Task WhenUpdatedAndSynchronized(IStateSnapshot snapshot1, CancellationToken cancellationToken1) {
-                await snapshot1.WhenUpdated().ConfigureAwait(false);
-                await snapshot1.State.Computed.WhenSynchronized(cancellationToken1).ConfigureAwait(false);
+            static async Task WhenUpdatedAndSynchronized(StateSnapshot snapshot, CancellationToken cancellationToken1) {
+                await snapshot.WhenUpdated().ConfigureAwait(false);
+                await snapshot.UntypedState.Computed.WhenSynchronized(cancellationToken1).ConfigureAwait(false);
             }
         }
 
@@ -311,7 +311,7 @@ public static partial class ComputedExt
             if (computed.IsConsistent())
                 return computed;
 
-            computed = await computed.Update(cancellationToken).ConfigureAwait(false);
+            computed = (Computed<T>)await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
         }
     }
 }

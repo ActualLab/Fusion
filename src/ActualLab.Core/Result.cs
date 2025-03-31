@@ -16,7 +16,7 @@ public interface IResult
     /// <summary>
     /// Retrieves the result's value. Throws an <see cref="Error"/> when <see cref="HasError"/>.
     /// </summary>
-    public object? UntypedValue { get; }
+    public object? Value { get; }
     /// <summary>
     /// Retrieves result's error (if any).
     /// </summary>
@@ -36,7 +36,7 @@ public interface IResult
     /// <summary>
     /// Deconstructs the result.
     /// </summary>
-    /// <param name="untypedValue">Gets <see cref="UntypedValue"/> value.</param>
+    /// <param name="untypedValue">Gets <see cref="Value"/> value.</param>
     /// <param name="error">Gets <see cref="Error"/> value.</param>
     public void Deconstruct(out object? untypedValue, out Exception? error);
 
@@ -131,7 +131,7 @@ public interface IMutableResult<T> : IResult<T>, IMutableResult
 /// Untyped result of a computation and some helper methods related to <see cref="Result{T}"/> type.
 /// </summary>
 [StructLayout(LayoutKind.Auto)]
-[DebuggerDisplay("({" + nameof(UntypedValue) + "}, Error = {" + nameof(Error) + "})")]
+[DebuggerDisplay("({" + nameof(DebugValue) + "}, Error = {" + nameof(Error) + "})")]
 public readonly struct Result : IResult
 {
     private static readonly ConcurrentDictionary<Type, Func<Exception, IResult>> ErrorCache
@@ -162,8 +162,11 @@ public readonly struct Result : IResult
 
     private readonly object? _valueOrErrorBox;
 
+    public object? DebugValue
+        => _valueOrErrorBox is ErrorBox ? null : _valueOrErrorBox;
+
     /// <inheritdoc />
-    public object? UntypedValue {
+    public object? Value {
         get {
             if (_valueOrErrorBox is ErrorBox e)
                 ExceptionDispatchInfo.Capture(e.Error).Throw();
@@ -282,7 +285,7 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
 
     /// <inheritdoc />
     // ReSharper disable once HeapView.BoxingAllocation
-    object? IResult.UntypedValue => Value;
+    object? IResult.Value => Value;
 
     /// <summary>
     /// Constructor.

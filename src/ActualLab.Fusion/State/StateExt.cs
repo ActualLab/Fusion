@@ -4,30 +4,25 @@ public static class StateExt
 {
     // Computed-like methods
 
-    public static ValueTask<T> Use<T>(
+    public static ValueTask Update(this IState state, CancellationToken cancellationToken = default)
+    {
+        var valueTask = state.Computed.UpdateUntyped(cancellationToken);
+        return valueTask.IsCompletedSuccessfully
+            ? default
+            : new ValueTask(valueTask.AsTask());
+    }
+
+    public static Task<T> Use<T>(
         this IState<T> state, CancellationToken cancellationToken = default)
-        => state.Computed.Use(cancellationToken);
+        => (Task<T>)state.Computed.UseUntyped(cancellationToken);
 
     public static void Invalidate(this IState state, bool immediately = false)
         => state.Computed.Invalidate(immediately);
 
-    public static async ValueTask<TState> Update<TState>(
-        this TState state, CancellationToken cancellationToken = default)
-        where TState : class, IState
+    public static ValueTask Recompute(this IState state, CancellationToken cancellationToken = default)
     {
-        await state.Computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
-        return state;
-    }
-
-    public static async ValueTask<TState> Recompute<TState>(
-        this TState state, CancellationToken cancellationToken = default)
-        where TState : class, IState
-    {
-        var snapshot = state.Snapshot;
-        var computed = snapshot.Computed;
-        computed.Invalidate();
-        await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
-        return state;
+        state.Computed.Invalidate(true);
+        return state.Update(cancellationToken);
     }
 
     // Add/RemoveEventHandler

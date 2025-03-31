@@ -14,7 +14,7 @@ public interface IComputed : IResult, IHasVersion<ulong>
     public ComputedInput Input { get; }
     public Type OutputType { get; }
     public ConsistencyState ConsistencyState { get; }
-    public Result UntypedOutput { get; }
+    public Result Output { get; }
     public event Action<Computed> Invalidated;
 
     public Task GetValuePromise();
@@ -61,7 +61,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         [MethodImpl(MethodImplOptions.AggressiveInlining)] internal set => _state = (int)value;
     }
 
-    public Result UntypedOutput {
+    public Result Output {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
@@ -100,34 +100,34 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     // IResult implementation
 
-    public object? UntypedValue {
+    public object? Value {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => UntypedOutput.UntypedValue;
+        get => Output.Value;
     }
 
     public Exception? Error {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => UntypedOutput.Error;
+        get => Output.Error;
     }
 
     public bool HasValue {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => UntypedOutput.HasValue;
+        get => Output.HasValue;
     }
 
     public bool HasError {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => UntypedOutput.HasError;
+        get => Output.HasError;
     }
 
     void IResult.Deconstruct(out object? untypedValue, out Exception? error)
     {
-        untypedValue = UntypedValue;
+        untypedValue = Value;
         error = Error;
     }
 
     public object? GetUntypedValueOrErrorBox()
-        => Error != null ? new ErrorBox(Error) : UntypedValue;
+        => Error != null ? new ErrorBox(Error) : Value;
 
     // ToString & GetHashCode
 
@@ -145,7 +145,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
             return _untypedOutputPromise;
 
         lock (Lock)
-            return _untypedOutputPromise ??= UntypedOutput.AsTask(OutputType);
+            return _untypedOutputPromise ??= Output.ToTask(OutputType);
     }
 
     public async ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default)

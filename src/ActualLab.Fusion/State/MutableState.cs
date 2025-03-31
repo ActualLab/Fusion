@@ -8,6 +8,7 @@ public interface IMutableState : IState, IMutableResult
     public new interface IOptions : IState.IOptions;
 }
 
+// ReSharper disable once PossibleInterfaceMemberAmbiguity
 public interface IMutableState<T> : IState<T>, IMutableResult<T>, IMutableState;
 
 public class MutableState<T> : State<T>, IMutableState<T>
@@ -47,7 +48,7 @@ public class MutableState<T> : State<T>, IMutableState<T>
     // Set overloads
 
     public void Set(Result result)
-        => Set(result.AsTyped<T>());
+        => Set(result.ToTypedResult<T>());
 
     public void Set(Result<T> result)
     {
@@ -111,57 +112,30 @@ public class MutableState<T> : State<T>, IMutableState<T>
         if (Snapshot.Computed != computed)
             return;
 
-        var updateTask = computed.Update();
+        var updateTask = computed.UpdateUntyped();
         if (!updateTask.IsCompleted)
             throw Errors.InternalError("Update() task must complete synchronously here.");
     }
 
-    protected override ValueTask<Computed<T>> Invoke(
-        ComputeContext context,
-        CancellationToken cancellationToken)
+    protected override Task<Computed> ProduceComputed(ComputeContext context, CancellationToken cancellationToken = default)
     {
-        var computed = Computed;
-        if (ComputedImpl.TryUseExisting(computed, context))
-            return ValueTaskExt.FromResult(computed);
-
         // Double-check locking
         lock (Lock) {
-            computed = Computed;
+            var computed = Computed;
             if (ComputedImpl.TryUseExistingFromLock(computed, context))
-                return ValueTaskExt.FromResult(computed);
+                return Task.FromResult((Computed)computed);
 
             OnUpdating(computed);
             computed = CreateComputed();
             ComputedImpl.UseNew(computed, context);
-            return ValueTaskExt.FromResult(computed);
-        }
-    }
-
-    protected override Task<T> InvokeAndStrip(
-        ComputeContext context,
-        CancellationToken cancellationToken)
-    {
-        var computed = Computed;
-        if (ComputedImpl.TryUseExisting(computed, context))
-            return ComputedImpl.GetValueOrDefaultAsTask(computed, context);
-
-        // Double-check locking
-        lock (Lock) {
-            computed = Computed;
-            if (ComputedImpl.TryUseExistingFromLock(computed, context))
-                return ComputedImpl.GetValueOrDefaultAsTask(computed, context);
-
-            OnUpdating(computed);
-            computed = CreateComputed();
-            ComputedImpl.UseNew(computed, context);
-            return ComputedImpl.GetValueOrDefaultAsTask(computed, context);
+            return Task.FromResult((Computed)computed);
         }
     }
 
     protected override StateBoundComputed<T> CreateComputed()
     {
         var computed = base.CreateComputed();
-        computed.TrySetOutput(NextOutput);
+        computed.TrySetOutput(NextOutput.ToUntypedResult());
         Computed = computed;
         return computed;
     }

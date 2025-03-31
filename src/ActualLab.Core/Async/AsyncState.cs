@@ -156,7 +156,7 @@ public sealed class AsyncState<T>(T value)
         if (!IsFinal)
             return this;
 
-        _ = _next.Task.Result; // Must throw in case there is an error
+        _ = _next.Task.GetAwaiter().GetResult(); // Must throw in case there is an error
         throw Errors.AsyncStateIsFinal();
     }
 
@@ -165,7 +165,7 @@ public sealed class AsyncState<T>(T value)
         if (!IsFinal)
             return this;
 
-        _ = _next.Task.Result; // Must throw in case there is an error
+        _ = _next.Task.GetAwaiter().GetResult(); // Must throw in case there is an error
         throw errorFactory.Invoke();
     }
 }

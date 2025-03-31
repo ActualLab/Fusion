@@ -1,51 +1,51 @@
 namespace ActualLab.Fusion;
 
-public interface IStateSnapshot
+public abstract class StateSnapshot
 {
-    public IState State { get; }
-    public Computed Computed { get; }
-    public Computed LastNonErrorComputed { get; }
-    public int UpdateCount { get; }
-    public int ErrorCount { get; }
-    public int RetryCount { get; }
-    public bool IsInitial { get; }
+    protected AsyncTaskMethodBuilder WhenUpdatingSource = AsyncTaskMethodBuilderExt.New();
+    protected AsyncTaskMethodBuilder WhenUpdatedSource = AsyncTaskMethodBuilderExt.New();
 
-    public Task WhenInvalidated(CancellationToken cancellationToken = default);
-    public Task WhenUpdating();
-    public Task WhenUpdated();
-}
-
-public interface IStateSnapshot<T> : IStateSnapshot
-{
-    public new IState<T> State { get; }
-    public new Computed<T> Computed { get; }
-    public new Computed<T> LastNonErrorComputed { get; }
-}
-
-public class StateSnapshot<T> : IStateSnapshot<T>
-{
-    private AsyncTaskMethodBuilder WhenUpdatingSource { get; }
-    private AsyncTaskMethodBuilder WhenUpdatedSource { get; }
-
-    public IState<T> State { get; }
-    public Computed<T> Computed { get; }
-    public Computed<T> LastNonErrorComputed { get; }
-    public int UpdateCount { get; }
-    public int ErrorCount { get; }
-    public int RetryCount { get; }
+    public abstract IState UntypedState { get; }
+    public abstract Computed UntypedComputed { get; }
+    public abstract Computed UntypedLastNonErrorComputed { get; }
+    public int UpdateCount { get; protected init; }
+    public int ErrorCount { get; protected init; }
+    public int RetryCount { get; protected init; }
     public bool IsInitial => UpdateCount == 0;
 
-    IState IStateSnapshot.State => State;
-    Computed IStateSnapshot.Computed => Computed;
-    Computed IStateSnapshot.LastNonErrorComputed => LastNonErrorComputed;
+    public override string ToString()
+        => $"{GetType().GetName()}({UntypedComputed}, [{UpdateCount} update(s) / {ErrorCount} failure(s)])";
+
+    public Task WhenInvalidated(CancellationToken cancellationToken = default)
+        => UntypedComputed.WhenInvalidated(cancellationToken);
+    public Task WhenUpdating() => WhenUpdatingSource.Task;
+    public Task WhenUpdated() => WhenUpdatedSource.Task;
+
+    protected internal void OnUpdating()
+        => WhenUpdatingSource.TrySetResult();
+
+    protected internal void OnUpdated()
+    {
+        WhenUpdatingSource.TrySetResult();
+        WhenUpdatedSource.TrySetResult();
+    }
+}
+
+public class StateSnapshot<T> : StateSnapshot
+{
+    public readonly IState<T> State;
+    public readonly Computed<T> Computed;
+    public readonly Computed<T> LastNonErrorComputed;
+
+    public override IState UntypedState => State;
+    public override Computed UntypedComputed => Computed;
+    public override Computed UntypedLastNonErrorComputed => LastNonErrorComputed;
 
     public StateSnapshot(IState<T> state, Computed<T> computed)
     {
         State = state;
         Computed = computed;
         LastNonErrorComputed = computed;
-        WhenUpdatingSource = AsyncTaskMethodBuilderExt.New();
-        WhenUpdatedSource = AsyncTaskMethodBuilderExt.New();
         UpdateCount = 0;
         ErrorCount = 0;
         RetryCount = 0;
@@ -55,8 +55,6 @@ public class StateSnapshot<T> : IStateSnapshot<T>
     {
         State = prevSnapshot.State;
         Computed = computed;
-        WhenUpdatingSource = AsyncTaskMethodBuilderExt.New();
-        WhenUpdatedSource = AsyncTaskMethodBuilderExt.New();
         var error = computed.Error;
         if (error == null) {
             LastNonErrorComputed = computed;
@@ -80,22 +78,5 @@ public class StateSnapshot<T> : IStateSnapshot<T>
                 RetryCount = 1 + prevSnapshot.RetryCount;
             }
         }
-    }
-
-    public override string ToString()
-        => $"{GetType().GetName()}({Computed}, [{UpdateCount} update(s) / {ErrorCount} failure(s)])";
-
-    public Task WhenInvalidated(CancellationToken cancellationToken = default)
-        => Computed.WhenInvalidated(cancellationToken);
-    public Task WhenUpdating() => WhenUpdatingSource.Task;
-    public Task WhenUpdated() => WhenUpdatedSource.Task;
-
-    protected internal void OnUpdating()
-        => WhenUpdatingSource.TrySetResult();
-
-    protected internal void OnUpdated()
-    {
-        WhenUpdatingSource.TrySetResult();
-        WhenUpdatedSource.TrySetResult();
     }
 }

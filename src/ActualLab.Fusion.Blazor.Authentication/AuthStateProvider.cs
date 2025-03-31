@@ -82,7 +82,7 @@ public sealed class AuthStateProvider : AuthenticationStateProvider, IDisposable
             Task<AuthenticationState> authenticationStateTask;
             lock (_lock) {
                 var authState = state.LastNonErrorValue;
-                var oldAuthState = _authStateTask.Result;
+                var oldAuthState = _authStateTask.GetAwaiter().GetResult();
                 if (authState.IsIdenticalTo(oldAuthState))
                     return;
 
