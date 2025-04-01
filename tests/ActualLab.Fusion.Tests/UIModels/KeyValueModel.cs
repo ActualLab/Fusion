@@ -30,18 +30,23 @@ public class StringKeyValueModelState : ComputedState<KeyValueModel<string>>
         });
     }
 
-    protected override async Task<KeyValueModel<string>> Compute(CancellationToken cancellationToken)
+    protected override Task Compute(CancellationToken cancellationToken)
     {
-        if (IsDisposed) // Never complete if the state is already disposed
-            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+        return Implementation(cancellationToken);
 
-        var updateCount = ValueOrDefault?.UpdateCount ?? 0;
-        var key = Locals.ValueOrDefault ?? "";
-        var value = await KeyValueService.Get(key, cancellationToken).ConfigureAwait(false);
-        return new KeyValueModel<string>() {
-            Key = key,
-            Value = value,
-            UpdateCount = updateCount + 1,
-        };
+        async Task<KeyValueModel<string>> Implementation(CancellationToken cancellationToken)
+        {
+            if (IsDisposed) // Never complete if the state is already disposed
+                await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+
+            var updateCount = ValueOrDefault?.UpdateCount ?? 0;
+            var key = Locals.ValueOrDefault ?? "";
+            var value = await KeyValueService.Get(key, cancellationToken).ConfigureAwait(false);
+            return new KeyValueModel<string>() {
+                Key = key,
+                Value = value,
+                UpdateCount = updateCount + 1,
+            };
+        }
     }
 }

@@ -7,12 +7,17 @@ public class ServerTimeModel1State(IServiceProvider services)
 {
     private ITimeService TimeService => Services.GetRequiredService<ITimeService>();
 
-    protected override async Task<ServerTimeModel1> Compute(CancellationToken cancellationToken)
+    protected override Task Compute(CancellationToken cancellationToken)
     {
-        if (IsDisposed) // Never complete if the state is already disposed
-            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+        return Implementation(cancellationToken);
 
-        var time = await TimeService.GetTime(cancellationToken).ConfigureAwait(false);
-        return new ServerTimeModel1(time);
+        async Task<ServerTimeModel1> Implementation(CancellationToken cancellationToken)
+        {
+            if (IsDisposed) // Never complete if the state is already disposed
+                await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+
+            var time = await TimeService.GetTime(cancellationToken).ConfigureAwait(false);
+            return new ServerTimeModel1(time);
+        }
     }
 }

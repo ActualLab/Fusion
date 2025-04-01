@@ -91,26 +91,26 @@ public static partial class TaskExt
     public sealed class TaskFromExceptionFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume Task<T> methods are preserved")]
-        public override Func<Exception, Task> Generate()
+        public override object Generate()
             => typeof(T) == typeof(ValueVoid)
-                ? Task.FromException
-                : Task.FromException<T>;
+                ? (Func<Exception, Task>)Task.FromException
+                : (Func<Exception, Task>)Task.FromException<T>;
     }
 
     public sealed class ToTypedValueTaskFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
-        public override Func<Task, object> Generate()
+        public override object Generate()
             => typeof(T) == typeof(ValueVoid)
-                ? static source => new ValueTask(source)
-                : static source => new ValueTask<T>((Task<T>)source);
+                ? static (Task source) => (object)new ValueTask(source)
+                : static  (Task source) => (object)new ValueTask<T>((Task<T>)source);
     }
 
     public sealed class ToUntypedValueTaskFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
-        public override Func<Task, ValueTask<object?>> Generate()
+        public override object Generate()
             => typeof(T) == typeof(ValueVoid)
-                ? static source => {
-                    if (source.IsCompletedSuccessfully)
+                ? static (Task source) => {
+                    if (source.IsCompletedSuccessfully())
                         return new ValueTask<object?>(null!);
 
                     var task = source.ContinueWith(
@@ -121,8 +121,8 @@ public static partial class TaskExt
                         CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                     return new ValueTask<object?>(task);
                 }
-                : static source => {
-                    if (source.IsCompletedSuccessfully)
+                : static (Task source) => {
+                    if (source.IsCompletedSuccessfully())
                         return new ValueTask<object?>(((Task<T>)source).Result);
 
                     var task = source.ContinueWith(
@@ -146,15 +146,17 @@ public static partial class TaskExt
                 ? new Result<T>(((Task<T>)task).GetAwaiter().GetResult())
                 : new Result<T>(default!, task.AssertCompleted().GetBaseException());
 
-        public override Func<Task, IResult> Generate()
-            => typeof(T) == typeof(ValueVoid) ? ConvertVoid : Convert;
+        public override object Generate()
+            => typeof(T) == typeof(ValueVoid)
+                ? (Func<Task, IResult>)ConvertVoid
+                : (Func<Task, IResult>)Convert;
     }
 
     public sealed class ToUntypedResultSynchronouslyFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
-        public override Func<Task, Result> Generate()
+        public override object Generate()
             => typeof(T) == typeof(ValueVoid)
-                ? static source => {
+                ? static (Task source) => {
                     _ = source.AssertCompleted();
                     try {
                         source.GetAwaiter().GetResult();
@@ -164,7 +166,7 @@ public static partial class TaskExt
                         return new Result(null, e);
                     }
                 }
-                : static source => {
+                : static (Task source) => {
                     _ = source.AssertCompleted();
                     try {
                         var result = ((Task<T>)source).GetAwaiter().GetResult();

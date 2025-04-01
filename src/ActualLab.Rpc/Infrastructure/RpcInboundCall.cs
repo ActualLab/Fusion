@@ -298,7 +298,7 @@ public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef met
         set => ResultTask = (Task<TResult>)value!;
     }
 
-    protected override Task<TResult> InvokeTarget(RpcInboundMiddlewares middlewares)
+    protected override Task InvokeTarget(RpcInboundMiddlewares middlewares)
         => DefaultInvokeTarget<TResult>(middlewares);
 
     protected override Task SendResult()

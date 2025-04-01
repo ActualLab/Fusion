@@ -30,6 +30,7 @@ public sealed class RemoteComputeMethodFunction<T>(
     protected override Computed NewRemoteComputed(ComputedOptions options, ComputeMethodInput input, Result output, RpcCacheEntry? cacheEntry, RpcOutboundComputeCall? call = null)
         => new RemoteComputed<T>(options, input, output.ToTypedResult<T>(), cacheEntry, call);
 
+#if NET5_0_OR_GREATER
     protected override async Task<T> GetProduceValuePromiseWithSynchronizer(
         ComputedInput input,
         ComputeContext context,
@@ -54,6 +55,41 @@ public sealed class RemoteComputeMethodFunction<T>(
         ComputedImpl.UseNew(computed, context);
         return ((Computed<T>)computed).Value;
     }
+#else
+    protected override Task GetProduceValuePromiseWithSynchronizer(
+        ComputedInput input,
+        ComputeContext context,
+        IRemoteComputedSynchronizer synchronizer,
+        CancellationToken cancellationToken)
+    {
+        return Implementation(input, context, synchronizer, cancellationToken);
+
+        async Task<T> Implementation(
+            ComputedInput input,
+            ComputeContext context,
+            IRemoteComputedSynchronizer synchronizer,
+            CancellationToken cancellationToken)
+        {
+            // If we're here, (context.CallOptions & CallOptions.GetExisting) == 0,
+            // which means that only CallOptions.Capture can be used.
+
+            var computed = input.GetExistingComputed();
+            if (computed == null || !computed.IsConsistent())
+                computed = await ProduceComputed(input, ComputeContext.None, cancellationToken).ConfigureAwait(false);
+
+            var whenSynchronized = synchronizer.WhenSynchronized(computed, cancellationToken);
+            if (!whenSynchronized.IsCompletedSuccessfully()) {
+                await whenSynchronized.ConfigureAwait(false);
+                if (!computed.IsConsistent())
+                    computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
+            }
+
+            // Note that until this moment UseNew(...) wasn't called - we were using ComputeContext.None!
+            ComputedImpl.UseNew(computed, context);
+            return ((Computed<T>)computed).Value;
+        }
+    }
+#endif
 }
 
 public abstract class RemoteComputeMethodFunction(

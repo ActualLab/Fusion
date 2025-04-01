@@ -99,6 +99,7 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
         set => ResultTask = (Task<TResult>)value!;
     }
 
+#if NET5_0_OR_GREATER
     protected override async Task<TResult> InvokeTarget()
     {
         var ccs = Fusion.Computed.BeginCapture();
@@ -114,8 +115,31 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
             ccs.Dispose();
         }
     }
+#else
+    protected override Task InvokeTarget()
+    {
+        return Implementation();
 
-    protected override Task<TResult> InvokeTarget(RpcInboundMiddlewares middlewares)
+        async Task<TResult> Implementation()
+        {
+            var ccs = Fusion.Computed.BeginCapture();
+            try {
+                return await ((Task<TResult>)base.InvokeTarget()).ConfigureAwait(false);
+            }
+            finally {
+                var computed = ccs.Context.TryGetCaptured<TResult>();
+                if (computed != null) {
+                    lock (Lock)
+                        Computed ??= computed;
+                }
+                ccs.Dispose();
+            }
+        }
+    }
+
+#endif
+
+    protected override Task InvokeTarget(RpcInboundMiddlewares middlewares)
         => DefaultInvokeTarget<TResult>(middlewares);
 
     protected override Task SendResult()

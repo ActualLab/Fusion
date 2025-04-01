@@ -13,7 +13,7 @@ public static class ComputeFunctionExt
         CancellationToken cancellationToken = default)
     {
         var task = function.ProduceComputed(input, context, cancellationToken);
-        if (task.IsCompletedSuccessfully)
+        if (task.IsCompletedSuccessfully())
             return task.Result.GetValuePromise();
 
         return GenericInstanceCache
@@ -26,8 +26,8 @@ public static class ComputeFunctionExt
     public sealed class CompleteProduceValuePromiseFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume Task<T> methods are preserved")]
-        public override Func<Task<Computed>, Task> Generate()
-            => task => task.ContinueWith(
+        public override object Generate()
+            => (Task<Computed> task) => task.ContinueWith(
                 static t => {
                     var computed = t.GetAwaiter().GetResult();
                     return (T)computed.Output.Value!;

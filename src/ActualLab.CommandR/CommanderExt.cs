@@ -77,7 +77,7 @@ public static class CommanderExt
         }
 
         [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume Task<T> methods are preserved")]
-        public override Func<ICommander, ICommand, bool, CancellationToken, Task> Generate()
-            => TypedCall;
+        public override object Generate()
+            => (Func<ICommander, ICommand, bool, CancellationToken, Task>)TypedCall;
     }
 }

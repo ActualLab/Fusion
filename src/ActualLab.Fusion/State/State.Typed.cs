@@ -61,7 +61,7 @@ public abstract class State<T> : State, IResult<T>, IEquatable<State<T>>
 
     protected override object? ExtractComputeTaskResult(Task computeTask)
     {
-        if (computeTask.IsCompletedSuccessfully)
+        if (computeTask.IsCompletedSuccessfully())
             return ((Task<T>)computeTask).GetAwaiter().GetResult();
 
         if (computeTask.IsFaulted || computeTask.IsCanceled) {
