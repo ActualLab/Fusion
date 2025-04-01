@@ -43,6 +43,7 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
         => GetHandler(invocation) // Compute service method
             ?? NonComputeCallInterceptor.SelectHandler(invocation); // Regular or command service method
 
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]
     protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)
     {
         var computeMethodDef = (ComputeMethodDef)methodDef;

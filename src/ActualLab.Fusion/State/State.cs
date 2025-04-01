@@ -22,7 +22,7 @@ public interface IState : IResult, IComputeFunction, IEquatable<State>, IEquatab
     public StateSnapshot Snapshot { get; }
     public Computed Computed { get; }
     public object? LastNonErrorValue { get; }
-    public string? Category { get; init; }
+    public string Category { get; init; }
 
     public event Action<State, StateEventKind>? Invalidated;
     public event Action<State, StateEventKind>? Updating;

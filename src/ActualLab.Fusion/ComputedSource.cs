@@ -69,7 +69,7 @@ public sealed class ComputedSource<T> : ComputedInput, IComputedSource, IEquatab
     {
         Services = services;
         _computer = computer;
-        Category = category;
+        Category = category!;
 
         ComputedOptions = ComputedOptions.Default;
         AsyncLock = new AsyncLock(LockReentryMode.CheckedFail);

@@ -33,6 +33,7 @@ public class ComputeServiceInterceptor : Interceptor
     public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
         => GetHandler(invocation) ?? CommandServiceInterceptor.SelectHandler(invocation);
 
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]
     protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)
     {
         var computeMethodDef = (ComputeMethodDef)methodDef;

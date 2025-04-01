@@ -19,6 +19,8 @@ public static partial class TaskExt
     public static readonly Task<bool> FalseTask;
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume Task class is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume Task class is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume Task class is fully preserved")]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TaskExt))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Task<>))]
     static TaskExt()

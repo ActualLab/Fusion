@@ -1,10 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Api.Internal;
-using ActualLab.Identifiers.Internal;
-using ActualLab.IO;
-using ActualLab.IO.Internal;
-using ActualLab.Reflection.Internal;
-using ActualLab.Text.Internal;
-using ActualLab.Time.Internal;
 using Cysharp.Serialization.MessagePack;
 using MessagePack;
 using MessagePack.Formatters;
@@ -36,6 +31,9 @@ public class DefaultMessagePackResolver : IFormatterResolver
     public IMessagePackFormatter<T>? GetFormatter<T>()
         => FormatterCache<T>.Formatter;
 
+    [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume MessagePack formatters are preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume MessagePack formatters are preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume MessagePack formatters are preserved")]
     private static object? ResolveFormatter(Type type)
     {
         Type? formatterType;

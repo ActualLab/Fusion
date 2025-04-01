@@ -55,7 +55,7 @@ public interface IMutableResult : IResult
     /// <summary>
     /// <see cref="Object"/>-typed version of <see cref="IMutableResult{T}.Value"/>.
     /// </summary>
-    public new object? UntypedValue { get; set; }
+    public object? UntypedValue { get; set; }
     /// <summary>
     /// Retrieves or sets mutable result's error.
     /// </summary>
@@ -82,7 +82,7 @@ public interface IResult<T> : IResult, IConvertibleTo<T>
     /// <summary>
     /// Retrieves result's value. Throws an <see cref="Error"/> when <see cref="IResult.HasError"/>.
     /// </summary>
-    public T Value { get; }
+    public new T Value { get; }
 
     /// <summary>
     /// Deconstructs the result.

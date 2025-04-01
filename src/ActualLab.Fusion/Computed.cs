@@ -154,7 +154,8 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
             return this;
 
         using var scope = BeginIsolation();
-        return await Input.GetOrProduceComputed(scope.Context, cancellationToken).ConfigureAwait(false)!;
+        var computed = await Input.GetOrProduceComputed(scope.Context, cancellationToken).ConfigureAwait(false);
+        return computed!;
     }
 
     public Task UseUntyped(CancellationToken cancellationToken = default)

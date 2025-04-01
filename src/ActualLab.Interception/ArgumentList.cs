@@ -89,6 +89,7 @@ public sealed record ArgumentList0 : ArgumentList
     public override ArgumentList Duplicate()
         => new ArgumentList0();
 
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
     public override Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
         => InvokerCache.GetOrAdd(
             (_type, method),

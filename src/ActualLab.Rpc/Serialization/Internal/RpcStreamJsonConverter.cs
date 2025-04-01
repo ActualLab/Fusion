@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Rpc.Serialization.Internal;
 
 public class RpcStreamJsonConverter : JsonConverterFactory
@@ -8,6 +10,7 @@ public class RpcStreamJsonConverter : JsonConverterFactory
     public override bool CanConvert(Type typeToConvert)
         => typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(RpcStream<>);
 
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume JSON converter code is preserved")]
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
         => ConverterCache.GetOrAdd(typeToConvert, static t => {
             var canConvert = t.IsGenericType && t.GetGenericTypeDefinition() == typeof(RpcStream<>);

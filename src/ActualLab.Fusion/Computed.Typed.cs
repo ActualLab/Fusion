@@ -5,7 +5,7 @@ namespace ActualLab.Fusion;
 public abstract class Computed<T> : Computed, IResult<T>
 {
     public new Result<T> Output => base.Output.ToTypedResult<T>();
-    public T Value => Output.Value;
+    public new T Value => Output.Value;
     public T? ValueOrDefault => Output.ValueOrDefault;
 
     // Constructors
