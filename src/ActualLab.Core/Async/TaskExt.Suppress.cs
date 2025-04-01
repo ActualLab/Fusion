@@ -30,16 +30,18 @@ public static partial class TaskExt
 
     public static Task SuppressCancellation(this Task task)
         => task.ContinueWith(
-            t => {
-                if (t.IsCompletedSuccessfully() || t.IsCanceled)
+            static t => {
+                if (t.IsCompletedSuccessfully() || t.IsCanceledOrFaultedWithOce())
                     return;
 
-                ExceptionDispatchInfo.Capture(t.Exception!.GetBaseException()).Throw();
+                t.GetAwaiter().GetResult();
             },
             CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
     public static Task<T> SuppressCancellation<T>(this Task<T> task)
         => task.ContinueWith(
-            t => t.IsCanceled ? default! : t.GetAwaiter().GetResult(),
+            static t => t.IsCanceledOrFaultedWithOce()
+                ? default!
+                : t.GetAwaiter().GetResult(),
             CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 }

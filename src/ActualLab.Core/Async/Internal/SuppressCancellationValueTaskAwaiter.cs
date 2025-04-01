@@ -12,8 +12,9 @@ public readonly struct SuppressCancellationValueTaskAwaiter(ValueTask task, bool
 
     public void GetResult()
     {
-        if (task.IsCanceled)
+        if (task.IsCanceledOrFaultedWithOce())
             return;
+
         task.GetAwaiter().GetResult();
     }
 
@@ -30,7 +31,10 @@ public readonly struct SuppressCancellationValueTaskAwaiter<T>(ValueTask<T> task
     public bool IsCompleted => task.IsCompleted;
 
     public SuppressCancellationValueTaskAwaiter<T> GetAwaiter() => this;
-    public T GetResult() => task.IsCanceled ? default! : task.GetAwaiter().GetResult();
+    public T GetResult()
+        => task.IsCanceledOrFaultedWithOce()
+            ? default!
+            : task.GetAwaiter().GetResult();
 
     public void OnCompleted(Action action)
         => task.ConfigureAwait(captureContext).GetAwaiter().OnCompleted(action);

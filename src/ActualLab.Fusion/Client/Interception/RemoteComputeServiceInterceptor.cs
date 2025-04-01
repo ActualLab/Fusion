@@ -45,18 +45,19 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
 
     protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)
     {
+        var computeMethodDef = (ComputeMethodDef)methodDef;
         var rpcMethodDef = RpcServiceDef.GetOrFindMethod(initialInvocation.Method);
         if (rpcMethodDef == null) {
             // Proxy is a Distributed service & non-RPC method is called
             var function = (ComputeMethodFunction)typeof(ComputeMethodFunction<>)
-                .MakeGenericType(methodDef.UnwrappedReturnType)
-                .CreateInstance(Hub, methodDef);
+                .MakeGenericType(computeMethodDef.UnwrappedReturnType)
+                .CreateInstance(Hub, computeMethodDef);
             return function.ComputeServiceInterceptorHandler;
         }
         else {
             var function = (RemoteComputeMethodFunction)typeof(RemoteComputeMethodFunction<>)
-                .MakeGenericType(methodDef.UnwrappedReturnType)
-                .CreateInstance(Hub, methodDef, rpcMethodDef, LocalTarget);
+                .MakeGenericType(computeMethodDef.UnwrappedReturnType)
+                .CreateInstance(Hub, computeMethodDef, rpcMethodDef, LocalTarget);
             return function.RemoteComputeServiceInterceptorHandler;
         }
     }

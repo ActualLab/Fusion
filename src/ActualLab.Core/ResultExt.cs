@@ -55,13 +55,19 @@ public static class ResultExt
     public static Result ToUntypedResult(this IResult result)
         => new(result.GetUntypedValueOrErrorBox());
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result ToUntypedResult<T>(this Result<T> result)
+        => new(result.GetUntypedValueOrErrorBox());
+
     // ToTypedResult
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> ToTypedResult<T>(this Result result)
     {
         var (untypedValue, error) = result;
-        return new Result<T>((T)untypedValue!, error);
+        return error == null
+            ? new Result<T>((T)untypedValue!, error)
+            : new Result<T>(default!, error);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -72,14 +78,14 @@ public static class ResultExt
     public static Result<T> ToTypedResult<T>(this IResult result)
     {
         var (untypedValue, error) = result;
-        return new Result<T>((T)untypedValue!, error);
+        return error == null
+            ? new Result<T>((T)untypedValue!, error)
+            : new Result<T>(default!, error);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> ToTypedResult<T>(this IResult<T> result)
-    {
-        return new Result<T>(result.ValueOrDefault!, result.Error);
-    }
+        => new(result.ValueOrDefault!, result.Error);
 
     // ToTask
 

@@ -35,9 +35,10 @@ public class ComputeServiceInterceptor : Interceptor
 
     protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)
     {
+        var computeMethodDef = (ComputeMethodDef)methodDef;
         var function = (ComputeMethodFunction)typeof(ComputeMethodFunction<>)
-            .MakeGenericType(methodDef.UnwrappedReturnType)
-            .CreateInstance(Hub, methodDef);
+            .MakeGenericType(computeMethodDef.UnwrappedReturnType)
+            .CreateInstance(Hub, computeMethodDef);
         return function.ComputeServiceInterceptorHandler;
     }
 
