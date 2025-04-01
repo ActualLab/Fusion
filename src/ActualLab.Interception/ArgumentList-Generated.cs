@@ -1,4 +1,4 @@
-// ReSharper disable UnusedAutoPropertyAccessor.Global
+﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable ArrangeConstructorOrDestructorBody
 using System.Diagnostics.CodeAnalysis;
@@ -125,25 +125,25 @@ public abstract partial record ArgumentList
             : new ArgumentListS10(ArgumentListType.Get(typeof(T0), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9)), item0, item1, item2, item3, item4, item5, item6, item7, item8, item9);
 
     public virtual T Get0<T>() => throw new IndexOutOfRangeException();
-    public virtual object Get0Untyped() => throw new IndexOutOfRangeException();
+    public virtual object? Get0Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get1<T>() => throw new IndexOutOfRangeException();
-    public virtual object Get1Untyped() => throw new IndexOutOfRangeException();
+    public virtual object? Get1Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get2<T>() => throw new IndexOutOfRangeException();
-    public virtual object Get2Untyped() => throw new IndexOutOfRangeException();
+    public virtual object? Get2Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get3<T>() => throw new IndexOutOfRangeException();
-    public virtual object Get3Untyped() => throw new IndexOutOfRangeException();
+    public virtual object? Get3Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get4<T>() => throw new IndexOutOfRangeException();
-    public virtual object Get4Untyped() => throw new IndexOutOfRangeException();
+    public virtual object? Get4Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get5<T>() => throw new IndexOutOfRangeException();
-    public virtual object Get5Untyped() => throw new IndexOutOfRangeException();
+    public virtual object? Get5Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get6<T>() => throw new IndexOutOfRangeException();
-    public virtual object Get6Untyped() => throw new IndexOutOfRangeException();
+    public virtual object? Get6Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get7<T>() => throw new IndexOutOfRangeException();
-    public virtual object Get7Untyped() => throw new IndexOutOfRangeException();
+    public virtual object? Get7Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get8<T>() => throw new IndexOutOfRangeException();
-    public virtual object Get8Untyped() => throw new IndexOutOfRangeException();
+    public virtual object? Get8Untyped() => throw new IndexOutOfRangeException();
     public virtual T Get9<T>() => throw new IndexOutOfRangeException();
-    public virtual object Get9Untyped() => throw new IndexOutOfRangeException();
+    public virtual object? Get9Untyped() => throw new IndexOutOfRangeException();
 }
 
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
@@ -243,7 +243,7 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
 
     public override T Get<T>(int index)
         => index switch {
@@ -533,7 +533,7 @@ public sealed record ArgumentListS1 : ArgumentList1
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
 
     public override T Get<T>(int index)
         => index switch {
@@ -852,10 +852,10 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
 
     public override T Get<T>(int index)
         => index switch {
@@ -1212,10 +1212,10 @@ public sealed record ArgumentListS2 : ArgumentList2
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
 
     public override T Get<T>(int index)
         => index switch {
@@ -1595,13 +1595,13 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
 
     public override T Get<T>(int index)
         => index switch {
@@ -2024,13 +2024,13 @@ public sealed record ArgumentListS3 : ArgumentList3
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
 
     public override T Get<T>(int index)
         => index switch {
@@ -2471,16 +2471,16 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
 
     public override T Get<T>(int index)
         => index switch {
@@ -2969,16 +2969,16 @@ public sealed record ArgumentListS4 : ArgumentList4
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
 
     public override T Get<T>(int index)
         => index switch {
@@ -3483,19 +3483,19 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
 
     public override T Get<T>(int index)
         => index switch {
@@ -4049,19 +4049,19 @@ public sealed record ArgumentListS5 : ArgumentList5
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
 
     public override T Get<T>(int index)
         => index switch {
@@ -4628,22 +4628,22 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get5Untyped() => Item5;
+    public override object? Get5Untyped() => Item5;
 
     public override T Get<T>(int index)
         => index switch {
@@ -5259,22 +5259,22 @@ public sealed record ArgumentListS6 : ArgumentList6
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get5Untyped() => Item5;
+    public override object? Get5Untyped() => Item5;
 
     public override T Get<T>(int index)
         => index switch {
@@ -5903,25 +5903,25 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get5Untyped() => Item5;
+    public override object? Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get6Untyped() => Item6;
+    public override object? Get6Untyped() => Item6;
 
     public override T Get<T>(int index)
         => index switch {
@@ -6599,25 +6599,25 @@ public sealed record ArgumentListS7 : ArgumentList7
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get5Untyped() => Item5;
+    public override object? Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get6Untyped() => Item6;
+    public override object? Get6Untyped() => Item6;
 
     public override T Get<T>(int index)
         => index switch {
@@ -7308,28 +7308,28 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get5Untyped() => Item5;
+    public override object? Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get6Untyped() => Item6;
+    public override object? Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get7Untyped() => Item7;
+    public override object? Get7Untyped() => Item7;
 
     public override T Get<T>(int index)
         => index switch {
@@ -8069,28 +8069,28 @@ public sealed record ArgumentListS8 : ArgumentList8
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get5Untyped() => Item5;
+    public override object? Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get6Untyped() => Item6;
+    public override object? Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get7Untyped() => Item7;
+    public override object? Get7Untyped() => Item7;
 
     public override T Get<T>(int index)
         => index switch {
@@ -8843,31 +8843,31 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get5Untyped() => Item5;
+    public override object? Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get6Untyped() => Item6;
+    public override object? Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get7Untyped() => Item7;
+    public override object? Get7Untyped() => Item7;
     public override T Get8<T>() => Item8 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get8Untyped() => Item8;
+    public override object? Get8Untyped() => Item8;
 
     public override T Get<T>(int index)
         => index switch {
@@ -9669,31 +9669,31 @@ public sealed record ArgumentListS9 : ArgumentList9
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get5Untyped() => Item5;
+    public override object? Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get6Untyped() => Item6;
+    public override object? Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get7Untyped() => Item7;
+    public override object? Get7Untyped() => Item7;
     public override T Get8<T>() => Item8 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get8Untyped() => Item8;
+    public override object? Get8Untyped() => Item8;
 
     public override T Get<T>(int index)
         => index switch {
@@ -10508,34 +10508,34 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get5Untyped() => Item5;
+    public override object? Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get6Untyped() => Item6;
+    public override object? Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get7Untyped() => Item7;
+    public override object? Get7Untyped() => Item7;
     public override T Get8<T>() => Item8 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get8Untyped() => Item8;
+    public override object? Get8Untyped() => Item8;
     public override T Get9<T>() => Item9 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get9Untyped() => Item9;
+    public override object? Get9Untyped() => Item9;
 
     public override T Get<T>(int index)
         => index switch {
@@ -11399,34 +11399,34 @@ public sealed record ArgumentListS10 : ArgumentList10
 
     public override T Get0<T>() => Item0 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get0Untyped() => Item0;
+    public override object? Get0Untyped() => Item0;
     public override T Get1<T>() => Item1 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get1Untyped() => Item1;
+    public override object? Get1Untyped() => Item1;
     public override T Get2<T>() => Item2 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get2Untyped() => Item2;
+    public override object? Get2Untyped() => Item2;
     public override T Get3<T>() => Item3 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get3Untyped() => Item3;
+    public override object? Get3Untyped() => Item3;
     public override T Get4<T>() => Item4 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get4Untyped() => Item4;
+    public override object? Get4Untyped() => Item4;
     public override T Get5<T>() => Item5 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get5Untyped() => Item5;
+    public override object? Get5Untyped() => Item5;
     public override T Get6<T>() => Item6 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get6Untyped() => Item6;
+    public override object? Get6Untyped() => Item6;
     public override T Get7<T>() => Item7 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get7Untyped() => Item7;
+    public override object? Get7Untyped() => Item7;
     public override T Get8<T>() => Item8 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get8Untyped() => Item8;
+    public override object? Get8Untyped() => Item8;
     public override T Get9<T>() => Item9 is T value ? value : default!;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public override object Get9Untyped() => Item9;
+    public override object? Get9Untyped() => Item9;
 
     public override T Get<T>(int index)
         => index switch {
