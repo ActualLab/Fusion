@@ -23,5 +23,6 @@ public class CommanderProxyCodeKeeper : RpcProxyCodeKeeper
             return;
 
         Keep<CommandContext<TUnwrapped>>();
+        Keep<CommanderExt.TypedCallFactory<TUnwrapped>>();
     }
 }
