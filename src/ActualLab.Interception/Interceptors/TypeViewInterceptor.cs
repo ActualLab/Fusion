@@ -154,14 +154,13 @@ public class TypeViewInterceptor : Interceptor
         return invocation => {
             var target = invocation.InterfaceProxyTarget;
             var untypedResult = mTarget.Invoke(target, invocation.Arguments.ToArray());
-            var result = (ValueTask<TTarget>) untypedResult!;
+            var result = (ValueTask<TTarget>)untypedResult!;
             // ReSharper disable once HeapView.BoxingAllocation
-            return result
-                .AsTask()
-                .ContinueWith(
-                    t => converter.Convert(t.GetAwaiter().GetResult()),
-                    CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default)
-                .ToValueTask();
+            var resultTask = result.AsTask();
+            return resultTask.ContinueWith(
+                t => converter.Convert(t.GetAwaiter().GetResult()),
+                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default
+                ).ToValueTask();
         };
     }
 }

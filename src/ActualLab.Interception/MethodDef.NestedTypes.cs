@@ -127,7 +127,8 @@ public partial class MethodDef
                             if (valueTask.IsCompletedSuccessfully)
                                 return default;
 
-                            var resultTask = valueTask.AsTask().ContinueWith(
+                            var task = valueTask.AsTask();
+                            var resultTask = task.ContinueWith(
                                 static t => {
                                     t.GetAwaiter().GetResult();
                                     return (object?)null;
@@ -140,7 +141,8 @@ public partial class MethodDef
                             if (valueTask.IsCompletedSuccessfully)
                                 return new ValueTask<object?>(valueTask.Result);
 
-                            var resultTask = valueTask.AsTask().ContinueWith(
+                            var task = valueTask.AsTask();
+                            var resultTask = task.ContinueWith(
                                 static t => (object?)t.GetAwaiter().GetResult(),
                                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                             return new ValueTask<object?>(resultTask);
@@ -186,7 +188,8 @@ public partial class MethodDef
                             if (valueTask.IsCompletedSuccessfully)
                                 return default;
 
-                            var resultTask = valueTask.AsTask().ContinueWith(
+                            var task = valueTask.AsTask();
+                            var resultTask = task.ContinueWith(
                                 static t => {
                                     t.GetAwaiter().GetResult();
                                     return (object?)null;
@@ -199,7 +202,8 @@ public partial class MethodDef
                             if (valueTask.IsCompletedSuccessfully)
                                 return new ValueTask<object?>(valueTask.Result);
 
-                            var resultTask = valueTask.AsTask().ContinueWith(
+                            var task = valueTask.AsTask();
+                            var resultTask = task.ContinueWith(
                                 static t => (object?)t.GetAwaiter().GetResult(),
                                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                             return new ValueTask<object?>(resultTask);
@@ -248,7 +252,8 @@ public partial class MethodDef
                             if (valueTask.IsCompletedSuccessfully)
                                 return default;
 
-                            var resultTask = valueTask.AsTask().ContinueWith(
+                            var task = valueTask.AsTask();
+                            var resultTask = task.ContinueWith(
                                 static t => {
                                     t.GetAwaiter().GetResult();
                                     return (object?)null;
@@ -261,7 +266,8 @@ public partial class MethodDef
                             if (valueTask.IsCompletedSuccessfully)
                                 return new ValueTask<object?>(valueTask.Result);
 
-                            var resultTask = valueTask.AsTask().ContinueWith(
+                            var task = valueTask.AsTask();
+                            var resultTask = task.ContinueWith(
                                 static t => (object?)t.GetAwaiter().GetResult(),
                                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                             return new ValueTask<object?>(resultTask);

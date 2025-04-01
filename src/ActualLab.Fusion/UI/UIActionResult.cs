@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
 
 namespace ActualLab.Fusion.UI;
@@ -31,7 +30,7 @@ public class UIActionResult<T>(UIAction<T> action, Result<T> result, Moment comp
 
     // IResult<T> implementation
     public T Value => Result.Value;
-    object? IResult.Value => Result.Value;
+    object? IResult.Value => (Result as IResult).Value;
     public T? ValueOrDefault => Result.ValueOrDefault;
     public Exception? Error => Result.Error;
     public bool HasValue => Result.HasValue;

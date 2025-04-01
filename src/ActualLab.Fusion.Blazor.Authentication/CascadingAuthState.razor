@@ -56,8 +56,11 @@
     }
 
     private Task<AuthState> GetAuthState()
-        => AuthStateProvider.GetAuthenticationStateAsync()
-            .ContinueWith(
+    {
+        var authStateTask = AuthStateProvider.GetAuthenticationStateAsync();
+        return authStateTask.ContinueWith(
                 t => (AuthState)t.GetAwaiter().GetResult(),
                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Current);
+    }
+
 }

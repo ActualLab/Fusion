@@ -46,7 +46,7 @@ public class FusionComponentBase : ComponentBase, IHandleEvent
             catch {
                 // Avoiding exception filters for AOT runtime support.
                 // Ignore cancellations, but don't bother issuing a state change.
-                if (task1.IsCanceled)
+                if (task1.IsCanceledOrFaultedWithOce())
                     return;
                 throw;
             }

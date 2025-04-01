@@ -107,7 +107,7 @@ public abstract class State<T> : ComputedInput,
     // ReSharper disable once HeapView.PossibleBoxingAllocation
     object? IState.LastNonErrorValue => LastNonErrorValue;
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    object? IResult.Value => Computed.Value;
+    object? IResult.Value => (Computed as IResult).Value;
 
     public event Action<IState<T>, StateEventKind>? Invalidated;
     public event Action<IState<T>, StateEventKind>? Updating;

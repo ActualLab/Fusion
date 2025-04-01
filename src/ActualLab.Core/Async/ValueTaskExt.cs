@@ -13,12 +13,15 @@ public static partial class ValueTaskExt
     public static ValueTask<T> FromResult<T>(T value) => new(value);
     public static ValueTask<T> FromException<T>(Exception error) => new(Task.FromException<T>(error));
 
+    // GetResultKind
+
     public static TaskResultKind GetResultKind(this ValueTask task)
     {
         if (!task.IsCompleted)
             return TaskResultKind.Incomplete;
         if (task.IsCanceled)
             return TaskResultKind.Cancellation;
+
         return task.IsFaulted ? TaskResultKind.Error : TaskResultKind.Success;
     }
 
@@ -28,9 +31,19 @@ public static partial class ValueTaskExt
             return TaskResultKind.Incomplete;
         if (task.IsCanceled)
             return TaskResultKind.Cancellation;
+
         return task.IsFaulted ? TaskResultKind.Error : TaskResultKind.Success;
     }
 
+    // IsCanceledOrFaultedWithOce
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsCanceledOrFaultedWithOce(this ValueTask task)
+        => task.IsCanceled || (task.IsFaulted && task.AsTask().Exception?.GetBaseException() is OperationCanceledException);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsCanceledOrFaultedWithOce<T>(this ValueTask<T> task)
+        => task.IsCanceled || (task.IsFaulted && task.AsTask().Exception?.GetBaseException() is OperationCanceledException);
 
     // ToResultSynchronously
 

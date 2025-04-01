@@ -14,6 +14,7 @@ public static partial class TaskExt
 #else
     private static readonly Action<Task, int> StateFlagsSetter;
 #endif
+    private static readonly Func<Task, CancellationToken> CancellationTokenGetter;
 
     public static readonly Task<Unit> UnitTask;
     public static readonly Task<bool> TrueTask;
@@ -32,6 +33,9 @@ public static partial class TaskExt
             .GetField("m_stateFlags", BindingFlags.Instance | BindingFlags.NonPublic)!
             .GetSetter<Task, int>();
 #endif
+        CancellationTokenGetter = typeof(Task)
+            .GetProperty("CancellationToken", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetGetter<Task, CancellationToken>();
     }
 
     // NewNeverEndingUnreferenced
@@ -78,16 +82,30 @@ public static partial class TaskExt
             return TaskResultKind.Incomplete;
         if (task.IsCanceled)
             return TaskResultKind.Cancellation;
+
         return task.IsFaulted ? TaskResultKind.Error : TaskResultKind.Success;
     }
 
     // GetBaseException
 
     public static Exception GetBaseException(this Task task)
-        => task.AssertCompleted().Exception?.GetBaseException()
-            ?? (task.IsCanceled
-                ? new TaskCanceledException(task)
-                : throw Errors.TaskIsFaultedButNoExceptionAvailable());
+    {
+        if (task.IsFaulted)
+            return task.Exception.GetBaseException();
+        if (task.IsCanceled)
+            return new TaskCanceledException(task);
+
+        throw Errors.TaskIsNeitherFaultedNorCancelled();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static CancellationToken GetCancellationToken(this Task task)
+        => CancellationTokenGetter.Invoke(task);
+
+    // IsCanceledOrFaultedWithOce
+
+    public static bool IsCanceledOrFaultedWithOce(this Task task)
+        => task.IsCanceled || (task.IsFaulted && task.Exception?.GetBaseException() is OperationCanceledException);
 
     // AssertXxx
 

@@ -285,7 +285,7 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
 
     /// <inheritdoc />
     // ReSharper disable once HeapView.BoxingAllocation
-    object? IResult.Value => Value;
+    object? IResult.Value => Error == null ? Value : null;
 
     /// <summary>
     /// Constructor.

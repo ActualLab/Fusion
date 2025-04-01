@@ -14,7 +14,7 @@ namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD103
 
-public class RemoteComputeMethodFunction<T>(
+public sealed class RemoteComputeMethodFunction<T>(
     FusionHub hub,
     ComputeMethodDef methodDef,
     RpcMethodDef rpcMethodDef,

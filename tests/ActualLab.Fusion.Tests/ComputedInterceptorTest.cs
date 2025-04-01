@@ -40,11 +40,11 @@ public class ComputedInterceptorTest(ITestOutputHelper @out) : FusionTestBase(@o
             cts.Cancel();
             try {
                 await task.ConfigureAwait(false);
+                Assert.Fail("OperationCanceledException wasn't thrown.");
             }
-            catch {
+            catch (OperationCanceledException) {
                 // Intended
             }
-            task.IsCanceled.Should().BeTrue();
 
             task = time.GetTimeWithDelay(default);
             await TestExt.When(

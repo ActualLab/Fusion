@@ -170,11 +170,13 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
                 for (; delta > 0; delta--) {
                     var workerTask = Task.Run(RunWorker, CancellationToken.None);
                     Workers.Add(workerTask);
-                    _ = workerTask.ContinueWith(static (task, state) => {
-                        var self = (BatchProcessor<T, TResult>)state!;
-                        lock (self.Lock)
-                            self.Workers.Remove(task);
-                    }, this, TaskScheduler.Default);
+                    _ = workerTask.ContinueWith(
+                        static (task, state) => {
+                            var self = (BatchProcessor<T, TResult>)state!;
+                            lock (self.Lock)
+                                self.Workers.Remove(task);
+                        },
+                        this, TaskScheduler.Default);
                 }
                 workerCount = Workers.Count;
             }
