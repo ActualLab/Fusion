@@ -14,6 +14,6 @@ public sealed class FuncComputedState<T> : ComputedState<T>
         Initialize(settings);
     }
 
-    protected override Task<T> Compute(CancellationToken cancellationToken)
-        => ComputeTaskIfDisposed() ?? Computer.Invoke(cancellationToken);
+    protected override Task Compute(CancellationToken cancellationToken)
+        => GetComputeTaskIfDisposed() ?? Computer.Invoke(cancellationToken);
 }

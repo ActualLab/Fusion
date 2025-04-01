@@ -44,7 +44,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
                     }))
                 .ToArray();
 
-            async Task Mutator(IMutableState<int> ms) {
+            async Task Mutator(MutableState<int> ms) {
                 for (var i = 1; i <= iterationCount; i++) {
                     ms.Value = i;
                     if (i % delayFrequency == 0)
@@ -119,7 +119,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
                 })
                 .ToArray();
 
-            async Task Mutator(IMutableState<int> ms) {
+            async Task Mutator(MutableState<int> ms) {
                 for (var i = 1; i <= iterationCount; i++) {
                     ms.Value = i;
                     if (i % delayFrequency == 0)
@@ -194,7 +194,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
                 .Any(p => !ReferenceEquals(p.x.Computed, p.y.Computed))
                 .Should().BeFalse();
 
-            async Task Mutator(IMutableState<int> ms) {
+            async Task Mutator(MutableState<int> ms) {
                 for (var i = 1; i <= iterationCount; i++) {
                     ms.Value = i;
                     if (i % delayFrequency == 0)

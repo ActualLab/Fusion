@@ -13,22 +13,22 @@ public interface IComputedSource : IComputeFunction
     public Computed Computed { get; }
 }
 
-public class ComputedSource<T> : ComputedInput, IComputedSource, IEquatable<ComputedSource<T>>
+public sealed class ComputedSource<T> : ComputedInput, IComputedSource, IEquatable<ComputedSource<T>>
 {
     private volatile ComputedSourceComputed<T> _computed;
     private volatile Func<ComputedSource<T>, CancellationToken, ValueTask<T>>? _computer;
-    private string? _category;
 
-    protected AsyncLock AsyncLock { get; }
-    protected object Lock => AsyncLock;
+    private AsyncLock AsyncLock { get; }
+    private object Lock => AsyncLock;
     [field: AllowNull, MaybeNull]
-    protected ILogger Log => field ??= Services.LogFor(GetType());
+    private ILogger Log => field ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; }
 
+    [field: AllowNull, MaybeNull]
     public override string Category {
-        get => _category ??= GetType().GetName();
-        init => _category = value;
+        get => field ??= GetType().GetName();
+        init;
     }
 
     public ComputedOptions ComputedOptions { get; init; }
@@ -69,7 +69,7 @@ public class ComputedSource<T> : ComputedInput, IComputedSource, IEquatable<Comp
     {
         Services = services;
         _computer = computer;
-        _category = category;
+        Category = category;
 
         ComputedOptions = ComputedOptions.Default;
         AsyncLock = new AsyncLock(LockReentryMode.CheckedFail);
@@ -109,10 +109,12 @@ public class ComputedSource<T> : ComputedInput, IComputedSource, IEquatable<Comp
             // This "Function" supports just a single input == this
             throw new ArgumentOutOfRangeException(nameof(input));
 
-        return Invoke(context, cancellationToken);
+        return ProduceComputed(context, cancellationToken);
     }
 
-    private async Task<Computed> Invoke(
+    // Private methods
+
+    private async Task<Computed> ProduceComputed(
         ComputeContext context,
         CancellationToken cancellationToken)
     {
@@ -123,14 +125,12 @@ public class ComputedSource<T> : ComputedInput, IComputedSource, IEquatable<Comp
             return computed!;
 
         releaser.MarkLockedLocally();
-        computed = await GetComputed(cancellationToken).ConfigureAwait(false);
+        computed = await ProduceComputedFromLock(cancellationToken).ConfigureAwait(false);
         ComputedImpl.UseNew(computed, context);
         return computed;
     }
 
-    // Private methods
-
-    private async ValueTask<ComputedSourceComputed<T>> GetComputed(CancellationToken cancellationToken)
+    private async Task<ComputedSourceComputed<T>> ProduceComputedFromLock(CancellationToken cancellationToken)
     {
         ComputedSourceComputed<T> computed;
         var tryIndex = 0;
@@ -145,7 +145,7 @@ public class ComputedSource<T> : ComputedInput, IComputedSource, IEquatable<Comp
             }
             catch (Exception e) {
                 var delayTask = ComputedImpl.FinalizeAndTryReprocessInternalCancellation(
-                    nameof(GetComputed), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
+                    nameof(ProduceComputedFromLock), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
                 if (delayTask == SpecialTasks.MustThrow)
                     throw;
                 if (delayTask == SpecialTasks.MustReturn)

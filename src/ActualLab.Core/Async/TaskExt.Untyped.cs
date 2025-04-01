@@ -50,13 +50,6 @@ public static partial class TaskExt
             .Get<Func<Exception, Task>>(typeof(TaskFromExceptionFactory<>), resultType)
             .Invoke(exception);
 
-    // ToUntypedValueTask
-
-    public static ValueTask<object?> ToUntypedValueTask(this Task task, Type resultType)
-        => GenericInstanceCache
-            .Get<Func<Task, ValueTask<object?>>>(typeof(ToUntypedValueTaskFactory<>), resultType)
-            .Invoke(task);
-
     // ToTypedXxx
 
     public static object ToTypedValueTask(this Task task, Type resultType)
@@ -73,6 +66,24 @@ public static partial class TaskExt
     public static Task<IResult> ToTypedResultAsync(this Task task, Type resultType)
         => task.ContinueWith(
             t => t.ToTypedResultSynchronously(resultType),
+            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+
+    // ToUntypedXxx
+
+    public static ValueTask<object?> ToUntypedValueTask(this Task task, Type resultType)
+        => GenericInstanceCache
+            .Get<Func<Task, ValueTask<object?>>>(typeof(ToUntypedValueTaskFactory<>), resultType)
+            .Invoke(task);
+
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "FromTypedTaskInternal is preserved")]
+    public static Result ToUntypedResultSynchronously(this Task task, Type resultType)
+        => GenericInstanceCache
+            .Get<Func<Task, Result>>(typeof(ToUntypedResultSynchronouslyFactory<>), resultType)
+            .Invoke(task);
+
+    public static Task<Result> ToUntypedResultAsync(this Task task, Type resultType)
+        => task.ContinueWith(
+            t => t.ToUntypedResultSynchronously(resultType),
             CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
     // Nested types
@@ -99,6 +110,9 @@ public static partial class TaskExt
         public override Func<Task, ValueTask<object?>> Generate()
             => typeof(T) == typeof(ValueVoid)
                 ? static source => {
+                    if (source.IsCompletedSuccessfully)
+                        return new ValueTask<object?>(null!);
+
                     var task = source.ContinueWith(
                         static t => {
                             t.GetAwaiter().GetResult();
@@ -108,6 +122,9 @@ public static partial class TaskExt
                     return new ValueTask<object?>(task);
                 }
                 : static source => {
+                    if (source.IsCompletedSuccessfully)
+                        return new ValueTask<object?>(((Task<T>)source).Result);
+
                     var task = source.ContinueWith(
                         static t => (object?)((Task<T>)t).GetAwaiter().GetResult(),
                         CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
@@ -131,5 +148,31 @@ public static partial class TaskExt
 
         public override Func<Task, IResult> Generate()
             => typeof(T) == typeof(ValueVoid) ? ConvertVoid : Convert;
+    }
+
+    public sealed class ToUntypedResultSynchronouslyFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    {
+        public override Func<Task, Result> Generate()
+            => typeof(T) == typeof(ValueVoid)
+                ? static source => {
+                    _ = source.AssertCompleted();
+                    try {
+                        source.GetAwaiter().GetResult();
+                        return new Result(null, null);
+                    }
+                    catch (Exception e) {
+                        return new Result(null, e);
+                    }
+                }
+                : static source => {
+                    _ = source.AssertCompleted();
+                    try {
+                        var result = ((Task<T>)source).GetAwaiter().GetResult();
+                        return new Result(result, null);
+                    }
+                    catch (Exception e) {
+                        return new Result(null, e);
+                    }
+                };
     }
 }

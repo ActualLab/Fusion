@@ -2,10 +2,11 @@ namespace ActualLab.Fusion.Tests.Services;
 
 public class CounterSumService : IComputeService
 {
-    private readonly IMutableState<int>[] _counters;
+    private readonly MutableState<int>[] _counters;
 
-    public IMutableState<int> this[int counterIndex] => _counters[counterIndex];
+    public MutableState<int> this[int counterIndex] => _counters[counterIndex];
 
+    // ReSharper disable once ConvertToPrimaryConstructor
     public CounterSumService(StateFactory stateFactory)
         => _counters = Enumerable.Range(0, 10)
             .Select(_ => stateFactory.NewMutable<int>())

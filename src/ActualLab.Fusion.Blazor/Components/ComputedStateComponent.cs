@@ -30,7 +30,7 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
                 ? CompleteRecomputeAsync(recomputeTask.AsTask())
                 : Task.CompletedTask;
 
-            static async Task CompleteAsync(Task dependency, IComputedState<TState> state, bool mustAwaitForRecompute1) {
+            static async Task CompleteAsync(Task dependency, ComputedState<TState> state, bool mustAwaitForRecompute1) {
                 await dependency;
                 var recomputeTask1 = state.Recompute();
                 if (mustAwaitForRecompute1 && !recomputeTask1.IsCompleted)

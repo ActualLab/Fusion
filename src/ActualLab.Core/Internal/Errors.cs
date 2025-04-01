@@ -75,6 +75,8 @@ public static class Errors
         => new InvalidOperationException("Task is expected to be completed at this point, but it's not.");
     public static Exception TaskIsNeitherFaultedNorCancelled()
         => new InvalidOperationException("Task is neither faulted nor cancelled.");
+    public static Exception TaskAwaiterMustThrow()
+        => new InvalidOperationException( "Task is faulted or canceled, but its awaiter doesn't throw an exception.");
 
     public static Exception AsyncStateIsFinal()
         => new InvalidOperationException("AsyncState is expected to be non-final at this point, but it's final.");

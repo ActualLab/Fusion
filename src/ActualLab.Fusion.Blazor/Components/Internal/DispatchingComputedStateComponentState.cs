@@ -16,6 +16,6 @@ public abstract class DispatchingComputedStateComponentState<T>: ComputedStateCo
         // so we assume here that ComputeState:
         // - Is either called from UpdateCycle only,
         // - Or its other callers assume it may fail due to GracefulDisposeToken cancellation.
-        ComputeTaskFactory = () => ComputeTaskIfDisposed() ?? Component.ComputeState(GracefulDisposeToken);
+        ComputeTaskFactory = () => GetComputeTaskIfDisposed() ?? Component.ComputeState(GracefulDisposeToken);
     }
 }
