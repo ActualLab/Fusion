@@ -34,14 +34,17 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         ComputeMethodInput input,
         Result<T> output,
         RpcCacheEntry? cacheEntry,
-        RpcOutboundComputeCall? call)
+        RpcOutboundComputeCall? call = null)
         : base(options, input, output, true, SkipComputedRegistration.Option)
     {
         CallSource = AsyncTaskMethodBuilderExt.New<RpcOutboundComputeCall?>();
-        if (call != null)
+        if (call != null) {
             CallSource.SetResult(call);
+            SynchronizedSource = AlwaysSynchronized.Source;
+        }
+        else
+            SynchronizedSource = AsyncTaskMethodBuilderExt.New();
         CacheEntry = cacheEntry;
-        SynchronizedSource = AlwaysSynchronized.Source;
         ComputedRegistry.Instance.Register(this);
 
         // This should go after .Register(this)

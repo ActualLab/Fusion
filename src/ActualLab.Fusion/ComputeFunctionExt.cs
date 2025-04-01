@@ -1,15 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.OS;
+using ActualLab.Caching;
 
 namespace ActualLab.Fusion;
 
 public static class ComputeFunctionExt
 {
-    private static readonly ConcurrentDictionary<Type, Func<Task<Computed>, Task>> CompleteProduceValuePromiseDelegateCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly MethodInfo CompleteProduceValuePromiseGenericMethod = typeof(ComputeFunctionExt)
-        .GetMethod(nameof(CompleteProduceValuePromise), BindingFlags.Static | BindingFlags.NonPublic)!;
-
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume ComputeFunctionExt<T> methods are preserved")]
     public static Task ProduceValuePromise(
         this IComputeFunction function,
@@ -18,25 +13,25 @@ public static class ComputeFunctionExt
         CancellationToken cancellationToken = default)
     {
         var task = function.ProduceComputed(input, context, cancellationToken);
-        if (task.IsCompleted)
+        if (task.IsCompletedSuccessfully)
             return task.Result.GetValuePromise();
 
-        return CompleteProduceValuePromiseDelegateCache.GetOrAdd(function.OutputType,
-            static t => {
-                var taskType = typeof(Task<>).MakeGenericType(t);
-                var delegateType = typeof(Func<,>).MakeGenericType(typeof(Task<Computed>), taskType);
-                var method = CompleteProduceValuePromiseGenericMethod.MakeGenericMethod(t);
-                return (Func<Task<Computed>, Task>)method.CreateDelegate(delegateType);
-            }).Invoke(task);
+        return GenericInstanceCache
+            .Get<Func<Task<Computed>, Task>>(typeof(CompleteProduceValuePromiseFactory<>), function.OutputType)
+            .Invoke(task);
     }
 
-    // Private methods
+    // Nested types
 
-    private static Task<T> CompleteProduceValuePromise<T>(Task<Computed> task)
-        => task.ContinueWith(
-            static t => {
-                var computed = t.GetAwaiter().GetResult();
-                return (T)computed.Output.Value!;
-            },
-            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    public sealed class CompleteProduceValuePromiseFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    {
+        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume Task<T> methods are preserved")]
+        public override Func<Task<Computed>, Task> Generate()
+            => task => task.ContinueWith(
+                static t => {
+                    var computed = t.GetAwaiter().GetResult();
+                    return (T)computed.Output.Value!;
+                },
+                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    }
 }
