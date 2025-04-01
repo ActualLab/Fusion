@@ -13,8 +13,15 @@ public interface IGenericInstanceFactory<T1, T2>;
 
 public static class GenericInstanceCache
 {
-    private static readonly ConcurrentDictionary<(Type, Type?), object?> Cache1 = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly ConcurrentDictionary<(Type, Type?, Type?), object?> Cache2 = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<(Type, Type?), object?> Cache1;
+    private static readonly ConcurrentDictionary<(Type, Type?, Type?), object?> Cache2;
+
+    static GenericInstanceCache()
+    {
+        var concurrencyLevel = HardwareInfo.GetProcessorCountPo2Factor(2);
+        Cache1 = new ConcurrentDictionary<(Type, Type?), object?>(concurrencyLevel, 131);
+        Cache2 = new ConcurrentDictionary<(Type, Type?, Type?), object?>(concurrencyLevel, 131);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TResult Get<TResult>(Type factoryType, Type? argType)

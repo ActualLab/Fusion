@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
-using ActualLab.OS;
 
 namespace ActualLab.Async;
 
@@ -14,7 +13,6 @@ public static partial class TaskExt
 #else
     private static readonly Action<Task, int> StateFlagsSetter;
 #endif
-    private static readonly Func<Task, CancellationToken> CancellationTokenGetter;
 
     public static readonly Task<Unit> UnitTask;
     public static readonly Task<bool> TrueTask;
@@ -33,9 +31,6 @@ public static partial class TaskExt
             .GetField("m_stateFlags", BindingFlags.Instance | BindingFlags.NonPublic)!
             .GetSetter<Task, int>();
 #endif
-        CancellationTokenGetter = typeof(Task)
-            .GetProperty("CancellationToken", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .GetGetter<Task, CancellationToken>();
     }
 
     // NewNeverEndingUnreferenced
@@ -97,10 +92,6 @@ public static partial class TaskExt
 
         throw Errors.TaskIsNeitherFaultedNorCancelled();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static CancellationToken GetCancellationToken(this Task task)
-        => CancellationTokenGetter.Invoke(task);
 
     // IsCanceledOrFaultedWithOce
 
