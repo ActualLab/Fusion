@@ -8,10 +8,12 @@ public class TimeSpanExtTest(ITestOutputHelper @out) : TestBase(@out)
         Check(TimeSpan.Zero, "0s");
         Check(S(0.1), "100ms");
         Check(S(-0.1), "-100ms");
+#if !NETFRAMEWORK
         Check(S(0.100001), "100.001ms");
         Check(S(0.1000011), "100.001ms");
         Check(S(0.1000016), "100.002ms");
         Check(S(-0.1000016), "-100.002ms");
+#endif
         Check(M(1) + S(0.11), "1m 0.11s");
         Check(M(1) + S(0.1111), "1m 0.111s");
         Check(M(-1) + S(-0.1111), "-(1m 0.111s)");

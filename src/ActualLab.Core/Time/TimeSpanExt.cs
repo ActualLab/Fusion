@@ -24,10 +24,15 @@ public static class TimeSpanExt
     public static string ToShortString(this TimeSpan value)
     {
         var absValue = TimeSpan.FromTicks(Math.Abs(value.Ticks));
+#if NETSTANDARD2_0
+        if (absValue <= TimeSpan.FromMilliseconds(0.001))
+            return "0s";
+#else
         if (absValue < TimeSpan.FromMilliseconds(0.001))
             return absValue == TimeSpan.Zero
                 ? "0s"
                 : $"{value.TotalMilliseconds * 1000:0.###}μs";
+#endif
         if (absValue < TimeSpan.FromSeconds(1))
             return $"{value.TotalMilliseconds:0.###}ms";
         if (absValue < TimeSpan.FromSeconds(60))
