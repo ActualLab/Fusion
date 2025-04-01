@@ -9,6 +9,6 @@ public sealed class DispatchingComputedStateComponentStateNoExecutionContextFlow
     public override ComputedStateDispatchMode DispatchMode
         => ComputedStateDispatchMode.Dispatch;
 
-    protected override Task<T> Compute(CancellationToken cancellationToken)
+    protected override Task Compute(CancellationToken cancellationToken)
         => Dispatcher.InvokeAsync(ComputeTaskFactory);
 }

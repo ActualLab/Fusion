@@ -4,7 +4,7 @@ public static class StateExt
 {
     // Computed-like methods
 
-    public static ValueTask Update(this IState state, CancellationToken cancellationToken = default)
+    public static ValueTask Update(this State state, CancellationToken cancellationToken = default)
     {
         var valueTask = state.Computed.UpdateUntyped(cancellationToken);
         return valueTask.IsCompletedSuccessfully
@@ -13,13 +13,13 @@ public static class StateExt
     }
 
     public static Task<T> Use<T>(
-        this IState<T> state, CancellationToken cancellationToken = default)
+        this State<T> state, CancellationToken cancellationToken = default)
         => (Task<T>)state.Computed.UseUntyped(cancellationToken);
 
-    public static void Invalidate(this IState state, bool immediately = false)
+    public static void Invalidate(this State state, bool immediately = false)
         => state.Computed.Invalidate(immediately);
 
-    public static ValueTask Recompute(this IState state, CancellationToken cancellationToken = default)
+    public static ValueTask Recompute(this State state, CancellationToken cancellationToken = default)
     {
         state.Computed.Invalidate(true);
         return state.Update(cancellationToken);
@@ -27,8 +27,8 @@ public static class StateExt
 
     // Add/RemoveEventHandler
 
-    public static void AddEventHandler(this IState state,
-        StateEventKind eventFilter, Action<IState, StateEventKind> handler)
+    public static void AddEventHandler(this State state,
+        StateEventKind eventFilter, Action<State, StateEventKind> handler)
     {
         if ((eventFilter & StateEventKind.Invalidated) != 0)
             state.Invalidated += handler;
@@ -38,30 +38,8 @@ public static class StateExt
             state.Updated += handler;
     }
 
-    public static void AddEventHandler<T>(this IState<T> state,
-        StateEventKind eventFilter, Action<IState<T>, StateEventKind> handler)
-    {
-        if ((eventFilter & StateEventKind.Invalidated) != 0)
-            state.Invalidated += handler;
-        if ((eventFilter & StateEventKind.Updating) != 0)
-            state.Updating += handler;
-        if ((eventFilter & StateEventKind.Updated) != 0)
-            state.Updated += handler;
-    }
-
-    public static void RemoveEventHandler(this IState state,
-        StateEventKind eventFilter, Action<IState, StateEventKind> handler)
-    {
-        if ((eventFilter & StateEventKind.Invalidated) != 0)
-            state.Invalidated -= handler;
-        if ((eventFilter & StateEventKind.Updating) != 0)
-            state.Updating -= handler;
-        if ((eventFilter & StateEventKind.Updated) != 0)
-            state.Updated -= handler;
-    }
-
-    public static void RemoveEventHandler<T>(this IState<T> state,
-        StateEventKind eventFilter, Action<IState<T>, StateEventKind> handler)
+    public static void RemoveEventHandler(this State state,
+        StateEventKind eventFilter, Action<State, StateEventKind> handler)
     {
         if ((eventFilter & StateEventKind.Invalidated) != 0)
             state.Invalidated -= handler;
@@ -73,23 +51,23 @@ public static class StateExt
 
     // When
 
-    public static Task<Computed<T>> When<T>(this IState<T> state,
+    public static Task<Computed<T>> When<T>(this State<T> state,
         Func<T, bool> predicate,
         CancellationToken cancellationToken = default)
         => state.Computed.When(predicate, cancellationToken);
 
-    public static Task<Computed<T>> When<T>(this IState<T> state,
+    public static Task<Computed<T>> When<T>(this State<T> state,
         Func<T, bool> predicate,
         IUpdateDelayer updateDelayer,
         CancellationToken cancellationToken = default)
         => state.Computed.When(predicate, updateDelayer, cancellationToken);
 
-    public static Task<Computed<T>> When<T>(this IState<T> state,
+    public static Task<Computed<T>> When<T>(this State<T> state,
         Func<T, Exception?, bool> predicate,
         CancellationToken cancellationToken = default)
         => state.Computed.When(predicate, cancellationToken);
 
-    public static Task<Computed<T>> When<T>(this IState<T> state,
+    public static Task<Computed<T>> When<T>(this State<T> state,
         Func<T, Exception?, bool> predicate,
         IUpdateDelayer updateDelayer,
         CancellationToken cancellationToken = default)
@@ -98,19 +76,19 @@ public static class StateExt
     // Changes
 
     public static IAsyncEnumerable<Computed<T>> Changes<T>(
-        this IState<T> state,
+        this State<T> state,
         CancellationToken cancellationToken = default)
         => state.Computed.Changes(cancellationToken);
 
     public static IAsyncEnumerable<Computed<T>> Changes<T>(
-        this IState<T> state,
+        this State<T> state,
         IUpdateDelayer updateDelayer,
         CancellationToken cancellationToken = default)
         => state.Computed.Changes(updateDelayer, cancellationToken);
 
     // WhenNonInitial
 
-    public static Task WhenNonInitial<T>(this IState<T> state)
+    public static Task WhenNonInitial(this State state)
     {
         if (state is IMutableState)
             return Task.CompletedTask;
@@ -124,12 +102,12 @@ public static class StateExt
     // WhenSynchronized & Synchronize
 
     public static Task WhenSynchronized(
-        this IState state,
+        this State state,
         CancellationToken cancellationToken = default)
         => state.Computed.WhenSynchronized(cancellationToken);
 
     public static ValueTask<Computed<T>> Synchronize<T>(
-        this IState<T> state,
+        this State<T> state,
         CancellationToken cancellationToken = default)
         => state.Computed.Synchronize(cancellationToken);
 }

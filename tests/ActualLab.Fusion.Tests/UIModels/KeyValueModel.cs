@@ -12,7 +12,7 @@ public class KeyValueModel<TValue>
 
 public class StringKeyValueModelState : ComputedState<KeyValueModel<string>>
 {
-    private IMutableState<string> Locals { get; }
+    private MutableState<string> Locals { get; }
 
     private IKeyValueService<string> KeyValueService
         => Services.GetRequiredService<IKeyValueService<string>>();

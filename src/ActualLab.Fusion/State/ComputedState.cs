@@ -28,10 +28,7 @@ public interface IComputedState : IState, IDisposable, IHasWhenDisposed
     public CancellationToken GracefulDisposeToken { get; }
 }
 
-// ReSharper disable once PossibleInterfaceMemberAmbiguity
-public interface IComputedState<T> : IState<T>, IComputedState;
-
-public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTimeoutHandler
+public abstract class ComputedState<T> : State<T>, IComputedState, IGenericTimeoutHandler
 {
     public new record Options : State<T>.Options, IComputedState.IOptions
     {
@@ -76,7 +73,7 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
             Initialize(settings);
     }
 
-    protected override void Initialize(State<T>.Options settings)
+    protected override void Initialize(State.Options settings)
     {
         base.Initialize(settings);
         var computedStateOptions = (Options)settings;
@@ -120,30 +117,8 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
     void IGenericTimeoutHandler.OnTimeout()
         => _gracefulDisposeTokenSource.CancelAndDisposeSilently();
 
-    protected virtual async Task UpdateCycle()
-    {
-        try {
-            await Computed.UpdateUntyped(DisposeToken).ConfigureAwait(false);
-            while (true) {
-                var snapshot = Snapshot;
-                var computed = snapshot.Computed;
-                if (!computed.IsInvalidated())
-                    await computed.WhenInvalidated(DisposeToken).ConfigureAwait(false);
-                await UpdateDelayer.Delay(snapshot.RetryCount, DisposeToken).ConfigureAwait(false);
-                if (!snapshot.WhenUpdated().IsCompleted)
-                    // GracefulDisposeToken here allows Update to take some extra after DisposeToken cancellation.
-                    // This, in particular, lets RPC calls to complete, cache entries to populate, etc.
-                    await computed.UpdateUntyped(GracefulDisposeToken).ConfigureAwait(false);
-            }
-        }
-        catch (Exception e) {
-            if (!e.IsCancellationOf(DisposeToken))
-                Log.LogError(e, "UpdateCycle() failed and stopped for {Category}", Category);
-        }
-        finally {
-            _gracefulDisposeTokenSource.CancelAndDisposeSilently();
-        }
-    }
+    protected virtual Task UpdateCycle()
+        => ComputedStateImpl.UpdateCycle(this, _gracefulDisposeTokenSource);
 
     public override Computed? GetExistingComputed()
     {
@@ -151,7 +126,7 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
             return _computingComputed ?? base.GetExistingComputed();
     }
 
-    protected override StateBoundComputed<T> CreateComputed()
+    protected override Computed CreateComputed()
     {
         var computed = new StateBoundComputed<T>(ComputedOptions, this);
         lock (Lock)
@@ -159,14 +134,7 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
         return computed;
     }
 
-    protected override void OnSetSnapshot(StateSnapshot<T> snapshot, StateSnapshot<T>? prevSnapshot)
-    {
-        // This method is called inside lock (Lock)
-        _computingComputed = null;
-        base.OnSetSnapshot(snapshot, prevSnapshot);
-    }
-
-    protected Task<T>? ComputeTaskIfDisposed()
+    protected Task<T>? GetComputeTaskIfDisposed()
     {
 #pragma warning disable MA0022, RCS1210
         if (!IsDisposed)
@@ -176,5 +144,12 @@ public abstract class ComputedState<T> : State<T>, IComputedState<T>, IGenericTi
             ? Task.FromCanceled<T>(DisposeToken)
             : TaskExt.NewNeverEndingUnreferenced<T>().WaitAsync(DisposeToken);
 #pragma warning restore MA0022, RCS1210
+    }
+
+    protected override void OnSetSnapshot(StateSnapshot snapshot, StateSnapshot? prevSnapshot)
+    {
+        // This method is called inside lock (Lock)
+        _computingComputed = null;
+        base.OnSetSnapshot(snapshot, prevSnapshot);
     }
 }

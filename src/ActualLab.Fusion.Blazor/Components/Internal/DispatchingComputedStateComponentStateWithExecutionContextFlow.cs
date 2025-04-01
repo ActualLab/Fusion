@@ -9,7 +9,7 @@ public sealed class DispatchingComputedStateComponentStateWithExecutionContextFl
     public override ComputedStateDispatchMode DispatchMode
         => ComputedStateDispatchMode.DispatchWithExecutionContextFlow;
 
-    protected override Task<T> Compute(CancellationToken cancellationToken)
+    protected override Task Compute(CancellationToken cancellationToken)
     {
         var executionContext = ExecutionContext.Capture();
         return executionContext == null

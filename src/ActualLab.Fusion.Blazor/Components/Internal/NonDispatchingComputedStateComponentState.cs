@@ -9,6 +9,6 @@ public sealed class NonDispatchingComputedStateComponentState<T>(
     public override ComputedStateDispatchMode DispatchMode
         => ComputedStateDispatchMode.None;
 
-    protected override Task<T> Compute(CancellationToken cancellationToken)
-        => ComputeTaskIfDisposed() ?? Component.ComputeState(cancellationToken);
+    protected override Task Compute(CancellationToken cancellationToken)
+        => GetComputeTaskIfDisposed() ?? Component.ComputeState(cancellationToken);
 }

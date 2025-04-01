@@ -16,12 +16,12 @@
 }
 
 @code {
-    private readonly Action<IState, StateEventKind> _stateOfStateChangedHandler;
+    private readonly Action<State, StateEventKind> _stateOfStateChangedHandler;
     private volatile StateSnapshot? _snapshot = null!;
 
 #pragma warning disable BL0007
     [Parameter]
-    public IState? State {
+    public State? State {
         get => _snapshot?.UntypedState;
         set {
             var oldState = _snapshot?.UntypedState;

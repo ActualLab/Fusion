@@ -76,12 +76,13 @@ public sealed class AuthStateProvider : AuthenticationStateProvider, IDisposable
         return new AuthState(user, isSignOutForced);
     }
 
-    private void OnStateChanged(IState<AuthState> state, StateEventKind eventKind)
+    private void OnStateChanged(State state, StateEventKind eventKind)
         => _ = Task.Run(() => {
+            var typedState = (State<AuthState>)state;
             Task<AuthState> authStateTask;
             Task<AuthenticationState> authenticationStateTask;
             lock (_lock) {
-                var authState = state.LastNonErrorValue;
+                var authState = typedState.LastNonErrorValue;
                 var oldAuthState = _authStateTask.GetAwaiter().GetResult();
                 if (authState.IsIdenticalTo(oldAuthState))
                     return;

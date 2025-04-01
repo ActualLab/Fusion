@@ -10,8 +10,8 @@ public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposa
 
     [field: AllowNull, MaybeNull]
     protected StateFactory StateFactory => field ??= Services.StateFactory();
-    protected abstract IState UntypedState { get; }
-    protected Action<IState, StateEventKind> StateChanged { get; set; }
+    protected abstract State UntypedState { get; }
+    protected Action<State, StateEventKind> StateChanged { get; set; }
 
     protected StatefulComponentBase()
     {
@@ -33,10 +33,10 @@ public abstract class StatefulComponentBase : FusionComponentBase, IAsyncDisposa
 }
 
 public abstract class StatefulComponentBase<TState> : StatefulComponentBase
-    where TState : class, IState
+    where TState : State
 {
     protected TState State { get; private set; } = null!;
-    protected override IState UntypedState => State;
+    protected override State UntypedState => State;
 
     public override Task SetParametersAsync(ParameterView parameters)
     {

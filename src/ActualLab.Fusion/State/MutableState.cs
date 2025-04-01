@@ -8,10 +8,7 @@ public interface IMutableState : IState, IMutableResult
     public new interface IOptions : IState.IOptions;
 }
 
-// ReSharper disable once PossibleInterfaceMemberAmbiguity
-public interface IMutableState<T> : IState<T>, IMutableResult<T>, IMutableState;
-
-public class MutableState<T> : State<T>, IMutableState<T>
+public class MutableState<T> : State<T>, IMutableResult<T>
 {
     public new record Options : State<T>.Options, IMutableState.IOptions
     {
@@ -105,7 +102,7 @@ public class MutableState<T> : State<T>, IMutableState<T>
 
     // Protected methods
 
-    protected internal override void OnInvalidated(Computed<T> computed)
+    protected internal override void OnInvalidated(Computed computed)
     {
         base.OnInvalidated(computed);
 
@@ -121,25 +118,25 @@ public class MutableState<T> : State<T>, IMutableState<T>
     {
         // Double-check locking
         lock (Lock) {
-            var computed = Computed;
+            var computed = UntypedComputed;
             if (ComputedImpl.TryUseExistingFromLock(computed, context))
-                return Task.FromResult((Computed)computed);
+                return Task.FromResult(computed);
 
             OnUpdating(computed);
             computed = CreateComputed();
             ComputedImpl.UseNew(computed, context);
-            return Task.FromResult((Computed)computed);
+            return Task.FromResult(computed);
         }
     }
 
-    protected override StateBoundComputed<T> CreateComputed()
+    protected override Computed CreateComputed()
     {
         var computed = base.CreateComputed();
         computed.TrySetOutput(NextOutput.ToUntypedResult());
-        Computed = computed;
+        UntypedComputed = computed;
         return computed;
     }
 
-    protected override Task<T> Compute(CancellationToken cancellationToken)
+    protected override Task Compute(CancellationToken cancellationToken)
         => throw Errors.InternalError("This method should never be called.");
 }
