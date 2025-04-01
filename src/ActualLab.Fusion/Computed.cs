@@ -50,7 +50,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
     public readonly ComputedOptions Options = options;
     public readonly ComputedInput Input = input;
     public readonly ulong Version = ComputedVersion.Next();
-    private Task? _untypedOutputPromise;
+    private Task? _untypedValuePromise;
 
     // IComputed properties
 
@@ -141,11 +141,11 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     public Task GetValuePromise()
     {
-        if (_untypedOutputPromise != null)
-            return _untypedOutputPromise;
+        if (_untypedValuePromise != null)
+            return _untypedValuePromise;
 
         lock (Lock)
-            return _untypedOutputPromise ??= Output.ToTask(OutputType);
+            return _untypedValuePromise ??= Output.ToTask(OutputType);
     }
 
     public async ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default)
