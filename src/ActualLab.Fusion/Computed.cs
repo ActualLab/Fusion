@@ -23,7 +23,7 @@ public interface IComputed : IResult, IHasVersion<ulong>
     public void Invalidate(bool immediately = false);
 }
 
-public abstract partial class Computed(ComputedOptions options, ComputedInput input, Result output = default)
+public abstract partial class Computed(ComputedOptions options, ComputedInput input, Result output)
     : IComputed, IGenericTimeoutHandler
 {
     private volatile int _state;

@@ -18,16 +18,13 @@ public abstract class Computed<T> : Computed, IResult<T>
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected Computed(ComputedOptions options, ComputedInput input)
-        : base(options, input)
+        : base(options, input, Result.Default<T>())
     { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected Computed(ComputedOptions options, ComputedInput input, Result<T> output, bool isConsistent)
         : base(options, input, output.ToUntypedResult())
         => ConsistencyState = isConsistent ? ConsistencyState.Consistent : ConsistencyState.Invalidated;
-
-    public new Task<T> GetValuePromise()
-        => (Task<T>)base.GetValuePromise();
 
     // IResult<T> implementation
 
