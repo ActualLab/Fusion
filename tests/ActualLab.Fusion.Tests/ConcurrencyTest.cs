@@ -35,7 +35,8 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
             var ms1 = factory.NewMutable(0);
             var ms2 = factory.NewMutable(2);
             var computedStates = Enumerable.Range(0, HardwareInfo.GetProcessorCountFactor(2))
-                .Select(_ => factory.NewComputed<int>(
+                .Select(_ => factory.NewComputed(
+                    // ReSharper disable once AccessToModifiedClosure
                     updateDelayer,
                     async ct => {
                         var m1 = await ms1.Use(ct).ConfigureAwait(false);
@@ -59,7 +60,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
 
             foreach (var computedState in computedStates) {
                 var snapshot = computedState.Snapshot;
-                var c = snapshot.Computed;
+                var c = (Computed<int>)snapshot.Computed;
                 if (!c.IsConsistent()) {
                     Out.WriteLine($"Updating: {c}");
                     await snapshot.WhenUpdated().WaitAsync(TimeSpan.FromSeconds(1));

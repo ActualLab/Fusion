@@ -2,22 +2,21 @@ namespace ActualLab.Fusion;
 
 public interface IStateBoundComputed : IComputed
 {
-    public IState State { get; }
+    public State State { get; }
 }
 
 public class StateBoundComputed<T> : Computed<T>, IStateBoundComputed
 {
-    IState IStateBoundComputed.State => State;
-    public State<T> State { get; }
+    public State State { get; }
 
-    public StateBoundComputed(ComputedOptions options, State<T> state)
+    public StateBoundComputed(ComputedOptions options, State state)
         : base(options, state)
     {
         State = state;
         ComputedRegistry.Instance.PseudoRegister(this);
     }
 
-    protected StateBoundComputed(ComputedOptions options, State<T> state, Result<T> output, bool isConsistent)
+    protected StateBoundComputed(ComputedOptions options, State state, Result<T> output, bool isConsistent)
         : base(options, state, output, isConsistent)
     {
         State = state;

@@ -19,12 +19,12 @@ public class RpcPeerStateMonitor : WorkerBase
     public TimeSpan MinReconnectsIn { get; init; } = TimeSpan.FromSeconds(1);
     public TimeSpan ExtraInvalidationDelay { get; init; } = TimeSpan.FromMilliseconds(100);
 
-    public State<RpcPeerRawState> RawState {
+    public IState<RpcPeerRawState> RawState {
         get => _rawState;
         protected set => _rawState = (MutableState<RpcPeerRawState>)value;
     }
-    public State<Moment> LastReconnectDelayCancelledAt { get; protected set; } = null!;
-    public State<RpcPeerState> State { get; protected set; } = null!;
+    public IState<Moment> LastReconnectDelayCancelledAt { get; protected set; } = null!;
+    public IState<RpcPeerState> State { get; protected set; } = null!;
 
     public RpcPeerStateMonitor(
         IServiceProvider services,

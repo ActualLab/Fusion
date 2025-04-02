@@ -1,10 +1,10 @@
 namespace ActualLab.Fusion.Blazor.Internal;
 
 public sealed class DispatchingComputedStateComponentStateWithExecutionContextFlow<T>(
-    ComputedState<T>.Options settings,
+    ComputedState<T>.Options options,
     ComputedStateComponent<T> component,
     IServiceProvider services
-) : DispatchingComputedStateComponentState<T>(settings, component, services)
+) : DispatchingComputedStateComponentState<T>(options, component, services)
 {
     public override ComputedStateDispatchMode DispatchMode
         => ComputedStateDispatchMode.DispatchWithExecutionContextFlow;

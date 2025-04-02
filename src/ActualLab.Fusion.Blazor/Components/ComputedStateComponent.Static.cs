@@ -1,30 +1,29 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Caching;
 using ActualLab.OS;
 
 namespace ActualLab.Fusion.Blazor;
 
-public static class ComputedStateComponent
+public abstract partial class ComputedStateComponent
 {
-    private static readonly MethodInfo GetDefaultOptionsImplMethod = typeof(ComputedStateComponent)
-        .GetMethod(nameof(CreateDefaultStateOptionsImpl), BindingFlags.Static | BindingFlags.NonPublic)!;
     private static readonly ConcurrentDictionary<Type, string> StateCategoryCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly ConcurrentDictionary<Type, IComputedState.IOptions> StateOptionsCache
+    private static readonly ConcurrentDictionary<Type, IComputedStateOptions> StateOptionsCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly ConcurrentDictionary<Type, Func<Type, IComputedState.IOptions>> CreateDefaultStateOptionsCache
+    private static readonly ConcurrentDictionary<Type, Func<Type, IComputedStateOptions>> CreateDefaultStateOptionsCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static ComputedStateComponentOptions DefaultOptions { get; set; }
         = ComputedStateComponentOptions.RecomputeStateOnParameterChange;
-    public static Func<Type, IComputedState.IOptions> DefaultStateOptionsFactory { get; set; } = CreateDefaultStateOptions;
+    public static Func<Type, IComputedStateOptions> DefaultStateOptionsFactory { get; set; } = CreateDefaultStateOptions;
 
-    public static ComputedState<TState>.Options GetStateOptions<TState>(
-        Type componentType, Func<Type, ComputedState<TState>.Options>? optionsFactory = null)
-        => (ComputedState<TState>.Options)StateOptionsCache.GetOrAdd(componentType,
-            optionsFactory as Func<Type, IComputedState.IOptions> ?? DefaultStateOptionsFactory);
+    public static ComputedState<T>.Options GetStateOptions<T>(
+        Type componentType, Func<Type, ComputedState<T>.Options>? optionsFactory = null)
+        => (ComputedState<T>.Options)StateOptionsCache.GetOrAdd(componentType,
+            optionsFactory as Func<Type, IComputedStateOptions> ?? DefaultStateOptionsFactory);
 
-    public static IComputedState.IOptions GetStateOptions(
-        Type componentType, Func<Type, IComputedState.IOptions>? optionsFactory = null)
+    public static IComputedStateOptions GetStateOptions(
+        Type componentType, Func<Type, IComputedStateOptions>? optionsFactory = null)
         => StateOptionsCache.GetOrAdd(componentType, optionsFactory ?? DefaultStateOptionsFactory);
 
     public static string GetStateCategory(Type componentType)
@@ -35,27 +34,31 @@ public static class ComputedStateComponent
 
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume GetDefaultOptions method is preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume GetDefaultOptions method is preserved")]
-    public static IComputedState.IOptions CreateDefaultStateOptions(Type componentType)
-        => CreateDefaultStateOptionsCache.GetOrAdd(componentType, static componentType1 => {
-            var type = componentType1;
-            while (type != null) {
-                if (type.IsGenericType
-                    && type.GetGenericTypeDefinition() is var gtd
-                    && gtd == typeof(ComputedStateComponent<>)) {
-                    var stateType = type.GetGenericArguments().Single();
-                    return (Func<Type, IComputedState.IOptions>)GetDefaultOptionsImplMethod
-                        .MakeGenericMethod(stateType)
-                        .CreateDelegate(typeof(Func<Type, IComputedState.IOptions>));
+    public static IComputedStateOptions CreateDefaultStateOptions(Type componentType)
+        => CreateDefaultStateOptionsCache.GetOrAdd(componentType,
+            static componentType => {
+                var type = componentType;
+                while (type != null) {
+                    if (type.IsGenericType
+                        && type.GetGenericTypeDefinition() is var gtd
+                        && gtd == typeof(ComputedStateComponent<>)) {
+                        var stateType = type.GetGenericArguments().Single();
+                        return GenericInstanceCache
+                            .Get<Func<Type, IComputedStateOptions>>(typeof(CreateDefaultStateOptionsFactory<>), stateType)
+                            .Invoke(componentType);
+                    }
+                    type = type.BaseType;
                 }
-                type = type.BaseType;
-            }
-            throw new ArgumentOutOfRangeException(nameof(componentType));
-        }).Invoke(componentType);
+                throw new ArgumentOutOfRangeException(nameof(componentType));
+            }).Invoke(componentType);
 
-    // Private methods
+    // Nested types
 
-    private static IComputedState.IOptions CreateDefaultStateOptionsImpl<TState>(Type componentType)
-        => new ComputedState<TState>.Options() {
-            Category = GetStateCategory(componentType),
-        };
+    public sealed class CreateDefaultStateOptionsFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    {
+        public override object Generate()
+            => (Type componentType) => (IComputedStateOptions)new ComputedState<T>.Options() {
+                Category = GetStateCategory(componentType),
+            };
+    }
 }

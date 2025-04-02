@@ -3,9 +3,9 @@ namespace ActualLab.Fusion.EntityFramework;
 public interface IDbShardRegistry
 {
     public bool HasSingleShard { get; }
-    public State<ImmutableHashSet<DbShard>> Shards { get; }
-    public State<ImmutableHashSet<DbShard>> UsedShards { get; }
-    public State<ImmutableHashSet<DbShard>> EventProcessorShards { get; }
+    public IState<ImmutableHashSet<DbShard>> Shards { get; }
+    public IState<ImmutableHashSet<DbShard>> UsedShards { get; }
+    public IState<ImmutableHashSet<DbShard>> EventProcessorShards { get; }
     public MutableState<Func<DbShard, bool>> EventProcessorShardFilter { get; }
 
     public bool Add(DbShard shard);
@@ -26,9 +26,9 @@ public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
     private readonly ComputedState<ImmutableHashSet<DbShard>> _eventProcessorShards;
 
     public bool HasSingleShard { get; }
-    public State<ImmutableHashSet<DbShard>> Shards => _shards;
-    public State<ImmutableHashSet<DbShard>> UsedShards => _usedShards;
-    public State<ImmutableHashSet<DbShard>> EventProcessorShards => _eventProcessorShards;
+    public IState<ImmutableHashSet<DbShard>> Shards => _shards;
+    public IState<ImmutableHashSet<DbShard>> UsedShards => _usedShards;
+    public IState<ImmutableHashSet<DbShard>> EventProcessorShards => _eventProcessorShards;
     public MutableState<Func<DbShard, bool>> EventProcessorShardFilter { get; }
 
     public DbShardRegistry(IServiceProvider services, params DbShard[] initialShards)

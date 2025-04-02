@@ -473,6 +473,7 @@ public class ProxyCodeKeeper : CodeKeeper
         Keep<TaskExt.ToTypedResultSynchronouslyFactory<TUnwrapped>>();
         Keep<TaskExt.ToUntypedValueTaskFactory<TUnwrapped>>();
         Keep<TaskExt.ToUntypedResultSynchronouslyFactory<TUnwrapped>>();
+        Keep<TaskExt.GetUntypedResultSynchronouslyFactory<TUnwrapped>>();
 
         MethodDefCodeKeeper.KeepCodeForResult<TResult, TUnwrapped>();
         Keep<Interceptor>().KeepCodeForResult<TResult, TUnwrapped>();

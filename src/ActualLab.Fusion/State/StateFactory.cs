@@ -27,16 +27,16 @@ public class StateFactory(IServiceProvider services) : IHasServices
 
     public IServiceProvider Services { get; } = services;
 
-    public virtual MutableState<T> NewMutable<T>(MutableState<T>.Options settings)
-        => new(settings, Services);
+    public virtual MutableState<T> NewMutable<T>(MutableState<T>.Options options)
+        => new(options, Services);
 
     public virtual ComputedState<T> NewComputed<T>(
-        ComputedState<T>.Options settings,
+        ComputedState<T>.Options options,
         Func<CancellationToken, Task<T>> computer)
-        => new FuncComputedState<T>(settings, Services, computer);
+        => new FuncComputedState<T>(options, Services, computer);
 
     public virtual ComputedState<T> NewComputed<T>(
-        ComputedState<T>.Options settings,
+        ComputedState<T>.Options options,
         Func<ComputedState<T>, CancellationToken, Task<T>> computer)
-        => new FuncComputedStateEx<T>(settings, Services, computer);
+        => new FuncComputedStateEx<T>(options, Services, computer);
 }

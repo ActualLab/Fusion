@@ -1,10 +1,10 @@
 namespace ActualLab.Fusion.Blazor.Internal;
 
 public abstract class ComputedStateComponentState<T>(
-    ComputedState<T>.Options settings,
+    ComputedState<T>.Options options,
     ComputedStateComponent<T> component,
     IServiceProvider services
-    ) : ComputedState<T>(settings, services, false), IHasInitialize
+    ) : ComputedState<T>(options, services, false), IHasInitialize
 {
     protected ComputedStateComponent<T> Component { get; } = component;
 

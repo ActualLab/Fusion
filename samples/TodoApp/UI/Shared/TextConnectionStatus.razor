@@ -1,5 +1,5 @@
 @using ActualLab.Rpc
-@inherits StatefulComponentBase<State<RpcPeerState>>
+@inherits StatefulComponentBase<RpcPeerState>
 
 @{
     var m = State.Value;
@@ -25,7 +25,7 @@
     public string CssClass { get; set; } = "";
 
     protected override void OnInitialized()
-        => SetState(Monitor.State);
+        => SetState((State)Monitor.State);
 
     public override ValueTask DisposeAsync()
         => default; // State shouldn't be disposed

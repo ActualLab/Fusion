@@ -272,7 +272,7 @@ public static partial class ComputedExt
 
             static async Task WhenUpdatedAndSynchronized(StateSnapshot snapshot, CancellationToken cancellationToken1) {
                 await snapshot.WhenUpdated().ConfigureAwait(false);
-                await snapshot.UntypedState.Computed.WhenSynchronized(cancellationToken1).ConfigureAwait(false);
+                await snapshot.State.Computed.WhenSynchronized(cancellationToken1).ConfigureAwait(false);
             }
         }
 

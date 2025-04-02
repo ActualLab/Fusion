@@ -55,7 +55,7 @@ public interface IMutableResult : IResult
     /// <summary>
     /// <see cref="Object"/>-typed version of <see cref="IMutableResult{T}.Value"/>.
     /// </summary>
-    public object? UntypedValue { get; set; }
+    public new object? Value { get; set; }
     /// <summary>
     /// Retrieves or sets mutable result's error.
     /// </summary>
@@ -132,7 +132,7 @@ public interface IMutableResult<T> : IResult<T>, IMutableResult
 /// </summary>
 [StructLayout(LayoutKind.Auto)]
 [DebuggerDisplay("({" + nameof(DebugValue) + "}, Error = {" + nameof(Error) + "})")]
-public readonly struct Result : IResult
+public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
 {
     private static readonly ConcurrentDictionary<Type, Func<Exception, IResult>> ErrorCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
@@ -231,6 +231,22 @@ public readonly struct Result : IResult
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public object? GetUntypedValueOrErrorBox()
         => _valueOrErrorBox;
+
+    // Equality
+
+    /// <inheritdoc />
+    public bool Equals(Result other)
+        => Equals(_valueOrErrorBox, other._valueOrErrorBox);
+    public bool Equals(IResult? other)
+        => !ReferenceEquals(other, null) && Equals(_valueOrErrorBox, other.GetUntypedValueOrErrorBox());
+    /// <inheritdoc />
+    public override bool Equals(object? obj)
+        => obj is IResult o && Equals(o);
+
+    /// <inheritdoc />
+    public override int GetHashCode() => _valueOrErrorBox?.GetHashCode() ?? 0;
+    public static bool operator ==(Result left, Result right) => left.Equals(right);
+    public static bool operator !=(Result left, Result right) => !left.Equals(right);
 
     // Private methods
 

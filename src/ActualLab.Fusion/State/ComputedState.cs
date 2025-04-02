@@ -1,8 +1,32 @@
+using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
+using ActualLab.Trimming;
 
 namespace ActualLab.Fusion;
 
-public static class ComputedState
+// Interfaces
+
+public interface IComputedStateOptions : IStateOptions
+{
+    public IUpdateDelayer? UpdateDelayer { get; init; }
+    public bool TryComputeSynchronously { get; init; }
+    public bool FlowExecutionContext { get; init; }
+    public TimeSpan GracefulDisposeDelay { get; init; }
+}
+
+public interface IComputedState : IState, IDisposable, IHasWhenDisposed
+{
+    public IUpdateDelayer UpdateDelayer { get; set; }
+    public Task UpdateCycleTask { get; }
+    public CancellationToken DisposeToken { get; }
+    public CancellationToken GracefulDisposeToken { get; }
+}
+
+public interface IComputedState<T> : IState<T>, IComputedState;
+
+// Classes
+
+public abstract class ComputedState : State, IComputedState, IGenericTimeoutHandler
 {
     public static class DefaultOptions
     {
@@ -10,40 +34,14 @@ public static class ComputedState
         public static bool FlowExecutionContext { get; set; } = false;
         public static TimeSpan GracefulDisposeDelay { get; set; } = TimeSpan.FromSeconds(10);
     }
-}
 
-public interface IComputedState : IState, IDisposable, IHasWhenDisposed
-{
-    public new interface IOptions : IState.IOptions
-    {
-        public IUpdateDelayer? UpdateDelayer { get; init; }
-        public bool TryComputeSynchronously { get; init; }
-        public bool FlowExecutionContext { get; init; }
-        public TimeSpan GracefulDisposeDelay { get; init; }
-    }
-
-    public IUpdateDelayer UpdateDelayer { get; set; }
-    public Task UpdateCycleTask { get; }
-    public CancellationToken DisposeToken { get; }
-    public CancellationToken GracefulDisposeToken { get; }
-}
-
-public abstract class ComputedState<T> : State<T>, IComputedState, IGenericTimeoutHandler
-{
-    public new record Options : State<T>.Options, IComputedState.IOptions
-    {
-        public IUpdateDelayer? UpdateDelayer { get; init; }
-        public bool TryComputeSynchronously { get; init; } = ComputedState.DefaultOptions.TryComputeSynchronously;
-        public bool FlowExecutionContext { get; init; } = ComputedState.DefaultOptions.FlowExecutionContext;
-        public TimeSpan GracefulDisposeDelay { get; init; } = ComputedState.DefaultOptions.GracefulDisposeDelay;
-    }
-
-    private volatile Computed<T>? _computingComputed;
-    private volatile IUpdateDelayer _updateDelayer = null!;
     private volatile Task? _whenDisposed;
-    private readonly CancellationTokenSource _disposeTokenSource;
-    private readonly CancellationTokenSource? _gracefulDisposeTokenSource;
-    private readonly TimeSpan _gracefulDisposeDelay;
+    private volatile IUpdateDelayer _updateDelayer = null!;
+
+    protected volatile Computed? ComputingComputed;
+    protected readonly CancellationTokenSource DisposeTokenSource;
+    protected readonly CancellationTokenSource? GracefulDisposeTokenSource;
+    protected readonly TimeSpan GracefulDisposeDelay;
 
     public IUpdateDelayer UpdateDelayer {
         get => _updateDelayer;
@@ -56,27 +54,27 @@ public abstract class ComputedState<T> : State<T>, IComputedState, IGenericTimeo
     public Task? WhenDisposed => _whenDisposed;
     public override bool IsDisposed => _whenDisposed != null;
 
-    protected ComputedState(Options settings, IServiceProvider services, bool initialize = true)
-        : base(settings, services, false)
+    protected ComputedState(IComputedStateOptions options, IServiceProvider services, bool initialize = true)
+        : base(options, services, false)
     {
-        _disposeTokenSource = new CancellationTokenSource();
-        DisposeToken = _disposeTokenSource.Token;
+        DisposeTokenSource = new CancellationTokenSource();
+        DisposeToken = DisposeTokenSource.Token;
 
-        _gracefulDisposeDelay = settings.GracefulDisposeDelay;
-        _gracefulDisposeTokenSource = _gracefulDisposeDelay > TimeSpan.Zero
+        GracefulDisposeDelay = options.GracefulDisposeDelay;
+        GracefulDisposeTokenSource = GracefulDisposeDelay > TimeSpan.Zero
             ? new CancellationTokenSource()
-            : _disposeTokenSource;
-        GracefulDisposeToken = _gracefulDisposeTokenSource.Token;
+            : DisposeTokenSource;
+        GracefulDisposeToken = GracefulDisposeTokenSource.Token;
 
         // ReSharper disable once VirtualMemberCallInConstructor
         if (initialize)
-            Initialize(settings);
+            Initialize(options);
     }
 
-    protected override void Initialize(State.Options settings)
+    protected override void Initialize(IStateOptions settings)
     {
         base.Initialize(settings);
-        var computedStateOptions = (Options)settings;
+        var computedStateOptions = (IComputedStateOptions)settings;
         _updateDelayer = computedStateOptions.UpdateDelayer ?? Services.GetRequiredService<IUpdateDelayer>();
 
         // Ideally we want to suppress execution context flow here,
@@ -108,48 +106,100 @@ public abstract class ComputedState<T> : State<T>, IComputedState, IGenericTimeo
             _whenDisposed = UpdateCycleTask ?? Task.CompletedTask;
         }
         GC.SuppressFinalize(this);
-        _disposeTokenSource.CancelAndDisposeSilently();
-        if (!ReferenceEquals(_gracefulDisposeTokenSource, _disposeTokenSource))
-            Timeouts.Generic.AddOrUpdateToEarlier(this, Timeouts.Clock.Now + _gracefulDisposeDelay);
+        DisposeTokenSource.CancelAndDisposeSilently();
+        if (!ReferenceEquals(GracefulDisposeTokenSource, DisposeTokenSource))
+            Timeouts.Generic.AddOrUpdateToEarlier(this, Timeouts.Clock.Now + GracefulDisposeDelay);
     }
 
     // Handles the rest of Dispose
     void IGenericTimeoutHandler.OnTimeout()
-        => _gracefulDisposeTokenSource.CancelAndDisposeSilently();
+        => GracefulDisposeTokenSource.CancelAndDisposeSilently();
 
-    protected virtual Task UpdateCycle()
-        => ComputedStateImpl.UpdateCycle(this, _gracefulDisposeTokenSource);
+    protected virtual async Task UpdateCycle()
+    {
+        var cancellationToken = DisposeToken;
+        try {
+            await Computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
+            while (true) {
+                var snapshot = Snapshot;
+                var computed = snapshot.Computed;
+                if (!computed.IsInvalidated())
+                    await computed.WhenInvalidated(cancellationToken).ConfigureAwait(false);
+
+                await UpdateDelayer.Delay(snapshot.RetryCount, cancellationToken).ConfigureAwait(false);
+
+                if (!snapshot.WhenUpdated().IsCompleted)
+                    // GracefulDisposeToken here allows Update to take some extra after DisposeToken cancellation.
+                    // This, in particular, lets RPC calls to complete, cache entries to populate, etc.
+                    await computed.UpdateUntyped(GracefulDisposeToken).ConfigureAwait(false);
+            }
+        }
+        catch (Exception e) {
+            if (!e.IsCancellationOf(cancellationToken))
+                Log.LogError(e, "UpdateCycle() failed and stopped for {Category}", Category);
+        }
+        finally {
+            GracefulDisposeTokenSource.CancelAndDisposeSilently();
+        }
+    }
 
     public override Computed? GetExistingComputed()
     {
         lock (Lock)
-            return _computingComputed ?? base.GetExistingComputed();
+            return ComputingComputed ?? base.GetExistingComputed();
     }
+
+    protected Task? GetComputeTaskIfDisposed()
+        => ComputedStateImpl.GetComputeTaskIfDisposed(this);
+
+    protected override void OnSetSnapshot(StateSnapshot snapshot, StateSnapshot? prevSnapshot)
+    {
+        // This method is called inside lock (Lock)
+        ComputingComputed = null;
+        base.OnSetSnapshot(snapshot, prevSnapshot);
+    }
+}
+
+public abstract class ComputedState<T> : ComputedState, IState<T>
+{
+    public record Options : StateOptions<T>, IComputedStateOptions
+    {
+        public IUpdateDelayer? UpdateDelayer { get; init; }
+        public bool TryComputeSynchronously { get; init; } = DefaultOptions.TryComputeSynchronously;
+        public bool FlowExecutionContext { get; init; } = DefaultOptions.FlowExecutionContext;
+        public TimeSpan GracefulDisposeDelay { get; init; } = DefaultOptions.GracefulDisposeDelay;
+    }
+
+    public override Type OutputType => typeof(T);
+
+    // IState<T> implementation
+    public new Computed<T> Computed {
+        get => (Computed<T>)UntypedComputed;
+        protected set => UntypedComputed = value;
+    }
+    public T? ValueOrDefault => Computed.ValueOrDefault;
+    public new T Value => Computed.Value;
+    public new T LastNonErrorValue => ((Computed<T>)Snapshot.LastNonErrorComputed).Value;
+
+    // ReSharper disable once ConvertToPrimaryConstructor
+    protected ComputedState(Options options, IServiceProvider services, bool initialize = true)
+        : base(options, services, initialize)
+    {
+        if (CodeKeeper.AlwaysFalse)
+            CodeKeeper.Keep<ComputedStateImpl.GetComputeTaskIfDisposedFactory<T>>();
+    }
+
+    // IResult<T> implementation
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Deconstruct(out T value, out Exception? error)
+        => Computed.Deconstruct(out value, out error);
+    T IConvertibleTo<T>.Convert() => Value;
 
     protected override Computed CreateComputed()
     {
         var computed = new StateBoundComputed<T>(ComputedOptions, this);
         lock (Lock)
-            _computingComputed = computed;
+            ComputingComputed = computed;
         return computed;
-    }
-
-    protected Task<T>? GetComputeTaskIfDisposed()
-    {
-#pragma warning disable MA0022, RCS1210
-        if (!IsDisposed)
-            return null;
-
-        return DisposeToken.IsCancellationRequested
-            ? Task.FromCanceled<T>(DisposeToken)
-            : TaskExt.NewNeverEndingUnreferenced<T>().WaitAsync(DisposeToken);
-#pragma warning restore MA0022, RCS1210
-    }
-
-    protected override void OnSetSnapshot(StateSnapshot snapshot, StateSnapshot? prevSnapshot)
-    {
-        // This method is called inside lock (Lock)
-        _computingComputed = null;
-        base.OnSetSnapshot(snapshot, prevSnapshot);
     }
 }

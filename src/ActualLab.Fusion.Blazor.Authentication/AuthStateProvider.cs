@@ -78,7 +78,7 @@ public sealed class AuthStateProvider : AuthenticationStateProvider, IDisposable
 
     private void OnStateChanged(State state, StateEventKind eventKind)
         => _ = Task.Run(() => {
-            var typedState = (State<AuthState>)state;
+            var typedState = (IState<AuthState>)state;
             Task<AuthState> authStateTask;
             Task<AuthenticationState> authenticationStateTask;
             lock (_lock) {

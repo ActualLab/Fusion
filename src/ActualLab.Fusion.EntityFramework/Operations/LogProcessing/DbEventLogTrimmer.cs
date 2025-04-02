@@ -12,7 +12,7 @@ public class DbEventLogTrimmer<TDbContext>
         public static Options Default { get; set; } = new();
     }
 
-    protected override State<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
+    protected override IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
 
     public override DbLogKind LogKind => DbLogKind.Events;
 

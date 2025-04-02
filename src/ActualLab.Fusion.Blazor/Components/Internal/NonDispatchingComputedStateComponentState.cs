@@ -1,10 +1,10 @@
 namespace ActualLab.Fusion.Blazor.Internal;
 
 public sealed class NonDispatchingComputedStateComponentState<T>(
-    ComputedState<T>.Options settings,
+    ComputedState<T>.Options options,
     ComputedStateComponent<T> component,
     IServiceProvider services
-) : ComputedStateComponentState<T>(settings, component, services)
+) : ComputedStateComponentState<T>(options, component, services)
 {
     public override ComputedStateDispatchMode DispatchMode
         => ComputedStateDispatchMode.None;

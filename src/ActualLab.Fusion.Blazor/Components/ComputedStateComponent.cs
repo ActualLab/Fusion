@@ -3,11 +3,9 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
-#pragma warning disable CA2007
-
-public abstract class ComputedStateComponent<TState> : StatefulComponentBase<ComputedState<TState>>
+public abstract partial class ComputedStateComponent : StatefulComponentBase
 {
-    protected ComputedStateComponentOptions Options { get; set; } = ComputedStateComponent.DefaultOptions;
+    protected ComputedStateComponentOptions Options { get; set; } = DefaultOptions;
 
     public override Task SetParametersAsync(ParameterView parameters)
     {
@@ -30,7 +28,7 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
                 ? CompleteRecomputeAsync(recomputeTask.AsTask())
                 : Task.CompletedTask;
 
-            static async Task CompleteAsync(Task dependency, ComputedState<TState> state, bool mustAwaitForRecompute1) {
+            static async Task CompleteAsync(Task dependency, State state, bool mustAwaitForRecompute1) {
                 await dependency;
                 var recomputeTask1 = state.Recompute();
                 if (mustAwaitForRecompute1 && !recomputeTask1.IsCompleted)
@@ -52,25 +50,6 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
         }
     }
 
-    protected virtual ComputedState<TState>.Options GetStateOptions()
-        => ComputedStateComponent.GetStateOptions<TState>(GetType());
-
-    protected override (ComputedState<TState> State, object? StateOptions) CreateState()
-    {
-        // Synchronizes ComputeState call as per:
-        // https://github.com/servicetitan/Stl.Fusion/issues/202
-        var stateOptions = GetStateOptions();
-        var dispatchMode = Options.CanComputeStateOnThreadPool()
-            ? ComputedStateDispatchMode.None
-            : stateOptions.FlowExecutionContext && DispatcherInfo.IsExecutionContextFlowSupported(this)
-                ? ComputedStateDispatchMode.Dispatch
-                : ComputedStateDispatchMode.DispatchWithExecutionContextFlow;
-        var state = ComputedStateComponentState<TState>.New(dispatchMode, stateOptions, this, Services);
-        return (state, stateOptions);
-    }
-
-    protected internal abstract Task<TState> ComputeState(CancellationToken cancellationToken);
-
     protected override bool ShouldRender()
     {
         var computed = State.Computed;
@@ -80,4 +59,30 @@ public abstract class ComputedStateComponent<TState> : StatefulComponentBase<Com
         // Inconsistent state is rare, so we make this check at last
         return (Options & ComputedStateComponentOptions.RenderInconsistentState) != 0;
     }
+}
+
+public abstract class ComputedStateComponent<T> : ComputedStateComponent, IStatefulComponent<T>
+{
+    protected State UntypedState => base.State;
+    protected new ComputedState<T> State => (ComputedState<T>)base.State;
+    IState<T> IStatefulComponent<T>.State => (IState<T>)base.State;
+
+    protected virtual ComputedState<T>.Options GetStateOptions()
+        => ComputedStateComponent.GetStateOptions<T>(GetType());
+
+    protected override (State State, object? StateInitializeOptions) CreateState()
+    {
+        // Synchronizes ComputeState call as per:
+        // https://github.com/servicetitan/Stl.Fusion/issues/202
+        var stateOptions = GetStateOptions();
+        var dispatchMode = Options.CanComputeStateOnThreadPool()
+            ? ComputedStateDispatchMode.None
+            : stateOptions.FlowExecutionContext && DispatcherInfo.IsExecutionContextFlowSupported(this)
+                ? ComputedStateDispatchMode.Dispatch
+                : ComputedStateDispatchMode.DispatchWithExecutionContextFlow;
+        var state = ComputedStateComponentState<T>.New(dispatchMode, stateOptions, this, Services);
+        return (state, stateOptions);
+    }
+
+    protected internal abstract Task<T> ComputeState(CancellationToken cancellationToken);
 }

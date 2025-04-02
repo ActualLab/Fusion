@@ -1,31 +1,23 @@
 namespace ActualLab.Fusion;
 
-public class StateSnapshot<T>(State<T> state, StateSnapshot<T>? prevSnapshot, Computed<T> computed)
-    : StateSnapshot(state, prevSnapshot, computed)
+public sealed class StateSnapshot
 {
-    public State<T> State => (State<T>)UntypedState;
-    public Computed<T> Computed => (Computed<T>)UntypedComputed;
-    public Computed<T> LastNonErrorComputed => (Computed<T>)UntypedLastNonErrorComputed;
-}
+    private AsyncTaskMethodBuilder _whenUpdatingSource = AsyncTaskMethodBuilderExt.New();
+    private AsyncTaskMethodBuilder _whenUpdatedSource = AsyncTaskMethodBuilderExt.New();
 
-public abstract class StateSnapshot
-{
-    protected AsyncTaskMethodBuilder WhenUpdatingSource = AsyncTaskMethodBuilderExt.New();
-    protected AsyncTaskMethodBuilder WhenUpdatedSource = AsyncTaskMethodBuilderExt.New();
-
-    public readonly State UntypedState;
-    public readonly Computed UntypedComputed;
-    public readonly Computed UntypedLastNonErrorComputed;
-    public int UpdateCount { get; protected init; }
-    public int ErrorCount { get; protected init; }
-    public int RetryCount { get; protected init; }
+    public readonly State State;
+    public readonly Computed Computed;
+    public readonly Computed LastNonErrorComputed;
+    public int UpdateCount { get; }
+    public int ErrorCount { get; }
+    public int RetryCount { get; }
     public bool IsInitial => UpdateCount == 0;
 
-    protected StateSnapshot(State state, StateSnapshot? prevSnapshot, Computed computed)
+    public StateSnapshot(State state, StateSnapshot? prevSnapshot, Computed computed)
     {
-        UntypedState = state;
-        UntypedComputed = computed;
-        UntypedLastNonErrorComputed = computed;
+        State = state;
+        Computed = computed;
+        LastNonErrorComputed = computed;
         if (prevSnapshot == null) {
             UpdateCount = 0;
             ErrorCount = 0;
@@ -35,21 +27,21 @@ public abstract class StateSnapshot
 
         var error = computed.Error;
         if (error == null) {
-            UntypedLastNonErrorComputed = computed;
+            LastNonErrorComputed = computed;
             UpdateCount = 1 + prevSnapshot.UpdateCount;
             ErrorCount = prevSnapshot.ErrorCount;
             RetryCount = 0;
         }
         else if (!computed.IsTransientError(error)) {
             // Non-transient error
-            UntypedLastNonErrorComputed = prevSnapshot.UntypedLastNonErrorComputed;
+            LastNonErrorComputed = prevSnapshot.LastNonErrorComputed;
             UpdateCount = 1 + prevSnapshot.UpdateCount;
             ErrorCount = 1 + prevSnapshot.ErrorCount;
             RetryCount = 0;
         }
         else {
             // Transient error
-            UntypedLastNonErrorComputed = prevSnapshot.UntypedLastNonErrorComputed;
+            LastNonErrorComputed = prevSnapshot.LastNonErrorComputed;
             UpdateCount = 1 + prevSnapshot.UpdateCount;
             ErrorCount = 1 + prevSnapshot.ErrorCount;
             RetryCount = 1 + prevSnapshot.RetryCount;
@@ -57,19 +49,19 @@ public abstract class StateSnapshot
     }
 
     public override string ToString()
-        => $"{GetType().GetName()}({UntypedComputed}, [{UpdateCount} update(s) / {ErrorCount} failure(s)])";
+        => $"{GetType().GetName()}({Computed}, [{UpdateCount} update(s) / {ErrorCount} failure(s)])";
 
     public Task WhenInvalidated(CancellationToken cancellationToken = default)
-        => UntypedComputed.WhenInvalidated(cancellationToken);
-    public Task WhenUpdating() => WhenUpdatingSource.Task;
-    public Task WhenUpdated() => WhenUpdatedSource.Task;
+        => Computed.WhenInvalidated(cancellationToken);
+    public Task WhenUpdating() => _whenUpdatingSource.Task;
+    public Task WhenUpdated() => _whenUpdatedSource.Task;
 
-    protected internal void OnUpdating()
-        => WhenUpdatingSource.TrySetResult();
+    internal void OnUpdating()
+        => _whenUpdatingSource.TrySetResult();
 
-    protected internal void OnUpdated()
+    internal void OnUpdated()
     {
-        WhenUpdatingSource.TrySetResult();
-        WhenUpdatedSource.TrySetResult();
+        _whenUpdatingSource.TrySetResult();
+        _whenUpdatedSource.TrySetResult();
     }
 }

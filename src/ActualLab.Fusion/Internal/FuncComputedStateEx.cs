@@ -5,13 +5,13 @@ public sealed class FuncComputedStateEx<T> : ComputedState<T>
     public Func<ComputedState<T>, CancellationToken, Task<T>> Computer { get; }
 
     public FuncComputedStateEx(
-        Options settings,
+        Options options,
         IServiceProvider services,
         Func<ComputedState<T>, CancellationToken, Task<T>> computer)
-        : base(settings, services, false)
+        : base(options, services, false)
     {
         Computer = computer;
-        Initialize(settings);
+        Initialize(options);
     }
 
     protected override Task Compute(CancellationToken cancellationToken)

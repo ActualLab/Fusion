@@ -13,7 +13,7 @@ public static class StateExt
     }
 
     public static Task<T> Use<T>(
-        this State<T> state, CancellationToken cancellationToken = default)
+        this IState<T> state, CancellationToken cancellationToken = default)
         => (Task<T>)state.Computed.UseUntyped(cancellationToken);
 
     public static void Invalidate(this State state, bool immediately = false)
@@ -51,23 +51,23 @@ public static class StateExt
 
     // When
 
-    public static Task<Computed<T>> When<T>(this State<T> state,
+    public static Task<Computed<T>> When<T>(this IState<T> state,
         Func<T, bool> predicate,
         CancellationToken cancellationToken = default)
         => state.Computed.When(predicate, cancellationToken);
 
-    public static Task<Computed<T>> When<T>(this State<T> state,
+    public static Task<Computed<T>> When<T>(this IState<T> state,
         Func<T, bool> predicate,
         IUpdateDelayer updateDelayer,
         CancellationToken cancellationToken = default)
         => state.Computed.When(predicate, updateDelayer, cancellationToken);
 
-    public static Task<Computed<T>> When<T>(this State<T> state,
+    public static Task<Computed<T>> When<T>(this IState<T> state,
         Func<T, Exception?, bool> predicate,
         CancellationToken cancellationToken = default)
         => state.Computed.When(predicate, cancellationToken);
 
-    public static Task<Computed<T>> When<T>(this State<T> state,
+    public static Task<Computed<T>> When<T>(this IState<T> state,
         Func<T, Exception?, bool> predicate,
         IUpdateDelayer updateDelayer,
         CancellationToken cancellationToken = default)
@@ -76,12 +76,12 @@ public static class StateExt
     // Changes
 
     public static IAsyncEnumerable<Computed<T>> Changes<T>(
-        this State<T> state,
+        this IState<T> state,
         CancellationToken cancellationToken = default)
         => state.Computed.Changes(cancellationToken);
 
     public static IAsyncEnumerable<Computed<T>> Changes<T>(
-        this State<T> state,
+        this IState<T> state,
         IUpdateDelayer updateDelayer,
         CancellationToken cancellationToken = default)
         => state.Computed.Changes(updateDelayer, cancellationToken);
@@ -107,7 +107,7 @@ public static class StateExt
         => state.Computed.WhenSynchronized(cancellationToken);
 
     public static ValueTask<Computed<T>> Synchronize<T>(
-        this State<T> state,
+        this IState<T> state,
         CancellationToken cancellationToken = default)
         => state.Computed.Synchronize(cancellationToken);
 }

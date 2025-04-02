@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Caching;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 
@@ -7,18 +8,10 @@ namespace ActualLab.Fusion;
 #pragma warning disable CA1721
 #pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
 
-public interface IState : IResult, IComputeFunction, IEquatable<State>, IEquatable<IState>
+// Interfaces
+
+public interface IState : IResult, IComputeFunction
 {
-    public interface IOptions
-    {
-        public ComputedOptions ComputedOptions { get; init; }
-        public Action<State>? EventConfigurator { get; init; }
-        public string? Category { get; init; }
-
-        public Result InitialOutput { get; init; }
-        public object? InitialValue { get; init; }
-    }
-
     public StateSnapshot Snapshot { get; }
     public Computed Computed { get; }
     public object? LastNonErrorValue { get; }
@@ -29,32 +22,37 @@ public interface IState : IResult, IComputeFunction, IEquatable<State>, IEquatab
     public event Action<State, StateEventKind>? Updated;
 }
 
+public interface IState<T> : IState, IResult<T>
+{
+    public new Computed<T> Computed { get; }
+    public new T LastNonErrorValue { get; }
+}
+
+// Classes
+
 public abstract class State : ComputedInput, IState
 {
-    public abstract record Options : IState.IOptions
-    {
-        public ComputedOptions ComputedOptions { get; init; } = ComputedOptions.Default;
-        public Action<State>? EventConfigurator { get; init; }
-        public string? Category { get; init; }
-
-        public Result InitialOutput { get; init; }
-        public object? InitialValue {
-            get => InitialOutput.Value;
-            init => InitialOutput = new Result(value, null);
-        }
-    }
-
     private volatile StateSnapshot? _snapshot;
     private string? _category;
 
+    // Protected properties
+
     protected ComputedOptions ComputedOptions { get; private set; } = null!;
+
     protected AsyncLock AsyncLock { get; } = new(LockReentryMode.CheckedFail);
     protected object Lock => AsyncLock;
+
+    [field: AllowNull, MaybeNull]
+    protected Func<Task, object?> GetUntypedTaskResultSynchronously =>
+        field ??= GenericInstanceCache.Get<Func<Task, object?>>(
+            typeof(TaskExt.GetUntypedResultSynchronouslyFactory<>), OutputType);
+
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
-    public IServiceProvider Services { get; }
+    // Public properties
 
+    public IServiceProvider Services { get; }
     public abstract Type OutputType { get; }
 
     public override string Category {
@@ -71,20 +69,20 @@ public abstract class State : ComputedInput, IState
 
     protected Computed UntypedComputed {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _snapshot!.UntypedComputed;
+        get => _snapshot!.Computed;
         set {
             value.AssertConsistencyStateIsNot(ConsistencyState.Computing);
             lock (Lock) {
                 var prevSnapshot = _snapshot;
                 if (prevSnapshot != null) {
-                    if (prevSnapshot.UntypedComputed == value)
+                    if (prevSnapshot.Computed == value)
                         return;
 
-                    prevSnapshot.UntypedComputed.Invalidate();
-                    _snapshot = CreateSnapshot(this, prevSnapshot, value);
+                    prevSnapshot.Computed.Invalidate();
+                    _snapshot = new StateSnapshot(this, prevSnapshot, value);
                 }
                 else
-                    _snapshot = CreateSnapshot(this, null, value);
+                    _snapshot = new StateSnapshot(this, null, value);
                 OnSetSnapshot(_snapshot, prevSnapshot);
             }
         }
@@ -97,17 +95,17 @@ public abstract class State : ComputedInput, IState
 
     public Computed Computed {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _snapshot!.UntypedComputed;
+        get => _snapshot!.Computed;
     }
 
     public object? Value {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _snapshot!.UntypedComputed.Value;
+        get => _snapshot!.Computed.Value;
     }
 
     public object? LastNonErrorValue {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _snapshot!.UntypedLastNonErrorComputed;
+        get => _snapshot!.LastNonErrorComputed;
     }
 
     public Exception? Error {
@@ -129,15 +127,15 @@ public abstract class State : ComputedInput, IState
     public event Action<State, StateEventKind>? Updating;
     public event Action<State, StateEventKind>? Updated;
 
-    protected State(Options settings, IServiceProvider services, bool initialize = true)
+    protected State(IStateOptions options, IServiceProvider services, bool initialize = true)
     {
         Services = services;
-        Initialize(this, RuntimeHelpers.GetHashCode(this));
+        Initialize(this, RuntimeHelpers.GetHashCode(this)); // ComputedInput.Initialize
 
         // ReSharper disable once VirtualMemberCallInConstructor
         if (initialize)
 #pragma warning disable CA2214
-            Initialize(settings);
+            Initialize(options);
 #pragma warning restore CA2214
     }
 
@@ -151,10 +149,6 @@ public abstract class State : ComputedInput, IState
 
     // Equality
 
-    public bool Equals(IState? other)
-        => ReferenceEquals(this, other);
-    public bool Equals(State? other)
-        => ReferenceEquals(this, other);
     public override bool Equals(ComputedInput? other)
         => ReferenceEquals(this, other);
     public override bool Equals(object? obj)
@@ -166,7 +160,7 @@ public abstract class State : ComputedInput, IState
         => ComputedOptions;
 
     public override Computed? GetExistingComputed()
-        => _snapshot?.UntypedComputed;
+        => _snapshot?.Computed;
 
     // IComputedFunction implementation
 
@@ -207,7 +201,7 @@ public abstract class State : ComputedInput, IState
                 using var _ = Computed.BeginCompute(computed);
                 var computeTask = Compute(cancellationToken);
                 await computeTask.ConfigureAwait(false);
-                var result = ExtractComputeTaskResult(computeTask);
+                var result = GetUntypedTaskResultSynchronously(computeTask);
                 computed.TrySetValue(result);
                 break;
             }
@@ -231,23 +225,21 @@ public abstract class State : ComputedInput, IState
     }
 
     protected abstract Computed CreateComputed();
-    protected abstract StateSnapshot CreateSnapshot(State state, StateSnapshot? prevSnapshot, Computed computed);
     protected abstract Task Compute(CancellationToken cancellationToken);
-    protected abstract object? ExtractComputeTaskResult(Task computeTask);
 
     // Life cycle / OnXxx methods
 
-    protected virtual void Initialize(Options settings)
+    protected virtual void Initialize(IStateOptions options)
     {
-        _category = settings.Category;
-        ComputedOptions = settings.ComputedOptions;
-        settings.EventConfigurator?.Invoke(this);
+        _category = options.Category;
+        ComputedOptions = options.ComputedOptions;
+        options.EventConfigurator?.Invoke(this);
 
         var computed = CreateComputed();
         if (_snapshot != null)
             return; // CreateComputed sets Computed, if overriden (e.g. in MutableState)
 
-        computed.TrySetOutput(settings.InitialOutput);
+        computed.TrySetOutput(options.InitialOutput);
         UntypedComputed = computed;
         computed.Invalidate();
     }
@@ -255,7 +247,7 @@ public abstract class State : ComputedInput, IState
     protected internal virtual void OnInvalidated(Computed computed)
     {
         var snapshot = Snapshot;
-        if (computed != snapshot.UntypedComputed)
+        if (computed != snapshot.Computed)
             return;
 
         try {
@@ -269,7 +261,7 @@ public abstract class State : ComputedInput, IState
     protected virtual void OnUpdating(Computed computed)
     {
         var snapshot = Snapshot;
-        if (computed != snapshot.UntypedComputed)
+        if (computed != snapshot.Computed)
             return;
 
         try {

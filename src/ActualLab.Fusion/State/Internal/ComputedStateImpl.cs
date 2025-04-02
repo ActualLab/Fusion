@@ -1,36 +1,36 @@
+using ActualLab.Caching;
+
 namespace ActualLab.Fusion.Internal;
 
 public static class ComputedStateImpl
 {
-    public static async Task UpdateCycle(
-        IComputedState state,
-        CancellationTokenSource? gracefulDisposeTokenSource)
+    public static Task? GetComputeTaskIfDisposed(ComputedState state)
     {
-        var cancellationToken = state.DisposeToken;
-        try {
-            await state.Computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
-            while (true) {
-                var snapshot = state.Snapshot;
-                var computed = snapshot.UntypedComputed;
-                if (!computed.IsInvalidated())
-                    await computed.WhenInvalidated(cancellationToken).ConfigureAwait(false);
+#pragma warning disable MA0022, RCS1210
+        if (!state.IsDisposed)
+            return null;
 
-                await state.UpdateDelayer.Delay(snapshot.RetryCount, cancellationToken).ConfigureAwait(false);
+        return GenericInstanceCache
+            .Get<Func<CancellationToken, Task>>(
+                typeof(TaskExt.GetUntypedResultSynchronouslyFactory<>),
+                state.OutputType)
+            .Invoke(state.DisposeToken);
+#pragma warning restore MA0022, RCS1210
+    }
 
-                if (!snapshot.WhenUpdated().IsCompleted)
-                    // GracefulDisposeToken here allows Update to take some extra after DisposeToken cancellation.
-                    // This, in particular, lets RPC calls to complete, cache entries to populate, etc.
-                    await computed.UpdateUntyped(state.GracefulDisposeToken).ConfigureAwait(false);
-            }
-        }
-        catch (Exception e) {
-            if (!e.IsCancellationOf(cancellationToken))
-                state.Services
-                    .LogFor(state.GetType())
-                    .LogError(e, "UpdateCycle() failed and stopped for {Category}", state.Category);
-        }
-        finally {
-            gracefulDisposeTokenSource.CancelAndDisposeSilently();
+    // Nested types
+
+    public sealed class GetComputeTaskIfDisposedFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    {
+        public override object Generate()
+        {
+            if (typeof(T) == typeof(ValueVoid))
+                throw ActualLab.Internal.Errors.InternalError("Generic type parameter is void type.");
+
+            return static (CancellationToken disposeToken)
+                => disposeToken.IsCancellationRequested
+                    ? (Task)Task.FromCanceled<T>(disposeToken)
+                    : TaskExt.NewNeverEndingUnreferenced<T>().WaitAsync(disposeToken);
         }
     }
 }

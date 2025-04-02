@@ -7,8 +7,8 @@ public abstract class DispatchingComputedStateComponentState<T>: ComputedStateCo
     protected readonly Dispatcher Dispatcher;
     protected readonly Func<Task<T>> ComputeTaskFactory;
 
-    protected DispatchingComputedStateComponentState(Options settings, ComputedStateComponent<T> component, IServiceProvider services)
-        : base(settings, component, services)
+    protected DispatchingComputedStateComponentState(Options options, ComputedStateComponent<T> component, IServiceProvider services)
+        : base(options, component, services)
     {
         Dispatcher = component.GetDispatcher();
         // We cache this delegate to avoid its allocation on per-compute basis.
@@ -16,6 +16,11 @@ public abstract class DispatchingComputedStateComponentState<T>: ComputedStateCo
         // so we assume here that ComputeState:
         // - Is either called from UpdateCycle only,
         // - Or its other callers assume it may fail due to GracefulDisposeToken cancellation.
-        ComputeTaskFactory = () => GetComputeTaskIfDisposed() ?? Component.ComputeState(GracefulDisposeToken);
+        ComputeTaskFactory = () => {
+            var computeTaskIfDisposed = GetComputeTaskIfDisposed();
+            return computeTaskIfDisposed != null
+                ? (Task<T>)computeTaskIfDisposed
+                : Component.ComputeState(GracefulDisposeToken);
+        };
     }
 }

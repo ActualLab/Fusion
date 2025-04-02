@@ -10,11 +10,11 @@ public class MutableStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
         var factory = CreateServices().StateFactory();
 
         var ms1 = factory.NewMutable<string>("A");
-        ms1.Updated += (s, _) => Out.WriteLine($"ms1 = {((State<string>)s).ValueOrDefault}");
+        ms1.Updated += (s, _) => Out.WriteLine($"ms1 = {((IState<string>)s).ValueOrDefault}");
         ms1.Value.Should().Be("A");
 
         var ms2 = factory.NewMutable<string>("B");
-        ms2.Updated += (s, _)  => Out.WriteLine($"ms2 = {((State<string>)s).ValueOrDefault}");
+        ms2.Updated += (s, _)  => Out.WriteLine($"ms2 = {((IState<string>)s).ValueOrDefault}");
         ms2.Value.Should().Be("B");
 
         var cs = factory.NewComputed<string>(

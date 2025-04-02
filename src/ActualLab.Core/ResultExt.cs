@@ -8,14 +8,7 @@ namespace ActualLab;
 /// </summary>
 public static class ResultExt
 {
-    // IsValueUntyped, IsValue
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsValueUntyped(this Result result, out object? value)
-    {
-        (value, var error) = result;
-        return error == null;
-    }
+    // IsValue
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsValue<T>(this Result<T> result, [MaybeNullWhen(false)] out T value)
@@ -45,19 +38,35 @@ public static class ResultExt
         return error == null;
     }
 
-    // ToUntypedResult
+    // IsValueUntyped
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result ToUntypedResult(this Result result)
-        => result;
+    public static bool IsValueUntyped(this Result result, out object? value)
+    {
+        (value, var error) = result;
+        return error == null;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result ToUntypedResult(this IResult result)
-        => new(result.GetUntypedValueOrErrorBox());
+    public static bool IsValueUntyped(this IResult result, out object? value)
+    {
+        (value, var error) = result;
+        return error == null;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result ToUntypedResult<T>(this Result<T> result)
-        => new(result.GetUntypedValueOrErrorBox());
+    public static bool IsValueUntyped(this Result result, out object? value, [NotNullWhen(false)] out Exception? error)
+    {
+        (value, error) = result;
+        return error == null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsValueUntyped(this IResult result, out object? value, [NotNullWhen(false)] out Exception? error)
+    {
+        (value, error) = result;
+        return error == null;
+    }
 
     // ToTypedResult
 
@@ -86,6 +95,20 @@ public static class ResultExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> ToTypedResult<T>(this IResult<T> result)
         => new(result.ValueOrDefault!, result.Error);
+
+    // ToUntypedResult
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result ToUntypedResult(this Result result)
+        => result;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result ToUntypedResult(this IResult result)
+        => new(result.GetUntypedValueOrErrorBox());
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result ToUntypedResult<T>(this Result<T> result)
+        => new(result.GetUntypedValueOrErrorBox());
 
     // ToTask
 

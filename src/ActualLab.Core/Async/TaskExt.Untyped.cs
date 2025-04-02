@@ -63,11 +63,6 @@ public static partial class TaskExt
             .Get<Func<Task, IResult>>(typeof(ToTypedResultSynchronouslyFactory<>), resultType)
             .Invoke(task);
 
-    public static Task<IResult> ToTypedResultAsync(this Task task, Type resultType)
-        => task.ContinueWith(
-            t => t.ToTypedResultSynchronously(resultType),
-            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-
     // ToUntypedXxx
 
     public static ValueTask<object?> ToUntypedValueTask(this Task task, Type resultType)
@@ -81,10 +76,13 @@ public static partial class TaskExt
             .Get<Func<Task, Result>>(typeof(ToUntypedResultSynchronouslyFactory<>), resultType)
             .Invoke(task);
 
-    public static Task<Result> ToUntypedResultAsync(this Task task, Type resultType)
-        => task.ContinueWith(
-            t => t.ToUntypedResultSynchronously(resultType),
-            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    // GetUntypedResultXxx
+
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "FromTypedTaskInternal is preserved")]
+    public static object? GetUntypedResultSynchronously(this Task task, Type resultType)
+        => GenericInstanceCache
+            .Get<Func<Task, object?>>(typeof(GetUntypedResultSynchronouslyFactory<>), resultType)
+            .Invoke(task);
 
     // Nested types
 
@@ -175,6 +173,21 @@ public static partial class TaskExt
                     catch (Exception e) {
                         return new Result(null, e);
                     }
+                };
+    }
+
+    public sealed class GetUntypedResultSynchronouslyFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    {
+        public override object Generate()
+            => typeof(T) == typeof(ValueVoid)
+                ? static (Task source) => {
+                    _ = source.AssertCompleted();
+                    source.GetAwaiter().GetResult();
+                    return (object?)null;
+                }
+                : static (Task source) => {
+                    _ = source.AssertCompleted();
+                    return (object?)((Task<T>)source).GetAwaiter().GetResult();
                 };
     }
 }

@@ -20,7 +20,7 @@ public abstract class MixedStateComponent<TState, TMutableState> : ComputedState
             throw Errors.AlreadyInitialized(nameof(MutableState));
 
         MutableState = mutableState ?? throw new ArgumentNullException(nameof(mutableState));
-        mutableState.Updated += (_, _) => _ = State.Recompute();
+        mutableState.Updated += (_, _) => _ = UntypedState.Recompute();
     }
 
     protected virtual string GetMutableStateCategory()
