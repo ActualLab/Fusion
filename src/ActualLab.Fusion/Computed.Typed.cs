@@ -5,6 +5,8 @@ namespace ActualLab.Fusion;
 
 public abstract class Computed<T> : Computed, IResult<T>
 {
+    public static readonly Result DefaultResult = new(default(T));
+
     public new Result<T> Output => base.Output.ToTypedResult<T>();
     public new T Value => (T)base.Output.Value!;
     public T? ValueOrDefault {
@@ -18,7 +20,7 @@ public abstract class Computed<T> : Computed, IResult<T>
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected Computed(ComputedOptions options, ComputedInput input)
-        : base(options, input, Result.Default<T>())
+        : base(options, input, DefaultResult)
     { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

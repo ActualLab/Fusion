@@ -140,9 +140,6 @@ public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
         = typeof(Result).GetMethod(nameof(ErrorInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result Default<T>() => Cache<T>.DefaultUntyped;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> New<T>(T value, Exception? error = null) => new(value, error);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> NewError<T>(Exception error) => new(default!, error);
@@ -256,13 +253,6 @@ public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
     private static IResult ErrorInternal<T>(Exception error)
         // ReSharper disable once HeapView.BoxingAllocation
         => new Result<T>(default!, error);
-
-    // Nested types
-
-    private static class Cache<T>
-    {
-        public static readonly Result DefaultUntyped = new(default(T));
-    }
 }
 
 /// <summary>
