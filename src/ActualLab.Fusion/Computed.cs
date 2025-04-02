@@ -29,7 +29,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
     private volatile int _state;
     private volatile ComputedFlags _flags;
     private volatile int _lastKeepAliveSlot;
-    private Result _untypedOutput = output;
+    private Result _output = output;
     private RefHashSetSlim3<Computed> _dependencies;
     private HashSetSlim3<(ComputedInput Input, ulong Version)> _dependants;
     // ReSharper disable once InconsistentNaming
@@ -65,7 +65,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
-            return _untypedOutput;
+            return _output;
         }
     }
 
@@ -278,7 +278,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
                 return false;
 
             ConsistencyState = ConsistencyState.Consistent;
-            _untypedOutput = output;
+            _output = output;
             flags = Flags;
         }
 

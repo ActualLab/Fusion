@@ -1,12 +1,18 @@
 using ActualLab.Conversion;
+using ActualLab.Internal;
 
 namespace ActualLab.Fusion;
 
 public abstract class Computed<T> : Computed, IResult<T>
 {
     public new Result<T> Output => base.Output.ToTypedResult<T>();
-    public new T Value => Output.Value;
-    public T? ValueOrDefault => Output.ValueOrDefault;
+    public new T Value => (T)base.Output.Value!;
+    public T? ValueOrDefault {
+        get {
+            var output = base.Output.GetUntypedValueOrErrorBox();
+            return output is ErrorBox ? default : (T)output!;
+        }
+    }
 
     // Constructors
 
