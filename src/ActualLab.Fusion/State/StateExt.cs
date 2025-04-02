@@ -4,7 +4,7 @@ public static class StateExt
 {
     // Computed-like methods
 
-    public static ValueTask Update(this State state, CancellationToken cancellationToken = default)
+    public static ValueTask Update(this IState state, CancellationToken cancellationToken = default)
     {
         var valueTask = state.Computed.UpdateUntyped(cancellationToken);
         return valueTask.IsCompletedSuccessfully
@@ -16,10 +16,10 @@ public static class StateExt
         this IState<T> state, CancellationToken cancellationToken = default)
         => (Task<T>)state.Computed.UseUntyped(cancellationToken);
 
-    public static void Invalidate(this State state, bool immediately = false)
+    public static void Invalidate(this IState state, bool immediately = false)
         => state.Computed.Invalidate(immediately);
 
-    public static ValueTask Recompute(this State state, CancellationToken cancellationToken = default)
+    public static ValueTask Recompute(this IState state, CancellationToken cancellationToken = default)
     {
         state.Computed.Invalidate(true);
         return state.Update(cancellationToken);
@@ -27,7 +27,7 @@ public static class StateExt
 
     // Add/RemoveEventHandler
 
-    public static void AddEventHandler(this State state,
+    public static void AddEventHandler(this IState state,
         StateEventKind eventFilter, Action<State, StateEventKind> handler)
     {
         if ((eventFilter & StateEventKind.Invalidated) != 0)
@@ -38,7 +38,7 @@ public static class StateExt
             state.Updated += handler;
     }
 
-    public static void RemoveEventHandler(this State state,
+    public static void RemoveEventHandler(this IState state,
         StateEventKind eventFilter, Action<State, StateEventKind> handler)
     {
         if ((eventFilter & StateEventKind.Invalidated) != 0)
@@ -88,7 +88,7 @@ public static class StateExt
 
     // WhenNonInitial
 
-    public static Task WhenNonInitial(this State state)
+    public static Task WhenNonInitial(this IState state)
     {
         if (state is IMutableState)
             return Task.CompletedTask;
@@ -102,7 +102,7 @@ public static class StateExt
     // WhenSynchronized & Synchronize
 
     public static Task WhenSynchronized(
-        this State state,
+        this IState state,
         CancellationToken cancellationToken = default)
         => state.Computed.WhenSynchronized(cancellationToken);
 

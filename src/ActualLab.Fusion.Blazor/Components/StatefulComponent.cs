@@ -60,6 +60,17 @@ public abstract class StatefulComponentBase : FusionComponentBase, IStatefulComp
     }
 
     protected void SetState(
+        IState state,
+        StateEventKind stateChangedEventKind = StateEventKind.Updated)
+        => SetState((State)state, null, stateChangedEventKind);
+
+    protected void SetState(
+        IState state,
+        object? stateInitializeOptions,
+        StateEventKind stateChangedEventKind = StateEventKind.Updated)
+        => SetState((State)state, stateInitializeOptions, stateChangedEventKind);
+
+    protected void SetState(
         State state,
         StateEventKind stateChangedEventKind = StateEventKind.Updated)
         => SetState(state, null, stateChangedEventKind);
