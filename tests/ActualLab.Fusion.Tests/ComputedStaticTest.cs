@@ -28,7 +28,8 @@ public class ComputedStaticTest(ITestOutputHelper @out) : TestBase(@out)
         c.Value.s.Should().BeNull();
         c.Value.delta.Should().Be(TimeSpan.Zero);
 
-        c = await c.Update().When(x => x.delta > TimeSpan.FromSeconds(5));
+        c = await c.Update();
+        c = await c.When(x => x.delta > TimeSpan.FromSeconds(5));
         c.Value.s.Should().Be("xxx");
     }
 

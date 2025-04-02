@@ -16,7 +16,7 @@ public class StateBoundComputed<T> : Computed<T>, IStateBoundComputed
         ComputedRegistry.Instance.PseudoRegister(this);
     }
 
-    protected StateBoundComputed(ComputedOptions options, State state, Result<T> output, bool isConsistent)
+    protected StateBoundComputed(ComputedOptions options, State state, Result output, bool isConsistent)
         : base(options, state, output, isConsistent)
     {
         State = state;

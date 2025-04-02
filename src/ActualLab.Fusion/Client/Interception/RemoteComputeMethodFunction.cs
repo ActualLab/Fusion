@@ -28,7 +28,7 @@ public sealed class RemoteComputeMethodFunction<T>(
         => new ReplicaComputed<T>(ComputedOptions, input);
 
     protected override Computed NewRemoteComputed(ComputedOptions options, ComputeMethodInput input, Result output, RpcCacheEntry? cacheEntry, RpcOutboundComputeCall? call = null)
-        => new RemoteComputed<T>(options, input, output.ToTypedResult<T>(), cacheEntry, call);
+        => new RemoteComputed<T>(options, input, output, cacheEntry, call);
 
 #if NET5_0_OR_GREATER
     protected override async Task<T> GetProduceValuePromiseWithSynchronizer(

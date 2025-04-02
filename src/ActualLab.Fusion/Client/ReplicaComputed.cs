@@ -20,7 +20,7 @@ public class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaComputed
         : base(options, input)
     { }
 
-    protected ReplicaComputed(ComputedOptions options, ComputeMethodInput input, Result<T> output, bool isConsistent = true)
+    protected ReplicaComputed(ComputedOptions options, ComputeMethodInput input, Result output, bool isConsistent = true)
         : base(options, input, output, isConsistent)
     { }
 

@@ -25,40 +25,4 @@ public static class ComputedSourceExt
         source.Computed.Invalidate(true);
         return source.Update(cancellationToken);
     }
-
-    // When
-
-    public static Task<Computed<T>> When<T>(this ComputedSource<T> source,
-        Func<T, bool> predicate,
-        CancellationToken cancellationToken = default)
-        => source.Computed.When(predicate, cancellationToken);
-
-    public static Task<Computed<T>> When<T>(this ComputedSource<T> source,
-        Func<T, bool> predicate,
-        IUpdateDelayer updateDelayer,
-        CancellationToken cancellationToken = default)
-        => source.Computed.When(predicate, updateDelayer, cancellationToken);
-
-    public static Task<Computed<T>> When<T>(this ComputedSource<T> source,
-        Func<T, Exception?, bool> predicate,
-        CancellationToken cancellationToken = default)
-        => source.Computed.When(predicate, cancellationToken);
-
-    public static Task<Computed<T>> When<T>(this ComputedSource<T> source,
-        Func<T, Exception?, bool> predicate,
-        IUpdateDelayer updateDelayer,
-        CancellationToken cancellationToken = default)
-        => source.Computed.When(predicate, updateDelayer, cancellationToken);
-
-    // Changes
-
-    public static IAsyncEnumerable<Computed<T>> Changes<T>(
-        this ComputedSource<T> source,
-        CancellationToken cancellationToken = default)
-        => source.Computed.Changes(cancellationToken);
-    public static IAsyncEnumerable<Computed<T>> Changes<T>(
-        this ComputedSource<T> source,
-        IUpdateDelayer updateDelayer,
-        CancellationToken cancellationToken = default)
-        => source.Computed.Changes(updateDelayer, cancellationToken);
 }

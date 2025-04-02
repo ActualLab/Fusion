@@ -19,7 +19,7 @@ public sealed class ComputedSourceComputed<T> : Computed<T>, IComputedSourceComp
 
     public ComputedSourceComputed(
         ComputedOptions options, ComputedSource<T> source,
-        Result<T> output, bool isConsistent)
+        Result output, bool isConsistent)
         : base(options, source, output, isConsistent)
     {
         Source = source;

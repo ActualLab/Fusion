@@ -201,8 +201,8 @@ public abstract class State : ComputedInput, IState
                 using var _ = Computed.BeginCompute(computed);
                 var computeTask = Compute(cancellationToken);
                 await computeTask.ConfigureAwait(false);
-                var result = GetUntypedTaskResultSynchronously(computeTask);
-                computed.TrySetValue(result);
+                var value = GetUntypedTaskResultSynchronously(computeTask);
+                computed.TrySetValue(value);
                 break;
             }
             catch (Exception e) {

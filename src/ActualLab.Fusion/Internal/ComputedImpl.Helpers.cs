@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Fusion.Client;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 
@@ -44,7 +45,8 @@ public static partial class ComputedImpl
             // CallOptions.Invalidate is:
             // - always paired with CallOptions.GetExisting
             // - never paired with CallOptions.Capture
-            existing.InvalidateFromCall();
+            if (existing is not IRemoteComputed)
+                existing.Invalidate();
             return true;
         }
 

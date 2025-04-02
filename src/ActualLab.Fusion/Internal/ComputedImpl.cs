@@ -19,10 +19,6 @@ public static partial class ComputedImpl
     // Invalidation
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void InvalidateFromCall(Computed computed)
-        => computed.InvalidateFromCall();
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void StartAutoInvalidation(Computed computed)
         => computed.StartAutoInvalidation();
 

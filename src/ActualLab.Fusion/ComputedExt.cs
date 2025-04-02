@@ -65,72 +65,9 @@ public static partial class ComputedExt
         };
     }
 
-    // Perf: a copy of above method requiring no cast to interface
-    public static void Invalidate<T>(this Computed<T> computed, TimeSpan delay, bool? usePreciseTimer = null)
-    {
-        if (delay == TimeSpan.MaxValue) // No invalidation
-            return;
-
-        if (delay <= TimeSpan.Zero) { // Instant invalidation
-            computed.Invalidate();
-            return;
-        }
-
-        var bPrecise = usePreciseTimer ?? delay <= Computed.PreciseInvalidationDelayThreshold;
-        if (!bPrecise) {
-            Timeouts.Generic.AddOrUpdateToEarlier(computed, Timeouts.Clock.Now + delay);
-            computed.Invalidated += static c => Timeouts.Generic.Remove((IGenericTimeoutHandler)c);
-            return;
-        }
-
-        // CancellationTokenSource's continuations don't need the ExecutionContext,
-        // plus it's a good thing to ditch it here to avoid possible memory leaks.
-        using var _ = ExecutionContextExt.TrySuppressFlow();
-        var cts = new CancellationTokenSource(delay);
-        var registration = cts.Token.Register(() => {
-            // No need to schedule this via Task.Run, since this code is
-            // either invoked from Invalidate method (via Invalidated handler),
-            // so Invalidate() call will do nothing & return immediately,
-            // or it's invoked via one of timer threads, i.e. where it's
-            // totally fine to invoke Invalidate directly as well.
-            computed.Invalidate(true);
-            cts.Dispose();
-        });
-        computed.Invalidated += _ => {
-            try {
-                if (!cts.IsCancellationRequested)
-                    cts.Cancel(true);
-            }
-            catch {
-                // Intended: this method should never throw any exceptions
-            }
-            finally {
-                registration.Dispose();
-                cts.Dispose();
-            }
-        };
-    }
-
     // WhenInvalidated
 
     public static Task WhenInvalidated(this Computed computed, CancellationToken cancellationToken = default)
-    {
-        if (computed.ConsistencyState == ConsistencyState.Invalidated)
-            return Task.CompletedTask;
-
-        var tcs = AsyncTaskMethodBuilderExt.New();
-        if (cancellationToken.CanBeCanceled) {
-            cancellationToken.ThrowIfCancellationRequested();
-            return new WhenInvalidatedClosure(tcs, computed, cancellationToken).Task;
-        }
-
-        // No way to cancel / unregister the handler here
-        computed.Invalidated += _ => tcs.TrySetResult();
-        return tcs.Task;
-    }
-
-    // Perf: a copy of above method requiring no cast to interface
-    public static Task WhenInvalidated<T>(this Computed<T> computed, CancellationToken cancellationToken = default)
     {
         if (computed.ConsistencyState == ConsistencyState.Invalidated)
             return Task.CompletedTask;
@@ -160,7 +97,7 @@ public static partial class ComputedExt
     {
         while (true) {
             if (!computed.IsConsistent())
-                computed = await computed.Update<T>(cancellationToken).ConfigureAwait(false);
+                computed = await computed.Update(cancellationToken).ConfigureAwait(false);
             if (predicate.Invoke(computed.Value))
                 return computed;
 
@@ -191,38 +128,27 @@ public static partial class ComputedExt
         }
     }
 
-    // When w/ computedTask
+    // WhenUntyped
 
-    public static Task<Computed<T>> When<T>(
-        this ValueTask<Computed<T>> computedTask,
-        Func<T, bool> predicate,
+    public static Task<Computed> WhenUntyped(this Computed computed,
+        Func<Computed, bool> predicate,
         CancellationToken cancellationToken = default)
-        => computedTask.When(predicate, FixedDelayer.NextTick, cancellationToken);
+        => computed.WhenUntyped(predicate, FixedDelayer.NextTick, cancellationToken);
 
-    public static async Task<Computed<T>> When<T>(
-        this ValueTask<Computed<T>> computedTask,
-        Func<T, bool> predicate,
+    public static async Task<Computed> WhenUntyped(this Computed computed,
+        Func<Computed, bool> predicate,
         IUpdateDelayer updateDelayer,
         CancellationToken cancellationToken = default)
     {
-        var computed = await computedTask.ConfigureAwait(false);
-        return await computed.When(predicate, updateDelayer, cancellationToken).ConfigureAwait(false);
-    }
+        while (true) {
+            if (!computed.IsConsistent())
+                computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
+            if (predicate.Invoke(computed))
+                return computed;
 
-    public static Task<Computed<T>> When<T>(
-        this ValueTask<Computed<T>> computedTask,
-        Func<T, Exception?, bool> predicate,
-        CancellationToken cancellationToken = default)
-        => computedTask.When(predicate, FixedDelayer.NextTick, cancellationToken);
-
-    public static async Task<Computed<T>> When<T>(
-        this ValueTask<Computed<T>> computedTask,
-        Func<T, Exception?, bool> predicate,
-        IUpdateDelayer updateDelayer,
-        CancellationToken cancellationToken = default)
-    {
-        var computed = await computedTask.ConfigureAwait(false);
-        return await computed.When(predicate, updateDelayer, cancellationToken).ConfigureAwait(false);
+            await computed.WhenInvalidated(cancellationToken).ConfigureAwait(false);
+            await updateDelayer.Delay(0, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     // Changes
@@ -240,6 +166,33 @@ public static partial class ComputedExt
         var retryCount = 0;
         while (true) {
             computed = (Computed<T>)await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
+            yield return computed;
+
+            await computed.WhenInvalidated(cancellationToken).ConfigureAwait(false);
+
+            var hasTransientError = computed.Error is { } error && computed.IsTransientError(error);
+            retryCount = hasTransientError ? retryCount + 1 : 0;
+
+            await updateDelayer.Delay(retryCount, cancellationToken).ConfigureAwait(false);
+        }
+        // ReSharper disable once IteratorNeverReturns
+    }
+
+    // ChangesUntyped
+
+    public static IAsyncEnumerable<Computed> ChangesUntyped(
+        this Computed computed,
+        CancellationToken cancellationToken = default)
+        => computed.ChangesUntyped(FixedDelayer.NextTick, cancellationToken);
+
+    public static async IAsyncEnumerable<Computed> ChangesUntyped(
+        this Computed computed,
+        IUpdateDelayer updateDelayer,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var retryCount = 0;
+        while (true) {
+            computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
             yield return computed;
 
             await computed.WhenInvalidated(cancellationToken).ConfigureAwait(false);

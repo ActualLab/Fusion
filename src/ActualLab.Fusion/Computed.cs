@@ -293,10 +293,6 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         return true;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected internal virtual void InvalidateFromCall()
-        => Invalidate();
-
     [MethodImpl(MethodImplOptions.NoInlining)]
     protected internal void StartAutoInvalidation()
     {

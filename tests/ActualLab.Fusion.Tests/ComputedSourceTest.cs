@@ -8,32 +8,32 @@ public class ComputedSourceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         var services = CreateServices();
 
         var id = 0;
-        var ci = new ComputedSource<int>(services,
+        var cs = new ComputedSource<int>(services,
             -1,
             (_, _) => {
                 var value = Interlocked.Increment(ref id);
                 Out.WriteLine($"Computed: {value}");
-                return new ValueTask<int>(value);
+                return Task.FromResult(value);
             });
 
-        ci.Computed.IsConsistent().Should().BeFalse();
-        ci.Computed.Value.Should().Be(-1);
+        cs.Computed.IsConsistent().Should().BeFalse();
+        cs.Computed.Value.Should().Be(-1);
 
-        (await ci.Use()).Should().Be(1);
-        ci.Computed.IsConsistent().Should().BeTrue();
-        ci.Computed.Value.Should().Be(1);
+        (await cs.Use()).Should().Be(1);
+        cs.Computed.IsConsistent().Should().BeTrue();
+        cs.Computed.Value.Should().Be(1);
 
-        (await ci.Use()).Should().Be(1);
-        ci.Computed.IsConsistent().Should().BeTrue();
-        ci.Computed.Value.Should().Be(1);
+        (await cs.Use()).Should().Be(1);
+        cs.Computed.IsConsistent().Should().BeTrue();
+        cs.Computed.Value.Should().Be(1);
 
-        (await ci.Computed.Use()).Should().Be(1);
-        ci.Computed.Invalidate();
+        (await cs.Computed.Use()).Should().Be(1);
+        cs.Computed.Invalidate();
 
-        (await ci.Use()).Should().Be(2);
-        (await ci.Use()).Should().Be(2);
-        ci.Computed.Value.Should().Be(2);
-        (await ci.Computed.Use()).Should().Be(2);
+        (await cs.Use()).Should().Be(2);
+        (await cs.Use()).Should().Be(2);
+        cs.Computed.Value.Should().Be(2);
+        (await cs.Computed.Use()).Should().Be(2);
     }
 
     [Fact]
@@ -42,23 +42,23 @@ public class ComputedSourceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         var services = CreateServices();
 
         var id = 0;
-        var ci = new ComputedSource<int>(services,
+        var cs = new ComputedSource<int>(services,
             (_, _) => {
                 var value = Interlocked.Increment(ref id);
                 Out.WriteLine($"Computed: {value}");
-                return new ValueTask<int>(value);
+                return Task.FromResult(value);
             }) {
             ComputedOptions = new() {
                 AutoInvalidationDelay = TimeSpan.FromSeconds(0.2),
             }
         };
-        ci.Computed.IsConsistent().Should().BeFalse();
+        cs.Computed.IsConsistent().Should().BeFalse();
 
-        (await ci.Use()).Should().Be(1);
-        ci.Computed.IsConsistent().Should().BeTrue();
+        (await cs.Use()).Should().Be(1);
+        cs.Computed.IsConsistent().Should().BeTrue();
 
-        await ci.When(x => x > 1).WaitAsync(TimeSpan.FromSeconds(1));
-        await ci.Changes().Take(3).CountAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2));
-        (await ci.Use()).Should().BeGreaterThan(3);
+        await cs.Computed.When(x => x > 1).WaitAsync(TimeSpan.FromSeconds(1));
+        await cs.Computed.Changes().Take(3).CountAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2));
+        (await cs.Use()).Should().BeGreaterThan(3);
     }
 }

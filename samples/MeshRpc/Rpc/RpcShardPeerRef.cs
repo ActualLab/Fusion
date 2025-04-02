@@ -54,14 +54,15 @@ public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
 
         _ = Task.Run(async () => {
             Console.WriteLine($"{Key}: created.".Pastel(ConsoleColor.Green));
+            var computed = MeshState.State.Computed;
             if (HostId == "null")
-                await MeshState.State.When(x => x.Hosts.Length > 0).ConfigureAwait(false);
+                await computed.When(x => x.Hosts.Length > 0, CancellationToken.None).ConfigureAwait(false);
             else
-                await MeshState.State.When(x => !x.HostById.ContainsKey(HostId)).ConfigureAwait(false);
+                await computed.When(x => !x.HostById.ContainsKey(HostId), CancellationToken.None).ConfigureAwait(false);
             Cache.TryRemove(ShardRef, lazy);
             await _rerouteTokenSource.CancelAsync();
             Console.WriteLine($"{Key}: rerouted.".Pastel(ConsoleColor.Yellow));
-        });
+        }, CancellationToken.None);
     }
 
     public override RpcPeerConnectionKind GetConnectionKind(RpcHub hub)

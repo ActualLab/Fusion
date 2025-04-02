@@ -24,7 +24,7 @@ public sealed class MeshState
     {
         State = StateFactory.Default.NewMutable(new MeshState());
         _ = Task.Run(async () => {
-            await foreach (var (state, _) in State.Changes())
+            await foreach (var (state, _) in State.Computed.Changes())
                 Console.WriteLine(state.ShardMap.ToString().PastelBg(ConsoleColor.DarkBlue));
         });
     }

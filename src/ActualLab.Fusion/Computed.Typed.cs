@@ -24,8 +24,8 @@ public abstract class Computed<T> : Computed, IResult<T>
     { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected Computed(ComputedOptions options, ComputedInput input, Result<T> output, bool isConsistent)
-        : base(options, input, output.ToUntypedResult())
+    protected Computed(ComputedOptions options, ComputedInput input, Result output, bool isConsistent)
+        : base(options, input, output)
         => ConsistencyState = isConsistent ? ConsistencyState.Consistent : ConsistencyState.Invalidated;
 
     // IResult<T> implementation

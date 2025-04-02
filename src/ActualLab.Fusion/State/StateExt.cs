@@ -25,6 +25,19 @@ public static class StateExt
         return state.Update(cancellationToken);
     }
 
+    // WhenNonInitial
+
+    public static Task WhenNonInitial(this IState state)
+    {
+        if (state is IMutableState)
+            return Task.CompletedTask;
+
+        var snapshot = state.Snapshot;
+        return snapshot.IsInitial
+            ? snapshot.WhenUpdated()
+            : Task.CompletedTask;
+    }
+
     // Add/RemoveEventHandler
 
     public static void AddEventHandler(this IState state,
@@ -48,66 +61,4 @@ public static class StateExt
         if ((eventFilter & StateEventKind.Updated) != 0)
             state.Updated -= handler;
     }
-
-    // When
-
-    public static Task<Computed<T>> When<T>(this IState<T> state,
-        Func<T, bool> predicate,
-        CancellationToken cancellationToken = default)
-        => state.Computed.When(predicate, cancellationToken);
-
-    public static Task<Computed<T>> When<T>(this IState<T> state,
-        Func<T, bool> predicate,
-        IUpdateDelayer updateDelayer,
-        CancellationToken cancellationToken = default)
-        => state.Computed.When(predicate, updateDelayer, cancellationToken);
-
-    public static Task<Computed<T>> When<T>(this IState<T> state,
-        Func<T, Exception?, bool> predicate,
-        CancellationToken cancellationToken = default)
-        => state.Computed.When(predicate, cancellationToken);
-
-    public static Task<Computed<T>> When<T>(this IState<T> state,
-        Func<T, Exception?, bool> predicate,
-        IUpdateDelayer updateDelayer,
-        CancellationToken cancellationToken = default)
-        => state.Computed.When(predicate, updateDelayer, cancellationToken);
-
-    // Changes
-
-    public static IAsyncEnumerable<Computed<T>> Changes<T>(
-        this IState<T> state,
-        CancellationToken cancellationToken = default)
-        => state.Computed.Changes(cancellationToken);
-
-    public static IAsyncEnumerable<Computed<T>> Changes<T>(
-        this IState<T> state,
-        IUpdateDelayer updateDelayer,
-        CancellationToken cancellationToken = default)
-        => state.Computed.Changes(updateDelayer, cancellationToken);
-
-    // WhenNonInitial
-
-    public static Task WhenNonInitial(this IState state)
-    {
-        if (state is IMutableState)
-            return Task.CompletedTask;
-
-        var snapshot = state.Snapshot;
-        return snapshot.IsInitial
-            ? snapshot.WhenUpdated()
-            : Task.CompletedTask;
-    }
-
-    // WhenSynchronized & Synchronize
-
-    public static Task WhenSynchronized(
-        this IState state,
-        CancellationToken cancellationToken = default)
-        => state.Computed.WhenSynchronized(cancellationToken);
-
-    public static ValueTask<Computed<T>> Synchronize<T>(
-        this IState<T> state,
-        CancellationToken cancellationToken = default)
-        => state.Computed.Synchronize(cancellationToken);
 }

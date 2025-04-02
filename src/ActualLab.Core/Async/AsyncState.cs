@@ -94,8 +94,11 @@ public sealed class AsyncState<T>(T value)
     public Task<AsyncState<T>> WhenNext(CancellationToken cancellationToken)
         => _next.Task.WaitAsync(cancellationToken);
 
-    async Task<IAsyncState> IAsyncState<T>.When(Func<T, bool> predicate, CancellationToken cancellationToken)
-        => await When(predicate, cancellationToken).ConfigureAwait(false);
+    Task<IAsyncState> IAsyncState<T>.When(Func<T, bool> predicate, CancellationToken cancellationToken)
+        => When(predicate, cancellationToken)
+            .ContinueWith(
+                static t => (IAsyncState)t.GetAwaiter().GetResult(),
+                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
     public async Task<AsyncState<T>> When(Func<T, bool> predicate, CancellationToken cancellationToken = default)
     {

@@ -115,7 +115,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
                             var m2 = await ms2.Use(ct).ConfigureAwait(false);
                             return m1 + m2;
                         });
-                    var reader = source.Changes(updateDelayer).LastAsync();
+                    var reader = source.Computed.Changes(updateDelayer).LastAsync();
                     return (Source: source, Reader: reader);
                 })
                 .ToArray();
@@ -184,7 +184,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
                     var computed = await Computed.Capture(() => counterSum.Sum(0, 1));
                     var reader = Task.Run(() => {
                          var reader1 = computed.Changes(updateDelayer).LastAsync().AsTask();
-                         var reader2 = source.Changes(updateDelayer).LastAsync().AsTask();
+                         var reader2 = source.Computed.Changes(updateDelayer).LastAsync().AsTask();
                          return Task.WhenAll(reader1, reader2);
                     });
                     return (Source: source, Computed: computed, SourceReader: reader);

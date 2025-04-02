@@ -33,7 +33,7 @@ public static class ComputedTest
         var vTimeout = timeout ?? DefaultTimeout;
         using var timeoutCts = new CancellationTokenSource(vTimeout);
         try {
-            await computedSource.When(x => x, timeoutCts.Token).ConfigureAwait(false);
+            await computedSource.Computed.When(x => x, timeoutCts.Token).ConfigureAwait(false);
         }
         catch (Exception e) when (e.IsCancellationOf(timeoutCts.Token)) {
             lastError?.Throw();
@@ -64,7 +64,7 @@ public static class ComputedTest
         var vTimeout = timeout ?? DefaultTimeout;
         using var timeoutCts = new CancellationTokenSource(vTimeout);
         try {
-            await computedSource.When(x => x, timeoutCts.Token).ConfigureAwait(false);
+            await computedSource.Computed.When(x => x, timeoutCts.Token).ConfigureAwait(false);
         }
         catch (Exception e) when (e.IsCancellationOf(timeoutCts.Token)) {
             lastError?.Throw();

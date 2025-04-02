@@ -44,7 +44,7 @@ async Task AddHosts(CancellationToken cancellationToken = default)
             Console.WriteLine($"Stopping hosts (remaining: {hostCount})");
             var host = meshState.Value.Hosts[0];
             await host.DisposeAsync().ConfigureAwait(false);
-            await meshState.When(x => !x.HostById.ContainsKey(host.Id)).ConfigureAwait(false);
+            await meshState.Computed.When(x => !x.HostById.ContainsKey(host.Id)).ConfigureAwait(false);
         }
     }
 }

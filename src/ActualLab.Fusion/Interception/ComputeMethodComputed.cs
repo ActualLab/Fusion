@@ -11,7 +11,7 @@ public class ComputeMethodComputed<T> : Computed<T>, IComputedMethodComputed
         : base(options, input)
         => ComputedRegistry.Instance.Register(this);
 
-    protected ComputeMethodComputed(ComputedOptions options, ComputeMethodInput input, Result<T> output, bool isConsistent = true)
+    protected ComputeMethodComputed(ComputedOptions options, ComputeMethodInput input, Result output, bool isConsistent = true)
         : base(options, input, output, isConsistent)
     {
         if (!isConsistent)
@@ -23,7 +23,7 @@ public class ComputeMethodComputed<T> : Computed<T>, IComputedMethodComputed
     protected ComputeMethodComputed(
         ComputedOptions options,
         ComputeMethodInput input,
-        Result<T> output,
+        Result output,
         bool isConsistent,
         SkipComputedRegistration _
         ) : base(options, input, output, isConsistent)

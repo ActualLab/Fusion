@@ -23,10 +23,10 @@ public abstract class DbShardWorkerBase<TDbContext>(
 
     protected override Task OnRun(CancellationToken cancellationToken)
     {
-        var changes = WorkerShards
+        var changes = WorkerShards.Computed
             .Changes(cancellationToken)
             .SkipSyncItems(cancellationToken)
-            .Select(x => x.Value.Remove(DbShard.Template));
+            .Select(c => c.Value.Remove(DbShard.Template));
         return changes.RunItemTasks(
             OnRun,
             // (shards, _, _) => Log.LogWarning("New shards: {Shards}", shards.ToDelimitedString()),

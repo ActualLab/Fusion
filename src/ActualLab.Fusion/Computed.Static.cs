@@ -52,26 +52,26 @@ public partial class Computed
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Computed<T> New<T>(
-        Func<CancellationToken, ValueTask<T>> compute)
+        Func<CancellationToken, Task<T>> compute)
         => new ComputedSource<T>(DefaultServices, (_, ct) => compute.Invoke(ct)).Computed;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Computed<T> New<T>(
         Result<T> initialOutput,
-        Func<CancellationToken, ValueTask<T>> compute)
+        Func<CancellationToken, Task<T>> compute)
         => new ComputedSource<T>(DefaultServices, initialOutput, (_, ct) => compute.Invoke(ct)).Computed;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Computed<T> New<T>(
         IServiceProvider services,
-        Func<CancellationToken, ValueTask<T>> compute)
+        Func<CancellationToken, Task<T>> compute)
         => new ComputedSource<T>(services, (_, ct) => compute.Invoke(ct)).Computed;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Computed<T> New<T>(
         IServiceProvider services,
         Result<T> initialOutput,
-        Func<CancellationToken, ValueTask<T>> compute)
+        Func<CancellationToken, Task<T>> compute)
         => new ComputedSource<T>(services, initialOutput, (_, ct) => compute.Invoke(ct)).Computed;
 
     // TryCapture

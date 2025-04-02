@@ -12,10 +12,8 @@ public interface IRemoteComputed : IComputed, IMaybeCachedValue, IDisposable
 {
     public AsyncTaskMethodBuilder<RpcOutboundComputeCall?> CallSource { get; }
     public AsyncTaskMethodBuilder SynchronizedSource { get; }
-    public Task WhenCallBound { get; }
+    public Task<RpcOutboundComputeCall?> WhenCallBound { get; }
     public RpcCacheEntry? CacheEntry { get; }
-
-    public bool BindToCall(RpcOutboundComputeCall? call);
 }
 
 public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
@@ -23,7 +21,6 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
     public AsyncTaskMethodBuilder<RpcOutboundComputeCall?> CallSource { get; }
     public AsyncTaskMethodBuilder SynchronizedSource { get; }
 
-    Task IRemoteComputed.WhenCallBound => CallSource.Task;
     public Task<RpcOutboundComputeCall?> WhenCallBound => CallSource.Task;
     public RpcCacheEntry? CacheEntry { get; }
     public Task WhenSynchronized => SynchronizedSource.Task;
@@ -32,7 +29,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
     public RemoteComputed(
         ComputedOptions options,
         ComputeMethodInput input,
-        Result<T> output,
+        Result output,
         RpcCacheEntry? cacheEntry,
         RpcOutboundComputeCall? call = null)
         : base(options, input, output, true, SkipComputedRegistration.Option)
@@ -49,7 +46,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
 
         // This should go after .Register(this)
         if (call != null)
-            BindWhenInvalidatedToCall(call);
+            this.BindWhenInvalidatedToCall(call);
         StartAutoInvalidation();
     }
 
@@ -65,58 +62,11 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         call?.CompleteAndUnregister(notifyCancelled: !this.IsInvalidated());
     }
 
-    public bool BindToCall(RpcOutboundComputeCall? call)
-    {
-        if (!CallSource.TrySetResult(call)) {
-            // Another call is already bound
-            if (call == null) {
-                // Call from OnInvalidated - we need to cancel the old call
-                var boundCall = WhenCallBound.GetAwaiter().GetResult();
-                boundCall?.SetInvalidated(true);
-            }
-            else {
-                // Normal BindToCall, we cancel the call to ensure its invalidation sub. is gone
-                call.SetInvalidated(true);
-            }
-            return false;
-        }
-        // If we're here, the computed is bound to the specified call
-
-        if (call != null) // Otherwise the null call originates from OnInvalidated
-            BindWhenInvalidatedToCall(call);
-        return true;
-    }
-
-    public void BindWhenInvalidatedToCall(RpcOutboundComputeCall call)
-    {
-        var whenInvalidated = call.WhenInvalidated;
-        if (whenInvalidated.IsCompleted) {
-            // No call (call prepare error - e.g. if there is no such RPC service),
-            // or the call result is already invalidated
-            Invalidate(true);
-            return;
-        }
-
-        _ = whenInvalidated.ContinueWith(
-            _ => Invalidate(true),
-            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-    }
-
     // Protected methods
-
-    protected internal override void InvalidateFromCall()
-    {
-        // If such a computed is invalidated from Invalidation.Begin() block,
-        // more likely than not it's a mistake - i.e. they're just replicas of
-        // computed instances living on another host, so their original instances
-        // have to be invalidated rather than the replicas.
-        //
-        // That's why the best we can do here is to just ignore the call.
-    }
 
     protected override void OnInvalidated()
     {
-        BindToCall(null);
+        this.BindToCall(null);
 
         // PseudoUnregister triggers the Unregistered event in ComputedRegistry w/o actual unregistration.
         // We have to keep this computed in the registry even after the invalidation,

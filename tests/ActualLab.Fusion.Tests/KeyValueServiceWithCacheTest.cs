@@ -145,7 +145,7 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
             });
 
         Out.WriteLine("l5");
-        await state.WhenSynchronized();
+        await state.Computed.WhenSynchronized();
         Out.WriteLine("l6");
         state.Value.Should().Be("a b");
 
@@ -159,11 +159,11 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
 
         await kv.Set("2", "c");
         Out.WriteLine("l11");
-        state.WhenSynchronized().IsCompleted.Should().BeTrue();
+        state.Computed.WhenSynchronized().IsCompleted.Should().BeTrue();
         Out.WriteLine("l12");
         state.Value.Should().Be("a b");
         Out.WriteLine("l13");
-        await state.When(x => x == "a c").WaitAsync(TimeSpan.FromSeconds(1));
+        await state.Computed.When(x => x == "a c").WaitAsync(TimeSpan.FromSeconds(1));
     }
 
     private static async Task<RemoteComputed<string>> GetComputed(IKeyValueService<string> kv, string key)
