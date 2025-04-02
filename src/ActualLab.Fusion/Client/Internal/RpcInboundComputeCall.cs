@@ -11,7 +11,7 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
 {
     public override string DebugTypeName => "<=";
     public override int CompletedStage
-        => UntypedResultTask is { IsCompleted: true } ? (UntypedComputed is { } c && c.IsInvalidated() ? 2 : 1) : 0;
+        => ResultTask is { IsCompleted: true } ? (UntypedComputed is { } c && c.IsInvalidated() ? 2 : 1) : 0;
     public override string CompletedStageName
         => CompletedStage switch { 0 => "", 1 => "ResultReady", _ => "Invalidated" };
     public abstract Computed? UntypedComputed { get; }
@@ -29,7 +29,7 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
     {
         lock (Lock) {
             var existingCall = Context.Peer.InboundCalls.Get(Id);
-            if (existingCall != this || UntypedResultTask == null)
+            if (existingCall != this || ResultTask == null)
                 return null;
 
             return WhenProcessed = completedStage switch {
@@ -42,7 +42,7 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
 
     protected override async Task ProcessStage1Plus(CancellationToken cancellationToken)
     {
-        await UntypedResultTask!.SilentAwait(false);
+        await ResultTask!.SilentAwait(false);
         lock (Lock) {
             if (Trace is { } trace) {
                 trace.Complete(this);
@@ -93,12 +93,6 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
     public Computed<TResult>? Computed { get; private set; }
     public override Computed? UntypedComputed => Computed;
 
-    public Task<TResult>? ResultTask { get; private set; }
-    public override Task? UntypedResultTask {
-        get => ResultTask;
-        set => ResultTask = (Task<TResult>)value!;
-    }
-
 #if NET5_0_OR_GREATER
     protected override async Task<TResult> InvokeTarget()
     {
@@ -143,5 +137,5 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
         => DefaultInvokeTarget<TResult>(middlewares);
 
     protected override Task SendResult()
-        => DefaultSendResult(ResultTask);
+        => DefaultSendResult((Task<TResult>?)ResultTask);
 }

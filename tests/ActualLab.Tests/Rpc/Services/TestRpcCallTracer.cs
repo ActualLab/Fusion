@@ -35,7 +35,7 @@ public class TestRpcCallTracer(RpcMethodDef method) : RpcCallTracer(method)
         public override void Complete(RpcInboundCall call)
         {
             Interlocked.Increment(ref _tracer._exitCount);
-            var resultTask = call.UntypedResultTask;
+            var resultTask = call.ResultTask;
             if (resultTask != null && !resultTask.IsCompletedSuccessfully())
                 Interlocked.Increment(ref _tracer._errorCount);
         }

@@ -117,19 +117,28 @@ public class MutableStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
     }
 
     [Fact]
-    public void InitialOutputTest()
+    public async Task InitialOutputTest()
     {
         var services = CreateServices();
+        var stateFactory = services.StateFactory();
 
         var s0 = new MutableState<int>(new MutableState<int>.Options(), services);
         s0.Value.Should().Be(0);
+        (await s0.Use()).Should().Be(0);
+
         var s1 = new MutableState<string>(new MutableState<string>.Options(), services);
         s1.Value.Should().Be(null);
+        (await s1.Use()).Should().Be(null);
 
-        using var s2 = services.StateFactory().NewComputed(async ct => {
+        using var s2 = stateFactory.NewComputed(async ct => {
             await Task.Delay(100, ct);
             return 1;
         });
         s2.Value.Should().Be(0);
+        (await s2.Use()).Should().Be(1);
+
+        var s3 = stateFactory.NewMutable((bool?)null);
+        s3.Value.Should().Be(null);
+        (await s3.Use()).Should().Be(null);
     }
 }

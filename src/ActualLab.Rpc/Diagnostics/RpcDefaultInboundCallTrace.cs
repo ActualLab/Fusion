@@ -9,7 +9,7 @@ public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Acti
     public override void Complete(RpcInboundCall call)
     {
         if (Activity != null) {
-            var untypedResultTask = call.UntypedResultTask;
+            var untypedResultTask = call.ResultTask;
             if (untypedResultTask == null) {
                 StaticLog.For(typeof(RpcDefaultInboundCallTrace)).LogError("Call doesn't have ResultTask yet");
                 untypedResultTask = Task.CompletedTask;

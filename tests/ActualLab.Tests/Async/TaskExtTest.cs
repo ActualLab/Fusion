@@ -6,6 +6,14 @@ namespace ActualLab.Tests.Async;
 public class TaskExtTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
+    public void FromResultTest()
+    {
+        // Task
+        ((Task<int?>)TaskExt.FromResult((object?)null, typeof(int?))).Result.Should().Be(null);
+        ((Task<int?>)TaskExt.FromResult(1, typeof(int?))).Result.Should().Be((int?)1);
+    }
+
+    [Fact]
     public void FromDefaultResultTest()
     {
         // Task

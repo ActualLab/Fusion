@@ -9,7 +9,7 @@ public readonly record struct RpcCallSummary(
 {
     public RpcCallSummary(RpcInboundCall inboundCall)
         : this(
-            inboundCall.UntypedResultTask?.GetResultKind() ?? TaskResultKind.Incomplete,
+            inboundCall.ResultTask?.GetResultKind() ?? TaskResultKind.Incomplete,
             inboundCall.Context.CreatedAt.Elapsed.TotalMilliseconds)
     { }
 }

@@ -41,4 +41,14 @@ public abstract class Computed<T> : Computed, IResult<T>
     }
 
     T IConvertibleTo<T>.Convert() => Value;
+
+    // Protected methods
+
+    protected override Task CreateValuePromise()
+    {
+        var (value, error) = base.Output;
+        return error == null
+            ? Task.FromResult((T)value!)
+            : Task.FromException<T>(error);
+    }
 }

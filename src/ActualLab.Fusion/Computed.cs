@@ -145,7 +145,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
             return _untypedValuePromise;
 
         lock (Lock)
-            return _untypedValuePromise ??= Output.ToTask(OutputType);
+            return _untypedValuePromise ??= CreateValuePromise();
     }
 
     public async ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default)
@@ -258,6 +258,8 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     protected virtual void OnInvalidated()
         => CancelTimeouts();
+
+    protected abstract Task CreateValuePromise();
 
     // Protected internal methods - you can call them via ComputedImpl
 

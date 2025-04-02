@@ -20,9 +20,9 @@ public abstract class RpcInboundCall : RpcCall
     public readonly RpcInboundContext Context;
     public readonly CancellationToken CallCancelToken;
     public ArgumentList? Arguments;
-    public abstract Task? UntypedResultTask { get; set; }
+    public Task? ResultTask;
     public RpcHeader[]? ResultHeaders;
-    public virtual int CompletedStage => UntypedResultTask is { IsCompleted: true } ? 1 : 0;
+    public virtual int CompletedStage => ResultTask is { IsCompleted: true } ? 1 : 0;
     public virtual string CompletedStageName => CompletedStage == 0 ? "" : "ResultReady";
     public Task? WhenProcessed;
     public RpcInboundCallTrace? Trace;
@@ -134,12 +134,12 @@ public abstract class RpcInboundCall : RpcCall
                     peer.CallLogger.LogInbound(this);
 
                 // Call
-                UntypedResultTask = inboundMiddlewares != null
+                ResultTask = inboundMiddlewares != null
                     ? InvokeTarget(inboundMiddlewares)
                     : InvokeTarget();
             }
             catch (Exception error) {
-                UntypedResultTask = TaskExt.FromException(error, MethodDef.UnwrappedReturnType);
+                ResultTask = TaskExt.FromException(error, MethodDef.UnwrappedReturnType);
             }
             return WhenProcessed = ProcessStage1Plus(cancellationToken);
         }
@@ -149,7 +149,7 @@ public abstract class RpcInboundCall : RpcCall
     {
         lock (Lock) {
             var existingCall = Context.Peer.InboundCalls.Get(Id);
-            if (existingCall != this || UntypedResultTask == null)
+            if (existingCall != this || ResultTask == null)
                 return null;
 
             return WhenProcessed = completedStage switch {
@@ -173,12 +173,12 @@ public abstract class RpcInboundCall : RpcCall
 
     protected virtual Task ProcessStage1Plus(CancellationToken cancellationToken)
     {
-        return UntypedResultTask!.IsCompleted
+        return ResultTask!.IsCompleted
             ? Complete()
             : CompleteAsync();
 
         async Task CompleteAsync() {
-            await UntypedResultTask!.SilentAwait(false);
+            await ResultTask!.SilentAwait(false);
             await Complete().ConfigureAwait(false);
         }
 
@@ -291,16 +291,9 @@ public abstract class RpcInboundCall : RpcCall
 public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
     : RpcInboundCall(context, methodDef)
 {
-    public Task<TResult>? ResultTask { get; private set; }
-
-    public override Task? UntypedResultTask {
-        get => ResultTask;
-        set => ResultTask = (Task<TResult>)value!;
-    }
-
     protected override Task InvokeTarget(RpcInboundMiddlewares middlewares)
         => DefaultInvokeTarget<TResult>(middlewares);
 
     protected override Task SendResult()
-        => DefaultSendResult(ResultTask);
+        => DefaultSendResult((Task<TResult>?)ResultTask);
 }

@@ -144,14 +144,6 @@ public static class ResultExt
             : Task.FromException<T>(error);
     }
 
-    public static Task ToTask(this Result result, Type resultType)
-    {
-        var (value, error) = result;
-        return error == null
-            ? TaskExt.FromResult(value, resultType)
-            : TaskExt.FromException(error, resultType);
-    }
-
     // ToValueTask
 
     public static ValueTask<T> ToValueTask<T>(this Result result)
