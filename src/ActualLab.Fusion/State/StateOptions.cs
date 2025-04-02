@@ -16,20 +16,19 @@ public interface IStateOptions<T> : IStateOptions
     public new T InitialValue { get; init; }
 }
 
-public abstract record StateOptions : IStateOptions
+public abstract record StateOptions(Result InitialOutput) : IStateOptions
 {
     public ComputedOptions ComputedOptions { get; init; } = ComputedOptions.Default;
     public Action<State>? EventConfigurator { get; init; }
     public string? Category { get; init; }
 
-    public Result InitialOutput { get; init; }
     public object? InitialValue {
         get => InitialOutput.Value;
         init => InitialOutput = new Result(value, null);
     }
 }
 
-public record StateOptions<T> : StateOptions, IStateOptions<T>
+public record StateOptions<T>() : StateOptions(Computed<T>.DefaultResult), IStateOptions<T>
 {
     public new Result<T> InitialOutput {
         get => base.InitialOutput.ToTypedResult<T>();
