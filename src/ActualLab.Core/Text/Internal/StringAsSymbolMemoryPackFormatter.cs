@@ -1,5 +1,7 @@
 namespace ActualLab.Text.Internal;
 
+#if !NETSTANDARD2_0
+
 public sealed class StringAsSymbolMemoryPackFormatter : MemoryPackFormatter<string>
 {
     public static readonly StringAsSymbolMemoryPackFormatter Default = new();
@@ -35,3 +37,5 @@ public sealed class StringAsSymbolMemoryPackFormatter : MemoryPackFormatter<stri
             reader.Advance(deltas[i]);
     }
 }
+
+#endif

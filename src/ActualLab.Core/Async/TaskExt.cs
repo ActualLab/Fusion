@@ -88,7 +88,7 @@ public static partial class TaskExt
     public static Exception GetBaseException(this Task task)
     {
         if (task.IsFaulted)
-            return task.Exception.GetBaseException();
+            return task.Exception!.GetBaseException();
         if (task.IsCanceled)
             return new TaskCanceledException(task);
 

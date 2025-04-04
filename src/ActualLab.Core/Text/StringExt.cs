@@ -6,7 +6,11 @@ public static class StringExt
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetOrdinalHashCode(this string source)
+#if !NETSTANDARD2_0
         => source.GetHashCode(StringComparison.Ordinal);
+#else
+        => source.AsSpan().GetXxHash3();
+#endif
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong GetXxHash3L(this string source)

@@ -125,7 +125,7 @@ public sealed partial class Session : IHasId<string>,
     {
         // ReSharper disable once NonReadonlyMemberInGetHashCode
         if (_hashCode == 0) {
-            var hashCode = Id.GetHashCode(StringComparison.Ordinal);
+            var hashCode = Id.GetOrdinalHashCode();
             if (hashCode == 0)
                 hashCode = 1;
             // ReSharper disable once NonReadonlyMemberInGetHashCode
