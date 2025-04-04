@@ -19,7 +19,7 @@ public abstract class DbShardWorkerBase<TDbContext>(
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
-    protected virtual IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.UsedShards;
+    protected virtual IState<ImmutableHashSet<string>> WorkerShards => DbHub.ShardRegistry.UsedShards;
 
     protected override Task OnRun(CancellationToken cancellationToken)
     {
@@ -33,5 +33,5 @@ public abstract class DbShardWorkerBase<TDbContext>(
             cancellationToken);
     }
 
-    protected abstract Task OnRun(DbShard shard, CancellationToken cancellationToken);
+    protected abstract Task OnRun(string shard, CancellationToken cancellationToken);
 }

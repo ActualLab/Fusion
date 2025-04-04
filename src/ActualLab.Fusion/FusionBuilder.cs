@@ -232,21 +232,21 @@ public readonly struct FusionBuilder
         mode = mode.Or(DefaultServiceMode);
         return mode switch {
             RpcServiceMode.Local => AddComputeService(serviceType, implementationType, addCommandHandlers),
-            RpcServiceMode.Client => AddClient(serviceType, default, addCommandHandlers),
-            RpcServiceMode.Server => AddServer(serviceType, implementationType, default, addCommandHandlers),
-            RpcServiceMode.Distributed => AddDistributedService(serviceType, implementationType, default, addCommandHandlers),
-            RpcServiceMode.DistributedPair => AddDistributedServicePair(serviceType, implementationType, default, addCommandHandlers),
+            RpcServiceMode.Client => AddClient(serviceType, "", addCommandHandlers),
+            RpcServiceMode.Server => AddServer(serviceType, implementationType, "", addCommandHandlers),
+            RpcServiceMode.Distributed => AddDistributedService(serviceType, implementationType, "", addCommandHandlers),
+            RpcServiceMode.DistributedPair => AddDistributedServicePair(serviceType, implementationType, "", addCommandHandlers),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
     }
 
     public FusionBuilder AddClient<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
-        (Symbol name = default, bool addCommandHandlers = true)
+        (string name = "", bool addCommandHandlers = true)
         => AddClient(typeof(TService), name, addCommandHandlers);
     public FusionBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        Symbol name = default, bool addCommandHandlers = true)
+        string name = "", bool addCommandHandlers = true)
     {
         if (!typeof(IComputeService).IsAssignableFrom(serviceType))
             throw Errors.MustImplement<IComputeService>(serviceType, nameof(serviceType));
@@ -319,12 +319,12 @@ public readonly struct FusionBuilder
     public FusionBuilder AddServer<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (Symbol name = default, bool addCommandHandlers = true)
+        (string name = "", bool addCommandHandlers = true)
         => AddServer(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
     public FusionBuilder AddServer(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        Symbol name = default,
+        string name = "",
         bool addCommandHandlers = true)
     {
         // ~ RpcBuilder.AddServer, but for Compute Service
@@ -342,12 +342,12 @@ public readonly struct FusionBuilder
     public FusionBuilder AddDistributedService<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (Symbol name = default, bool addCommandHandlers = true)
+        (string name = "", bool addCommandHandlers = true)
         => AddDistributedService(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
     public FusionBuilder AddDistributedService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        Symbol name = default,
+        string name = "",
         bool addCommandHandlers = true)
     {
         // ~ RpcBuilder.AddDistributedService, but for Compute Service
@@ -370,12 +370,12 @@ public readonly struct FusionBuilder
     public FusionBuilder AddDistributedServicePair<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (Symbol name = default, bool addCommandHandlers = true)
+        (string name = "", bool addCommandHandlers = true)
         => AddDistributedServicePair(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
     public FusionBuilder AddDistributedServicePair(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        Symbol name = default,
+        string name = "",
         bool addCommandHandlers = true)
     {
         // ~ RpcBuilder.AddDistributedServicePair, but for Compute Service

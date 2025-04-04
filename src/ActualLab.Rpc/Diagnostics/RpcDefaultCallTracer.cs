@@ -26,7 +26,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
     {
         TraceInbound = traceInbound;
         TraceOutbound = traceOutbound;
-        var fullMethodName = DiagnosticsExt.FixName($"{method.Service.Name.Value}/{method.Name.Value}");
+        var fullMethodName = DiagnosticsExt.FixName($"{method.Service.Name}/{method.Name}");
         InboundCallName = "in." + fullMethodName;
         OutboundCallName = "out." + fullMethodName;
         ActivitySource = RpcInstruments.ActivitySource;

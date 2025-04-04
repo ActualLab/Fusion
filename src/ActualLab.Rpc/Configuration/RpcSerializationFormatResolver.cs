@@ -3,10 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 namespace ActualLab.Rpc;
 
 public sealed record RpcSerializationFormatResolver(
-    Symbol DefaultServerFormatKey,
-    Symbol DefaultClientFormatKey,
-    IReadOnlyDictionary<Symbol, RpcSerializationFormat> Items
-    ) : SimpleResolver<Symbol, RpcSerializationFormat>(Items)
+    string DefaultServerFormatKey,
+    string DefaultClientFormatKey,
+    IReadOnlyDictionary<string, RpcSerializationFormat> Items
+    ) : SimpleResolver<string, RpcSerializationFormat>(Items)
 {
     // Static members
 
@@ -26,22 +26,22 @@ public sealed record RpcSerializationFormatResolver(
         set;
     }
 
-    public static RpcSerializationFormatResolver NewDefault(Symbol defaultFormatKey)
+    public static RpcSerializationFormatResolver NewDefault(string defaultFormatKey)
         => NewDefault(defaultFormatKey, defaultFormatKey);
-    public static RpcSerializationFormatResolver NewDefault(Symbol defaultServerFormatKey, Symbol defaultClientFormatKey)
+    public static RpcSerializationFormatResolver NewDefault(string defaultServerFormatKey, string defaultClientFormatKey)
         => new(defaultServerFormatKey, defaultClientFormatKey, DefaultFormats.ToArray());
 
     // Instance members
 
-    public RpcSerializationFormatResolver(Symbol defaultFormatKey, params RpcSerializationFormat[] formats)
+    public RpcSerializationFormatResolver(string defaultFormatKey, params RpcSerializationFormat[] formats)
         : this(defaultFormatKey, defaultFormatKey, formats)
     { }
 
     public RpcSerializationFormatResolver(
-        Symbol defaultServerFormatKey,
-        Symbol defaultClientFormatKey,
+        string defaultServerFormatKey,
+        string defaultClientFormatKey,
         params RpcSerializationFormat[] formats)
-        : this(defaultServerFormatKey, defaultClientFormatKey, formats.ToDictionary(x => x.Key))
+        : this(defaultServerFormatKey, defaultClientFormatKey, formats.ToDictionary(x => x.Key, StringComparer.Ordinal))
     { }
 
     public override string ToString()
@@ -56,9 +56,9 @@ public sealed record RpcSerializationFormatResolver(
         return Get(key, peerRef.IsServer);
     }
 
-    public RpcSerializationFormat Get(Symbol key, bool isServer)
+    public RpcSerializationFormat Get(string key, bool isServer)
     {
-        if (key.IsEmpty)
+        if (key.IsNullOrEmpty())
             key = isServer ? DefaultServerFormatKey : DefaultClientFormatKey;
         return this.Get(key);
     }

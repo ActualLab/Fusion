@@ -25,9 +25,9 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
     public TypeRef WrappedTypeRef { get; }
 
     [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
-    public bool IsNone => TypeRef.AssemblyQualifiedName.IsEmpty;
+    public bool IsNone => TypeRef.AssemblyQualifiedName.IsNullOrEmpty();
     [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
-    public bool HasWrappedTypeRef => !WrappedTypeRef.AssemblyQualifiedName.IsEmpty;
+    public bool HasWrappedTypeRef => !WrappedTypeRef.AssemblyQualifiedName.IsNullOrEmpty();
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public OldExceptionInfo(TypeRef typeRef, string? message, TypeRef wrappedTypeRef)

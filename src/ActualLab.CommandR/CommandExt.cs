@@ -42,8 +42,8 @@ public static class CommandExt
         var type = command.GetType();
         var chainId = command is IEventCommand eventCommand
             ? eventCommand.ChainId
-            : default;
-        return OperationNameCache.GetOrAdd((type, chainId.Value, operation, prefix),
+            : "";
+        return OperationNameCache.GetOrAdd((type, chainId, operation, prefix),
             static key => {
                 var type = (Type)key.Item1;
                 var chainId = (string)key.Item2;

@@ -16,7 +16,7 @@ public static class TextTypeSerializer
 
     public static ByteString ToBytes(Type type) =>
         ToBytesCache.GetOrAdd(type, static t => {
-            var name = new TypeRef(t).WithoutAssemblyVersions().AssemblyQualifiedName.Value;
+            var name = new TypeRef(t).WithoutAssemblyVersions().AssemblyQualifiedName;
             using var sb = ZString.CreateUtf8StringBuilder();
             sb.AppendLiteral(Prefix);
             sb.Append(name);

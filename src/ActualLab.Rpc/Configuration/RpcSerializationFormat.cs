@@ -4,7 +4,7 @@ using ActualLab.Rpc.Serialization;
 namespace ActualLab.Rpc;
 
 public sealed class RpcSerializationFormat(
-    Symbol key,
+    string key,
     Func<RpcArgumentSerializer> argumentSerializerFactory,
     Func<RpcPeer, IByteSerializer<RpcMessage>> messageSerializerFactory)
 {
@@ -67,7 +67,7 @@ public sealed class RpcSerializationFormat(
 
     private readonly Lazy<RpcArgumentSerializer> _argumentSerializerLazy = new(argumentSerializerFactory);
 
-    public Symbol Key { get; } = key;
+    public string Key { get; } = key;
     public RpcArgumentSerializer ArgumentSerializer => _argumentSerializerLazy.Value;
     public Func<RpcPeer, IByteSerializer<RpcMessage>> MessageSerializerFactory => messageSerializerFactory;
 }

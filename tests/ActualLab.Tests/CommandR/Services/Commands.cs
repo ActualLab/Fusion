@@ -7,7 +7,7 @@ public record LogCommand : ICommand<Unit>
 
 public record LogEvent : IEventCommand
 {
-    public Symbol ChainId { get; init; }
+    public string ChainId { get; init; } = "";
     public string Message { get; init; } = "";
 }
 
@@ -31,7 +31,7 @@ public record RecAddUsersCommand : ICommand<Unit>
 
 public record IncSetFailCommand : IEventCommand
 {
-    public Symbol ChainId { get; init; }
+    public string ChainId { get; init; } = "";
     public int IncrementDelay { get; init; }
     public int SetDelay { get; init; }
     public int FailDelay { get; init; }

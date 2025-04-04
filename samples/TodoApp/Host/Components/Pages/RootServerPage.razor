@@ -52,7 +52,7 @@
                 _renderMode = RenderModeEndpoint.GetRenderMode(HttpContext);
             await ServerAuthHelper.UpdateAuthState(HttpContext);
             _authSchemas = await ServerAuthHelper.GetSchemas(HttpContext);
-            _sessionId = ServerAuthHelper.Session.Id.Value;
+            _sessionId = ServerAuthHelper.Session.Id;
             // Activity.Current = null; // We don't want to "infect" Blazor circuit with it
         }
         await base.SetParametersAsync(parameters);

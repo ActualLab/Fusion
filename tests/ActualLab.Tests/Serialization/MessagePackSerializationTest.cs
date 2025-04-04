@@ -97,9 +97,9 @@ public class MessagePackSerializationTest(ITestOutputHelper @out) : TestBase(@ou
         Test(default(Session), "null");
         Test(new Session("01234567890"), "\"01234567890\"");
 
-        // DbShard
-        Test(default(DbShard), "\"\"");
-        Test(new DbShard("01"), "\"01\"");
+        // string
+        Test(default(string), "\"\"");
+        Test("01", "\"01\"");
     }
 
     private void Test<T>(T value, string expectedJson)

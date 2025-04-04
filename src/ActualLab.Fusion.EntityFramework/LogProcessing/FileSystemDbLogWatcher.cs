@@ -13,7 +13,7 @@ public class FileSystemDbLogWatcher<TDbContext, TDbEntry>(
 {
     public FileSystemDbLogWatcherOptions<TDbContext> Settings { get; } = settings;
 
-    protected override DbShardWatcher CreateShardWatcher(DbShard shard)
+    protected override DbShardWatcher CreateShardWatcher(string shard)
         => new ShardWatcher(this, shard);
 
     // Nested types
@@ -26,7 +26,7 @@ public class FileSystemDbLogWatcher<TDbContext, TDbEntry>(
         public IObservable<FileSystemEventArgs> Observable { get; init; }
         public IDisposable Subscription { get; init; }
 
-        public ShardWatcher(FileSystemDbLogWatcher<TDbContext, TDbEntry> owner, DbShard shard) : base(shard)
+        public ShardWatcher(FileSystemDbLogWatcher<TDbContext, TDbEntry> owner, string shard) : base(shard)
         {
             Owner = owner;
             FilePath = Owner.Settings.FilePathFormatter.Invoke(Shard, typeof(TDbEntry));

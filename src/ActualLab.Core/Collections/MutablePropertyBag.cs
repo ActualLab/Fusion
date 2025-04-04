@@ -9,12 +9,12 @@ public interface IMutablePropertyBag : IReadOnlyPropertyBag
     public event Action? Changed;
 
     public bool Set<T>(T value);
-    public bool Set<T>(Symbol key, T value);
-    public bool Set(Symbol key, object? value);
+    public bool Set<T>(string key, T value);
+    public bool Set(string key, object? value);
     public void SetMany(PropertyBag items);
     public void SetMany(params ReadOnlySpan<PropertyBagItem> items);
     public bool Remove<T>();
-    public bool Remove(Symbol key);
+    public bool Remove(string key);
     public void Clear();
 
     public bool Update(PropertyBag bag);
@@ -70,7 +70,7 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
         get => _snapshot.Items;
     }
 
-    public object? this[Symbol key] {
+    public object? this[string key] {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _snapshot[key];
         set => Update((key, value), static (s, bag) => bag.Set(s.key, s.value));
@@ -93,20 +93,20 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains<T>()
-        => _snapshot[typeof(T)] != null;
+        => _snapshot[typeof(T).ToIdentifierSymbol()] != null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool Contains(Symbol key)
+    public bool Contains(string key)
         => _snapshot[key] != null;
 
     // TryGet
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGet<T>([MaybeNullWhen(false)] out T value)
-        => _snapshot.TryGet(typeof(T), out value);
+        => _snapshot.TryGet(typeof(T).ToIdentifierSymbol(), out value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGet<T>(Symbol key, [MaybeNullWhen(false)] out T value)
+    public bool TryGet<T>(string key, [MaybeNullWhen(false)] out T value)
         => _snapshot.TryGet(key, out value);
 
     // Get
@@ -114,10 +114,10 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T? Get<T>()
         where T : class
-        => _snapshot.Get<T>(typeof(T));
+        => _snapshot.Get<T>(typeof(T).ToIdentifierSymbol());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T? Get<T>(Symbol key)
+    public T? Get<T>(string key)
         where T : class
         => (T?)_snapshot[key];
 
@@ -125,30 +125,30 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T GetOrDefault<T>()
-        => _snapshot.GetOrDefault<T>(typeof(T));
+        => _snapshot.GetOrDefault<T>(typeof(T).ToIdentifierSymbol());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T GetOrDefault<T>(Symbol key)
+    public T GetOrDefault<T>(string key)
         => _snapshot.GetOrDefault<T>(key);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T GetOrDefault<T>(T @default)
-        => _snapshot.GetOrDefault(typeof(T), @default);
+        => _snapshot.GetOrDefault(typeof(T).ToIdentifierSymbol(), @default);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T GetOrDefault<T>(Symbol key, T @default)
+    public T GetOrDefault<T>(string key, T @default)
         => _snapshot.GetOrDefault(key, @default);
 
     // Set
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Set<T>(T value)
-        => Set(typeof(T), (object?)value);
+        => Set(typeof(T).ToIdentifierSymbol(), (object?)value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool Set<T>(Symbol key, T value)
+    public bool Set<T>(string key, T value)
         => Set(key, (object?)value);
 
-    public bool Set(Symbol key, object? value)
+    public bool Set(string key, object? value)
         => Update((key, value), static (s, bag) => bag.Set(s.key, s.value));
 
     // SetMany
@@ -173,9 +173,9 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Remove<T>()
-        => Remove(typeof(T));
+        => Remove(typeof(T).ToIdentifierSymbol());
 
-    public bool Remove(Symbol key)
+    public bool Remove(string key)
         => Update(key, static (k, bag) => bag.Remove(k));
 
     // Clear

@@ -12,7 +12,7 @@ public class NestedOperationLoggerTest : FusionTestBase
     public async Task BasicTest()
     {
         var kvs = Services.GetRequiredService<IKeyValueStore>();
-        var shard = DbShard.None;
+        var shard = DbShard.Single;
 
         var c1 = await Computed.Capture(() => kvs.Get(shard, "1"));
         var c2 = await Computed.Capture(() => kvs.Get(shard, "2"));

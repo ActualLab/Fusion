@@ -14,9 +14,9 @@ public class FakeDbLogWatcher<TDbContext, TDbEntry>
             watcherType.GetName());
     }
 
-    public Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default)
+    public Task NotifyChanged(string shard, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
-    public Task WhenChanged(DbShard shard, CancellationToken cancellationToken = default)
+    public Task WhenChanged(string shard, CancellationToken cancellationToken = default)
         => TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken);
 }

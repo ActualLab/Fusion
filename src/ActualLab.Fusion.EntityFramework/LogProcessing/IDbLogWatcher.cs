@@ -5,6 +5,6 @@ namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 public interface IDbLogWatcher<TDbContext, TDbEntry>
     where TDbContext : DbContext
 {
-    public Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default);
-    public Task WhenChanged(DbShard shard, CancellationToken cancellationToken = default);
+    public Task NotifyChanged(string shard, CancellationToken cancellationToken = default);
+    public Task WhenChanged(string shard, CancellationToken cancellationToken = default);
 }

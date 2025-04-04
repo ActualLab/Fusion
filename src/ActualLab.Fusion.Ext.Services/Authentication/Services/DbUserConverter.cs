@@ -13,11 +13,12 @@ public class DbUserConverter<TDbContext, TDbUser, TDbUserId>(IServiceProvider se
         services.GetRequiredService<IDbUserIdHandler<TDbUserId>>();
 
     public override TDbUser NewEntity() => new();
-    public override User NewModel() => new(Symbol.Empty, "");
+    public override User NewModel() => new("", "");
 
     public override void UpdateEntity(User source, TDbUser target)
     {
-        if (DbUserIdHandler.Format(target.Id) != source.Id)
+        var targetId = DbUserIdHandler.Format(target.Id);
+        if (!string.Equals(targetId, source.Id, StringComparison.Ordinal))
             throw new ArgumentOutOfRangeException(nameof(source));
         target.Version = VersionGenerator.NextVersion(target.Version);
 

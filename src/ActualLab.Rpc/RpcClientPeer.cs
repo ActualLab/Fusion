@@ -6,7 +6,7 @@ public class RpcClientPeer : RpcPeer
 {
     private volatile AsyncState<Moment> _reconnectAt = new(default);
 
-    public Symbol ClientId { get; protected init; }
+    public string ClientId { get; protected init; }
     public RpcClientPeerReconnectDelayer ReconnectDelayer { get; init; }
 
     public AsyncState<Moment> ReconnectsAt => _reconnectAt;

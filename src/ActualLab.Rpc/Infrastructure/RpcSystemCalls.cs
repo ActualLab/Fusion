@@ -33,11 +33,11 @@ public interface IRpcSystemCalls : IRpcSystemService
 public class RpcSystemCalls(IServiceProvider services)
     : RpcServiceBase(services), IRpcSystemCalls, IRpcDynamicCallHandler
 {
-    private static readonly Symbol OkMethodName = nameof(Ok);
-    private static readonly Symbol ItemMethodName = nameof(I);
-    private static readonly Symbol BatchMethodName = nameof(B);
+    private static readonly string OkMethodName = nameof(Ok);
+    private static readonly string ItemMethodName = nameof(I);
+    private static readonly string BatchMethodName = nameof(B);
 
-    public static readonly Symbol Name = "$sys";
+    public static readonly string Name = "$sys";
 
     public Task<RpcNoWait> Handshake(RpcHandshake handshake)
         => RpcNoWait.Tasks.Completed; // Does nothing: this call is processed inside RpcPeer.OnRun
@@ -193,7 +193,7 @@ public class RpcSystemCalls(IServiceProvider services)
     {
         var call = context.Call;
         var methodName = call.MethodDef.Method.Name;
-        if (methodName == OkMethodName) {
+        if (string.Equals(methodName, OkMethodName, StringComparison.Ordinal)) {
             var outboundCall = context.Peer.OutboundCalls.Get(context.Message.RelatedId);
             if (outboundCall == null)
                 return false;
@@ -203,7 +203,7 @@ public class RpcSystemCalls(IServiceProvider services)
             allowPolymorphism = outboundMethodDef.AllowResultPolymorphism;
             return true;
         }
-        if (methodName == ItemMethodName) {
+        if (string.Equals(methodName, ItemMethodName, StringComparison.Ordinal)) {
             var stream = context.Peer.RemoteObjects.Get(context.Message.RelatedId) as RpcStream;
             if (stream == null)
                 return false;
@@ -212,7 +212,7 @@ public class RpcSystemCalls(IServiceProvider services)
             allowPolymorphism = true;
             return true;
         }
-        if (methodName == BatchMethodName) {
+        if (string.Equals(methodName, BatchMethodName, StringComparison.Ordinal)) {
             var stream = context.Peer.RemoteObjects.Get(context.Message.RelatedId) as RpcStream;
             if (stream == null)
                 return false;

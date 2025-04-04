@@ -13,7 +13,7 @@ public class RpcTestClient(
     {
         public static Options Default { get; set; } = new();
 
-        public Symbol SerializationFormatKey { get; init; }
+        public string SerializationFormatKey { get; init; } = "";
         public BoundedChannelOptions ChannelOptions { get; init; } = WebSocketChannel<RpcMessage>.Options.Default.WriteChannelOptions;
         public Func<RpcTestClient, ChannelPair<RpcMessage>> ConnectionFactory { get; init; } = DefaultConnectionFactory;
 
@@ -51,10 +51,13 @@ public class RpcTestClient(
     {
         var serializationFormatResolver = Services.GetRequiredService<RpcSerializationFormatResolver>();
         var serializationFormatKey = Settings.SerializationFormatKey;
-        if (serializationFormatKey.IsEmpty)
+        if (serializationFormatKey.IsNullOrEmpty())
             serializationFormatKey = serializationFormatResolver.DefaultClientFormatKey;
 
-        var clientPeerRef = serializationFormatKey == serializationFormatResolver.DefaultClientFormatKey
+        var clientPeerRef = string.Equals(
+            serializationFormatKey,
+            serializationFormatResolver.DefaultClientFormatKey,
+            StringComparison.Ordinal)
             ? RpcPeerRef.NewClient(clientId)
             : RpcPeerRef.NewClient(clientId, serializationFormatKey);
         var serverPeerRef = RpcPeerRef.NewServer(serverId, serializationFormatKey);

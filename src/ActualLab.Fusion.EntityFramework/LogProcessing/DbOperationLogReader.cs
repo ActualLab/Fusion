@@ -11,7 +11,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
     where TDbEntry : class, IDbIndexedLogEntry
     where TOptions : DbOperationLogReaderOptions
 {
-    protected ConcurrentDictionary<DbShard, long> NextIndexes { get; } = new();
+    protected ConcurrentDictionary<string, long> NextIndexes { get; } = new(StringComparer.Ordinal);
 
     public override DbLogKind LogKind => DbLogKind.Operations;
 
@@ -20,7 +20,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
             .FirstOrDefaultAsync(x => x.Index == key, cancellationToken)
             .ConfigureAwait(false);
 
-    protected override async Task<int> ProcessBatch(DbShard shard, int batchSize, CancellationToken cancellationToken)
+    protected override async Task<int> ProcessBatch(string shard, int batchSize, CancellationToken cancellationToken)
     {
         var nextIndexOpt = await TryGetNextIndex(shard, cancellationToken).ConfigureAwait(false);
         if (nextIndexOpt is not { } nextIndex)
@@ -52,7 +52,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
             // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
             Log.IfEnabled(logLevel)?.Log(logLevel,
                 $"{nameof(ProcessBatch)}[{{Shard}}]: got {{Count}}/{{BatchSize}} log entries with Index >= {{LastIndex}}",
-                shard.Value, entries.Count, batchSize, nextIndex);
+                shard, entries.Count, batchSize, nextIndex);
 
             await GetProcessTasks(shard, entries, nextIndex, cancellationToken)
                 .Collect(Settings.ConcurrencyLevel, useCurrentScheduler: false, cancellationToken)
@@ -70,7 +70,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
     }
 
     protected virtual IEnumerable<Task> GetProcessTasks(
-        DbShard shard, List<TDbEntry> entries, long nextIndex, CancellationToken cancellationToken)
+        string shard, List<TDbEntry> entries, long nextIndex, CancellationToken cancellationToken)
     {
         foreach (var entry in entries) {
             while (nextIndex != entry.Index)
@@ -81,7 +81,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
     }
 
     protected override async Task<bool> ProcessOne(
-        DbShard shard, long key, bool mustDiscard, CancellationToken cancellationToken)
+        string shard, long key, bool mustDiscard, CancellationToken cancellationToken)
     {
         if (mustDiscard)
             return true;
@@ -102,7 +102,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
 
     // Helpers
 
-    protected async ValueTask<long?> TryGetNextIndex(DbShard shard, CancellationToken cancellationToken)
+    protected async ValueTask<long?> TryGetNextIndex(string shard, CancellationToken cancellationToken)
     {
         if (NextIndexes.TryGetValue(shard, out var nextIndex))
             return nextIndex;
@@ -118,7 +118,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         return nextIndex;
     }
 
-    protected virtual async Task<TDbEntry?> GetStartEntry(DbShard shard, CancellationToken cancellationToken)
+    protected virtual async Task<TDbEntry?> GetStartEntry(string shard, CancellationToken cancellationToken)
     {
         var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);

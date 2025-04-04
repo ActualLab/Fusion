@@ -7,7 +7,7 @@ public class TypeRefNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<Type
     public override void WriteJson(
         JsonWriter writer, TypeRef value,
         Newtonsoft.Json.JsonSerializer serializer)
-        => writer.WriteValue(value.AssemblyQualifiedName.Value);
+        => writer.WriteValue(value.AssemblyQualifiedName);
 
     public override TypeRef ReadJson(
         JsonReader reader, Type objectType, TypeRef existingValue, bool hasExistingValue,

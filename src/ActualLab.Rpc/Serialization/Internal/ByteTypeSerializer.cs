@@ -19,7 +19,7 @@ public static class ByteTypeSerializer
 
     public static ByteString ToBytes(Type type) =>
         ToBytesCache.GetOrAdd(type, static t => {
-            var name = new TypeRef(t).WithoutAssemblyVersions().AssemblyQualifiedName.Value;
+            var name = new TypeRef(t).WithoutAssemblyVersions().AssemblyQualifiedName;
             var nameSpan = ByteString.FromStringAsUtf8(name).Span;
             var fullLength = nameSpan.Length + 4;
 

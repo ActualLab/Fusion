@@ -15,19 +15,19 @@ public sealed class RpcMethodDef : MethodDef
     public RpcHub Hub { get; }
     public RpcServiceDef Service { get; }
 
-    public Symbol Name {
+    public string Name {
         get;
         init {
-            if (value.IsEmpty)
+            if (value.IsNullOrEmpty())
                 throw new ArgumentOutOfRangeException(nameof(value));
 
             field = value;
-            FullName = ComposeFullName(Service.Name.Value, value.Value);
-            Ref = new RpcMethodRef(FullName.Value, this);
+            FullName = ComposeFullName(Service.Name, value);
+            Ref = new RpcMethodRef(FullName, this);
         }
     }
 
-    public new readonly Symbol FullName;
+    public new readonly string FullName = "";
     public readonly RpcMethodRef Ref;
 
     public readonly ArgumentListType ArgumentListType;

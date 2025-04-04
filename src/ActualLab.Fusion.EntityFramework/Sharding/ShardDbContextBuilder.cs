@@ -22,7 +22,7 @@ public readonly struct ShardDbContextBuilder<TDbContext>
 
         // Default services are configured to provide fake sharding w/ a single shard,
         // where IDbContextFactory is the one that's registered in the container.
-        services.TryAddSingleton<IDbShardRegistry<TDbContext>>(c => new DbShardRegistry<TDbContext>(c, DbShard.None));
+        services.TryAddSingleton<IDbShardRegistry<TDbContext>>(c => new DbShardRegistry<TDbContext>(c, DbShard.Single));
         services.TryAddSingleton<IDbShardResolver<TDbContext>>(c => new DbShardResolver<TDbContext>(c));
         services.TryAddSingleton<IShardDbContextFactory<TDbContext>, ShardDbContextFactory<TDbContext>>();
         services.TryAddSingleton<ShardDbContextFactoryBuilder<TDbContext>>(
@@ -49,10 +49,10 @@ public readonly struct ShardDbContextBuilder<TDbContext>
 
     // AddShardRegistry
 
-    public ShardDbContextBuilder<TDbContext> AddShardRegistry(IEnumerable<DbShard> shards)
+    public ShardDbContextBuilder<TDbContext> AddShardRegistry(IEnumerable<string> shards)
         => AddShardRegistry(shards.ToArray());
 
-    public ShardDbContextBuilder<TDbContext> AddShardRegistry(params DbShard[] shards)
+    public ShardDbContextBuilder<TDbContext> AddShardRegistry(params string[] shards)
     {
         Services.AddSingleton<IDbShardRegistry<TDbContext>>(c => new DbShardRegistry<TDbContext>(c, shards));
         return this;
@@ -75,7 +75,7 @@ public readonly struct ShardDbContextBuilder<TDbContext>
     // AddShardDbContextFactory
 
     public ShardDbContextBuilder<TDbContext> AddPooledShardDbContextFactory(
-        Action<IServiceProvider, DbShard, DbContextOptionsBuilder> dbContextOptionsBuilder)
+        Action<IServiceProvider, string, DbContextOptionsBuilder> dbContextOptionsBuilder)
     {
         AddShardDbContextFactory((c, shard, services) => {
             services.AddPooledDbContextFactory<TDbContext>(
@@ -92,7 +92,7 @@ public readonly struct ShardDbContextBuilder<TDbContext>
     }
 
     public ShardDbContextBuilder<TDbContext> AddTransientShardDbContextFactory(
-        Action<IServiceProvider, DbShard, DbContextOptionsBuilder> dbContextOptionsBuilder)
+        Action<IServiceProvider, string, DbContextOptionsBuilder> dbContextOptionsBuilder)
     {
         AddShardDbContextFactory((c, shard, services) => {
             services.AddTransientDbContextFactory<TDbContext>(
@@ -109,7 +109,7 @@ public readonly struct ShardDbContextBuilder<TDbContext>
     }
 
     public ShardDbContextBuilder<TDbContext> AddShardDbContextFactory(
-        Action<IServiceProvider, DbShard, ServiceCollection> dbContextServiceCollectionBuilder)
+        Action<IServiceProvider, string, ServiceCollection> dbContextServiceCollectionBuilder)
     {
         AddShardDbContextFactory(_ => (c, shard) => {
             var services = new ServiceCollection();

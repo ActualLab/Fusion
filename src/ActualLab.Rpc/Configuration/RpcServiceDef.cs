@@ -11,32 +11,32 @@ public sealed class RpcServiceDef
     private readonly ConcurrentDictionary<MethodInfo, RpcMethodDef?> _getOrFindMethodCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private Dictionary<MethodInfo, RpcMethodDef> _methods = null!;
-    private Dictionary<Symbol, RpcMethodDef> _methodByName = null!;
+    private Dictionary<string, RpcMethodDef> _methodByName = null!;
     private string? _toStringCached;
 
-    internal Dictionary<Symbol, RpcMethodDef> MethodByName => _methodByName;
+    internal Dictionary<string, RpcMethodDef> MethodByName => _methodByName;
 
     public RpcHub Hub { get; }
     public Type Type { get; }
     public ServiceResolver? ServerResolver { get; init; }
-    public Symbol Name { get; init; }
+    public string Name { get; init; }
     public bool IsSystem { get; init; }
     public bool IsBackend { get; init; }
     public bool HasServer => ServerResolver != null;
     [field: AllowNull, MaybeNull]
     public object Server => field ??= ServerResolver.Resolve(Hub.Services);
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
-    public Symbol Scope { get; init; }
+    public string Scope { get; init; }
     public LegacyNames LegacyNames { get; init; }
     public PropertyBag Properties { get; init; }
 
     public RpcMethodDef this[MethodInfo method] => GetMethod(method) ?? throw Errors.NoMethod(Type, method);
-    public RpcMethodDef this[Symbol methodName] => GetMethod(methodName) ?? throw Errors.NoMethod(Type, methodName);
+    public RpcMethodDef this[string methodName] => GetMethod(methodName) ?? throw Errors.NoMethod(Type, methodName);
 
     public RpcServiceDef(RpcHub hub, RpcServiceBuilder service)
     {
         var name = service.Name;
-        if (name.IsEmpty)
+        if (name.IsNullOrEmpty())
             name = service.Type.GetName();
 
         Hub = hub;
@@ -59,7 +59,7 @@ public sealed class RpcServiceDef
             throw new ArgumentOutOfRangeException(nameof(serviceType));
 
         _methods = new Dictionary<MethodInfo, RpcMethodDef>();
-        _methodByName = new Dictionary<Symbol, RpcMethodDef>();
+        _methodByName = new Dictionary<string, RpcMethodDef>(StringComparer.Ordinal);
         var bindingFlags = BindingFlags.Instance | BindingFlags.Public;
         var methods = (Type.IsInterface
                 ? serviceType.GetAllInterfaceMethods(bindingFlags)
@@ -99,7 +99,7 @@ public sealed class RpcServiceDef
 
     public RpcMethodDef? GetMethod(MethodInfo method)
         => _methods.GetValueOrDefault(method);
-    public RpcMethodDef? GetMethod(Symbol methodName)
+    public RpcMethodDef? GetMethod(string methodName)
         => _methodByName.GetValueOrDefault(methodName);
 
     public RpcMethodDef? GetOrFindMethod(MethodInfo method)

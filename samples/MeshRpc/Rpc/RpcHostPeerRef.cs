@@ -6,7 +6,7 @@ public sealed record RpcHostPeerRef : RpcPeerRef, IMeshPeerRef
 {
     private static readonly ConcurrentDictionary<HostRef, RpcHostPeerRef> Cache = new();
 
-    public Symbol HostId { get; }
+    public string HostId { get; }
 
     public static RpcHostPeerRef Get(HostRef hostRef)
         => Cache.GetOrAdd(hostRef, key => new RpcHostPeerRef(key));

@@ -10,11 +10,9 @@ public class TypeRefTypeConverter : TypeConverter
         => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
 
     public override object ConvertTo(ITypeDescriptorContext? context, CultureInfo? culture, object? value, Type destinationType)
-    {
-        if (destinationType == typeof(string))
-            return ((TypeRef) value!).AssemblyQualifiedName.Value;
-        return base.ConvertTo(context, culture, value, destinationType)!;
-    }
+        => destinationType == typeof(string)
+            ? ((TypeRef)value!).AssemblyQualifiedName
+            : base.ConvertTo(context, culture, value, destinationType)!;
 
     public override object ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
     {

@@ -1,6 +1,6 @@
 namespace ActualLab.CommandR.Configuration;
 
-public readonly struct CommandHandlerChain : IEquatable<CommandHandlerChain>
+public sealed class CommandHandlerChain
 {
     public static readonly CommandHandlerChain Empty = new([]);
 
@@ -8,7 +8,6 @@ public readonly struct CommandHandlerChain : IEquatable<CommandHandlerChain>
     private readonly int _finalHandlerIndex;
 
     public CommandHandler[] Items => _items ?? [];
-    public bool IsEmpty => _items == null || _items.Length == 0;
     public int Length => Items.Length;
     public int FinalHandlerIndex => _items == null ? -1 : _finalHandlerIndex;
     public CommandHandler this[int index] => Items[index];
@@ -34,11 +33,4 @@ public readonly struct CommandHandlerChain : IEquatable<CommandHandlerChain>
 
     public override string ToString()
         => $"[ {Items.ToDelimitedString()} ]";
-
-    // Equality
-    public bool Equals(CommandHandlerChain other) => Equals(Items, other.Items);
-    public override bool Equals(object? obj) => obj is CommandHandlerChain other && Equals(other);
-    public override int GetHashCode() => Items.GetHashCode();
-    public static bool operator ==(CommandHandlerChain left, CommandHandlerChain right) => left.Equals(right);
-    public static bool operator !=(CommandHandlerChain left, CommandHandlerChain right) => !left.Equals(right);
 }

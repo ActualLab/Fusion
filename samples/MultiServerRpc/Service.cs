@@ -5,14 +5,14 @@ using static System.Console;
 
 namespace Samples.MultiServerRpc;
 
-public record ServerId(Symbol Id); // Used just to display the message with Server ID
+public record ServerId(string Id); // Used just to display the message with Server ID
 
 public interface IChat : IComputeService
 {
     [ComputeMethod]
-    public Task<List<string>> GetRecentMessages(Symbol chatId, CancellationToken cancellationToken = default);
+    public Task<List<string>> GetRecentMessages(string chatId, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    public Task<int> GetWordCount(Symbol chatId, CancellationToken cancellationToken = default);
+    public Task<int> GetWordCount(string chatId, CancellationToken cancellationToken = default);
 
     [CommandHandler]
     public Task Post(Chat_Post command, CancellationToken cancellationToken);
@@ -21,24 +21,25 @@ public interface IChat : IComputeService
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record Chat_Post(
-    [property: DataMember, MemoryPackOrder(0)] Symbol ChatId,
+    [property: DataMember, MemoryPackOrder(0)] string ChatId,
     [property: DataMember, MemoryPackOrder(1)] string Message
     ) : ICommand<Unit>;
 
 public class Chat(ServerId serverId) : IChat
 {
+    // ReSharper disable once ChangeFieldTypeToSystemThreadingLock
     private readonly object _lock = new();
-    private readonly Dictionary<Symbol, List<string>> _chats = new();
+    private readonly Dictionary<string, List<string>> _chats = new(StringComparer.Ordinal);
 
     private ServerId ServerId { get; } = serverId;
 
-    public virtual Task<List<string>> GetRecentMessages(Symbol chatId, CancellationToken cancellationToken = default)
+    public virtual Task<List<string>> GetRecentMessages(string chatId, CancellationToken cancellationToken = default)
     {
         lock (_lock)
             return Task.FromResult(_chats.GetValueOrDefault(chatId) ?? new());
     }
 
-    public virtual async Task<int> GetWordCount(Symbol chatId, CancellationToken cancellationToken = default)
+    public virtual async Task<int> GetWordCount(string chatId, CancellationToken cancellationToken = default)
     {
         // Note that GetRecentMessages call here becomes a dependency of WordCount call,
         // and that's why it gets invalidated automatically.

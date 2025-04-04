@@ -23,6 +23,6 @@ public sealed class ByUuidAndVersionParameterComparer<TVersion> : ParameterCompa
 
         var oldUuid = ((IHasUuid)oldValue).Uuid;
         var newUuid = ((IHasUuid)newValue).Uuid;
-        return oldUuid == newUuid;
+        return string.Equals(oldUuid, newUuid, StringComparison.Ordinal);
     }
 }

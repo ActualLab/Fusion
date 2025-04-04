@@ -19,9 +19,9 @@ public class DbOperationLogReader<TDbContext>
         : base(settings, services)
         => OperationCompletionNotifier = services.GetRequiredService<IOperationCompletionNotifier>();
 
-    protected override Task Process(DbShard shard, DbOperation entry, CancellationToken cancellationToken)
+    protected override Task Process(string shard, DbOperation entry, CancellationToken cancellationToken)
     {
-        var isLocal = string.Equals(entry.HostId, DbHub.HostId.Value, StringComparison.Ordinal);
+        var isLocal = string.Equals(entry.HostId, DbHub.HostId.Id, StringComparison.Ordinal);
         return isLocal
             ? Task.CompletedTask
             : OperationCompletionNotifier.NotifyCompleted(entry.ToModel(), null);

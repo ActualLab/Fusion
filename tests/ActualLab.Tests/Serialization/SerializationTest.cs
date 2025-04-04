@@ -322,7 +322,9 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void ImmutableOptionSetSerialization()
     {
-        default(ImmutableOptionSet).AssertPassesThroughAllSerializers(Out);
+        default(ImmutableOptionSet).AssertPassesThroughAllSerializers(
+            x => x.Items.IsEmpty.Should().BeTrue(),
+            Out);
         var s = new ImmutableOptionSet();
         s = s.Set(3);
         s = s.Set("X");

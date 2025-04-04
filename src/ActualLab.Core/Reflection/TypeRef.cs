@@ -24,30 +24,28 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
     private static readonly Regex RemoveAssemblyVersionsRe =
         new(@",\s+Version=[^,]*,\s+Culture=[^,]*,\s+PublicKeyToken=[A-Za-z0-9]+", RegexOptions.Compiled);
 #endif
-    private static readonly ConcurrentDictionary<Symbol, TypeRef> UnversionedAssemblyNameCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly ConcurrentDictionary<Symbol, Type?> ResolveCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<string, TypeRef> UnversionedAssemblyNameCache
+        = new(HardwareInfo.ProcessorCountPo2, 131, StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, Type?> ResolveCache
+        = new(HardwareInfo.ProcessorCountPo2, 131, StringComparer.Ordinal);
 
     public static readonly TypeRef None = default;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
-    public Symbol AssemblyQualifiedName { get; }
+    [DataMember(Order = 0), MemoryPackOrder(0), SymbolStringMemoryPackFormatter, Key(0)]
+    public string AssemblyQualifiedName => field ?? "";
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public string TypeName
-        => AssemblyQualifiedName.Value[..AssemblyQualifiedName.Value.IndexOf(',', StringComparison.Ordinal)];
+        => AssemblyQualifiedName[..AssemblyQualifiedName.IndexOf(',', StringComparison.Ordinal)];
 
     public TypeRef(Type type)
         : this(type.AssemblyQualifiedName!) { }
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
-    public TypeRef(Symbol assemblyQualifiedName)
-        => AssemblyQualifiedName = assemblyQualifiedName;
     public TypeRef(string assemblyQualifiedName)
         => AssemblyQualifiedName = assemblyQualifiedName;
 
     public override string ToString()
-        => AssemblyQualifiedName.Value;
+        => AssemblyQualifiedName;
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public Type? TryResolve()
@@ -70,10 +68,14 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
 
     // Equality & comparison
 
-    public bool Equals(TypeRef other) => AssemblyQualifiedName == other.AssemblyQualifiedName;
-    public override bool Equals(object? obj) => obj is TypeRef other && Equals(other);
-    public override int GetHashCode() => AssemblyQualifiedName.HashCode;
-    public int CompareTo(TypeRef other) => AssemblyQualifiedName.CompareTo(other.AssemblyQualifiedName);
+    public bool Equals(TypeRef other)
+        => string.Equals(AssemblyQualifiedName, other.AssemblyQualifiedName, StringComparison.Ordinal);
+    public override bool Equals(object? obj)
+        => obj is TypeRef other && Equals(other);
+    public override int GetHashCode()
+        => AssemblyQualifiedName.GetOrdinalHashCode();
+    public int CompareTo(TypeRef other)
+        => string.CompareOrdinal(AssemblyQualifiedName, other.AssemblyQualifiedName);
 
     public static bool operator ==(TypeRef left, TypeRef right) => left.Equals(right);
     public static bool operator !=(TypeRef left, TypeRef right) => !left.Equals(right);
@@ -85,7 +87,7 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
     // Private methods
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
-    public static Type? Resolve(Symbol assemblyQualifiedName)
+    public static Type? Resolve(string assemblyQualifiedName)
     {
         var result = ResolveCache.GetOrAdd(assemblyQualifiedName,
             static aqn => Type.GetType(aqn, false, false));

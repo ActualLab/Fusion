@@ -5,11 +5,12 @@ namespace ActualLab.Collections;
 public sealed class RecentlySeenMap<TKey, TValue>(
     int capacity,
     TimeSpan duration,
-    MomentClock? clock = null)
+    MomentClock? clock = null,
+    IEqualityComparer<TKey>? keyComparer = null)
     where TKey : notnull
 {
     private readonly BinaryHeap<Moment, TKey> _heap = new(capacity + 1); // we may add one extra item, so "+ 1"
-    private readonly Dictionary<TKey, TValue> _map = new(capacity + 1); // we may add one extra item, so "+ 1"
+    private readonly Dictionary<TKey, TValue> _map = new(capacity + 1, keyComparer); // we may add one extra item, so "+ 1"
 
     public int Capacity { get; } = capacity;
     public TimeSpan Duration { get; } = duration;

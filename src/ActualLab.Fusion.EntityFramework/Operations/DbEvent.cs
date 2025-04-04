@@ -46,7 +46,7 @@ public sealed class DbEvent : IDbEventLogEntry
 
     public DbEvent UpdateFrom(OperationEvent model, VersionGenerator<long>? versionGenerator = null)
     {
-        if (model.Uuid.IsEmpty)
+        if (model.Uuid.IsNullOrEmpty())
             throw new ArgumentOutOfRangeException(nameof(model), "Uuid is empty.");
 
         Uuid = model.Uuid;

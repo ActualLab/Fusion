@@ -23,14 +23,14 @@ public class DbEventLogReader<TDbContext>
     }
 
     protected DbEventProcessor<TDbContext> EventProcessor { get; }
-    protected override IState<ImmutableHashSet<DbShard>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
+    protected override IState<ImmutableHashSet<string>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public DbEventLogReader(Options settings, IServiceProvider services)
         : base(settings, services)
         => EventProcessor = services.GetRequiredService<DbEventProcessor<TDbContext>>();
 
-    protected override Task Process(DbShard shard, DbEvent entry, CancellationToken cancellationToken)
+    protected override Task Process(string shard, DbEvent entry, CancellationToken cancellationToken)
     {
         var operationEvent = entry.ToModel();
         return EventProcessor.Process(operationEvent, cancellationToken);

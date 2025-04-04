@@ -21,7 +21,7 @@ public interface IDbEntityResolver<TKey, TDbEntity> : IDbEntityResolver
     public Func<TDbEntity, TKey> KeyExtractor { get; init; }
     public Expression<Func<TDbEntity, TKey>> KeyExtractorExpression { get; init; }
 
-    public Task<TDbEntity?> Get(DbShard shard, TKey key, CancellationToken cancellationToken = default);
+    public Task<TDbEntity?> Get(string shard, TKey key, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -70,7 +70,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
     private static MethodInfo EnumerableContainsMethod { get; }
         = new Func<IEnumerable<TKey>, TKey, bool>(Enumerable.Contains).Method;
 
-    private ConcurrentDictionary<DbShard, BatchProcessor<TKey, TDbEntity?>>? _batchProcessors;
+    private ConcurrentDictionary<string, BatchProcessor<TKey, TDbEntity?>>? _batchProcessors;
 
     protected Options Settings { get; }
     protected Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>[] Queries { get; init; }
@@ -87,7 +87,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         Settings = settings;
         var keyExtractor = Settings.KeyExtractor;
         if (keyExtractor == null) {
-            var shard = DbHub.ShardRegistry.HasSingleShard ? default : DbShard.Template;
+            var shard = DbHub.ShardRegistry.HasSingleShard ? DbShard.Single : DbShard.Template;
             using var dbContext = DbHub.ContextFactory.CreateDbContext(shard);
             var keyPropertyName = dbContext.Model
                 .FindEntityType(typeof(TDbEntity))!
@@ -101,7 +101,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         KeyExtractorExpression = keyExtractor;
         KeyExtractor = keyExtractor
             .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
-        _batchProcessors = new();
+        _batchProcessors = new(StringComparer.Ordinal);
 
 #pragma warning disable CA2214
         // ReSharper disable once VirtualMemberCallInConstructor
@@ -141,7 +141,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
             .ConfigureAwait(false);
     }
 
-    public virtual Task<TDbEntity?> Get(DbShard shard, TKey key, CancellationToken cancellationToken = default)
+    public virtual Task<TDbEntity?> Get(string shard, TKey key, CancellationToken cancellationToken = default)
     {
         var batchProcessor = GetBatchProcessor(shard);
         return batchProcessor.Process(key, cancellationToken);
@@ -271,7 +271,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
             .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
     }
 
-    protected BatchProcessor<TKey, TDbEntity?> GetBatchProcessor(DbShard shard)
+    protected BatchProcessor<TKey, TDbEntity?> GetBatchProcessor(string shard)
     {
         var batchProcessors = _batchProcessors;
         if (batchProcessors == null)
@@ -280,7 +280,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         return batchProcessors.GetOrAdd(shard, static (shard1, self) => self.CreateBatchProcessor(shard1), this);
     }
 
-    protected virtual BatchProcessor<TKey, TDbEntity?> CreateBatchProcessor(DbShard shard)
+    protected virtual BatchProcessor<TKey, TDbEntity?> CreateBatchProcessor(string shard)
     {
         var batchProcessor = new BatchProcessor<TKey, TDbEntity?> {
             BatchSize = Settings.BatchSize,
@@ -295,7 +295,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         return batchProcessor;
     }
 
-    protected virtual Activity? StartProcessBatchActivity(DbShard shard, int batchSize, int tryIndex)
+    protected virtual Activity? StartProcessBatchActivity(string shard, int batchSize, int tryIndex)
     {
         var activity = FusionInstruments.ActivitySource
             .IfEnabled(Settings.IsTracingEnabled)
@@ -310,7 +310,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
     }
 
     protected virtual async Task ProcessBatch(
-        DbShard shard,
+        string shard,
         List<BatchProcessor<TKey, TDbEntity?>.Item> batch,
         CancellationToken cancellationToken)
     {

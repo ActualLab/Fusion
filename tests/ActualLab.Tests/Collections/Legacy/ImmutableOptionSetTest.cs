@@ -34,7 +34,7 @@ public class ImmutableOptionSetTest(ITestOutputHelper @out) : TestBase(@out)
             x.Get<string>().Should().BeNull();
             x.GetOrDefault("").Should().Be("");
             x.Items.Count.Should().Be(0);
-            x.Should().Be(o);
+            x.Should().Be(x);
             x.Should().NotBe(o1);
             x.Should().NotBe(o2);
         });

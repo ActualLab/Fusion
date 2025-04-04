@@ -7,14 +7,14 @@ public record NpgsqlDbLogWatcherOptions<TDbContext>
 {
     public static NpgsqlDbLogWatcherOptions<TDbContext> Default { get; set; } = new();
 
-    public Func<DbShard, Type, string> ChannelNameFormatter { get; init; } = DefaultChannelNameFormatter;
+    public Func<string, Type, string> ChannelNameFormatter { get; init; } = DefaultChannelNameFormatter;
     public RetryDelaySeq TrackerRetryDelays { get; init; } = RetryDelaySeq.Exp(1, 10);
 
-    public static string DefaultChannelNameFormatter(DbShard shard, Type dbEntryType)
+    public static string DefaultChannelNameFormatter(string shard, Type dbEntryType)
     {
         var dbContextName = typeof(TDbContext).Name;
         var dbEntryName = dbEntryType.Name;
-        var shardSuffix = shard.IsNone ? "" : $"_{shard}";
+        var shardSuffix = DbShard.IsSingle(shard) ? "" : $"_{shard}";
         return $"{dbContextName}_{dbEntryName}{shardSuffix}";
     }
 }

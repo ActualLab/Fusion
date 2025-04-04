@@ -7,10 +7,10 @@ public abstract class DbLogWatcher<TDbContext, TDbEntry>(IServiceProvider servic
     : DbWorkerBase<TDbContext>(services), IDbLogWatcher<TDbContext, TDbEntry>
     where TDbContext : DbContext
 {
-    protected ConcurrentDictionary<DbShard, LazySlim<DbShard, DbLogWatcher<TDbContext, TDbEntry>, DbShardWatcher>>
-        ShardWatchers { get; set; } = new();
+    protected ConcurrentDictionary<string, LazySlim<string, DbLogWatcher<TDbContext, TDbEntry>, DbShardWatcher>>
+        ShardWatchers { get; set; } = new(StringComparer.Ordinal);
 
-    public virtual Task NotifyChanged(DbShard shard, CancellationToken cancellationToken = default)
+    public virtual Task NotifyChanged(string shard, CancellationToken cancellationToken = default)
     {
         if (StopToken.IsCancellationRequested)
             return Task.CompletedTask;
@@ -19,7 +19,7 @@ public abstract class DbLogWatcher<TDbContext, TDbEntry>(IServiceProvider servic
         return shardWatcher.NotifyChanged(cancellationToken);
     }
 
-    public virtual Task WhenChanged(DbShard shard, CancellationToken cancellationToken = default)
+    public virtual Task WhenChanged(string shard, CancellationToken cancellationToken = default)
     {
         StopToken.ThrowIfCancellationRequested();
         return GetShardWatcher(shard).WhenChanged.WaitAsync(cancellationToken);
@@ -27,9 +27,9 @@ public abstract class DbLogWatcher<TDbContext, TDbEntry>(IServiceProvider servic
 
     // Protected methods
 
-    protected abstract DbShardWatcher CreateShardWatcher(DbShard shard);
+    protected abstract DbShardWatcher CreateShardWatcher(string shard);
 
-    protected DbShardWatcher GetShardWatcher(DbShard shard) =>
+    protected DbShardWatcher GetShardWatcher(string shard) =>
         ShardWatchers.GetOrAdd(shard,
             static (shard1, self) => self.CreateShardWatcher(shard1),
             this);

@@ -188,7 +188,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var timeout = TimeSpan.FromSeconds(10);
         var disruptorCts = new CancellationTokenSource();
-        var disruptorTask = Task.Run(() => ConnectionDisruptor(disruptorCts.Token));
+        var disruptorTask = Task.Run(() => ConnectionDisruptor(disruptorCts.Token), disruptorCts.Token);
         try {
             var rnd = new Random();
             var callCount = 0L;

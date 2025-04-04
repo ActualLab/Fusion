@@ -6,5 +6,5 @@ public class TypeRefJsonConverter : JsonConverter<TypeRef>
         => new(reader.GetString()!);
 
     public override void Write(Utf8JsonWriter writer, TypeRef value, JsonSerializerOptions options)
-        => writer.WriteStringValue(value.AssemblyQualifiedName.Value);
+        => writer.WriteStringValue(value.AssemblyQualifiedName);
 }

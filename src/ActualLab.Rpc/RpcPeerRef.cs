@@ -1,7 +1,7 @@
 namespace ActualLab.Rpc;
 
 public partial record RpcPeerRef(
-    Symbol Key,
+    string Key,
     bool IsServer = false,
     bool IsBackend = false)
 {
@@ -26,21 +26,19 @@ public partial record RpcPeerRef(
         return result;
     }
 
-    public Symbol GetSerializationFormatKey()
+    public string GetSerializationFormatKey()
     {
-        var key = Key.Value;
-        var delimiterIndex = key.LastIndexOf('$');
+        var delimiterIndex = Key.LastIndexOf('$');
         return delimiterIndex >= 0
-            ? (Symbol)key.Substring(delimiterIndex + 1)
-            : default;
+            ? Key.Substring(delimiterIndex + 1)
+            : "";
     }
 
     public virtual RpcPeerConnectionKind GetConnectionKind(RpcHub hub)
     {
-        var key = Key.Value;
-        return key.StartsWith(LocalKeyPrefix, StringComparison.Ordinal)
+        return Key.StartsWith(LocalKeyPrefix, StringComparison.Ordinal)
             ? RpcPeerConnectionKind.Local
-            : key.StartsWith(LoopbackKeyPrefix, StringComparison.Ordinal)
+            : Key.StartsWith(LoopbackKeyPrefix, StringComparison.Ordinal)
                 ? RpcPeerConnectionKind.Loopback
                 : RpcPeerConnectionKind.Remote;
     }

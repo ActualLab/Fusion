@@ -6,8 +6,8 @@ namespace Samples.MeshRpc;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public readonly partial record struct HostRef(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] Symbol Id)
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] string Id)
 {
     public override string ToString()
-        => $"host:{Id.Value}";
+        => $"host:{Id}";
 }

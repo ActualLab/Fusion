@@ -7,56 +7,61 @@ namespace ActualLab.Fusion.Authentication;
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
-public readonly partial record struct UserIdentity(
-    [property: DataMember(Order = 0), MemoryPackOrder(0)] Symbol Id
-    ) : IComparable<UserIdentity>
+public readonly partial record struct UserIdentity : IComparable<UserIdentity>
 {
     private static readonly ListFormat IdFormat = ListFormat.SlashSeparated;
 
     public static readonly UserIdentity None;
     public static string DefaultSchema { get; set; } = "Default";
 
+    [DataMember(Order = 0), MemoryPackOrder(0), SymbolStringMemoryPackFormatter]
+    public string Id {
+        get => field ?? "";
+        init;
+    }
+
     // Computed properties
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, IgnoreMember]
-    public string Schema => ParseId(Id.Value).Schema;
+    public string Schema => ParseId(Id).Schema;
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, IgnoreMember]
-    public string SchemaBoundId => ParseId(Id.Value).SchemaBoundId;
+    public string SchemaBoundId => ParseId(Id).SchemaBoundId;
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, MemoryPackIgnore, IgnoreMember]
-    public bool IsValid => !Id.IsEmpty;
+    public bool IsValid => !Id.IsNullOrEmpty();
 
+    [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public UserIdentity(string id)
-        : this((Symbol)id) { }
+        => Id = id;
     public UserIdentity(string provider, string providerBoundId)
-        : this(FormatId(provider, providerBoundId)) { }
+        => Id = FormatId(provider, providerBoundId);
 
     // Conversion
 
     // NOTE: ToString() has to return Id.Value, otherwise dictionary key
     // serialization will be broken, and UserIdentity is actually used
     // as a dictionary key in User.Identities
-    public override string ToString() => Id.Value;
+    public override string ToString()
+        => Id;
 
     public void Deconstruct(out string schema, out string schemaBoundId)
-        => (schema, schemaBoundId) = ParseId(Id.Value);
+        => (schema, schemaBoundId) = ParseId(Id);
 
     public static implicit operator UserIdentity((string Schema, string SchemaBoundId) source)
         => new(source.Schema, source.SchemaBoundId);
-    public static implicit operator UserIdentity(Symbol source) => new(source);
     public static implicit operator UserIdentity(string source) => new(source);
-    public static implicit operator Symbol(UserIdentity source) => source.Id;
-    public static implicit operator string(UserIdentity source) => source.Id.Value;
+    public static implicit operator string(UserIdentity source) => source.Id;
 
     // Equality
 
-    public bool Equals(UserIdentity other) => Id.Equals(other.Id);
-    public override int GetHashCode() => Id.HashCode;
+    public bool Equals(UserIdentity other)
+        => string.Equals(Id, other.Id, StringComparison.Ordinal);
+    public override int GetHashCode()
+        => Id.GetOrdinalHashCode();
 
     // Comparison
 
     public int CompareTo(UserIdentity other)
-        => string.CompareOrdinal(Id.Value, other.Id.Value);
+        => string.CompareOrdinal(Id, other.Id);
 
     // Private methods
 
@@ -74,10 +79,17 @@ public readonly partial record struct UserIdentity(
     {
         if (id.IsNullOrEmpty())
             return ("", "");
+
         using var p = IdFormat.CreateParser(id);
         if (!p.TryParseNext())
             return (DefaultSchema, id);
+
         var firstItem = p.Item;
         return p.TryParseNext() ? (firstItem, p.Item) : (DefaultSchema, firstItem);
+    }
+
+    public void Deconstruct(out string Id)
+    {
+        Id = this.Id;
     }
 }

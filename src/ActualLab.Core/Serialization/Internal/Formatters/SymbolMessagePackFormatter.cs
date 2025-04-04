@@ -10,7 +10,7 @@ public sealed class HostIdMessagePackFormatter : IMessagePackFormatter<HostId?>
         if (ReferenceEquals(value, null))
             writer.WriteNil();
         else
-            options.Resolver.GetFormatterWithVerify<string>().Serialize(ref writer, value.Value, options);
+            options.Resolver.GetFormatterWithVerify<string>().Serialize(ref writer, value.Id, options);
     }
 
     public HostId? Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)

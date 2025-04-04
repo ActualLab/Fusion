@@ -17,11 +17,11 @@ public interface IDbSessionInfoRepo<in TDbContext, TDbSessionInfo, in TDbUserId>
     public Task<TDbSessionInfo> Upsert(
         TDbContext dbContext, string sessionId, SessionInfo sessionInfo, CancellationToken cancellationToken = default);
     public Task<int> Trim(
-        DbShard shard, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default);
+        string shard, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default);
 
     // Read methods
     public Task<TDbSessionInfo?> Get(
-        DbShard shard, string sessionId, CancellationToken cancellationToken = default);
+        string shard, string sessionId, CancellationToken cancellationToken = default);
     public Task<TDbSessionInfo?> Get(
         TDbContext dbContext, string sessionId, bool forUpdate, CancellationToken cancellationToken = default);
     public Task<TDbSessionInfo[]> ListByUser(
@@ -91,7 +91,7 @@ public class DbSessionInfoRepo<TDbContext,
     }
 
     public virtual async Task<int> Trim(
-        DbShard shard, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default)
+        string shard, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default)
     {
         var dbContext = await DbHub.CreateDbContext(shard, true, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
@@ -125,7 +125,7 @@ public class DbSessionInfoRepo<TDbContext,
 
     // Read methods
 
-    public async Task<TDbSessionInfo?> Get(DbShard shard, string sessionId, CancellationToken cancellationToken = default)
+    public async Task<TDbSessionInfo?> Get(string shard, string sessionId, CancellationToken cancellationToken = default)
         => await SessionResolver.Get(shard, sessionId, cancellationToken).ConfigureAwait(false);
 
     public virtual async Task<TDbSessionInfo?> Get(

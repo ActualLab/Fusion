@@ -9,7 +9,7 @@ namespace ActualLab.Fusion.Authentication;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarget
+public partial record User : IHasId<string>, IHasVersion<long>, IRequirementTarget
 {
     public static string GuestName { get; set; } = "Guest";
     public static Requirement<User> MustExist { get; set; }
@@ -21,8 +21,8 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
 
     private Lazy<ClaimsPrincipal>? _claimsPrincipalLazy;
 
-    [DataMember, MemoryPackOrder(0)]
-    public Symbol Id { get; init; }
+    [DataMember, MemoryPackOrder(0), SymbolStringMemoryPackFormatter]
+    public string Id { get; init; }
     [DataMember, MemoryPackOrder(1)]
     public string Name { get; init; }
     [DataMember, MemoryPackOrder(2)]
@@ -38,15 +38,15 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
     [DataMember(Name = nameof(Identities)), MemoryPackOrder(4), Key(4)]
     [JsonPropertyName(nameof(Identities)),  Newtonsoft.Json.JsonProperty(nameof(Identities))]
     public ApiMap<string, string> JsonCompatibleIdentities {
-        get => Identities.UnorderedItems.ToApiMap(p => p.Key.Id.Value, p => p.Value, StringComparer.Ordinal);
+        get => Identities.UnorderedItems.ToApiMap(p => p.Key.Id, p => p.Value, StringComparer.Ordinal);
         init => Identities = value.ToApiMap(p => new UserIdentity(p.Key), p => p.Value);
     }
 
     public static User NewGuest(string? name = null)
         => new(name ?? GuestName);
 
-    public User(string name) : this(Symbol.Empty, name) { }
-    public User(Symbol id, string name)
+    public User(string name) : this("", name) { }
+    public User(string id, string name)
     {
         Id = id;
         Name = name;
@@ -56,7 +56,7 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public User(
-        Symbol id,
+        string id,
         string name,
         long version,
         ApiMap<string, string> claims,
@@ -88,9 +88,9 @@ public partial record User : IHasId<Symbol>, IHasVersion<long>, IRequirementTarg
         => this with { Identities = Identities.With(identity, secret) };
 
     public bool IsAuthenticated()
-        => !Id.IsEmpty;
+        => !Id.IsNullOrEmpty();
     public bool IsGuest()
-        => Id.IsEmpty;
+        => Id.IsNullOrEmpty();
     public virtual bool IsInRole(string role)
         => Claims.ContainsKey($"{ClaimTypes.Role}/{role}");
 

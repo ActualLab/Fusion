@@ -5,15 +5,13 @@ namespace ActualLab.CommandR.Internal;
 
 public class Commander : ICommander
 {
-    private static readonly PropertyInfo ChainIdSetterProperty =
-        typeof(IEventCommand).GetProperty(nameof(IEventCommand.ChainId))!;
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]
+    [field: AllowNull, MaybeNull]
+    protected static Action<IEventCommand, string> ChainIdSetter
+        => field ??= typeof(IEventCommand).GetProperty(nameof(IEventCommand.ChainId))!.GetSetter<string>();
 
     public IServiceProvider Services { get; }
     public CommanderHub Hub { get; }
-
-    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]
-    [field: AllowNull, MaybeNull]
-    protected Action<IEventCommand, Symbol> ChainIdSetter => field ??= ChainIdSetterProperty.GetSetter<Symbol>();
 
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
@@ -27,7 +25,7 @@ public class Commander : ICommander
     public Task Run(CommandContext context, CancellationToken cancellationToken = default)
     {
 #pragma warning disable MA0100
-        if (context.UntypedCommand is IEventCommand { ChainId.IsEmpty: true } eventCommand)
+        if (context.UntypedCommand is IEventCommand eventCommand && eventCommand.ChainId.IsNullOrEmpty())
             return RunEvent(eventCommand, (CommandContext<Unit>)context, cancellationToken);
 
         // Task.Run is used to call RunInternal to make sure parent
@@ -69,7 +67,7 @@ public class Commander : ICommander
         IEventCommand command, CommandContext<Unit> context, CancellationToken cancellationToken = default)
     {
         try {
-            if (!command.ChainId.IsEmpty)
+            if (!command.ChainId.IsNullOrEmpty())
                 throw new ArgumentOutOfRangeException(nameof(command));
 
             var handlers = Hub.HandlerResolver.GetCommandHandlers(command);

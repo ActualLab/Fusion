@@ -15,7 +15,7 @@ public interface IAuthBackend : IComputeService
 
     // Queries
     [ComputeMethod(MinCacheDuration = 10)]
-    public Task<User?> GetUser(DbShard shard, Symbol userId, CancellationToken cancellationToken = default);
+    public Task<User?> GetUser(string shard, string userId, CancellationToken cancellationToken = default);
 }
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]

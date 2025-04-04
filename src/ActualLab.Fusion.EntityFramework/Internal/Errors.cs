@@ -7,12 +7,12 @@ public static class Errors
     public static Exception DbContextIsReadOnly()
         => new InvalidOperationException("Provided DbContext is read-only.");
 
-    public static Exception WrongDbOperationScopeShard(Type scopeType, DbShard shard, DbShard requestedShard)
+    public static Exception WrongDbOperationScopeShard(Type scopeType, string shard, string requestedShard)
         => new InvalidOperationException($"{scopeType} is already bound to shard '{shard}', which differs from '{requestedShard}'.");
     public static Exception DbOperationIndexWasNotAssigned()
         => new InvalidOperationException("DbOperation.Index wasn't assigned on save.");
 
-    public static Exception NoShard(DbShard shard)
+    public static Exception NoShard(string shard)
         => new InvalidOperationException($"Shard doesn't exist: '{shard}'.");
 
     public static Exception EntityNotFound<TEntity>()

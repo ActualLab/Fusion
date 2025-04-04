@@ -77,7 +77,7 @@ public class DbKeyValueStore<TDbContext,
 
     // Queries
 
-    public virtual async Task<string?> Get(DbShard shard, string key, CancellationToken cancellationToken = default)
+    public virtual async Task<string?> Get(string shard, string key, CancellationToken cancellationToken = default)
     {
         _ = PseudoGet(shard, key);
 
@@ -91,7 +91,7 @@ public class DbKeyValueStore<TDbContext,
         return dbKeyValue?.Value;
     }
 
-    public virtual async Task<int> Count(DbShard shard, string prefix, CancellationToken cancellationToken = default)
+    public virtual async Task<int> Count(string shard, string prefix, CancellationToken cancellationToken = default)
     {
         _ = PseudoGet(shard, prefix);
 
@@ -105,7 +105,7 @@ public class DbKeyValueStore<TDbContext,
     }
 
     public virtual async Task<string[]> ListKeySuffixes(
-        DbShard shard,
+        string shard,
         string prefix,
         PageRef<string> pageRef,
         SortDirection sortDirection = SortDirection.Ascending,
@@ -137,10 +137,10 @@ public class DbKeyValueStore<TDbContext,
     // Protected methods
 
     [ComputeMethod]
-    protected virtual Task<Unit> PseudoGet(DbShard shard, string keyPart)
+    protected virtual Task<Unit> PseudoGet(string shard, string keyPart)
         => TaskExt.UnitTask;
 
-    protected void PseudoGetAllPrefixes(DbShard shard, string key)
+    protected void PseudoGetAllPrefixes(string shard, string key)
     {
         var delimiter = KeyValueStoreExt.Delimiter;
         var delimiterIndex = key.IndexOf(delimiter, 0);

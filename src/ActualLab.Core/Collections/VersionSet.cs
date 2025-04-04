@@ -11,7 +11,7 @@ namespace ActualLab.Collections;
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record VersionSet(
     [property: JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
-    IReadOnlyDictionary<Symbol, Version> Items
+    IReadOnlyDictionary<string, Version> Items
 ) {
     public static readonly Version ZeroVersion = new();
     public static readonly ListFormat ListFormat = ListFormat.CommaSeparated;
@@ -28,7 +28,7 @@ public sealed partial record VersionSet(
             if (field == 0) {
                 var hashCode = 0;
                 foreach (var (scope, version) in Items)
-                    hashCode ^= System.HashCode.Combine(scope.HashCode, version.GetHashCode());
+                    hashCode ^= System.HashCode.Combine(scope.GetOrdinalHashCode(), version.GetHashCode());
                 if (hashCode == 0)
                     hashCode = 1;
                 field = hashCode;
@@ -37,29 +37,29 @@ public sealed partial record VersionSet(
         }
     }
 
-    public Version this[Symbol scope]
+    public Version this[string scope]
         => Items.GetValueOrDefault(scope, ZeroVersion)!;
 
     // Constructors
 
     public VersionSet()
-        : this(ImmutableDictionary<Symbol, Version>.Empty)
+        : this(ImmutableDictionary<string, Version>.Empty)
     { }
 
-    public VersionSet(Symbol scope, Version version)
-        : this(new Dictionary<Symbol, Version>() { { scope, version } })
+    public VersionSet(string scope, Version version)
+        : this(new Dictionary<string, Version>(StringComparer.Ordinal) { { scope, version } })
     { }
 
-    public VersionSet(Symbol scope, string version)
-        : this(new Dictionary<Symbol, Version>() { { scope, VersionExt.Parse(version) } })
+    public VersionSet(string scope, string version)
+        : this(new Dictionary<string, Version>(StringComparer.Ordinal) { { scope, VersionExt.Parse(version) } })
     { }
 
-    public VersionSet(params (Symbol Scope, Version Version)[] versions)
-        : this(versions.ToDictionary(kv => kv.Scope, kv => kv.Version))
+    public VersionSet(params (string Scope, Version Version)[] versions)
+        : this(versions.ToDictionary(kv => kv.Scope, kv => kv.Version, StringComparer.Ordinal))
     { }
 
-    public VersionSet(params (Symbol Scope, string Version)[] versions)
-        : this(versions.ToDictionary(kv => kv.Scope, kv => VersionExt.Parse(kv.Version)))
+    public VersionSet(params (string Scope, string Version)[] versions)
+        : this(versions.ToDictionary(kv => kv.Scope, kv => VersionExt.Parse(kv.Version), StringComparer.Ordinal))
     { }
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
@@ -85,7 +85,8 @@ public sealed partial record VersionSet(
         return true;
     }
 
-    public override int GetHashCode() => HashCode;
+    public override int GetHashCode()
+        => HashCode;
 
     // Parse and TryParse
 
@@ -102,7 +103,7 @@ public sealed partial record VersionSet(
         }
 
         result = null;
-        var versions = new Dictionary<Symbol, Version>();
+        var versions = new Dictionary<string, Version>(StringComparer.Ordinal);
         using var parser = ListFormat.CreateParser(s);
         while (parser.TryParseNext()) {
             var item = parser.Item;
@@ -122,7 +123,7 @@ public sealed partial record VersionSet(
                 return false;
             }
 
-            var scope = (Symbol)item[..equalsIndex];
+            var scope = item[..equalsIndex];
             versions[scope] = version;
         }
 
@@ -139,7 +140,7 @@ public sealed partial record VersionSet(
 
         using var formatter = ListFormat.CreateFormatter();
         foreach (var (scope, version) in Items)
-            formatter.Append($"{scope.Value}={version.Format()}");
+            formatter.Append($"{scope}={version.Format()}");
         formatter.AppendEnd();
         return formatter.Output;
     }

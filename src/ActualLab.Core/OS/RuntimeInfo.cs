@@ -5,8 +5,8 @@ public static class RuntimeInfo
     public static class Process
     {
         public static readonly Guid Guid = Guid.NewGuid();
-        public static readonly Symbol Id = Guid.Format(62);
-        public static readonly Symbol MachinePrefixedId = $"{Environment.MachineName}-{Id.Value}";
+        public static readonly string Id = Guid.Format(62);
+        public static readonly string MachinePrefixedId = $"{Environment.MachineName}-{Id}";
     }
 
     public static class DotNet

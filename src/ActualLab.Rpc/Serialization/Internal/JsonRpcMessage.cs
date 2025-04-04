@@ -29,7 +29,7 @@ public sealed record JsonRpcMessage(
 
         var result = new List<string>();
         foreach (var header in headers) {
-            result.Add(header.Key.Name.Value);
+            result.Add(header.Key.Name);
             result.Add(header.Value);
         }
 

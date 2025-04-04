@@ -10,7 +10,7 @@ public sealed class SessionMessagePackFormatter : IMessagePackFormatter<Session?
         if (ReferenceEquals(value, null))
             writer.WriteNil();
         else
-            options.Resolver.GetFormatterWithVerify<string>().Serialize(ref writer, value.Id.Value, options);
+            options.Resolver.GetFormatterWithVerify<string>().Serialize(ref writer, value.Id, options);
     }
 
     public Session? Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)

@@ -142,7 +142,7 @@ void ConfigureServices()
                     var tenantIndexes = hostSettings.TenantIndex is { } tenantIndex
                         ? Enumerable.Range(tenantIndex, 1) // Serve just a single tenant
                         : Enumerable.Range(0, hostSettings.TenantCount); // All tenants are served
-                    sharding.AddShardRegistry(tenantIndexes.Select(i => new DbShard($"tenant{i}")));
+                    sharding.AddShardRegistry(tenantIndexes.Select(i => $"tenant{i}"));
                     sharding.AddTransientShardDbContextFactory(ConfigureShardDbContext);
                 });
             }
@@ -151,7 +151,7 @@ void ConfigureServices()
                 db.Services.AddTransientDbContextFactory<AppDbContext>((c, db) => {
                     // We use fakeShard here solely to be able to
                     // re-use the configuration logic from ConfigureShardDbContext.
-                    ConfigureShardDbContext(c, default, db);
+                    ConfigureShardDbContext(c, DbShard.Single, db);
                 });
             }
         });
@@ -261,7 +261,7 @@ void ConfigureServices()
 }
 
 // ReSharper disable once VariableHidesOuterVariable
-void ConfigureShardDbContext(IServiceProvider services, DbShard shard, DbContextOptionsBuilder db)
+void ConfigureShardDbContext(IServiceProvider services, string shard, DbContextOptionsBuilder db)
 {
     if (!string.IsNullOrEmpty(hostSettings.UseSqlServer))
         db.UseSqlServer(hostSettings.UseSqlServer.Interpolate(shard));

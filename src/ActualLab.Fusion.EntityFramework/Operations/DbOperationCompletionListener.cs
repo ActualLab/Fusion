@@ -55,7 +55,7 @@ public class DbOperationCompletionListener<TDbContext>
     // Protected methods
 
     protected virtual Task Notify(
-        DbShard shard, Operation operation, DbOperationScope<TDbContext> operationScope,
+        string shard, Operation operation, DbOperationScope<TDbContext> operationScope,
         CancellationToken cancellationToken)
     {
         var notifyOperationLogTask = OperationLogWatcher.NotifyChanged(shard, cancellationToken);

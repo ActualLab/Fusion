@@ -15,9 +15,9 @@ public static class FusionBuilderExt
     {
         var services = fusion.Services;
         // In-memory auth service relies on IDbAuthBackend,
-        // which requires DbShard-based APIs, so we add fake IDbShardRegistry<Unit>
+        // which requires string-based APIs, so we add fake IDbShardRegistry<Unit>
         // to let it use Unit as TDbContext.
-        services.TryAddSingleton<IDbShardRegistry<Unit>>(c => new DbShardRegistry<Unit>(c, DbShard.None));
+        services.TryAddSingleton<IDbShardRegistry<Unit>>(c => new DbShardRegistry<Unit>(c, DbShard.Single));
         services.TryAddSingleton<IDbShardResolver<Unit>, DbShardResolver<Unit>>();
         return fusion.AddAuthService(typeof(InMemoryAuthService));
     }

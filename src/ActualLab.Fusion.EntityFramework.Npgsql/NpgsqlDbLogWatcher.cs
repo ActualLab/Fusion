@@ -18,7 +18,7 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
 
     // Protected methods
 
-    protected override DbShardWatcher CreateShardWatcher(DbShard shard)
+    protected override DbShardWatcher CreateShardWatcher(string shard)
         => new ShardWatcher(this, shard);
 
     // Nested types
@@ -33,13 +33,13 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
         public string QuotedNotifyPayload { get; }
         public TDbContext? DbContext { get; set; }
 
-        public ShardWatcher(NpgsqlDbLogWatcher<TDbContext, TDbEntry> owner, DbShard shard)
+        public ShardWatcher(NpgsqlDbLogWatcher<TDbContext, TDbEntry> owner, string shard)
             : base(shard)
         {
             Owner = owner;
             var hostId = DbHub.HostId;
             var channelName = owner.Settings.ChannelNameFormatter.Invoke(shard, typeof(TDbEntry));
-            QuotedNotifyPayload = hostId.Value
+            QuotedNotifyPayload = hostId.Id
 #if NETSTANDARD2_0
                 .Replace("'", "''");
 #else
@@ -56,7 +56,7 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
                 await database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
                 var dbConnection = (NpgsqlConnection) database.GetDbConnection()!;
                 dbConnection.Notification += (_, eventArgs) => {
-                    if (eventArgs.Payload != hostId.Id)
+                    if (!string.Equals(eventArgs.Payload, hostId.Id, StringComparison.Ordinal))
                         MarkChanged();
                 };
                 await dbContext.Database.ExecuteSqlRawAsync(ListenSql, cancellationToken).ConfigureAwait(false);

@@ -22,7 +22,7 @@ public interface IDbUserRepo<in TDbContext, TDbUser, TDbUserId>
         TDbContext dbContext, TDbUser dbUser, CancellationToken cancellationToken = default);
 
     // Read methods
-    public Task<TDbUser?> Get(DbShard shard, TDbUserId userId, CancellationToken cancellationToken = default);
+    public Task<TDbUser?> Get(string shard, TDbUserId userId, CancellationToken cancellationToken = default);
     public Task<TDbUser?> Get(TDbContext dbContext, TDbUserId userId, bool forUpdate, CancellationToken cancellationToken = default);
     public Task<TDbUser?> GetByUserIdentity(
         TDbContext dbContext, UserIdentity userIdentity, bool forUpdate, CancellationToken cancellationToken = default);
@@ -61,7 +61,7 @@ public class DbUserRepo<TDbContext,
             Id = id,
             Version = VersionGenerator.NextVersion(),
             Name = user.Name,
-            Claims = user.Claims.ToImmutableDictionary(),
+            Claims = user.Claims.ToImmutableDictionary(StringComparer.Ordinal),
         };
         dbContext.Add(dbUser);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -116,7 +116,7 @@ public class DbUserRepo<TDbContext,
 
     // Read methods
 
-    public async Task<TDbUser?> Get(DbShard shard, TDbUserId userId, CancellationToken cancellationToken = default)
+    public async Task<TDbUser?> Get(string shard, TDbUserId userId, CancellationToken cancellationToken = default)
         => await UserResolver.Get(shard, userId, cancellationToken).ConfigureAwait(false);
 
     public virtual async Task<TDbUser?> Get(
@@ -143,7 +143,7 @@ public class DbUserRepo<TDbContext,
         var dbUserIdentities = forUpdate
             ? dbContext.Set<DbUserIdentity<TDbUserId>>().ForNoKeyUpdate()
             : dbContext.Set<DbUserIdentity<TDbUserId>>();
-        var id = userIdentity.Id.Value;
+        var id = userIdentity.Id;
         var dbUserIdentity = await dbUserIdentities
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
             .ConfigureAwait(false);

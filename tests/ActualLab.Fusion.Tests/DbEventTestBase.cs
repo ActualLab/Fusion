@@ -162,7 +162,7 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
         await Services.Commander().Call(new EventQueue_Add(events));
     }
 
-    private Symbol GetUuid(string id)
+    private string GetUuid(string id)
     {
         var uuidEndIndex = id.IndexOf('.');
         return uuidEndIndex < 0

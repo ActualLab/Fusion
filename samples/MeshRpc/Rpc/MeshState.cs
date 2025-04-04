@@ -11,7 +11,7 @@ public sealed class MeshState
 
     public long Version { get; } = Interlocked.Increment(ref _lastVersion);
     public ImmutableArray<Host> Hosts { get; }
-    public IReadOnlyDictionary<Symbol, Host> HostById { get; }
+    public IReadOnlyDictionary<string, Host> HostById { get; }
     public ShardMap<Host> ShardMap { get; }
 
     public static void Register(Host host)
@@ -33,7 +33,7 @@ public sealed class MeshState
     {
         hosts ??= [];
         Hosts = [..hosts.OrderBy(x => x.Id)];
-        HostById = hosts.ToDictionary(h => h.Id);
+        HostById = hosts.ToDictionary(h => h.Id, StringComparer.Ordinal);
         ShardMap = new ShardMap<Host>(MeshSettings.ShardCount, Hosts);
     }
 

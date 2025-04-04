@@ -8,8 +8,8 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
 {
     private long _nextUserId;
 
-    protected ConcurrentDictionary<(DbShard Shard, Symbol UserId), User> Users { get; } = new();
-    protected ConcurrentDictionary<(DbShard Shard, Symbol SessionId), SessionInfo> SessionInfos { get; } = new();
+    protected ConcurrentDictionary<(string Shard, string UserId), User> Users { get; } = new();
+    protected ConcurrentDictionary<(string Shard, string SessionId), SessionInfo> SessionInfos { get; } = new();
     protected VersionGenerator<long> VersionGenerator { get; } = services.VersionGenerator<long>();
     protected IDbShardResolver<Unit> ShardResolver { get; } = services.DbShardResolver<Unit>();
     protected MomentClockSet Clocks { get; } = services.Clocks();
@@ -71,7 +71,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         context.Operation.Items.Set(sessionInfo);
         sessionInfo = sessionInfo with {
             AuthenticatedIdentity = "",
-            UserId = Symbol.Empty,
+            UserId = "",
             IsSignOutForced = force,
         };
         UpsertSessionInfo(shard, session.Id, sessionInfo, null);

@@ -13,18 +13,18 @@ namespace ActualLab.Collections;
 // [Obsolete("Use PropertyBag instead.")]
 public readonly partial record struct ImmutableOptionSet
 {
-    private static readonly ImmutableDictionary<Symbol, object> EmptyItems = ImmutableDictionary<Symbol, object>.Empty;
+    private static readonly ImmutableDictionary<string, object> EmptyItems
+        = ImmutableDictionary<string, object>.Empty.WithComparers(StringComparer.Ordinal);
 
     public static readonly ImmutableOptionSet Empty;
-
-    private readonly ImmutableDictionary<Symbol, object>? _items;
 
     // Computed properties
 
     [JsonIgnore, MemoryPackIgnore, IgnoreMember]
-    public ImmutableDictionary<Symbol, object> Items {
+    [field: AllowNull, MaybeNull]
+    public ImmutableDictionary<string, object> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _items ?? EmptyItems;
+        get => field ?? EmptyItems;
     }
 
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
@@ -33,31 +33,31 @@ public readonly partial record struct ImmutableOptionSet
         => OptionSetHelper.ToNewtonsoftJsonCompatible(Items);
 
     // ReSharper disable once CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
-    public object? this[Symbol key] => Items.TryGetValue(key, out var v) ? v : null;
+    public object? this[string key] => Items.TryGetValue(key, out var v) ? v : null;
 
     [Newtonsoft.Json.JsonConstructor]
     // ReSharper disable once ConvertToPrimaryConstructor
-    public ImmutableOptionSet(ImmutableDictionary<Symbol, object> items)
-        => _items = items;
+    public ImmutableOptionSet(ImmutableDictionary<string, object> items)
+        => Items = items.WithComparers(keyComparer: StringComparer.Ordinal);
 
     [JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public ImmutableOptionSet(IDictionary<string, NewtonsoftJsonSerialized<object>>? jsonCompatibleItems)
-        => _items = jsonCompatibleItems?.ToImmutableDictionary(p => (Symbol) p.Key, p => p.Value.Value);
+        => Items = jsonCompatibleItems?.ToImmutableDictionary(p => p.Key, p => p.Value.Value, StringComparer.Ordinal)!;
 
     public override string ToString()
         => $"{nameof(ImmutableOptionSet)}({OptionSetHelper.GetToStringArgs(Items)})";
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains<T>()
-        => this[typeof(T)] != null;
+        => this[typeof(T).ToIdentifierSymbol()] != null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool Contains(Symbol key)
+    public bool Contains(string key)
         => this[key] != null;
 
     public bool TryGet<T>(out T value)
     {
-        var objValue = this[typeof(T)];
+        var objValue = this[typeof(T).ToIdentifierSymbol()];
         if (objValue == null) {
             value = default!;
             return false;
@@ -69,24 +69,24 @@ public readonly partial record struct ImmutableOptionSet
     public T? Get<T>()
         where T : class
     {
-        var value = this[typeof(T)];
+        var value = this[typeof(T).ToIdentifierSymbol()];
         return (T?) value;
     }
 
     public T GetOrDefault<T>(T @default = default!)
     {
-        var value = this[typeof(T)];
+        var value = this[typeof(T).ToIdentifierSymbol()];
         return value != null ? (T) value : @default;
     }
 
     // ReSharper disable once HeapView.PossibleBoxingAllocation
-    public ImmutableOptionSet Set<T>(T value) => Set(typeof(T), value);
-    public ImmutableOptionSet Set(Symbol key, object? value)
+    public ImmutableOptionSet Set<T>(T value) => Set(typeof(T).ToIdentifierSymbol(), value);
+    public ImmutableOptionSet Set(string key, object? value)
         => new(value != null ? Items.SetItem(key, value) : Items.Remove(key));
 
     public ImmutableOptionSet SetMany(ImmutableOptionSet overrides)
         => SetMany(overrides.Items!);
-    public ImmutableOptionSet SetMany(IEnumerable<KeyValuePair<Symbol, object?>> overrides)
+    public ImmutableOptionSet SetMany(IEnumerable<KeyValuePair<string, object?>> overrides)
     {
         var result = this;
         foreach (var (key, value) in overrides)
@@ -94,7 +94,7 @@ public readonly partial record struct ImmutableOptionSet
         return result;
     }
 
-    public ImmutableOptionSet Remove<T>() => Set(typeof(T), null);
+    public ImmutableOptionSet Remove<T>() => Set(typeof(T).ToIdentifierSymbol(), null);
 
     // Equality
 

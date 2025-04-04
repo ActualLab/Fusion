@@ -29,7 +29,7 @@ public abstract class DbOperationScope : IOperationScope
     public CommandContext CommandContext { get; protected init; } = null!;
     protected IServiceProvider Services => CommandContext.Services;
     public Operation Operation { get; protected init; } = null!;
-    public DbShard Shard { get; protected set; }
+    public string Shard { get; protected set; } = DbShard.Single;
     public bool IsTransient => false;
     public bool IsUsed => MasterDbContext != null;
     public bool? IsCommitted { get; protected set; }
@@ -141,7 +141,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
     }
 
     public virtual async ValueTask InitializeDbContext(
-        TDbContext dbContext, DbShard shard, CancellationToken cancellationToken = default)
+        TDbContext dbContext, string shard, CancellationToken cancellationToken = default)
     {
         // This code must run in the same execution context to work, so
         // we run it first
@@ -151,7 +151,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
         if (MasterDbContext == null) // !IsUsed
             await CreateMasterDbContext(shard, cancellationToken).ConfigureAwait(false);
-        else if (Shard != shard)
+        else if (!string.Equals(Shard, shard, StringComparison.Ordinal))
             throw Errors.WrongDbOperationScopeShard(GetType(), Shard, shard);
 
         var database = dbContext.Database;
@@ -197,7 +197,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             // We'll manually add/update entities here
             dbContext.EnableChangeTracking(false);
             if (Operation.Events.Count != 0) {
-                var events = new Dictionary<Symbol, OperationEvent>();
+                var events = new Dictionary<string, OperationEvent>(StringComparer.Ordinal);
                 // We "clean up" the events first by getting rid of duplicates there
                 foreach (var e in Operation.Events) {
                     if (ReferenceEquals(e.Value, null))
@@ -205,9 +205,10 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
                     events[e.Uuid] = e;
                 }
-                var dbEvents = dbContext.Set<DbEvent>();
                 HasEvents = events.Count != 0;
-                foreach (var e in events.Values.OrderBy(x => x.Uuid)) {
+                var orderedEvents = events.Values.OrderBy(x => x.Uuid, StringComparer.Ordinal);
+                var dbEvents = dbContext.Set<DbEvent>();
+                foreach (var e in orderedEvents) {
                     var dbEvent = new DbEvent(e, DbHub.VersionGenerator);
                     var conflictStrategy = e.UuidConflictStrategy;
                     if (conflictStrategy == KeyConflictStrategy.Fail)
@@ -292,7 +293,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             // scope.MasterDbContext?.Database may throw this exception
             Log.LogWarning(e, "IsTransientFailure resorts to temporary {DbContext}", typeof(TDbContext).Name);
             try {
-                var shard = ShardRegistry.HasSingleShard ? default : DbShard.Template;
+                var shard = ShardRegistry.HasSingleShard ? DbShard.Single : DbShard.Template;
                 using var tmpDbContext = ContextFactory.CreateDbContext(shard);
                 var executionStrategy = tmpDbContext.Database.CreateExecutionStrategy();
                 return executionStrategy is ExecutionStrategy retryingExecutionStrategy
@@ -308,7 +309,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
     // Protected methods
 
-    protected virtual async ValueTask CreateMasterDbContext(DbShard shard, CancellationToken cancellationToken)
+    protected virtual async ValueTask CreateMasterDbContext(string shard, CancellationToken cancellationToken)
     {
         var dbContext = await ContextFactory.CreateDbContextAsync(shard, cancellationToken).ConfigureAwait(false);
         try {

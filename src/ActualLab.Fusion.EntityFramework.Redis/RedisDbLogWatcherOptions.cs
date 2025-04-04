@@ -7,14 +7,14 @@ public record RedisDbLogWatcherOptions<TDbContext>
 {
     public static RedisDbLogWatcherOptions<TDbContext> Default { get; set; } = new();
 
-    public Func<DbShard, Type, string> PubSubKeyFormatter { get; init; } = DefaultPubSubKeyFormatter;
+    public Func<string, Type, string> PubSubKeyFormatter { get; init; } = DefaultPubSubKeyFormatter;
     public RetryDelaySeq WatchRetryDelays { get; init; } = RetryDelaySeq.Exp(1, 10);
 
-    public static string DefaultPubSubKeyFormatter(DbShard shard, Type dbEntryType)
+    public static string DefaultPubSubKeyFormatter(string shard, Type dbEntryType)
     {
         var dbContextName = typeof(TDbContext).Name;
         var dbEntryName = dbEntryType.Name;
-        var shardSuffix = shard.IsNone ? "" : $".{shard}";
+        var shardSuffix = DbShard.IsSingle(shard) ? "" : $".{shard}";
         return $"{dbContextName}.{dbEntryName}{shardSuffix}";
     }
 }

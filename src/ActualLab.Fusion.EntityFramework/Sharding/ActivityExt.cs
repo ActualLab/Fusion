@@ -8,6 +8,6 @@ public static class ActivityExt
 #if !NETSTANDARD2_0
     [return: NotNullIfNotNull("activity")]
 #endif
-    public static Activity? AddShardTags(this Activity? activity, DbShard shard)
-        => activity?.AddTag("shard", shard.Value);
+    public static Activity? AddShardTags(this Activity? activity, string shard)
+        => activity?.AddTag("shard", shard);
 }

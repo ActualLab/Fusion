@@ -19,7 +19,7 @@ public class InMemoryKeyValueStore(
     protected Options Settings { get; } = settings;
     protected MomentClock Clock { get; }
         = settings.Clock ?? services.Clocks().SystemClock;
-    protected ConcurrentDictionary<(DbShard Shard, Symbol Key), (string Value, Moment? ExpiresAt)> Store { get; }
+    protected ConcurrentDictionary<(string Shard, string Key), (string Value, Moment? ExpiresAt)> Store { get; }
         = new();
 
     // Commands
@@ -60,7 +60,7 @@ public class InMemoryKeyValueStore(
 
     // Queries
 
-    public virtual Task<string?> Get(DbShard shard, string key, CancellationToken cancellationToken = default)
+    public virtual Task<string?> Get(string shard, string key, CancellationToken cancellationToken = default)
     {
         _ = PseudoGet(shard, key);
         if (!Store.TryGetValue((shard, key), out var item))
@@ -73,18 +73,19 @@ public class InMemoryKeyValueStore(
             : (string?)item.Value);
     }
 
-    public virtual Task<int> Count(DbShard shard, string prefix, CancellationToken cancellationToken = default)
+    public virtual Task<int> Count(string shard, string prefix, CancellationToken cancellationToken = default)
     {
         // O(Store.Count) cost - definitely not for prod,
         // but fine for client-side use cases & testing.
         _ = PseudoGet(shard, prefix);
         var count = Store.Keys
-            .Count(k => k.Shard == shard && k.Key.Value.StartsWith(prefix, StringComparison.Ordinal));
+            .Count(k => string.Equals(k.Shard, shard, StringComparison.Ordinal)
+                && k.Key.StartsWith(prefix, StringComparison.Ordinal));
         return Task.FromResult(count);
     }
 
     public virtual Task<string[]> ListKeySuffixes(
-        DbShard shard,
+        string shard,
         string prefix,
         PageRef<string> pageRef,
         SortDirection sortDirection = SortDirection.Ascending,
@@ -94,10 +95,11 @@ public class InMemoryKeyValueStore(
         // but fine for client-side use cases & testing.
         _ = PseudoGet(shard, prefix);
         var query = Store.Keys
-            .Where(k => k.Shard == shard && k.Key.Value.StartsWith(prefix, StringComparison.Ordinal));
+            .Where(k => string.Equals(k.Shard, shard, StringComparison.Ordinal)
+                && k.Key.StartsWith(prefix, StringComparison.Ordinal));
         query = query.OrderByAndTakePage(k => k.Key, pageRef, sortDirection);
         var result = query
-            .Select(k => k.Key.Value.Substring(prefix.Length))
+            .Select(k => k.Key.Substring(prefix.Length))
             .ToArray();
         return Task.FromResult(result);
     }
@@ -105,10 +107,10 @@ public class InMemoryKeyValueStore(
     // PseudoXxx query-like methods
 
     [ComputeMethod]
-    protected virtual Task<Unit> PseudoGet(DbShard shard, string keyPart)
+    protected virtual Task<Unit> PseudoGet(string shard, string keyPart)
         => TaskExt.UnitTask;
 
-    protected void PseudoGetAllPrefixes(DbShard shard, string key)
+    protected void PseudoGetAllPrefixes(string shard, string key)
     {
         var delimiter = KeyValueStoreExt.Delimiter;
         var delimiterIndex = key.IndexOf(delimiter, 0);
@@ -121,7 +123,7 @@ public class InMemoryKeyValueStore(
 
     // Private / protected
 
-    protected bool AddOrUpdate(DbShard shard, string key, string value, Moment? expiresAt)
+    protected bool AddOrUpdate(string shard, string key, string value, Moment? expiresAt)
     {
         var spinWait = new SpinWait();
         while (true) {

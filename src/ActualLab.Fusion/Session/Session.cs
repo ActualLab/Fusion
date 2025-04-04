@@ -12,16 +12,18 @@ namespace ActualLab.Fusion;
 [JsonConverter(typeof(SessionJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(SessionNewtonsoftJsonConverter))]
 [TypeConverter(typeof(SessionTypeConverter))]
-public sealed partial class Session : IHasId<Symbol>,
-    IEquatable<Session>, IConvertibleTo<string>, IConvertibleTo<Symbol>,
+public sealed partial class Session : IHasId<string>,
+    IEquatable<Session>, IConvertibleTo<string>,
     IHasToStringProducingJson
 {
     public static readonly Session Default = new("~");
     public static SessionFactory Factory { get; set; } = DefaultSessionFactory.New();
     public static SessionValidator Validator { get; set; } = session => !session.IsDefault();
 
-    [DataMember(Order = 0), MemoryPackOrder(0)]
-    public Symbol Id { get; }
+    private int _hashCode;
+
+    [DataMember(Order = 0), MemoryPackOrder(0), SymbolStringMemoryPackFormatter]
+    public string Id { get; }
 
     [field: AllowNull, MaybeNull]
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -31,26 +33,26 @@ public sealed partial class Session : IHasId<Symbol>,
         => Factory.Invoke();
 
     [MemoryPackConstructor, SerializationConstructor]
-    public Session(Symbol id)
+    public Session(string id)
     {
         // The check is here to prevent use of sessions with empty or other special Ids,
         // which could be a source of security problems later.
-        var idValue = id.Value;
-        if (idValue.Length < 8 && !(idValue.Length == 1 && idValue[0] == '~'))
+        if (id.IsNullOrEmpty() || (id.Length < 8 && !(id is ['~'])))
             throw Errors.InvalidSessionId(id);
+
         Id = id;
     }
 
     public string GetTags()
     {
-        var s = Id.Value;
+        var s = Id;
         var startIndex = s.IndexOf('&', StringComparison.Ordinal);
         return startIndex < 0 ? "" : s[(startIndex + 1)..];
     }
 
     public string GetTag(string tag)
     {
-        var s = Id.Value;
+        var s = Id;
         var tagPrefix = $"&{tag}=";
         var startIndex = s.IndexOf(tagPrefix, StringComparison.Ordinal);
         if (startIndex < 0)
@@ -65,7 +67,7 @@ public sealed partial class Session : IHasId<Symbol>,
 
     public Session WithTags(string tags)
     {
-        var s = Id.Value;
+        var s = Id;
         var startIndex = s.IndexOf('&', StringComparison.Ordinal);
         s = startIndex < 0 ? s : s[startIndex..];
         if (tags.IsNullOrEmpty())
@@ -75,7 +77,7 @@ public sealed partial class Session : IHasId<Symbol>,
 
     public Session WithTag(string tag, string value)
     {
-        var s = Id.Value;
+        var s = Id;
         var tagPrefix = $"&{tag}=";
         var startIndex = s.IndexOf(tagPrefix, StringComparison.Ordinal);
         if (startIndex > 0) {
@@ -96,14 +98,14 @@ public sealed partial class Session : IHasId<Symbol>,
     // SessionId by knowing it; on the other hand, ~4B hash variants are enough to identify
     // a Session of a given user, and that's the only purpose of this hash.
     private string ComputeHash()
-        => ((uint)Id.Value.GetXxHash3()).ToString("x8", CultureInfo.InvariantCulture);
+        => ((uint)Id.GetXxHash3()).ToString("x8", CultureInfo.InvariantCulture);
 
     // Conversion
 
-    public override string ToString() => Id.Value;
+    public override string ToString()
+        => Id;
 
-    Symbol IConvertibleTo<Symbol>.Convert() => Id;
-    string IConvertibleTo<string>.Convert() => Id.Value;
+    string IConvertibleTo<string>.Convert() => Id;
 
     // Equality
 
@@ -113,11 +115,27 @@ public sealed partial class Session : IHasId<Symbol>,
             return true;
         if (ReferenceEquals(null, other))
             return false;
-        return Id == other.Id;
+        return string.Equals(Id, other.Id, StringComparison.Ordinal);
     }
 
-    public override bool Equals(object? obj) => obj is Session s && Equals(s);
-    public override int GetHashCode() => Id.HashCode;
+    public override bool Equals(object? obj)
+        => obj is Session s && Equals(s);
+
+    public override int GetHashCode()
+    {
+        // ReSharper disable once NonReadonlyMemberInGetHashCode
+        if (_hashCode == 0) {
+            var hashCode = Id.GetHashCode(StringComparison.Ordinal);
+            if (hashCode == 0)
+                hashCode = 1;
+            // ReSharper disable once NonReadonlyMemberInGetHashCode
+            _hashCode = hashCode;
+        }
+
+        // ReSharper disable once NonReadonlyMemberInGetHashCode
+        return _hashCode;
+    }
+
     public static bool operator ==(Session? left, Session? right) => Equals(left, right);
     public static bool operator !=(Session? left, Session? right) => !Equals(left, right);
 }

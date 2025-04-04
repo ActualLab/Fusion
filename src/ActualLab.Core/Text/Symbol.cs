@@ -64,8 +64,6 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator Symbol(string? source) => new(source);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator Symbol(Type? source) => source?.ToSymbol() ?? Empty;
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator string(Symbol source) => source.Value;
 
     // Operators

@@ -170,24 +170,24 @@ public readonly struct RpcBuilder
 
     public RpcBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
-        (RpcServiceMode mode = default, Symbol name = default)
+        (RpcServiceMode mode = default, string name = "")
         where TService : class
         => AddService(typeof(TService), mode, name);
     public RpcBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (RpcServiceMode mode = default, Symbol name = default)
+        (RpcServiceMode mode = default, string name = "")
         where TService : class
         where TImplementation : class, TService
         => AddService(typeof(TService), typeof(TImplementation), mode, name);
     public RpcBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        RpcServiceMode mode = default, Symbol name = default)
+        RpcServiceMode mode = default, string name = "")
         => AddService(serviceType, serviceType, mode, name);
     public RpcBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        RpcServiceMode mode = default, Symbol name = default)
+        RpcServiceMode mode = default, string name = "")
     {
         mode = mode.Or(DefaultServiceMode);
         return mode switch {
@@ -202,24 +202,24 @@ public readonly struct RpcBuilder
 
     public RpcBuilder AddClient<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
-        (Symbol name = default)
+        (string name = "")
         where TService : class
         => AddClient(typeof(TService), typeof(TService), name);
     public RpcBuilder AddClient<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TProxyBase>
-        (Symbol name = default)
+        (string name = "")
         where TService : class
         where TProxyBase : class, TService
         => AddClient(typeof(TService), typeof(TProxyBase), name);
     public RpcBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        Symbol name = default)
+        string name = "")
         => AddClient(serviceType, serviceType, name);
     public RpcBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,
-        Symbol name = default)
+        string name = "")
     {
         // DI container:
         // - TProxyBaseType is a singleton RPC client for TService
@@ -280,24 +280,24 @@ public readonly struct RpcBuilder
 
     public RpcBuilder AddServer<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
-        (Symbol name = default)
+        (string name = "")
         where TService : class
         => AddServer(typeof(TService), name);
     public RpcBuilder AddServer<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (Symbol name = default)
+        (string name = "")
         where TService : class
         where TImplementation : class, TService
         => AddServer(typeof(TService), typeof(TImplementation), name);
     public RpcBuilder AddServer(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        Symbol name = default)
+        string name = "")
         => AddServer(serviceType, serviceType, name);
     public RpcBuilder AddServer(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        Symbol name = default)
+        string name = "")
     {
         // DI container:
         // - TImplementation is a singleton
@@ -313,14 +313,14 @@ public readonly struct RpcBuilder
     public RpcBuilder AddDistributedService<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (Symbol name = default)
+        (string name = "")
         where TService : class
         where TImplementation : class, TService
         => AddDistributedService(typeof(TService), typeof(TImplementation), name);
     public RpcBuilder AddDistributedService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        Symbol name = default)
+        string name = "")
     {
         // DI container:
         // - TService is a singleton mapped to a hybrid proxy extending TImplementation,
@@ -346,14 +346,14 @@ public readonly struct RpcBuilder
     public RpcBuilder AddDistributedServicePair<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (Symbol name = default)
+        (string name = "")
         where TService : class
         where TImplementation : class, TService
         => AddDistributedServicePair(typeof(TService), typeof(TImplementation), name);
     public RpcBuilder AddDistributedServicePair(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        Symbol name = default)
+        string name = "")
     {
         // DI container:
         // - TImplementation is a singleton

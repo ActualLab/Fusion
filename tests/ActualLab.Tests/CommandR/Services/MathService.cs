@@ -68,7 +68,7 @@ public class MathService(IServiceProvider services) : ServiceBase(services), IMa
     {
         await Task.Delay(command.SetDelay, cancellationToken).ConfigureAwait(false);
         Log.LogInformation("Set: ChainId = {ChainId}", command.ChainId);
-        command.ChainId.IsEmpty.Should().BeFalse();
+        command.ChainId.IsNullOrEmpty().Should().BeFalse();
         if (command.SetValue is { } value) {
             lock (_lock)
                 Value = value;
@@ -82,7 +82,7 @@ public class MathService(IServiceProvider services) : ServiceBase(services), IMa
     {
         await Task.Delay(command.IncrementDelay, cancellationToken).ConfigureAwait(false);
         Log.LogInformation("Inc: ChainId = {ChainId}", command.ChainId);
-        command.ChainId.IsEmpty.Should().BeFalse();
+        command.ChainId.IsNullOrEmpty().Should().BeFalse();
         lock (_lock)
             Value += command.IncrementBy;
     }
@@ -92,7 +92,7 @@ public class MathService(IServiceProvider services) : ServiceBase(services), IMa
     {
         await Task.Delay(command.FailDelay, cancellationToken).ConfigureAwait(false);
         Log.LogInformation("Fail: ChainId = {ChainId}", command.ChainId);
-        command.ChainId.IsEmpty.Should().BeFalse();
+        command.ChainId.IsNullOrEmpty().Should().BeFalse();
         if (command.MustFail)
             throw new InvalidOperationException("Fail!");
     }

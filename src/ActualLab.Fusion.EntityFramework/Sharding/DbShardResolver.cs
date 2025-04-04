@@ -6,7 +6,7 @@ public interface IDbShardResolver : IHasServices
 {
     public IDbShardRegistry ShardRegistry { get; }
 
-    public DbShard Resolve(object source);
+    public string Resolve(object source);
 }
 
 public interface IDbShardResolver<TDbContext> : IDbShardResolver
@@ -24,7 +24,7 @@ public abstract class DbShardResolver(IServiceProvider services) : IDbShardResol
     IDbShardRegistry IDbShardResolver.ShardRegistry => UntypedShardRegistry;
     protected abstract IDbShardRegistry UntypedShardRegistry { get; }
 
-    public abstract DbShard Resolve(object source);
+    public abstract string Resolve(object source);
 }
 
 public class DbShardResolver<TDbContext>(IServiceProvider services)
@@ -36,22 +36,22 @@ public class DbShardResolver<TDbContext>(IServiceProvider services)
     public IDbShardRegistry<TDbContext> ShardRegistry
         => field ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
 
-    public override DbShard Resolve(object source)
+    public override string Resolve(object source)
     {
         if (ShardRegistry.HasSingleShard)
-            return default;
+            return DbShard.Single;
 
         switch (source) {
             case Session session:
-                return new DbShard(session.GetTag(SessionShardTag));
+                return DbShard.Validate(session.GetTag(SessionShardTag));
             case IHasShard hasShard:
-                return hasShard.Shard;
+                return DbShard.Validate(hasShard.Shard);
             case ICommand command:
                 if (command is ISessionCommand sessionCommand)
-                    return new DbShard(sessionCommand.Session.GetTag(SessionShardTag));
-                return default;
+                    return DbShard.Validate(sessionCommand.Session.GetTag(SessionShardTag));
+                return DbShard.Single;
             default:
-                return default;
+                return DbShard.Single;
         }
     }
 }

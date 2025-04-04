@@ -10,7 +10,7 @@ public static class Errors
 
     public static Exception ServiceTypeConflict(Type serviceType)
         => new InvalidOperationException($"Service '{serviceType.GetName()}' is already registered.");
-    public static Exception ServiceNameConflict(Type serviceType1, Type serviceType2, Symbol serviceName)
+    public static Exception ServiceNameConflict(Type serviceType1, Type serviceType2, string serviceName)
         => new InvalidOperationException($"Services '{serviceType1.GetName()}' and '{serviceType2.GetName()}' have the same name '{serviceName}'.");
     public static Exception MethodNameConflict(RpcMethodDef methodDef)
         => new InvalidOperationException($"Service '{methodDef.Service.Type.GetName()}' has 2 or more methods named '{methodDef.Name}'.");

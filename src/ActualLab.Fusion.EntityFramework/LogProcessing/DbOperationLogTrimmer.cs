@@ -16,7 +16,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
 
     public abstract DbLogKind LogKind { get; }
 
-    protected override Task OnRun(DbShard shard, CancellationToken cancellationToken)
+    protected override Task OnRun(string shard, CancellationToken cancellationToken)
     {
         var mainTask = new AsyncChain($"{nameof(TrimOldEntries)}[{shard}]", ct => TrimOldEntries(shard, ct))
             .RetryForever(Settings.RetryDelays, SystemClock, Log)
@@ -32,7 +32,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
         return Task.WhenAll(mainTask, statisticsTask);
     }
 
-    protected virtual async Task TrimOldEntries(DbShard shard, CancellationToken cancellationToken)
+    protected virtual async Task TrimOldEntries(string shard, CancellationToken cancellationToken)
     {
         var batchSize = Settings.BatchSize;
         while (true) {
@@ -49,7 +49,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
         }
     }
 
-    private async Task LogStatistics(DbShard shard, CancellationToken cancellationToken)
+    private async Task LogStatistics(string shard, CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested) {
             await Task.Delay(Settings.StatisticsPeriod.Next(), cancellationToken).ConfigureAwait(false);
@@ -86,7 +86,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
         }
     }
 
-    protected virtual async Task<long> TrimBatch(DbShard shard, int batchSize, CancellationToken cancellationToken)
+    protected virtual async Task<long> TrimBatch(string shard, int batchSize, CancellationToken cancellationToken)
     {
         var minLoggedAt = SystemClock.Now.ToDateTime() - Settings.MaxEntryAge;
 

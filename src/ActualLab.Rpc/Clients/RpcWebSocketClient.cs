@@ -28,7 +28,7 @@ public class RpcWebSocketClient(
         public string ClientIdParameterName { get; init; } = "clientId";
 
         public static string DefaultHostUrlResolver(RpcWebSocketClient client, RpcClientPeer peer)
-            => peer.Ref.Key.Value;
+            => peer.Ref.Key;
 
         public static Uri? DefaultConnectionUriResolver(RpcWebSocketClient client, RpcClientPeer peer)
         {
@@ -54,7 +54,7 @@ public class RpcWebSocketClient(
 
             var queryStart = url.IndexOf('?') < 0 ? '?' : '&';
             url = $"{url}{queryStart}{settings.ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}"
-                + $"&{settings.SerializationFormatParameterName}={peer.SerializationFormat.Key.Value}";
+                + $"&{settings.SerializationFormatParameterName}={peer.SerializationFormat.Key}";
             return new Uri(url, UriKind.Absolute);
         }
 

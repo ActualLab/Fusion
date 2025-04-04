@@ -3,7 +3,6 @@ using System.Collections.Frozen;
 #endif
 using ActualLab.Comparison;
 using ActualLab.Internal;
-using ActualLab.OS;
 
 namespace ActualLab.Rpc;
 
@@ -11,7 +10,7 @@ public sealed class RpcMethodResolver
 {
     public readonly RpcServiceRegistry ServiceRegistry;
     public readonly VersionSet? Versions;
-    public readonly IReadOnlyDictionary<Symbol, MethodEntry>? MethodByFullName;
+    public readonly IReadOnlyDictionary<string, MethodEntry>? MethodByFullName;
     public readonly IReadOnlyDictionary<RpcMethodRef, MethodEntry>? MethodByRef;
     public readonly IReadOnlyDictionary<int, MethodEntry>? MethodByHashCode;
     public readonly RpcMethodResolver? NextResolver;
@@ -25,7 +24,7 @@ public sealed class RpcMethodResolver
         }
     }
 
-    public RpcMethodDef? this[Symbol fullName] {
+    public RpcMethodDef? this[string fullName] {
         get {
             if (MethodByFullName != null && MethodByFullName.TryGetValue(fullName, out var methodEntry))
                 return methodEntry.Method;
@@ -47,7 +46,7 @@ public sealed class RpcMethodResolver
     {
         ServiceRegistry = serviceRegistry;
         Versions = null;
-        var methodByFullName = new Dictionary<Symbol, MethodEntry>();
+        var methodByFullName = new Dictionary<string, MethodEntry>(StringComparer.Ordinal);
         var methodByRef = new Dictionary<RpcMethodRef, MethodEntry>();
         var methodByHashCode = new Dictionary<int, MethodEntry>();
         foreach (var service in ServiceRegistry) {
@@ -55,7 +54,7 @@ public sealed class RpcMethodResolver
                 continue;
 
             foreach (var method in service.Methods) {
-                var fullName = method.FullName.Value;
+                var fullName = method.FullName;
                 var methodRef = new RpcMethodRef(fullName, method);
                 var hashCode = methodRef.HashCode;
                 var entry = new MethodEntry(method, VersionExt.MaxValue);
@@ -96,7 +95,7 @@ public sealed class RpcMethodResolver
         Versions = versions;
         NextResolver = nextResolver;
         var methodByRef = new Dictionary<RpcMethodRef, MethodEntry>();
-        var methodByFullName = new Dictionary<Symbol, MethodEntry>();
+        var methodByFullName = new Dictionary<string, MethodEntry>(StringComparer.Ordinal);
         var methodByHashCode = new Dictionary<int, MethodEntry>();
         foreach (var service in ServiceRegistry) {
             if (!service.HasServer)
@@ -105,17 +104,17 @@ public sealed class RpcMethodResolver
             var scope = service.Scope;
             var version = versions[scope];
             var legacyServiceName = service.LegacyNames[version];
-            var serviceName = legacyServiceName.Name.Or(service.Name);
-            var serviceVersion = legacyServiceName.MaxVersion;
+            var serviceName = legacyServiceName?.Name ?? service.Name;
+            var serviceVersion = legacyServiceName?.MaxVersion ?? VersionExt.MaxValue;
             foreach (var method in service.Methods) {
                 var legacyMethodName = method.LegacyNames[version];
-                if (legacyMethodName.IsNone && legacyServiceName.IsNone)
+                if (legacyMethodName == null && legacyServiceName == null)
                     continue; // No overrides
 
-                var methodName = legacyMethodName.Name.Or(method.Name);
-                var methodVersion = legacyMethodName.IsNone ? serviceVersion : legacyMethodName.MaxVersion;
+                var methodName = legacyMethodName?.Name ?? method.Name;
+                var methodVersion = legacyMethodName == null ? serviceVersion : legacyMethodName.MaxVersion;
 
-                var fullName = RpcMethodDef.ComposeFullName(serviceName.Value, methodName.Value);
+                var fullName = RpcMethodDef.ComposeFullName(serviceName, methodName);
                 var methodRef = new RpcMethodRef(fullName, method);
                 var hashCode = methodRef.HashCode;
                 var entry = new MethodEntry(method, methodVersion);
@@ -161,7 +160,7 @@ public sealed class RpcMethodResolver
         var sMethods = "[]";
         if (MethodByFullName != null) {
             var methods = MethodByFullName
-                .OrderBy(x => x.Key)
+                .OrderBy(x => x.Key, StringComparer.Ordinal)
                 .Select(x => $"{Environment.NewLine}  {x.Key} -> {x.Value}");
             sMethods = "[" + string.Join("", methods) + Environment.NewLine + "]";
         }

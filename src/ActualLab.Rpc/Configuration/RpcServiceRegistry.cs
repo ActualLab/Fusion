@@ -8,14 +8,14 @@ namespace ActualLab.Rpc;
 public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<RpcServiceDef>
 {
     private readonly Dictionary<Type, RpcServiceDef> _services = new();
-    private readonly Dictionary<Symbol, RpcServiceDef> _serviceByName = new();
+    private readonly Dictionary<string, RpcServiceDef> _serviceByName = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<VersionSet, RpcMethodResolver> _serverMethodResolvers = new();
 
     public static LogLevel ConstructionDumpLogLevel { get; set; } = OSInfo.IsAnyClient ? LogLevel.None : LogLevel.Information;
 
     public int Count => _serviceByName.Count;
     public RpcServiceDef this[Type serviceType] => Get(serviceType) ?? throw Errors.NoService(serviceType);
-    public RpcServiceDef this[Symbol serviceName] => Get(serviceName) ?? throw Errors.NoService(serviceName);
+    public RpcServiceDef this[string serviceName] => Get(serviceName) ?? throw Errors.NoService(serviceName);
     public RpcMethodResolver ServerMethodResolver { get; }
     public RpcMethodResolver AnyMethodResolver { get; }
 
@@ -68,12 +68,12 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     public void DumpTo(StringBuilder sb, bool dumpMethods = true, string indent = "")
     {
 #pragma warning disable MA0011, MA0028, CA1305
-        foreach (var serviceDef in _serviceByName.Values.OrderBy(s => s.Name)) {
+        foreach (var serviceDef in _serviceByName.Values.OrderBy(s => s.Name, StringComparer.Ordinal)) {
             sb.Append(indent).Append(serviceDef).AppendLine();
             if (!dumpMethods)
                 continue;
 
-            foreach (var methodDef in serviceDef.Methods.OrderBy(m => m.Name))
+            foreach (var methodDef in serviceDef.Methods.OrderBy(m => m.Name, StringComparer.Ordinal))
                 sb.AppendLine($"{indent}- {methodDef.ToString(true)}");
         }
 #pragma warning restore MA0011, MA0028, CA1305
@@ -85,7 +85,7 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     public RpcServiceDef? Get(Type serviceType)
         => _services.GetValueOrDefault(serviceType);
 
-    public RpcServiceDef? Get(Symbol serviceName)
+    public RpcServiceDef? Get(string serviceName)
         => _serviceByName.GetValueOrDefault(serviceName);
 
     public RpcMethodResolver GetServerMethodResolver(VersionSet? versions)

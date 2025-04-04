@@ -219,7 +219,7 @@ public class ServerAuthHelper : IHasServices
 
         if (user == null)
             // Create
-            user = new User(Symbol.Empty, name) {
+            user = new User("", name) {
                 Claims = claims,
                 Identities = identities,
             };

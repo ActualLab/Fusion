@@ -27,5 +27,5 @@ public abstract class DbAuthService<TDbContext>(IServiceProvider services)
     public abstract Task<SessionInfo> SetupSession(AuthBackend_SetupSession command, CancellationToken cancellationToken = default);
     public abstract Task SetOptions(AuthBackend_SetSessionOptions command, CancellationToken cancellationToken = default);
     public abstract Task<SessionInfo?> GetSessionInfo(Session session, CancellationToken cancellationToken = default);
-    public abstract Task<User?> GetUser(DbShard shard, Symbol userId, CancellationToken cancellationToken = default);
+    public abstract Task<User?> GetUser(string shard, string userId, CancellationToken cancellationToken = default);
 }

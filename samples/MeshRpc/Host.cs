@@ -16,7 +16,7 @@ public sealed class Host : WorkerBase
     private static readonly IRemoteComputedCache SharedRemoteComputedCache;
     private static int _lastId;
 
-    public Symbol Id { get; }
+    public string Id { get; }
     public HostRef Ref { get; }
     public int Hash { get; }
     public int PortSlot { get; }
@@ -95,7 +95,7 @@ public sealed class Host : WorkerBase
     }
 
     public override string ToString()
-        => Id.Value;
+        => Id;
 
     public void RequestStop()
     {

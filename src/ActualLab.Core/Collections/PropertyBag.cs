@@ -8,18 +8,18 @@ public interface IReadOnlyPropertyBag
 {
     public int Count { get; }
     public IReadOnlyList<PropertyBagItem> Items { get; }
-    public object? this[Symbol key] { get; }
+    public object? this[string key] { get; }
 
     public bool Contains<T>();
-    public bool Contains(Symbol key);
+    public bool Contains(string key);
     public bool TryGet<T>([MaybeNullWhen(false)] out T value);
-    public bool TryGet<T>(Symbol key, [MaybeNullWhen(false)] out T value);
+    public bool TryGet<T>(string key, [MaybeNullWhen(false)] out T value);
     public T? Get<T>() where T : class;
-    public T? Get<T>(Symbol key) where T : class;
+    public T? Get<T>(string key) where T : class;
     public T GetOrDefault<T>();
-    public T GetOrDefault<T>(Symbol key);
+    public T GetOrDefault<T>(string key);
     public T GetOrDefault<T>(T @default);
-    public T GetOrDefault<T>(Symbol key, T @default);
+    public T GetOrDefault<T>(string key, T @default);
 }
 
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -59,9 +59,9 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
         get => _items ?? [];
     }
 
-    public object? this[Symbol key] {
+    public object? this[string key] {
         get {
-            if (_items == null || key.IsEmpty)
+            if (_items == null || key.IsNullOrEmpty())
                 return null;
 
             var index = Array.IndexOf(_items, PropertyBagItem.NewKey(key));
@@ -89,19 +89,19 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains<T>()
-        => this[typeof(T)] != null;
+        => this[typeof(T).ToIdentifierSymbol()] != null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool Contains(Symbol key)
+    public bool Contains(string key)
         => this[key] != null;
 
     // TryGet
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGet<T>([MaybeNullWhen(false)] out T value)
-        => TryGet(typeof(T), out value);
+        => TryGet(typeof(T).ToIdentifierSymbol(), out value);
 
-    public bool TryGet<T>(Symbol key, [MaybeNullWhen(false)] out T value)
+    public bool TryGet<T>(string key, [MaybeNullWhen(false)] out T value)
     {
         var objValue = this[key];
         if (objValue == null) {
@@ -117,9 +117,9 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T? Get<T>()
         where T : class
-        => Get<T>(typeof(T));
+        => Get<T>(typeof(T).ToIdentifierSymbol());
 
-    public T? Get<T>(Symbol key)
+    public T? Get<T>(string key)
         where T : class
         => (T?)this[key];
 
@@ -127,9 +127,9 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T GetOrDefault<T>()
-        => GetOrDefault<T>(typeof(T));
+        => GetOrDefault<T>(typeof(T).ToIdentifierSymbol());
 
-    public T GetOrDefault<T>(Symbol key)
+    public T GetOrDefault<T>(string key)
     {
         var value = this[key];
         return value != null ? (T)value : default!;
@@ -137,9 +137,9 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T GetOrDefault<T>(T @default)
-        => GetOrDefault(typeof(T), @default);
+        => GetOrDefault(typeof(T).ToIdentifierSymbol(), @default);
 
-    public T GetOrDefault<T>(Symbol key, T @default)
+    public T GetOrDefault<T>(string key, T @default)
     {
         var value = this[key];
         return value != null ? (T)value : @default;
@@ -149,13 +149,13 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public PropertyBag Set<T>(T value)
-        => Set(typeof(T), value);
+        => Set(typeof(T).ToIdentifierSymbol(), value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public PropertyBag Set<T>(Symbol key, T value)
+    public PropertyBag Set<T>(string key, T value)
         => Set(key, (object?)value);
 
-    public PropertyBag Set(Symbol key, object? value)
+    public PropertyBag Set(string key, object? value)
     {
         if (value == null)
             return Remove(key);
@@ -209,11 +209,11 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public PropertyBag Remove<T>()
-        => Remove(typeof(T));
+        => Remove(typeof(T).ToIdentifierSymbol());
 
-    public PropertyBag Remove(Symbol key)
+    public PropertyBag Remove(string key)
     {
-        if (key.IsEmpty)
+        if (key.IsNullOrEmpty())
             throw new ArgumentOutOfRangeException(nameof(key));
         if (_items == null)
             return this;

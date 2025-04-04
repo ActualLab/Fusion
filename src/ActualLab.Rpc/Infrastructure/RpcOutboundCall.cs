@@ -76,7 +76,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             isStream ? " ~" : " #",
             relatedId != 0 ? relatedId : Id,
             ' ',
-            methodDef?.FullName.Value ?? "n/a",
+            methodDef?.FullName ?? "n/a",
             arguments?.ToString() ?? "(n/a)",
             headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",
             completedStageName.IsNullOrEmpty() ? "" : $" @{completedStageName}");

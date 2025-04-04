@@ -40,7 +40,7 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
         = services.GetRequiredService<IDbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>>();
     protected MomentClock SystemClock => Clocks.SystemClock;
 
-    protected override Task OnRun(DbShard shard, CancellationToken cancellationToken)
+    protected override Task OnRun(string shard, CancellationToken cancellationToken)
         => new AsyncChain($"Trim({shard})", ct => Trim(shard, ct))
             .RetryForever(Settings.RetryDelays, SystemClock, Log)
             .CycleForever()
@@ -48,7 +48,7 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
             .PrependDelay(Settings.CheckPeriod.Next().MultiplyBy(0.1), SystemClock)
             .Start(cancellationToken);
 
-    protected virtual async Task Trim(DbShard shard, CancellationToken cancellationToken)
+    protected virtual async Task Trim(string shard, CancellationToken cancellationToken)
     {
         var batchSize = Settings.BatchSize;
         while (true) {
@@ -61,7 +61,7 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
                 var count = await Sessions.Trim(shard, maxLastSeenAt, batchSize, cancellationToken)
                     .ConfigureAwait(false);
                 if (count > 0)
-                    DefaultLog?.Log(Settings.LogLevel, "Trim({Shard}) trimmed {Count} sessions", shard.Value, count);
+                    DefaultLog?.Log(Settings.LogLevel, "Trim({Shard}) trimmed {Count} sessions", shard, count);
                 if (count < batchSize)
                     break;
             }

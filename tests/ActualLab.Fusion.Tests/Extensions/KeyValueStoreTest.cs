@@ -20,7 +20,7 @@ public abstract class KeyValueStoreTestBase : FusionTestBase
     public async Task BasicTest()
     {
         var kvs = Services.GetRequiredService<IKeyValueStore>();
-        var shard = DbShard.None;
+        var shard = DbShard.Single;
 
         await kvs.Set(shard, "1", "1v");
         (await kvs.Get(shard, "1")).Should().Be("1v");
@@ -32,7 +32,7 @@ public abstract class KeyValueStoreTestBase : FusionTestBase
     public async Task ComplexTest()
     {
         var kvs = Services.GetRequiredService<IKeyValueStore>();
-        var shard = DbShard.None;
+        var shard = DbShard.Single;
 
         await kvs.Set(shard, "1/2", "12");
         (await kvs.Count(shard, "1")).Should().Be(1);
@@ -93,7 +93,7 @@ public abstract class KeyValueStoreTestBase : FusionTestBase
     {
         var kvs = Services.GetRequiredService<IKeyValueStore>();
         var clock = (TestClock)Services.Clocks().SystemClock;
-        var shard = DbShard.None;
+        var shard = DbShard.Single;
 
         await kvs.Set(shard, "1", "1v", clock.Now + TimeSpan.FromSeconds(5));
         (await kvs.Get(shard, "1")).Should().Be("1v");

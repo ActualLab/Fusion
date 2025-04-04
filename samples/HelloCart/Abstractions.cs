@@ -39,7 +39,7 @@ public partial record EditCommand<TItem>(
 [DataContract, MemoryPackable, MessagePackObject(true)]
 [method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record LogMessageCommand(
-    [property: DataMember] Symbol Uuid,
+    [property: DataMember] string Uuid,
     [property: DataMember] string Message,
     [property: DataMember] Moment DelayUntil = default
 ) : ILocalCommand<Unit>, IHasUuid, IHasDelayUntil
@@ -63,7 +63,7 @@ public partial record LogMessageCommand(
         var hasDelayUntil = DelayUntil != default;
         var color = hasDelayUntil ? ConsoleColor.Green : ConsoleColor.Blue;
         Console.WriteLine($"[{Uuid}] {Message}".Pastel(color));
-        if (AppSettings.EnableRandomLogMessageCommandFailures && char.IsDigit(Uuid.Value[^1])) {
+        if (AppSettings.EnableRandomLogMessageCommandFailures && char.IsDigit(Uuid[^1])) {
             await Task.Delay(300, CancellationToken.None).ConfigureAwait(false);
             throw new TransactionException("Can't run this command!");
         }

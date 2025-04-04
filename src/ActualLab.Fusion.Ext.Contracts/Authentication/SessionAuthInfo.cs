@@ -13,9 +13,15 @@ public partial record SessionAuthInfo : IRequirementTarget
     [DataMember(Order = 0), MemoryPackOrder(0)] public string SessionHash { get => field ?? ""; init; }
 
     // Authentication
-    [DataMember(Order = 1), MemoryPackOrder(1)] public UserIdentity AuthenticatedIdentity { get; init; }
-    [DataMember(Order = 2), MemoryPackOrder(2)] public Symbol UserId { get; init; }
-    [DataMember(Order = 3), MemoryPackOrder(3)] public bool IsSignOutForced { get; init; }
+
+    [DataMember(Order = 1), MemoryPackOrder(1)]
+    public UserIdentity AuthenticatedIdentity { get; init; }
+
+    [DataMember(Order = 2), MemoryPackOrder(2), SymbolStringMemoryPackFormatter]
+    public string UserId { get; init; } = "";
+
+    [DataMember(Order = 3), MemoryPackOrder(3)]
+    public bool IsSignOutForced { get; init; }
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public SessionAuthInfo()
@@ -24,5 +30,5 @@ public partial record SessionAuthInfo : IRequirementTarget
         => SessionHash = session?.Hash ?? "";
 
     public bool IsAuthenticated()
-        => !(IsSignOutForced || UserId.IsEmpty);
+        => !(IsSignOutForced || UserId.IsNullOrEmpty());
 }

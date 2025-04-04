@@ -33,7 +33,7 @@ public class DbKeyValueTrimmer<TDbContext,
         KeyValueStore = services.GetRequiredService<IKeyValueStore>();
     }
 
-    protected override Task OnRun(DbShard shard, CancellationToken cancellationToken)
+    protected override Task OnRun(string shard, CancellationToken cancellationToken)
     {
         var lastTrimCount = 0;
 
@@ -61,7 +61,7 @@ public class DbKeyValueTrimmer<TDbContext,
 
             if (lastTrimCount > 0 && IsLoggingEnabled)
                 Log.Log(Settings.LogLevel,
-                    "Trim({Shard}) trimmed {Count} entries", shard.Value, lastTrimCount);
+                    "Trim({Shard}) trimmed {Count} entries", shard, lastTrimCount);
             // ReSharper disable once ExplicitCallerInfoArgument
         }).Trace(() => activitySource.StartActivity(GetType(), "Trim").AddShardTags(shard), Log);
 

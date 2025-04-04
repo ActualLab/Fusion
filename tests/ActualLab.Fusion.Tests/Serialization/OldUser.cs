@@ -40,7 +40,7 @@ public partial record OldUser : IHasId<Symbol>, IHasVersion<long>, IRequirementT
     [DataMember(Name = nameof(Identities)), MemoryPackOrder(4)]
     [JsonPropertyName(nameof(Identities)),  Newtonsoft.Json.JsonProperty(nameof(Identities))]
     public Dictionary<string, string> JsonCompatibleIdentities {
-        get => Identities.ToDictionary(p => p.Key.Id.Value, p => p.Value, StringComparer.Ordinal);
+        get => Identities.ToDictionary(p => p.Key.Id, p => p.Value, StringComparer.Ordinal);
         init => Identities = value.ToImmutableDictionary(p => new UserIdentity(p.Key), p => p.Value);
     }
 

@@ -2,7 +2,7 @@ namespace ActualLab.Collections.Internal;
 
 internal static class OptionSetHelper
 {
-    public static string GetToStringArgs(IReadOnlyDictionary<Symbol, object> items)
+    public static string GetToStringArgs(IReadOnlyDictionary<string, object> items)
     {
         const int limit = 5;
         var count = items.Count;
@@ -16,11 +16,11 @@ internal static class OptionSetHelper
     }
 
     public static IDictionary<string, NewtonsoftJsonSerialized<object>> ToNewtonsoftJsonCompatible(
-        IReadOnlyDictionary<Symbol, object> items)
+        IReadOnlyDictionary<string, object> items)
     {
         var result = new SortedDictionary<string, NewtonsoftJsonSerialized<object>>(StringComparer.Ordinal);
         foreach (var (key, value) in items)
-            result.Add(key.Value, NewtonsoftJsonSerialized.New(value));
+            result.Add(key, NewtonsoftJsonSerialized.New(value));
         return result;
     }
 }

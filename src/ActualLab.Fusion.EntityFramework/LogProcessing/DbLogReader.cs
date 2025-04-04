@@ -12,7 +12,7 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
     where TDbEntry : class, IDbLogEntry
     where TOptions : DbLogReaderOptions
 {
-    protected Dictionary<(DbShard Shard, TDbKey Key), Task> ReprocessTasks { get; } = new();
+    protected Dictionary<(string Shard, TDbKey Key), Task> ReprocessTasks { get; } = new();
 
     protected IDbLogWatcher<TDbContext, TDbEntry> LogWatcher { get; }
         = services.GetRequiredService<IDbLogWatcher<TDbContext, TDbEntry>>();
@@ -26,21 +26,21 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
     public abstract DbLogKind LogKind { get; }
 
     protected abstract Task<TDbEntry?> GetEntry(TDbContext dbContext, TDbKey key, CancellationToken cancellationToken);
-    protected abstract Task<int> ProcessBatch(DbShard shard, int batchSize, CancellationToken cancellationToken);
-    protected abstract Task<bool> ProcessOne(DbShard shard, TDbKey key, bool mustDiscard, CancellationToken cancellationToken);
-    protected abstract Task Process(DbShard shard, TDbEntry entry, CancellationToken cancellationToken);
+    protected abstract Task<int> ProcessBatch(string shard, int batchSize, CancellationToken cancellationToken);
+    protected abstract Task<bool> ProcessOne(string shard, TDbKey key, bool mustDiscard, CancellationToken cancellationToken);
+    protected abstract Task Process(string shard, TDbEntry entry, CancellationToken cancellationToken);
 
-    protected override Task OnRun(DbShard shard, CancellationToken cancellationToken)
+    protected override Task OnRun(string shard, CancellationToken cancellationToken)
         => new AsyncChain($"{nameof(ProcessNewEntries)}[{shard}]", ct => ProcessNewEntries(shard, ct))
             .RetryForever(Settings.RetryDelays, SystemClock, Log)
             .CycleForever()
             .Log(Log)
             .Start(cancellationToken);
 
-    protected virtual Task WhenChanged(DbShard shard, CancellationToken cancellationToken)
+    protected virtual Task WhenChanged(string shard, CancellationToken cancellationToken)
         => LogWatcher.WhenChanged(shard, cancellationToken);
 
-    protected virtual async Task ProcessNewEntries(DbShard shard, CancellationToken cancellationToken)
+    protected virtual async Task ProcessNewEntries(string shard, CancellationToken cancellationToken)
     {
         var timeoutCts = cancellationToken.CreateLinkedTokenSource();
         try {
@@ -74,7 +74,7 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
     }
 
     protected async Task<bool> ProcessSafe(
-        DbShard shard, TDbKey key, TDbEntry entry, bool canReprocess,
+        string shard, TDbKey key, TDbEntry entry, bool canReprocess,
         CancellationToken cancellationToken)
     {
         // This method should never fail when canReprocess == true
@@ -103,7 +103,7 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
     }
 
     protected void ReprocessSafe(
-        DbShard shard, TDbKey key, bool mustDiscard,
+        string shard, TDbKey key, bool mustDiscard,
         CancellationToken cancellationToken)
     {
         // This method should never fail!
@@ -123,7 +123,7 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
         }
     }
 
-    protected async Task Reprocess(DbShard shard, TDbKey key, bool mustDiscard, CancellationToken cancellationToken)
+    protected async Task Reprocess(string shard, TDbKey key, bool mustDiscard, CancellationToken cancellationToken)
     {
         for (var i = mustDiscard ? 1 : 0; i < 2; i++) {
             var (mustDiscard1, sProcess, sProcessed, sErrorExtra) = i switch {

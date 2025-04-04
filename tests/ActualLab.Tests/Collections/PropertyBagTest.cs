@@ -25,16 +25,16 @@ public class PropertyBagTest(ITestOutputHelper @out) : TestBase(@out)
             x.Count.Should().Be(1);
         });
 
-        var s = new DbShard("S");
+        var s = "S";
         var o3 = o2.Set(s);
         o3 = o3.AssertPassesThroughAllSerializers(x => {
             x.Get<string>().Should().Be("B");
             x.GetOrDefault("").Should().Be("B");
-            x.GetOrDefault<DbShard>().Should().Be(s);
+            x.GetOrDefault<string>().Should().Be(s);
             x.Count.Should().Be(2);
         });
 
-        var o4 = o3.Remove<string>().Remove<DbShard>();
+        var o4 = o3.Remove<string>().Remove<string>();
         o4.AssertPassesThroughAllSerializers(x => {
             x.Get<string>().Should().BeNull();
             x.GetOrDefault("").Should().Be("");

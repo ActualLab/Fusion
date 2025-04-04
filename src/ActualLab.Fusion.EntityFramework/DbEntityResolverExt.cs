@@ -8,7 +8,7 @@ public static class DbEntityResolverExt
         CancellationToken cancellationToken = default)
         where TKey : notnull
         where TDbEntity : class
-        => resolver.Get(default, key, cancellationToken);
+        => resolver.Get(DbShard.Single, key, cancellationToken);
 
     public static Task<Dictionary<TKey, TDbEntity>> GetMany<TKey, TDbEntity>(
         this IDbEntityResolver<TKey, TDbEntity> resolver,
@@ -16,11 +16,11 @@ public static class DbEntityResolverExt
         CancellationToken cancellationToken = default)
         where TKey : notnull
         where TDbEntity : class
-        => resolver.GetMany(default, keys, cancellationToken);
+        => resolver.GetMany(DbShard.Single, keys, cancellationToken);
 
     public static async Task<Dictionary<TKey, TDbEntity>> GetMany<TKey, TDbEntity>(
         this IDbEntityResolver<TKey, TDbEntity> resolver,
-        DbShard shard,
+        string shard,
         IEnumerable<TKey> keys,
         CancellationToken cancellationToken = default)
         where TKey : notnull

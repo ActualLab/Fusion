@@ -17,7 +17,7 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry>(
 
     public RedisDbLogWatcherOptions<TDbContext> Settings { get; } = settings;
 
-    protected override DbShardWatcher CreateShardWatcher(DbShard shard)
+    protected override DbShardWatcher CreateShardWatcher(string shard)
         => new ShardWatcher(this, shard);
 
     // Nested types
@@ -29,7 +29,7 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry>(
         public RedisPub RedisPub { get; }
         public RedisValue NotifyPayload { get; }
 
-        public ShardWatcher(RedisDbLogWatcher<TDbContext, TDbEntry> owner, DbShard shard) : base(shard)
+        public ShardWatcher(RedisDbLogWatcher<TDbContext, TDbEntry> owner, string shard) : base(shard)
         {
             Owner = owner;
             var hostId = owner.DbHub.HostId;
@@ -48,7 +48,7 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry>(
                     var value = await redisSub.Messages
                         .ReadAsync(cancellationToken)
                         .ConfigureAwait(false);
-                    if (!string.Equals(hostId.Id.Value, value, StringComparison.Ordinal))
+                    if (!string.Equals(hostId.Id, value, StringComparison.Ordinal))
                         MarkChanged();
                 }
             }).RetryForever(owner.Settings.WatchRetryDelays, owner.Log);

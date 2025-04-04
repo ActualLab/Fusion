@@ -5,29 +5,30 @@ namespace ActualLab.Fusion.EntityFramework;
 
 public interface IShardDbContextFactory
 {
-    public DbContext CreateDbContext(DbShard shard);
-    public ValueTask<DbContext> CreateDbContextAsync(DbShard shard, CancellationToken cancellationToken = default);
+    public DbContext CreateDbContext(string shard);
+    public ValueTask<DbContext> CreateDbContextAsync(string shard, CancellationToken cancellationToken = default);
 }
 
 public interface IShardDbContextFactory<TDbContext> : IShardDbContextFactory
     where TDbContext : DbContext
 {
-    public new TDbContext CreateDbContext(DbShard shard);
-    public new ValueTask<TDbContext> CreateDbContextAsync(DbShard shard, CancellationToken cancellationToken = default);
+    public new TDbContext CreateDbContext(string shard);
+    public new ValueTask<TDbContext> CreateDbContextAsync(string shard, CancellationToken cancellationToken = default);
 }
 
 // ReSharper disable once TypeParameterCanBeVariant
 public delegate IDbContextFactory<TDbContext> ShardDbContextFactoryBuilder<TDbContext>(
     IServiceProvider services,
-    DbShard shard)
+    string shard)
     where TDbContext : DbContext;
 
 public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbContext>
     where TDbContext : DbContext
 {
     private readonly ConcurrentDictionary<
-        DbShard,
-        LazySlim<DbShard, ShardDbContextFactory<TDbContext>, IDbContextFactory<TDbContext>>> _factories = new();
+        string,
+        LazySlim<string, ShardDbContextFactory<TDbContext>, IDbContextFactory<TDbContext>>> _factories
+        = new(StringComparer.Ordinal);
 
     protected IServiceProvider Services { get; }
     protected IDbShardRegistry<TDbContext> ShardRegistry { get; }
@@ -43,10 +44,10 @@ public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbConte
         HasSingleShard = ShardRegistry.HasSingleShard;
     }
 
-    public TDbContext CreateDbContext(DbShard shard)
+    public TDbContext CreateDbContext(string shard)
         => GetDbContextFactory(shard).CreateDbContext();
 
-    public ValueTask<TDbContext> CreateDbContextAsync(DbShard shard, CancellationToken cancellationToken = default)
+    public ValueTask<TDbContext> CreateDbContextAsync(string shard, CancellationToken cancellationToken = default)
     {
         var factory = GetDbContextFactory(shard);
 #if NET6_0_OR_GREATER
@@ -58,15 +59,15 @@ public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbConte
 
     // Explicit interface implementations
 
-    DbContext IShardDbContextFactory.CreateDbContext(DbShard shard)
+    DbContext IShardDbContextFactory.CreateDbContext(string shard)
         => CreateDbContext(shard);
-    async ValueTask<DbContext> IShardDbContextFactory.CreateDbContextAsync(DbShard shard,
+    async ValueTask<DbContext> IShardDbContextFactory.CreateDbContextAsync(string shard,
         CancellationToken cancellationToken)
         => await CreateDbContextAsync(shard, cancellationToken).ConfigureAwait(false);
 
     // Protected methods
 
-    protected virtual IDbContextFactory<TDbContext> GetDbContextFactory(DbShard shard)
+    protected virtual IDbContextFactory<TDbContext> GetDbContextFactory(string shard)
         => _factories.GetOrAdd(shard, static (shard1, self) => {
             if (!self.ShardRegistry.CanUse(shard1))
                 throw Internal.Errors.NoShard(shard1);

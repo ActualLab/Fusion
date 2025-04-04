@@ -14,7 +14,7 @@ public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodIn
 public delegate bool RpcBackendServiceDetector(Type serviceType);
 public delegate bool RpcCommandTypeDetector(Type type);
 public delegate RpcCallTimeouts RpcCallTimeoutsProvider(RpcMethodDef methodDef);
-public delegate Symbol RpcServiceScopeResolver(RpcServiceDef serviceDef);
+public delegate string RpcServiceScopeResolver(RpcServiceDef serviceDef);
 public delegate RpcPeerRef RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
 public delegate string RpcHashProvider(TextOrBytes data);
 public delegate Task RpcRerouteDelayer(CancellationToken cancellationToken);
@@ -142,10 +142,10 @@ public static class RpcDefaultDelegates
     public static RpcCallLoggerFactory CallLoggerFactory { get; set; } =
         static (peer, filter, log, logLevel) => new RpcCallLogger(peer, filter, log, logLevel);
 
-    private static readonly Symbol KeepAliveMethodName = (Symbol)$"{nameof(IRpcSystemCalls.KeepAlive)}:1";
+    private static readonly string KeepAliveMethodName = $"{nameof(IRpcSystemCalls.KeepAlive)}:1";
     public static RpcCallLoggerFilter CallLoggerFilter { get; set; } =
         static (peer, call) => {
             var methodDef = call.MethodDef;
-            return !(methodDef.IsSystem && methodDef.Name == KeepAliveMethodName);
+            return !(methodDef.IsSystem && string.Equals(methodDef.Name, KeepAliveMethodName, StringComparison.Ordinal));
         };
 }

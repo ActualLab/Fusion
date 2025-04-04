@@ -22,8 +22,8 @@ public static class RpcDefaults
         }
     } = OSInfo.IsAnyClient ? RpcMode.Client : RpcMode.Server;
 
-    public static Symbol ApiScope { get; set; } = "Api";
-    public static Symbol BackendScope { get; set; } = "Backend";
+    public static string ApiScope { get; set; } = "Api";
+    public static string BackendScope { get; set; } = "Backend";
     public static Version ApiVersion { get; set; } = new(1, 0);
     public static Version BackendVersion { get; set; } = new(1, 0);
 

@@ -8,13 +8,13 @@ public record FileSystemDbLogWatcherOptions<TDbContext>
 {
     public static FileSystemDbLogWatcherOptions<TDbContext> Default { get; set; } = new();
 
-    public Func<DbShard, Type, FilePath> FilePathFormatter { get; init; } = DefaultFilePathFormatter;
+    public Func<string, Type, FilePath> FilePathFormatter { get; init; } = DefaultFilePathFormatter;
 
-    public static FilePath DefaultFilePathFormatter(DbShard shard, Type dbEntryType)
+    public static FilePath DefaultFilePathFormatter(string shard, Type dbEntryType)
     {
         var dbContextName = typeof(TDbContext).Name;
         var dbEntryName = dbEntryType.Name;
-        var shardSuffix = shard.IsNone ? "" : $"_{shard}";
+        var shardSuffix = DbShard.IsSingle(shard) ? "" : $"_{shard}";
         var appTempDir = FilePath.GetApplicationTempDirectory("", true);
         return appTempDir & (FilePath.GetHashedName($"{dbContextName}_{dbEntryName}{shardSuffix}") + ".tracker");
     }

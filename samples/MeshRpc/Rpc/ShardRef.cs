@@ -14,16 +14,12 @@ public readonly partial record struct ShardRef(
     public static ShardRef New(object? source)
         => source switch {
             null => default,
-            Symbol s => New(s),
             string s => New(s),
             _ => New(source.GetHashCode()),
         };
 
     public static ShardRef New(int hash)
         => new(hash.PositiveModulo(ShardCount));
-
-    public static ShardRef New(Symbol value)
-        => New(value.Value.GetXxHash3().PositiveModulo(ShardCount));
 
     public static ShardRef New(string value)
         => New(value.GetXxHash3().PositiveModulo(ShardCount));

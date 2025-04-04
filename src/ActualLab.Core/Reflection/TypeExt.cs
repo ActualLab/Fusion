@@ -26,18 +26,18 @@ public static partial class TypeExt
 
     private static readonly ConcurrentDictionary<Type, Type> NonProxyTypeCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), Symbol>> GetNameCache
+    private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), string>> GetNameCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), Symbol>> ToIdentifierNameCache
+    private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), string>> ToIdentifierNameCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly ConcurrentDictionary<Type, LazySlim<Type, Symbol>> ToSymbolCache
+    private static readonly ConcurrentDictionary<(Type Type, string Prefix), string> ToIdentifierSymbolCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly ConcurrentDictionary<Type, Type?> GetTaskOrValueTaskTypeCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly ConcurrentDictionary<Type, object?> DefaultValueCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
-    public static readonly string SymbolPrefix = "@";
+    public const string DefaultIdentifierSymbolPrefix = "@";
 
     public static Func<Type, Type> NonProxyTypeResolver {
         get;
@@ -188,14 +188,9 @@ public static partial class TypeExt
             });
     }
 
-    public static Symbol ToSymbol(this Type type)
-        => ToSymbolCache.GetOrAdd(type,
-                static type1 => new Symbol(SymbolPrefix + type1.ToIdentifierName(true, true)));
-
-    public static Symbol ToSymbol(this Type type, bool withPrefix)
-        => withPrefix
-            ? type.ToSymbol()
-            : (Symbol)type.ToIdentifierName(true, true);
+    public static string ToIdentifierSymbol(this Type type, string prefix = DefaultIdentifierSymbolPrefix)
+        => ToIdentifierSymbolCache.GetOrAdd((type, prefix),
+            static key => ZString.Concat(key.Prefix, key.Type.ToIdentifierName(true, true)));
 
     public static bool IsTaskOrValueTask(this Type type)
         => type.GetTaskOrValueTaskType() != null;

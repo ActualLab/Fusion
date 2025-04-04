@@ -13,9 +13,9 @@ public interface IDbUserIdHandler<TDbUserId>
     public bool IsNone([NotNullWhen(false)] TDbUserId? userId);
     public void Require([NotNull] TDbUserId? userId);
 
-    public Symbol Format(TDbUserId? userId);
-    public TDbUserId Parse(Symbol userId, bool allowNone);
-    public bool TryParse(Symbol userId, bool allowNone, out TDbUserId result);
+    public string Format(TDbUserId? userId);
+    public TDbUserId Parse(string userId, bool allowNone);
+    public bool TryParse(string userId, bool allowNone, out TDbUserId result);
 }
 
 public class DbUserIdHandler<TDbUserId> : IDbUserIdHandler<TDbUserId>
@@ -56,12 +56,12 @@ public class DbUserIdHandler<TDbUserId> : IDbUserIdHandler<TDbUserId>
             throw Errors.UserIdRequired();
     }
 
-    public virtual Symbol Format(TDbUserId? userId)
+    public virtual string Format(TDbUserId? userId)
         => IsNone(userId)
-            ? Symbol.Empty
+            ? ""
             : Formatter.Convert(userId);
 
-    public virtual TDbUserId Parse(Symbol userId, bool allowNone)
+    public virtual TDbUserId Parse(string userId, bool allowNone)
     {
         if (!TryParse(userId, true, out var result))
             throw Errors.InvalidUserId();
@@ -70,10 +70,10 @@ public class DbUserIdHandler<TDbUserId> : IDbUserIdHandler<TDbUserId>
         return result;
     }
 
-    public virtual bool TryParse(Symbol userId, bool allowNone, out TDbUserId result)
+    public virtual bool TryParse(string userId, bool allowNone, out TDbUserId result)
     {
         result = None;
-        if (userId.IsEmpty)
+        if (userId.IsNullOrEmpty())
             return allowNone;
 
         if (!Parser.TryConvert(userId).IsSome(out var parsed))

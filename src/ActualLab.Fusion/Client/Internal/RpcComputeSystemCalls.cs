@@ -11,7 +11,7 @@ public interface IRpcComputeSystemCalls : IRpcSystemService
 public class RpcComputeSystemCalls(IServiceProvider services)
     : RpcServiceBase(services), IRpcComputeSystemCalls
 {
-    public static readonly Symbol Name = "$sys-c";
+    public static readonly string Name = "$sys-c";
 
     public Task<RpcNoWait> Invalidate()
     {

@@ -36,7 +36,7 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
     }
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
-    public RpcHeader(string? name, string? value = "")
+    public RpcHeader(string name, string? value = "")
     {
         Key = RpcHeaderKey.NewOrWellKnown(name);
         _value = value;
@@ -51,8 +51,7 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
 
     // Equality is based solely on header name
     public bool Equals(RpcHeader other)
-        => Key.Name == other.Key.Name;
-
+        => Key == other.Key;
     public override int GetHashCode()
         => Key.GetHashCode();
 }

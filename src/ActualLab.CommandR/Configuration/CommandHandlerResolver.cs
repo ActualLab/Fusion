@@ -61,7 +61,7 @@ public class CommandHandlerResolver
                     from nonFilterHandler in nonFilterHandlers
                     let handlerSubset = handlers.Where(h => h.IsFilter || h == nonFilterHandler).ToArray()
                     select KeyValuePair.Create(nonFilterHandler.Id, new CommandHandlerChain(handlerSubset))
-                ).ToImmutableDictionary();
+                ).ToImmutableDictionary(StringComparer.Ordinal);
                 return new CommandHandlerSet(commandType1, handlerChains);
             }
 

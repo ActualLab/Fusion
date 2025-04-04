@@ -152,7 +152,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
     // [ComputeMethod] inherited
     public override async Task<User?> GetUser(
-        DbShard shard, Symbol userId, CancellationToken cancellationToken = default)
+        string shard, string userId, CancellationToken cancellationToken = default)
     {
         if (!UserIdHandler.TryParse(userId, false, out var dbUserId))
             return null;
@@ -164,11 +164,11 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
     // Protected methods
 
     [ComputeMethod]
-    protected virtual async Task<ImmutableArray<(Symbol Id, SessionInfo SessionInfo)>> GetUserSessions(
-        DbShard shard, string userId, CancellationToken cancellationToken = default)
+    protected virtual async Task<ImmutableArray<(string Id, SessionInfo SessionInfo)>> GetUserSessions(
+        string shard, string userId, CancellationToken cancellationToken = default)
     {
         if (!UserIdHandler.TryParse(userId, false, out var dbUserId))
-            return ImmutableArray<(Symbol Id, SessionInfo SessionInfo)>.Empty;
+            return ImmutableArray<(string Id, SessionInfo SessionInfo)>.Empty;
 
         var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
@@ -177,7 +177,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var dbSessions = await Sessions.ListByUser(dbContext, dbUserId, cancellationToken).ConfigureAwait(false);
         var sessions = dbSessions
-            .Select(x => ((Symbol) x.Id, SessionConverter.ToModel(x)!))
+            .Select(x => (x.Id, SessionConverter.ToModel(x)!))
             .ToImmutableArray();
         return sessions;
     }

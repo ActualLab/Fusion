@@ -25,17 +25,17 @@ public class MutablePropertyBagTest(ITestOutputHelper @out) : TestBase(@out)
             x.Count.Should().Be(1);
         });
 
-        var s = new DbShard("S");
+        var s = "S";
         o.Set(s);
         o = o.AssertPassesThroughAllSerializers(x => {
             x.Get<string>().Should().Be("B");
             x.GetOrDefault("").Should().Be("B");
-            x.GetOrDefault<DbShard>().Should().Be(s);
+            x.GetOrDefault<string>().Should().Be(s);
             x.Count.Should().Be(2);
         });
 
         o.Remove<string>();
-        o.Remove<DbShard>();
+        o.Remove<string>();
         o = o.AssertPassesThroughAllSerializers(x => {
             x.Get<string>().Should().BeNull();
             x.GetOrDefault("").Should().Be("");

@@ -50,7 +50,7 @@ async Task RunClient()
     var services = new ServiceCollection()
         .AddFusion(fusion => {
             fusion.Rpc.AddWebSocketClient(_ => new RpcWebSocketClient.Options() {
-                HostUrlResolver = (_, peer) => peer.Ref.Key.Value // peer.Ref.Id is the host URL in this sample
+                HostUrlResolver = (_, peer) => peer.Ref.Key // peer.Ref.Id is the host URL in this sample
             });
             fusion.AddClient<IChat>();
         })
@@ -59,11 +59,11 @@ async Task RunClient()
                 if (methodDef.Service.Type == typeof(IChat)) {
                     var arg0Type = args.GetType(0);
                     int hash;
-                    if (arg0Type == typeof(Symbol))
+                    if (arg0Type == typeof(string))
                         // Contrary to string.GetHashCode, GetXxHash3 doesn't change run to run
-                        hash = args.Get<Symbol>(0).Value.GetXxHash3();
+                        hash = args.Get<string>(0).GetXxHash3();
                     else if (arg0Type == typeof(Chat_Post))
-                        hash = args.Get<Chat_Post>(0).ChatId.Value.GetXxHash3();
+                        hash = args.Get<Chat_Post>(0).ChatId.GetXxHash3();
                     else
                         throw new NotSupportedException("Can't route this call.");
                     return clientPeerRefs[hash % serverCount];
@@ -74,7 +74,7 @@ async Task RunClient()
         .BuildServiceProvider();
 
     Write("Enter chat ID: ");
-    var chatId = new Symbol((await ConsoleExt.ReadLineAsync() ?? "").Trim());
+    var chatId = (await ConsoleExt.ReadLineAsync() ?? "").Trim();
     var chat = services.GetRequiredService<IChat>();
     var commander = services.Commander();
     _ = Task.Run(ObserveMessages);

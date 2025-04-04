@@ -25,7 +25,7 @@ public sealed class RpcTextMessageSerializer(RpcPeer peer)
     {
         var reader = new Utf8JsonReader(data.Span);
         var m = (JsonRpcMessage)JsonSerializer.Deserialize(ref reader, typeof(JsonRpcMessage), JsonRpcMessageContext.Default)!;
-        var methodRef = ServerMethodResolver[m.Method]?.Ref ?? new RpcMethodRef(m.Method ?? "");
+        var methodRef = ServerMethodResolver[m.Method ?? ""]?.Ref ?? new RpcMethodRef(m.Method ?? "");
 
         var tail = data.Slice((int)reader.BytesConsumed).Span;
         if (tail[0] == Delimiter)

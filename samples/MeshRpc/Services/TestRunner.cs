@@ -43,7 +43,7 @@ public class TestRunner(IServiceProvider services) : WorkerBase
         var rnd = new Random();
         for (var callId = 0;; callId++) {
             var useFusion = UseFusionSampler.Next();
-            var serviceName = (Symbol)(useFusion ? nameof(IFusionCounter) : nameof(ISimpleCounter));
+            var serviceName = useFusion ? nameof(IFusionCounter) : nameof(ISimpleCounter);
             var mustIncrement = IncrementSampler.Next();
             var key = rnd.Next(CounterCount);
 

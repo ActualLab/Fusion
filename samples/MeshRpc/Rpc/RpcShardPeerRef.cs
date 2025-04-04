@@ -10,13 +10,13 @@ public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
     private volatile CancellationTokenSource? _rerouteTokenSource;
 
     public ShardRef ShardRef { get; }
-    public Symbol HostId { get; }
+    public string HostId { get; }
     public override CancellationToken RerouteToken => _rerouteTokenSource?.Token ?? CancellationToken.None;
 
-    public static Symbol GetKey(ShardRef shardRef)
+    public static string GetKey(ShardRef shardRef)
     {
         var meshState = MeshState.State.Value;
-        return $"{shardRef} v{meshState.Version} -> {meshState.GetShardHost(shardRef)?.Id.Value ?? "null"}";
+        return $"{shardRef} v{meshState.Version} -> {meshState.GetShardHost(shardRef)?.Id ?? "null"}";
     }
 
     public static RpcShardPeerRef Get(ShardRef shardRef)
@@ -40,7 +40,7 @@ public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
         : base(GetKey(shardRef))
     {
         ShardRef = shardRef;
-        HostId = Key.Value.Split(" -> ")[1];
+        HostId = Key.Split(" -> ")[1];
     }
 
     public void TryStart(LazySlim<ShardRef, RpcShardPeerRef> lazy)
