@@ -6,10 +6,6 @@ namespace ActualLab.Api;
 public static class ApiSet
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ApiSet<T> Empty<T>()
-        => ApiSet<T>.Empty;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ApiSet<T> New<T>(params ReadOnlySpan<T> items)
         => new(items);
 }

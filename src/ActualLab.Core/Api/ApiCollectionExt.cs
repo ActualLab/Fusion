@@ -35,7 +35,9 @@ public static class ApiCollectionExt
         try {
             await foreach (var item in source.WithCancellation(cancellationToken).ConfigureAwait(false))
                 buffer.Add(item);
-            return buffer.Count == 0 ? default : new Api.ApiArray<TSource>(buffer.ToArray());
+            return buffer.Count == 0
+                ? ApiArray<TSource>.Empty
+                : new ApiArray<TSource>(buffer.ToArray());
         }
         finally {
             buffer.Release();

@@ -49,7 +49,7 @@ public class ApiArrayNewtonsoftJsonConverter : JsonConverter
         public override ApiArray<T> ReadJson(
             JsonReader reader,
             Type objectType,
-            ApiArray<T> existingValue,
+            ApiArray<T>? existingValue,
             bool hasExistingValue,
             JsonSerializer serializer)
         {
@@ -57,8 +57,8 @@ public class ApiArrayNewtonsoftJsonConverter : JsonConverter
             return new(items!);
         }
 
-        public override void WriteJson(JsonWriter writer, ApiArray<T> value, JsonSerializer serializer)
-            => serializer.Serialize(writer, value.Items);
+        public override void WriteJson(JsonWriter writer, ApiArray<T>? value, JsonSerializer serializer)
+            => serializer.Serialize(writer, value?.Items);
     }
 
     private sealed class NullableConverter<T> : Newtonsoft.Json.JsonConverter<ApiArray<T>?>

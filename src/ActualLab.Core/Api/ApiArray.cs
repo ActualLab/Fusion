@@ -8,12 +8,8 @@ namespace ActualLab.Api;
 public static class ApiArray
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ApiArray<T> Empty<T>()
-        => default;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ApiArray<T> New<T>(params ReadOnlySpan<T> items)
-        => items.Length == 0 ? default : new(items.ToArray());
+        => items.Length == 0 ? ApiArray<T>.Empty : new(items.ToArray());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ApiArray<T> Wrap<T>(T[] items)
@@ -22,20 +18,15 @@ public static class ApiArray
 
 #pragma warning disable MA0084
 
-[StructLayout(LayoutKind.Auto)]
 [CollectionBuilder(typeof(ApiArray), "New")]
 [JsonConverter(typeof(ApiArrayJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(ApiArrayNewtonsoftJsonConverter))]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-#if NET8_0_OR_GREATER
-[MessagePackObject(true, SuppressSourceGeneration = true)]
-#else
 [MessagePackFormatter(typeof(ApiArrayMessagePackFormatter<>))]
-#endif
-public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArray<T>>
+public sealed partial class ApiArray<T> : IReadOnlyList<T>
 {
     private static readonly T[] EmptyItems = [];
-    public static readonly ApiArray<T> Empty = default!;
+    public static readonly ApiArray<T> Empty = new(EmptyItems);
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     [field: AllowNull, MaybeNull, IgnoreMember]
@@ -272,13 +263,4 @@ public readonly partial struct ApiArray<T> : IReadOnlyList<T>, IEquatable<ApiArr
         Array.Copy(items, 0, newItems, 0, maxCount);
         return new ApiArray<T>(newItems);
     }
-
-    // Equality
-
-    public bool Equals(ApiArray<T> other) => Equals(Items, other.Items);
-    public override bool Equals(object? obj) => obj is ApiArray<T> other && Equals(other);
-    public override int GetHashCode() => Items.GetHashCode();
-
-    public static bool operator ==(ApiArray<T> left, ApiArray<T> right) => left.Equals(right);
-    public static bool operator !=(ApiArray<T> left, ApiArray<T> right) => !left.Equals(right);
 }

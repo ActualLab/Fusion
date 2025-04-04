@@ -3,10 +3,15 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Api.Internal;
 
-public class ApiArrayMessagePackFormatter<T> : IMessagePackFormatter<ApiArray<T>>
+public class ApiArrayMessagePackFormatter<T> : IMessagePackFormatter<ApiArray<T>?>
 {
-    public void Serialize(ref MessagePackWriter writer, ApiArray<T> value, MessagePackSerializerOptions options)
+    public void Serialize(ref MessagePackWriter writer, ApiArray<T>? value, MessagePackSerializerOptions options)
     {
+        if (value == null) {
+            writer.WriteNil();
+            return;
+        }
+
         if (value.IsEmpty) {
             writer.WriteArrayHeader(0);
             return;
@@ -18,14 +23,14 @@ public class ApiArrayMessagePackFormatter<T> : IMessagePackFormatter<ApiArray<T>
             formatter.Serialize(ref writer, item, options);
     }
 
-    public ApiArray<T> Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)
+    public ApiArray<T>? Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)
     {
         if (reader.TryReadNil())
-            return default;
+            return null;
 
         var len = reader.ReadArrayHeader();
         if (len == 0)
-            return default;
+            return ApiArray<T>.Empty;
 
         var formatter = options.Resolver.GetFormatterWithVerify<T>();
         var array = new T[len];

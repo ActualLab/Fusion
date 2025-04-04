@@ -78,7 +78,7 @@ public class MessagePackSerializationTest(ITestOutputHelper @out) : TestBase(@ou
         Test(ApiNullable8.Value(1), "1");
 
         // ApiArray
-        Test(default(ApiArray<int>), "[]");
+        Test(ApiArray<int>.Empty, "[]");
         Test(new ApiArray<int>([1,2]), "[1,2]");
 
         // ApiList

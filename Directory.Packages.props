@@ -57,7 +57,7 @@
     <EntityFrameworkCoreMySqlVersion3>[3.2.7,)</EntityFrameworkCoreMySqlVersion3>
     <!-- Serialization -->
     <NewtonsoftJsonVersion>[13.0.3,)</NewtonsoftJsonVersion>
-    <MemoryPackVersion>[1.21.3,)</MemoryPackVersion>
+    <MemoryPackVersion>[1.21.4,)</MemoryPackVersion>
     <MessagePackVersion>[3.1.3,)</MessagePackVersion>
     <MessagePackVersion2>[2.5.192,)</MessagePackVersion2>
     <!-- Other -->
