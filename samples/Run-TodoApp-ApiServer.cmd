@@ -1,7 +1,7 @@
 @echo off
 
 set ASPNETCORE_ENVIRONMENT=Development
-set ExePath=../artifacts/samples/Host/net8.0/Templates.TodoApp.Host.dll
+set ExePath=../artifacts/samples/bin/Host/debug/Samples.TodoApp.Host.dll
 
 set ASPNETCORE_URLS=http://localhost:5005/
 set Host__HostKind=ApiServer
