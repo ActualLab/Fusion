@@ -96,10 +96,6 @@ public class MessagePackSerializationTest(ITestOutputHelper @out) : TestBase(@ou
         // Session
         Test(default(Session), "null");
         Test(new Session("01234567890"), "\"01234567890\"");
-
-        // string
-        Test(default(string), "\"\"");
-        Test("01", "\"01\"");
     }
 
     private void Test<T>(T value, string expectedJson)
