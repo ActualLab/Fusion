@@ -1,4 +1,3 @@
-using ActualLab.Fusion.EntityFramework;
 using ActualLab.IO;
 using ActualLab.Reflection;
 using ActualLab.Serialization.Internal;
