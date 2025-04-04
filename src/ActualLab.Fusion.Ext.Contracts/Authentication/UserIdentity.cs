@@ -14,7 +14,7 @@ public readonly partial record struct UserIdentity : IComparable<UserIdentity>
     public static readonly UserIdentity None;
     public static string DefaultSchema { get; set; } = "Default";
 
-    [DataMember(Order = 0), MemoryPackOrder(0), SymbolStringMemoryPackFormatter]
+    [DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter]
     public string Id {
         get => field ?? "";
         init;

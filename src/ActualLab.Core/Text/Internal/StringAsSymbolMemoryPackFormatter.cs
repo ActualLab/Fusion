@@ -1,8 +1,8 @@
 namespace ActualLab.Text.Internal;
 
-public sealed class SymbolStringMemoryPackFormatter : MemoryPackFormatter<string>
+public sealed class StringAsSymbolMemoryPackFormatter : MemoryPackFormatter<string>
 {
-    public static readonly SymbolStringMemoryPackFormatter Default = new();
+    public static readonly StringAsSymbolMemoryPackFormatter Default = new();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override void Serialize<TBufferWriter>(ref MemoryPackWriter<TBufferWriter> writer, scoped ref string? value)

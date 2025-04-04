@@ -9,7 +9,7 @@ namespace ActualLab.Collections.Internal;
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record struct PropertyBagItem(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), SymbolStringMemoryPackFormatter, Key(0)] string Key,
+    [property: DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter, Key(0)] string Key,
     [property: DataMember(Order = 1), MemoryPackOrder(1), Key(1)] TypeDecoratingUniSerialized<object> Serialized
     ) : IComparable<PropertyBagItem>
 {

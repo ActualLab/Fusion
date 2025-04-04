@@ -17,7 +17,7 @@ public partial record SessionAuthInfo : IRequirementTarget
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public UserIdentity AuthenticatedIdentity { get; init; }
 
-    [DataMember(Order = 2), MemoryPackOrder(2), SymbolStringMemoryPackFormatter]
+    [DataMember(Order = 2), MemoryPackOrder(2), StringAsSymbolMemoryPackFormatter]
     public string UserId { get; init; } = "";
 
     [DataMember(Order = 3), MemoryPackOrder(3)]

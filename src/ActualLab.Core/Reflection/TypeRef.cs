@@ -31,7 +31,7 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
 
     public static readonly TypeRef None = default;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), SymbolStringMemoryPackFormatter, Key(0)]
+    [DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter, Key(0)]
     public string AssemblyQualifiedName => field ?? "";
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]

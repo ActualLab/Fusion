@@ -22,7 +22,7 @@ public sealed partial class Session : IHasId<string>,
 
     private int _hashCode;
 
-    [DataMember(Order = 0), MemoryPackOrder(0), SymbolStringMemoryPackFormatter]
+    [DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter]
     public string Id { get; }
 
     [field: AllowNull, MaybeNull]

@@ -9,7 +9,7 @@ namespace ActualLab;
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record HostId(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), SymbolStringMemoryPackFormatter, Key(0)] string Id
+    [property: DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter, Key(0)] string Id
     ) : IEquatable<string>
 {
     private static long _nextId;
