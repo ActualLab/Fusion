@@ -6,6 +6,9 @@ namespace ActualLab.Collections;
 
 public interface IMutablePropertyBag : IReadOnlyPropertyBag
 {
+    public new object? this[string key] { get; set; }
+    public new object? this[Type key] { get; set; }
+
     public event Action? Changed;
 
     public bool Set<T>(T value);
@@ -81,6 +84,7 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
     public object? this[Type key] {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _snapshot[key.ToIdentifierSymbol()];
+        set => Update((key, value), static (s, bag) => bag.Set(s.key.ToIdentifierSymbol(), s.value));
     }
 
     public MutablePropertyBag()
