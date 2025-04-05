@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using ActualLab.Fusion.Authentication;
 
 namespace ActualLab.Fusion.Server.Internal;
 
