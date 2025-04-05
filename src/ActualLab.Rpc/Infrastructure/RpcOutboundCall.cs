@@ -200,12 +200,14 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public virtual void SetResult(object? result, RpcInboundContext? context)
     {
+#if DEBUG
         if (!MethodDef.IsInstanceOfUnwrappedReturnType(result)) {
             var error = Internal.Errors.InvalidResultType(MethodDef.UnwrappedReturnType, result?.GetType());
             SetError(error, context);
             Peer.Log.LogError(error, "Got incorrect call result type: {Call}", this);
             return;
         }
+#endif
         if (ResultSource.TrySetResult(result)) {
             CompleteAndUnregister(notifyCancelled: false);
             if (context != null)
@@ -222,6 +224,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
 
         var result = cacheEntry.DeserializedValue;
+#if DEBUG
         if (!MethodDef.IsInstanceOfUnwrappedReturnType(result)) {
             var error = Internal.Errors.InvalidResultType(MethodDef.UnwrappedReturnType, result?.GetType());
             SetError(error, context);
@@ -229,6 +232,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
                 "Got 'Match', but cache entry's serialized value has incorrect type type: {Call}", this);
             return;
         }
+#endif
         if (ResultSource.TrySetResult(result)) {
             CompleteAndUnregister(notifyCancelled: false);
             if (context != null)

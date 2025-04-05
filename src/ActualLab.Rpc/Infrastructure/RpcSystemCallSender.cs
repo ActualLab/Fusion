@@ -8,11 +8,9 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     : RpcServiceBase(services)
 {
     [field: AllowNull, MaybeNull]
-    public IRpcSystemCalls Client => field
-        ??= Services.GetRequiredService<IRpcSystemCalls>();
+    public IRpcSystemCalls Client => field ??= Services.GetRequiredService<IRpcSystemCalls>();
     [field: AllowNull, MaybeNull]
-    public RpcServiceDef ServiceDef => field
-        ??= Hub.ServiceRegistry.Get<IRpcSystemCalls>()!;
+    public RpcServiceDef ServiceDef => field ??= Hub.ServiceRegistry.Get<IRpcSystemCalls>()!;
     [field: AllowNull, MaybeNull]
     public RpcMethodDef HandshakeMethodDef => field
         ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Handshake)));

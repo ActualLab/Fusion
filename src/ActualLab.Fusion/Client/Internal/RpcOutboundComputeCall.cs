@@ -46,12 +46,14 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
             // except the Unregister call in the end.
             // We don't unregister the call here, coz
             // we'll need to await for invalidation
+#if DEBUG
             if (!MethodDef.IsInstanceOfUnwrappedReturnType(result)) {
                 var error = Errors.InvalidResultType(MethodDef.UnwrappedReturnType, result?.GetType());
                 SetError(error, context);
                 Peer.InternalServices.Log.LogError(error, "Got incorrect call result type: {Call}", this);
                 return;
             }
+#endif
             if (ResultSource.TrySetResult(result)) {
                 CompleteKeepRegistered();
                 Context.CacheInfoCapture?.CaptureValue(context!.Message);
@@ -77,13 +79,15 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
             }
 
             var result = cacheEntry.DeserializedValue;
+#if DEBUG
             if (!MethodDef.IsInstanceOfUnwrappedReturnType(result)) {
                 var error = Errors.InvalidResultType(MethodDef.UnwrappedReturnType, result?.GetType());
                 SetError(error, context);
                 Peer.InternalServices.Log.LogError(error,
-                    "Got 'Match', but cache entry's serialized value has incorrect type type: {Call}", this);
+                    "Got 'Match', but cache entry's serialized value has incorrect type: {Call}", this);
                 return;
             }
+#endif
             if (ResultSource.TrySetResult(result)) {
                 CompleteKeepRegistered();
                 Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);

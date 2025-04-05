@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.Infrastructure;
 using Cysharp.Text;
 
 namespace ActualLab.Rpc;
@@ -44,6 +45,7 @@ public sealed class RpcMethodDef : MethodDef
     public LegacyNames LegacyNames { get; init; }
     public PropertyBag Properties { get; init; }
     public RpcCallTimeouts Timeouts { get; init; }
+    public RpcSystemCallKind SystemCallKind { get; init; }
 
     public RpcMethodDef(
         RpcServiceDef service,
@@ -80,6 +82,15 @@ public sealed class RpcMethodDef : MethodDef
             && ParameterTypes[1] == typeof(CancellationToken)
             && Hub.CommandTypeDetector(ParameterTypes[0]);
         Timeouts = Hub.CallTimeoutsProvider(this).Normalize();
+
+        SystemCallKind = service.Type == typeof(IRpcSystemCalls)
+            ? Method.Name switch {
+                nameof(IRpcSystemCalls.Ok) => RpcSystemCallKind.Ok,
+                nameof(IRpcSystemCalls.I) => RpcSystemCallKind.Item,
+                nameof(IRpcSystemCalls.B) => RpcSystemCallKind.Batch,
+                _ => RpcSystemCallKind.OtherOrNone,
+            }
+            : RpcSystemCallKind.OtherOrNone;
     }
 
     public override string ToString()

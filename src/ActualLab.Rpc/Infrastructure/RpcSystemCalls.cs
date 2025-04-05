@@ -30,14 +30,13 @@ public interface IRpcSystemCalls : IRpcSystemService
     public Task<RpcNoWait> End(long index, ExceptionInfo error);
 }
 
-public class RpcSystemCalls(IServiceProvider services)
+public sealed class RpcSystemCalls(IServiceProvider services)
     : RpcServiceBase(services), IRpcSystemCalls, IRpcDynamicCallHandler
 {
-    private static readonly string OkMethodName = nameof(Ok);
-    private static readonly string ItemMethodName = nameof(I);
-    private static readonly string BatchMethodName = nameof(B);
-
-    public static readonly string Name = "$sys";
+    public const string Name = "$sys";
+    public const string OkMethodName = nameof(Ok);
+    public const string ItemMethodName = nameof(I);
+    public const string BatchMethodName = nameof(B);
 
     public Task<RpcNoWait> Handshake(RpcHandshake handshake)
         => RpcNoWait.Tasks.Completed; // Does nothing: this call is processed inside RpcPeer.OnRun
@@ -192,8 +191,12 @@ public class RpcSystemCalls(IServiceProvider services)
     public bool IsValidCall(RpcInboundContext context, ref ArgumentList arguments, ref bool allowPolymorphism)
     {
         var call = context.Call;
-        var methodName = call.MethodDef.Method.Name;
-        if (string.Equals(methodName, OkMethodName, StringComparison.Ordinal)) {
+        RpcStream? stream;
+        var systemCallKind = call.MethodDef.SystemCallKind;
+        if (systemCallKind == RpcSystemCallKind.OtherOrNone) // Most frequent path
+            return false;
+
+        if (systemCallKind == RpcSystemCallKind.Ok) { // Next frequent path
             var outboundCall = context.Peer.OutboundCalls.Get(context.Message.RelatedId);
             if (outboundCall == null)
                 return false;
@@ -203,8 +206,9 @@ public class RpcSystemCalls(IServiceProvider services)
             allowPolymorphism = outboundMethodDef.AllowResultPolymorphism;
             return true;
         }
-        if (string.Equals(methodName, ItemMethodName, StringComparison.Ordinal)) {
-            var stream = context.Peer.RemoteObjects.Get(context.Message.RelatedId) as RpcStream;
+
+        if (systemCallKind == RpcSystemCallKind.Item) {
+            stream = context.Peer.RemoteObjects.Get(context.Message.RelatedId) as RpcStream;
             if (stream == null)
                 return false;
 
@@ -212,15 +216,14 @@ public class RpcSystemCalls(IServiceProvider services)
             allowPolymorphism = true;
             return true;
         }
-        if (string.Equals(methodName, BatchMethodName, StringComparison.Ordinal)) {
-            var stream = context.Peer.RemoteObjects.Get(context.Message.RelatedId) as RpcStream;
-            if (stream == null)
-                return false;
 
-            arguments = stream.CreateStreamBatchArguments();
-            allowPolymorphism = true;
-            return true;
-        }
-        return false;
+        // If we're here, systemCallKind == RpcSystemCallKind.Batch
+        stream = context.Peer.RemoteObjects.Get(context.Message.RelatedId) as RpcStream;
+        if (stream == null)
+            return false;
+
+        arguments = stream.CreateStreamBatchArguments();
+        allowPolymorphism = true;
+        return true;
     }
 }

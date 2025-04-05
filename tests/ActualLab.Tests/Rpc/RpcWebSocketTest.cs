@@ -374,6 +374,7 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData(50_000, "msgpack2-np")]
     [InlineData(50_000, "msgpack2c")]
     [InlineData(50_000, "msgpack2c-np")]
+    // [InlineData(200_000, "msgpack2c-np")]
     public async Task PerformanceTest(int iterationCount, string serializationFormat)
     {
         SerializationFormat = serializationFormat;
