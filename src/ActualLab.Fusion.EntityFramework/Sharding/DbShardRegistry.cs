@@ -37,7 +37,7 @@ public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
             throw new ArgumentOutOfRangeException(nameof(initialShards), "Initial shard set is empty.");
 
         var shards = initialShards.ToImmutableHashSet();
-        HasSingleShard = shards.Contains("");
+        HasSingleShard = shards.Contains(DbShard.Single);
         if (HasSingleShard) {
             if (shards.Count != 1)
                 throw new ArgumentOutOfRangeException(nameof(initialShards),
