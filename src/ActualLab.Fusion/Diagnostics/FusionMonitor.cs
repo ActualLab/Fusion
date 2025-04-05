@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using Cysharp.Text;
 
 namespace ActualLab.Fusion.Diagnostics;
 
@@ -184,6 +183,6 @@ public sealed class FusionMonitor : WorkerBase
 
         if (RegistrationLogSampler.Next())
             // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-            Log.LogDebug(ZString.Concat(isRegistration ? "+ " : "- ", input));
+            Log.LogDebug((isRegistration ? "+ " : "- ") + input);
     }
 }

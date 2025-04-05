@@ -1,4 +1,3 @@
-using Cysharp.Text;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Interception;
@@ -112,7 +111,7 @@ public abstract class RemoteComputeMethodFunction(
     public readonly object? LocalTarget = localTarget;
 
     public override string ToString()
-        => _toString ??= ZString.Concat('*', base.ToString());
+        => _toString ??= "*" + base.ToString();
 
     public object? RemoteComputeServiceInterceptorHandler(Invocation invocation)
     {

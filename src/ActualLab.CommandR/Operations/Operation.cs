@@ -1,6 +1,5 @@
 using ActualLab.CommandR.Internal;
 using ActualLab.Versioning;
-using Cysharp.Text;
 
 namespace ActualLab.CommandR.Operations;
 
@@ -35,7 +34,7 @@ public class Operation : IHasUuid, IHasId<string>
     }
 
     public static Operation NewTransient(IOperationScope scope)
-        => New(scope, ZString.Concat(Ulid.NewUlid(), "-local"));
+        => New(scope, $"{Ulid.NewUlid()}-local");
 
     public Operation()
         : this("", "")

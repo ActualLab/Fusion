@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
-using Cysharp.Text;
 using MessagePack;
 
 namespace ActualLab.Fusion;
@@ -67,30 +66,30 @@ public sealed partial class Session : IHasId<string>,
 
     public Session WithTags(string tags)
     {
-        var s = Id;
-        var startIndex = s.IndexOf('&', StringComparison.Ordinal);
-        s = startIndex < 0 ? s : s[startIndex..];
+        var id = Id;
+        var startIndex = id.IndexOf('&', StringComparison.Ordinal);
+        id = startIndex < 0 ? id : id[startIndex..];
         if (tags.IsNullOrEmpty())
-            return startIndex < 0 ? this : new Session(s);
-        return new Session(ZString.Concat(s, '&', tags));
+            return startIndex < 0 ? this : new Session(id);
+        return new Session(string.Concat(id, "&", tags));
     }
 
     public Session WithTag(string tag, string value)
     {
-        var s = Id;
+        var id = Id;
         var tagPrefix = $"&{tag}=";
-        var startIndex = s.IndexOf(tagPrefix, StringComparison.Ordinal);
+        var startIndex = id.IndexOf(tagPrefix, StringComparison.Ordinal);
         if (startIndex > 0) {
-            var endIndex = s.IndexOf('&', startIndex + tagPrefix.Length);
-            s = endIndex < 0
-                ? s[..startIndex]
+            var endIndex = id.IndexOf('&', startIndex + tagPrefix.Length);
+            id = endIndex < 0
+                ? id[..startIndex]
 #if NETCOREAPP3_1_OR_GREATER
-                : string.Concat(s.AsSpan(0, startIndex), s.AsSpan(startIndex + s.Length));
+                : string.Concat(id.AsSpan(0, startIndex), id.AsSpan(startIndex + id.Length));
 #else
-                : string.Concat(s.Substring(0, startIndex), s.Substring(startIndex + s.Length));
+                : string.Concat(id.Substring(0, startIndex), id.Substring(startIndex + id.Length));
 #endif
         }
-        return new Session(ZString.Concat(s, tagPrefix, value));
+        return new Session(string.Concat(id, tagPrefix, value));
     }
 
     // We use non-cryptographic hash here because System.Security.Cryptography isn't supported in Blazor.

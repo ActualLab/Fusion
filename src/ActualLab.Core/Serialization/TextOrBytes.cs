@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.HighPerformance;
-using Cysharp.Text;
 using MessagePack;
 
 namespace ActualLab.Serialization;
@@ -60,8 +59,8 @@ public readonly partial record struct TextOrBytes(
             : BitConverter.ToString(Data.Span[..Math.Min(Data.Length, maxLength)].ToArray());
 #endif
         return isText
-            ? ZString.Concat("[ ", text.Length, " char(s): `", sData, text.Length <= maxLength ? "` ]" : "`... ]")
-            : ZString.Concat("[ ", Data.Length, " byte(s): ", sData, Data.Length <= maxLength ? " ]" : "... ]");
+            ? $"[ {text.Length} char(s): `{sData}{(text.Length <= maxLength ? "`" : "`...")} ]"
+            : $"[ {Data.Length} byte(s): {sData}{(Data.Length <= maxLength ? "" : "...")} ]";
     }
 
     public static implicit operator TextOrBytes(ReadOnlyMemory<byte> bytes) => new(bytes);

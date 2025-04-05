@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Diagnostics;
-using Cysharp.Text;
 using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -71,11 +70,11 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var isStream = methodDef?.IsStream == true;
         var relatedId = context.RelatedId;
         var completedStageName = CompletedStageName;
-        var result = ZString.Concat(
+        var result = string.Concat(
             DebugTypeName,
             isStream ? " ~" : " #",
-            relatedId != 0 ? relatedId : Id,
-            ' ',
+            (relatedId != 0 ? relatedId : Id).ToString(),
+            " ",
             methodDef?.FullName ?? "n/a",
             arguments?.ToString() ?? "(n/a)",
             headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",

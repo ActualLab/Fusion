@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using ActualLab.Time.Internal;
-using Cysharp.Text;
 using MessagePack;
 
 namespace ActualLab.Time;
@@ -36,7 +35,7 @@ public readonly partial record struct CpuTimestamp(
     }
 
     public override string ToString()
-        => ZString.Concat(Elapsed.ToShortString(), " elapsed");
+        => string.Concat(Elapsed.ToShortString(), " elapsed");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TimeSpan operator -(CpuTimestamp a, CpuTimestamp b)

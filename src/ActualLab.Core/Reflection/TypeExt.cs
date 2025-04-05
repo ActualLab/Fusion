@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using ActualLab.OS;
-using Cysharp.Text;
 
 namespace ActualLab.Reflection;
 
@@ -30,14 +29,14 @@ public static partial class TypeExt
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), string>> ToIdentifierNameCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly ConcurrentDictionary<(Type Type, string Prefix), string> ToIdentifierSymbolCache
+    private static readonly ConcurrentDictionary<Type, Symbol> ToIdentifierSymbolCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly ConcurrentDictionary<Type, Type?> GetTaskOrValueTaskTypeCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly ConcurrentDictionary<Type, object?> DefaultValueCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
-    public const string DefaultIdentifierSymbolPrefix = "@";
+    public const string IdentifierSymbolPrefix = "@";
 
     public static Func<Type, Type> NonProxyTypeResolver {
         get;
@@ -188,9 +187,9 @@ public static partial class TypeExt
             });
     }
 
-    public static string ToIdentifierSymbol(this Type type, string prefix = DefaultIdentifierSymbolPrefix)
-        => ToIdentifierSymbolCache.GetOrAdd((type, prefix),
-            static key => ZString.Concat(key.Prefix, key.Type.ToIdentifierName(true, true)));
+    public static Symbol ToIdentifierSymbol(this Type type)
+        => ToIdentifierSymbolCache.GetOrAdd(type,
+            static t => new Symbol(IdentifierSymbolPrefix + t.ToIdentifierName(true, true)));
 
     public static bool IsTaskOrValueTask(this Type type)
         => type.GetTaskOrValueTaskType() != null;
@@ -262,7 +261,7 @@ public static partial class TypeExt
 
         var nonProxyNamespacePrefix = @namespace[..^proxyNamespace.Length];
         var nonProxyNamePrefix = namePrefix[..^proxy.Length];
-        var nonProxyName = ZString.Concat(nonProxyNamespacePrefix, nonProxyNamePrefix, nameSuffix);
+        var nonProxyName = string.Concat(nonProxyNamespacePrefix, nonProxyNamePrefix, nameSuffix);
         try {
             return type.Assembly.GetType(nonProxyName) ?? type;
         }

@@ -1,5 +1,3 @@
-using Cysharp.Text;
-
 namespace ActualLab.Async;
 
 [StructLayout(LayoutKind.Auto)]
@@ -11,10 +9,8 @@ public record struct Temporary<T>(T Value, CancellationToken GoneToken)
         goneToken = GoneToken;
     }
 
-    public override string ToString() =>
-        ZString.Concat('(',
-            Value?.ToString() ?? "null",
-            GoneToken.IsCancellationRequested ? ", gone)" : ", alive)");
+    public override string ToString()
+        => $"({Value?.ToString() ?? "null"}{(GoneToken.IsCancellationRequested ? ", gone)" : ", alive)")}";
 
     public static implicit operator Temporary<T>((T Value, CancellationToken GoneToken) value)
         => new(value.Value, value.GoneToken);

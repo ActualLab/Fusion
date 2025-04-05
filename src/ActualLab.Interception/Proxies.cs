@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception.Interceptors;
-using Cysharp.Text;
 using ActualLab.Interception.Internal;
 using ActualLab.OS;
 using ActualLab.Trimming;
@@ -84,7 +83,7 @@ public static class Proxies
                 namePrefix = name[..backTrickIndex];
                 nameSuffix = name[backTrickIndex..];
             }
-            var proxyTypeName = ZString.Concat(
+            var proxyTypeName = string.Concat(
                 type.Namespace,
                 type.Namespace.IsNullOrEmpty() ? "" : ".",
                 "ActualLabProxies.",

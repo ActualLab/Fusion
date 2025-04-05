@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
-using Cysharp.Text;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -81,11 +80,11 @@ public abstract class RpcInboundCall : RpcCall
                 : Context.Peer.OutboundCalls.Get(relatedId);
         var completedStageName = CompletedStageName;
 
-        var result = ZString.Concat(
+        var result = string.Concat(
             DebugTypeName,
             MethodDef.IsStream ? " ~" : " #",
-            relatedId,
-            ' ',
+            relatedId.ToString(),
+            " ",
             MethodDef.FullName,
             arguments,
             headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",

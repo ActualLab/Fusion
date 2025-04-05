@@ -1,4 +1,3 @@
-using Cysharp.Text;
 using ActualLab.Interception;
 
 namespace ActualLab.Fusion.Interception;
@@ -26,7 +25,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     }
 
     public override string ToString()
-        => ZString.Concat(Category, Invocation.Arguments, "-Hash=", HashCode);
+        => string.Concat(Category, Invocation.Arguments.ToString(), "-Hash=", HashCode.ToString());
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override ComputedOptions GetComputedOptions()

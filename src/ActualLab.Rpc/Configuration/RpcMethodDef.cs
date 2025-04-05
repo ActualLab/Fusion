@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
-using Cysharp.Text;
 
 namespace ActualLab.Rpc;
 
@@ -107,7 +106,7 @@ public sealed class RpcMethodDef : MethodDef
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ComposeFullName(string serviceName, string methodName)
-        => ZString.Concat(serviceName, '.', methodName);
+        => string.Concat(serviceName, ".", methodName);
 
     public static (string ServiceName, string MethodName) SplitFullName(string fullName)
     {

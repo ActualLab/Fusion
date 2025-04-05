@@ -3,7 +3,6 @@ using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.Text.Internal;
 using CommunityToolkit.HighPerformance;
-using Cysharp.Text;
 using MessagePack;
 
 namespace ActualLab.Text;
@@ -60,9 +59,7 @@ public readonly partial struct ByteString : IEquatable<ByteString>, IComparable<
     public string ToString(int maxLength)
     {
         var length = Bytes.Length;
-        return ZString.Concat("[ ",
-            length, " byte(s): ", ToHexString(maxLength),
-            length <= maxLength ? " ]" : "... ]");
+        return $"[ {length} byte(s): {ToHexString(maxLength)}{(length <= maxLength ? "" : "...")} ]";
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

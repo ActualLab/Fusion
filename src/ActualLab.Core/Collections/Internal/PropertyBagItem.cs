@@ -28,6 +28,10 @@ public partial record struct PropertyBagItem(
         return new PropertyBagItem(key, default);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static PropertyBagItem NewKey(Type key)
+        => new(key.ToIdentifierSymbol(), default);
+
     public static PropertyBagItem New(string key, object? value)
     {
         if (key.IsNullOrEmpty())
@@ -36,6 +40,14 @@ public partial record struct PropertyBagItem(
             throw new ArgumentOutOfRangeException(nameof(value));
 
         return new PropertyBagItem(key, TypeDecoratingUniSerialized.New(value));
+    }
+
+    public static PropertyBagItem New(Type key, object? value)
+    {
+        if (ReferenceEquals(value, null))
+            throw new ArgumentOutOfRangeException(nameof(value));
+
+        return new PropertyBagItem(key.ToIdentifierSymbol(), TypeDecoratingUniSerialized.New(value));
     }
 
     public static PropertyBagItem New<T>(object value)

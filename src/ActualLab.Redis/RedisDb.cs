@@ -1,4 +1,3 @@
-using Cysharp.Text;
 using StackExchange.Redis;
 using StackExchange.Redis.KeyspaceIsolation;
 
@@ -29,7 +28,7 @@ public class RedisDb
     public string FullKey(string keySuffix)
         => KeyPrefix.IsNullOrEmpty()
             ? keySuffix
-            : ZString.Concat(KeyPrefix, KeyDelimiter, keySuffix);
+            : string.Concat(KeyPrefix, KeyDelimiter, keySuffix);
 
     public RedisDb WithKeyPrefix(string keyPrefix)
         => keyPrefix.IsNullOrEmpty()
@@ -42,7 +41,7 @@ public class RedisDb
     {
         var database = multiplexer.GetDatabase();
         if (!KeyPrefix.IsNullOrEmpty())
-            database = database.WithKeyPrefix(ZString.Concat(KeyPrefix, KeyDelimiter));
+            database = database.WithKeyPrefix(string.Concat(KeyPrefix, KeyDelimiter));
         return database;
     }
 }

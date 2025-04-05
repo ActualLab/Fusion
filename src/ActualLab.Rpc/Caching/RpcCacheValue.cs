@@ -1,4 +1,3 @@
-using Cysharp.Text;
 using MessagePack;
 
 namespace ActualLab.Rpc.Caching;
@@ -33,7 +32,7 @@ public readonly partial record struct RpcCacheValue(
             ? "[ none ]"
             : Hash.IsNullOrEmpty()
                 ? data
-                : ZString.Concat(data, "-Hash=", Hash);
+                : string.Concat(data, "-Hash=", Hash);
     }
 
     public string ToString(int maxDataLength)
@@ -43,7 +42,7 @@ public readonly partial record struct RpcCacheValue(
             ? "[ none ]"
             : Hash.IsNullOrEmpty()
                 ? data
-                : ZString.Concat(data, "-Hash=", Hash);
+                : string.Concat(data, "-Hash=", Hash);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

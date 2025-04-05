@@ -65,7 +65,7 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
 #else
         // And that's one of ways to produce a readable one
         var data = Convert.ToBase64String(key.ArgumentData.Span);
-        return ZString.Concat(_keyPrefix, key.Name, ' ', data);
+        return string.Concat(_keyPrefix, key.Name, " ", data);
 #endif
     }
 }
