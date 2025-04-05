@@ -10,7 +10,7 @@
     <span>Connection state: </span>
     <strong>
         <span>@(m.GetDescription(true))</span>
-        @if (m.ReconnectsIn != default) {
+        @if (m.ReconnectsIn != TimeSpan.Zero) {
             <span> Will reconnect <TimerBadge ExpiresAt="@(Clock.Now + m.ReconnectsIn)"/>. </span>
             <Anchor TextColor="@TextColor.Success" Clicked="@Reconnect">Reconnect</Anchor>
         }

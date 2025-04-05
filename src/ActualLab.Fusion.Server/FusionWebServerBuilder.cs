@@ -44,7 +44,6 @@ public readonly struct FusionWebServerBuilder
         services.AddScoped(c => new SessionMiddleware(c.GetRequiredService<SessionMiddleware.Options>(), c));
         services.AddSingleton(_ => ServerAuthHelper.Options.Default);
         services.AddScoped(c => new ServerAuthHelper(c.GetRequiredService<ServerAuthHelper.Options>(), c));
-        services.AddSingleton(_ => new AuthSchemasCache());
         services.AddSingleton(_ => AuthEndpoints.Options.Default);
         services.AddSingleton(c => new AuthEndpoints(c.GetRequiredService<AuthEndpoints.Options>()));
         services.AddSingleton(_ => new RenderModeEndpoint());

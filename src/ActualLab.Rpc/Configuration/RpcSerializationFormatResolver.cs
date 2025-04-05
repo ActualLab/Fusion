@@ -20,9 +20,8 @@ public sealed record RpcSerializationFormatResolver(
     [field: AllowNull, MaybeNull]
     public static RpcSerializationFormatResolver Default {
         get => field ??= NewDefault(
-            RpcSerializationFormat.MemoryPackV1
-                .Key, // Default server format (should be this one for backward compatibility)
-            RpcSerializationFormat.MemoryPackV2.Key); // Default client format (the newest one)
+            RpcSerializationFormat.MemoryPackV1.Key, // Default server format, MemoryPackV1 to support pre-v8 Fusion clients
+            RpcSerializationFormat.MemoryPackV2.Key); // Default client format
         set;
     }
 

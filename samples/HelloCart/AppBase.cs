@@ -1,4 +1,3 @@
-using ActualLab.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Samples.HelloCart.V2;
 using static System.Console;

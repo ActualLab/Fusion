@@ -1,20 +1,23 @@
 ﻿@using ActualLab.Fusion.Blazor
 @using ActualLab.Fusion.Server.Authentication
 @using ActualLab.Fusion.Server.Endpoints
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>TodoApp: Fusion+Blazor Template</title>
+    <title>TodoApp: Fusion+Blazor Sample</title>
     <base href="/" />
-    <link rel="icon" type="image/png" href="@Asset("favicon.png")"/>
-    <link rel="stylesheet" href="@Asset("app.css")"/>
+    <link rel="icon" type="image/png" href="@Assets["favicon.png"]"/>
+    <link rel="stylesheet" href="@Assets["css/app.css"]"/>
+    <ImportMap />
     <BlazoriseStyles/>
-    <script src="@Asset("_content/ActualLab.Fusion.Blazor.Authentication/scripts/fusionAuth.js")"></script>
+    <script src="@Assets["_content/ActualLab.Fusion.Blazor.Authentication/scripts/fusionAuth.js"]"></script>
     <script>
         window.FusionAuth.schemas = "@_authSchemas";
     </script>
+    <script src="@Assets["js/app.js"]"></script>
     <HeadOutlet @rendermode="@(_renderMode?.Mode)" />
 </head>
 <body>
@@ -53,13 +56,7 @@
             await ServerAuthHelper.UpdateAuthState(HttpContext);
             _authSchemas = await ServerAuthHelper.GetSchemas(HttpContext);
             _sessionId = ServerAuthHelper.Session.Id;
-            // Activity.Current = null; // We don't want to "infect" Blazor circuit with it
         }
         await base.SetParametersAsync(parameters);
     }
-
-    // Private methods
-
-    private string Asset(string path)
-        => Assets[path];
 }

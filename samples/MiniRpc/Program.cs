@@ -104,6 +104,7 @@ public sealed partial record Chat_Post(
 
 public class Chat : IChat
 {
+    // ReSharper disable once ChangeFieldTypeToSystemThreadingLock
     private readonly object _lock = new();
     private List<string> _posts = new();
 

@@ -1,5 +1,4 @@
 using System.Globalization;
-using ActualLab.DependencyInjection;
 using ActualLab.Fusion.Blazor;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Samples.TodoApp.UI;
@@ -9,7 +8,7 @@ CultureInfo.DefaultThreadCurrentCulture = culture;
 CultureInfo.DefaultThreadCurrentUICulture = culture;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
-StartupHelper.ConfigureServices(builder.Services, builder);
+ClientStartup.ConfigureServices(builder.Services, builder);
 var host = builder.Build();
 StaticLog.Factory = host.Services.LoggerFactory();
 ComponentInfo.DebugLog = StaticLog.For<ComponentInfo>();

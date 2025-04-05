@@ -19,9 +19,8 @@ using Samples.TodoApp.UI.Services;
 
 namespace Samples.TodoApp.UI;
 
-
 [UnconditionalSuppressMessage("Trimming", "IL2026:RequiresUnreferencedCodeAttribute", Justification = "Fine here")]
-public static class StartupHelper
+public static class ClientStartup
 {
     public static void ConfigureServices(IServiceCollection services, WebAssemblyHostBuilder builder)
     {
@@ -41,7 +40,7 @@ public static class StartupHelper
 #endif
         // Default RPC client serialization format
         RpcSerializationFormatResolver.Default = RpcSerializationFormatResolver.Default with {
-            DefaultClientFormatKey = "msgpack2c-np",
+            // DefaultClientFormatKey = "msgpack2c-np",
             // DefaultClientFormatKey = "mempack2c-np",
             // DefaultClientFormatKey = "json-np",
         };

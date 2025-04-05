@@ -18,6 +18,7 @@
     <Using Include="ActualLab.Async" />
     <Using Include="ActualLab.Channels" />
     <Using Include="ActualLab.Collections" />
+    <Using Include="ActualLab.DependencyInjection" />
     <Using Include="ActualLab.CommandR" />
     <Using Include="ActualLab.CommandR.Configuration" />
     <Using Include="ActualLab.CommandR.Commands" />

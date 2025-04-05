@@ -1,4 +1,3 @@
-using ActualLab.DependencyInjection;
 using ActualLab.Rpc;
 using Pastel;
 using static Samples.MeshRpc.TestSettings;

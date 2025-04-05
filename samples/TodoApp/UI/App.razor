@@ -1,9 +1,5 @@
 @using ActualLab.OS
-@using ActualLab.DependencyInjection
 @implements IDisposable
-@inject IServiceProvider Services;
-@inject BlazorCircuitContext BlazorCircuitContext
-@inject ISessionResolver SessionResolver
 
 <CascadingAuthState UsePresenceReporter="true">
     <ThemeProvider Theme="@Theme">
@@ -23,10 +19,12 @@
 @code {
     private Theme Theme { get; } = new() { IsGradient = true, IsRounded = false };
 
-    [Parameter]
-    public string SessionId { get; set; } = "";
-    [Parameter]
-    public string RenderModeKey { get; set; } = "";
+    [Inject] private IServiceProvider Services { get; set; } = null!;
+    [Inject] private ISessionResolver SessionResolver { get; set; } = null!;
+    [Inject] private BlazorCircuitContext BlazorCircuitContext { get; set; } = null!;
+
+    [Parameter] public string SessionId { get; set; } = "";
+    [Parameter] public string RenderModeKey { get; set; } = "";
 
     protected override void OnInitialized()
     {

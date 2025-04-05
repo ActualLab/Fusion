@@ -73,6 +73,7 @@
     <Using Include="ActualLab" />
     <Using Include="ActualLab.Async" />
     <Using Include="ActualLab.Collections" />
+    <Using Include="ActualLab.DependencyInjection" />
     <Using Condition="$(UseFusion)" Include="ActualLab.CommandR" />
     <Using Condition="$(UseFusion)" Include="ActualLab.CommandR.Configuration" />
     <Using Condition="$(UseFusion)" Include="ActualLab.CommandR.Commands" />

@@ -3,7 +3,6 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using ActualLab.DependencyInjection;
 using ActualLab.Fusion.Blazor;
 using ActualLab.Fusion.Blazor.Authentication;
 using Microsoft.Extensions.Configuration.Memory;
@@ -212,7 +211,7 @@ void ConfigureServices()
     }
 
     // Shared services
-    StartupHelper.ConfigureSharedServices(services, hostKind, hostSettings.BackendUrl);
+    ClientStartup.ConfigureSharedServices(services, hostKind, hostSettings.BackendUrl);
 
     // ASP.NET Core authentication providers
     services.AddAuthentication(options => {
@@ -283,6 +282,7 @@ void ConfigureShardDbContext(IServiceProvider services, string shard, DbContextO
 void ConfigureApp()
 {
     // Configure the HTTP request pipeline
+    StaticWebAssetsLoader.UseStaticWebAssets(env, cfg);
     if (app.Environment.IsDevelopment()) {
         app.UseWebAssemblyDebugging();
     }
@@ -292,7 +292,6 @@ void ConfigureApp()
         app.UseHsts();
     }
     app.UseHttpsRedirection();
-    app.UseStaticFiles();
     app.UseWebSockets(new WebSocketOptions() {
         KeepAliveInterval = TimeSpan.FromSeconds(30),
     });
@@ -310,7 +309,8 @@ void ConfigureApp()
     });
 
     // Razor components
-    app.MapRazorComponents<RootServerPage>()
+    app.MapStaticAssets();
+    app.MapRazorComponents<_HostPage>()
         .AddInteractiveServerRenderMode()
         .AddInteractiveWebAssemblyRenderMode()
         .AddAdditionalAssemblies(typeof(App).Assembly);

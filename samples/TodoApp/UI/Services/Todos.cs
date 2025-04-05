@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using ActualLab.DependencyInjection;
 using ActualLab.Diagnostics;
 using Samples.TodoApp.Abstractions;
 

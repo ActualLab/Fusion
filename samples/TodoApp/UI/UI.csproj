@@ -3,11 +3,8 @@
   <PropertyGroup>
     <RootNamespace>Samples.TodoApp.UI</RootNamespace>
     <AssemblyName>Samples.TodoApp.UI</AssemblyName>
-    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
-    <!-- Warnings -->
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-    <!-- CS8669: The annotation for nullable reference types should only be used in code within a '#nullable' annotations context. Auto-generated code requires an explicit '#nullable' directive in source. -->
-    <NoWarn>$(NoWarn);CS8669</NoWarn>
+    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
   </PropertyGroup>
 
   <PropertyGroup>
