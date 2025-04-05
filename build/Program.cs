@@ -160,7 +160,7 @@ internal static class Program
                         "push",
                         nupkgPath,
                         "--force-english-output",
-                        "--timeout", "60",
+                        "--timeout", "300",
                         "--api-key", nugetApiKey,
                         "--source", feed,
                         "--skip-duplicate"
