@@ -35,7 +35,7 @@ public class DbOperationScopeProvider(IServiceProvider services)
             if (DbOperationScope.TryGet(context) is not { } scope)
                 throw;
 
-            var operationReprocessor = context.Items.GetKeyless<IOperationReprocessor>();
+            var operationReprocessor = context.Items.KeylessGet<IOperationReprocessor>();
             if (operationReprocessor == null)
                 throw;
 

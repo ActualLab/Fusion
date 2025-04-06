@@ -77,9 +77,9 @@ public class RpcWebSocketServer(
 
             webSocket = wsContext.WebSocket;
             var properties = PropertyBag.Empty
-                .SetKeyless((RpcPeer)peer)
-                .SetKeyless(context)
-                .SetKeyless(webSocket);
+                .KeylessSet((RpcPeer)peer)
+                .KeylessSet(context)
+                .KeylessSet(webSocket);
             var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
             var webSocketChannelOptions = WebSocketChannelOptionsProvider.Invoke(peer, properties);
             var channel = new WebSocketChannel<RpcMessage>(

@@ -121,10 +121,10 @@ public class RpcWebSocketClient(
         }
 
         var properties = PropertyBag.Empty
-            .SetKeyless((RpcPeer)clientPeer)
-            .SetKeyless(uri)
-            .SetKeyless(webSocketOwner)
-            .SetKeyless(webSocketOwner.WebSocket);
+            .KeylessSet((RpcPeer)clientPeer)
+            .KeylessSet(uri)
+            .KeylessSet(webSocketOwner)
+            .KeylessSet(webSocketOwner.WebSocket);
         var webSocketChannelOptions = WebSocketChannelOptionsProvider.Invoke(clientPeer, properties);
         var channel = new WebSocketChannel<RpcMessage>(webSocketChannelOptions, webSocketOwner);
         return new RpcConnection(channel, properties);

@@ -134,7 +134,7 @@ public class OperationReprocessor : IOperationReprocessor
                 $"{GetType().GetName()} cannot be used more than once in the same command execution pipeline.");
         CommandContext = context;
 
-        context.Items.SetKeyless((IOperationReprocessor)this);
+        context.Items.KeylessSet((IOperationReprocessor)this);
         var itemsBackup = context.Items.Snapshot;
         var executionStateBackup = context.ExecutionState;
         while (true) {

@@ -30,10 +30,10 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
             clientPeer.Ref.IsBackend);
         var serverPeer = Hub.GetServerPeer(serverPeerRef);
         var channelPair = ChannelPair.CreateTwisted<RpcMessage>(LocalChannelOptions);
-        var clientConnection = new RpcConnection(channelPair.Channel1, PropertyBag.Empty.SetKeyless((RpcPeer)clientPeer)) {
+        var clientConnection = new RpcConnection(channelPair.Channel1, PropertyBag.Empty.KeylessSet((RpcPeer)clientPeer)) {
             IsLocal = true,
         };
-        var serverConnection = new RpcConnection(channelPair.Channel2, PropertyBag.Empty.SetKeyless((RpcPeer)serverPeer)) {
+        var serverConnection = new RpcConnection(channelPair.Channel2, PropertyBag.Empty.KeylessSet((RpcPeer)serverPeer)) {
             IsLocal = true,
         };
         serverPeer.SetConnection(serverConnection);

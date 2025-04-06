@@ -372,10 +372,10 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     {
         default(PropertyBag).AssertPassesThroughAllSerializers();
         var s = new PropertyBag();
-        s.SetKeyless(default(Unit));
-        s.SetKeyless(3);
-        s.SetKeyless((int?)4);
-        s.SetKeyless("X");
+        s.KeylessSet(default(Unit));
+        s.KeylessSet(3);
+        s.KeylessSet((int?)4);
+        s.KeylessSet("X");
         Out.WriteLine(s.ToString());
         var s1 = s.PassThroughSystemJsonSerializer(Out);
         Out.WriteLine(s1.ToString());
@@ -387,10 +387,10 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     {
         default(MutablePropertyBag).AssertPassesThroughAllSerializers();
         var s = new MutablePropertyBag();
-        s.SetKeyless(default(Unit));
-        s.SetKeyless(3);
-        s.SetKeyless((int?)4);
-        s.SetKeyless("X");
+        s.KeylessSet(default(Unit));
+        s.KeylessSet(3);
+        s.KeylessSet((int?)4);
+        s.KeylessSet("X");
         Out.WriteLine(s.ToString());
         var s1 = s.PassThroughAllSerializers(Out);
         Out.WriteLine(s.ToString());

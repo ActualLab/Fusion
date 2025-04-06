@@ -9,7 +9,7 @@ public static class PropertyBagExt
     public static MutablePropertyBag ToMutable(this PropertyBag bag)
         => new(bag);
 
-    // ContainsXxx
+    // (Keyless)Contains
 
     public static bool Contains(this PropertyBag bag, string key)
         => bag[key] != null;
@@ -21,12 +21,12 @@ public static class PropertyBagExt
     public static bool Contains(this MutablePropertyBag bag, Type key)
         => bag[key] != null;
 
-    public static bool ContainsKeyless<T>(this PropertyBag bag)
+    public static bool KeylessContains<T>(this PropertyBag bag)
         => bag[typeof(T)] != null;
-    public static bool ContainsKeyless<T>(this MutablePropertyBag bag)
+    public static bool KeylessContains<T>(this MutablePropertyBag bag)
         => bag[typeof(T)] != null;
 
-    // TryGetXxx
+    // (Keyless)TryGet
 
     public static bool TryGet(this PropertyBag bag, string key, [NotNullWhen(true)] out object? value)
     {
@@ -62,7 +62,7 @@ public static class PropertyBagExt
         return true;
     }
 
-    public static bool TryGetKeyless<T>(this PropertyBag bag, [MaybeNullWhen(false)] out T value)
+    public static bool KeylessTryGet<T>(this PropertyBag bag, [MaybeNullWhen(false)] out T value)
     {
         var objValue = bag[typeof(T)];
         if (objValue == null) {
@@ -73,7 +73,7 @@ public static class PropertyBagExt
         return true;
     }
 
-    public static bool TryGetKeyless<T>(this MutablePropertyBag bag, [MaybeNullWhen(false)] out T value)
+    public static bool KeylessTryGet<T>(this MutablePropertyBag bag, [MaybeNullWhen(false)] out T value)
     {
         var objValue = bag[typeof(T)];
         if (objValue == null) {
@@ -84,7 +84,7 @@ public static class PropertyBagExt
         return true;
     }
 
-    // GetXxx
+    // (Keyless)Get
 
     public static T? Get<T>(this PropertyBag bag, string key)
     {
@@ -110,39 +110,34 @@ public static class PropertyBagExt
         return value != null ? (T)value : @default;
     }
 
-    public static T? GetKeyless<T>(this PropertyBag bag)
+    public static T? KeylessGet<T>(this PropertyBag bag)
     {
         var value = bag[typeof(T)];
         return value != null ? (T)value : default;
     }
 
-    public static T? GetKeyless<T>(this MutablePropertyBag bag)
+    public static T? KeylessGet<T>(this MutablePropertyBag bag)
     {
         var value = bag[typeof(T)];
         return value != null ? (T)value : default;
     }
 
-    public static T GetKeyless<T>(this PropertyBag bag, T @default)
+    public static T KeylessGet<T>(this PropertyBag bag, T @default)
     {
         var value = bag[typeof(T)];
         return value != null ? (T)value : @default;
     }
 
-    public static T GetKeyless<T>(this MutablePropertyBag bag, T @default)
+    public static T KeylessGet<T>(this MutablePropertyBag bag, T @default)
     {
         var value = bag[typeof(T)];
         return value != null ? (T)value : @default;
     }
 
-    // SetXxx
+    // (Keyless)Set & SetMany
 
     public static void Set(this MutablePropertyBag bag, string key, object? value)
         => bag.Update((key, value), static (kv, bag) => bag.Set(kv.key, kv.value));
-
-    public static PropertyBag SetKeyless<T>(this PropertyBag bag, T value)
-        => bag.Set(typeof(T).ToIdentifierSymbol(), value);
-    public static void SetKeyless<T>(this MutablePropertyBag bag, T value)
-        => bag.Set(typeof(T).ToIdentifierSymbol(), value);
 
 #pragma warning disable CS0618 // Type or member is obsolete
     public static PropertyBag SetMany(this PropertyBag bag, PropertyBag items)
@@ -151,7 +146,12 @@ public static class PropertyBagExt
         => bag.SetMany(items.RawItems ?? []);
 #pragma warning restore CS0618 // Type or member is obsolete
 
-    // RemoveXxx
+    public static PropertyBag KeylessSet<T>(this PropertyBag bag, T value)
+        => bag.Set(typeof(T).ToIdentifierSymbol(), value);
+    public static void KeylessSet<T>(this MutablePropertyBag bag, T value)
+        => bag.Set(typeof(T).ToIdentifierSymbol(), value);
+
+    // (Keyless)Remove
 
     public static void Remove(this MutablePropertyBag bag, string key)
         => bag.Update(key, static (key, bag) => bag.Remove(key));
@@ -161,9 +161,9 @@ public static class PropertyBagExt
     public static void Remove(this MutablePropertyBag bag, Type key)
         => bag.Remove(key.ToIdentifierSymbol());
 
-    public static PropertyBag RemoveKeyless<T>(this PropertyBag bag)
+    public static PropertyBag KeylessRemove<T>(this PropertyBag bag)
         => bag.Remove(typeof(T).ToIdentifierSymbol());
-    public static void RemoveKeyless<T>(this MutablePropertyBag bag)
+    public static void KeylessRemove<T>(this MutablePropertyBag bag)
         => bag.Remove(typeof(T).ToIdentifierSymbol());
 
     // Clear
