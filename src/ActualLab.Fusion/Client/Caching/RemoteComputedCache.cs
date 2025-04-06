@@ -81,7 +81,8 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
             return new RpcCacheEntry(key, entry, resultList.Get0Untyped());
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            Log.LogError(e, "Cached result read failed");
+            Log.LogWarning("Read failed for key `{Key}`: {Type}({Message})",
+                key, e.GetType().GetName(), e.Message);
             return null;
         }
     }
