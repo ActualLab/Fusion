@@ -57,7 +57,7 @@ public sealed class RpcSerializationFormat(
        peer => new RpcByteMessageSerializerCompact(peer));
 
    // ReSharper disable once UseCollectionExpression
-   public static ImmutableArray<RpcSerializationFormat> All { get; set; } = ImmutableArray.Create(
+   public static ImmutableList<RpcSerializationFormat> All { get; set; } = ImmutableList.Create(
         MemoryPackV1, MemoryPackV2, MemoryPackV2C, MemoryPackV2NP, MemoryPackV2CNP,
         MessagePackV1, MessagePackV2, MessagePackV2C, MessagePackV2NP, MessagePackV2CNP,
         SystemJson, SystemJsonNP,

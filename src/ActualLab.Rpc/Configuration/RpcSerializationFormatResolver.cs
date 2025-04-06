@@ -10,11 +10,10 @@ public sealed record RpcSerializationFormatResolver(
 {
     // Static members
 
-    private static ImmutableArray<RpcSerializationFormat>? _defaultFormats;
-
-    public static ImmutableArray<RpcSerializationFormat> DefaultFormats {
-        get => _defaultFormats ??= RpcSerializationFormat.All;
-        set => _defaultFormats = value;
+    [field: AllowNull, MaybeNull]
+    public static ImmutableList<RpcSerializationFormat> DefaultFormats {
+        get => field ??= RpcSerializationFormat.All;
+        set;
     }
 
     [field: AllowNull, MaybeNull]
