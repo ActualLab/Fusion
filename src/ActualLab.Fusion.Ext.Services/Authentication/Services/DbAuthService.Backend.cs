@@ -20,7 +20,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
-            var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
+            var invSessionInfo = context.Operation.Items.GetKeyless<SessionInfo>();
             if (invSessionInfo != null) {
                 _ = GetUser(shard, invSessionInfo.UserId, default);
                 _ = GetUserSessions(shard, invSessionInfo.UserId, default);
@@ -70,8 +70,8 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         };
         await Sessions.Upsert(dbContext, session.Id, sessionInfo, cancellationToken).ConfigureAwait(false);
 
-        context.Operation.Items.Set(sessionInfo);
-        context.Operation.Items.Set(isNewUser);
+        context.Operation.Items.SetKeyless(sessionInfo);
+        context.Operation.Items.SetKeyless(isNewUser);
     }
 
     // [CommandHandler] inherited
@@ -84,12 +84,12 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve(command);
         if (Invalidation.IsActive) {
-            var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
+            var invSessionInfo = context.Operation.Items.GetKeyless<SessionInfo>();
             if (invSessionInfo == null)
                 return null!;
 
             _ = GetSessionInfo(session, default); // Must go first!
-            var invIsNew = context.Operation.Items.GetOrDefault<bool>();
+            var invIsNew = context.Operation.Items.GetKeyless<bool>();
             if (invIsNew)
                 _ = GetAuthInfo(session, default);
             if (invSessionInfo.IsAuthenticated())
@@ -115,8 +115,8 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
             .Upsert(dbContext, session.Id, sessionInfo, cancellationToken)
             .ConfigureAwait(false);
         sessionInfo = SessionConverter.ToModel(dbSessionInfo);
-        context.Operation.Items.Set(sessionInfo); // invSessionInfo
-        context.Operation.Items.Set(isNew); // invIsNew
+        context.Operation.Items.SetKeyless(sessionInfo); // invSessionInfo
+        context.Operation.Items.SetKeyless(isNew); // invIsNew
         return sessionInfo!;
     }
 

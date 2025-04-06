@@ -17,8 +17,8 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         var context = CommandContext.GetCurrent();
         if (Invalidation.IsActive) {
             // Invalidation logic
-            var isNew = context.Operation.Items.GetOrDefault<bool>("New");
-            var isDoneChanged = context.Operation.Items.GetOrDefault<bool>("IsDoneChanged");
+            var isNew = context.Operation.Items.Get<bool>("New");
+            var isDoneChanged = context.Operation.Items.Get<bool>("IsDoneChanged");
             _ = Get(folder, item.Id, default);
             if (isNew)
                 _ = PseudoListIds(folder);

@@ -13,7 +13,7 @@ public class SessionBoundRpcConnectionFactory
         RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties,
         CancellationToken cancellationToken)
     {
-        if (!properties.TryGet<HttpContext>(out var httpContext))
+        if (!properties.TryGetKeyless<HttpContext>(out var httpContext))
             return CreateRpcConnectionAsync(channel, properties);
 
         var query = httpContext.Request.Query;

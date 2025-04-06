@@ -66,7 +66,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         var context = CommandContext.GetCurrent();
         if (Invalidation.IsActive) {
             _ = Get(user.Id, default).AssertCompleted();
-            existingUser = context.Operation.Items.Get<User>();
+            existingUser = context.Operation.Items.GetKeyless<User>();
             if (existingUser == null)
                 _ = Count(default).AssertCompleted();
             return;
@@ -79,7 +79,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         var userId = user.Id;
         if (orUpdate) {
             existingUser = await dbContext.Users.FindAsync(DbKey.Compose(userId), cancellationToken);
-            context.Operation.Items.Set(existingUser);
+            context.Operation.Items.SetKeyless(existingUser);
             if (existingUser != null!)
                 dbContext.Users.Update(user);
         }
@@ -123,7 +123,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         var user = command.User;
         var context = CommandContext.GetCurrent();
         if (Invalidation.IsActive) {
-            var success = context.Operation.Items.GetOrDefault<bool>();
+            var success = context.Operation.Items.GetKeyless<bool>();
             if (success) {
                 _ = Get(user.Id, default).AssertCompleted();
                 _ = Count(default).AssertCompleted();
@@ -137,7 +137,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         dbContext.Users.Remove(user);
         try {
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            context.Operation.Items.Set(true);
+            context.Operation.Items.SetKeyless(true);
             return true;
         }
         catch (DbUpdateConcurrencyException) {

@@ -4,29 +4,6 @@ using MessagePack;
 
 namespace ActualLab.Collections;
 
-public interface IMutablePropertyBag : IReadOnlyPropertyBag
-{
-    public new object? this[string key] { get; set; }
-    public new object? this[Type key] { get; set; }
-
-    public event Action? Changed;
-
-    public bool Set<T>(T value);
-    public bool Set<T>(string key, T value);
-    public bool Set(string key, object? value);
-    public bool Set(Type key, object? value);
-    public void SetMany(PropertyBag items);
-    public void SetMany(params ReadOnlySpan<PropertyBagItem> items);
-    public bool Remove<T>();
-    public bool Remove(string key);
-    public bool Remove(Type key);
-    public void Clear();
-
-    public bool Update(PropertyBag bag);
-    public bool Update(Func<PropertyBag, PropertyBag> updater);
-    public bool Update<TState>(TState state, Func<TState, PropertyBag, PropertyBag> updater);
-}
-
 #pragma warning disable CS0618 // Type or member is obsolete
 
 #if !NET5_0
@@ -35,7 +12,7 @@ public interface IMutablePropertyBag : IReadOnlyPropertyBag
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial class MutablePropertyBag : IMutablePropertyBag
+public sealed partial class MutablePropertyBag
 {
 #if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
@@ -100,67 +77,7 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
     public override string ToString()
         => $"{nameof(MutablePropertyBag)}({PropertyBagHelper.GetToStringArgs(RawItems)})";
 
-    // Contains
-
-    public bool Contains<T>()
-        => _snapshot[typeof(T).ToIdentifierSymbol()] != null;
-
-    public bool Contains(string key)
-        => _snapshot[key] != null;
-
-    public bool Contains(Type key)
-        => _snapshot[key.ToIdentifierSymbol()] != null;
-
-    // TryGet
-
-    public bool TryGet<T>([MaybeNullWhen(false)] out T value)
-        => _snapshot.TryGet(typeof(T).ToIdentifierSymbol(), out value);
-
-    public bool TryGet<T>(string key, [MaybeNullWhen(false)] out T value)
-        => _snapshot.TryGet(key, out value);
-
-    // Get
-
-    public T? Get<T>()
-        where T : class
-        => _snapshot.Get<T>(typeof(T).ToIdentifierSymbol());
-
-    public T? Get<T>(string key)
-        where T : class
-        => (T?)_snapshot[key];
-
-    // GetOrDefault
-
-    public T GetOrDefault<T>()
-        => _snapshot.GetOrDefault<T>(typeof(T).ToIdentifierSymbol());
-
-    public T GetOrDefault<T>(string key)
-        => _snapshot.GetOrDefault<T>(key);
-
-    public T GetOrDefault<T>(T @default)
-        => _snapshot.GetOrDefault(typeof(T).ToIdentifierSymbol(), @default);
-
-    public T GetOrDefault<T>(string key, T @default)
-        => _snapshot.GetOrDefault(key, @default);
-
-    // Set
-
-    public bool Set<T>(T value)
-        => Set(typeof(T).ToIdentifierSymbol(), (object?)value);
-
-    public bool Set<T>(string key, T value)
-        => Set(key, (object?)value);
-
-    public bool Set(string key, object? value)
-        => Update((key, value), static (s, bag) => bag.Set(s.key, s.value));
-
-    public bool Set(Type key, object? value)
-        => Update((key, value), static (s, bag) => bag.Set(s.key.ToIdentifierSymbol(), s.value));
-
     // SetMany
-
-    public void SetMany(PropertyBag items)
-        => SetMany(items.RawItems ?? []);
 
     public void SetMany(params ReadOnlySpan<PropertyBagItem> items)
     {
@@ -173,22 +90,6 @@ public sealed partial class MutablePropertyBag : IMutablePropertyBag
         if (isChanged)
             Changed?.Invoke();
     }
-
-    // Remove
-
-    public bool Remove<T>()
-        => Remove(typeof(T).ToIdentifierSymbol());
-
-    public bool Remove(string key)
-        => Update(key, static (k, bag) => bag.Remove(k));
-
-    public bool Remove(Type key)
-        => Update(key, static (k, bag) => bag.Remove(k.ToIdentifierSymbol()));
-
-    // Clear
-
-    public void Clear()
-        => Update(_ => default);
 
     // Update
 

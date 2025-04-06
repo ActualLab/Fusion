@@ -21,7 +21,7 @@ public partial class InMemoryAuthService
         if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
-            var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
+            var invSessionInfo = context.Operation.Items.GetKeyless<SessionInfo>();
             if (invSessionInfo != null) {
                 _ = GetUser(shard, invSessionInfo.UserId, default);
                 _ = GetUserSessions(shard, invSessionInfo.UserId, default);
@@ -77,8 +77,8 @@ public partial class InMemoryAuthService
         // Persist changes
         Users[(shard, user.Id)] = user;
         sessionInfo = UpsertSessionInfo(shard, session.Id, sessionInfo, sessionInfo.Version);
-        context.Operation.Items.Set(sessionInfo);
-        context.Operation.Items.Set(isNewUser);
+        context.Operation.Items.SetKeyless(sessionInfo);
+        context.Operation.Items.SetKeyless(isNewUser);
         return Task.CompletedTask;
     }
 
@@ -93,10 +93,10 @@ public partial class InMemoryAuthService
 
         if (Invalidation.IsActive) {
             _ = GetSessionInfo(session, default); // Must go first!
-            var invIsNew = context.Operation.Items.GetOrDefault<bool>();
+            var invIsNew = context.Operation.Items.GetKeyless<bool>();
             if (invIsNew)
                 _ = GetAuthInfo(session, default);
-            var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
+            var invSessionInfo = context.Operation.Items.GetKeyless<SessionInfo>();
             if (invSessionInfo?.IsAuthenticated() ?? false)
                 _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             return Task.FromResult<SessionInfo>(null!);
@@ -104,7 +104,7 @@ public partial class InMemoryAuthService
 
         InMemoryOperationScope.Require();
         var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
-        context.Operation.Items.Set(sessionInfo == null); // invIsNew
+        context.Operation.Items.SetKeyless(sessionInfo == null); // invIsNew
         sessionInfo ??= new SessionInfo(session, Clocks.SystemClock.Now);
         sessionInfo = sessionInfo with {
             IPAddress = ipAddress.IsNullOrEmpty() ? sessionInfo.IPAddress : ipAddress,
@@ -112,7 +112,7 @@ public partial class InMemoryAuthService
             Options = options.SetMany(sessionInfo.Options),
         };
         sessionInfo = UpsertSessionInfo(shard, session.Id, sessionInfo, sessionInfo.Version);
-        context.Operation.Items.Set(sessionInfo); // invSessionInfo
+        context.Operation.Items.SetKeyless(sessionInfo); // invSessionInfo
         return Task.FromResult(sessionInfo);
     }
 

@@ -4,26 +4,6 @@ using MessagePack;
 
 namespace ActualLab.Collections;
 
-public interface IReadOnlyPropertyBag
-{
-    public int Count { get; }
-    public IReadOnlyList<PropertyBagItem> Items { get; }
-    public object? this[string key] { get; }
-    public object? this[Type key] { get; }
-
-    public bool Contains<T>();
-    public bool Contains(string key);
-    public bool Contains(Type key);
-    public bool TryGet<T>([MaybeNullWhen(false)] out T value);
-    public bool TryGet<T>(string key, [MaybeNullWhen(false)] out T value);
-    public T? Get<T>() where T : class;
-    public T? Get<T>(string key) where T : class;
-    public T GetOrDefault<T>();
-    public T GetOrDefault<T>(string key);
-    public T GetOrDefault<T>(T @default);
-    public T GetOrDefault<T>(string key, T @default);
-}
-
 #pragma warning disable CS0618 // Type or member is obsolete
 
 #if !NET5_0
@@ -32,7 +12,7 @@ public interface IReadOnlyPropertyBag
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<PropertyBag>
+public readonly partial struct PropertyBag : IEquatable<PropertyBag>
 {
     public static readonly PropertyBag Empty;
 
@@ -89,74 +69,6 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
     public override string ToString()
         => $"{nameof(PropertyBag)}({PropertyBagHelper.GetToStringArgs(_items)})";
 
-    public MutablePropertyBag ToMutable()
-        => new(this);
-
-    // Contains
-
-    public bool Contains<T>()
-        => this[typeof(T).ToIdentifierSymbol()] != null;
-
-    public bool Contains(string key)
-        => this[key] != null;
-
-    public bool Contains(Type key)
-        => this[key.ToIdentifierSymbol()] != null;
-
-    // TryGet
-
-    public bool TryGet<T>([MaybeNullWhen(false)] out T value)
-        => TryGet(typeof(T).ToIdentifierSymbol(), out value);
-
-    public bool TryGet<T>(string key, [MaybeNullWhen(false)] out T value)
-    {
-        var objValue = this[key];
-        if (objValue == null) {
-            value = default!;
-            return false;
-        }
-        value = (T)objValue;
-        return true;
-    }
-
-    // Get
-
-    public T? Get<T>()
-        where T : class
-        => Get<T>(typeof(T).ToIdentifierSymbol());
-
-    public T? Get<T>(string key)
-        where T : class
-        => (T?)this[key];
-
-    // GetOrDefault
-
-    public T GetOrDefault<T>()
-        => GetOrDefault<T>(typeof(T).ToIdentifierSymbol());
-
-    public T GetOrDefault<T>(string key)
-    {
-        var value = this[key];
-        return value != null ? (T)value : default!;
-    }
-
-    public T GetOrDefault<T>(T @default)
-        => GetOrDefault(typeof(T).ToIdentifierSymbol(), @default);
-
-    public T GetOrDefault<T>(string key, T @default)
-    {
-        var value = this[key];
-        return value != null ? (T)value : @default;
-    }
-
-    // Set
-
-    public PropertyBag Set<T>(T value)
-        => Set(typeof(T).ToIdentifierSymbol(), value);
-
-    public PropertyBag Set<T>(string key, T value)
-        => Set(key, (object?)value);
-
     public PropertyBag Set(string key, object? value)
     {
         if (value == null)
@@ -182,9 +94,6 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
         return new PropertyBag(items);
     }
 
-    public PropertyBag SetMany(PropertyBag items)
-        => SetMany(items.RawItems ?? []);
-
     public PropertyBag SetMany(params ReadOnlySpan<PropertyBagItem> items)
     {
         var buffer = ArrayBuffer<PropertyBagItem>.Lease(true);
@@ -205,11 +114,6 @@ public readonly partial struct PropertyBag : IReadOnlyPropertyBag, IEquatable<Pr
             buffer.Release();
         }
     }
-
-    // Remove
-
-    public PropertyBag Remove<T>()
-        => Remove(typeof(T).ToIdentifierSymbol());
 
     public PropertyBag Remove(string key)
     {
