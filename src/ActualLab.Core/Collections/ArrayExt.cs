@@ -1,21 +1,8 @@
 namespace ActualLab.Collections;
 
-public static class ArrayExt
+public static partial class ArrayExt
 {
-    public static T[] Duplicate<T>(this T[] source)
-    {
-        var length = source.Length;
-        if (length == 0)
-            return source;
-
-#if NET5_0_OR_GREATER
-        var result = GC.AllocateUninitializedArray<T>(length);
-#else
-        var result = new T[length];
-#endif
-        source.AsSpan().CopyTo(result);
-        return result;
-    }
+    // SortInPlace
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T[] SortInPlace<T>(this T[] array)

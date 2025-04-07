@@ -1,19 +1,22 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using ActualLab.Api.Internal;
-using MessagePack;
 
 namespace ActualLab.Api;
 
 public static class ApiArray
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ApiArray<T> New<T>(params ReadOnlySpan<T> items)
-        => items.Length == 0 ? ApiArray<T>.Empty : new(items.ToArray());
+    public static ApiArray<T> Empty<T>()
+        => default;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ApiArray<T> Wrap<T>(T[] items)
-        => new(items);
+    public static ApiArray<T> New<T>(params T[] items)
+        => items.Length == 0 ? default : new(items);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ApiArray<T> New<T>(scoped ReadOnlySpan<T> items)
+        => items.Length == 0 ? default : new(items.ToArray());
 }
 
 #pragma warning disable MA0084
@@ -22,26 +25,27 @@ public static class ApiArray
 [JsonConverter(typeof(ApiArrayJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(ApiArrayNewtonsoftJsonConverter))]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-[MessagePackFormatter(typeof(ApiArrayMessagePackFormatter<>))]
-public sealed partial class ApiArray<T> : IReadOnlyList<T>
+[method: MemoryPackConstructor]
+public readonly partial struct ApiArray<T>(T[] items)
+    : IReadOnlyList<T>, IEquatable<ApiArray<T>>
 {
     private static readonly T[] EmptyItems = [];
-    public static readonly ApiArray<T> Empty = new(EmptyItems);
+    public static readonly ApiArray<T> Empty = default!;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    [field: AllowNull, MaybeNull, IgnoreMember]
+    [field: AllowNull, MaybeNull]
     public T[] Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => field ?? EmptyItems;
-    }
+    } = items is { Length: 0 } ? null! : items;
 
-    [MemoryPackIgnore, IgnoreMember]
+    [MemoryPackIgnore]
     public int Count {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Items.Length;
     }
 
-    [MemoryPackIgnore, IgnoreMember]
+    [MemoryPackIgnore]
     public bool IsEmpty {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Items.Length == 0;
@@ -61,10 +65,6 @@ public sealed partial class ApiArray<T> : IReadOnlyList<T>
 #endif
     }
 
-    [method: MemoryPackConstructor, SerializationConstructor]
-    internal ApiArray(T[] items)
-        => Items = items is { Length: 0 } ? null! : items;
-
     public ApiArray(IReadOnlyCollection<T> source)
         : this(source.Count == 0 ? EmptyItems : source.ToArray())
     { }
@@ -77,7 +77,7 @@ public sealed partial class ApiArray<T> : IReadOnlyList<T>
     public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)Items).GetEnumerator();
 
     public ApiArray<T> Clone()
-        => IsEmpty ? Empty : new(Items.Duplicate());
+        => IsEmpty ? Empty : new(Items.ToArray());
 
     public override string ToString()
     {
@@ -147,7 +147,9 @@ public sealed partial class ApiArray<T> : IReadOnlyList<T>
         return -1;
     }
 
-    public ApiArray<T> Add(T item, bool addInFront = false)
+    // WithXxx
+
+    public ApiArray<T> With(T item, bool addInFront = false)
     {
         var newItems = new T[Count + 1];
         if (addInFront) {
@@ -161,24 +163,44 @@ public sealed partial class ApiArray<T> : IReadOnlyList<T>
         return new ApiArray<T>(newItems);
     }
 
-    public ApiArray<T> TryAdd(T item, bool addInFront = false)
-        => Contains(item) ? this : Add(item, addInFront);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ApiArray<T> WithMany(params ReadOnlySpan<T> newItems)
+        => WithMany(false, newItems);
 
-    public ApiArray<T> AddOrReplace(T item, bool addInFront = false)
-        => AddOrUpdate(item, _ => item, addInFront);
+    public ApiArray<T> WithMany(bool addInFront, params ReadOnlySpan<T> newItems)
+    {
+        var result = new T[items.Length + newItems.Length];
+        if (addInFront) {
+            newItems.CopyTo(result);
+            items.CopyTo(result.AsSpan(newItems.Length));
+        }
+        else {
+            items.CopyTo(result.AsSpan());
+            newItems.CopyTo(result.AsSpan(items.Length));
+        }
+        return new(result);
+    }
 
-    public ApiArray<T> AddOrUpdate(T item, Func<T, T> updater, bool addInFront = false)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ApiArray<T> WithOrSkip(T item, bool addInFront = false)
+        => Contains(item) ? this : With(item, addInFront);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ApiArray<T> WithOrReplace(T item, bool addInFront = false)
+        => WithOrUpdate(item, _ => item, addInFront);
+
+    public ApiArray<T> WithOrUpdate(T item, Func<T, T> updater, bool addInFront = false)
     {
         var index = IndexOf(item);
         if (index < 0)
-            return Add(item, addInFront);
+            return With(item, addInFront);
 
-        var newItems = Items.Duplicate();
+        var newItems = Items.ToArray();
         newItems[index] = updater.Invoke(newItems[index]);
         return new(newItems);
     }
 
-    public ApiArray<T> UpdateWhere(Func<T, bool> where, Func<T, T> updater)
+    public ApiArray<T> WithUpdate(Func<T, bool> where, Func<T, T> updater)
     {
         var items = Items;
         if (items.Length == 0)
@@ -188,14 +210,16 @@ public sealed partial class ApiArray<T> : IReadOnlyList<T>
         for (var i = 0; i < items.Length; i++) {
             var item = items[i];
             if (where.Invoke(item)) {
-                copy ??= items.Duplicate();
+                copy ??= items.ToArray();
                 copy[i] = updater.Invoke(item);
             }
         }
         return copy == null ? this : new ApiArray<T>(copy);
     }
 
-    public ApiArray<T> RemoveAll(T item)
+    // Without
+
+    public ApiArray<T> Without(T item)
     {
         var items = Items;
         if (items.Length == 0)
@@ -211,7 +235,7 @@ public sealed partial class ApiArray<T> : IReadOnlyList<T>
             : new ApiArray<T>(list);
     }
 
-    public ApiArray<T> RemoveAll(Func<T, bool> predicate)
+    public ApiArray<T> Without(Func<T, bool> predicate)
     {
         var items = Items;
         if (items.Length == 0)
@@ -227,7 +251,7 @@ public sealed partial class ApiArray<T> : IReadOnlyList<T>
             : new ApiArray<T>(list);
     }
 
-    public ApiArray<T> RemoveAll(Func<T, int, bool> predicate)
+    public ApiArray<T> Without(Func<T, int, bool> predicate)
     {
         var items = Items;
         if (items.Length == 0)
@@ -244,7 +268,9 @@ public sealed partial class ApiArray<T> : IReadOnlyList<T>
             : new ApiArray<T>(list);
     }
 
-    public ApiArray<T> Trim(int maxCount)
+    // ToTrimmed
+
+    public ApiArray<T> ToTrimmed(int maxCount)
     {
 #if NET8_0_OR_GREATER
         ArgumentOutOfRangeException.ThrowIfNegative(maxCount);
@@ -263,4 +289,13 @@ public sealed partial class ApiArray<T> : IReadOnlyList<T>
         Array.Copy(items, 0, newItems, 0, maxCount);
         return new ApiArray<T>(newItems);
     }
+
+    // Equality
+
+    public bool Equals(ApiArray<T> other) => Equals(Items, other.Items);
+    public override bool Equals(object? obj) => obj is ApiArray<T> other && Equals(other);
+    public override int GetHashCode() => Items.GetHashCode();
+
+    public static bool operator ==(ApiArray<T> left, ApiArray<T> right) => left.Equals(right);
+    public static bool operator !=(ApiArray<T> left, ApiArray<T> right) => !left.Equals(right);
 }
