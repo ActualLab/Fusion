@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -95,20 +96,20 @@ public abstract class RpcInboundCall : RpcCall
 
     public virtual Task Process(CancellationToken cancellationToken)
     {
+        var peer = Context.Peer;
         if (NoWait) {
             try {
                 Arguments ??= DeserializeArguments();
                 if (Arguments == null)
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
-
-                var peer = Context.Peer;
-                if (peer.CallLogger.IsLogged(this))
-                    peer.CallLogger.LogInbound(this);
-                return InvokeTarget(); // NoWait calls must complete fast & be cheap, so cancellationToken isn't passed
             }
             catch (Exception error) {
-                return TaskExt.FromException(error, MethodDef.UnwrappedReturnType);
+                throw ProcessArgumentDeserializationError(error);
             }
+
+            if (peer.CallLogger.IsLogged(this))
+                peer.CallLogger.LogInbound(this);
+            return InvokeTarget(); // NoWait calls must complete fast & be cheap, so cancellationToken isn't passed
         }
 
         var existingCall = Context.Peer.InboundCalls.GetOrRegister(this);
@@ -128,7 +129,6 @@ public abstract class RpcInboundCall : RpcCall
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
 
                 // Before call
-                var peer = Context.Peer;
                 if (peer.CallLogger.IsLogged(this))
                     peer.CallLogger.LogInbound(this);
 
@@ -170,6 +170,32 @@ public abstract class RpcInboundCall : RpcCall
     protected abstract Task InvokeTarget(RpcInboundMiddlewares middlewares);
     protected abstract Task SendResult();
 
+    protected Exception ProcessArgumentDeserializationError(Exception error)
+    {
+        error = Errors.CannotDeserializeInboundCallArguments(error);
+        if (MethodDef.IsCallResultMethod())
+            InvokeOverridenTarget(Hub.SystemCallSender.ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()));
+        return error;
+
+        void InvokeOverridenTarget(RpcMethodDef methodDef, ArgumentList arguments)
+        {
+            var oldMethodDef = MethodDef;
+            var oldArguments = Arguments;
+            try {
+                MethodDef = methodDef;
+                Arguments = arguments;
+                var peer = Context.Peer;
+                if (peer.CallLogger.IsLogged(this))
+                    peer.CallLogger.LogInbound(this);
+                _ = InvokeTarget();
+            }
+            finally {
+                MethodDef = oldMethodDef;
+                Arguments = oldArguments;
+            }
+        }
+    }
+
     protected virtual Task ProcessStage1Plus(CancellationToken cancellationToken)
     {
         return ResultTask!.IsCompleted
@@ -201,25 +227,26 @@ public abstract class RpcInboundCall : RpcCall
         var message = Context.Message;
         var argumentSerializer = peer.ArgumentSerializer;
         var arguments = message.Arguments;
+        var methodDef = MethodDef;
         if (arguments == null) {
-            arguments = MethodDef.ArgumentListType.Factory.Invoke();
-            var allowPolymorphism = MethodDef.AllowArgumentPolymorphism;
-            if (!MethodDef.HasObjectTypedArguments)
-                argumentSerializer.Deserialize(ref arguments, allowPolymorphism, message.ArgumentData);
+            arguments = methodDef.ArgumentListType.Factory.Invoke();
+            var needsArgumentPolymorphism = methodDef.HasPolymorphicArguments;
+            if (!needsArgumentPolymorphism)
+                argumentSerializer.Deserialize(ref arguments, false, message.ArgumentData);
             else {
-                var dynamicCallHandler = (IRpcDynamicCallHandler)ServiceDef.Server;
                 var expectedArguments = arguments;
-                if (!dynamicCallHandler.IsValidCall(Context, ref expectedArguments, ref allowPolymorphism))
+                if (ServiceDef.Server is IRpcCallArgumentValidator validator
+                    && !validator.IsValidCall(Context, ref expectedArguments, ref needsArgumentPolymorphism))
                     return null;
 
-                argumentSerializer.Deserialize(ref expectedArguments, allowPolymorphism, message.ArgumentData);
+                argumentSerializer.Deserialize(ref expectedArguments, needsArgumentPolymorphism, message.ArgumentData);
                 if (!ReferenceEquals(arguments, expectedArguments))
                     arguments.SetFrom(expectedArguments);
             }
         }
 
         // Set CancellationToken
-        var ctIndex = MethodDef.CancellationTokenIndex;
+        var ctIndex = methodDef.CancellationTokenIndex;
         if (ctIndex >= 0)
             arguments.SetCancellationToken(ctIndex, CallCancelToken);
 
@@ -279,7 +306,7 @@ public abstract class RpcInboundCall : RpcCall
             Log.IfEnabled(LogLevel.Error)?.LogError(e, "Remote call completed with an error: {Call}", this);
 
         var systemCallSender = Hub.SystemCallSender;
-        return systemCallSender.Complete(peer, this, result, MethodDef.AllowResultPolymorphism, ResultHeaders);
+        return systemCallSender.Complete(peer, this, result, MethodDef.HasPolymorphicResult, ResultHeaders);
 
         static Result<TResult> InvocationIsStillInProgressErrorResult()
             => new(default!, ActualLab.Internal.Errors.InternalError(

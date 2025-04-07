@@ -5,14 +5,14 @@ using ActualLab.Rpc.Serialization.Internal;
 
 namespace ActualLab.Rpc.Serialization;
 
-public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bool allowPolymorphism = true)
-    : RpcArgumentSerializer(allowPolymorphism)
+public sealed class RpcByteArgumentSerializerV2(IByteSerializer baseSerializer, bool forcePolymorphism = false)
+    : RpcArgumentSerializer(forcePolymorphism)
 {
-    public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
+    public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool needsPolymorphism, int sizeHint)
     {
         var buffer = GetWriteBuffer(sizeHint);
-        var itemSerializer = (ItemSerializer)(AllowPolymorphism
-            ? allowPolymorphism
+        var itemSerializer = (ItemSerializer)(ForcePolymorphism
+            ? needsPolymorphism
                 ? new ItemPolymorphicSerializer(baseSerializer, buffer)
                 : new ItemNonPolymorphicSerializer(baseSerializer, buffer)
             : new ItemValueOnlySerializer(baseSerializer, buffer));
@@ -20,10 +20,10 @@ public sealed class RpcByteArgumentSerializer(IByteSerializer baseSerializer, bo
         return GetWriteBufferMemory(buffer);
     }
 
-    public override void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, ReadOnlyMemory<byte> data)
+    public override void Deserialize(ref ArgumentList arguments, bool needsPolymorphism, ReadOnlyMemory<byte> data)
     {
-        var itemDeserializer = (ItemDeserializer)(AllowPolymorphism
-            ? allowPolymorphism
+        var itemDeserializer = (ItemDeserializer)(ForcePolymorphism
+            ? needsPolymorphism
                 ? new ItemPolymorphicDeserializer(baseSerializer, data)
                 : new ItemNonPolymorphicDeserializer(baseSerializer, data)
             : new ItemValueOnlyDeserializer(baseSerializer, data));

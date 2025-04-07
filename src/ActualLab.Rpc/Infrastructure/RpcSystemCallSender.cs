@@ -68,18 +68,18 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
 
     public Task Complete<TResult>(
         RpcPeer peer, RpcInboundCall inboundCall, Result<TResult> result,
-        bool allowPolymorphism,
+        bool needsArgumentPolymorphism,
         RpcHeader[]? headers = null)
     {
         var (value, error) = result;
         return error == null
-            ? Ok(peer, inboundCall, value, allowPolymorphism, headers)
+            ? Ok(peer, inboundCall, value, needsArgumentPolymorphism, headers)
             : Error(peer, inboundCall, result.Error!, headers);
     }
 
     public Task Ok<TResult>(
         RpcPeer peer, RpcInboundCall inboundCall, TResult result,
-        bool allowPolymorphism,
+        bool needsArgumentPolymorphism,
         RpcHeader[]? headers = null)
     {
         try {
@@ -87,9 +87,9 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
             var call = context.PrepareCallForSendNoWait(OkMethodDef, ArgumentList.New(result))!;
             var inboundHash = inboundCall.Context.Message.Headers.TryGet(WellKnownRpcHeaders.Hash);
             if (inboundHash == null)
-                return call.SendNoWait(allowPolymorphism);
+                return call.SendNoWait(needsArgumentPolymorphism);
 
-            var (message, hash) = call.CreateMessageWithHashHeader(call.Context.RelatedId, allowPolymorphism);
+            var (message, hash) = call.CreateMessageWithHashHeader(call.Context.RelatedId, needsArgumentPolymorphism);
             return string.Equals(hash, inboundHash, StringComparison.Ordinal)
                 ? Match(peer, inboundCall.Id, headers)
                 : call.SendNoWait(message);
@@ -180,7 +180,11 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     {
         var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
         using var _ = context.Activate();
-        var call = context.PrepareCallForSendNoWait(BatchMethodDef, ArgumentList.New(index, items))!;
+        var itemType = typeof(TItem);
+        var arguments = itemType.IsAbstract || itemType == typeof(object)
+            ? ArgumentList.New(index, (object)items) // This ensures the serialization of this type will be polymorphic
+            : ArgumentList.New(index, items);
+        var call = context.PrepareCallForSendNoWait(BatchMethodDef, arguments)!;
 #pragma warning disable MA0100
         return call.SendNoWait(true);
 #pragma warning restore MA0100

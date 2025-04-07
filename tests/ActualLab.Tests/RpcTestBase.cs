@@ -25,7 +25,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 
     public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
     public RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
-    public Symbol SerializationFormat { get; set; } = "mempack2";
+    public string SerializationFormat { get; set; } = RpcSerializationFormatResolver.Default.DefaultClientFormatKey;
     public bool ExposeBackend { get; init; } = false;
     public bool UseTestClock { get; init; }
     public bool UseLogging { get; init; } = true;

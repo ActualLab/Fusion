@@ -108,9 +108,22 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await AssertNoCalls(clientPeer, Out);
     }
 
-    [Fact]
-    public async Task BasicTest()
+    [Theory]
+    [InlineData("json3")]
+    [InlineData("njson3")]
+    [InlineData("mempack1")]
+    [InlineData("mempack2")]
+    [InlineData("mempack2c")]
+    [InlineData("mempack3")]
+    [InlineData("mempack3c")]
+    [InlineData("msgpack1")]
+    [InlineData("msgpack2")]
+    [InlineData("msgpack2c")]
+    [InlineData("msgpack3")]
+    [InlineData("msgpack3c")]
+    public async Task BasicTest(string serializationFormat)
     {
+        SerializationFormat = serializationFormat;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
         var client = services.GetRequiredService<ITestRpcServiceClient>();
@@ -219,10 +232,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var t = new Tuple<int>(1);
         (await backendClient.Polymorph(t)).Should().Be(t);
 
-        await Assert.ThrowsAnyAsync<Exception>(
-            async () => await client.PolymorphArg(new Tuple<int>(1)));
-        await Assert.ThrowsAnyAsync<Exception>(
-            async () => await client.PolymorphResult(2));
+        (await client.PolymorphArg(new Tuple<int>(1))).Should().Be(1);
+        (await client.PolymorphResult(2)).Should().Be(new Tuple<int>(2));
 
         await AssertNoCalls(clientPeer, Out);
     }
@@ -242,9 +253,22 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await AssertNoCalls(clientPeer, Out);
     }
 
-    [Fact]
-    public async Task StreamTest()
+    [Theory]
+    [InlineData("json3")]
+    [InlineData("njson3")]
+    [InlineData("mempack1")]
+    [InlineData("mempack2")]
+    [InlineData("mempack2c")]
+    [InlineData("mempack3")]
+    [InlineData("mempack3c")]
+    [InlineData("msgpack1")]
+    [InlineData("msgpack2")]
+    [InlineData("msgpack2c")]
+    [InlineData("msgpack3")]
+    [InlineData("msgpack3c")]
+    public async Task StreamTest(string serializationFormat)
     {
+        SerializationFormat = serializationFormat;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
         var client = services.GetRequiredService<ITestRpcServiceClient>();

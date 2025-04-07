@@ -2,11 +2,10 @@ using System.Buffers;
 using ActualLab.Interception;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
-using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Serialization;
 
-public abstract class RpcArgumentSerializer(bool allowPolymorphism)
+public abstract class RpcArgumentSerializer(bool forcePolymorphism)
 {
     [ThreadStatic] private static ArrayPoolBuffer<byte>? _writeBuffer;
     protected static readonly ArrayPool<byte> NoPool = NoArrayPool<byte>.Instance;
@@ -15,16 +14,17 @@ public abstract class RpcArgumentSerializer(bool allowPolymorphism)
     public static int WriteBufferCapacity { get; set; } = 4096;
     public static int CopyThreshold { get; set; } = 1024;
 
-    public bool AllowPolymorphism { get; } = allowPolymorphism;
+    public bool ForcePolymorphism { get; } = forcePolymorphism;
 
-    public abstract ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint);
-    public abstract void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, ReadOnlyMemory<byte> data);
+    public abstract ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool needsPolymorphism, int sizeHint);
+    public abstract void Deserialize(ref ArgumentList arguments, bool needsPolymorphism, ReadOnlyMemory<byte> data);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected static ArrayPoolBuffer<byte> GetWriteBuffer(int sizeHint)
         => sizeHint >= CopyThreshold
             ? new ArrayPoolBuffer<byte>(NoPool, 256 + sizeHint, false)
-            : ArrayPoolBuffer<byte>.NewOrReset(ref _writeBuffer, WriteBufferCapacity, WriteBufferReplaceCapacity, false);
+            : ArrayPoolBuffer<byte>.NewOrReset(ref _writeBuffer, WriteBufferCapacity, WriteBufferReplaceCapacity,
+                false);
 
     protected static ReadOnlyMemory<byte> GetWriteBufferMemory(ArrayPoolBuffer<byte> buffer)
     {
@@ -39,11 +39,7 @@ public abstract class RpcArgumentSerializer(bool allowPolymorphism)
         return memory; // We don't copy the memory here, but also "release" the buffer
     }
 
-    protected static Type RequireNonAbstract(Type type)
-    {
-        if (type.IsAbstract)
-            throw Errors.CannotSerializeAbstractType(type);
-
-        return type;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsPolymorphic(Type type)
+        => type.IsAbstract || type == typeof(object);
 }

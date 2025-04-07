@@ -54,10 +54,10 @@ public static class Errors
         => new SerializationException("Invalid item size. The remainder of the message will be dropped.");
     public static Exception InvalidItemTypeFormat()
         => new SerializationException("Invalid item type format.");
-    public static Exception InvalidMessageFormat()
-        => new SerializationException("Invalid message format.");
     public static Exception CannotSerializeAbstractType(Type type)
         => new SerializationException($"Cannot serialize abstract type '{type.GetName()}'.");
+    public static Exception CannotDeserializeInboundCallArguments(Exception innerException)
+        => new SerializationException("Cannot deserialize inbound call arguments.", innerException);
     public static Exception CannotDeserializeUnexpectedArgumentType(Type expectedType, Type actualType)
         => new SerializationException($"Cannot deserialize unexpected argument type: " +
             $"expected '{expectedType.GetName()}' (exact match), got '{actualType.GetName()}'.");

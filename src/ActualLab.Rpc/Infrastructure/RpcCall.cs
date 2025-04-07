@@ -9,7 +9,7 @@ public abstract class RpcCall(RpcMethodDef methodDef)
 
     public abstract string DebugTypeName { get; }
 
-    public readonly RpcMethodDef MethodDef = methodDef;
+    public RpcMethodDef MethodDef = methodDef;
 
     public RpcHub Hub {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

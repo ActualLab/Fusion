@@ -91,7 +91,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         if (NoWait) {
             // NoWait always means "send immediately, even if disconnected"
-            _ = SendNoWait(MethodDef.AllowArgumentPolymorphism);
+            _ = SendNoWait(MethodDef.HasPolymorphicArguments);
             return ResultTask;
         }
 
@@ -130,15 +130,15 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public void RegisterCacheKeyOnly()
     {
         using var _ = Context.Activate(); // CreateMessage may use it
-        var message = CreateMessage(Id, MethodDef.AllowArgumentPolymorphism);
+        var message = CreateMessage(Id, MethodDef.HasPolymorphicArguments);
         Context.CacheInfoCapture?.CaptureKey(Context, message);
     }
 
-    public Task SendNoWait(bool allowPolymorphism, ChannelWriter<RpcMessage>? sender = null)
+    public Task SendNoWait(bool needsPolymorphism, ChannelWriter<RpcMessage>? sender = null)
     {
         // NoWait calls don't require RpcOutboundContext.Current to serialize their arguments,
         // so no Context.Activate() call here.
-        var message = CreateMessage(Context.RelatedId, allowPolymorphism);
+        var message = CreateMessage(Context.RelatedId, needsPolymorphism);
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
         return Peer.Send(message, sender);
@@ -160,7 +160,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             var cacheInfoCapture = context.CacheInfoCapture;
             var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
             var activity = context.Trace?.Activity;
-            message = CreateMessage(Id, MethodDef.AllowArgumentPolymorphism, hash, activity);
+            message = CreateMessage(Id, MethodDef.HasPolymorphicArguments, hash, activity);
             cacheInfoCapture?.CaptureKey(context, message);
         }
         catch (Exception error) {
@@ -175,10 +175,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         return Peer.Send(message, sender);
     }
 
-    public RpcMessage CreateMessage(long relatedId, bool allowPolymorphism, string? hash = null, Activity? activity = null)
+    public RpcMessage CreateMessage(long relatedId, bool needsPolymorphism, string? hash = null, Activity? activity = null)
     {
         var arguments = Context.Arguments!;
-        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism, Context.SizeHint);
+        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
         var headers = Context.Headers;
         if (hash != null)
             headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
@@ -187,10 +187,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         return new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
     }
 
-    public (RpcMessage Message, string Hash) CreateMessageWithHashHeader(long relatedId, bool allowPolymorphism)
+    public (RpcMessage Message, string Hash) CreateMessageWithHashHeader(long relatedId, bool needsPolymorphism)
     {
         var arguments = Context.Arguments!;
-        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, allowPolymorphism, Context.SizeHint);
+        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
         var hash = Peer.HashProvider.Invoke(argumentData);
         var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
         var message = new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
@@ -200,8 +200,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public virtual void SetResult(object? result, RpcInboundContext? context)
     {
 #if DEBUG
-        if (!MethodDef.IsInstanceOfUnwrappedReturnType(result)) {
-            var error = Internal.Errors.InvalidResultType(MethodDef.UnwrappedReturnType, result?.GetType());
+        var rpcMethodDef = MethodDef;
+        if (!rpcMethodDef.IsInstanceOfUnwrappedReturnType(result)) {
+            var error = Internal.Errors.InvalidResultType(rpcMethodDef.UnwrappedReturnType, result?.GetType());
             SetError(error, context);
             Peer.Log.LogError(error, "Got incorrect call result type: {Call}", this);
             return;
@@ -301,7 +302,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     // Helpers
 
     public bool IsPeerChanged()
-        => Peer != MethodDef.Hub.CallRouter.Invoke(MethodDef, Context.Arguments!);
+    {
+        var methodDef = MethodDef;
+        return Peer != methodDef.Hub.CallRouter.Invoke(methodDef, Context.Arguments!);
+    }
 
     public void SetRerouteError()
     {

@@ -5,20 +5,20 @@ using Cysharp.Text;
 
 namespace ActualLab.Rpc.Serialization;
 
-public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bool allowPolymorphism = true)
-    : RpcArgumentSerializer(allowPolymorphism)
+public sealed class RpcTextArgumentSerializerV1(ITextSerializer baseSerializer, bool forcePolymorphism = false)
+    : RpcArgumentSerializer(forcePolymorphism)
 {
     private static readonly byte Delimiter = 0x1e; // Record separator in ASCII / UTF8
 
     [ThreadStatic] private static Utf8TextWriter? _utf8Buffer;
     public static int Utf8BufferReplaceCapacity { get; set; } = 65536;
 
-    public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool allowPolymorphism, int sizeHint)
+    public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool needsPolymorphism, int sizeHint)
     {
         var writer = _utf8Buffer ??= new Utf8TextWriter();
         try {
-            var itemSerializer = (ItemSerializer)(AllowPolymorphism
-                ? allowPolymorphism
+            var itemSerializer = (ItemSerializer)(ForcePolymorphism
+                ? needsPolymorphism
                     ? new ItemPolymorphicSerializer(baseSerializer, writer)
                     : new ItemNonPolymorphicSerializer(baseSerializer, writer)
                 : new ItemValueOnlySerializer(baseSerializer, writer));
@@ -39,10 +39,10 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
         }
     }
 
-    public override void Deserialize(ref ArgumentList arguments, bool allowPolymorphism, ReadOnlyMemory<byte> data)
+    public override void Deserialize(ref ArgumentList arguments, bool needsPolymorphism, ReadOnlyMemory<byte> data)
     {
-        var itemDeserializer = (ItemDeserializer)(AllowPolymorphism
-            ? allowPolymorphism
+        var itemDeserializer = (ItemDeserializer)(ForcePolymorphism
+            ? needsPolymorphism
                 ? new ItemPolymorphicDeserializer(baseSerializer, data)
                 : new ItemNonPolymorphicDeserializer(baseSerializer, data)
             : new ItemValueOnlyDeserializer(baseSerializer, data));
@@ -73,7 +73,7 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
     {
         public override void OnClass(Type type, object? item, int index)
         {
-            var itemType = item?.GetType() ?? RequireNonAbstract(type);
+            var itemType = item?.GetType() ?? type;
             TextTypeSerializer.WriteDerivedItemType(Writer, type, itemType);
             Serializer.Write(Writer, item, itemType);
             Writer.WriteLiteral(Delimiter);
@@ -90,7 +90,7 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
                 return;
             }
 
-            var itemType = item?.GetType() ?? RequireNonAbstract(type);
+            var itemType = item?.GetType() ?? type;
             TextTypeSerializer.WriteDerivedItemType(Writer, type, itemType);
             Serializer.Write(Writer, item, itemType);
             Writer.WriteLiteral(Delimiter);
@@ -105,7 +105,7 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
         public override void OnClass(Type type, object? item, int index)
         {
             Writer.WriteLiteral(TextTypeSerializer.NullTypeSpan);
-            Serializer.Write(Writer, item, RequireNonAbstract(type));
+            Serializer.Write(Writer, item, type);
             Writer.WriteLiteral(Delimiter);
         }
 
@@ -121,7 +121,7 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
             }
 
             Writer.WriteLiteral(TextTypeSerializer.NullTypeSpan);
-            Serializer.Write(Writer, item, RequireNonAbstract(type));
+            Serializer.Write(Writer, item, type);
             Writer.WriteLiteral(Delimiter);
         }
     }
@@ -133,7 +133,7 @@ public sealed class RpcTextArgumentSerializer(ITextSerializer baseSerializer, bo
     {
         public override void OnClass(Type type, object? item, int index)
         {
-            Serializer.Write(Writer, item, RequireNonAbstract(type));
+            Serializer.Write(Writer, item, type);
             Writer.WriteLiteral(Delimiter);
         }
 

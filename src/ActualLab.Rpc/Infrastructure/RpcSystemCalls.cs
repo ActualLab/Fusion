@@ -1,5 +1,6 @@
 using ActualLab.Interception;
 using ActualLab.Rpc.Internal;
+using ActualLab.Rpc.Serialization;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -31,7 +32,7 @@ public interface IRpcSystemCalls : IRpcSystemService
 }
 
 public sealed class RpcSystemCalls(IServiceProvider services)
-    : RpcServiceBase(services), IRpcSystemCalls, IRpcDynamicCallHandler
+    : RpcServiceBase(services), IRpcSystemCalls, IRpcCallArgumentValidator
 {
     public const string Name = "$sys";
     public const string OkMethodName = nameof(Ok);
@@ -188,7 +189,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
 
     // IRpcDynamicCallHandler
 
-    public bool IsValidCall(RpcInboundContext context, ref ArgumentList arguments, ref bool allowPolymorphism)
+    public bool IsValidCall(RpcInboundContext context, ref ArgumentList arguments, ref bool needsArgumentPolymorphism)
     {
         var call = context.Call;
         RpcStream? stream;
@@ -203,7 +204,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
 
             var outboundMethodDef = outboundCall.MethodDef;
             arguments = outboundMethodDef.ResultListType.Factory.Invoke();
-            allowPolymorphism = outboundMethodDef.AllowResultPolymorphism;
+            needsArgumentPolymorphism = outboundMethodDef.HasPolymorphicResult;
             return true;
         }
 
@@ -213,7 +214,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
                 return false;
 
             arguments = stream.CreateStreamItemArguments();
-            allowPolymorphism = true;
+            needsArgumentPolymorphism = RpcArgumentSerializer.IsPolymorphic(stream.ItemType);
             return true;
         }
 
@@ -222,8 +223,13 @@ public sealed class RpcSystemCalls(IServiceProvider services)
         if (stream == null)
             return false;
 
-        arguments = stream.CreateStreamBatchArguments();
-        allowPolymorphism = true;
+        needsArgumentPolymorphism = RpcArgumentSerializer.IsPolymorphic(stream.ItemType);
+        arguments = needsArgumentPolymorphism
+            // We need to force polymorphic deserialization of the second argument in RpcArgumentSerializer
+            // in case TItem is polymorphic. TItem[] is non-abstract & non-object, so RpcArgumentSerializer
+            // won't use polymorphic deserialization for the second argument unless we "reset" its type to object.
+            ? ArgumentList.New<long, object>(0L, null!)
+            : stream.CreateStreamBatchArguments();
         return true;
     }
 }

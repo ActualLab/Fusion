@@ -66,17 +66,8 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         var t1 = await backendClient.Polymorph(t);
         t1.Should().Be(t);
 
-        if (ConnectionKind == RpcPeerConnectionKind.Local) {
-            // No serialization & no checks w/ local connection
-            await client.PolymorphArg(new Tuple<int>(1));
-            await client.PolymorphResult(2);
-        }
-        else {
-            await Assert.ThrowsAnyAsync<Exception>(
-                () => client.PolymorphArg(new Tuple<int>(1)));
-            await Assert.ThrowsAnyAsync<Exception>(
-                () => client.PolymorphResult(2));
-        }
+        (await client.PolymorphArg(new Tuple<int>(1))).Should().Be(1);
+        (await client.PolymorphResult(2)).Should().Be(new Tuple<int>(2));
     }
 
     [Theory]

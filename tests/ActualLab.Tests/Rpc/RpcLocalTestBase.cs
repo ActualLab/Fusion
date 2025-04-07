@@ -7,6 +7,8 @@ namespace ActualLab.Tests.Rpc;
 
 public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
+    public string SerializationFormat { get; set; } = RpcSerializationFormatResolver.Default.DefaultClientFormatKey;
+
     protected virtual ServiceProvider CreateServices(
         Action<IServiceCollection>? configureServices = null)
     {
@@ -47,5 +49,7 @@ public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
                 ? new RpcServerPeer(hub, peerRef)
                 : new RpcClientPeer(hub, peerRef)
         );
+        services.AddSingleton<RpcSerializationFormatResolver>(
+            _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()));
     }
 }

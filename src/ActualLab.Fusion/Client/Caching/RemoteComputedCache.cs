@@ -77,7 +77,7 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
 
             DefaultLog?.Log(Settings.LogLevel, "[?] {Key} -> hit", key);
             var resultList = methodDef.ResultListType.Factory.Invoke();
-            ArgumentSerializer.Deserialize(ref resultList, methodDef.AllowResultPolymorphism, entry.Data);
+            ArgumentSerializer.Deserialize(ref resultList, methodDef.HasPolymorphicResult, entry.Data);
             return new RpcCacheEntry(key, entry, resultList.Get0Untyped());
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {

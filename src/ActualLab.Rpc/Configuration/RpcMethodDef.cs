@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc;
 
@@ -32,14 +33,13 @@ public sealed class RpcMethodDef : MethodDef
 
     public readonly ArgumentListType ArgumentListType;
     public readonly ArgumentListType ResultListType;
-    public readonly bool HasObjectTypedArguments;
     public readonly bool NoWait;
     public readonly bool IsSystem;
     public readonly bool IsBackend;
     public readonly bool IsStream;
+    public readonly bool HasPolymorphicArguments;
+    public readonly bool HasPolymorphicResult;
     public bool IsCommand { get; init; }
-    public bool AllowArgumentPolymorphism { get; init; }
-    public bool AllowResultPolymorphism { get; init; }
     public RpcCallTracer? Tracer { get; init; }
     public LegacyNames LegacyNames { get; init; }
     public PropertyBag Properties { get; init; }
@@ -58,16 +58,16 @@ public sealed class RpcMethodDef : MethodDef
         Hub = service.Hub;
         ArgumentListType = ArgumentListType.Get(ParameterTypes);
         ResultListType = ArgumentListType.Get(UnwrappedReturnType);
-        HasObjectTypedArguments = ParameterTypes.Any(type => typeof(object) == type);
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);
         IsSystem = service.IsSystem;
         IsBackend = service.IsBackend;
         IsStream = IsSystem && StreamMethodNames.Contains(method.Name);
+        HasPolymorphicArguments = ParameterTypes.Any(RpcArgumentSerializer.IsPolymorphic);
+        HasPolymorphicResult = RpcArgumentSerializer.IsPolymorphic(UnwrappedReturnType);
 
         Service = service;
         var nameSuffix = $":{ParameterTypes.Length}";
         Name = Method.Name + nameSuffix;
-        AllowResultPolymorphism = AllowArgumentPolymorphism = IsSystem || IsBackend;
 
         if (!IsAsyncMethod)
             IsValid = false;
@@ -117,5 +117,23 @@ public sealed class RpcMethodDef : MethodDef
         var serviceName = fullName[..dotIndex];
         var methodName = fullName[(dotIndex + 1)..];
         return (serviceName, methodName);
+    }
+
+    public bool IsCallResultMethod()
+    {
+        if (!IsSystem)
+            return false;
+
+        var systemCallSender = Hub.SystemCallSender;
+        return this == systemCallSender.OkMethodDef
+            || this == systemCallSender.ErrorMethodDef;
+    }
+
+    public bool IsStreamResultMethod()
+    {
+        var systemCallSender = Hub.SystemCallSender;
+        return this == systemCallSender.BatchMethodDef
+            || this == systemCallSender.ItemMethodDef
+            || this == systemCallSender.EndMethodDef;
     }
 }

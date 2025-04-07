@@ -406,7 +406,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             return context;
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            Log.LogError(e, "Failed to process message: {Message}", message);
+            Log.LogError(e, "Failed to process inbound message: {Message}", message);
             return null;
         }
     }
