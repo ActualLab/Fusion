@@ -3,6 +3,7 @@ using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Tests.Model;
+using ActualLab.Generators;
 using ActualLab.Reflection;
 using User = ActualLab.Fusion.Authentication.User;
 
@@ -52,6 +53,18 @@ public class InMemoryInMemoryAuthServiceTest : AuthServiceTestBase
 
 public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    public override Task InitializeAsync()
+    {
+        StringAsSymbolMemoryPackFormatterAttribute.IsEnabled = RandomShared.NextDouble() < 0.5;
+        return base.InitializeAsync();
+    }
+
+    public override Task DisposeAsync()
+    {
+        StringAsSymbolMemoryPackFormatterAttribute.IsEnabled = false;
+        return base.DisposeAsync();
+    }
+
     [Fact]
     public async Task ContainerConfigTest()
     {

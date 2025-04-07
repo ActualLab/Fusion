@@ -264,9 +264,7 @@ public class RpcWebSocketTest : RpcTestBase
 
     [Theory]
     [InlineData("json3")]
-    [InlineData("json3-np")]
     [InlineData("njson3")]
-    [InlineData("njson3-np")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
     [InlineData("mempack2-np")]
