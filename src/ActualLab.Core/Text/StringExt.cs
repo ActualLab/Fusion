@@ -7,7 +7,7 @@ public static class StringExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetOrdinalHashCode(this string source)
 #if !NETSTANDARD2_0
-        => source.GetHashCode(StringComparison.Ordinal);
+        => StringComparer.Ordinal.GetHashCode(source);
 #else
         => source.AsSpan().GetXxHash3();
 #endif

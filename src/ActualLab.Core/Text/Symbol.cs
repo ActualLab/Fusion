@@ -45,9 +45,16 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
         else {
             _value = value;
 #pragma warning disable MA0021, CA1307
-            _hashCode = value.GetHashCode();
+            _hashCode = value.GetOrdinalHashCode();
 #pragma warning restore MA0021, CA1307
         }
+    }
+
+    // This constructor must be used only if hash code was precomputed earlier
+    public Symbol(string value, int hashCode)
+    {
+        _value = value;
+        _hashCode = hashCode;
     }
 
     public override string ToString() => Value;
@@ -102,7 +109,7 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
     private Symbol(SerializationInfo info, StreamingContext context)
     {
         _value = info.GetString(nameof(Value)) ?? "";
-        _hashCode = _value.Length == 0 ? 0 : StringComparer.Ordinal.GetHashCode(_value);
+        _hashCode = _value.Length == 0 ? 0 : _value.GetOrdinalHashCode();
     }
 #pragma warning restore CS8618
 

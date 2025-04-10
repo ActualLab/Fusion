@@ -43,11 +43,11 @@ public sealed class SymbolPerformanceTest(ITestOutputHelper @out) : BenchmarkTes
                 _ = s.GetHashCode();
         }, 5, 10, 20);
 
-        await Benchmark("string(length).GetHashCode(StringComparison.Ordinal)", iterationCount, static (c, n) => {
+        await Benchmark("string(length).GetOrdinalHashCode()", iterationCount, static (c, n) => {
             var s = new string('0', c);
             while (--n > 0)
 #pragma warning disable MA0021
-                _ = s.GetHashCode();
+                _ = s.GetOrdinalHashCode();
 #pragma warning restore MA0021
         }, options);
         await Benchmark("(object)string(length).GetHashCode()", iterationCount, static (c, n) => {
