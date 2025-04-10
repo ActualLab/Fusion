@@ -8,11 +8,15 @@
 ![Commit Activity](https://img.shields.io/github/commit-activity/m/actuallab/Fusion)
 [![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 
+| [ActualLab.Fusion Video](https://youtu.be/eMO7AmI6ui4)<br/>[<img src=".\docs\img\Fusion-Video.jpg" title="ActualLab.Fusion, the distributed state sync monster" width="300"/>](https://youtu.be/eMO7AmI6ui4) | [ActualLab.Rpc Video](https://youtu.be/vwm1l8eevak)<br/>[<img src="./Docs/img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc - the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak) |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
 ## Table of Contents
 
 - [Overview](#overview)
 - [Usage](#usage)
 - [Documentation](#documentation)
+- [Samples](#samples)
 - ["What is your evidence?"](#what-is-your-evidence)
 - [Is Fusion fast?](#is-fusion-fast)
 - [Does Fusion scale?](#does-fusion-scale)
@@ -114,6 +118,11 @@ So **Fusion abstracts away the "placement" of a service**, and does it much bett
 
 ## Documentation
 
+These two videos cover the most interesting parts of Fusion:
+
+| [ActualLab.Fusion Video](https://youtu.be/eMO7AmI6ui4)<br/>[<img src=".\docs\img\Fusion-Video.jpg" title="ActualLab.Fusion, the distributed state sync monster" width="300"/>](https://youtu.be/eMO7AmI6ui4) | [ActualLab.Rpc Video](https://youtu.be/vwm1l8eevak)<br/>[<img src="./Docs/img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc - the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak) |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
 [<img align="right" width="150" src="./docs/img/FusionSlides.jpg"/>](https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html)
 If you prefer slides, check out
 ["Why real-time web apps need Blazor and Fusion?" talk](https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html) -
@@ -143,15 +152,17 @@ Let's start with some big guns:
 > We're posting some code examples from Actual Chat codebase [here](https://actual.chat/chat/san4Cohzym), 
 > so join this chat to learn how we use it in a real app.
 
-Now, the samples:
+## Samples
+
+1. Clone [Fusion Samples] repository: `git clone git@github.com:ActualLab/Fusion.Samples.git`
+2. Follow the instructions from
+   [README.md](https://github.com/ActualLab/Fusion.Samples/blob/master/README.md)
+   to build and run everything.
 
 Below is [Fusion+Blazor Sample](https://github.com/ActualLab/Fusion.Samples#3-blazor-samples)
 delivering real-time updates to 3 browser windows:
 
 ![](docs/img/ActualLab-Fusion-Chat-Sample.gif)
-
-<img src="https://img.shields.io/badge/-Live!-red" valign="middle"> Play with 
-[live version of this sample](https://fusion-samples.servicetitan.com) right now!
 
 The sample supports [**both** Blazor Server and Blazor WebAssembly 
 hosting modes](https://docs.microsoft.com/en-us/aspnet/core/blazor/hosting-models?view=aspnetcore-3.1).
@@ -393,9 +404,7 @@ kills the chattiness you'd expect from a regular client-side proxy.
 * Join [Fusion Place] to ask questions and track project updates.
 
 ## Posts And Other Content
-* [Fusion: 1st birthday, 1K+ stars on GitHub, System.Text.Json support in v1.4](https://alexyakunin.medium.com/fusion-1st-birthday-1k-stars-on-github-system-text-json-support-in-v1-4-c73e9feb45c7?source=friends_link&sk=2e261e0dacce92f05d31baac400c3032)
 * [Popular UI architectures compared & how Blazor+Fusion UI fits in there](https://itnext.io/the-most-popular-ui-architectures-and-how-fusion-based-ui-fits-in-there-fb47e45038a7?source=friends_link&sk=bef676ccd1f3c6e6148178bf05346852)
-* [Fusion: Current State and Upcoming Features](https://alexyakunin.medium.com/fusion-current-state-and-upcoming-features-88bc4201594b?source=friends_link&sk=375290c4538167fe99419a744f3d42d5)
 * [The Ungreen Web: Why our web apps are terribly inefficient?](https://alexyakunin.medium.com/the-ungreen-web-why-our-web-apps-are-terribly-inefficient-28791ed48035?source=friends_link&sk=74fb46086ca13ff4fea387d6245cb52b)
 * [Why real-time UI is inevitable future for web apps?](https://medium.com/@alexyakunin/features-of-the-future-web-apps-part-1-e32cf4e4e4f4?source=friends_link&sk=65dacdbf670ef9b5d961c4c666e223e2)
 * [How similar is Fusion to SignalR?](https://medium.com/@alexyakunin/how-similar-is-stl-fusion-to-signalr-e751c14b70c3?source=friends_link&sk=241d5293494e352f3db338d93c352249)
