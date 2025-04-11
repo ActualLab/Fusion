@@ -468,7 +468,8 @@ public class ProxyCodeKeeper : CodeKeeper
             return;
 
         Keep<IGenericInstanceFactory<TUnwrapped>>();
-        Keep<TaskExt.TaskFromExceptionFactory<TUnwrapped>>();
+        Keep<TaskExt.FromExceptionFactory<TUnwrapped>>();
+        Keep<TaskExt.FromCancelledTaskFactory<TUnwrapped>>();
         Keep<TaskExt.ToTypedValueTaskFactory<TUnwrapped>>();
         Keep<TaskExt.ToTypedResultSynchronouslyFactory<TUnwrapped>>();
         Keep<TaskExt.ToUntypedValueTaskFactory<TUnwrapped>>();

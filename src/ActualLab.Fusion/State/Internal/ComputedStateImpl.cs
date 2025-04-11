@@ -4,6 +4,7 @@ namespace ActualLab.Fusion.Internal;
 
 public static class ComputedStateImpl
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task? GetComputeTaskIfDisposed(ComputedState state)
     {
 #pragma warning disable MA0022, RCS1210
@@ -11,9 +12,7 @@ public static class ComputedStateImpl
             return null;
 
         return GenericInstanceCache
-            .Get<Func<CancellationToken, Task>>(
-                typeof(TaskExt.GetUntypedResultSynchronouslyFactory<>),
-                state.OutputType)
+            .Get<Func<CancellationToken, Task>>(typeof(GetComputeTaskIfDisposedFactory<>), state.OutputType)
             .Invoke(state.DisposeToken);
 #pragma warning restore MA0022, RCS1210
     }
@@ -25,7 +24,7 @@ public static class ComputedStateImpl
         public override object Generate()
         {
             if (typeof(T) == typeof(ValueVoid))
-                throw ActualLab.Internal.Errors.InternalError("Generic type parameter is void type.");
+                throw ActualLab.Internal.Errors.InternalError("Void-typed parameter cannot be used here.");
 
             return static (CancellationToken disposeToken)
                 => disposeToken.IsCancellationRequested

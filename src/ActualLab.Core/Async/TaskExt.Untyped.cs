@@ -47,8 +47,16 @@ public static partial class TaskExt
 
     public static Task FromException(Exception exception, Type resultType)
         => GenericInstanceCache
-            .Get<Func<Exception, Task>>(typeof(TaskFromExceptionFactory<>), resultType)
+            .Get<Func<Exception, Task>>(typeof(FromExceptionFactory<>), resultType)
             .Invoke(exception);
+
+    // FromCancelled
+
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "FromTypedTaskInternal is preserved")]
+    public static Task FromCancelled(CancellationToken cancellationToken, Type resultType)
+        => GenericInstanceCache
+            .Get<Func<CancellationToken, Task>>(typeof(GetUntypedResultSynchronouslyFactory<>), resultType)
+            .Invoke(cancellationToken);
 
     // ToTypedXxx
 
@@ -86,13 +94,21 @@ public static partial class TaskExt
 
     // Nested types
 
-    public sealed class TaskFromExceptionFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    public sealed class FromExceptionFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume Task<T> methods are preserved")]
         public override object Generate()
             => typeof(T) == typeof(ValueVoid)
                 ? (Func<Exception, Task>)Task.FromException
                 : (Func<Exception, Task>)Task.FromException<T>;
+    }
+
+    public sealed class FromCancelledTaskFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    {
+        public override object Generate()
+            => typeof(T) == typeof(ValueVoid)
+                ? static (CancellationToken cancellationToken) => Task.FromCanceled(cancellationToken)
+                : static (CancellationToken cancellationToken) => (Task)Task.FromCanceled<T>(cancellationToken);
     }
 
     public sealed class ToTypedValueTaskFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
