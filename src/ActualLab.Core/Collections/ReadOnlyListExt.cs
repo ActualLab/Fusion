@@ -55,8 +55,10 @@ public static class ReadOnlyListExt
 
         if (source is T[] array)
             array.AsSpan().CopyTo(target);
+#if NET5_0_OR_GREATER
         else if (source is List<T> list)
             CollectionsMarshal.AsSpan(list).CopyTo(target);
+#endif
         else {
             for (var i = 0; i < source.Count; i++)
                 target[i] = source[i];
@@ -73,8 +75,10 @@ public static class ReadOnlyListExt
         var newItems = new T[maxCount];
         if (items is T[] array)
             array.AsSpan(0, maxCount).CopyTo(newItems);
+#if NET5_0_OR_GREATER
         else if (items is List<T> list)
             CollectionsMarshal.AsSpan(list)[..maxCount].CopyTo(newItems);
+#endif
         else {
             for (var i = 0; i < maxCount; i++)
                 newItems[i] = items[i];
