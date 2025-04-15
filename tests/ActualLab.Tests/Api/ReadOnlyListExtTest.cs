@@ -1,21 +1,30 @@
 namespace ActualLab.Tests.Api;
 
-public class ArrayExtTest(ITestOutputHelper @out) : TestBase(@out)
+public class ReadOnlyListExtTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
     public void SerializationTest()
     {
-        void Equal(int[] x, int[] v) => x.Should().Equal(v);
+        for (var size = 0; size < 5; size++) {
+            var l = MakeList(size);
+            l.AssertPassesThroughAllSerializers(ListsEqual, Out);
+            l.IndexOf(0).Should().Be(size == 0 ? -1 : 0);
+            l.LastIndexOf(0).Should().Be(size == 0 ? -1 : 0);
+        }
 
-        Array.Empty<int>().AssertPassesThroughAllSerializers(Equal, Out);
-        new[] {1}.AssertPassesThroughAllSerializers(Equal, Out);
-        new[] {1, 2}.AssertPassesThroughAllSerializers(Equal, Out);
+        return;
+
+        IReadOnlyList<int> MakeList(int count)
+            => Enumerable.Range(0, count).ToArray();
+
+        void ListsEqual(IReadOnlyList<int> x, IReadOnlyList<int> v)
+            => x.Should().Equal(v);
     }
 
     [Fact]
     public void WithTest()
     {
-        var a = Enumerable.Range(0, 5).ToArray();
+        var a = (IReadOnlyList<int>)Enumerable.Range(0, 5).ToArray();
         a.Should().HaveCount(5);
 
         a.WithOrSkip(0).Should().HaveCount(5);
@@ -34,10 +43,10 @@ public class ArrayExtTest(ITestOutputHelper @out) : TestBase(@out)
         a = a.Without((_, index) => index >= 2);
         a.Should().HaveCount(2);
 
-        a = a.ToTrimmed(5);
+        a = a.Trim(5);
         a.Should().HaveCount(2);
 
-        a = a.ToTrimmed(1);
+        a = a.Trim(1);
         a.Should().HaveCount(1);
         a[0].Should().Be(1);
     }
@@ -62,7 +71,7 @@ public class ArrayExtTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void WithOrReplaceTest()
     {
-        var a = Enumerable.Range(0, 5).ToArray();
+        var a = (IReadOnlyList<int>)Enumerable.Range(0, 5).ToArray();
         a.Should().HaveCount(5);
 
         a.WithOrReplace(6).Should().HaveCount(6);
@@ -81,7 +90,7 @@ public class ArrayExtTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void WithOrUpdateTest()
     {
-        var a = Enumerable.Range(0, 5).ToArray();
+        var a = (IReadOnlyList<int>)Enumerable.Range(0, 5).ToArray();
         a.Should().HaveCount(5);
 
         a.WithOrUpdate(5, i => i + 100).Should().HaveCount(6);
@@ -103,7 +112,7 @@ public class ArrayExtTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void UpdateTest()
     {
-        var a = Enumerable.Range(0, 5).ToApiArray();
+        var a = (IReadOnlyList<int>)Enumerable.Range(0, 5).ToArray();
         a.Should().HaveCount(5);
 
         a.WithUpdate(i => i == 5, i => i + 100).Should().BeEquivalentTo([0, 1, 2, 3, 4], o => o.WithStrictOrdering());

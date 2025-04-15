@@ -12,8 +12,8 @@ public class ArrayExtTest(ITestOutputHelper @out) : TestBase(@out)
             const int itemCount = 20;
             var a = Enumerable.Range(0, itemCount)
                 .OrderBy(_ => rnd.NextDouble())
-                .ToArray(itemCount);
-            var b = a.OrderBy(x => x).ToArray(itemCount);
+                .ToArrayOfKnownLength(itemCount);
+            var b = a.OrderBy(x => x).ToArrayOfKnownLength(itemCount);
 
             a = a.SortInPlace();
             a.Length.Should().Be(itemCount);
@@ -31,11 +31,11 @@ public class ArrayExtTest(ITestOutputHelper @out) : TestBase(@out)
         var rnd = new Random();
         for (var i = 0; i < 1000; i++) {
             const int itemCount = 20;
-            var a = Enumerable.Range(0, 10)
+            var a = Enumerable.Range(0, itemCount)
                 .Select(i => new Vector2(-i, i))
                 .OrderBy(_ => rnd.NextDouble())
-                .ToArray(itemCount);
-            var b = a.OrderBy(x => x.Y).ToArray(itemCount);
+                .ToArrayOfKnownLength(itemCount);
+            var b = a.OrderBy(x => x.Y).ToArrayOfKnownLength(itemCount);
 
             a = a.SortInPlace(x => x.Y);
             a.Length.Should().Be(itemCount);
