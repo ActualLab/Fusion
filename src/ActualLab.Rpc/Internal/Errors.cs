@@ -87,9 +87,9 @@ public static class Errors
                 : $"The {remoteParty} didn't respond in time.");
 
     public static Exception HandshakeTimeout()
-        => new TimeoutException("Timeout while waiting for handshake.");
+        => new TimeoutException("Timeout while waiting for RPC handshake.");
     public static Exception KeepAliveTimeout()
-        => new TimeoutException("Timeout while waiting for \"keep-alive\" message.");
+        => new TimeoutException("Timeout while waiting for RPC keep-alive.");
 
     public static Exception ClientRpcPeerRefExpected(string argumentName)
         => new ArgumentOutOfRangeException(argumentName, "Client RpcPeerRef is expected.");

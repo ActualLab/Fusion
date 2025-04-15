@@ -20,7 +20,7 @@ public record RpcLimits
     public TimeSpan KeepAlivePeriod { get; init; } = TimeSpan.FromSeconds(15);
     // When "keep-alive" isn't received during this period, the connection gets dropped -> reconnect starts
     public TimeSpan KeepAliveTimeout { get; init; } = TimeSpan.FromSeconds(55);
-    // The code that checks ObjectKeepAliveTimeout & ObjectReleaseTimeout runs w/ this cycle time
+    // The code that checks KeepAliveTimeout & ObjectReleaseTimeout runs w/ this cycle time
     public TimeSpan ObjectReleasePeriod { get; init; } = TimeSpan.FromSeconds(10);
     // When the object doesn't get a "keep-alive" this long, it gets released
     public TimeSpan ObjectReleaseTimeout { get; init; } = TimeSpan.FromSeconds(125);
