@@ -4,19 +4,22 @@ public static class ReadOnlyListExt
 {
     // IndexOf
 
-    public static int IndexOf<T>(this IReadOnlyList<T> source, T value)
+    public static int IndexOf<T>(this IReadOnlyList<T> source, T value, IEqualityComparer<T>? comparer = null)
     {
         if (source.Count == 0)
             return -1;
 
-        if (source is T[] array)
-            Array.IndexOf(array, value);
+        var defaultComparer = EqualityComparer<T>.Default;
+        comparer ??= defaultComparer;
+        if (source is T[] array && ReferenceEquals(comparer, defaultComparer))
+            return Array.IndexOf(array, value);
+
         if (source is List<T> list)
-            return list.IndexOf(value);
+            return list.IndexOf(value, comparer);
 
         var index = 0;
         foreach (var item in source) {
-            if (EqualityComparer<T>.Default.Equals(item, value))
+            if (comparer.Equals(item, value))
                 return index;
 
             index++;
@@ -26,20 +29,22 @@ public static class ReadOnlyListExt
 
     // LastIndexOf
 
-    public static int LastIndexOf<T>(this IReadOnlyList<T> source, T value)
+    public static int LastIndexOf<T>(this IReadOnlyList<T> source, T value, IEqualityComparer<T>? comparer = null)
     {
         if (source.Count == 0)
             return -1;
 
-        if (source is T[] array)
-            Array.LastIndexOf(array, value);
+        var defaultComparer = EqualityComparer<T>.Default;
+        comparer ??= defaultComparer;
+        if (source is T[] array && ReferenceEquals(comparer, defaultComparer))
+            return Array.LastIndexOf(array, value);
         if (source is List<T> list)
-            return list.LastIndexOf(value);
+            return list.LastIndexOf(value, comparer);
 
         var lastIndex = -1;
         var index = 0;
         foreach (var item in source) {
-            if (EqualityComparer<T>.Default.Equals(item, value))
+            if (comparer.Equals(item, value))
                 lastIndex = index;
             index++;
         }
@@ -121,16 +126,24 @@ public static class ReadOnlyListExt
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static IReadOnlyList<T> WithOrSkip<T>(this IReadOnlyList<T> items, T item, bool addInFront = false)
-        => items.IndexOf(item) >= 0 ? items : items.With(item, addInFront);
+    public static IReadOnlyList<T> WithOrSkip<T>(
+        this IReadOnlyList<T> items, T item, bool addInFront = false,
+        IEqualityComparer<T>? comparer = null)
+        => items.IndexOf(item, comparer) >= 0
+            ? items
+            : items.With(item, addInFront);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static IReadOnlyList<T> WithOrReplace<T>(this IReadOnlyList<T> items, T item, bool addInFront = false)
-        => items.WithOrUpdate(item, _ => item, addInFront);
+    public static IReadOnlyList<T> WithOrReplace<T>(
+        this IReadOnlyList<T> items, T item, bool addInFront = false,
+        IEqualityComparer<T>? comparer = null)
+        => items.WithOrUpdate(item, _ => item, addInFront, comparer);
 
-    public static IReadOnlyList<T> WithOrUpdate<T>(this IReadOnlyList<T> items, T item, Func<T, T> updater, bool addInFront = false)
+    public static IReadOnlyList<T> WithOrUpdate<T>(
+        this IReadOnlyList<T> items, T item, Func<T, T> updater, bool addInFront = false,
+        IEqualityComparer<T>? comparer = null)
     {
-        var index = items.IndexOf(item);
+        var index = items.IndexOf(item, comparer);
         if (index < 0)
             return items.With(item, addInFront);
 
@@ -139,7 +152,8 @@ public static class ReadOnlyListExt
         return newItems;
     }
 
-    public static IReadOnlyList<T> WithUpdate<T>(this IReadOnlyList<T> items, Func<T, bool> predicate, Func<T, T> updater)
+    public static IReadOnlyList<T> WithUpdate<T>(
+        this IReadOnlyList<T> items, Func<T, bool> predicate, Func<T, T> updater)
     {
         if (items.Count == 0)
             return items;
@@ -157,14 +171,17 @@ public static class ReadOnlyListExt
 
     // Without
 
-    public static IReadOnlyList<T> Without<T>(this IReadOnlyList<T> items, T item)
+    public static IReadOnlyList<T> Without<T>(
+        this IReadOnlyList<T> items, T item,
+        IEqualityComparer<T>? comparer = null)
     {
         if (items.Count == 0)
             return items;
 
+        comparer ??= EqualityComparer<T>.Default;
         var list = new List<T>(items.Count);
         foreach (var existingItem in items) {
-            if (!EqualityComparer<T>.Default.Equals(existingItem, item))
+            if (!comparer.Equals(existingItem, item))
                 list.Add(existingItem);
         }
         return list.Count == items.Count
