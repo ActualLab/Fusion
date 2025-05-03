@@ -97,8 +97,8 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
 
     public override void SetError(Exception error, RpcInboundContext? context, bool assumeCancelled = false)
     {
-        // SetError call not only sets the error, but also
-        // invalidates computed method calls awaiting the invalidation, if context == null.
+        // SetError call not only sets the error, but also invalidates computed method calls
+        // awaiting the invalidation if context == null.
 
         var oce = error as OperationCanceledException;
         if (error is RpcRerouteException)
@@ -111,7 +111,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
                 : ResultSource.TrySetException(error);
             if (isResultSet) {
                 CompleteKeepRegistered();
-                Context.CacheInfoCapture?.CaptureValue(oce != null, error, cancellationToken);
+                Context.CacheInfoCapture?.CaptureError(oce != null, error, cancellationToken);
             }
             if (context == null) // Non-peer set
                 SetInvalidatedUnsafe(!assumeCancelled);
@@ -124,7 +124,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
         lock (Lock) {
             var isResultSet = ResultSource.TrySetCanceled(cancellationToken);
             if (isResultSet)
-                Context.CacheInfoCapture?.CaptureValue(cancellationToken);
+                Context.CacheInfoCapture?.CaptureCancellation(cancellationToken);
             WhenInvalidatedSource.TrySetResult();
             CompleteAndUnregister(notifyCancelled: true);
             return isResultSet;
@@ -142,7 +142,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
                 return;
 
             if (ResultSource.TrySetCanceled(CancellationTokenExt.Canceled))
-                Context.CacheInfoCapture?.CaptureValue(CancellationToken.None);
+                Context.CacheInfoCapture?.CaptureCancellation(CancellationToken.None);
         }
     }
 

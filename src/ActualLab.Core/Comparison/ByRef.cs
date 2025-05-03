@@ -1,7 +1,7 @@
 namespace ActualLab.Comparison;
 
 // Shouldn't be serializable!
-public readonly struct Ref<T>(T target) : IEquatable<Ref<T>>
+public readonly struct ByRef<T>(T target) : IEquatable<ByRef<T>>
     where T : class?
 {
     public T Target { get; } = target;
@@ -10,21 +10,21 @@ public readonly struct Ref<T>(T target) : IEquatable<Ref<T>>
         => $"{GetType().GetName()}({Target?.ToString() ?? "␀"})";
 
     // Equality
-    public bool Equals(Ref<T> other)
+    public bool Equals(ByRef<T> other)
         => ReferenceEquals(Target, other.Target);
     public override bool Equals(object? obj)
-        => obj is Ref<T> other && Equals(other);
+        => obj is ByRef<T> other && Equals(other);
     public override int GetHashCode()
         => RuntimeHelpers.GetHashCode(Target!);
-    public static bool operator ==(Ref<T> left, Ref<T> right)
+    public static bool operator ==(ByRef<T> left, ByRef<T> right)
         => left.Equals(right);
-    public static bool operator !=(Ref<T> left, Ref<T> right)
+    public static bool operator !=(ByRef<T> left, ByRef<T> right)
         => !left.Equals(right);
 }
 
-public static class Ref
+public static class ByRef
 {
-    public static Ref<T> New<T>(T value)
+    public static ByRef<T> New<T>(T value)
         where T : class?
         => new(value);
 }

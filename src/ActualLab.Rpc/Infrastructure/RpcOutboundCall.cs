@@ -253,7 +253,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             return;
 
         CompleteAndUnregister(notifyCancelled: context == null && !assumeCancelled);
-        Context.CacheInfoCapture?.CaptureValue(oce != null, error, cancellationToken);
+        Context.CacheInfoCapture?.CaptureError(oce != null, error, cancellationToken);
     }
 
     public virtual bool Cancel(CancellationToken cancellationToken)
@@ -261,7 +261,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var isResultSet = ResultSource.TrySetCanceled(cancellationToken);
         if (isResultSet) {
             CompleteAndUnregister(notifyCancelled: true);
-            Context.CacheInfoCapture?.CaptureValue(cancellationToken);
+            Context.CacheInfoCapture?.CaptureCancellation(cancellationToken);
         }
         return isResultSet;
     }

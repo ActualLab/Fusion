@@ -2,16 +2,16 @@ using ActualLab.Comparison;
 
 namespace ActualLab.Tests.Comparison;
 
-public class RefTest
+public class ByRefTest
 {
     public record TestRecord(string X);
 
     [Fact]
     public void BasicTest()
     {
-        var r0 = Ref.New(default(TestRecord));
-        var r1 = Ref.New(new TestRecord("X"));
-        var r2 = Ref.New(new TestRecord("X"));
+        var r0 = ByRef.New(default(TestRecord));
+        var r1 = ByRef.New(new TestRecord("X"));
+        var r2 = ByRef.New(new TestRecord("X"));
         r0.Target.Should().NotBe(r1.Target);
         r1.Target.Should().Be(r2.Target);
 

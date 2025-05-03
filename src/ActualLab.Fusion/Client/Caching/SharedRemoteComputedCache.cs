@@ -15,7 +15,7 @@ public class SharedRemoteComputedCache : IRemoteComputedCache
 
     public ValueTask<RpcCacheEntry?> Get(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
         => Instance.Get(input, key, cancellationToken);
-    public ValueTask<RpcCacheValue> Get(RpcCacheKey key, CancellationToken cancellationToken = default)
+    public ValueTask<RpcCacheValue?> Get(RpcCacheKey key, CancellationToken cancellationToken = default)
         => Instance.Get(key, cancellationToken);
 
     public void Set(RpcCacheKey key, RpcCacheValue value)

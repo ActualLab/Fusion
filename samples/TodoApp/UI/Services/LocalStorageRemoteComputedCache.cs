@@ -2,7 +2,6 @@ using ActualLab.Fusion.Client.Caching;
 using ActualLab.IO;
 using ActualLab.Rpc.Caching;
 using Blazored.LocalStorage;
-using Cysharp.Text;
 using MemoryPack;
 
 namespace Samples.TodoApp.UI.Services;
@@ -28,7 +27,7 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
         _storage = services.GetRequiredService<ISyncLocalStorageService>();
     }
 
-    public override ValueTask<RpcCacheValue> Get(RpcCacheKey key, CancellationToken cancellationToken = default)
+    public override ValueTask<RpcCacheValue?> Get(RpcCacheKey key, CancellationToken cancellationToken = default)
     {
         var sValue = _storage.GetItemAsString(GetStringKey(key));
         if (sValue.IsNullOrEmpty())
@@ -36,7 +35,7 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
 
         var bytes  = Convert.FromBase64String(sValue);
         var value = MemoryPackSerializer.Deserialize<RpcCacheValue>(bytes);
-        return new ValueTask<RpcCacheValue>(value);
+        return new ValueTask<RpcCacheValue?>(value);
     }
 
     public override void Set(RpcCacheKey key, RpcCacheValue value)

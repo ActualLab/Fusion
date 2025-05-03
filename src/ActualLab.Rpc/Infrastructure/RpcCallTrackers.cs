@@ -100,6 +100,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
             while (!cancellationToken.IsCancellationRequested) {
                 var callCount = 0;
                 var inProgressCallCount = 0;
+                var delayedCallCount = 0;
                 foreach (var call in this) {
                     callCount++;
                     if (call.ResultTask.IsCompleted)
@@ -131,20 +132,24 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                             Peer.Log.LogError(error,
                                 "{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout})",
                                 Peer.Ref, call, elapsed.ToShortString(), timeouts.Timeout.ToShortString());
-                        else
+                        else if (++delayedCallCount <= RpcCallTimeouts.DelayedCallLogLimit)
                             Peer.Log.LogWarning(
-                                "{PeerRef}': call {Call} took {Elapsed} from its start or previous report here",
+                                "{PeerRef}': call {Call} is delayed ({Elapsed} from its start or prev. report here)",
                                 Peer.Ref, call, elapsed.ToShortString());
                     }
                 }
+                if (delayedCallCount > RpcCallTimeouts.DelayedCallLogLimit)
+                    Peer.Log.LogWarning(
+                        "{PeerRef}': {UnloggedDelayedCallCount} more delayed call(s) aren't logged",
+                        Peer.Ref, delayedCallCount - RpcCallTimeouts.DelayedCallLogLimit);
 
                 var summaryLogSettings = Limits.LogOutboundCallSummarySettings;
                 if (lastSummaryReportAt.Elapsed > summaryLogSettings.Period
                     && callCount > summaryLogSettings.MinCount) {
                     lastSummaryReportAt = CpuTimestamp.Now;
                     Peer.Log.LogInformation(
-                        "{PeerRef}': Tracking {CallCount} outbound calls (in progress: {InProgressCallCount})",
-                        Peer.Ref, callCount, inProgressCallCount);
+                        "{PeerRef}': Tracking {CallCount} outbound calls (in progress: {InProgressCallCount}, delayed: {DelayedCallCount})",
+                        Peer.Ref, callCount, inProgressCallCount, delayedCallCount);
                 }
 
                 await Task.Delay(Limits.CallTimeoutCheckPeriod.Next(), cancellationToken).ConfigureAwait(false);

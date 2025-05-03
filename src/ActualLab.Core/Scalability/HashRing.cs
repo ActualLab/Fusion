@@ -1,12 +1,13 @@
 namespace ActualLab.Scalability;
 
-public readonly struct HashRing<T>
+public class HashRing<T>
     where T : notnull
 {
     private static readonly IComparer<(T Value, int Hash)> Comparer = new ItemComparer();
 
     public static readonly Func<T, int> DefaultHasher = static v => v.GetHashCode();
     public static readonly Func<T, int> DefaultStringHasher = static v => v is string s ? s.GetXxHash3() : v.GetHashCode();
+    // ReSharper disable once UseCollectionExpression
     public static readonly HashRing<T> Empty = new(Array.Empty<T>());
 
     private readonly T[] _doubleNodes;

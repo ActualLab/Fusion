@@ -18,8 +18,8 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
     protected readonly object Lock = new();
 #endif
     protected readonly MomentClock Clock;
-    protected Dictionary<RpcCacheKey, RpcCacheValue> FlushQueue = new();
-    protected Dictionary<RpcCacheKey, RpcCacheValue> FlushingQueue = new();
+    protected Dictionary<RpcCacheKey, RpcCacheValue?> FlushQueue = new();
+    protected Dictionary<RpcCacheKey, RpcCacheValue?> FlushingQueue = new();
     protected Task? FlushTask;
     protected Task FlushingTask = Task.CompletedTask;
     protected CancellationTokenSource FlushCts = new();
@@ -36,13 +36,13 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
             WhenInitialized = Initialize(settings.Version);
     }
 
-    public override ValueTask<RpcCacheValue> Get(RpcCacheKey key, CancellationToken cancellationToken = default)
+    public override ValueTask<RpcCacheValue?> Get(RpcCacheKey key, CancellationToken cancellationToken = default)
     {
         lock (Lock) {
             if (FlushQueue.TryGetValue(key, out var value))
-                return new ValueTask<RpcCacheValue>(value);
+                return new ValueTask<RpcCacheValue?>(value);
             if (FlushingQueue.TryGetValue(key, out value))
-                return new ValueTask<RpcCacheValue>(value);
+                return new ValueTask<RpcCacheValue?>(value);
         }
         return Fetch(key, cancellationToken);
     }
@@ -60,7 +60,7 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
     {
         DefaultLog?.Log(Settings.LogLevel, "[-] {Key}", key);
         lock (Lock) {
-            FlushQueue[key] = default;
+            FlushQueue[key] = null;
             FlushTask ??= DelayedFlush(null, FlushCts.Token);
         }
     }
@@ -77,8 +77,8 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
 
     // Protected methods
 
-    protected abstract ValueTask<RpcCacheValue> Fetch(RpcCacheKey key, CancellationToken cancellationToken);
-    protected abstract Task Flush(Dictionary<RpcCacheKey, RpcCacheValue> flushingQueue);
+    protected abstract ValueTask<RpcCacheValue?> Fetch(RpcCacheKey key, CancellationToken cancellationToken);
+    protected abstract Task Flush(Dictionary<RpcCacheKey, RpcCacheValue?> flushingQueue);
 
     protected async Task DelayedFlush(TimeSpan? flushDelay, CancellationToken cancellationToken)
     {

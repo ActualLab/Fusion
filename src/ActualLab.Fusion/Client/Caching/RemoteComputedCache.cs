@@ -47,11 +47,9 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
 
         var expectedData = EncodingExt.Utf8NoBom.GetBytes(version);
         var entry = await Get(VersionKey, cancellationToken).ConfigureAwait(false);
-        if (!entry.IsNone) {
-            if (entry.Data.Span.SequenceEqual(expectedData)) {
-                DefaultLog?.Log(Settings.LogLevel, "Initialize: version match -> will reuse cache content");
-                return;
-            }
+        if (entry is not null && entry.Data.Span.SequenceEqual(expectedData)) {
+            DefaultLog?.Log(Settings.LogLevel, "Initialize: version match -> will reuse cache content");
+            return;
         }
 
         DefaultLog?.Log(Settings.LogLevel, "Initialize: version mismatch -> will clear cache content");
@@ -70,7 +68,7 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
                 await WhenInitializedUnlessVersionKey(key).WaitAsync(cancellationToken).SilentAwait(false);
 
             var entry = await Get(key, cancellationToken).ConfigureAwait(false);
-            if (entry.IsNone) {
+            if (entry is null) {
                 DefaultLog?.Log(Settings.LogLevel, "[?] {Key} -> miss", key);
                 return null;
             }
@@ -87,7 +85,7 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
         }
     }
 
-    public abstract ValueTask<RpcCacheValue> Get(RpcCacheKey key, CancellationToken cancellationToken = default);
+    public abstract ValueTask<RpcCacheValue?> Get(RpcCacheKey key, CancellationToken cancellationToken = default);
     public abstract void Set(RpcCacheKey key, RpcCacheValue value);
     public abstract void Remove(RpcCacheKey key);
     public abstract Task Clear(CancellationToken cancellationToken = default);

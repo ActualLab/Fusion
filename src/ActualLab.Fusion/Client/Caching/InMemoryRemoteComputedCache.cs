@@ -12,20 +12,18 @@ public sealed class InMemoryRemoteComputedCache(
         public static new Options Default { get; set; } = new();
     }
 
-    private static readonly ValueTask<RpcCacheValue> MissValueTask = new(RpcCacheValue.None);
+    private readonly ConcurrentDictionary<RpcCacheKey, RpcCacheValue?> _cache = new();
 
-    private readonly ConcurrentDictionary<RpcCacheKey, RpcCacheValue> _cache = new();
-
-    protected override ValueTask<RpcCacheValue> Fetch(RpcCacheKey key, CancellationToken cancellationToken)
+    protected override ValueTask<RpcCacheValue?> Fetch(RpcCacheKey key, CancellationToken cancellationToken)
         => _cache.TryGetValue(key, out var result)
-            ? new ValueTask<RpcCacheValue>(result)
-            : MissValueTask;
+            ? new ValueTask<RpcCacheValue?>(result)
+            : default;
 
-    protected override Task Flush(Dictionary<RpcCacheKey, RpcCacheValue> flushingQueue)
+    protected override Task Flush(Dictionary<RpcCacheKey, RpcCacheValue?> flushingQueue)
     {
         DefaultLog?.Log(Settings.LogLevel, "Flushing {Count} item(s)", flushingQueue.Count);
         foreach (var (key, entry) in flushingQueue) {
-            if (entry.IsNone)
+            if (entry is null)
                 _cache.Remove(key, out _);
             else
                 _cache[key] = entry;

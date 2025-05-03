@@ -2,8 +2,10 @@ namespace ActualLab.Rpc;
 
 public sealed record RpcCallTimeouts
 {
-    public static readonly RpcCallTimeouts None = new();
     private static readonly RpcCallTimeouts NoneButLogLongRunning = new(null, 30) { TimeoutAction = RpcCallTimeoutAction.Log };
+
+    public static readonly RpcCallTimeouts None = new();
+    public static int DelayedCallLogLimit { get; set; } = 10;
 
     public static class Defaults
     {

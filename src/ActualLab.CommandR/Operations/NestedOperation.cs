@@ -5,4 +5,4 @@ namespace ActualLab.CommandR.Operations;
 [StructLayout(LayoutKind.Auto)]
 [JsonObject(MemberSerialization.OptOut)]
 [method: Newtonsoft.Json.JsonConstructor]
-public readonly record struct NestedOperation(ICommand Command, PropertyBag Items);
+public sealed record NestedOperation(ICommand Command, PropertyBag Items);

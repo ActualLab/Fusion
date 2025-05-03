@@ -232,15 +232,15 @@ public abstract class RemoteComputeMethodFunction(
             throw e; // We treat server-side cancellations the same way as client-side cancellations
 
         RpcCacheEntry? cacheEntry = null;
-        if (cacheInfoCapture != null && cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueSource)) {
+        if (cacheInfoCapture != null && cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueOrError)) {
             // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
-            var cacheValue = (await cacheValueSource.Task.ResultAwait(false)).ValueOrDefault; // None if error
+            var cacheValue = cacheValueOrError as RpcCacheValue;
 
             if (existingCacheEntry == null)
                 cacheEntry = UpdateCache(cache!, cacheKey, cacheValue, value);
             else {
-                if (!cacheValue.IsNone && cacheValue.HashOrDataEquals(existingCacheEntry.Value))
-                    cacheEntry = existingCacheEntry; // Existing cached entry is still intact
+                if (cacheValue is not null && cacheValue.HashOrDataEquals(existingCacheEntry.Value))
+                    cacheEntry = existingCacheEntry; // The existing cached entry is still intact
                 else
                     cacheEntry = UpdateCache(cache!, cacheKey, cacheValue, value, existing);
             }
@@ -258,7 +258,7 @@ public abstract class RemoteComputeMethodFunction(
         CancellationToken cancellationToken)
     {
         var cacheInfoCapture = new RpcCacheInfoCapture(RpcCacheInfoCaptureMode.KeyOnly);
-        // This is a fake call that only captures cache key.
+        // This is a fake call that only captures the cache key.
         // No actual RPC call happens here, and SendRpcCall completes synchronously here.
         var sendTask = SendRpcCall(input, peer, cacheInfoCapture, cancellationToken);
         if (!sendTask.IsCompleted)
@@ -266,8 +266,8 @@ public abstract class RemoteComputeMethodFunction(
 
         if (cacheInfoCapture.Key is not { } cacheKey) {
             // cacheKey wasn't captured - a weird case that normally shouldn't happen.
-            // The best we can do here is to proceed assuming cache entry is missing,
-            // i.e. perform RPC call & update cache.
+            // The best we can do here is to proceed assuming that the cache entry is missing,
+            // i.e., perform an RPC call and update the cache.
             return await ComputeRpc(input, cache, null, peer, cancellationToken).ConfigureAwait(false);
         }
 
@@ -353,13 +353,11 @@ public abstract class RemoteComputeMethodFunction(
             return;
         }
 
-        // 5. Get cache key & data
-        RpcCacheValue cacheValue = default;
-        if (cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueSource))
-            // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
-            cacheValue = (await cacheValueSource.Task.ResultAwait(false)).ValueOrDefault; // None if error
+        // 5. Get cached key and data
+        cacheInfoCapture.RequireKeyAndValue(out var cacheKey, out var cacheValueOrError);
+        var cacheValue = cacheValueOrError as RpcCacheValue;
 
-        // 6. Re-entering the lock & check if cachedComputed is still consistent
+        // 6. Re-entering the lock and check if cachedComputed is still consistent
         using var releaser = await InputLocks.Lock(input).ConfigureAwait(false);
         if (!cachedComputed.IsConsistent())
             return; // Since the call was bound to cachedComputed, it's properly cancelled already
@@ -368,11 +366,11 @@ public abstract class RemoteComputeMethodFunction(
 
         // 7. Update cache
         RpcCacheEntry? cacheEntry;
-        if (existingCacheEntry == null)
+        if (existingCacheEntry is null)
             cacheEntry = UpdateCache(cache, cacheKey, cacheValue, value);
         else {
-            if (!cacheValue.IsNone && cacheValue.HashOrDataEquals(existingCacheEntry.Value)) {
-                // Existing cached entry is still intact
+            if (cacheValue is not null && cacheValue.HashOrDataEquals(existingCacheEntry.Value)) {
+                // The existing cached entry is still intact
                 remoteCachedComputed.SynchronizedSource.TrySetResult();
                 return;
             }
@@ -458,7 +456,7 @@ public abstract class RemoteComputeMethodFunction(
     protected RpcCacheEntry? UpdateCache(
         IRemoteComputedCache cache,
         RpcCacheKey key,
-        RpcCacheValue value,
+        RpcCacheValue? value,
         object? deserializedValue,
         Computed? existing = null)
     {
@@ -466,12 +464,12 @@ public abstract class RemoteComputeMethodFunction(
         if (existing != null && CacheLog.IfEnabled(updateLogLevel) is { } cacheLog) {
             if (LogCacheEntryUpdateSettings.MaxDataLength is var maxDataLength and > 0)
                 cacheLog.Log(updateLogLevel, "Entry update: {Input}, value: {OldValue} -> {NewValue}",
-                    existing.Input, ((IRemoteComputed)existing).CacheEntry!.Value.ToString(maxDataLength), value.ToString(maxDataLength));
+                    existing.Input, ((IRemoteComputed)existing).CacheEntry?.Value.ToString(maxDataLength), value?.ToString(maxDataLength));
             else
                 cacheLog.Log(updateLogLevel, "Entry update: {Input}", existing.Input);
         }
 
-        if (value.IsNone) {
+        if (value is null) {
             cache.Remove(key); // Error -> wipe cache entry
             return null;
         }

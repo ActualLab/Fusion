@@ -47,11 +47,11 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
                 operationItems.Snapshot = operationItemsBackup;
             }
             else {
-                // There was no operation, but it could be requested inside one of nested commands
+                // There was no operation, but it could be requested inside one of the nested commands
                 operation = context.TryGetOperation();
                 if (operation != null) {
                     // The operation is requested inside the nested command, so we have to make a couple fixes:
-                    // - Add nested operation that corresponds to the current command
+                    // - Add a nested operation that corresponds to the current command
                     // - Replace its Items with an empty bag
                     var operationItems = operation.Items;
                     operation.NestedOperations = operation.NestedOperations.Add(new(command, operationItems.Snapshot));

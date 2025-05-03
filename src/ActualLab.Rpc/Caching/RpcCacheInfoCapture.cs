@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using ActualLab.Internal;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Caching;
@@ -9,12 +11,14 @@ public enum RpcCacheInfoCaptureMode
     KeyAndData = 3,
 }
 
+#pragma warning disable RCS1059
+
 public sealed class RpcCacheInfoCapture
 {
     public readonly RpcCacheInfoCaptureMode CaptureMode;
     public readonly RpcCacheEntry? CacheEntry;
-    public RpcCacheKey? Key;
-    public TaskCompletionSource<RpcCacheValue>? ValueSource; // Non-error IFF RpcOutboundCall.ResultTask is non-error
+    public volatile RpcCacheKey? Key;
+    public volatile object? ValueOrError; // Either RpcCacheValue or Exception
 
     public RpcCacheInfoCapture(RpcCacheInfoCaptureMode captureMode)
         : this(cacheEntry: null, captureMode)
@@ -28,49 +32,74 @@ public sealed class RpcCacheInfoCapture
             throw new ArgumentOutOfRangeException(nameof(captureMode));
 
         CaptureMode = captureMode;
-        if (captureMode == RpcCacheInfoCaptureMode.KeyAndData)
-            ValueSource = new();
         CacheEntry = cacheEntry;
     }
 
-    public bool HasKeyAndValue(out RpcCacheKey key, out TaskCompletionSource<RpcCacheValue> valueSource)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool HasKeyAndValue(
+        [NotNullWhen(true)] out RpcCacheKey? key,
+        [NotNullWhen(true)] out object? valueOrError)
     {
-        if (ReferenceEquals(Key, null) || ValueSource == null) {
-            key = null!;
-            valueSource = null!;
-            return false;
-        }
-
         key = Key;
-        valueSource = ValueSource;
-        return true;
+        valueOrError = ValueOrError;
+        return key is not null && valueOrError is not null;
     }
 
-    public void CaptureKey(RpcOutboundContext context, RpcMessage? message)
-        => Key ??= message is { Arguments: null } // This indicates ArgumentData is there
-            ? new RpcCacheKey(context.MethodDef!.FullName, message.ArgumentData)
-            : null;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void RequireKeyAndValue(out RpcCacheKey key, out object valueOrError)
+    {
+        if (!HasKeyAndValue(out key!, out valueOrError!))
+            throw Errors.InternalError(
+                $"{nameof(RequireKeyAndValue)} is called, but CaptureMode is {CaptureMode} and Key is {Key}.");
+    }
+
+    public void CaptureKey(RpcOutboundContext context, RpcMessage message)
+    {
+        if (Key is null)
+            lock (this)
+                // ReSharper disable once NonAtomicCompoundOperator
+                Key ??= new RpcCacheKey(context.MethodDef!.FullName, message.ArgumentData);
+    }
 
     public void CaptureValue(RpcMessage message)
     {
-        var hash = message.Headers.TryGet(WellKnownRpcHeaders.Hash) ?? "";
-        ValueSource?.TrySetResult(new RpcCacheValue(message.ArgumentData, hash));
+        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData && ValueOrError is null)
+            lock (this)
+                // ReSharper disable once NonAtomicCompoundOperator
+                ValueOrError ??= new RpcCacheValue(
+                    message.ArgumentData,
+                    message.Headers.TryGet(WellKnownRpcHeaders.Hash) ?? "");
     }
 
     public void CaptureValue(RpcCacheValue value)
-        => ValueSource?.TrySetResult(value);
+    {
+        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData && ValueOrError is null)
+            lock (this)
+                // ReSharper disable once NonAtomicCompoundOperator
+                ValueOrError ??= value;
+    }
 
-    public void CaptureValue(Exception error)
-        => ValueSource?.TrySetException(error);
-
-    public void CaptureValue(CancellationToken cancellationToken)
-        => ValueSource?.TrySetCanceled(cancellationToken);
-
-    public void CaptureValue(bool isCancelled, Exception error, CancellationToken cancellationToken)
+    public void CaptureError(bool isCancelled, Exception error, CancellationToken cancellationToken)
     {
         if (isCancelled)
-            ValueSource?.TrySetCanceled(cancellationToken);
+            CaptureCancellation(cancellationToken);
         else
-            ValueSource?.TrySetException(error);
+            CaptureError(error);
+    }
+
+    public void CaptureError(Exception error)
+    {
+        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData && ValueOrError is null)
+            lock (this)
+                // ReSharper disable once NonAtomicCompoundOperator
+                ValueOrError ??= error;
+    }
+
+    public void CaptureCancellation(CancellationToken cancellationToken)
+    {
+        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData && ValueOrError == null)
+            lock (this)
+                // ReSharper disable once NonAtomicCompoundOperator
+                ValueOrError ??= new OperationCanceledException(cancellationToken);
     }
 }
