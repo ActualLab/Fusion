@@ -71,6 +71,24 @@ public static partial class TaskExt
         }
     }
 
+    // RequireResult
+
+    public static void RequireResult(this Task task)
+    {
+        if (!task.IsCompleted)
+            throw Errors.TaskIsNotCompleted();
+
+        task.GetAwaiter().GetResult();
+    }
+
+    public static T RequireResult<T>(this Task<T> task)
+    {
+        if (!task.IsCompleted)
+            throw Errors.TaskIsNotCompleted();
+
+        return task.GetAwaiter().GetResult();
+    }
+
     // GetResultKind
 
     public static TaskResultKind GetResultKind(this Task task)
