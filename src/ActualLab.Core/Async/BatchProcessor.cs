@@ -353,6 +353,8 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
             => ResultSource.TrySetFromResult(result);
         public bool TrySetError(Exception error)
             => ResultSource.TrySetException(error);
+        public bool TrySetCanceled()
+            => ResultSource.TrySetCanceled();
         public bool TrySetCanceled(CancellationToken cancellationToken)
             => ResultSource.TrySetCanceled(cancellationToken);
     }

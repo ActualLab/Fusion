@@ -57,6 +57,8 @@ public static partial class AsyncTaskMethodBuilderExt
         }
     }
 
+    public static bool TrySetCanceled<T>(this AsyncTaskMethodBuilder<T> target)
+        => target.TrySetCanceled(CancellationTokenExt.Canceled);
     public static bool TrySetCanceled<T>(this AsyncTaskMethodBuilder<T> target, CancellationToken cancellationToken)
     {
         var task = target.Task;
