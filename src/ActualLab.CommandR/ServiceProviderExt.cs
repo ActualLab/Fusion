@@ -11,10 +11,4 @@ public static class ServiceProviderExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static CommanderHub CommanderHub(this IServiceProvider services)
         => services.GetRequiredService<CommanderHub>();
-
-    public static bool IsScoped(this IServiceProvider services)
-    {
-        services = services.GetRequiredService<IServiceProvider>(); // Required!
-        return !ReferenceEquals(services.Commander().Services, services);
-    }
 }

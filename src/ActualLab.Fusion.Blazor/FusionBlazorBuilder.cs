@@ -22,7 +22,7 @@ public readonly struct FusionBlazorBuilder
             return;
         }
 
-        // We want above Contains call to run in O(1), so...
+        // We want the above Contains call to run in O(1), so...
         services.Insert(0, AddedTagDescriptor);
         services.AddScoped(c => new UICommander(c));
         services.AddScoped(_ => new UIActionFailureTracker.Options());
@@ -34,7 +34,7 @@ public readonly struct FusionBlazorBuilder
                 jsRuntime = c.GetService<IJSRuntime>();
             }
             catch {
-                // Intended
+                // Intended - it should throw InvalidOperationException from the root provider
             }
             return new JSRuntimeInfo(jsRuntime);
         });

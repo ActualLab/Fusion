@@ -80,7 +80,7 @@ public readonly struct FusionBuilder
             c.FusionHub()));
 
         // StateFactory
-        services.AddScopedOrSingleton(c => new StateFactory(c));
+        services.AddScopedOrSingleton((c, isScoped) => new StateFactory(c, isScoped));
 
         // Update delayer & UI action tracker
         services.AddSingleton(_ => new UIActionTracker.Options());

@@ -68,7 +68,7 @@ public readonly struct CommanderBuilder
         services.AddSingleton(c => new CommandHandlerResolver(
             c.GetRequiredService<CommandHandlerResolver.Options>(), c));
 
-        // Command services & their dependencies
+        // Command services and their dependencies
         Services.AddSingleton(_ => CommandServiceInterceptor.Options.Default);
         Services.AddSingleton(c => new CommandServiceInterceptor(
             c.GetRequiredService<CommandServiceInterceptor.Options>(), c));
