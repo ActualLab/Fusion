@@ -50,7 +50,7 @@ public abstract class StatefulComponentBase : FusionComponentBase, IStatefulComp
         // If we're here:
         // - Sync part of OnInitialized(Async) is completed
         // - Sync part of OnParametersSet(Async) is completed
-        // - No error is thrown from sync part of that code
+        // - No error is thrown from the sync part of that code
         if (!ReferenceEquals(State, null))
             return task;
 

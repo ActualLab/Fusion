@@ -1,10 +1,15 @@
-using System.Runtime.ExceptionServices;
-
 namespace ActualLab.Async;
 
 public static partial class TaskExt
 {
-    public static async Task SuppressExceptions(this Task task, Func<Exception, bool>? filter = null)
+    // SuppressExceptions
+
+    public static Task SuppressExceptions(this Task task)
+        => task.IsCompletedSuccessfully
+            ? task
+            : task.ContinueWith(_ => { }, TaskScheduler.Default);
+
+    public static async Task SuppressExceptions(this Task task, Func<Exception, bool>? filter)
     {
         try {
             await task.ConfigureAwait(false);
@@ -16,7 +21,12 @@ public static partial class TaskExt
         }
     }
 
-    public static async Task<T> SuppressExceptions<T>(this Task<T> task, Func<Exception, bool>? filter = null)
+    public static Task<T> SuppressExceptions<T>(this Task<T> task)
+        => task.IsCompletedSuccessfully
+            ? task
+            : task.ContinueWith(t => t.IsCompletedSuccessfully ? t.Result : default!, TaskScheduler.Default);
+
+    public static async Task<T> SuppressExceptions<T>(this Task<T> task, Func<Exception, bool>? filter)
     {
         try {
             return await task.ConfigureAwait(false);
@@ -27,6 +37,8 @@ public static partial class TaskExt
             throw;
         }
     }
+
+    // SuppressCancellation
 
     public static Task SuppressCancellation(this Task task)
         => task.ContinueWith(

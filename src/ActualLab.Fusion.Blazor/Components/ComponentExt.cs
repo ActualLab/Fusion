@@ -79,8 +79,8 @@ public static class ComponentExt
 
     /// <summary>
     /// Calls <see cref="ComponentBase.StateHasChanged"/> in the Blazor synchronization context
-    /// of the component, therefore it works even when called from another synchronization context
-    /// (e.g. a thread-pool thread).
+    /// of the component, therefore, it works even when called from another synchronization context
+    /// (e.g., a thread-pool thread).
     /// </summary>
     public static void NotifyStateHasChanged(this ComponentBase component)
     {

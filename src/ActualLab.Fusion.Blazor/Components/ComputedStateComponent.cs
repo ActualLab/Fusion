@@ -25,18 +25,19 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
 
             var recomputeTask = State.Recompute();
             return mustAwaitForRecompute && !recomputeTask.IsCompleted
-                ? CompleteRecomputeAsync(recomputeTask.AsTask())
+                ? recomputeTask.AsTask().SuppressExceptions()
                 : Task.CompletedTask;
 
             static async Task CompleteAsync(Task dependency, State state, bool mustAwaitForRecompute1) {
-                await dependency;
-                var recomputeTask1 = state.Recompute();
-                if (mustAwaitForRecompute1 && !recomputeTask1.IsCompleted)
-                    await recomputeTask1.SilentAwait();
+                try {
+                    await dependency.ConfigureAwait(false); // Ok here
+                }
+                finally {
+                    var recomputeTask1 = state.Recompute();
+                    if (mustAwaitForRecompute1 && !recomputeTask1.IsCompleted)
+                        await recomputeTask1.SilentAwait();
+                }
             }
-
-            static async Task CompleteRecomputeAsync(Task recomputeTask1)
-                => await recomputeTask1.SilentAwait();
         }
         catch {
             // We can still conclude whether the parameters were changed or not.
