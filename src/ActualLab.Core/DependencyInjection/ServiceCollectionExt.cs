@@ -76,17 +76,14 @@ public static class ServiceCollectionExt
             return new ScopedOrSingleton<LazySlim<TService>>.Scoped(c, lazy);
         });
 
-        TService? service = null;
+        ScopedOrSingleton<LazySlim<TService>>.Singleton? singleton = null;
         services.AddTransient<TService>(c => {
-            if (service is null) {
-                // Singleton is always available, so we start from it
-                var singleton = c.GetRequiredService<ScopedOrSingleton<LazySlim<TService>>.Singleton>();
-                var lazy = ReferenceEquals(singleton.Services, c) // Is c a root service provider?
-                    ? singleton.Value
-                    : c.GetRequiredService<ScopedOrSingleton<LazySlim<TService>>.Scoped>().Value;
-                service = lazy.Value;
-            }
-            return service;
+            // Singleton is always available, so we start from it
+            singleton ??= c.GetRequiredService<ScopedOrSingleton<LazySlim<TService>>.Singleton>();
+            var lazy = ReferenceEquals(singleton.Services, c) // Is c a root service provider?
+                ? singleton.Value
+                : c.GetRequiredService<ScopedOrSingleton<LazySlim<TService>>.Scoped>().Value;
+            return lazy.Value;
         });
         return services;
     }
