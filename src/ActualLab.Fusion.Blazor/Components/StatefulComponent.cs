@@ -1,7 +1,5 @@
-using ActualLab.Fusion.UI;
 using ActualLab.Internal;
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 
 namespace ActualLab.Fusion.Blazor;
 

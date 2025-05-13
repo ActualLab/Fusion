@@ -26,6 +26,9 @@ public interface IState<T> : IState, IResult<T>
 {
     public new Computed<T> Computed { get; }
     public new T LastNonErrorValue { get; }
+
+    public bool IsInitial(out T value);
+    public bool IsInitial(out T value, out Exception? error);
 }
 
 // Classes

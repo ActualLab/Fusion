@@ -195,6 +195,25 @@ public abstract class ComputedState<T> : ComputedState, IState<T>
         => Computed.Deconstruct(out value, out error);
     T IConvertibleTo<T>.Convert() => Value;
 
+    // Useful helpers
+
+    public bool IsInitial(out T value)
+    {
+        var snapshot = Snapshot;
+        value = ((Computed<T>)snapshot.LastNonErrorComputed).Value;
+        return snapshot.IsInitial;
+    }
+
+    public bool IsInitial(out T value, out Exception? error)
+    {
+        var snapshot = Snapshot;
+        value = ((Computed<T>)snapshot.LastNonErrorComputed).Value;
+        error = snapshot.Computed.Error;
+        return snapshot.IsInitial;
+    }
+
+    // Protected methods
+
     protected override Computed CreateComputed()
     {
         var computed = new StateBoundComputed<T>(ComputedOptions, this);

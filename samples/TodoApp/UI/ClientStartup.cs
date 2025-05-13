@@ -84,7 +84,7 @@ public static class ClientStartup
 
             // Highly recommended option for client & API servers:
             RpcDefaultDelegates.FrameDelayerProvider = RpcFrameDelayerProviders.Auto();
-            // Lets ComputedState to be dependent on e.g. current culture - use only if you need this:
+            // Lets ComputedState to be dependent on, e.g., current culture - use only if you need this:
             // ComputedState.DefaultOptions.FlowExecutionContext = true;
             fusion.Rpc.AddWebSocketClient(remoteRpcHostUrl);
             if (hostKind is HostKind.ApiServer or HostKind.SingleServer) {
@@ -98,6 +98,11 @@ public static class ClientStartup
             fusion.AddComputeService<Todos>(ServiceLifetime.Scoped);
             services.AddScoped(c => new RpcPeerStateMonitor(c, OSInfo.IsAnyClient ? RpcPeerRef.Default : null));
             services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25)); // 0.25s
+
+            // Uncomment to make computed state components to re-render only on re-computation of their state.
+            // Click on DefaultOptions to see when they re-render by default.
+            // ComputedStateComponent.DefaultOptions = ComputedStateComponentOptions.RecomputeStateOnParameterChange;
+            // ComputedRenderStateComponent.DefaultOptions = ComputedStateComponentOptions.RecomputeStateOnParameterChange;
 
             // Blazorise
             services.AddBlazorise(options => {

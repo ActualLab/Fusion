@@ -1,4 +1,3 @@
-using ActualLab.Fusion.Blazor.Internal;
 using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
@@ -41,6 +40,8 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
         // Inconsistent state is rare, so we make this check at last
         return (Options & ComputedStateComponentOptions.RenderInconsistentState) != 0;
     }
+
+    // Private methods
 
     private Task OnInitializedFlow()
     {
@@ -109,30 +110,4 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
         if (!whenComputed.IsCompleted)
             await whenComputed.SilentAwait(); // Recompute errors are exposed via State.Value/Error
     }
-}
-
-public abstract class ComputedStateComponent<T> : ComputedStateComponent, IStatefulComponent<T>
-{
-    protected State UntypedState => base.State;
-    protected new ComputedState<T> State => (ComputedState<T>)base.State;
-    IState<T> IStatefulComponent<T>.State => (IState<T>)base.State;
-
-    protected virtual ComputedState<T>.Options GetStateOptions()
-        => ComputedStateComponent.GetStateOptions<T>(GetType());
-
-    protected override (State State, object? StateInitializeOptions) CreateState()
-    {
-        // Synchronizes ComputeState call as per:
-        // https://github.com/servicetitan/Stl.Fusion/issues/202
-        var stateOptions = GetStateOptions();
-        var dispatchMode = Options.CanComputeStateOnThreadPool()
-            ? ComputedStateDispatchMode.None
-            : stateOptions.FlowExecutionContext && DispatcherInfo.IsExecutionContextFlowSupported(this)
-                ? ComputedStateDispatchMode.Dispatch
-                : ComputedStateDispatchMode.DispatchWithExecutionContextFlow;
-        var state = ComputedStateComponentState<T>.New(dispatchMode, stateOptions, this, Services);
-        return (state, stateOptions);
-    }
-
-    protected internal abstract Task<T> ComputeState(CancellationToken cancellationToken);
 }

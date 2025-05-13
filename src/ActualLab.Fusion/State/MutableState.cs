@@ -134,6 +134,8 @@ public class MutableState<T> : MutableState, IMutableState<T>
         => Computed.Deconstruct(out value, out error);
     T IConvertibleTo<T>.Convert() => Value;
 
+    // Set overloads
+
     public void Set(Result<T> result)
         => Set(result.ToUntypedResult());
 
@@ -167,6 +169,23 @@ public class MutableState<T> : MutableState, IMutableState<T>
             NextOutput = result.ToUntypedResult();
             snapshot.Computed.Invalidate();
         }
+    }
+
+    // Useful helpers
+
+    public bool IsInitial(out T value)
+    {
+        var snapshot = Snapshot;
+        value = ((Computed<T>)snapshot.LastNonErrorComputed).Value;
+        return snapshot.IsInitial;
+    }
+
+    public bool IsInitial(out T value, out Exception? error)
+    {
+        var snapshot = Snapshot;
+        value = ((Computed<T>)snapshot.LastNonErrorComputed).Value;
+        error = snapshot.Computed.Error;
+        return snapshot.IsInitial;
     }
 
     // Protected methods

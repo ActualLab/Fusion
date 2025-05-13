@@ -3,7 +3,10 @@
 @inject ClientAuthHelper ClientAuthHelper
 
 @{
-    var user = State.LastNonErrorValue.OrGuest();
+    if (State.IsInitial(out var user))
+        return;
+
+    user = user.OrGuest();
     var usedAuthSchemas = user.Identities.Select(kv => kv.Key.Schema).ToHashSet();
     var unusedAuthSchemas = AuthSchemas.Where(p => !usedAuthSchemas.Contains(p.Name)).ToArray();
 }
