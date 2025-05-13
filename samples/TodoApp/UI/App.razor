@@ -21,7 +21,7 @@
 
     [Inject] private IServiceProvider Services { get; set; } = null!;
     [Inject] private ISessionResolver SessionResolver { get; set; } = null!;
-    [Inject] private UIHub UIHub { get; set; } = null!;
+    [Inject] private FusionHub FusionHub { get; set; } = null!;
 
     [Parameter] public string SessionId { get; set; } = "";
     [Parameter] public string RenderModeKey { get; set; } = "";
@@ -38,10 +38,10 @@
         else {
             SessionResolver.Session = new Session(SessionId);
         }
-        if (UIHub.IsInteractive)
-            UIHub.Initialize(this.GetDispatcher(), RenderModeDef.GetOrDefault(RenderModeKey));
+        if (FusionHub.IsInteractive)
+            FusionHub.Initialize(this.GetDispatcher(), RenderModeDef.GetOrDefault(RenderModeKey));
     }
 
     public void Dispose()
-        => UIHub.Dispose();
+        => FusionHub.Dispose();
 }

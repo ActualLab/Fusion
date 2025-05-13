@@ -7,17 +7,14 @@ using ActualLab.Internal;
 namespace ActualLab.Fusion.Blazor;
 
 /// <summary>
-/// UIHub is a scoped service caching a set of most frequently used Blazor & Fusion services.
+/// <see cref="FusionHub"/> is a scoped service caching a set of most frequently used Blazor & Fusion services.
 /// In addition to that, it enables access to Blazor <see cref="Dispatcher"/>
 /// and provides information about the current <see cref="RenderMode"/>.
 /// </summary>
-public class UIHub : ProcessorBase, IHasServices, IServiceProvider
+public class FusionHub : ProcessorBase, IHasServices
 {
     private static long _lastId;
 
-    private readonly StateFactory _stateFactory;
-    private readonly UICommander _uiCommander;
-    private readonly ICommander _commander;
     protected readonly AsyncTaskMethodBuilder WhenInitializedSource = AsyncTaskMethodBuilderExt.New();
 
     [field: AllowNull, MaybeNull]
@@ -26,7 +23,9 @@ public class UIHub : ProcessorBase, IHasServices, IServiceProvider
     public long Id { get; } = Interlocked.Increment(ref _lastId);
 
     public IServiceProvider Services { get; }
-
+    public StateFactory StateFactory { get; }
+    public UICommander UICommander { get; }
+    public ICommander Commander { get; }
     // Some services require lazy resolution
     [field: AllowNull, MaybeNull]
     public Session Session => field ??= Services.GetRequiredService<Session>();
@@ -36,7 +35,7 @@ public class UIHub : ProcessorBase, IHasServices, IServiceProvider
     public JSRuntimeInfo JSRuntimeInfo => field ??= Services.GetRequiredService<JSRuntimeInfo>();
     [field: AllowNull, MaybeNull]
     public IJSRuntime JS => field ??= Services.GetRequiredService<IJSRuntime>();
-    // Shortcuts
+    // Useful shortcuts
     public bool IsPrerendering => JSRuntimeInfo.IsPrerendering;
     public bool IsInteractive => JSRuntimeInfo.IsInteractive;
 
@@ -53,18 +52,12 @@ public class UIHub : ProcessorBase, IHasServices, IServiceProvider
     // ReSharper disable once InconsistentlySynchronizedField
     public Task WhenInitialized => WhenInitializedSource.Task;
 
-    // Notice that UIHub is IServiceProvider, so a set of property-like methods listed below
-    // are exposed in this way to avoid conflicts with identical IServiceProvider extension methods.
-    public StateFactory StateFactory() => _stateFactory;
-    public UICommander UICommander() => _uiCommander;
-    public ICommander Commander() => _commander;
-
-    public UIHub(IServiceProvider services)
+    public FusionHub(IServiceProvider services)
     {
         Services = services;
-        _stateFactory = services.StateFactory();
-        _uiCommander = services.UICommander();
-        _commander = UICommander().Commander;
+        StateFactory = services.StateFactory();
+        UICommander = services.UICommander();
+        Commander = UICommander.Commander;
     }
 
     public virtual void Initialize(
@@ -87,7 +80,4 @@ public class UIHub : ProcessorBase, IHasServices, IServiceProvider
             WhenInitializedSource.TrySetResult();
         }
     }
-
-    public object? GetService(Type serviceType)
-        => Services.GetService(serviceType);
 }

@@ -3,12 +3,12 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion.Blazor;
 
-public class RenderModeHelper(UIHub uiHub)
+public class RenderModeHelper(FusionHub fusionHub)
 {
-    protected UIHub UIHub { get; } = uiHub;
+    protected FusionHub FusionHub { get; } = fusionHub;
 
-    public RenderModeDef? CurrentMode => UIHub.WhenInitialized.IsCompleted
-        ? UIHub.RenderMode
+    public RenderModeDef? CurrentMode => FusionHub.WhenInitialized.IsCompleted
+        ? FusionHub.RenderMode
         : null;
 
     public virtual string GetCurrentModeTitle()
@@ -32,7 +32,7 @@ public class RenderModeHelper(UIHub uiHub)
         if (CurrentMode == renderMode)
             return;
 
-        var navigationManager = UIHub.Nav;
+        var navigationManager = FusionHub.Nav;
         var switchUrl = GetModeChangeUrl(renderMode.Key, navigationManager.Uri);
         navigationManager.NavigateTo(switchUrl, true);
     }

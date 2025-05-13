@@ -7,22 +7,22 @@ namespace ActualLab.Fusion.Blazor;
 
 #pragma warning disable CA2007
 
-public class FusionComponentBase : ComponentBase, IHandleEvent, IHasUIHub
+public class FusionComponentBase : ComponentBase, IHandleEvent, IHasFusionHub
 {
     public static ParameterComparisonMode DefaultParameterComparisonMode { get; set; } = ParameterComparisonMode.Custom;
 
-    [Inject] protected UIHub UIHub { get; init; } = null!;
+    [Inject] protected FusionHub FusionHub { get; init; } = null!;
 
     // Most useful service shortcuts
-    protected IServiceProvider Services => UIHub.Services;
-    protected Session Session => UIHub.Session;
-    protected StateFactory StateFactory => UIHub.StateFactory();
-    protected UICommander UICommander => UIHub.UICommander();
-    protected NavigationManager Nav => UIHub.Nav;
-    protected IJSRuntime JS => UIHub.JS;
+    protected IServiceProvider Services => FusionHub.Services;
+    protected Session Session => FusionHub.Session;
+    protected StateFactory StateFactory => FusionHub.StateFactory;
+    protected UICommander UICommander => FusionHub.UICommander;
+    protected NavigationManager Nav => FusionHub.Nav;
+    protected IJSRuntime JS => FusionHub.JS;
 
-    // Explicit IHasUIHub & IHasServices implementation
-    UIHub IHasUIHub.UIHub => UIHub;
+    // Explicit IHasFusionHub & IHasServices implementation
+    FusionHub IHasFusionHub.FusionHub => FusionHub;
     IServiceProvider IHasServices.Services => Services;
 
     protected bool MustRenderAfterEvent { get; set; } = true;

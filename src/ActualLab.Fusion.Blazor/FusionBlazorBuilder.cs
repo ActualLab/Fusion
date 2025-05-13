@@ -39,8 +39,8 @@ public readonly struct FusionBlazorBuilder
                 }
             return new JSRuntimeInfo(jsRuntime);
         });
-        services.AddScoped(c => new RenderModeHelper(c.GetRequiredService<UIHub>()));
-        services.AddScoped(c => new UIHub(c));
+        services.AddScoped(c => new RenderModeHelper(c.GetRequiredService<FusionHub>()));
+        services.AddScoped(c => new FusionHub(c));
 
         configure?.Invoke(this);
     }
