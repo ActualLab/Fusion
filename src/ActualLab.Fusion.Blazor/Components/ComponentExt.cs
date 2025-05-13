@@ -11,14 +11,16 @@ namespace ActualLab.Fusion.Blazor;
 
 public static class ComponentExt
 {
-#if USE_UNSAFE_ACCESSORS && NET8_0_OR_GREATER
+#if USE_UNSAFE_ACCESSORS
     // [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_renderFragment")]
     // private static extern ref RenderFragment RenderFragmentGetter(ComponentBase @this);
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_renderHandle")]
     private static extern ref RenderHandle RenderHandleGetter(ComponentBase @this);
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_initialized")]
     private static extern ref bool IsInitializedGetter(ComponentBase @this);
-    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_renderer")]
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_initialized")]
+    private static extern ref bool HasPendingQueuedRenderGetter(ComponentBase @this);
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_hasPendingQueuedRender")]
     private static extern ref Renderer? RendererGetter(ref RenderHandle @this);
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_componentId")]
     private static extern ref int ComponentIdGetter(ref RenderHandle @this);
@@ -41,6 +43,9 @@ public static class ComponentExt
     // private static readonly Action<ComponentBase, RenderFragment> RenderFragmentSetter;
     private static readonly Func<ComponentBase, RenderHandle> RenderHandleGetter;
     private static readonly Func<ComponentBase, bool> IsInitializedGetter;
+    private static readonly Action<ComponentBase, bool> IsInitializedSetter;
+    private static readonly Func<ComponentBase, bool> HasPendingQueuedRenderGetter;
+    private static readonly Action<ComponentBase, bool> HasPendingQueuedRenderSetter;
     private static readonly Action<ComponentBase> StateHasChangedInvoker;
     private static readonly Func<RenderHandle, object?> GetOptionalComponentStateGetter;
 #endif
@@ -60,22 +65,12 @@ public static class ComponentExt
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SetRenderFragment(ComponentBase component, RenderFragment renderFragment)
-#if USE_UNSAFE_ACCESSORS && NET8_0_OR_GREATER
+#if USE_UNSAFE_ACCESSORS
         => RenderFragmentGetter(component) = renderFragment;
 #else
         => RenderFragmentSetter(component, renderFragment);
 #endif
 */
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsInitialized(this ComponentBase component)
-        => IsInitializedGetter(component);
-
-    public static bool IsDisposed(this ComponentBase component)
-    {
-        var renderHandle = RenderHandleGetter(component);
-        return GetOptionalComponentStateGetter(renderHandle) == null;
-    }
 
     /// <summary>
     /// Calls <see cref="ComponentBase.StateHasChanged"/> in the Blazor synchronization context
@@ -98,7 +93,39 @@ public static class ComponentExt
         }
     }
 
-#if !(USE_UNSAFE_ACCESSORS && NET8_0_OR_GREATER)
+    // Other handy methods - exposed as regular rather than extension methods
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsInitialized(ComponentBase component)
+        => IsInitializedGetter(component);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void MarkInitialized(ComponentBase component)
+#if USE_UNSAFE_ACCESSORS
+        => IsInitializedGetter(component) = true;
+#else
+        => IsInitializedSetter(component, true);
+#endif
+
+    public static bool IsDisposed(ComponentBase component)
+    {
+        var renderHandle = RenderHandleGetter(component);
+        return GetOptionalComponentStateGetter(renderHandle) == null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ClosedDisposable<ComponentBase> SuspendStateHasChanged(ComponentBase component)
+        => HasPendingQueuedRenderGetter(component)
+            ? default // Already suspended
+            : Disposable.NewClosed(component, static c => {
+#if USE_UNSAFE_ACCESSORS
+                HasPendingQueuedRenderGetter(c) = false;
+#else
+                HasPendingQueuedRenderSetter(c, false);
+#endif
+            });
+
+#if !USE_UNSAFE_ACCESSORS
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "See DynamicDependency below")]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComponentBase))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RenderHandle))]
@@ -107,10 +134,14 @@ public static class ComponentExt
         var bfInstanceNonPublic = BindingFlags.Instance | BindingFlags.NonPublic;
         var tComponentBase = typeof(ComponentBase);
         var fInitialized = tComponentBase.GetField("_initialized", bfInstanceNonPublic)!;
+        var fHasPendingQueuedRender = tComponentBase.GetField("_hasPendingQueuedRender", bfInstanceNonPublic)!;
         var fRenderHandle = tComponentBase.GetField("_renderHandle", bfInstanceNonPublic)!;
         var mStateHasChanged = tComponentBase.GetMethod("StateHasChanged", bfInstanceNonPublic)!;
 
         IsInitializedGetter = fInitialized.GetGetter<ComponentBase, bool>();
+        IsInitializedSetter = fInitialized.GetSetter<ComponentBase, bool>();
+        HasPendingQueuedRenderGetter = fHasPendingQueuedRender.GetGetter<ComponentBase, bool>();
+        HasPendingQueuedRenderSetter = fHasPendingQueuedRender.GetSetter<ComponentBase, bool>();
         // RenderFragmentGetter = fRenderFragment.GetGetter<ComponentBase, RenderFragment>();
         // RenderFragmentSetter = fRenderFragment.GetSetter<ComponentBase, RenderFragment>();
         RenderHandleGetter = fRenderHandle.GetGetter<ComponentBase, RenderHandle>();

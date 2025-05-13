@@ -14,7 +14,11 @@ public abstract partial class ComputedStateComponent
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static ComputedStateComponentOptions DefaultOptions { get; set; }
-        = ComputedStateComponentOptions.RecomputeStateOnParameterChange;
+        = ComputedStateComponentOptions.RecomputeStateOnParameterChange
+        | ComputedStateComponentOptions.RenderOnceInitializedAsync
+        | ComputedStateComponentOptions.RenderOnceParametersSet
+        | ComputedStateComponentOptions.RenderOnceParametersSetAsync;
+
     public static Func<Type, IComputedStateOptions> DefaultStateOptionsFactory { get; set; } = CreateDefaultStateOptions;
 
     public static ComputedState<T>.Options GetStateOptions<T>(

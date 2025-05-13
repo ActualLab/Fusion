@@ -1,6 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
+using ActualLab.Fusion.UI;
 using ActualLab.Internal;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace ActualLab.Fusion.Blazor;
 
@@ -16,14 +17,10 @@ public interface IStatefulComponent<T> : IStatefulComponent
 
 public abstract class StatefulComponentBase : FusionComponentBase, IStatefulComponent
 {
-    [Inject] protected IServiceProvider Services { get; init; } = null!;
-
-    [field: AllowNull, MaybeNull]
-    protected StateFactory StateFactory => field ??= Services.StateFactory();
     protected State State { get; private set; } = null!;
     protected Action<State, StateEventKind> StateChanged { get; set; }
 
-    IServiceProvider IHasServices.Services => Services;
+    // Explicit IState implementation
     State IStatefulComponent.State => State;
 
     protected StatefulComponentBase()

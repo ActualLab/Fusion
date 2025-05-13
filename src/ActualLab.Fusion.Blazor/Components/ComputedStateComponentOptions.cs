@@ -6,9 +6,11 @@ namespace ActualLab.Fusion.Blazor;
 public enum ComputedStateComponentOptions
 {
     RecomputeStateOnParameterChange = 0x1,
-    AwaitForRecomputeOnParameterChange = 0x2,
     RenderInconsistentState = 0x10,
-    ComputeStateOnThreadPool = 0x100,
+    RenderOnceInitializedAsync = 0x100,
+    RenderOnceParametersSet = 0x200,
+    RenderOnceParametersSetAsync = 0x400,
+    ComputeStateOnThreadPool = 0x1000,
 }
 
 public static class ComputedStateComponentOptionsExt

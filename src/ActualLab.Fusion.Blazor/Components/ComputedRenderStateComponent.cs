@@ -1,5 +1,13 @@
 namespace ActualLab.Fusion.Blazor;
 
+public static class ComputedRenderStateComponent
+{
+    public static ComputedStateComponentOptions DefaultOptions { get; set; }
+        = ComputedStateComponentOptions.RecomputeStateOnParameterChange
+        | ComputedStateComponentOptions.RenderOnceInitializedAsync
+        | ComputedStateComponentOptions.RenderOnceParametersSetAsync;
+}
+
 public abstract class ComputedRenderStateComponent<TState> : ComputedStateComponent<TState>
 {
     private StateSnapshot? _renderState;
@@ -8,6 +16,9 @@ public abstract class ComputedRenderStateComponent<TState> : ComputedStateCompon
         get => _renderState ??= UntypedState.Snapshot;
         set => _renderState = value;
     }
+
+    protected ComputedRenderStateComponent()
+        => Options = ComputedRenderStateComponent.DefaultOptions;
 
     protected override bool ShouldRender()
     {

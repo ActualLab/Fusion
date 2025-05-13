@@ -4,7 +4,7 @@ namespace ActualLab.DependencyInjection;
 
 public static class ServiceDescriptorExt
 {
-#if USE_UNSAFE_ACCESSORS && NET8_0_OR_GREATER
+#if USE_UNSAFE_ACCESSORS
 
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "GetImplementationType")]
     private static extern Type? GetImplementationTypeImpl(ServiceDescriptor @this);

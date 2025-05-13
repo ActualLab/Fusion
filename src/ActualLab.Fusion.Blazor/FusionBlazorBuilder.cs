@@ -28,18 +28,19 @@ public readonly struct FusionBlazorBuilder
         services.AddScoped(_ => new UIActionFailureTracker.Options());
         services.AddScoped(c => new UIActionFailureTracker(
             c.GetRequiredService<UIActionFailureTracker.Options>(), c));
-        services.AddScopedOrSingleton(c => {
+        services.AddScopedOrSingleton((c, isScoped) => {
             IJSRuntime? jsRuntime = null;
-            try {
-                jsRuntime = c.GetService<IJSRuntime>();
-            }
-            catch {
-                // Intended - it should throw InvalidOperationException from the root provider
-            }
+            if (isScoped)
+                try {
+                    jsRuntime = c.GetService<IJSRuntime>();
+                }
+                catch {
+                    // Maybe the container is getting disposed
+                }
             return new JSRuntimeInfo(jsRuntime);
         });
-        services.AddScoped(c => new RenderModeHelper(c.GetRequiredService<BlazorCircuitContext>()));
-        services.AddScoped(c => new BlazorCircuitContext(c));
+        services.AddScoped(c => new RenderModeHelper(c.GetRequiredService<UIHub>()));
+        services.AddScoped(c => new UIHub(c));
 
         configure?.Invoke(this);
     }

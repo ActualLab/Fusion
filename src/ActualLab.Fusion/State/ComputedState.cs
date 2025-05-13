@@ -77,7 +77,7 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
         var computedStateOptions = (IComputedStateOptions)settings;
         _updateDelayer = computedStateOptions.UpdateDelayer ?? Services.GetRequiredService<IUpdateDelayer>();
 
-        // Ideally we want to suppress execution context flow here,
+        // Ideally, we want to suppress execution context flow here,
         // because the Update is ~ a worker-style task.
         if (computedStateOptions.TryComputeSynchronously)
             UpdateCycleTask = computedStateOptions.FlowExecutionContext

@@ -3,12 +3,12 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion.Blazor;
 
-public class RenderModeHelper(BlazorCircuitContext circuitContext)
+public class RenderModeHelper(UIHub uiHub)
 {
-    protected BlazorCircuitContext CircuitContext { get; } = circuitContext;
+    protected UIHub UIHub { get; } = uiHub;
 
-    public RenderModeDef? CurrentMode => CircuitContext.WhenInitialized.IsCompleted
-        ? CircuitContext.RenderMode
+    public RenderModeDef? CurrentMode => UIHub.WhenInitialized.IsCompleted
+        ? UIHub.RenderMode
         : null;
 
     public virtual string GetCurrentModeTitle()
@@ -32,7 +32,7 @@ public class RenderModeHelper(BlazorCircuitContext circuitContext)
         if (CurrentMode == renderMode)
             return;
 
-        var navigationManager = CircuitContext.NavigationManager;
+        var navigationManager = UIHub.Nav;
         var switchUrl = GetModeChangeUrl(renderMode.Key, navigationManager.Uri);
         navigationManager.NavigateTo(switchUrl, true);
     }

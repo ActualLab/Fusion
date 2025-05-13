@@ -42,6 +42,7 @@ public readonly struct Disposable<T> : IDisposable
     public T Resource { get; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    // ReSharper disable once ConvertToPrimaryConstructor
     public Disposable(T resource, Action<T> disposer)
     {
         Resource = resource;
@@ -60,6 +61,7 @@ public readonly struct Disposable<T, TState> : IDisposable
     public T Resource { get; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    // ReSharper disable once ConvertToPrimaryConstructor
     public Disposable(T resource, TState state, Action<T, TState> disposer)
     {
         Resource = resource;
@@ -77,6 +79,7 @@ public readonly struct ClosedDisposable<TState> : IDisposable
     private readonly Action<TState>? _disposer;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    // ReSharper disable once ConvertToPrimaryConstructor
     public ClosedDisposable(TState state, Action<TState> disposer)
     {
         _state = state;

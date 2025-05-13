@@ -1,11 +1,9 @@
 @page "/authentication"
 @using UAParser
 @inherits ComputedStateComponent<(User? User, List<AuthenticationPage.SessionInfoModel>? Sessions)>
-@inject Session Session
 @inject IAuth Auth
 @inject ClientAuthHelper ClientAuthHelper
 @inject IFusionTime FusionTime
-@inject NavigationManager Nav
 
 @{
     var state = State.LastNonErrorValue;
