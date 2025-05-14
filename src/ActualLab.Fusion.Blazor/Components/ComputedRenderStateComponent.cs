@@ -4,8 +4,7 @@ public static class ComputedRenderStateComponent
 {
     public static ComputedStateComponentOptions DefaultOptions { get; set; }
         = ComputedStateComponentOptions.RecomputeStateOnParameterChange
-        | ComputedStateComponentOptions.RenderOnceInitializedAsync
-        | ComputedStateComponentOptions.RenderOnceParametersSetAsync;
+        | ComputedStateComponentOptions.RenderOnceInitializedAsync;
 }
 
 public abstract class ComputedRenderStateComponent<TState> : ComputedStateComponent<TState>
