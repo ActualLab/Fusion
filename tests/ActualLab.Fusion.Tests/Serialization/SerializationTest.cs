@@ -33,37 +33,49 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void OldToNewUserSerialization()
     {
-        var oldUser = new OldUser("b", "bob");
-        var newUser = oldUser.AssertPassesThroughAllSerializers<OldUser, User>(AssertEqual, Out);
-        newUser.Claims.Count.Should().Be(0);
-        newUser.Identities.Count.Should().Be(0);
+        StringAsSymbolMemoryPackFormatterAttribute.IsEnabled = true;
+        try {
+            var oldUser = new OldUser("b", "bob");
+            var newUser = oldUser.AssertPassesThroughMemoryPackSerializer<OldUser, User>(AssertEqual, Out);
+            newUser.Claims.Count.Should().Be(0);
+            newUser.Identities.Count.Should().Be(0);
 
-        oldUser = new OldUser("b", "bob") { Version = 3 }
-            .WithClaim("email1", "bob1@bob.bom")
-            .WithClaim("email2", "bob2@bob.bom")
-            .WithIdentity("google/1", "s")
-            .WithIdentity("google/2", "q");
-        newUser = oldUser.AssertPassesThroughAllSerializers<OldUser, User>(AssertEqual, Out);
-        newUser.Claims.Count.Should().Be(2);
-        newUser.Identities.Count.Should().Be(2);
+            oldUser = new OldUser("b", "bob") { Version = 3 }
+                .WithClaim("email1", "bob1@bob.bom")
+                .WithClaim("email2", "bob2@bob.bom")
+                .WithIdentity("google/1", "s")
+                .WithIdentity("google/2", "q");
+            newUser = oldUser.AssertPassesThroughMemoryPackSerializer<OldUser, User>(AssertEqual, Out);
+            newUser.Claims.Count.Should().Be(2);
+            newUser.Identities.Count.Should().Be(2);
+        }
+        finally {
+            StringAsSymbolMemoryPackFormatterAttribute.IsEnabled = false;
+        }
     }
 
     [Fact]
     public void NewToOldUserSerialization()
     {
-        var newUser = new User("b", "bob");
-        var oldUser = newUser.AssertPassesThroughAllSerializers<User, OldUser>(AssertEqual, Out);
-        oldUser.Claims.Count.Should().Be(0);
-        oldUser.Identities.Count.Should().Be(0);
+        StringAsSymbolMemoryPackFormatterAttribute.IsEnabled = true;
+        try {
+            var newUser = new User("b", "bob");
+            var oldUser = newUser.AssertPassesThroughMemoryPackSerializer<User, OldUser>(AssertEqual, Out);
+            oldUser.Claims.Count.Should().Be(0);
+            oldUser.Identities.Count.Should().Be(0);
 
-        newUser = new User("b", "bob") { Version = 3 }
-            .WithClaim("email1", "bob1@bob.bom")
-            .WithClaim("email2", "bob2@bob.bom")
-            .WithIdentity("google/1", "s")
-            .WithIdentity("google/2", "q");
-        oldUser = newUser.AssertPassesThroughAllSerializers<User, OldUser>(AssertEqual, Out);
-        oldUser.Claims.Count.Should().Be(2);
-        oldUser.Identities.Count.Should().Be(2);
+            newUser = new User("b", "bob") { Version = 3 }
+                .WithClaim("email1", "bob1@bob.bom")
+                .WithClaim("email2", "bob2@bob.bom")
+                .WithIdentity("google/1", "s")
+                .WithIdentity("google/2", "q");
+            oldUser = newUser.AssertPassesThroughMemoryPackSerializer<User, OldUser>(AssertEqual, Out);
+            oldUser.Claims.Count.Should().Be(2);
+            oldUser.Identities.Count.Should().Be(2);
+        }
+        finally {
+            StringAsSymbolMemoryPackFormatterAttribute.IsEnabled = false;
+        }
     }
 
     [Fact]

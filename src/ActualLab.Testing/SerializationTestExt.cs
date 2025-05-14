@@ -81,6 +81,16 @@ public static class SerializationTestExt
         return v;
     }
 
+    public static T2 AssertPassesThroughMemoryPackSerializer<T1, T2>(this T1 value, Action<T2, T1> assertion,
+        ITestOutputHelper? output = null)
+    {
+        var mp1 = MemoryPackSerialized.New(value);
+        output?.WriteLine($"MemoryPackSerializer: {mp1.Data.AsByteString()}");
+        var mp2 = MemoryPackSerialized.New<T2>(mp1.Data);
+        assertion.Invoke(mp2.Value, value);
+        return mp2.Value;
+    }
+
     public static T2 AssertPassesThroughAllSerializers<T1, T2>(this T1 value, Action<T2, T1> assertion, ITestOutputHelper? output = null)
     {
         var mp1 = MemoryPackSerialized.New(value);

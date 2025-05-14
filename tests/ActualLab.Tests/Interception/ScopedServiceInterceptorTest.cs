@@ -79,12 +79,12 @@ public class ScopedInterceptorTest(ITestOutputHelper @out) : TestBase(@out)
     {
         // Preps
         var services = new ServiceCollection()
-            .AddCommander(_ => {}) // Required to make .IsScoped() work
+            .AddFusion(_ => {}) // Required to make .IsScoped() work
             .AddSingleton(ScopedServiceInterceptor.Options.Default)
             .AddScoped<IScopedServiceTestService, ScopedServiceTestService>()
             .AddRpc(rpc => {
                 // That's how you can register a server w/ custom resolver in RPC - in this case
-                // it's a proxy for IScopedServiceTestService which uses ScopedServiceInterceptor.
+                // it's a proxy for IScopedServiceTestService, which uses ScopedServiceInterceptor.
                 rpc.Service<IScopedServiceTestService>().HasServer(
                     ServiceResolver.New<IScopedServiceTestService>(c => {
                         var interceptorOptions = c.GetRequiredService<ScopedServiceInterceptor.Options>();
