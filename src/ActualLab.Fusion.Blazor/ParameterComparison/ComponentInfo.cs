@@ -69,7 +69,7 @@ public sealed class ComponentInfo
         var fca = type.GetCustomAttribute<FusionComponentAttribute>(false);
         ParameterComparisonMode = fca?.ParameterComparisonMode.NullIfInherited()
             ?? parentComponentInfo?.ParameterComparisonMode
-            ?? FusionComponentBase.DefaultParameterComparisonMode;
+            ?? CircuitHubComponentBase.DefaultParameterComparisonMode;
     }
 
     public bool ShouldSetParameters(ComponentBase component, ParameterView parameterView)

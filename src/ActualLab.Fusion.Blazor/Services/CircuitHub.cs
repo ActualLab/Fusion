@@ -7,11 +7,11 @@ using ActualLab.Internal;
 namespace ActualLab.Fusion.Blazor;
 
 /// <summary>
-/// <see cref="FusionHub"/> is a scoped service caching a set of most frequently used Blazor & Fusion services.
+/// <see cref="CircuitHub"/> is a scoped service caching a set of most frequently used Blazor & Fusion services.
 /// In addition to that, it enables access to Blazor <see cref="Dispatcher"/>
 /// and provides information about the current <see cref="RenderMode"/>.
 /// </summary>
-public class FusionHub : ProcessorBase, IHasServices
+public class CircuitHub : ProcessorBase, IHasServices
 {
     private static long _lastId;
 
@@ -29,6 +29,8 @@ public class FusionHub : ProcessorBase, IHasServices
     // Some services require lazy resolution
     [field: AllowNull, MaybeNull]
     public Session Session => field ??= Services.GetRequiredService<Session>();
+    [field: AllowNull, MaybeNull]
+    public ISessionResolver SessionResolver => field ??= Services.GetRequiredService<ISessionResolver>();
     [field: AllowNull, MaybeNull]
     public NavigationManager Nav => field ??= Services.GetRequiredService<NavigationManager>();
     [field: AllowNull, MaybeNull]
@@ -52,7 +54,7 @@ public class FusionHub : ProcessorBase, IHasServices
     // ReSharper disable once InconsistentlySynchronizedField
     public Task WhenInitialized => WhenInitializedSource.Task;
 
-    public FusionHub(IServiceProvider services)
+    public CircuitHub(IServiceProvider services)
     {
         Services = services;
         StateFactory = services.StateFactory();

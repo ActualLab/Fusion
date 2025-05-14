@@ -83,7 +83,7 @@ public static class ComponentExt
             var dispatcher = component.GetDispatcher();
             if (dispatcher.CheckAccess()) // Also handles NullDispatcher, which always returns true here
                 StateHasChangedInvoker(component);
-            else if (component is FusionComponentBase fc)
+            else if (component is CircuitHubComponentBase fc)
                 _ = dispatcher.InvokeAsync(fc.StateHasChangedInvoker);
             else
                 _ = dispatcher.InvokeAsync(() => StateHasChangedInvoker(component));

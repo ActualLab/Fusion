@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
-public interface IStatefulComponent : IHasServices, IAsyncDisposable
+public interface IStatefulComponent : IHasCircuitHub, IAsyncDisposable
 {
     public State State { get; }
 }
@@ -13,7 +13,7 @@ public interface IStatefulComponent<T> : IStatefulComponent
     public new IState<T> State { get; }
 }
 
-public abstract class StatefulComponentBase : FusionComponentBase, IStatefulComponent
+public abstract class StatefulComponentBase : CircuitHubComponentBase, IStatefulComponent
 {
     protected State State { get; private set; } = null!;
     protected Action<State, StateEventKind> StateChanged { get; set; }
