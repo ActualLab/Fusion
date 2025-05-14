@@ -50,6 +50,7 @@ public abstract class StatefulComponentBase : CircuitHubComponentBase, IStateful
         return task;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void EnsureStateIsCreated()
     {
         if (!ReferenceEquals(State, null))
