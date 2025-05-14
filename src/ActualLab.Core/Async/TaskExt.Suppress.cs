@@ -5,7 +5,7 @@ public static partial class TaskExt
     // SuppressExceptions
 
     public static Task SuppressExceptions(this Task task)
-        => task.IsCompletedSuccessfully
+        => task.IsCompletedSuccessfully()
             ? task
             : task.ContinueWith(_ => { }, TaskScheduler.Default);
 
@@ -22,9 +22,9 @@ public static partial class TaskExt
     }
 
     public static Task<T> SuppressExceptions<T>(this Task<T> task)
-        => task.IsCompletedSuccessfully
+        => task.IsCompletedSuccessfully()
             ? task
-            : task.ContinueWith(t => t.IsCompletedSuccessfully ? t.Result : default!, TaskScheduler.Default);
+            : task.ContinueWith(t => t.IsCompletedSuccessfully() ? t.Result : default!, TaskScheduler.Default);
 
     public static async Task<T> SuppressExceptions<T>(this Task<T> task, Func<Exception, bool>? filter)
     {
