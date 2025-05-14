@@ -46,12 +46,17 @@ public abstract class StatefulComponentBase : CircuitHubComponentBase, IStateful
         // - Sync part of OnInitialized(Async) is completed
         // - Sync part of OnParametersSet(Async) is completed
         // - No error is thrown from the sync part of that code
+        EnsureStateIsCreated();
+        return task;
+    }
+
+    protected void EnsureStateIsCreated()
+    {
         if (!ReferenceEquals(State, null))
-            return task;
+            return;
 
         var (state, stateOptions) = CreateState();
         SetState(state, stateOptions);
-        return task;
     }
 
     protected void SetState(

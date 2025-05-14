@@ -25,10 +25,7 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
 
         ComponentExt.MarkInitialized(this);
         var whenInitialized =  OnInitializedFlow();
-        if (ReferenceEquals(State, null)) {
-            var (state, stateOptions) = CreateState();
-            SetState(state, stateOptions);
-        }
+        EnsureStateIsCreated();
         return whenInitialized;
     }
 
