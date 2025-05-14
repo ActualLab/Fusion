@@ -24,11 +24,12 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
             return OnSetParametersFlow(false);
 
         ComponentExt.MarkInitialized(this);
+        var whenInitialized =  OnInitializedFlow();
         if (ReferenceEquals(State, null)) {
             var (state, stateOptions) = CreateState();
             SetState(state, stateOptions);
         }
-        return OnInitializedFlow();
+        return whenInitialized;
     }
 
     protected override bool ShouldRender()
