@@ -17,11 +17,14 @@ public static class RpcDefaults
             if (value is not (RpcMode.Client or RpcMode.Server))
                 throw new ArgumentOutOfRangeException(nameof(value), value, null);
 
-            lock (StaticLock)
+            lock (StaticLock) {
                 field = value;
+                UseCallValidator = value != RpcMode.Client;
+            }
         }
-    } = OSInfo.IsAnyClient ? RpcMode.Client : RpcMode.Server;
+    }
 
+    public static bool UseCallValidator { get; set; }
     public static string ApiScope { get; set; } = "Api";
     public static string BackendScope { get; set; } = "Backend";
     public static Version ApiVersion { get; set; } = new(1, 0);
@@ -48,4 +51,8 @@ public static class RpcDefaults
             return field;
         }
     }
+
+    static RpcDefaults()
+        // This assignment has to run at last
+        => Mode = OSInfo.IsAnyClient ? RpcMode.Client : RpcMode.Server;
 }

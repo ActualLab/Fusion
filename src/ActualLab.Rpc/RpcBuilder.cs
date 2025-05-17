@@ -104,6 +104,7 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.BackendServiceDetector);
         services.AddSingleton(_ => RpcDefaultDelegates.CommandTypeDetector);
         services.AddSingleton(_ => RpcDefaultDelegates.CallTimeoutsProvider);
+        services.AddSingleton(_ => RpcDefaultDelegates.CallValidatorProvider);
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceScopeResolver);
         services.AddSingleton(_ => RpcDefaultDelegates.InboundCallFilter);
         services.AddSingleton(_ => RpcDefaultDelegates.CallRouter);

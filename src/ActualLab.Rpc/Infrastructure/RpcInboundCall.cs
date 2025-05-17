@@ -102,6 +102,8 @@ public abstract class RpcInboundCall : RpcCall
                 Arguments ??= DeserializeArguments();
                 if (Arguments == null)
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
+
+                // NoWait call arguments aren't validated
             }
             catch (Exception error) {
                 throw ProcessArgumentDeserializationError(error);
@@ -109,7 +111,7 @@ public abstract class RpcInboundCall : RpcCall
 
             if (peer.CallLogger.IsLogged(this))
                 peer.CallLogger.LogInbound(this);
-            return InvokeTarget(); // NoWait calls must complete fast & be cheap, so cancellationToken isn't passed
+            return InvokeTarget(); // NoWait calls must complete fast & be cheap, so the cancellationToken isn't passed
         }
 
         var existingCall = Context.Peer.InboundCalls.GetOrRegister(this);
@@ -133,6 +135,7 @@ public abstract class RpcInboundCall : RpcCall
                     peer.CallLogger.LogInbound(this);
 
                 // Call
+                MethodDef.CallValidator?.Invoke(this);
                 ResultTask = inboundMiddlewares != null
                     ? InvokeTarget(inboundMiddlewares)
                     : InvokeTarget();
@@ -235,9 +238,9 @@ public abstract class RpcInboundCall : RpcCall
                 argumentSerializer.Deserialize(ref arguments, false, message.ArgumentData);
             else {
                 var expectedArguments = arguments;
-                if (ServiceDef.Server is IRpcCallArgumentValidator validator
-                    && !validator.IsValidCall(Context, ref expectedArguments, ref needsArgumentPolymorphism))
-                    return null;
+                if (ServiceDef.Server is IRpcPolymorphicArgumentHandler handler
+                    && !handler.IsValidCall(Context, ref expectedArguments, ref needsArgumentPolymorphism))
+                    return null; // Means "related call is gone, so just ignore the incoming one"
 
                 argumentSerializer.Deserialize(ref expectedArguments, needsArgumentPolymorphism, message.ArgumentData);
                 if (!ReferenceEquals(arguments, expectedArguments))

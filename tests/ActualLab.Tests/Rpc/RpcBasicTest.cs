@@ -145,19 +145,21 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var client = services.GetRequiredService<ITestRpcServiceClient>();
 
         (await client.OnHello(new HelloCommand("X"))).Should().Be("Hello, X!");
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => client.OnHello(null!)); // That's due to RpcCallValidator
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             () => client.OnHello(new HelloCommand("error")));
 
         connection.Disconnect();
         await clientPeer.ConnectionState.WhenDisconnected();
-        // NOTE: It won't throw under debugger due to debug mode timeouts
+        // NOTE: It won't throw under the debugger due to debug mode timeouts
         await Assert.ThrowsAsync<TimeoutException>(
             () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(2))));
         await Delay(0.1);
         await AssertNoCalls(clientPeer, Out);
 
         await connection.Connect();
-        // NOTE: It won't throw under debugger due to debug mode timeouts
+        // NOTE: It won't throw under the debugger due to debug mode timeouts
         await Assert.ThrowsAsync<TimeoutException>(
             () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(30))));
 
@@ -228,6 +230,9 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
         var client = services.GetRequiredService<ITestRpcServiceClient>();
         var backendClient = services.GetRequiredService<ITestRpcBackendClient>();
+
+        await Assert.ThrowsAnyAsync<Exception>(
+            () => backendClient.Polymorph(null!)); // Should fail on deserialization
 
         var t = new Tuple<int>(1);
         (await backendClient.Polymorph(t)).Should().Be(t);

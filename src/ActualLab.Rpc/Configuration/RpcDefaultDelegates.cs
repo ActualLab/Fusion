@@ -14,6 +14,7 @@ public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodIn
 public delegate bool RpcBackendServiceDetector(Type serviceType);
 public delegate bool RpcCommandTypeDetector(Type type);
 public delegate RpcCallTimeouts RpcCallTimeoutsProvider(RpcMethodDef methodDef);
+public delegate Action<RpcInboundCall>? RpcCallValidatorProvider(RpcMethodDef method);
 public delegate string RpcServiceScopeResolver(RpcServiceDef serviceDef);
 public delegate RpcPeerRef RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
 public delegate string RpcHashProvider(TextOrBytes data);
@@ -71,6 +72,32 @@ public static class RpcDefaultDelegates
             return method.IsCommand
                 ? RpcCallTimeouts.Defaults.Command
                 : RpcCallTimeouts.Defaults.Query;
+        };
+
+    public static RpcCallValidatorProvider CallValidatorProvider { get; set; } =
+        static method => {
+            if (!RpcDefaults.UseCallValidator)
+                return null;
+            if (method.NoWait || method.IsSystem)
+                return null; // These methods are supposed to rely on built-in validation for perf. reasons
+
+            var nonNullableArgIndexesList = new List<int>();
+            var nullabilityInfoContext = new NullabilityInfoContext();
+            var parameters = method.Parameters;
+            for (var i = 0; i < parameters.Length; i++) {
+                var p = parameters[i];
+                if (p.ParameterType.IsClass && nullabilityInfoContext.Create(p).ReadState == NullabilityState.NotNull)
+                    nonNullableArgIndexesList.Add(i);
+            }
+            if (nonNullableArgIndexesList.Count == 0)
+                return null;
+
+            var nonNullableArgIndexes = nonNullableArgIndexesList.ToArray();
+            return call => {
+                var args = call.Arguments!;
+                foreach (var index in nonNullableArgIndexes)
+                    ArgumentNullException.ThrowIfNull(args.GetUntyped(index), parameters[index].Name);
+            };
         };
 
     public static RpcServiceScopeResolver ServiceScopeResolver { get; set; } =

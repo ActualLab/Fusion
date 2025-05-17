@@ -42,9 +42,10 @@ public sealed class RpcMethodDef : MethodDef
     public bool IsCommand { get; init; }
     public RpcCallTracer? Tracer { get; init; }
     public LegacyNames LegacyNames { get; init; }
-    public PropertyBag Properties { get; init; }
     public RpcCallTimeouts Timeouts { get; init; }
+    public Action<RpcInboundCall>? CallValidator { get; init; }
     public RpcSystemCallKind SystemCallKind { get; init; }
+    public PropertyBag Properties { get; init; }
 
     public RpcMethodDef(
         RpcServiceDef service,
@@ -80,7 +81,8 @@ public sealed class RpcMethodDef : MethodDef
         IsCommand = ParameterTypes.Length == 2
             && ParameterTypes[1] == typeof(CancellationToken)
             && Hub.CommandTypeDetector(ParameterTypes[0]);
-        Timeouts = Hub.CallTimeoutsProvider(this).Normalize();
+        Timeouts = Hub.CallTimeoutsProvider.Invoke(this).Normalize();
+        CallValidator = Hub.CallValidatorProvider.Invoke(this);
 
         SystemCallKind = service.Type == typeof(IRpcSystemCalls)
             ? Method.Name switch {

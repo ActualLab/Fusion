@@ -32,7 +32,7 @@ public interface IRpcSystemCalls : IRpcSystemService
 }
 
 public sealed class RpcSystemCalls(IServiceProvider services)
-    : RpcServiceBase(services), IRpcSystemCalls, IRpcCallArgumentValidator
+    : RpcServiceBase(services), IRpcSystemCalls, IRpcPolymorphicArgumentHandler
 {
     public const string Name = "$sys";
     public const string OkMethodName = nameof(Ok);
