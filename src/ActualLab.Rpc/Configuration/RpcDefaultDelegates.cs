@@ -76,6 +76,7 @@ public static class RpcDefaultDelegates
 
     public static RpcCallValidatorProvider CallValidatorProvider { get; set; } =
         static method => {
+#if NET6_0_OR_GREATER // NullabilityInfoContext is available in .NET 6.0+
             if (!RpcDefaults.UseCallValidator)
                 return null;
             if (method.NoWait || method.IsSystem)
@@ -98,6 +99,9 @@ public static class RpcDefaultDelegates
                 foreach (var index in nonNullableArgIndexes)
                     ArgumentNullException.ThrowIfNull(args.GetUntyped(index), parameters[index].Name);
             };
+#else
+            return null;
+#endif
         };
 
     public static RpcServiceScopeResolver ServiceScopeResolver { get; set; } =

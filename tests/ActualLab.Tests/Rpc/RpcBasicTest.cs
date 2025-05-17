@@ -145,10 +145,12 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var client = services.GetRequiredService<ITestRpcServiceClient>();
 
         (await client.OnHello(new HelloCommand("X"))).Should().Be("Hello, X!");
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => client.OnHello(null!)); // That's due to RpcCallValidator
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             () => client.OnHello(new HelloCommand("error")));
+#if NET6_0_OR_GREATER
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => client.OnHello(null!)); // That's due to RpcCallValidator
+#endif
 
         connection.Disconnect();
         await clientPeer.ConnectionState.WhenDisconnected();
