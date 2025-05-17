@@ -13,8 +13,9 @@ public sealed class StringAsSymbolMemoryPackFormatterAttribute
 #else
     private static readonly object Lock = new();
 #endif
+
     public static MemoryPackFormatter<string> Formatter {
-        get => field;
+        get;
         set {
             lock (Lock)
                 field = value;
