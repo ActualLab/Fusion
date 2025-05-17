@@ -3,10 +3,12 @@ using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Tests.Model;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Generators;
+using ActualLab.Testing.Collections;
 using User = ActualLab.Fusion.Authentication.User;
 
 namespace ActualLab.Fusion.Tests.Serialization;
 
+[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
