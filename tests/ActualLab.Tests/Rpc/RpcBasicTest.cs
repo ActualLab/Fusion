@@ -252,11 +252,15 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
         var client = services.GetRequiredService<ITestRpcServiceClient>();
 
-        var cts = new CancellationTokenSource(100);
-        var result = await client.Delay(TimeSpan.FromMilliseconds(300), cts.Token).ResultAwait();
-        result.Error.Should().BeAssignableTo<OperationCanceledException>();
-        var cancellationCount = await client.GetCancellationCount();
-        cancellationCount.Should().Be(1);
+        // This test may fail due to other tests, so we retry it for up to 5s
+        await TestExt.When(async () => {
+            var cts = new CancellationTokenSource(100);
+            var result = await client.Delay(TimeSpan.FromMilliseconds(300), cts.Token).ResultAwait();
+            result.Error.Should().BeAssignableTo<OperationCanceledException>();
+            var cancellationCount = await client.GetCancellationCount();
+            cancellationCount.Should().Be(1);
+        }, TimeSpan.FromSeconds(5));
+
         await AssertNoCalls(clientPeer, Out);
     }
 
