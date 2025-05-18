@@ -57,9 +57,9 @@ public class HashSetSlimTest
             var sum = hs.Sum(item => item.Sum(x => (long)x));
 
             // Apply
-            var applyHandler = (Action<Box<long>, string>)(
+            var applyHandler = (Action<MutableBox<long>, string>)(
                 (box, item) => box.Value += item.Sum(x => (long)x));
-            var box1 = new Box<long>();
+            var box1 = new MutableBox<long>();
             c.Apply(box1, applyHandler);
             box1.Value.Should().Be(sum);
 

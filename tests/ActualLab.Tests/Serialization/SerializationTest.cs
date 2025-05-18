@@ -408,4 +408,39 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         Out.WriteLine(s1.ToString());
         s1.Should().NotBe(s);
     }
+
+    [Fact]
+    public void BoxSerialization()
+    {
+        Test(0);
+        Test(1);
+        Test((string?)null);
+        Test("");
+        Test("s");
+        return;
+
+        void Test<T>(T value) {
+            var box = Box.New(value);
+            var serializedBox = box.PassThroughAllSerializers();
+            serializedBox.Should().Be(box);
+            serializedBox.Value.Should().Be(value);
+        }
+    }
+
+    [Fact]
+    public void MutableBoxSerialization()
+    {
+        Test(0);
+        Test(1);
+        Test((string?)null);
+        Test("");
+        Test("s");
+        return;
+
+        void Test<T>(T value) {
+            var box = MutableBox.New(value);
+            var serializedBox = box.PassThroughAllSerializers();
+            serializedBox.Value.Should().Be(value);
+        }
+    }
 }
