@@ -31,8 +31,10 @@ public sealed class RpcMethodDef : MethodDef
     public new readonly string FullName = "";
     public readonly RpcMethodRef Ref;
 
-    public readonly ArgumentListType ArgumentListType;
-    public readonly ArgumentListType ResultListType;
+    [field: AllowNull, MaybeNull] // Lazy: costly to construct in advance (delegate creation, etc.)
+    public ArgumentListType ArgumentListType => field ??= ArgumentListType.Get(ParameterTypes);
+    [field: AllowNull, MaybeNull] // Lazy: costly to construct in advance (delegate creation, etc.)
+    public ArgumentListType ResultListType => field ??= ArgumentListType.Get(UnwrappedReturnType);
     public readonly bool NoWait;
     public readonly bool IsSystem;
     public readonly bool IsBackend;
@@ -57,8 +59,6 @@ public sealed class RpcMethodDef : MethodDef
             throw new ArgumentOutOfRangeException(nameof(serviceType));
 
         Hub = service.Hub;
-        ArgumentListType = ArgumentListType.Get(ParameterTypes);
-        ResultListType = ArgumentListType.Get(UnwrappedReturnType);
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);
         IsSystem = service.IsSystem;
         IsBackend = service.IsBackend;
