@@ -1,6 +1,6 @@
 using ActualLab.Internal;
 
-namespace ActualLab.Identifiers;
+namespace ActualLab;
 
 public static class CanBeNoneExt
 {

@@ -1,4 +1,4 @@
-namespace ActualLab.Identifiers;
+namespace ActualLab;
 
 #pragma warning disable CA2252
 
