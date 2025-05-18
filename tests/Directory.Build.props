@@ -116,7 +116,6 @@
     <Using Include="ActualLab.Channels" />
     <Using Include="ActualLab.Collections" />
     <Using Include="ActualLab.DependencyInjection" />
-    <Using Include="ActualLab.Identifiers" />
     <Using Include="ActualLab.Mathematics" />
     <Using Include="ActualLab.Serialization" />
     <Using Include="ActualLab.Text" />
