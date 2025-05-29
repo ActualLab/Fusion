@@ -3,8 +3,7 @@ namespace ActualLab.Fusion.Blazor;
 public static class ComputedRenderStateComponent
 {
     public static ComputedStateComponentOptions DefaultOptions { get; set; }
-        = ComputedStateComponentOptions.RecomputeStateOnParameterChange
-        | ComputedStateComponentOptions.RenderOnceInitializedAsync;
+        = ComputedStateComponentOptions.RecomputeStateOnParameterChange; // Doesn't need any standard render points
 }
 
 public abstract class ComputedRenderStateComponent<TState> : ComputedStateComponent<TState>

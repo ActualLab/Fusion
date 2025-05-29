@@ -15,9 +15,7 @@ public abstract partial class ComputedStateComponent
 
     public static ComputedStateComponentOptions DefaultOptions { get; set; }
         = ComputedStateComponentOptions.RecomputeStateOnParameterChange
-        | ComputedStateComponentOptions.RenderOnceInitializedAsync
-        | ComputedStateComponentOptions.RenderOnceParametersSet
-        | ComputedStateComponentOptions.RenderOnceParametersSetAsync;
+        | ComputedStateComponentOptions.UseAllRenderPoints;
 
     public static Func<Type, IComputedStateOptions> DefaultStateOptionsFactory { get; set; } = CreateDefaultStateOptions;
 

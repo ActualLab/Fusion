@@ -64,10 +64,7 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
         var whenParametersSet = OnParametersSetAsync();
 
         // Maybe render on sync part completion
-        var option = isInitializing
-            ? ComputedStateComponentOptions.RenderOnceInitializedAsync
-            : ComputedStateComponentOptions.RenderOnceParametersSet;
-        if ((Options & option) != 0)
+        if (isInitializing || (Options & ComputedStateComponentOptions.UseParametersSetRenderPoint) != 0)
             StateHasChanged();
 
         // Sync-async branching to speed up the "happy" sync path
@@ -75,7 +72,7 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
             return CompleteOnSetParametersFlowAsync(whenParametersSet, isInitializing);
 
         // Maybe render on async part completion (there is no actual async part, but we act like it's there)
-        if ((Options & ComputedStateComponentOptions.RenderOnceParametersSet) != 0)
+        if ((Options & ComputedStateComponentOptions.UseParametersSetRenderPoint) != 0)
             StateHasChanged();
 
         // The code below handles RecomputeStateOnParameterChange, and:
@@ -95,7 +92,7 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
         await whenParametersSet.SuppressCancellationAwait(); // Blazor views lifecycle method cancellations as ~normal completions
 
         // Maybe render on async part completion (there is no actual async part, but we act like it's there)
-        if ((Options & ComputedStateComponentOptions.RenderOnceParametersSetAsync) != 0)
+        if ((Options & ComputedStateComponentOptions.UseParametersSetAsyncRenderPoint) != 0)
             StateHasChanged();
 
         // The code below handles RecomputeStateOnParameterChange, and:
