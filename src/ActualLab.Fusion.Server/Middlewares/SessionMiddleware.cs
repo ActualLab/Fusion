@@ -18,9 +18,9 @@ public class SessionMiddleware : IMiddleware, IHasServices
             SameSite = SameSiteMode.Lax,
             Expiration = TimeSpan.FromDays(28),
         };
+        public bool AlwaysUpdateCookie { get; init; } = true; // This ensures cookie expiration time gets bumped up on each request
         public Func<HttpContext, bool> RequestFilter { get; init; } = _ => true;
-        public Func<SessionMiddleware, HttpContext, Task<bool>> ForcedSignOutHandler { get; init; } =
-            DefaultForcedSignOutHandler;
+        public Func<SessionMiddleware, HttpContext, Task<bool>> ForcedSignOutHandler { get; init; } = DefaultForcedSignOutHandler;
         public Func<Session, HttpContext, Session>? TagProvider { get; init; }
 
         public static async Task<bool> DefaultForcedSignOutHandler(SessionMiddleware self, HttpContext httpContext)
@@ -28,8 +28,8 @@ public class SessionMiddleware : IMiddleware, IHasServices
             await httpContext.SignOutAsync().ConfigureAwait(false);
             var url = httpContext.Request.GetEncodedPathAndQuery();
             httpContext.Response.Redirect(url);
-            // true:  reload: redirect w/o invoking the next middleware
-            // false: proceed normally, i.e. invoke the next middleware
+            // true: reload: redirect w/o invoking the next middleware
+            // false: proceed normally, i.e., invoke the next middleware
             return true;
         }
     }
@@ -86,7 +86,7 @@ public class SessionMiddleware : IMiddleware, IHasServices
         }
         session ??= Session.New();
         session = Settings.TagProvider?.Invoke(session, httpContext) ?? session;
-        if (session != originalSession) {
+        if (Settings.AlwaysUpdateCookie || session != originalSession) {
             var cookieName = Settings.Cookie.Name ?? "";
             var responseCookies = httpContext.Response.Cookies;
             responseCookies.Append(cookieName, session.Id, Settings.Cookie.Build(httpContext));
