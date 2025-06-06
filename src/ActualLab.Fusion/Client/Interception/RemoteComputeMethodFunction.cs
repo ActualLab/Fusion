@@ -303,8 +303,8 @@ public abstract class RemoteComputeMethodFunction(
     {
         // 0. Await for RPC call delay
         var delayTask = Caching.RemoteComputedCache.HitToCallDelayer?.Invoke(input, peer);
-        if (delayTask != null && delayTask.IsCompletedSuccessfully())
-            await delayTask.ConfigureAwait(false);
+        if (delayTask is { IsCompleted: false })
+            await delayTask.SilentAwait(false);
 
         // 1. Await for the connection
         // SendRpcCall uses an interceptor with AssumeConnected == false, so we have to do it here.
