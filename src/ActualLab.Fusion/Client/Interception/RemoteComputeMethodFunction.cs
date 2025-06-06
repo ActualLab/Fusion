@@ -302,7 +302,7 @@ public abstract class RemoteComputeMethodFunction(
         RpcPeer peer)
     {
         // 0. Await for RPC call delay
-        var delayTask = Caching.RemoteComputedCache.UpdateDelayer?.Invoke(input, peer);
+        var delayTask = Caching.RemoteComputedCache.HitToCallDelayer?.Invoke(input, peer);
         if (delayTask != null && delayTask.IsCompletedSuccessfully())
             await delayTask.ConfigureAwait(false);
 
