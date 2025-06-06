@@ -31,9 +31,11 @@ public sealed class RpcSerializationFormat(
     public static readonly RpcSerializationFormat MemoryPackV2C = new("mempack2c",
         () => new RpcByteArgumentSerializerV2(MemoryPackByteSerializer.Default, forcePolymorphism: true),
         peer => new RpcByteMessageSerializerCompact(peer));
+    // ReSharper disable once InconsistentNaming
     public static readonly RpcSerializationFormat MemoryPackV2NP = new("mempack2-np",
         () => new RpcByteArgumentSerializerV2(MemoryPackByteSerializer.Default),
         peer => new RpcByteMessageSerializer(peer));
+    // ReSharper disable once InconsistentNaming
     public static readonly RpcSerializationFormat MemoryPackV2CNP = new("mempack2c-np",
         () => new RpcByteArgumentSerializerV2(MemoryPackByteSerializer.Default),
         peer => new RpcByteMessageSerializerCompact(peer));
@@ -56,9 +58,11 @@ public sealed class RpcSerializationFormat(
     public static readonly RpcSerializationFormat MessagePackV2C = new("msgpack2c",
         () => new RpcByteArgumentSerializerV2(MessagePackByteSerializer.Default, forcePolymorphism: true),
         peer => new RpcByteMessageSerializerCompact(peer));
+    // ReSharper disable once InconsistentNaming
     public static readonly RpcSerializationFormat MessagePackV2NP = new("msgpack2-np",
         () => new RpcByteArgumentSerializerV2(MessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializer(peer));
+    // ReSharper disable once InconsistentNaming
     public static readonly RpcSerializationFormat MessagePackV2CNP = new("msgpack2c-np",
         () => new RpcByteArgumentSerializerV2(MessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerCompact(peer));
