@@ -273,7 +273,7 @@ public abstract class RemoteComputeMethodFunction(
 
         var cacheEntry = await cache.Get(input, cacheKey, cancellationToken).ConfigureAwait(false);
         if (cacheEntry == null)
-            // No cacheResult wasn't captured -> perform RPC call & update cache
+            // No cacheEntry was captured -> perform RPC call and update cache
             return await ComputeRpc(input, cache, null, peer, cancellationToken).ConfigureAwait(false);
 
         var cachedComputed = NewRemoteComputed(
@@ -287,7 +287,7 @@ public abstract class RemoteComputeMethodFunction(
         // And we can't use cancellationToken from here:
         // - We're completing the computation w/ cached value here
         // - But the code below starts the async task running the actual RPC call
-        // - And if this task gets cancelled, the subscription to invalidation won't be set up,
+        // - And if this task gets canceled, the subscription to invalidation won't be set up,
         //   and thus the result may end up being stale forever.
         _ = ExecutionContextExt.Start(
             ExecutionContextExt.Default,

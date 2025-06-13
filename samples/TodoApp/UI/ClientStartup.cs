@@ -45,6 +45,18 @@ public static class ClientStartup
             // DefaultClientFormatKey = "json3",
         };
 
+        // The code below is totally optional.
+        // It makes Fusion to delay initial compute method RCP calls if they're resolved as "hit" into the local cache.
+        // We use a single instance of the initial delay task - we want it to be
+        // an absolute delay from the app start rather than a relative delay for each call.
+        var hitToCallDelayTask = Task
+            .Delay(TimeSpan.FromSeconds(5))
+            .ContinueWith(_ => RemoteComputedCache.HitToCallDelayer = null, TaskScheduler.Default); // Reset the delayer once the initial delay is over
+        RemoteComputedCache.HitToCallDelayer = (input, peer) => {
+            peer.InternalServices.Log.LogDebug("'{PeerRef}': Delaying {Input}", peer.Ref, input);
+            return hitToCallDelayTask;
+        };
+
         // Fusion services
         var fusion = services.AddFusion();
         fusion.AddAuthClient();
