@@ -18,36 +18,39 @@ public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IBy
 #else
     private static readonly object StaticLock = new();
 #endif
+    private static volatile MemoryPackByteSerializer? _default;
+    private static volatile TypeDecoratingByteSerializer? _defaultTypeDecorating;
+
     private readonly ConcurrentDictionary<Type, MemoryPackByteSerializer> _typedSerializerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static MemoryPackSerializerOptions DefaultOptions { get; set; } = MemoryPackSerializerOptions.Default;
 
-    [field: AllowNull, MaybeNull]
     public static MemoryPackByteSerializer Default {
         get {
-            if (field is { } value)
+            if (_default is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new(DefaultOptions);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _default ??= new(DefaultOptions);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _default = value;
         }
     }
 
-    [field: AllowNull, MaybeNull]
     public static TypeDecoratingByteSerializer DefaultTypeDecorating {
         get {
-            if (field is { } value)
+            if (_defaultTypeDecorating is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new TypeDecoratingByteSerializer(Default);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _defaultTypeDecorating = value;
         }
     }
 

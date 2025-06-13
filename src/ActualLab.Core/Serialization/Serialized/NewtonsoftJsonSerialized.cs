@@ -21,13 +21,14 @@ public static class NewtonsoftJsonSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class NewtonsoftJsonSerialized<T> : TextSerialized<T>
 {
-    private static ITextSerializer<T>? _serializer;
+    private static volatile ITextSerializer<T>? _serializer;
 
     protected override ITextSerializer<T> GetSerializer()
     {
         if (_serializer is { } serializer)
             return serializer;
         lock (StaticLock)
+            // ReSharper disable once NonAtomicCompoundOperator
             return _serializer ??= NewtonsoftJsonSerializer.Default.ToTyped<T>();
     }
 

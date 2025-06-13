@@ -10,15 +10,18 @@ public static class RpcDefaults
 #else
     private static readonly object StaticLock = new();
 #endif
+    private static volatile RpcMode _mode;
+    private static volatile VersionSet? _backendPeerVersions;
+    private static volatile VersionSet? _apiPeerVersions;
 
     public static RpcMode Mode {
-        get;
+        get => _mode;
         set {
             if (value is not (RpcMode.Client or RpcMode.Server))
                 throw new ArgumentOutOfRangeException(nameof(value), value, null);
 
             lock (StaticLock) {
-                field = value;
+                _mode = value;
                 UseCallValidator = value != RpcMode.Client;
             }
         }
@@ -30,25 +33,23 @@ public static class RpcDefaults
     public static Version ApiVersion { get; set; } = new(1, 0);
     public static Version BackendVersion { get; set; } = new(1, 0);
 
-    [field: AllowNull, MaybeNull]
     public static VersionSet ApiPeerVersions {
         get {
-            if (field?[ApiScope] != ApiVersion)
+            if (_apiPeerVersions?[ApiScope] != ApiVersion)
                 lock (StaticLock)
-                    if (field?[ApiScope] != ApiVersion)
-                        field = new(ApiScope, ApiVersion);
-            return field;
+                    if (_apiPeerVersions?[ApiScope] != ApiVersion)
+                        _apiPeerVersions = new(ApiScope, ApiVersion);
+            return _apiPeerVersions;
         }
     }
 
-    [field: AllowNull, MaybeNull]
     public static VersionSet BackendPeerVersions {
         get {
-            if (field?[BackendScope] != BackendVersion)
+            if (_backendPeerVersions?[BackendScope] != BackendVersion)
                 lock (StaticLock)
-                    if (field?[BackendScope] != BackendVersion)
-                        field = new(BackendScope, BackendVersion);
-            return field;
+                    if (_backendPeerVersions?[BackendScope] != BackendVersion)
+                        _backendPeerVersions = new(BackendScope, BackendVersion);
+            return _backendPeerVersions;
         }
     }
 

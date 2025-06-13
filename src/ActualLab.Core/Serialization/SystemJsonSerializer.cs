@@ -13,51 +13,54 @@ public class SystemJsonSerializer : TextSerializerBase
 #else
     private static readonly object StaticLock = new();
 #endif
+    private static volatile SystemJsonSerializer? _pretty;
+    private static volatile SystemJsonSerializer? _default;
+    private static volatile TypeDecoratingTextSerializer? _defaultTypeDecorating;
 
     public static JsonSerializerOptions PrettyOptions { get; set; }
         = new() { WriteIndented = true };
     public static JsonSerializerOptions DefaultOptions { get; set; }
         = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    [field: AllowNull, MaybeNull]
     public static SystemJsonSerializer Pretty {
         get {
-            if (field is { } value)
+            if (_pretty is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new(PrettyOptions);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _pretty ??= new(PrettyOptions);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _pretty = value;
         }
     }
 
-    [field: AllowNull, MaybeNull]
     public static SystemJsonSerializer Default {
         get {
-            if (field is { } value)
+            if (_default is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new(DefaultOptions);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _default ??= new(DefaultOptions);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _default = value;
         }
     }
 
-    [field: AllowNull, MaybeNull]
     public static TypeDecoratingTextSerializer DefaultTypeDecorating {
         get {
-            if (field is { } value)
+            if (_defaultTypeDecorating is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new TypeDecoratingTextSerializer(Default);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _defaultTypeDecorating ??= new TypeDecoratingTextSerializer(Default);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _defaultTypeDecorating = value;
         }
     }
 

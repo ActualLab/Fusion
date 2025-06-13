@@ -10,14 +10,15 @@ public static class ConsoleExt
 #else
     private static readonly object StaticLock = new();
 #endif
+    private static volatile TaskScheduler? _scheduler;
 
-    [field: AllowNull, MaybeNull]
     public static TaskScheduler Scheduler {
         get {
-            if (field is { } scheduler)
+            if (_scheduler is { } scheduler)
                 return scheduler;
             lock (StaticLock)
-                return field ??= new DedicatedThreadScheduler();
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _scheduler ??= new DedicatedThreadScheduler();
         }
     }
 

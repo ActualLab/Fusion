@@ -15,50 +15,54 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
 #else
     private static readonly object StaticLock = new();
 #endif
+    private static volatile MessagePackSerializerOptions? _defaultOptions;
+    private static volatile MessagePackByteSerializer? _default;
+    private static volatile TypeDecoratingByteSerializer? _defaultTypeDecorating;
+
     private readonly ConcurrentDictionary<Type, MessagePackByteSerializer> _typedSerializerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public static IFormatterResolver DefaultResolver { get; set; } = DefaultMessagePackResolver.Instance;
 
-    [field: AllowNull, MaybeNull]
     public static MessagePackSerializerOptions DefaultOptions {
         get {
-            if (field is { } value)
+            if (_defaultOptions is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new(DefaultResolver);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _defaultOptions ??= new(DefaultResolver);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _defaultOptions = value;
         }
     }
 
-    [field: AllowNull, MaybeNull]
     public static MessagePackByteSerializer Default {
         get {
-            if (field is { } value)
+            if (_default is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new(DefaultOptions);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _default ??= new(DefaultOptions);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _default = value;
         }
     }
 
-    [field: AllowNull, MaybeNull]
     public static TypeDecoratingByteSerializer DefaultTypeDecorating {
         get {
-            if (field is { } value)
+            if (_defaultTypeDecorating is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new TypeDecoratingByteSerializer(Default);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _defaultTypeDecorating = value;
         }
     }
 

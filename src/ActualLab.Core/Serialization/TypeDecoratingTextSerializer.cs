@@ -14,36 +14,38 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
 #else
     private static readonly object StaticLock = new();
 #endif
+    private static volatile TypeDecoratingTextSerializer? _default;
+    private static volatile TypeDecoratingTextSerializer? _defaultLegacy;
 
     public const string TypeDecoratorPrefix = "/* @type ";
     public const string TypeDecoratorSuffix = " */ ";
     public const char ExactTypeDecorator = '.';
 
-    [field: AllowNull, MaybeNull]
     public static TypeDecoratingTextSerializer Default {
         get {
-            if (field is { } value)
+            if (_default is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new(TextSerializer.Default);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _default ??= new(TextSerializer.Default);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _default = value;
         }
     }
 
-    [field: AllowNull, MaybeNull]
     public static TypeDecoratingTextSerializer DefaultLegacy {
         get {
-            if (field is { } value)
+            if (_defaultLegacy is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new LegacyTypeDecoratingTextSerializer(TextSerializer.Default);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _defaultLegacy ??= new LegacyTypeDecoratingTextSerializer(TextSerializer.Default);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _defaultLegacy = value;
         }
     }
 

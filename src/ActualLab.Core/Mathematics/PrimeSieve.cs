@@ -15,7 +15,7 @@ public sealed class PrimeSieve
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static PrimeSieve? _instance;
+    private static volatile PrimeSieve? _instance;
 
     private readonly int _limitSqrt;
     private readonly BitArray _isPrime;

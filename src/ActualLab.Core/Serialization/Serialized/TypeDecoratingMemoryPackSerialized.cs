@@ -21,13 +21,14 @@ public static class TypeDecoratingMemoryPackSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class TypeDecoratingMemoryPackSerialized<T> : ByteSerialized<T>
 {
-    private static IByteSerializer<T>? _serializer;
+    private static volatile IByteSerializer<T>? _serializer;
 
     protected override IByteSerializer<T> GetSerializer()
     {
         if (_serializer is { } serializer)
             return serializer;
         lock (StaticLock)
+            // ReSharper disable once NonAtomicCompoundOperator
             return _serializer ??= MemoryPackByteSerializer.DefaultTypeDecorating.ToTyped<T>();
     }
 

@@ -7,7 +7,7 @@ public static class RpcCallStage
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static Dictionary<int, string> _callStageNames = new() {
+    private static volatile Dictionary<int, string> _callStageNames = new() {
         { ResultReady, nameof(ResultReady) },
         { ResultReady | Unregistered, "*" + nameof(ResultReady) },
         { Invalidated, nameof(Invalidated) },

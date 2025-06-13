@@ -16,7 +16,7 @@ public static class StaticLog
         get => _factory;
         set {
             lock (StaticLock) {
-                if (ReferenceEquals(Factory, value))
+                if (ReferenceEquals(_factory, value))
                     return;
 
                 _factory = value;

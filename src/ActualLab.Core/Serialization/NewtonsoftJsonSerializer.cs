@@ -18,6 +18,8 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
     private static readonly object StaticLock = new();
 #endif
     private readonly JsonSerializer _jsonSerializer;
+    private static volatile NewtonsoftJsonSerializer? _default;
+    private static volatile TypeDecoratingTextSerializer? _defaultTypeDecorating;
 
     public static JsonSerializerSettings DefaultSettings { get; set; } = new() {
         TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
@@ -28,31 +30,31 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
         ContractResolver = new DefaultContractResolver(),
     };
 
-    [field: AllowNull, MaybeNull]
     public static NewtonsoftJsonSerializer Default {
         get {
-            if (field is { } value)
+            if (_default is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new(DefaultSettings);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _default ??= new(DefaultSettings);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _default = value;
         }
     }
 
-    [field: AllowNull, MaybeNull]
     public static TypeDecoratingTextSerializer DefaultTypeDecorating {
         get {
-            if (field is { } value)
+            if (_defaultTypeDecorating is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new TypeDecoratingTextSerializer(Default);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _defaultTypeDecorating ??= new TypeDecoratingTextSerializer(Default);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _defaultTypeDecorating = value;
         }
     }
 

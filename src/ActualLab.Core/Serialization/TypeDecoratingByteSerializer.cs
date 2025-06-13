@@ -14,18 +14,19 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
 #else
     private static readonly object StaticLock = new();
 #endif
+    private static volatile TypeDecoratingByteSerializer? _default;
 
-    [field: AllowNull, MaybeNull]
     public static TypeDecoratingByteSerializer Default {
         get {
-            if (field is { } value)
+            if (_default is { } value)
                 return value;
             lock (StaticLock)
-                return field ??= new(ByteSerializer.Default);
+                // ReSharper disable once NonAtomicCompoundOperator
+                return _default ??= new(ByteSerializer.Default);
         }
         set {
             lock (StaticLock)
-                field = value;
+                _default = value;
         }
     }
 

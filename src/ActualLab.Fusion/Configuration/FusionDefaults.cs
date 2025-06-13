@@ -9,15 +9,16 @@ public static class FusionDefaults
 #else
     private static readonly object StaticLock = new();
 #endif
+    private static volatile FusionMode _mode;
 
     public static FusionMode Mode {
-        get;
+        get => _mode;
         set {
             if (value is not (FusionMode.Client or FusionMode.Server))
                 throw new ArgumentOutOfRangeException(nameof(value), value, null);
 
             lock (StaticLock) {
-                field = value;
+                _mode = value;
                 Recompute();
             }
         }
