@@ -50,7 +50,7 @@ public static class ClientStartup
         // We use a single instance of the initial delay task - we want it to be
         // an absolute delay from the app start rather than a relative delay for each call.
         var hitToCallDelayTask = Task
-            .Delay(TimeSpan.FromSeconds(5))
+            .Delay(TimeSpan.FromSeconds(2)) // Initial delay of 2 seconds
             .ContinueWith(_ => RemoteComputedCache.HitToCallDelayer = null, TaskScheduler.Default); // Reset the delayer once the initial delay is over
         RemoteComputedCache.HitToCallDelayer = (input, peer) => {
             peer.InternalServices.Log.LogDebug("'{PeerRef}': Delaying {Input}", peer.Ref, input);
