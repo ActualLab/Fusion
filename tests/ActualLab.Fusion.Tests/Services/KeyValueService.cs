@@ -39,6 +39,8 @@ public class KeyValueService<TValue> : IKeyValueService<TValue>
 
     private ICommander Commander { get; }
 
+    public TimeSpan GetMethodDelay { get; set; }
+
     public KeyValueService(IServiceProvider services)
     {
         Commander = services.Commander();
@@ -52,6 +54,8 @@ public class KeyValueService<TValue> : IKeyValueService<TValue>
     public virtual async Task<TValue> Get(string key, CancellationToken cancellationToken = default)
 #pragma warning restore 1998
     {
+        if (GetMethodDelay > TimeSpan.Zero)
+            await Task.Delay(GetMethodDelay, cancellationToken).ConfigureAwait(false);
         if (key.EndsWith("error"))
             throw new ArgumentException("Error!", nameof(key));
         return _values.TryGetValue(key, out var value) ? value : default!;

@@ -1,4 +1,5 @@
 using ActualLab.Rpc;
+using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 
@@ -40,7 +41,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
 
     public override void SetResult(object? result, RpcInboundContext? context)
     {
-        // We always use Lock to update ResultSource in this type
+        // We always use Lock to update ResultSource and call CacheInfoCapture.CaptureXxx
         lock (Lock) {
             // The code below is a copy of base.SetResult
             // except the Unregister call in the end.
@@ -56,20 +57,21 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
 #endif
             if (ResultSource.TrySetResult(result)) {
                 CompleteKeepRegistered();
-                Context.CacheInfoCapture?.CaptureValue(context!.Message);
+                Context.CacheInfoCapture?.CaptureValueFromLock(context!.Message);
             }
         }
     }
 
     public override void SetMatch(RpcInboundContext? context)
     {
-        // We always use Lock to update ResultSource in this type
+        // We always use Lock to update ResultSource and call CacheInfoCapture.CaptureXxx
         lock (Lock) {
             // The code below is a copy of base.SetResult
             // except the Unregister call in the end.
             // We don't unregister the call here, coz
             // we'll need to await for invalidation
-            var cacheEntry = Context.CacheInfoCapture?.CacheEntry;
+            var cacheInfoCapture = Context.CacheInfoCapture;
+            var cacheEntry = cacheInfoCapture?.CacheEntry;
             if (cacheEntry == null) {
                 var error = Errors.MatchButNoCachedEntry();
                 SetError(error, context: null);
@@ -90,7 +92,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
 #endif
             if (ResultSource.TrySetResult(result)) {
                 CompleteKeepRegistered();
-                Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
+                cacheInfoCapture?.CaptureValueFromLock(cacheEntry.Value);
             }
         }
     }
@@ -104,14 +106,15 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
         if (error is RpcRerouteException)
             oce = null; // RpcRerouteException is OperationCanceledException, but must be exposed as-is here
         var cancellationToken = oce?.CancellationToken ?? default;
-        // We always use Lock to update ResultSource in this type
+
+        // We always use Lock to update ResultSource and call CacheInfoCapture.CaptureXxx
         lock (Lock) {
             var isResultSet = oce != null
                 ? ResultSource.TrySetCanceled(cancellationToken)
                 : ResultSource.TrySetException(error);
             if (isResultSet) {
                 CompleteKeepRegistered();
-                Context.CacheInfoCapture?.CaptureError(oce != null, error, cancellationToken);
+                Context.CacheInfoCapture?.CaptureErrorFromLock(oce != null, error, cancellationToken);
             }
             if (context == null) // Non-peer set
                 SetInvalidatedUnsafe(!assumeCancelled);
@@ -120,11 +123,11 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
 
     public override bool Cancel(CancellationToken cancellationToken)
     {
-        // We always use Lock to update ResultSource in this type
+        // We always use Lock to update ResultSource and call CacheInfoCapture.CaptureXxx
         lock (Lock) {
             var isResultSet = ResultSource.TrySetCanceled(cancellationToken);
             if (isResultSet)
-                Context.CacheInfoCapture?.CaptureCancellation(cancellationToken);
+                Context.CacheInfoCapture?.CaptureCancellationFromLock(cancellationToken);
             WhenInvalidatedSource.TrySetResult();
             CompleteAndUnregister(notifyCancelled: true);
             return isResultSet;
@@ -142,7 +145,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
                 return;
 
             if (ResultSource.TrySetCanceled(CancellationTokenExt.Canceled))
-                Context.CacheInfoCapture?.CaptureCancellation(CancellationToken.None);
+                Context.CacheInfoCapture?.CaptureCancellationFromLock(CancellationToken.None);
         }
     }
 

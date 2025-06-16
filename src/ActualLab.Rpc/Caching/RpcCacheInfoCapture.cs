@@ -17,8 +17,9 @@ public sealed class RpcCacheInfoCapture
 {
     public readonly RpcCacheInfoCaptureMode CaptureMode;
     public readonly RpcCacheEntry? CacheEntry;
+    public volatile RpcOutboundCall? Call;
     public volatile RpcCacheKey? Key;
-    public volatile object? ValueOrError; // Either RpcCacheValue or Exception
+    public object? ValueOrError; // Either RpcCacheValue or Exception
 
     public RpcCacheInfoCapture(RpcCacheInfoCaptureMode captureMode)
         : this(cacheEntry: null, captureMode)
@@ -40,9 +41,11 @@ public sealed class RpcCacheInfoCapture
         [NotNullWhen(true)] out RpcCacheKey? key,
         [NotNullWhen(true)] out object? valueOrError)
     {
-        key = Key;
-        valueOrError = ValueOrError;
-        return key is not null && valueOrError is not null;
+        lock (Call!.Lock) {
+            key = Key;
+            valueOrError = ValueOrError;
+            return key is not null && valueOrError is not null;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -55,51 +58,53 @@ public sealed class RpcCacheInfoCapture
 
     public void CaptureKey(RpcOutboundContext context, RpcMessage message)
     {
-        if (Key is null)
-            lock (this)
-                // ReSharper disable once NonAtomicCompoundOperator
-                Key ??= new RpcCacheKey(context.MethodDef!.FullName, message.ArgumentData);
+        var call = context.Call;
+        lock (call!) {
+            Call = call;
+            // ReSharper disable once NonAtomicCompoundOperator
+            Key ??= new RpcCacheKey(context.MethodDef!.FullName, message.ArgumentData);
+        }
     }
 
-    public void CaptureValue(RpcMessage message)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void CaptureValueFromLock(RpcMessage message)
     {
-        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData && ValueOrError is null)
-            lock (this)
-                // ReSharper disable once NonAtomicCompoundOperator
-                ValueOrError ??= new RpcCacheValue(
-                    message.ArgumentData,
-                    message.Headers.TryGet(WellKnownRpcHeaders.Hash) ?? "");
+        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData)
+            // ReSharper disable once InconsistentlySynchronizedField
+            ValueOrError = new RpcCacheValue(
+                message.ArgumentData,
+                message.Headers.TryGet(WellKnownRpcHeaders.Hash) ?? "");
     }
 
-    public void CaptureValue(RpcCacheValue value)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void CaptureValueFromLock(RpcCacheValue value)
     {
-        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData && ValueOrError is null)
-            lock (this)
-                // ReSharper disable once NonAtomicCompoundOperator
-                ValueOrError ??= value;
+        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData)
+            // ReSharper disable once InconsistentlySynchronizedField
+            ValueOrError = value;
     }
 
-    public void CaptureError(bool isCancelled, Exception error, CancellationToken cancellationToken)
+    public void CaptureErrorFromLock(bool isCancelled, Exception error, CancellationToken cancellationToken)
     {
         if (isCancelled)
-            CaptureCancellation(cancellationToken);
+            CaptureCancellationFromLock(cancellationToken);
         else
-            CaptureError(error);
+            CaptureErrorFromLock(error);
     }
 
-    public void CaptureError(Exception error)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void CaptureErrorFromLock(Exception error)
     {
-        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData && ValueOrError is null)
-            lock (this)
-                // ReSharper disable once NonAtomicCompoundOperator
-                ValueOrError ??= error;
+        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData)
+            // ReSharper disable once InconsistentlySynchronizedField
+            ValueOrError ??= error;
     }
 
-    public void CaptureCancellation(CancellationToken cancellationToken)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void CaptureCancellationFromLock(CancellationToken cancellationToken)
     {
-        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData && ValueOrError == null)
-            lock (this)
-                // ReSharper disable once NonAtomicCompoundOperator
-                ValueOrError ??= new OperationCanceledException(cancellationToken);
+        if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData)
+            // ReSharper disable once InconsistentlySynchronizedField
+            ValueOrError ??= new OperationCanceledException(cancellationToken);
     }
 }

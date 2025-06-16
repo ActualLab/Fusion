@@ -1,4 +1,3 @@
-using ActualLab.Caching;
 using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
@@ -205,66 +204,44 @@ public static partial class ComputedExt
         // ReSharper disable once IteratorNeverReturns
     }
 
-    // WhenSynchronized & Synchronize
+    // IsSynchronized, WhenSynchronized, Synchronize
+
+    public static bool IsSynchronized(this Computed computed)
+        => ComputedSynchronizer.Current.IsSynchronized(computed);
+
+    public static bool IsSynchronized(this Computed computed, ComputedSynchronizer computedSynchronizer)
+        => computedSynchronizer.IsSynchronized(computed);
 
     public static Task WhenSynchronized(
         this Computed computed,
         CancellationToken cancellationToken = default)
-    {
-        if (computed is IMaybeCachedValue mcv)
-            return mcv.WhenSynchronized.WaitAsync(cancellationToken);
+        => ComputedSynchronizer.Current.WhenSynchronized(computed, cancellationToken);
 
-        if (computed is IStateBoundComputed stateBoundComputed) {
-            var state = stateBoundComputed.State;
-            if (state is IMutableState)
-                return Task.CompletedTask;
+    public static Task WhenSynchronized(
+        this Computed computed,
+        ComputedSynchronizer computedSynchronizer,
+        CancellationToken cancellationToken = default)
+        => computedSynchronizer.WhenSynchronized(computed, cancellationToken);
 
-            var snapshot = state.Snapshot;
-            if (snapshot.IsInitial)
-                return WhenUpdatedAndSynchronized(snapshot, cancellationToken);
+    public static ValueTask<Computed> Synchronize(
+        this Computed computed,
+        CancellationToken cancellationToken = default)
+        => ComputedSynchronizer.Current.Synchronize(computed, cancellationToken);
 
-            static async Task WhenUpdatedAndSynchronized(StateSnapshot snapshot, CancellationToken cancellationToken1) {
-                await snapshot.WhenUpdated().ConfigureAwait(false);
-                await snapshot.State.Computed.WhenSynchronized(cancellationToken1).ConfigureAwait(false);
-            }
-        }
+    public static ValueTask<Computed> Synchronize(
+        this Computed computed,
+        ComputedSynchronizer computedSynchronizer,
+        CancellationToken cancellationToken = default)
+        => computedSynchronizer.Synchronize(computed, cancellationToken);
 
-        // Computed is a regular computed instance
-        var usedBuffer = ArrayBuffer<Computed>.Lease(false);
-        var taskBuffer = ArrayBuffer<Task>.Lease(false);
-        try {
-            computed.CopyDependenciesTo(ref usedBuffer);
-            var usedArray = usedBuffer.Buffer;
-            for (var i = 0; i < usedBuffer.Count; i++) {
-                var used = usedArray[i];
-                var whenSynchronized = used.WhenSynchronized(cancellationToken);
-                if (!whenSynchronized.IsCompleted)
-                    taskBuffer.Add(whenSynchronized);
-            }
-            return taskBuffer.Count switch {
-                0 => Task.CompletedTask,
-                1 => taskBuffer[0],
-                _ => Task.WhenAll(taskBuffer.ToArray()),
-            };
-        }
-        finally {
-            taskBuffer.Release();
-            usedBuffer.Release();
-        }
-    }
+    public static ValueTask<Computed<T>> Synchronize<T>(
+        this Computed<T> computed,
+        CancellationToken cancellationToken = default)
+        => computed.Synchronize(ComputedSynchronizer.Current, cancellationToken);
 
     public static async ValueTask<Computed<T>> Synchronize<T>(
         this Computed<T> computed,
+        ComputedSynchronizer computedSynchronizer,
         CancellationToken cancellationToken = default)
-    {
-        while (true) {
-            var whenSynchronized = computed.WhenSynchronized(cancellationToken);
-            if (!whenSynchronized.IsCompleted)
-                await whenSynchronized.WaitAsync(cancellationToken).ConfigureAwait(false);
-            if (computed.IsConsistent())
-                return computed;
-
-            computed = (Computed<T>)await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
-        }
-    }
+        => (Computed<T>)await computedSynchronizer.Synchronize(computed, cancellationToken).ConfigureAwait(false);
 }

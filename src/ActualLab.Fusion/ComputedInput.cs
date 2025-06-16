@@ -69,6 +69,15 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
             : Function.ProduceValuePromise(this, context, cancellationToken);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task GetOrProduceValuePromise(
+        ComputeContext context,
+        ComputedSynchronizer computedSynchronizer,
+        CancellationToken cancellationToken = default)
+        => computedSynchronizer is ComputedSynchronizer.None || (context.CallOptions & CallOptions.GetExisting) != 0
+            ? GetOrProduceValuePromise(context, cancellationToken)
+            : Function.ProduceValuePromise(this, context, computedSynchronizer, cancellationToken);
+
     // Nested types
 
     private sealed class EqualityComparerImpl : IEqualityComparer<ComputedInput>

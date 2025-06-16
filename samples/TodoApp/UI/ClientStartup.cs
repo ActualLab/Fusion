@@ -26,7 +26,7 @@ public static class ClientStartup
     {
         var logging = builder.Logging;
         logging.SetMinimumLevel(LogLevel.Warning);
-        logging.AddFilter(typeof(App).Namespace, LogLevel.Information);
+        logging.AddFilter(typeof(App).Namespace, LogLevel.Debug);
         logging.AddFilter(typeof(Computed).Namespace, LogLevel.Information);
         logging.AddFilter(typeof(InMemoryRemoteComputedCache).Namespace, LogLevel.Information);
         logging.AddFilter(typeof(RpcHub).Namespace, LogLevel.Debug);
@@ -56,6 +56,7 @@ public static class ClientStartup
             peer.InternalServices.Log.LogDebug("'{PeerRef}': Delaying {Input}", peer.Ref, input);
             return hitToCallDelayTask;
         };
+        // ComputedSynchronizer.DefaultCurrent = ComputedSynchronizer.Precise.Instance;
 
         // Fusion services
         var fusion = services.AddFusion();

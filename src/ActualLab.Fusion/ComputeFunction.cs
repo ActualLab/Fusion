@@ -50,7 +50,7 @@ public abstract class ComputeFunction(FusionHub hub, Type outputType) : ICompute
                 return computed!;
 
             if (input.IsDisposed) {
-                // We're going to await for indefinitely long task here, and there is a chance
+                // We're going to await for an indefinitely long task here, and there is a chance
                 // this task is going to be GC-collected. So we need to release the async lock here
                 // to prevent a memory leak in AsyncLocks set, which is going to keep our
                 // never-released lock otherwise.

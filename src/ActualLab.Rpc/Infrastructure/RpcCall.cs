@@ -2,7 +2,7 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcCall(RpcMethodDef methodDef)
 {
-    protected object Lock {
+    public object Lock {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this;
     }

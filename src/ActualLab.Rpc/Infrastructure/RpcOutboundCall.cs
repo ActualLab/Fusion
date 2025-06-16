@@ -199,44 +199,51 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public virtual void SetResult(object? result, RpcInboundContext? context)
     {
+        // We always use Lock to update ResultSource and call CacheInfoCapture.CaptureXxx
+        lock (Lock) {
 #if DEBUG
-        var rpcMethodDef = MethodDef;
-        if (!rpcMethodDef.IsInstanceOfUnwrappedReturnType(result)) {
-            var error = Internal.Errors.InvalidResultType(rpcMethodDef.UnwrappedReturnType, result?.GetType());
-            SetError(error, context);
-            Peer.Log.LogError(error, "Got incorrect call result type: {Call}", this);
-            return;
-        }
+            var rpcMethodDef = MethodDef;
+            if (!rpcMethodDef.IsInstanceOfUnwrappedReturnType(result)) {
+                var error = Internal.Errors.InvalidResultType(rpcMethodDef.UnwrappedReturnType, result?.GetType());
+                SetError(error, context);
+                Peer.Log.LogError(error, "Got incorrect call result type: {Call}", this);
+                return;
+            }
 #endif
-        if (ResultSource.TrySetResult(result)) {
-            CompleteAndUnregister(notifyCancelled: false);
-            if (context != null)
-                Context.CacheInfoCapture?.CaptureValue(context.Message);
+            if (ResultSource.TrySetResult(result)) {
+                CompleteAndUnregister(notifyCancelled: false);
+                if (context != null)
+                    Context.CacheInfoCapture?.CaptureValueFromLock(context.Message);
+            }
         }
     }
 
     public virtual void SetMatch(RpcInboundContext? context)
     {
-        var cacheEntry = Context.CacheInfoCapture?.CacheEntry;
-        if (cacheEntry == null) {
-            SetError(Internal.Errors.MatchButNoCachedEntry(), null);
-            return;
-        }
+        // We always use Lock to update ResultSource and call CacheInfoCapture.CaptureXxx
+        lock (Lock) {
+            var cacheInfoCapture = Context.CacheInfoCapture;
+            var cacheEntry = cacheInfoCapture?.CacheEntry;
+            if (cacheEntry == null) {
+                SetError(Internal.Errors.MatchButNoCachedEntry(), null);
+                return;
+            }
 
-        var result = cacheEntry.DeserializedValue;
+            var result = cacheEntry.DeserializedValue;
 #if DEBUG
-        if (!MethodDef.IsInstanceOfUnwrappedReturnType(result)) {
-            var error = Internal.Errors.InvalidResultType(MethodDef.UnwrappedReturnType, result?.GetType());
-            SetError(error, context);
-            Peer.Log.LogError(error,
-                "Got 'Match', but cache entry's serialized value has incorrect type type: {Call}", this);
-            return;
-        }
+            if (!MethodDef.IsInstanceOfUnwrappedReturnType(result)) {
+                var error = Internal.Errors.InvalidResultType(MethodDef.UnwrappedReturnType, result?.GetType());
+                SetError(error, context);
+                Peer.Log.LogError(error,
+                    "Got 'Match', but cache entry's serialized value has incorrect type type: {Call}", this);
+                return;
+            }
 #endif
-        if (ResultSource.TrySetResult(result)) {
-            CompleteAndUnregister(notifyCancelled: false);
-            if (context != null)
-                Context.CacheInfoCapture?.CaptureValue(cacheEntry.Value);
+            if (ResultSource.TrySetResult(result)) {
+                CompleteAndUnregister(notifyCancelled: false);
+                if (context != null)
+                    cacheInfoCapture?.CaptureValueFromLock(cacheEntry.Value);
+            }
         }
     }
 
@@ -246,24 +253,29 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (error is RpcRerouteException)
             oce = null; // RpcRerouteException is OperationCanceledException, but must be exposed as-is here
         var cancellationToken = oce?.CancellationToken ?? default;
-        var isResultSet = oce != null
-            ? ResultSource.TrySetCanceled(cancellationToken)
-            : ResultSource.TrySetException(error);
-        if (!isResultSet)
-            return;
 
-        CompleteAndUnregister(notifyCancelled: context == null && !assumeCancelled);
-        Context.CacheInfoCapture?.CaptureError(oce != null, error, cancellationToken);
+        lock (Lock) {
+            var isResultSet = oce != null
+                ? ResultSource.TrySetCanceled(cancellationToken)
+                : ResultSource.TrySetException(error);
+            if (isResultSet) {
+                CompleteAndUnregister(notifyCancelled: context == null && !assumeCancelled);
+                Context.CacheInfoCapture?.CaptureErrorFromLock(oce != null, error, cancellationToken);
+            }
+        }
     }
 
     public virtual bool Cancel(CancellationToken cancellationToken)
     {
-        var isResultSet = ResultSource.TrySetCanceled(cancellationToken);
-        if (isResultSet) {
-            CompleteAndUnregister(notifyCancelled: true);
-            Context.CacheInfoCapture?.CaptureCancellation(cancellationToken);
+        // We always use Lock to update ResultSource and call CacheInfoCapture.CaptureXxx
+        lock (Lock) {
+            var isResultSet = ResultSource.TrySetCanceled(cancellationToken);
+            if (isResultSet) {
+                CompleteAndUnregister(notifyCancelled: true);
+                Context.CacheInfoCapture?.CaptureCancellationFromLock(cancellationToken);
+            }
+            return isResultSet;
         }
-        return isResultSet;
     }
 
     public virtual int? GetReconnectStage(bool isPeerChanged)
@@ -340,7 +352,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     protected AsyncTaskMethodBuilder<object?> CreateResultSource<TResult>()
         => NoWait || CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly
             ? Cache<TResult>.NoWaitResultSource
-            : AsyncTaskMethodBuilderExt.New<object?>();
+            : AsyncTaskMethodBuilderExt.New<object?>(); // MUST run continuations asynchronously!
 
     // Nested types
 

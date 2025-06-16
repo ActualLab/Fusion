@@ -60,8 +60,10 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
     [InlineData(false, true, null)]
     [InlineData(true, false, null)]
     [InlineData(true, true, null)]
-    public async Task RemoteComputeContextTest(bool waitForConnection, bool syncIfDisconnected, double? timeout)
+    public async Task RemoteComputeSynchronizerTest(bool waitForConnection, bool assumeSyncedWhenDisconnected, double? maxSyncDuration)
     {
+        ComputedSynchronizer.Current.Should().Be(ComputedSynchronizer.Precise.Instance);
+
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -80,23 +82,23 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
         c1.WhenSynchronized.IsCompleted.Should().BeTrue(); // Cache has 'Get("1")' entry now
         await Task.Delay(TimeSpan.FromSeconds(0.1));
 
+        var synchronizer = new ComputedSynchronizer.Safe() {
+            AssumeSynchronizedWhenDisconnected = assumeSyncedWhenDisconnected,
+            MaxSynchronizeDurationProvider = _ => maxSyncDuration.HasValue ? TimeSpan.FromSeconds(maxSyncDuration.Value) : null,
+        };
+
         if (waitForConnection)
             await kv2.Set("2", "b");
-
-        var synchronizer = new RemoteComputedSynchronizer() {
-            UseWhenDisconnected = syncIfDisconnected
-        };
-        if (timeout is { } vTimeout)
-            synchronizer = synchronizer with {
-                TimeoutFactory = vTimeout <= 0
-                    ? (_, _) => Task.CompletedTask
-                    : (_, ct) => Task.Delay(TimeSpan.FromSeconds(vTimeout), ct)
-            };
-        var willBeSynchronized = timeout != 0 && (waitForConnection || syncIfDisconnected);
         using (synchronizer.Activate()) {
+            ((KeyValueService<string>)kv).GetMethodDelay = TimeSpan.FromSeconds(0.5);
             var c2 = await GetComputed(kv2, "1");
+            c2.Should().NotBeSameAs(c1);
             c2.Value.Should().Be("a");
-            c2.WhenSynchronized.IsCompleted.Should().Be(willBeSynchronized);
+
+            var isSynced = c2.WhenSynchronized.IsCompleted;
+            var gotEnoughTimeToSync = maxSyncDuration != 0d;
+            var willFakeSync = assumeSyncedWhenDisconnected && !waitForConnection;
+            isSynced.Should().Be(!willFakeSync && gotEnoughTimeToSync);
         }
     }
 

@@ -8,11 +8,12 @@ namespace ActualLab.Fusion.Client;
 
 #pragma warning disable VSTHRD104, MA0055
 
-public interface IRemoteComputed : IComputed, IMaybeCachedValue, IDisposable
+public interface IRemoteComputed : IComputed, IDisposable
 {
     public AsyncTaskMethodBuilder<RpcOutboundComputeCall?> CallSource { get; }
     public AsyncTaskMethodBuilder SynchronizedSource { get; }
     public Task<RpcOutboundComputeCall?> WhenCallBound { get; }
+    public Task WhenSynchronized { get; }
     public RpcCacheEntry? CacheEntry { get; }
 }
 
