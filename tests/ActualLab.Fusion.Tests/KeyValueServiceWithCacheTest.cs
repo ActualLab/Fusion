@@ -37,7 +37,7 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
         var c2 = await GetComputed(kv2, "1"); // Cached version fetched
         c2.Value.Should().Be("a");
         c2.WhenSynchronized.IsCompleted.Should().BeFalse();
-        await c2.WhenSynchronized(); // Synced
+        await c2.WhenSynchronized(ComputedSynchronizer.Precise.Instance); // Synced
         c2.WhenSynchronized.IsCompleted.Should().BeTrue();
         c2 = await GetComputed(kv2, "1");
         c2.WhenSynchronized.IsCompleted.Should().BeTrue();
@@ -62,7 +62,8 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
     [InlineData(true, true, null)]
     public async Task RemoteComputeSynchronizerTest(bool waitForConnection, bool assumeSyncedWhenDisconnected, double? maxSyncDuration)
     {
-        ComputedSynchronizer.Current.Should().Be(ComputedSynchronizer.Precise.Instance);
+        ComputedSynchronizer.DefaultCurrent.Should().Be(ComputedSynchronizer.None.Instance);
+        ComputedSynchronizer.Current.Should().Be(ComputedSynchronizer.None.Instance);
 
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
