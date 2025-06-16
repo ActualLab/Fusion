@@ -7,16 +7,18 @@ namespace ActualLab.Text;
 // See https://referencesource.microsoft.com/#mscorlib/system/text/stringbuildercache.cs,a6dbe82674916ac0
 public static class StringBuilderExt
 {
+    private const int MaxCountPerThread = 16;
     private const int MaxCapacity = 1024;
     [ThreadStatic]
-    private static StringBuilder? _cached;
+    private static Stack<StringBuilder>? _cached;
 
     public static StringBuilder Acquire(int capacity = 64)
     {
         if (capacity <= MaxCapacity) {
-            var sb = _cached;
-            if (sb != null && sb.Capacity >= capacity) {
-                _cached = null;
+            var cached = _cached ??= new Stack<StringBuilder>(MaxCountPerThread);
+            if (cached.TryPop(out var sb)) {
+                // No capacity check here: we assume reusing the existing one
+                // is still more efficient than creating a new one
                 return sb;
             }
         }
@@ -27,9 +29,12 @@ public static class StringBuilderExt
     {
         if (sb.Capacity > MaxCapacity)
             return;
+        var cached = _cached ??= new Stack<StringBuilder>(MaxCountPerThread);
+        if (cached.Count >= MaxCountPerThread)
+            return;
 
         sb.Clear();
-        _cached = sb;
+        cached.Push(sb);
     }
 
     public static string ToStringAndRelease(this StringBuilder sb)
