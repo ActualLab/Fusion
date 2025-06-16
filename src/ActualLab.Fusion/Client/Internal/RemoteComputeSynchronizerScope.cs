@@ -7,7 +7,7 @@ public readonly struct RemoteComputeSynchronizerScope : IDisposable
     public readonly IRemoteComputedSynchronizer? Synchronizer;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal RemoteComputeSynchronizerScope(IRemoteComputedSynchronizer synchronizer)
+    internal RemoteComputeSynchronizerScope(IRemoteComputedSynchronizer? synchronizer)
     {
         _oldSynchronizer = RemoteComputedSynchronizer.Current;
         Synchronizer = synchronizer;

@@ -1,19 +1,32 @@
+using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Internal;
-using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Client;
 
 public interface IRemoteComputedSynchronizer
 {
-    public Task WhenSynchronized(Computed computed, CancellationToken cancellationToken);
+    public Task WhenSynchronized(IRemoteComputed computed, CancellationToken cancellationToken);
 }
 
 public record RemoteComputedSynchronizer : IRemoteComputedSynchronizer
 {
+#if NET9_0_OR_GREATER
+    private static readonly Lock StaticLock = new();
+#else
+    private static readonly object StaticLock = new();
+#endif
     private static readonly AsyncLocal<IRemoteComputedSynchronizer?> CurrentLocal = new();
+    private static volatile IRemoteComputedSynchronizer _default = new RemoteComputedSynchronizer();
 
     public static readonly IRemoteComputedSynchronizer? None = null;
-    public static IRemoteComputedSynchronizer Default { get; set; } = new RemoteComputedSynchronizer();
+
+    public static IRemoteComputedSynchronizer Default {
+        get => _default;
+        set {
+            lock (StaticLock)
+                _default = value;
+        }
+    }
 
     public static IRemoteComputedSynchronizer? Current {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -21,29 +34,30 @@ public record RemoteComputedSynchronizer : IRemoteComputedSynchronizer
         internal set => CurrentLocal.Value = value;
     }
 
-    public bool UseWhenDisconnected { get; init; } // = Unused when disconnected by default!
-    public Func<IRemoteComputed, RpcPeer> PeerResolver { get; init; } =
-        static c => c.Input.Function.Hub.RpcHub.DefaultPeer;
+    public bool UseWhenDisconnected { get; init; }
+    public bool UseWithRemoteComputedCacheHitToCallDelayer { get; init; }
     public Func<IRemoteComputed, CancellationToken, Task>? TimeoutFactory { get; init; }
 
-    public virtual Task WhenSynchronized(Computed computed, CancellationToken cancellationToken)
+    public virtual bool IsSynchronized(IRemoteComputed computed)
     {
-        if (computed is not IRemoteComputed remoteComputed)
-            return Task.CompletedTask;
+        if (computed.WhenSynchronized.IsCompleted)
+            return true;
+        if (!(UseWhenDisconnected && !computed.Input.Function.Hub.RpcHub.DefaultPeer.IsConnected()))
+            return true;
+        if (!(UseWithRemoteComputedCacheHitToCallDelayer && RemoteComputedCache.HitToCallDelayer is not null))
+            return true;
 
-        var whenSynchronized = remoteComputed.WhenSynchronized;
-        if (whenSynchronized.IsCompleted)
-            return Task.CompletedTask;
+        return false;
+    }
 
-        if (!UseWhenDisconnected) {
-            var peer = PeerResolver.Invoke(remoteComputed);
-            if (!peer.IsConnected())
-                return Task.CompletedTask;
-        }
+    public virtual Task WhenSynchronized(IRemoteComputed computed, CancellationToken cancellationToken)
+    {
+        if (IsSynchronized(computed))
+            return Task.CompletedTask;
 
         return TimeoutFactory is { } timeoutFactory
-            ? CompleteAsync(remoteComputed, timeoutFactory, cancellationToken)
-            : remoteComputed.WhenSynchronized.WaitAsync(cancellationToken);
+            ? CompleteAsync(computed, timeoutFactory, cancellationToken)
+            : computed.WhenSynchronized.WaitAsync(cancellationToken);
 
         static async Task CompleteAsync(
             IRemoteComputed computed,
@@ -65,6 +79,6 @@ public record RemoteComputedSynchronizer : IRemoteComputedSynchronizer
 
 public static class RemoteComputedSynchronizerExt
 {
-    public static RemoteComputeSynchronizerScope Activate(this IRemoteComputedSynchronizer synchronizer)
+    public static RemoteComputeSynchronizerScope Activate(this IRemoteComputedSynchronizer? synchronizer)
         => new(synchronizer);
 }

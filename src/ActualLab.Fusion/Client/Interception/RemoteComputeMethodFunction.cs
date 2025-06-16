@@ -43,11 +43,13 @@ public sealed class RemoteComputeMethodFunction<T>(
         if (computed == null || !computed.IsConsistent())
             computed = await ProduceComputed(input, ComputeContext.None, cancellationToken).ConfigureAwait(false);
 
-        var whenSynchronized = synchronizer.WhenSynchronized(computed, cancellationToken);
-        if (!whenSynchronized.IsCompletedSuccessfully()) {
-            await whenSynchronized.ConfigureAwait(false);
-            if (!computed.IsConsistent())
-                computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
+        if (computed is IRemoteComputed remoteComputed) {
+            var whenSynchronized = synchronizer.WhenSynchronized(remoteComputed, cancellationToken);
+            if (!whenSynchronized.IsCompletedSuccessfully()) {
+                await whenSynchronized.ConfigureAwait(false);
+                if (!computed.IsConsistent())
+                    computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
+            }
         }
 
         // Note that until this moment UseNew(...) wasn't called - we were using ComputeContext.None!
