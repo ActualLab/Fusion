@@ -15,7 +15,7 @@ public abstract class TextSerializerBase : ITextSerializer
     public virtual object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         var decoder = EncodingExt.Utf8NoBom.GetDecoder();
-        var buffer = ZString.CreateStringBuilder();
+        var buffer = ZString.CreateStringBuilder(); // Fine here: it is used zero-alloc IBufferWriter<char>
         try {
             decoder.Convert(data.Span, ref buffer);
             readLength = data.Length;

@@ -12,7 +12,7 @@ public static class DecoderExt
 {
     public static string Convert(this Decoder decoder, ReadOnlySpan<byte> source)
     {
-        var sb = ZString.CreateStringBuilder();
+        var sb = ZString.CreateStringBuilder(); // Fine here: it is used zero-alloc IBufferWriter<char>
         try {
             decoder.Convert(source, ref sb);
             return sb.ToString();

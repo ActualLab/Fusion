@@ -1,3 +1,4 @@
+using System.Text;
 using Cysharp.Text;
 
 namespace ActualLab.Text;
@@ -8,7 +9,7 @@ public ref struct ListFormatter
     public ListFormat Format => new(Delimiter, Escape);
     public readonly char Delimiter;
     public readonly char Escape;
-    public Utf16ValueStringBuilder OutputBuilder;
+    public StringBuilder OutputBuilder;
     public int ItemIndex;
     public string Output => OutputBuilder.ToString();
 
@@ -20,12 +21,12 @@ public ref struct ListFormatter
     {
         Delimiter = format.Delimiter;
         Escape = format.Escape;
-        OutputBuilder = ZString.CreateStringBuilder();
+        OutputBuilder = StringBuilderExt.Acquire();
         ItemIndex = itemIndex;
     }
 
     public void Dispose()
-        => OutputBuilder.Dispose();
+        => OutputBuilder.Release();
 
     public void Append(string item)
     {

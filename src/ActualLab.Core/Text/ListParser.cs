@@ -1,3 +1,4 @@
+using System.Text;
 using Cysharp.Text;
 using ActualLab.Internal;
 
@@ -10,7 +11,7 @@ public ref struct ListParser
     public readonly char Delimiter;
     public readonly char Escape;
     public ReadOnlySpan<char> Source;
-    public Utf16ValueStringBuilder ItemBuilder;
+    public StringBuilder ItemBuilder;
     public int ItemIndex;
     public string Item => ItemBuilder.ToString();
 
@@ -24,19 +25,18 @@ public ref struct ListParser
         Delimiter = format.Delimiter;
         Escape = format.Escape;
         Source = source;
-        ItemBuilder = ZString.CreateStringBuilder();
+        ItemBuilder = StringBuilderExt.Acquire();
         ItemIndex = itemIndex;
     }
 
     public void Dispose()
-        => ItemBuilder.Dispose();
+        => ItemBuilder.Release();
 
     public bool TryParseNext(bool clearItemBuilder = true)
     {
         if (clearItemBuilder)
             ItemBuilder.Clear();
         ItemIndex++;
-        var startLength = ItemBuilder.Length;
         for (var index = 0; index < Source.Length; index++) {
             var c = Source[index];
             if (c == Escape) {
