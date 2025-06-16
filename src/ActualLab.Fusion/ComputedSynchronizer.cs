@@ -13,7 +13,7 @@ public abstract class ComputedSynchronizer
 #endif
     internal static readonly AsyncLocal<ComputedSynchronizer?> CurrentLocal = new();
 
-    public static ComputedSynchronizer Default { get; set; } = new Safe();
+    public static ComputedSynchronizer Default { get; set; } = Safe.Instance;
     public static ComputedSynchronizer DefaultCurrent { get; set; } = None.Instance;
 
     public static ComputedSynchronizer Current {
