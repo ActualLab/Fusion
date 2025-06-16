@@ -41,10 +41,10 @@ public class JSRuntimeInfo
     }
 
     public override string ToString()
-        => $"{GetType().Name}("
-            + $"Runtime = {Runtime?.ToString() ?? "null"}, "
-            + $"IsRemote = {IsRemote}, "
-            + $"ClientProxy = {ClientProxy?.ToString() ?? "null"}, "
-            + $"IsPrerendering = {IsPrerendering}, "
-            + $"IsInteractive = {IsInteractive})";
+        => $"{GetType().Name}({Runtime?.ToString() ?? "null"}) {{ "
+            + $"IsRemote: {IsRemote}, "
+            + $"IsPrerendering: {IsPrerendering}, "
+            + $"IsInteractive: {IsInteractive}, "
+            + $"ClientProxy: {ClientProxy?.ToString() ?? "null"}"
+            + $" }}";
 }
