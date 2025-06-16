@@ -41,6 +41,7 @@ public class FusionProxyCodeKeeper : ProxyCodeKeeper
         Keep<ComputeMethodFunction<TUnwrapped>>();
         Keep<RemoteComputeMethodFunction<TUnwrapped>>();
         Keep<ComputeFunctionExt.CompleteProduceValuePromiseFactory<TUnwrapped>>();
+        Keep<ComputeFunctionExt.CompleteProduceValuePromiseWithSynchronizerFactory<TUnwrapped>>();
 
         var outboundContext = CallSilently(() => new RpcOutboundContext());
         var inboundContext = CallSilently(() => new RpcInboundContext(null!, null!, default));
