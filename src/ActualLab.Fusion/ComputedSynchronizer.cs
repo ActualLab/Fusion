@@ -159,13 +159,16 @@ public abstract class ComputedSynchronizer
     {
         public static Safe Instance { get; set; } = new();
 
+        private volatile int _assumeSynchronized;
+
         public bool AssumeSynchronizedWhenDisconnected { get; init; } = true;
         public bool AssumeSynchronizedWhenRemoteComputedCacheHasHitToCallDelayer { get; init; } = true;
         public Func<IRemoteComputed, TimeSpan?>? MaxSynchronizeDurationProvider { get; init; } = static _ => TimeSpan.FromSeconds(5);
 
         public bool AssumeSynchronized {
-            get;
-            set => Interlocked.Exchange(ref field, value);
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _assumeSynchronized != 0;
+            set => Interlocked.Exchange(ref _assumeSynchronized, value ? 1 : 0);
         }
 
         public Safe()
