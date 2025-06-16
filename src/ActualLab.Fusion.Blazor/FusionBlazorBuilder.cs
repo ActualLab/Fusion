@@ -28,16 +28,15 @@ public readonly struct FusionBlazorBuilder
         services.AddScoped(_ => new UIActionFailureTracker.Options());
         services.AddScoped(c => new UIActionFailureTracker(
             c.GetRequiredService<UIActionFailureTracker.Options>(), c));
-        services.AddScopedOrSingleton((c, isScoped) => {
-            IJSRuntime? jsRuntime = null;
-            if (isScoped)
-                try {
-                    jsRuntime = c.GetService<IJSRuntime>();
-                }
-                catch {
-                    // Maybe the container is getting disposed
-                }
-            return new JSRuntimeInfo(jsRuntime);
+        services.AddScopedOrSingleton((c, _) => {
+            try {
+                // Note that IJSRuntime is registered as a singleton (i.e., it's non-scoped) in Blazor WASM
+                return new JSRuntimeInfo(c.GetService<IJSRuntime>());
+            }
+            catch {
+                // No IJSRuntime / the container is getting disposed / etc.
+                return new JSRuntimeInfo(null);
+            }
         });
         services.AddScoped(c => new RenderModeHelper(c.GetRequiredService<CircuitHub>()));
         services.AddScoped(c => new CircuitHub(c));

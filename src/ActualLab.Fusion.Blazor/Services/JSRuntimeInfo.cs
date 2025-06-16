@@ -39,4 +39,12 @@ public class JSRuntimeInfo
         var clientProxyGetter = fClientProxy.GetGetter<object?, object?>(true);
         ClientProxyGetter = () => clientProxyGetter.Invoke(runtime);
     }
+
+    public override string ToString()
+        => $"{GetType().Name}("
+            + $"Runtime = {Runtime?.ToString() ?? "null"}, "
+            + $"IsRemote = {IsRemote}, "
+            + $"ClientProxy = {ClientProxy?.ToString() ?? "null"}, "
+            + $"IsPrerendering = {IsPrerendering}, "
+            + $"IsInteractive = {IsInteractive})";
 }
