@@ -121,6 +121,22 @@ public abstract class ComputedSynchronizer
         }
     }
 
+    public async Task<Computed> Synchronize(Task<Computed> computedTask, CancellationToken cancellationToken)
+    {
+        var computed = await computedTask.ConfigureAwait(false);
+        for (var updateCount = 0;; updateCount++) {
+            var whenSynchronized = WhenSynchronized(computed, cancellationToken);
+            if (!whenSynchronized.IsCompleted)
+                await whenSynchronized.SilentAwait(false);
+            if (!whenSynchronized.IsCompletedSuccessfully())
+                return computed; // Timed out
+            if (computed.IsConsistent() || updateCount >= MaxUpdateCountOnSynchronize)
+                return computed;
+
+            computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     public abstract bool IsSynchronized(IRemoteComputed computed);
     public abstract Task WhenSynchronized(IRemoteComputed computed, CancellationToken cancellationToken);
 
