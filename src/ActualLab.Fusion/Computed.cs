@@ -323,8 +323,8 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     protected internal Computed[] GetDependencies()
     {
-        var result = new Computed[_dependencies.Count];
         lock (Lock) {
+            var result = new Computed[_dependencies.Count];
             _dependencies.CopyTo(result);
             return result;
         }
