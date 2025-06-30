@@ -42,7 +42,7 @@ public class RpcRoutingInterceptor : RpcInterceptorBase
         };
     }
 
-    private async Task<object?> InvokeWithRerouting(
+    protected virtual async Task<object?> InvokeWithRerouting(
         Invocation invocation,
         RpcMethodDef methodDef,
         RpcOutboundContext context,

@@ -7,6 +7,7 @@ public abstract class RpcInterceptorBase : Interceptor
 {
     public readonly RpcHub Hub;
     public readonly RpcServiceDef ServiceDef;
+    public readonly RpcInterceptorOptions Settings;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     protected RpcInterceptorBase(RpcInterceptorOptions settings, IServiceProvider services, RpcServiceDef serviceDef)
@@ -14,6 +15,7 @@ public abstract class RpcInterceptorBase : Interceptor
     {
         Hub = services.RpcHub();
         ServiceDef = serviceDef;
+        Settings = settings;
         UsesUntypedHandlers = true;
     }
 
