@@ -17,15 +17,15 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
     }
 
     public readonly RpcServiceDef RpcServiceDef;
-    public readonly RpcRoutingInterceptor NonComputeCallInterceptor;
-    public readonly RpcNonRoutingInterceptor ComputeCallInterceptor;
+    public readonly RpcInterceptor NonComputeCallInterceptor;
+    public readonly RpcInterceptor ComputeCallInterceptor;
     public readonly object? LocalTarget;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public RemoteComputeServiceInterceptor(Options settings,
         FusionHub hub,
-        RpcRoutingInterceptor nonComputeCallInterceptor,
-        RpcNonRoutingInterceptor computeCallInterceptor,
+        RpcInterceptor nonComputeCallInterceptor,
+        RpcInterceptor computeCallInterceptor,
         object? localTarget
         ) : base(settings, hub)
     {

@@ -34,7 +34,7 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcClient Client => Hub.Client;
     public ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers => Hub.Peers;
 
-    internal readonly RpcInterceptorOptions InterceptorOptions
+    public readonly RpcInterceptorOptions InterceptorOptions
         = hub.Services.GetRequiredService<RpcInterceptorOptions>();
 
     // NewXxx

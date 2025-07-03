@@ -3,7 +3,7 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public class RpcSwitchInterceptor : RpcInterceptorBase
+public class RpcSwitchInterceptor : RpcInterceptor
 {
     public readonly RpcSafeCallRouter CallRouter;
     public readonly object? LocalTarget;
@@ -11,7 +11,8 @@ public class RpcSwitchInterceptor : RpcInterceptorBase
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public RpcSwitchInterceptor(
-        RpcInterceptorOptions settings, IServiceProvider services,
+        RpcInterceptorOptions settings,
+        IServiceProvider services,
         RpcServiceDef serviceDef,
         object? localTarget,
         object? remoteTarget)

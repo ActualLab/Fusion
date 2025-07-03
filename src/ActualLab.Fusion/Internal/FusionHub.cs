@@ -5,6 +5,7 @@ using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Interception;
 using ActualLab.Interception;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Internal;
 
@@ -55,12 +56,15 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
     public RemoteComputeServiceInterceptor NewRemoteComputeServiceInterceptor(Type serviceType, object? localTarget)
     {
         var rpcInternalServices = RpcHub.InternalServices;
-        var nonComputeCallRpcInterceptor = rpcInternalServices.NewRoutingInterceptor(serviceType, CommanderHub.Interceptor);
-        var invalidatingRpcRoutingInterceptor = new InvalidatingRpcRoutingInterceptor(nonComputeCallRpcInterceptor);
         var computeCallRpcInterceptor = rpcInternalServices.NewNonRoutingInterceptor(serviceType, assumeConnected: true);
+        var rpcRoutingInterceptor = rpcInternalServices.NewRoutingInterceptor(serviceType, CommanderHub.Interceptor);
+        var nonComputeCallRpcInterceptor = NewDisableRpcWhileInvalidatingInterceptor(rpcRoutingInterceptor);
         return new(RemoteComputeServiceInterceptorOptions, this,
-            invalidatingRpcRoutingInterceptor,
+            nonComputeCallRpcInterceptor,
             computeCallRpcInterceptor,
             localTarget);
     }
+
+    public DisableRpcWhileInvalidatingInterceptor NewDisableRpcWhileInvalidatingInterceptor(RpcRoutingInterceptor next)
+        => new(RpcHub.InternalServices.InterceptorOptions, Services, next.ServiceDef, next);
 }

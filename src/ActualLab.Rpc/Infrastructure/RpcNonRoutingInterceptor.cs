@@ -2,7 +2,7 @@ using ActualLab.Interception;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public class RpcNonRoutingInterceptor : RpcInterceptorBase
+public class RpcNonRoutingInterceptor : RpcInterceptor
 {
     public readonly object? LocalTarget;
     public readonly bool AssumeConnected;

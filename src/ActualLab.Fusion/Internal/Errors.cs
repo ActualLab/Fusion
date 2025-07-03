@@ -41,6 +41,8 @@ public static class Errors
 
     // Rpc related
 
+    public static Exception RpcDisabled()
+        => new RpcDisabledException();
     public static Exception RemoteComputeMethodCallFromTheSameService(RpcMethodDef methodDef, RpcPeerRef peerRef)
         => new InvalidOperationException(
             $"Incoming RPC compute service call to {methodDef} via '{peerRef}' " +

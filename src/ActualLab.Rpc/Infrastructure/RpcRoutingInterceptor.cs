@@ -2,7 +2,7 @@ using ActualLab.Interception;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public class RpcRoutingInterceptor : RpcInterceptorBase
+public class RpcRoutingInterceptor : RpcInterceptor
 {
     public readonly object? LocalTarget;
     public readonly bool AssumeConnected;
@@ -42,7 +42,7 @@ public class RpcRoutingInterceptor : RpcInterceptorBase
         };
     }
 
-    protected virtual async Task<object?> InvokeWithRerouting(
+    protected async Task<object?> InvokeWithRerouting(
         Invocation invocation,
         RpcMethodDef methodDef,
         RpcOutboundContext context,
