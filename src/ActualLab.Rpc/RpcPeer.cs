@@ -63,7 +63,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     protected RpcPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions)
     {
-        // ServiceRegistry is resolved in lazy fashion in RpcHub.
+        // ServiceRegistry is resolved in a lazy fashion in RpcHub.
         // We access it here to make sure any configuration error gets thrown at this point.
         _ = hub.ServiceRegistry;
 
