@@ -28,7 +28,7 @@ public readonly struct FusionWebServerBuilder
             return;
         }
 
-        // We want above Contains call to run in O(1), so...
+        // We want the above Contains call to run in O(1), so...
         services.Insert(0, AddedTagDescriptor);
 
         // Add Rpc-related services
