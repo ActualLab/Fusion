@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Diagnostics;
+using ActualLab.Interception;
+using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
@@ -21,6 +23,10 @@ public class ComputeServiceCommandCompletionInvalidator(
     [field: AllowNull, MaybeNull]
     protected CommandHandlerResolver CommandHandlerResolver
         => field ??= Services.GetRequiredService<CommandHandlerResolver>();
+    [field: AllowNull, MaybeNull]
+    protected RpcHub RpcHub => field ??= Services.GetRequiredService<RpcHub>();
+    [field: AllowNull, MaybeNull]
+    protected RpcSafeCallRouter CallRouter => field ??= RpcHub.InternalServices.CallRouter;
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
@@ -84,7 +90,24 @@ public class ComputeServiceCommandCompletionInvalidator(
         if (finalHandler == null || finalHandler.ParameterTypes.Length != 2)
             return false;
 
-        var service = Services.GetService(finalHandler.GetHandlerServiceType());
+        var rpcServiceDef = RpcHub.ServiceRegistry.Get(finalHandler.ServiceType);
+        if (rpcServiceDef != null) {
+            if (!rpcServiceDef.HasServer)
+                return false; // RPC Client should not invalidate RPC Server commands
+
+            var methodDef = rpcServiceDef.GetMethod(finalHandler.Method);
+            if (methodDef == null)
+                return false;
+
+            var arguments = ArgumentList.New(command, CancellationToken.None);
+            var rpcPeer = CallRouter.Invoke(methodDef, arguments);
+            if (rpcPeer.ConnectionKind != RpcPeerConnectionKind.Local)
+                return false; // Command is not local, and we don't invalidate it through RPC
+        }
+
+
+        var handlerServiceType = finalHandler.GetHandlerServiceType();
+        var service = Services.GetService(handlerServiceType);
         return service is IComputeService;
     }
 
