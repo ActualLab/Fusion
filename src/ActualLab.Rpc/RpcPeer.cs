@@ -334,8 +334,14 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     }, readerToken);
 
                     while (await reader.WaitToReadAsync(readerToken).ConfigureAwait(false))
-                    while (reader.TryRead(out var message))
-                        _ = ProcessMessage(message, peerChangedToken, readerToken);
+                    while (reader.TryRead(out var message)) {
+                        var pct = peerChangedToken;
+                        var rt = readerToken;
+                        _ = ExecutionContextExt.Start(
+                            ExecutionContextExt.Default,
+                            // Suppress execution context to avoid capturing Activity.Current
+                            () => Task.Run(() => ProcessMessage(message, pct, rt), CancellationToken.None));
+                    }
                 }
                 catch (Exception e) {
                     var isReaderAbort = readerToken.IsCancellationRequested
