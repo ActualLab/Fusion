@@ -9,8 +9,8 @@ public sealed class DisableRpcWhileInvalidatingInterceptor(
     RpcInterceptorOptions settings,
     IServiceProvider services,
     RpcServiceDef serviceDef,
-    RpcRoutingInterceptor nextInterceptor)
-    : RpcRoutingInterceptor(settings, services, serviceDef, nextInterceptor.LocalTarget, nextInterceptor.AssumeConnected)
+    RpcRoutingInterceptor nextInterceptor
+    ) : RpcRoutingInterceptor(settings, services, serviceDef, nextInterceptor.LocalTarget, nextInterceptor.AssumeConnected)
 {
     public readonly RpcInterceptor NextInterceptor = nextInterceptor;
 
@@ -23,13 +23,18 @@ public sealed class DisableRpcWhileInvalidatingInterceptor(
         var rpcMethodDef = (RpcMethodDef)methodDef;
         var localCallAsyncInvoker = methodDef.SelectAsyncInvokerUntyped(initialInvocation.Proxy, LocalTarget);
         return invocation => {
-            if (!Invalidation.IsActive)
+            // Note that most likely we intercept a command call here,
+            // since this interceptor is used only for non-compute method calls.
+
+            if (!Invalidation.IsActive) // No invalidation -> bypass the call
                 return nextHandler.Invoke(invocation);
 
-            if (!rpcMethodDef.Service.HasServer)
-                throw Errors.RpcDisabled(); // Invalidation is active, but the service is not available on the server.
+            // If we're here, the invalidation is active
+            if (!rpcMethodDef.Service.HasServer) // The service is an RPC client
+                throw Errors.RpcDisabled();
 
-            // Switch to the local call for invalidation - all hosts should be invalidated.
+            // If we're here, the service is either an RPC server or a distributed service / service pair.
+            // To invalidate every host, we reroute the call to the local target.
             if (localCallAsyncInvoker == null)
                 throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 

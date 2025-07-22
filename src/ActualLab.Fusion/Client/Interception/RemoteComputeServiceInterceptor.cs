@@ -49,7 +49,7 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
         var computeMethodDef = (ComputeMethodDef)methodDef;
         var rpcMethodDef = RpcServiceDef.GetOrFindMethod(initialInvocation.Method);
         if (rpcMethodDef == null) {
-            // Proxy is a Distributed service & non-RPC method is called
+            // Proxy is a Distributed service and a non-RPC method is called
             var function = (ComputeMethodFunction)typeof(ComputeMethodFunction<>)
                 .MakeGenericType(computeMethodDef.UnwrappedReturnType)
                 .CreateInstance(Hub, computeMethodDef);
