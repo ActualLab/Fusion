@@ -9,4 +9,14 @@ public static class WorkerExt
         _ = worker.Run();
         return worker;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TWorker Start<TWorker>(this TWorker worker, bool isolate)
+        where TWorker : IWorker
+    {
+        _ = isolate
+            ? ExecutionContextExt.Start(ExecutionContextExt.Default, worker.Run)
+            : worker.Run();
+        return worker;
+    }
 }

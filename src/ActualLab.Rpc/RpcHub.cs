@@ -117,7 +117,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 
             peer = PeerFactory.Invoke(this, peerRef);
             Peers[peerRef] = peer;
-            peer.Start();
+            peer.Start(isolate: true); // We don't want to capture Activity.Current, etc. here
             if (peerRef.CanBeRerouted)
                 _ = peerRef.WhenRerouted().ContinueWith(_ => {
                     peer.Dispose();
