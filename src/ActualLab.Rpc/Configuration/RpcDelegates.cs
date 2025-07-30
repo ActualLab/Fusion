@@ -17,7 +17,7 @@ public delegate string RpcHashProvider(ReadOnlyMemory<byte> bytes);
 public delegate RpcInboundContext RpcInboundContextFactory(
     RpcPeer peer, RpcMessage message, CancellationToken cancellationToken);
 
-// Call validation
+// Call validation & filtering
 public delegate Action<RpcInboundCall>? RpcCallValidatorProvider(RpcMethodDef method);
 public delegate bool RpcInboundCallFilter(RpcPeer peer, RpcMethodDef method);
 
