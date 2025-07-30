@@ -39,7 +39,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public VersionSet Versions { get; init; }
     public RpcSerializationFormat SerializationFormat { get; init; }
     public RpcArgumentSerializer ArgumentSerializer { get; init; }
-    public RpcHashProvider HashProvider { get; init; }
     public RpcInboundContextFactory InboundContextFactory { get; init; }
     public RpcInboundCallFilter InboundCallFilter { get; init; }
     public RpcInboundCallTracker InboundCalls { get; init; }
@@ -76,7 +75,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
         SerializationFormat = Hub.SerializationFormats.Get(peerRef);
         ArgumentSerializer = SerializationFormat.ArgumentSerializer;
-        HashProvider = Hub.HashProvider;
         InboundContextFactory = Hub.InboundContextFactory;
         InboundCallFilter = Hub.InboundCallFilter;
 
