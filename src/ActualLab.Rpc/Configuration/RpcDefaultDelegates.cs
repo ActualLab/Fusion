@@ -9,31 +9,6 @@ using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc;
 
-public delegate RpcServiceDef RpcServiceDefBuilder(RpcHub hub, RpcServiceBuilder service);
-public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodInfo method);
-public delegate bool RpcBackendServiceDetector(Type serviceType);
-public delegate bool RpcCommandTypeDetector(Type type);
-public delegate RpcCallTimeouts RpcCallTimeoutsProvider(RpcMethodDef methodDef);
-public delegate Action<RpcInboundCall>? RpcCallValidatorProvider(RpcMethodDef method);
-public delegate string RpcServiceScopeResolver(RpcServiceDef serviceDef);
-public delegate RpcPeerRef RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
-public delegate string RpcHashProvider(TextOrBytes data);
-public delegate Task RpcRerouteDelayer(CancellationToken cancellationToken);
-public delegate void RpcPeerTracker(RpcPeer peer);
-public delegate RpcPeer RpcPeerFactory(RpcHub hub, RpcPeerRef peerRef);
-public delegate RpcInboundContext RpcInboundContextFactory(
-    RpcPeer peer, RpcMessage message, CancellationToken cancellationToken);
-public delegate bool RpcInboundCallFilter(RpcPeer peer, RpcMethodDef method);
-public delegate Task<RpcConnection> RpcServerConnectionFactory(
-    RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties, CancellationToken cancellationToken);
-public delegate WebSocketChannel<RpcMessage>.Options RpcWebSocketChannelOptionsProvider(
-    RpcPeer peer, PropertyBag properties);
-public delegate TimeSpan RpcServerPeerCloseTimeoutProvider(RpcServerPeer peer);
-public delegate bool RpcPeerTerminalErrorDetector(Exception error);
-public delegate RpcCallTracer? RpcCallTracerFactory(RpcMethodDef method);
-public delegate RpcCallLogger RpcCallLoggerFactory(RpcPeer peer, RpcCallLoggerFilter filter, ILogger log, LogLevel logLevel);
-public delegate bool RpcCallLoggerFilter(RpcPeer peer, RpcCall call);
-
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
