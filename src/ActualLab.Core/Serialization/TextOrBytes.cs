@@ -26,7 +26,7 @@ public readonly partial record struct TextOrBytes(
     // Computed properties
     [MemoryPackIgnore, IgnoreMember]
     [field: AllowNull, MaybeNull]
-    public byte[] Bytes => field ?? GetBytes();
+    public byte[] Bytes => field ?? Data.TryGetUnderlyingArray() ?? Data.ToArray();
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsEmpty => Data.Length == 0;
@@ -100,18 +100,4 @@ public readonly partial record struct TextOrBytes(
 
     public bool DataEquals(TextOrBytes other)
         => Data.Span.SequenceEqual(other.Data.Span);
-
-    // Private methods
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private byte[] GetBytes()
-    {
-#if !NETSTANDARD2_0
-        if (MemoryMarshal.TryGetArray(Data, out var segment)
-            && segment.Array is { } bytes
-            && bytes.Length == Data.Length)
-            return bytes;
-#endif
-        return Data.ToArray();
-    }
 }

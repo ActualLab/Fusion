@@ -11,7 +11,7 @@ public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodIn
 public delegate bool RpcBackendServiceDetector(Type serviceType);
 public delegate bool RpcCommandTypeDetector(Type type);
 public delegate string RpcServiceScopeResolver(RpcServiceDef serviceDef);
-public delegate string RpcHashProvider(TextOrBytes data);
+public delegate string RpcHashProvider(ReadOnlyMemory<byte> bytes);
 
 // RpcInboundContext / RpcOutboundContext factories
 public delegate RpcInboundContext RpcInboundContextFactory(

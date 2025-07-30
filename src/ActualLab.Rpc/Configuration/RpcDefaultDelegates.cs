@@ -89,17 +89,17 @@ public static class RpcDefaultDelegates
         static (method, arguments) => RpcPeerRef.Default;
 
     public static RpcHashProvider HashProvider { get; set; } =
-        static data => {
-            // It's better to use more efficient hash function here, e.g. Blake3.
+        static bytes => {
+            // It's better to use a more efficient hash function here, e.g., Blake3.
             // We use SHA256 mainly to minimize the number of dependencies.
 #if NET5_0_OR_GREATER
-            var bytes = (Span<byte>)stackalloc byte[32]; // 32 bytes
-            SHA256.HashData(data.Data.Span, bytes);
-            return Convert.ToBase64String(bytes[..18]); // 18 bytes -> 24 chars
+            var buffer = (Span<byte>)stackalloc byte[32]; // 32 bytes
+            SHA256.HashData(bytes.Span, buffer);
+            return Convert.ToBase64String(buffer[..18]); // 18 bytes -> 24 chars
 #else
             using var sha256 = SHA256.Create();
-            var bytes = sha256.ComputeHash(data.Bytes); // 32 bytes
-            return Convert.ToBase64String(bytes.AsSpan(0, 18).ToArray()); // 18 bytes -> 24 chars
+            var buffer = sha256.ComputeHash(bytes.TryGetUnderlyingArray() ?? bytes.ToArray()); // 32 bytes
+            return Convert.ToBase64String(buffer.AsSpan(0, 18).ToArray()); // 18 bytes -> 24 chars
 #endif
         };
 

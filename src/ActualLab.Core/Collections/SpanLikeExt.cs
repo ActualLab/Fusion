@@ -29,4 +29,17 @@ public static class SpanLikeExt
 
     public static T GetRingItem<T>(this IReadOnlyList<T> items, int index)
         => items[index.PositiveModulo(items.Count)];
+
+    // TryGetUnderlyingArray
+
+    public static T[]? TryGetUnderlyingArray<T>(this ReadOnlyMemory<T> items)
+    {
+#if !NETSTANDARD2_0
+        if (MemoryMarshal.TryGetArray(items, out var segment)
+            && segment.Array is { } array
+            && array.Length == items.Length)
+            return array;
+#endif
+        return null;
+    }
 }
