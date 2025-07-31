@@ -12,38 +12,38 @@ public static class PropertyBagExt
     // (Keyless)Contains
 
     public static bool Contains(this PropertyBag bag, string key)
-        => bag[key] != null;
+        => bag[key] is not null;
     public static bool Contains(this MutablePropertyBag bag, string key)
-        => bag[key] != null;
+        => bag[key] is not null;
 
     public static bool Contains(this PropertyBag bag, Type key)
-        => bag[key] != null;
+        => bag[key] is not null;
     public static bool Contains(this MutablePropertyBag bag, Type key)
-        => bag[key] != null;
+        => bag[key] is not null;
 
     public static bool KeylessContains<T>(this PropertyBag bag)
-        => bag[typeof(T)] != null;
+        => bag[typeof(T)] is not null;
     public static bool KeylessContains<T>(this MutablePropertyBag bag)
-        => bag[typeof(T)] != null;
+        => bag[typeof(T)] is not null;
 
     // (Keyless)TryGet
 
     public static bool TryGet(this PropertyBag bag, string key, [NotNullWhen(true)] out object? value)
     {
         value = bag[key];
-        return value != null;
+        return value is not null;
     }
 
     public static bool TryGet(this MutablePropertyBag bag, string key, [NotNullWhen(true)] out object? value)
     {
         value = bag[key];
-        return value != null;
+        return value is not null;
     }
 
     public static bool TryGet<T>(this PropertyBag bag, string key, [MaybeNullWhen(false)] out T value)
     {
         var objValue = bag[typeof(T)];
-        if (objValue == null) {
+        if (objValue is null) {
             value = default!;
             return false;
         }
@@ -54,7 +54,7 @@ public static class PropertyBagExt
     public static bool TryGet<T>(this MutablePropertyBag bag, string key, [MaybeNullWhen(false)] out T value)
     {
         var objValue = bag[typeof(T)];
-        if (objValue == null) {
+        if (objValue is null) {
             value = default!;
             return false;
         }
@@ -65,7 +65,7 @@ public static class PropertyBagExt
     public static bool KeylessTryGet<T>(this PropertyBag bag, [MaybeNullWhen(false)] out T value)
     {
         var objValue = bag[typeof(T)];
-        if (objValue == null) {
+        if (objValue is null) {
             value = default!;
             return false;
         }
@@ -76,7 +76,7 @@ public static class PropertyBagExt
     public static bool KeylessTryGet<T>(this MutablePropertyBag bag, [MaybeNullWhen(false)] out T value)
     {
         var objValue = bag[typeof(T)];
-        if (objValue == null) {
+        if (objValue is null) {
             value = default!;
             return false;
         }
@@ -89,49 +89,49 @@ public static class PropertyBagExt
     public static T? Get<T>(this PropertyBag bag, string key)
     {
         var value = bag[key];
-        return value != null ? (T)value : default;
+        return value is not null ? (T)value : default;
     }
 
     public static T? Get<T>(this MutablePropertyBag bag, string key)
     {
         var value = bag[key];
-        return value != null ? (T)value : default;
+        return value is not null ? (T)value : default;
     }
 
     public static T Get<T>(this PropertyBag bag, string key, T @default)
     {
         var value = bag[key];
-        return value != null ? (T)value : @default;
+        return value is not null ? (T)value : @default;
     }
 
     public static T Get<T>(this MutablePropertyBag bag, string key, T @default)
     {
         var value = bag[key];
-        return value != null ? (T)value : @default;
+        return value is not null ? (T)value : @default;
     }
 
     public static T? KeylessGet<T>(this PropertyBag bag)
     {
         var value = bag[typeof(T)];
-        return value != null ? (T)value : default;
+        return value is not null ? (T)value : default;
     }
 
     public static T? KeylessGet<T>(this MutablePropertyBag bag)
     {
         var value = bag[typeof(T)];
-        return value != null ? (T)value : default;
+        return value is not null ? (T)value : default;
     }
 
     public static T KeylessGet<T>(this PropertyBag bag, T @default)
     {
         var value = bag[typeof(T)];
-        return value != null ? (T)value : @default;
+        return value is not null ? (T)value : @default;
     }
 
     public static T KeylessGet<T>(this MutablePropertyBag bag, T @default)
     {
         var value = bag[typeof(T)];
-        return value != null ? (T)value : @default;
+        return value is not null ? (T)value : @default;
     }
 
     // (Keyless)Set & SetMany

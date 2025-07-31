@@ -138,7 +138,7 @@ public class MethodExtTest
             foreach (var (a, s) in attrs.Zip(expected, (a, s) => (a, s)))
                 a.DisplayName.Should().Be(s);
             var attr = method!.GetAttribute<DisplayNameAttribute>(true, true);
-            if (attr == null)
+            if (attr is null)
                 expected.Length.Should().Be(0);
             else
                 attr.DisplayName.Should().Be(expected[0]);

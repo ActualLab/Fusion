@@ -13,7 +13,7 @@ public class NestedOperationLoggerTester(IKeyValueStore keyValueStore) : IComput
     {
         var (keys, valuePrefix) = command;
         var first = keys.FirstOrDefault();
-        if (first == null)
+        if (first is null)
             return;
 
         var nextCommand = new NestedOperationLoggerTester_SetMany(keys.Skip(1).ToArray(), valuePrefix);

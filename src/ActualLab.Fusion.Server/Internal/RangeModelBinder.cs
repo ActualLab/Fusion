@@ -8,7 +8,7 @@ public class RangeModelBinder : IModelBinder
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume server-side code is fully preserved")]
     public Task BindModelAsync(ModelBindingContext bindingContext)
     {
-        if (bindingContext == null)
+        if (bindingContext is null)
             throw new ArgumentNullException(nameof(bindingContext));
 
         try {

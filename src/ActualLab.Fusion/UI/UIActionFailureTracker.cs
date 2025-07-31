@@ -70,7 +70,7 @@ public class UIActionFailureTracker : MutableList<IUIActionResult>
         return Update((result, Settings), static (state, items) => {
             var (newItem, settings) = state;
             var error = newItem.Error;
-            if (error == null)
+            if (error is null)
                 return items;
 
             // We don't want to add duplicate exceptions here

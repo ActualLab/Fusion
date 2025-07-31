@@ -49,16 +49,16 @@ public readonly partial record struct ImmutableOptionSet
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains<T>()
-        => this[typeof(T).ToIdentifierSymbol()] != null;
+        => this[typeof(T).ToIdentifierSymbol()] is not null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains(string key)
-        => this[key] != null;
+        => this[key] is not null;
 
     public bool TryGet<T>(out T value)
     {
         var objValue = this[typeof(T).ToIdentifierSymbol()];
-        if (objValue == null) {
+        if (objValue is null) {
             value = default!;
             return false;
         }
@@ -76,13 +76,13 @@ public readonly partial record struct ImmutableOptionSet
     public T GetOrDefault<T>(T @default = default!)
     {
         var value = this[typeof(T).ToIdentifierSymbol()];
-        return value != null ? (T) value : @default;
+        return value is not null ? (T) value : @default;
     }
 
     // ReSharper disable once HeapView.PossibleBoxingAllocation
     public ImmutableOptionSet Set<T>(T value) => Set(typeof(T).ToIdentifierSymbol(), value);
     public ImmutableOptionSet Set(string key, object? value)
-        => new(value != null ? Items.SetItem(key, value) : Items.Remove(key));
+        => new(value is not null ? Items.SetItem(key, value) : Items.Remove(key));
 
     public ImmutableOptionSet SetMany(ImmutableOptionSet overrides)
         => SetMany(overrides.Items!);

@@ -34,7 +34,7 @@ public class Commander : ICommander
         var currentActivity = Activity.Current;
         using var _ = context.IsOutermost ? ExecutionContextExt.TrySuppressFlow() : default;
         return Task.Run(() => {
-            if (currentActivity != null)
+            if (currentActivity is not null)
                 Activity.Current = currentActivity; // We want to restore it even though we suppress the flow here
             return RunCommand(context, cancellationToken);
         }, CancellationToken.None);

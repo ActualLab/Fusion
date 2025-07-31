@@ -50,7 +50,7 @@ public sealed class DbEvent : IDbEventLogEntry
             throw new ArgumentOutOfRangeException(nameof(model), "Uuid is empty.");
 
         Uuid = model.Uuid;
-        if (versionGenerator != null)
+        if (versionGenerator is not null)
             Version = versionGenerator.NextVersion(Version);
         LoggedAt = model.LoggedAt;
         DelayUntil = model.DelayUntil;

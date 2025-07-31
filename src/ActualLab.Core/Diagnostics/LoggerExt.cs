@@ -6,7 +6,7 @@ public static class LoggerExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsLogging([NotNullWhen(true)] this ILogger? log, LogLevel logLevel)
-        => log != null && logLevel != LogLevel.None && log.IsEnabled(logLevel);
+        => log is not null && logLevel != LogLevel.None && log.IsEnabled(logLevel);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ILogger? IfEnabled(this ILogger? log, LogLevel logLevel)

@@ -26,7 +26,7 @@ public partial class JsonString(string value) :
     } = value;
 
     public static JsonString? New(string? value)
-        => value == null ? Null : new JsonString(value);
+        => value is null ? Null : new JsonString(value);
 
     public override string ToString()
         => Value;

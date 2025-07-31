@@ -10,7 +10,7 @@ internal static class Interop
 {
     internal static unsafe void GetRandomBytes(byte* buffer, int length)
     {
-        Debug.Assert(buffer != null);
+        Debug.Assert(buffer is not null);
         Debug.Assert(length >= 0);
 
         var status = BCrypt.BCryptGenRandom(IntPtr.Zero, buffer, length, BCrypt.BCRYPT_USE_SYSTEM_PREFERRED_RNG);

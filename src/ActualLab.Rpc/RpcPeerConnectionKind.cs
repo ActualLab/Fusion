@@ -3,6 +3,6 @@ namespace ActualLab.Rpc;
 public enum RpcPeerConnectionKind
 {
     Remote = 0,
-    Loopback,
-    Local,
+    Loopback = 1,
+    Local = 2,
 }

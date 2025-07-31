@@ -77,7 +77,7 @@ public readonly partial record struct CpuTimestamp(
                     .GetMethod(
                         nameof(QueryPerformanceCounter),
                         BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-                if (mQueryPerformanceCounter != null) {
+                if (mQueryPerformanceCounter is not null) {
                     // .NET + .NET Core, WASM
                     TickFrequency = Stopwatch.Frequency;
                     QueryPerformanceCounter = (Func<long>)mQueryPerformanceCounter!

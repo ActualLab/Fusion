@@ -15,7 +15,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcCallTimeoutsProvider CallTimeoutsProvider;
     internal readonly RpcCallValidatorProvider CallValidatorProvider;
     internal readonly RpcServiceScopeResolver ServiceScopeResolver;
-    internal readonly RpcSafeCallRouter CallRouter;
+    internal readonly RpcSafeCallRouter SafeCallRouter;
     internal readonly RpcRerouteDelayer RerouteDelayer;
     internal readonly RpcHashProvider HashProvider;
     internal readonly RpcInboundCallFilter InboundCallFilter;
@@ -75,7 +75,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         CallTimeoutsProvider = services.GetRequiredService<RpcCallTimeoutsProvider>();
         CallValidatorProvider = services.GetRequiredService<RpcCallValidatorProvider>();
         ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();
-        CallRouter = services.GetRequiredService<RpcSafeCallRouter>();
+        SafeCallRouter = services.GetRequiredService<RpcSafeCallRouter>();
         RerouteDelayer = services.GetRequiredService<RpcRerouteDelayer>();
         HashProvider = services.GetRequiredService<RpcHashProvider>();
         InboundCallFilter = services.GetRequiredService<RpcInboundCallFilter>();
@@ -110,7 +110,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         lock (Lock) {
             if (Peers.TryGetValue(peerRef, out peer))
                 return peer;
-            if (WhenDisposed != null)
+            if (WhenDisposed is not null)
                 throw Errors.AlreadyDisposed(GetType());
             if (peerRef.IsRerouted)
                 throw RpcRerouteException.MustReroute(peerRef);

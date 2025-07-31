@@ -14,13 +14,13 @@ public static class ProxyHelper
         string name, Type[] argumentTypes)
     {
         var result = GetMethodInfoImpl(type, name, argumentTypes);
-        if (result != null)
+        if (result is not null)
             return result;
 
         if (type.IsInterface) {
             foreach (var tInterface in type.GetAllBaseTypes(false, true)) {
                 result = GetMethodInfoImpl(tInterface, name, argumentTypes);
-                if (result != null)
+                if (result is not null)
                     return result;
             }
         }

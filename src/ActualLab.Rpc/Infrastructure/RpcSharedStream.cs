@@ -69,7 +69,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         LastKeepAliveAt = CpuTimestamp.Now;
         lock (Lock) {
             var whenRunning = WhenRunning;
-            if (whenRunning == null) {
+            if (whenRunning is null) {
                 if (mustReset && nextIndex == 0)
                     this.Start();
                 else
@@ -184,7 +184,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                 }
                 if (isFullyBuffered)
                     goto nextAck;
-                if (whenMovedNextAsTask == null)
+                if (whenMovedNextAsTask is null)
                     continue;
 
                 // 3.3. Flush & await whenMovedNextAsTask or whenAckReady
@@ -219,7 +219,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
     {
         // Debug.WriteLine($"{Id}: <- #{index} (ack @ {ackIndex})");
         var (value, error) = item;
-        if (error == null)
+        if (error is null)
             return _systemCallSender.Item(Peer, Id.LocalId, index, value, _sizeHintProvider?.Invoke(value) ?? 0);
 
         if (ReferenceEquals(item.Error, NoMoreItemsTag))
@@ -252,7 +252,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         public async ValueTask Add(long index, Result<T> item)
         {
             var (value, error) = item;
-            if (error != null) {
+            if (error is not null) {
                 await Flush(index).ConfigureAwait(false);
                 await stream.Send(index, item).ConfigureAwait(false);
                 return;
@@ -260,7 +260,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
             if (_isPolymorphic) {
                 var itemType = value?.GetType();
-                if (_items.Count >= BatchSize || (itemType != null && itemType != _itemType))
+                if (_items.Count >= BatchSize || (itemType is not null && itemType != _itemType))
                     await Flush(index).ConfigureAwait(false);
                 _itemType ??= itemType;
             }
@@ -289,7 +289,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                     : new T[count];
                 _items.CopyTo(items);
                 var sizeHint = 0;
-                if (_sizeHintProvider != null)
+                if (_sizeHintProvider is not null)
                     foreach (var item in items)
                         sizeHint += _sizeHintProvider.Invoke(item);
                 var result = stream._systemCallSender.Batch(

@@ -37,7 +37,7 @@ public abstract class AppBase
 
         if (MustRecreateDb) {
             var dbContextFactory = services.GetService<IDbContextFactory<AppDbContext>>();
-            if (dbContextFactory != null) {
+            if (dbContextFactory is not null) {
                 await using var dbContext = await dbContextFactory.CreateDbContextAsync();
                 await dbContext.Database.EnsureDeletedAsync();
                 await dbContext.Database.EnsureCreatedAsync();

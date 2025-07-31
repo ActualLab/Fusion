@@ -20,7 +20,7 @@ public static class ConfigurationExt
     {
         var settingsType = typeof(TSettings);
         var altSectionName = (string?)null;
-        if (sectionName == null) {
+        if (sectionName is null) {
             sectionName = settingsType.Name;
             var plusIndex = sectionName.IndexOf('+', StringComparison.Ordinal);
             if (plusIndex >= 0)
@@ -29,7 +29,7 @@ public static class ConfigurationExt
         }
         var settings = new TSettings();
         var section = configuration.GetSection(sectionName);
-        if (!section.Exists() && altSectionName != null)
+        if (!section.Exists() && altSectionName is not null)
             section = configuration.GetSection(altSectionName);
         section.Bind(settings);
         if (mustValidate) {

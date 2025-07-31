@@ -71,7 +71,7 @@ public sealed class AuthStateProvider : AuthenticationStateProvider, IDisposable
         var user = await Auth.GetUser(_session, cancellationToken).ConfigureAwait(false);
         // AuthService.GetUser checks for forced sign-out as well, so
         // we should explicitly query its state for unauthenticated users only
-        var isSignOutForced = user == null
+        var isSignOutForced = user is null
             && await Auth.IsSignOutForced(_session, cancellationToken).ConfigureAwait(false);
         return new AuthState(user, isSignOutForced);
     }

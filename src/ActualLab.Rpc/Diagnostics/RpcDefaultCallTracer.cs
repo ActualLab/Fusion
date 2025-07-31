@@ -51,7 +51,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
             return null;
 
         var headers = call.Context.Message.Headers;
-        var activity = headers != null && RpcActivityInjector.TryExtract(headers, out var activityContext)
+        var activity = headers is not null && RpcActivityInjector.TryExtract(headers, out var activityContext)
             ? ActivitySource.StartActivity(InboundCallName, ActivityKind.Server,
                 parentContext: activityContext,
                 links: [new ActivityLink(activityContext)])

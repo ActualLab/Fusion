@@ -77,7 +77,7 @@ public abstract class State : ComputedInput, IState
             value.AssertConsistencyStateIsNot(ConsistencyState.Computing);
             lock (Lock) {
                 var prevSnapshot = _snapshot;
-                if (prevSnapshot != null) {
+                if (prevSnapshot is not null) {
                     if (prevSnapshot.Computed == value)
                         return;
 
@@ -239,7 +239,7 @@ public abstract class State : ComputedInput, IState
         options.EventConfigurator?.Invoke(this);
 
         var computed = CreateComputed();
-        if (_snapshot != null)
+        if (_snapshot is not null)
             return; // CreateComputed sets Computed, if overriden (e.g. in MutableState)
 
         computed.TrySetOutput(options.InitialOutput);
@@ -278,7 +278,7 @@ public abstract class State : ComputedInput, IState
 
     protected virtual void OnSetSnapshot(StateSnapshot snapshot, StateSnapshot? prevSnapshot)
     {
-        if (prevSnapshot == null)
+        if (prevSnapshot is null)
             // First assignment / initialization
             return;
 

@@ -7,7 +7,7 @@ public class PageRefModelBinderProvider  : IModelBinderProvider
 {
     public IModelBinder? GetBinder(ModelBinderProviderContext context)
     {
-        if (context == null)
+        if (context is null)
             throw new ArgumentNullException(nameof(context));
 
         var modelType = context.Metadata.ModelType;

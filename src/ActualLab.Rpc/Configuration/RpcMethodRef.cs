@@ -49,7 +49,7 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
 
     public string GetFullMethodName()
     {
-        if (Target != null)
+        if (Target is not null)
             return Target.FullName;
         if (HashName)
 #if !NETSTANDARD2_0
@@ -62,7 +62,7 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
 
     public (string ServiceName, string MethodName) GetServiceAndMethodName()
     {
-        if (Target != null)
+        if (Target is not null)
             return (Target.Service.Name, Target.Name);
 
         var fullName = GetFullMethodName();

@@ -30,7 +30,7 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 
     public ExceptionInfo(Exception? exception)
     {
-        if (exception == null) {
+        if (exception is null) {
             TypeRef = default;
             Message = "";
         } else {
@@ -88,11 +88,11 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 
         var (type, message) = (exceptionInfo.TypeRef.TryResolve(), exceptionInfo.Message);
         type ??= UnknownExceptionTypeResolver?.Invoke(exceptionInfo.TypeRef);
-        if (type == null || !typeof(Exception).IsAssignableFrom(type))
+        if (type is null || !typeof(Exception).IsAssignableFrom(type))
             return null;
 
         var ctor = type.GetConstructor(ExceptionCtorArgumentTypes1);
-        if (ctor != null) {
+        if (ctor is not null) {
             try {
                 return (Exception)type.CreateInstance(message, (Exception?) null);
             }
@@ -102,7 +102,7 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
         }
 
         ctor = type.GetConstructor(ExceptionCtorArgumentTypes2);
-        if (ctor == null)
+        if (ctor is null)
             return null;
 
         var parameter = ctor.GetParameters().SingleOrDefault();

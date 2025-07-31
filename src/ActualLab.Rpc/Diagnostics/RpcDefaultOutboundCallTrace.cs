@@ -8,7 +8,7 @@ public sealed class RpcDefaultOutboundCallTrace(Activity? activity)
 {
     public override void Complete(RpcOutboundCall call)
     {
-        if (Activity == null)
+        if (Activity is null)
             return;
 
         Activity.Finalize(call.ResultTask);

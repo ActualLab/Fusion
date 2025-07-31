@@ -114,7 +114,7 @@ public class RpcTestConnection
     {
         // ReSharper disable once InconsistentlySynchronizedField
         await foreach (var channels in _channels.Last.Changes(cancellationToken).ConfigureAwait(false)) {
-            if (channels == null)
+            if (channels is null)
                 continue;
             if (channels.Channel1.Reader.Completion.IsCompleted)
                 continue;

@@ -111,7 +111,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreMember]
     public override Type ItemType => typeof(T);
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreMember]
-    public override RpcObjectKind Kind => _localSource != null ? RpcObjectKind.Local : RpcObjectKind.Remote;
+    public override RpcObjectKind Kind => _localSource is not null ? RpcObjectKind.Local : RpcObjectKind.Remote;
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public RpcStream() { }
@@ -121,20 +121,20 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 
     ~RpcStream()
     {
-        if (_localSource == null)
+        if (_localSource is null)
             Close(Errors.AlreadyDisposed(GetType()));
     }
 
     public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
     {
-        if (_localSource != null)
+        if (_localSource is not null)
             return _localSource.GetAsyncEnumerator(cancellationToken);
 
         lock (_lock) {
-            if (_remoteChannel != null)
+            if (_remoteChannel is not null)
                 throw Internal.Errors.RemoteRpcStreamCanBeEnumeratedJustOnce();
-            if (Peer == null)
-                throw Errors.InternalError("RpcStream.Peer == null.");
+            if (Peer is null)
+                throw Errors.InternalError("RpcStream.Peer is null.");
 
             _remoteChannel = Channel.CreateUnbounded<T>(RemoteChannelOptions);
             if (_nextIndex == long.MaxValue) // Marked as missing
@@ -150,7 +150,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 
     public static string SerializeToString(RpcStream<T>? stream)
     {
-        if (stream == null)
+        if (stream is null)
             return "";
 
         using var formatter = ListFormat.CommaSeparated.CreateFormatter();
@@ -198,7 +198,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     protected internal override Task OnItem(long index, object? item)
     {
         lock (_lock) {
-            if (_remoteChannel == null)
+            if (_remoteChannel is null)
                 return Task.CompletedTask;
             if (index < _nextIndex)
                 return MaybeSendAckFromLock(index);
@@ -215,7 +215,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     protected internal override Task OnBatch(long index, object? items)
     {
         lock (_lock) {
-            if (_remoteChannel == null)
+            if (_remoteChannel is null)
                 return Task.CompletedTask;
             if (index < _nextIndex)
                 return MaybeSendAckFromLock(index);
@@ -235,7 +235,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     protected internal override Task OnEnd(long index, Exception? error)
     {
         lock (_lock) {
-            if (_remoteChannel == null)
+            if (_remoteChannel is null)
                 return Task.CompletedTask;
             if (index < _nextIndex)
                 return MaybeSendAckFromLock(index);
@@ -251,7 +251,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     protected override Task Reconnect(CancellationToken cancellationToken)
     {
         lock (_lock)
-            return _remoteChannel != null && !_isDisconnected
+            return _remoteChannel is not null && !_isDisconnected
                 ? SendResetFromLock(_nextIndex)
                 : Task.CompletedTask;
     }
@@ -277,7 +277,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 
     private void CloseFromLock(Exception? error)
     {
-        if (_remoteChannel != null) {
+        if (_remoteChannel is not null) {
             if (_nextIndex != long.MaxValue)
                 _ = SendCloseFromLock();
             _remoteChannel.Writer.TryComplete(error);

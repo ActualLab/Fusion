@@ -83,7 +83,7 @@ public readonly struct ShardDbContextBuilder<TDbContext>
                     // This ensures logging settings from the main container
                     // are applied to ShardDbContextFactory's DbContexts
                     var loggerFactory = c.GetService<ILoggerFactory>();
-                    if (loggerFactory != null)
+                    if (loggerFactory is not null)
                         db.UseLoggerFactory(loggerFactory);
                     dbContextOptionsBuilder.Invoke(c, shard, db);
                 });
@@ -100,7 +100,7 @@ public readonly struct ShardDbContextBuilder<TDbContext>
                     // This ensures logging settings from the main container
                     // are applied to ShardDbContextFactory's DbContexts
                     var loggerFactory = c.GetService<ILoggerFactory>();
-                    if (loggerFactory != null)
+                    if (loggerFactory is not null)
                         db.UseLoggerFactory(loggerFactory);
                     dbContextOptionsBuilder.Invoke(c, shard, db);
                 });

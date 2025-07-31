@@ -32,13 +32,11 @@ var services = new ServiceCollection()
         l.SetMinimumLevel(LogLevel.Debug);
         l.AddSimpleConsole();
     })
-    .AddFusion(fusion => {
-        fusion.AddComputeService<TestService>();
-        fusion.AddClient<ITestService>(addCommandHandlers: false);
-    })
     .AddRpc(rpc => {
         rpc.AddWebSocketClient();
-        rpc.Service<ITestService>().HasServer(typeof(TestService));
+    })
+    .AddFusion(fusion => {
+        fusion.AddClientAndServer<ITestService, TestService>();
     })
     .AddSingleton<RpcCallRouter>(_ => (method, args) => RpcPeerRef.Loopback)
     .BuildServiceProvider();

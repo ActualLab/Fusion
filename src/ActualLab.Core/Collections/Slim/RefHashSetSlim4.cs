@@ -8,23 +8,23 @@ public struct RefHashSetSlim4<T> : IRefHashSetSlim<T>
 
     private readonly bool HasSet {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _set != null;
+        get => _set is not null;
     }
 
     public readonly int Count {
         get {
             if (HasSet) return _set!.Count;
-            if (_tuple.Item1 == null) return 0;
-            if (_tuple.Item2 == null) return 1;
-            if (_tuple.Item3 == null) return 2;
-            if (_tuple.Item4 == null) return 3;
+            if (_tuple.Item1 is null) return 0;
+            if (_tuple.Item2 is null) return 1;
+            if (_tuple.Item3 is null) return 2;
+            if (_tuple.Item4 is null) return 3;
             return 4;
         }
     }
 
     public readonly bool Contains(T item)
     {
-        if (item == null)
+        if (item is null)
             throw new ArgumentNullException(nameof(item));
 
         if (HasSet) return _set!.Contains(item);
@@ -37,34 +37,34 @@ public struct RefHashSetSlim4<T> : IRefHashSetSlim<T>
 
     public bool Add(T item)
     {
-        if (item == null)
+        if (item is null)
             throw new ArgumentNullException(nameof(item));
 
         if (HasSet) return _set!.Add(item);
 
         // Item 1
-        if (_tuple.Item1 == null) {
+        if (_tuple.Item1 is null) {
             _tuple.Item1 = item;
             return true;
         }
         if (_tuple.Item1 == item) return false;
 
         // Item 2
-        if (_tuple.Item2 == null) {
+        if (_tuple.Item2 is null) {
             _tuple.Item2 = item;
             return true;
         }
         if (_tuple.Item2 == item) return false;
 
         // Item 3
-        if (_tuple.Item3 == null) {
+        if (_tuple.Item3 is null) {
             _tuple.Item3 = item;
             return true;
         }
         if (_tuple.Item3 == item) return false;
 
         // Item 4
-        if (_tuple.Item4 == null) {
+        if (_tuple.Item4 is null) {
             _tuple.Item4 = item;
             return true;
         }
@@ -79,34 +79,34 @@ public struct RefHashSetSlim4<T> : IRefHashSetSlim<T>
 
     public bool Remove(T item)
     {
-        if (item == null)
+        if (item is null)
             throw new ArgumentNullException(nameof(item));
 
         if (HasSet) return _set!.Remove(item);
 
         // Item 1
-        if (_tuple.Item1 == null) return false;
+        if (_tuple.Item1 is null) return false;
         if (_tuple.Item1 == item) {
             _tuple = (_tuple.Item2, _tuple.Item3, _tuple.Item4, default!)!;
             return true;
         }
 
         // Item 2
-        if (_tuple.Item2 == null) return false;
+        if (_tuple.Item2 is null) return false;
         if (_tuple.Item2 == item) {
             _tuple = (_tuple.Item1, _tuple.Item3, _tuple.Item4, default!)!;
             return true;
         }
 
         // Item 3
-        if (_tuple.Item3 == null) return false;
+        if (_tuple.Item3 is null) return false;
         if (_tuple.Item3 == item) {
             _tuple = (_tuple.Item1, _tuple.Item2, _tuple.Item4, default!)!;
             return true;
         }
 
         // Item 4
-        if (_tuple.Item4 == null) return false;
+        if (_tuple.Item4 is null) return false;
         if (_tuple.Item4 == item) {
             _tuple = (_tuple.Item1, _tuple.Item2, _tuple.Item3, default!)!;
             return true;
@@ -128,13 +128,13 @@ public struct RefHashSetSlim4<T> : IRefHashSetSlim<T>
                     yield return item;
                 yield break;
             }
-            if (_tuple.Item1 == null) yield break;
+            if (_tuple.Item1 is null) yield break;
             yield return _tuple.Item1;
-            if (_tuple.Item2 == null) yield break;
+            if (_tuple.Item2 is null) yield break;
             yield return _tuple.Item2;
-            if (_tuple.Item3 == null) yield break;
+            if (_tuple.Item3 is null) yield break;
             yield return _tuple.Item3;
-            if (_tuple.Item4 == null) yield break;
+            if (_tuple.Item4 is null) yield break;
             yield return _tuple.Item4;
         }
     }
@@ -146,13 +146,13 @@ public struct RefHashSetSlim4<T> : IRefHashSetSlim<T>
                 action(state, item);
             return;
         }
-        if (_tuple.Item1 == null) return;
+        if (_tuple.Item1 is null) return;
         action(state, _tuple.Item1);
-        if (_tuple.Item2 == null) return;
+        if (_tuple.Item2 is null) return;
         action(state, _tuple.Item2);
-        if (_tuple.Item3 == null) return;
+        if (_tuple.Item3 is null) return;
         action(state, _tuple.Item3);
-        if (_tuple.Item4 == null) return;
+        if (_tuple.Item4 is null) return;
         action(state, _tuple.Item4);
     }
 
@@ -163,13 +163,13 @@ public struct RefHashSetSlim4<T> : IRefHashSetSlim<T>
                 aggregator(ref state, item);
             return;
         }
-        if (_tuple.Item1 == null) return;
+        if (_tuple.Item1 is null) return;
         aggregator(ref state, _tuple.Item1);
-        if (_tuple.Item2 == null) return;
+        if (_tuple.Item2 is null) return;
         aggregator(ref state, _tuple.Item2);
-        if (_tuple.Item3 == null) return;
+        if (_tuple.Item3 is null) return;
         aggregator(ref state, _tuple.Item3);
-        if (_tuple.Item4 == null) return;
+        if (_tuple.Item4 is null) return;
         aggregator(ref state, _tuple.Item4);
     }
 
@@ -180,13 +180,13 @@ public struct RefHashSetSlim4<T> : IRefHashSetSlim<T>
                 state = aggregator(state, item);
             return state;
         }
-        if (_tuple.Item1 == null) return state;
+        if (_tuple.Item1 is null) return state;
         state = aggregator(state, _tuple.Item1);
-        if (_tuple.Item2 == null) return state;
+        if (_tuple.Item2 is null) return state;
         state = aggregator(state, _tuple.Item2);
-        if (_tuple.Item3 == null) return state;
+        if (_tuple.Item3 is null) return state;
         state = aggregator(state, _tuple.Item3);
-        if (_tuple.Item4 == null) return state;
+        if (_tuple.Item4 is null) return state;
         state = aggregator(state, _tuple.Item4);
         return state;
     }
@@ -199,13 +199,13 @@ public struct RefHashSetSlim4<T> : IRefHashSetSlim<T>
                 target[index++] = item;
             return;
         }
-        if (_tuple.Item1 == null) return;
+        if (_tuple.Item1 is null) return;
         target[index++] = _tuple.Item1;
-        if (_tuple.Item2 == null) return;
+        if (_tuple.Item2 is null) return;
         target[index++] = _tuple.Item2;
-        if (_tuple.Item3 == null) return;
+        if (_tuple.Item3 is null) return;
         target[index++] = _tuple.Item3;
-        if (_tuple.Item4 == null) return;
+        if (_tuple.Item4 is null) return;
         target[index] = _tuple.Item4;
     }
 }

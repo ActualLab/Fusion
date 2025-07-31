@@ -71,7 +71,7 @@ public static partial class TaskCompletionSourceExt
             target.SetCanceled();
 #endif
         }
-        else if (task.Exception != null)
+        else if (task.Exception is not null)
             target.SetException(task.Exception.GetBaseException());
         else
             target.SetResult(task.Result);
@@ -82,7 +82,7 @@ public static partial class TaskCompletionSourceExt
             ? cancellationToken.IsCancellationRequested
                 ? target.TrySetCanceled(cancellationToken)
                 : target.TrySetCanceled()
-            : task.Exception != null
+            : task.Exception is not null
                 ? target.TrySetException(task.Exception.GetBaseException())
                 : target.TrySetResult(task.Result);
 
@@ -109,7 +109,7 @@ public static partial class TaskCompletionSourceExt
     public static void SetFromResult<T>(this TaskCompletionSource<T> target, Result<T> result)
     {
         var (value, error) = result;
-        if (error == null)
+        if (error is null)
             target.SetResult(value);
         else if (error is OperationCanceledException)
             target.SetCanceled();
@@ -120,7 +120,7 @@ public static partial class TaskCompletionSourceExt
     public static void SetFromResult<T>(this TaskCompletionSource<T> target, Result<T> result, CancellationToken cancellationToken)
     {
         var (value, error) = result;
-        if (error == null)
+        if (error is null)
             target.SetResult(value);
         else if (error is OperationCanceledException) {
 #if NET5_0_OR_GREATER
@@ -140,7 +140,7 @@ public static partial class TaskCompletionSourceExt
     public static bool TrySetFromResult<T>(this TaskCompletionSource<T> target, Result<T> result)
     {
         var (value, error) = result;
-        return error == null
+        return error is null
             ? target.TrySetResult(value)
             : error is OperationCanceledException
                 ? target.TrySetCanceled()
@@ -150,7 +150,7 @@ public static partial class TaskCompletionSourceExt
     public static bool TrySetFromResult<T>(this TaskCompletionSource<T> target, Result<T> result, CancellationToken cancellationToken)
     {
         var (value, error) = result;
-        return error == null
+        return error is null
             ? target.TrySetResult(value)
             : error is OperationCanceledException
                 ? cancellationToken.IsCancellationRequested

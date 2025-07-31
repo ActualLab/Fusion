@@ -67,7 +67,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     public static ArrayPoolBuffer<T> NewOrReset(
         ref ArrayPoolBuffer<T>? buffer, int minCapacity, int maxCapacity)
     {
-        if (buffer == null)
+        if (buffer is null)
             return buffer = new ArrayPoolBuffer<T>(minCapacity);
 
         buffer.Reset(minCapacity, maxCapacity);
@@ -78,7 +78,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     public static ArrayPoolBuffer<T> NewOrReset(
         ref ArrayPoolBuffer<T>? buffer, int minCapacity, int maxCapacity, bool mustClear)
     {
-        if (buffer == null)
+        if (buffer is null)
             return buffer = new ArrayPoolBuffer<T>(minCapacity, mustClear);
 
         buffer.Reset(minCapacity, maxCapacity);

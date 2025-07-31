@@ -31,7 +31,7 @@ public class DbUserIdHandler<TDbUserId> : IDbUserIdHandler<TDbUserId>
         None = default!;
         if (typeof(TDbUserId) == typeof(string))
             None = (TDbUserId) (object) "";
-        if (generator == null) {
+        if (generator is null) {
             generator = () => default!;
             if (typeof(TDbUserId) == typeof(string)) {
                 var rsg = new RandomStringGenerator(12, RandomStringGenerator.Base32Alphabet);

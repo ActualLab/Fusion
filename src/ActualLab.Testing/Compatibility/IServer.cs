@@ -93,22 +93,22 @@ public class FeatureCollection : IFeatureCollection
     public object? this[Type key]
     {
         get {
-            if (key == null)
+            if (key is null)
                 throw new ArgumentNullException(nameof(key));
 
-            return _features != null && _features.TryGetValue(key, out var result) ? result : _defaults?[key];
+            return _features is not null && _features.TryGetValue(key, out var result) ? result : _defaults?[key];
         }
         set {
-            if (key == null)
+            if (key is null)
                 throw new ArgumentNullException(nameof(key));
 
-            if (value == null) {
-                if (_features != null && _features.Remove(key))
+            if (value is null) {
+                if (_features is not null && _features.Remove(key))
                     _containerRevision++;
                 return;
             }
 
-            if (_features == null)
+            if (_features is null)
                 _features = new Dictionary<Type, object>(_initialCapacity);
             _features[key] = value;
             _containerRevision++;
@@ -123,14 +123,14 @@ public class FeatureCollection : IFeatureCollection
     /// <inheritdoc />
     public IEnumerator<KeyValuePair<Type, object>> GetEnumerator()
     {
-        if (_features != null) {
+        if (_features is not null) {
             foreach (var pair in _features)
                 yield return pair;
         }
 
-        if (_defaults != null) {
+        if (_defaults is not null) {
             // Don't return features masked by the wrapper.
-            foreach (var pair in _features == null ? _defaults : _defaults.Except(_features, FeatureKeyComparer))
+            foreach (var pair in _features is null ? _defaults : _defaults.Except(_features, FeatureKeyComparer))
                 yield return pair;
         }
     }

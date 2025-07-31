@@ -15,8 +15,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
         commander.AddService<TestRpcService>();
 
         var rpc = services.AddRpc();
-        rpc.AddServer<ITestRpcService, TestRpcService>();
-        rpc.AddClient<ITestRpcService, ITestRpcServiceClient>();
+        rpc.AddClientAndServer<ITestRpcService, ITestRpcServiceClient, TestRpcService>();
     }
 
     [Fact]

@@ -36,7 +36,7 @@ public abstract class CachingPluginFinderBase : IPluginFinder
     protected virtual async Task<PluginSetInfo> FindOrGetCachedPlugins(CancellationToken cancellationToken)
     {
         var cacheKey = GetCacheKey();
-        if (cacheKey == null) {
+        if (cacheKey is null) {
             // Caching is off
             Log.LogDebug("Plugin cache is disabled (cache key is null)");
             return await FindPlugins(cancellationToken).ConfigureAwait(false);

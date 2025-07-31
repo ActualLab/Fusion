@@ -106,7 +106,7 @@ public sealed class Connector<TConnection> : WorkerBase
                 connectionSource.TrySetException(e);
             }
 
-            if (connection != null) {
+            if (connection is not null) {
                 lock (Lock) {
                     state = _state = _state.SetNext(new State(connectionSource));
                     IsConnected = IsConnected.SetNext(true);
@@ -114,7 +114,7 @@ public sealed class Connector<TConnection> : WorkerBase
 
                 Log.IfEnabled(LogLevel)?.Log(LogLevel, "{LogTag}: Connected", LogTag);
                 try {
-                    if (Connected != null)
+                    if (Connected is not null)
                         await Connected.Invoke(connection, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
@@ -143,7 +143,7 @@ public sealed class Connector<TConnection> : WorkerBase
                     error = state.Value.LastError;
                 }
 
-                if (error != null) {
+                if (error is not null) {
                     IsConnected = IsConnected.SetNext(Result.NewError<bool>(error));
                     Log?.LogError(error, "{LogTag}: Disconnected", LogTag);
                 }
@@ -154,7 +154,7 @@ public sealed class Connector<TConnection> : WorkerBase
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            if (error != null) {
+            if (error is not null) {
                 var transiency = TransiencyResolver.Invoke(error);
                 if (!transiency.MustRetry(ReconnectOnNonTransient))
                     throw error;
@@ -191,7 +191,7 @@ public sealed class Connector<TConnection> : WorkerBase
             prevState.Value.Dispose();
 
             var (isConnected, error) = IsConnected.Value;
-            if (error != null && isConnected)
+            if (error is not null && isConnected)
                 IsConnected = IsConnected.SetNext(false);
             IsConnected.SetFinal(Errors.AlreadyDisposed(GetType()));
         }

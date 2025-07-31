@@ -39,7 +39,7 @@ public class MemberInfoExtTest
             var setter = mi.GetSetter<MemberInfoExtTest, bool>();
             var untypedSetter = mi.GetSetter<object, object>(true);
 
-            if (getter == null || untypedGetter == null || setter == null || untypedSetter == null) {
+            if (getter is null || untypedGetter is null || setter is null || untypedSetter is null) {
                 getter.Should().NotBeNull();
                 untypedGetter.Should().NotBeNull();
                 setter.Should().NotBeNull();
@@ -88,7 +88,7 @@ public class MemberInfoExtTest
             var setter = mi.GetSetter<MemberInfoExtTest, bool>();
             var untypedSetter = mi.GetSetter<object, object>(true);
 
-            if (getter == null || untypedGetter == null || setter == null || untypedSetter == null) {
+            if (getter is null || untypedGetter is null || setter is null || untypedSetter is null) {
                 getter.Should().NotBeNull();
                 untypedGetter.Should().NotBeNull();
                 setter.Should().NotBeNull();
@@ -149,7 +149,7 @@ public class MemberInfoExtTest
             var setter = mi.GetSetter<MemberInfoExtTest, Task<bool>>();
             var untypedSetter = mi.GetSetter<object, object>(true);
 
-            if (getter == null || untypedGetter == null || setter == null || untypedSetter == null) {
+            if (getter is null || untypedGetter is null || setter is null || untypedSetter is null) {
                 getter.Should().NotBeNull();
                 untypedGetter.Should().NotBeNull();
                 setter.Should().NotBeNull();
@@ -213,7 +213,7 @@ public class MemberInfoExtTest
             var setter = mi.GetSetter<MemberInfoExtTest, Task<bool>>();
             var untypedSetter = mi.GetSetter<object, object>(true);
 
-            if (getter == null || untypedGetter == null || setter == null || untypedSetter == null) {
+            if (getter is null || untypedGetter is null || setter is null || untypedSetter is null) {
                 getter.Should().NotBeNull();
                 untypedGetter.Should().NotBeNull();
                 setter.Should().NotBeNull();

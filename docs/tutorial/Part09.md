@@ -167,7 +167,7 @@ public class RecSumCommandHandler
         // Each call creates a new CommandContext
         var contextStack = new List<CommandContext>();
         var currentContext = context;
-        while (currentContext != null) {
+        while (currentContext is not null) {
             contextStack.Add(currentContext);
             currentContext = currentContext.OuterContext;
         }

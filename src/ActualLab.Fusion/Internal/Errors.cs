@@ -14,7 +14,7 @@ public static class Errors
             $"Wrong Computed.State: {state}.");
 
     public static Exception CurrentComputedIsNull()
-        => new InvalidOperationException("Computed.Current == null.");
+        => new InvalidOperationException("Computed.Current is null.");
     public static Exception NoComputedCaptured()
         => new InvalidOperationException($"No {nameof(Computed)} was captured.");
 
@@ -41,8 +41,6 @@ public static class Errors
 
     // Rpc related
 
-    public static Exception RpcDisabled()
-        => new RpcDisabledException();
     public static Exception RemoteComputeMethodCallFromTheSameService(RpcMethodDef methodDef, RpcPeerRef peerRef)
         => new InvalidOperationException(
             $"Incoming RPC compute service call to {methodDef} via '{peerRef}' " +
@@ -51,6 +49,10 @@ public static class Errors
             "(same service instance, same arguments, so the same ComputedInput). " +
             "You must fix RpcCallRouter logic to make sure it never returns " +
             "an RpcPeerRef resolving to the localhost for such calls.");
+    public static Exception UnsupportedTargetRpcPeerRef(RpcMethodDef methodDef, RpcPeerRef peerRef)
+        => new InvalidOperationException(
+            $"Outgoing RPC compute service call to {methodDef} was routed to {peerRef}, " +
+            "which is unsupported for remote compute service.");
 
     // Session-related
 

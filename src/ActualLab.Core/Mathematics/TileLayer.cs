@@ -103,7 +103,7 @@ public class TileLayer<T>
 
     private void GetOptimalCoveringTiles(Range<T> range, ref ArrayBuffer<Tile<T>> appendTo)
     {
-        if (Smaller == null) {
+        if (Smaller is null) {
             GetCoveringTiles(range, ref appendTo);
             return;
         }

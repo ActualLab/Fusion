@@ -22,7 +22,7 @@ public class InMemoryProductService : IProductService
         // which is responsible for triggering invalidation pass.
         // Compare the invalidation logic here and in InMemoryCartService.Edit.
         InMemoryOperationScope.Require();
-        if (product == null)
+        if (product is null)
             _products.Remove(productId, out _);
         else
             _products[productId] = product;

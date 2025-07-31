@@ -15,7 +15,7 @@ public sealed partial record RpcHandshake(
 
     public RpcPeerChangeKind GetPeerChangeKind(RpcHandshake? lastHandshake)
     {
-        if (lastHandshake == null)
+        if (lastHandshake is null)
             return RpcPeerChangeKind.ChangedToVeryFirst;
 
         return RemotePeerId == lastHandshake.RemotePeerId

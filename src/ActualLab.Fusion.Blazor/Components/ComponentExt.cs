@@ -32,7 +32,7 @@ public static class ComponentExt
     private static ComponentState? GetOptionalComponentStateGetter(RenderHandle renderHandle)
     {
         var renderer = RendererGetter(ref renderHandle);
-        if (renderer == null)
+        if (renderer is null)
             return null;
 
         var componentId = ComponentIdGetter(ref renderHandle);
@@ -110,7 +110,7 @@ public static class ComponentExt
     public static bool IsDisposed(ComponentBase component)
     {
         var renderHandle = RenderHandleGetter(component);
-        return GetOptionalComponentStateGetter(renderHandle) == null;
+        return GetOptionalComponentStateGetter(renderHandle) is null;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -48,8 +48,8 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
     {
         var computeMethodDef = (ComputeMethodDef)methodDef;
         var rpcMethodDef = RpcServiceDef.GetOrFindMethod(initialInvocation.Method);
-        if (rpcMethodDef == null) {
-            // Proxy is a Distributed service and a non-RPC method is called
+        if (rpcMethodDef is null) {
+            // Proxy is a Distributed service, and a non-RPC method is called (i.e., the local compute method)
             var function = (ComputeMethodFunction)typeof(ComputeMethodFunction<>)
                 .MakeGenericType(computeMethodDef.UnwrappedReturnType)
                 .CreateInstance(Hub, computeMethodDef);
@@ -65,13 +65,13 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
 
     protected override MethodDef? CreateMethodDef(MethodInfo method,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType)
-        // This interceptor is created on per-service basis, so to reuse the validation cache,
+        // This interceptor is created on a per-service basis, so to reuse the validation cache,
         // we redirect this call to Hub.ComputeServiceInterceptor, which is a singleton.
         => Hub.ComputeServiceInterceptor.GetMethodDef(method, proxyType);
 
     protected override void ValidateTypeInternal(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
-        // This interceptor is created on per-service basis, so to reuse the validation cache,
+        // This interceptor is created on a per-service basis, so to reuse the validation cache,
         // we redirect this call to Hub.ComputeServiceInterceptor, which is a singleton.
         => Hub.ComputeServiceInterceptor.ValidateType(type);
 }

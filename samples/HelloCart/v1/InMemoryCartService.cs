@@ -10,7 +10,7 @@ public class InMemoryCartService(IProductService products) : ICartService
         if (string.IsNullOrEmpty(cartId))
             throw new ArgumentOutOfRangeException(nameof(command));
 
-        if (cart == null)
+        if (cart is null)
             _carts.Remove(cartId, out _);
         else
             _carts[cartId] = cart;
@@ -27,7 +27,7 @@ public class InMemoryCartService(IProductService products) : ICartService
     public virtual async Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default)
     {
         var cart = await Get(id, cancellationToken);
-        if (cart == null)
+        if (cart is null)
             return 0;
 
         var total = 0M;

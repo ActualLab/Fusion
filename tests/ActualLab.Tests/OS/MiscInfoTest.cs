@@ -26,7 +26,7 @@ public class MiscInfoTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var version = RuntimeInfo.DotNet.Version;
         var versionString = RuntimeInfo.DotNet.VersionString;
-        if (version == null) {
+        if (version is null) {
 #if NET7_0
         versionString.Should().StartWith("7.");
 #elif NET6_0

@@ -38,7 +38,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             if (force)
                 _ = IsSignOutForced(session, default);
             var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo != null) {
+            if (invSessionInfo is not null) {
                 _ = GetUser(shard, invSessionInfo.UserId, default);
                 _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             }
@@ -49,7 +49,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         // Let's handle special kinds of sign-out first, which only trigger "primary" sign-out version
         if (isKickCommand) {
             var user = await GetUser(session, cancellationToken).ConfigureAwait(false);
-            if (user == null)
+            if (user is null)
                 return;
             var userSessions = await GetUserSessions(shard, user.Id, cancellationToken).ConfigureAwait(false);
             var signOutSessions = kickUserSessionHash.IsNullOrEmpty()
@@ -64,7 +64,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         }
 
         var sessionInfo = await GetSessionInfo(session, cancellationToken).ConfigureAwait(false);
-        if (sessionInfo == null || sessionInfo.IsSignOutForced)
+        if (sessionInfo is null || sessionInfo.IsSignOutForced)
             return;
 
         // Updating SessionInfo
@@ -86,7 +86,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
 
         if (Invalidation.IsActive) {
             var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo != null)
+            if (invSessionInfo is not null)
                 _ = GetUser(shard, invSessionInfo.UserId, default);
             return;
         }
@@ -100,7 +100,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             .ConfigureAwait(false);
 
         context.Operation.Items.KeylessSet(sessionInfo);
-        if (command.Name != null) {
+        if (command.Name is not null) {
             if (command.Name.Length < 3)
                 throw new ArgumentOutOfRangeException(nameof(command));
             user = user with {
@@ -115,7 +115,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
     public virtual async Task UpdatePresence(Session session, CancellationToken cancellationToken = default)
     {
         var sessionInfo = await GetSessionInfo(session, cancellationToken).ConfigureAwait(false);
-        if (sessionInfo == null)
+        if (sessionInfo is null)
             return;
 
         var delta = Clocks.SystemClock.Now - sessionInfo.LastSeenAt;
@@ -176,7 +176,7 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         session.RequireValid();
         var shard = ShardResolver.Resolve(session);
         var user = await GetUser(session, cancellationToken).ConfigureAwait(false);
-        if (user == null)
+        if (user is null)
             return ImmutableArray<SessionInfo>.Empty;
 
         var sessions = await GetUserSessions(shard, user.Id, cancellationToken).ConfigureAwait(false);

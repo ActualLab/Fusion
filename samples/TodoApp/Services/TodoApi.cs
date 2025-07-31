@@ -51,7 +51,7 @@ public class TodoApi(IAuth auth, ITodoBackend backend, ICommander commander) : I
     {
         var user = await auth.GetUser(session, cancellationToken).ConfigureAwait(false);
         var tenant = session.GetTenant(); // tenant is associated with a session
-        return user != null
+        return user is not null
             ? $"{tenant}/user/{user.Id}"
             : $"{tenant}/global";
     }

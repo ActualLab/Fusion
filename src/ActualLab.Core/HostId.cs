@@ -35,7 +35,7 @@ public partial record HostId(
 
     // Equality
     public virtual bool Equals(HostId? other)
-        => other != null && string.Equals(Id, other.Id, StringComparison.Ordinal);
+        => other is not null && string.Equals(Id, other.Id, StringComparison.Ordinal);
     public virtual bool Equals(string? other)
         => string.Equals(Id, other, StringComparison.Ordinal);
     public override int GetHashCode()

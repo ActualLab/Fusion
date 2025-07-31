@@ -9,7 +9,7 @@ public static class GenerationExt
     public static List<ITypeSymbol> GetAllBaseTypes(this ITypeSymbol typeSymbol, bool includingSelf, List<ITypeSymbol> output)
     {
         var current = typeSymbol;
-        while (current != null) {
+        while (current is not null) {
             if (includingSelf || !ReferenceEquals(current, typeSymbol))
                 output.Add(current);
             current = current.BaseType;

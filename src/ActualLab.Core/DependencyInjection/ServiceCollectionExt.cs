@@ -35,10 +35,11 @@ public static class ServiceCollectionExt
         Action<IServiceProvider, string?, TOptions> configureOptions)
         where TOptions : class
     {
-        if (services == null)
+        if (services is null)
             throw new ArgumentNullException(nameof(services));
-        if (configureOptions == null)
+        if (configureOptions is null)
             throw new ArgumentNullException(nameof(configureOptions));
+
         services.AddOptions();
         services.TryAddSingleton<IConfigureOptions<TOptions>>(
             c => new ConfigureAllNamedOptions<TOptions>(c, configureOptions));
@@ -53,7 +54,7 @@ public static class ServiceCollectionExt
         Func<IServiceProvider, TService> defaultFactory)
         where TService : class
     {
-        if (factory != null)
+        if (factory is not null)
             services.AddSingleton(factory);
         else
             services.TryAddSingleton(defaultFactory);

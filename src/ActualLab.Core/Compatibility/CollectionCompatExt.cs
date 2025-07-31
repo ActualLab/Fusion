@@ -18,7 +18,7 @@ public static class CollectionCompatExt
         TKey key,
         TValue? defaultValue)
     {
-        if (dictionary == null)
+        if (dictionary is null)
             throw new ArgumentNullException(nameof(dictionary));
 
         return !dictionary.TryGetValue(key, out var obj) ? defaultValue : obj;
@@ -29,7 +29,7 @@ public static class CollectionCompatExt
         TKey key,
         TValue value)
     {
-        if (dictionary == null)
+        if (dictionary is null)
             throw new ArgumentNullException(nameof(dictionary));
         if (dictionary.ContainsKey(key))
             return false;
@@ -43,7 +43,7 @@ public static class CollectionCompatExt
         TKey key,
         [MaybeNullWhen(false)] out TValue value)
     {
-        if (dictionary == null)
+        if (dictionary is null)
             throw new ArgumentNullException(nameof(dictionary));
         if (dictionary.TryGetValue(key, out value)) {
             dictionary.Remove(key);

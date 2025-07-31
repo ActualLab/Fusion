@@ -42,7 +42,7 @@ public class RpcWebSocketServer(
         // Based on https://stackoverflow.com/questions/41848095/websockets-using-owin
 
         var acceptToken = context.Get<WebSocketAccept>("websocket.Accept");
-        if (acceptToken == null)
+        if (acceptToken is null)
             return HttpStatusCode.BadRequest;
 
         var peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
@@ -100,12 +100,12 @@ public class RpcWebSocketServer(
             await channel.WhenClosed.ConfigureAwait(false);
         }
         catch (Exception e) {
-            if (connection != null || e.IsCancellationOf(cancellationToken))
+            if (connection is not null || e.IsCancellationOf(cancellationToken))
                 return; // Intended: this is typically a normal connection termination
 
             var request = context.Request;
             Log.LogWarning(e, "Failed to accept RPC connection: {Path}{Query}", request.Path, request.QueryString);
-            if (webSocket != null)
+            if (webSocket is not null)
                 return;
 
             try {

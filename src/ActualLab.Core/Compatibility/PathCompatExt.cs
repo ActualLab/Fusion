@@ -43,9 +43,9 @@ public static class PathCompatExt
     {
         // From https://stackoverflow.com/questions/3139467/how-to-get-absolute-file-path-from-base-path-and-relative-containing
 
-        if (path == null)
+        if (path is null)
             throw new ArgumentNullException(nameof(path));
-        if (basePath == null)
+        if (basePath is null)
             throw new ArgumentNullException(nameof(basePath));
 
         var newPath = Path.Combine(basePath, path);

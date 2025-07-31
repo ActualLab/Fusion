@@ -61,7 +61,7 @@ public class ServerAuthHelper : IHasServices
         string? schemas;
         if (cache) {
             schemas = Schemas;
-            if (schemas != null)
+            if (schemas is not null)
                 return schemas;
         }
         var authSchemas = await httpContext.GetAuthenticationSchemas().ConfigureAwait(false);
@@ -99,11 +99,11 @@ public class ServerAuthHelper : IHasServices
 
         var sessionInfo = await GetSessionInfo(session, cancellationToken).ConfigureAwait(false);
         var mustSetupSession =
-            sessionInfo == null
+            sessionInfo is null
             || !string.Equals(sessionInfo.IPAddress, ipAddress, StringComparison.Ordinal)
             || !string.Equals(sessionInfo.UserAgent, userAgent, StringComparison.Ordinal)
             || sessionInfo.LastSeenAt + Settings.SessionInfoUpdatePeriod < Clocks.SystemClock.Now;
-        if (mustSetupSession || sessionInfo == null)
+        if (mustSetupSession || sessionInfo is null)
             sessionInfo = await SetupSession(session, sessionInfo, ipAddress, userAgent, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -193,7 +193,7 @@ public class ServerAuthHelper : IHasServices
 
     protected virtual bool IsSameUser(User? user, ClaimsPrincipal httpUser, string schema)
     {
-        if (user == null)
+        if (user is null)
             return false;
 
         var httpUserIdentityName = httpUser.Identity?.Name ?? "";
@@ -221,7 +221,7 @@ public class ServerAuthHelper : IHasServices
             { identity, "" },
         };
 
-        if (user == null)
+        if (user is null)
             // Create
             user = new User("", name) {
                 Claims = claims,

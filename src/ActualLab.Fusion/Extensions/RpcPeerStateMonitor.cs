@@ -38,7 +38,7 @@ public class RpcPeerStateMonitor : WorkerBase
             return;
 
         var stateFactory = services.StateFactory();
-        var connectionState = peerRef == null ? null : RpcHub.GetPeer(peerRef).ConnectionState.Value;
+        var connectionState = peerRef is null ? null : RpcHub.GetPeer(peerRef).ConnectionState.Value;
         var isConnected = connectionState?.IsConnected() ?? true;
 
         var initialRawState = isConnected
@@ -48,7 +48,7 @@ public class RpcPeerStateMonitor : WorkerBase
         _rawState = stateFactory.NewMutable(initialRawState, stateCategory);
 
         stateCategory = $"{GetType().Name}.{nameof(LastReconnectDelayCancelledAt)}";
-        LastReconnectDelayCancelledAt = peerRef == null
+        LastReconnectDelayCancelledAt = peerRef is null
             ? stateFactory.NewMutable((Moment)default, stateCategory)
             : stateFactory.NewComputed<Moment>(
                 FixedDelayer.NextTick,
@@ -57,9 +57,9 @@ public class RpcPeerStateMonitor : WorkerBase
 
         stateCategory = $"{GetType().Name}.{nameof(State)}";
         var initialState = initialRawState.IsConnected
-            ? new RpcPeerState(peerRef == null ? RpcPeerStateKind.Connected : RpcPeerStateKind.JustConnected)
+            ? new RpcPeerState(peerRef is null ? RpcPeerStateKind.Connected : RpcPeerStateKind.JustConnected)
             : new RpcPeerState(RpcPeerStateKind.JustDisconnected, connectionState?.Error);
-        State = peerRef == null
+        State = peerRef is null
             ? stateFactory.NewMutable(initialState, stateCategory)
             : stateFactory.NewComputed(initialState, FixedDelayer.NextTick, ComputeState, stateCategory);
         if (mustStart)
@@ -77,14 +77,14 @@ public class RpcPeerStateMonitor : WorkerBase
 
     public void Start()
     {
-        if (PeerRef != null)
+        if (PeerRef is not null)
             _ = Run();
     }
 
     protected override async Task OnRun(CancellationToken cancellationToken)
     {
         var peerRef = PeerRef;
-        if (peerRef == null) // Always connected
+        if (peerRef is null) // Always connected
             return;
 
         while (true) {

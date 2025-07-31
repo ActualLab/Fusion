@@ -28,7 +28,7 @@ public sealed record RpcPeerState(
         case RpcPeerStateKind.Disconnected when ReconnectsIn == default:
             return "Reconnecting...";
         }
-        if (LastError == null || !useLastError)
+        if (LastError is null || !useLastError)
             return "Disconnected.";
 
         var message = LastError.Message.Trim();

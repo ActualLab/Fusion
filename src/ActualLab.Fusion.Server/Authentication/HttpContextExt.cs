@@ -8,7 +8,7 @@ public static class HttpContextExt
 {
     public static async Task<AuthenticationScheme[]> GetAuthenticationSchemas(this HttpContext httpContext)
     {
-        if (httpContext == null)
+        if (httpContext is null)
             throw new ArgumentNullException(nameof(httpContext));
         var schemes = httpContext.RequestServices.GetRequiredService<IAuthenticationSchemeProvider>();
         var allSchemes = await schemes.GetAllSchemesAsync().ConfigureAwait(false);
@@ -21,7 +21,7 @@ public static class HttpContextExt
 
     public static async Task<bool> IsAuthenticationSchemeSupported(this HttpContext httpContext, string scheme)
     {
-        if (httpContext == null)
+        if (httpContext is null)
             throw new ArgumentNullException(nameof(httpContext));
         var authenticationSchemas = await httpContext.GetAuthenticationSchemas().ConfigureAwait(false);
         return (

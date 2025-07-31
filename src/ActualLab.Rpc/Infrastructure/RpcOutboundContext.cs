@@ -53,7 +53,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public RpcOutboundCall? PrepareCall(RpcMethodDef methodDef, ArgumentList arguments)
     {
         if (MethodDef != methodDef) {
-            if (MethodDef != null)
+            if (MethodDef is not null)
                 throw ActualLab.Internal.Errors.AlreadyInvoked(nameof(PrepareCall));
 
             // MethodDef, Arguments, CancellationToken
@@ -68,12 +68,12 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         if (CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly }) {
             Peer ??= hub.LoopbackPeer; // Peer must be set, but invoking the router makes no sense here
             Call = RpcOutboundCall.New(this);
-            return Call ?? throw ActualLab.Internal.Errors.InternalError("Call == null, which isn't expected here.");
+            return Call ?? throw ActualLab.Internal.Errors.InternalError("Call is null, which isn't expected here.");
         }
 
-        Peer ??= hub.CallRouter.Invoke(methodDef, arguments);
+        Peer ??= hub.SafeCallRouter.Invoke(methodDef, arguments);
         Call = RpcOutboundCall.New(this);
-        if (Call != null) {
+        if (Call is not null) {
             if (MethodDef.Tracer is { } tracer)
                 Trace ??= tracer.StartOutboundTrace(Call);
             hub.OutboundMiddlewares.NullIfEmpty()?.OnPrepareCall(this, false);
@@ -84,7 +84,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public RpcOutboundCall? PrepareCallForSendNoWait(RpcMethodDef methodDef, ArgumentList arguments)
     {
         if (MethodDef != methodDef) {
-            if (MethodDef != null)
+            if (MethodDef is not null)
                 throw ActualLab.Internal.Errors.AlreadyInvoked(nameof(PrepareCall));
 
             // MethodDef, Arguments, CancellationToken
@@ -96,23 +96,23 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
 
         // Peer & Call
         var hub = MethodDef.Hub;
-        Peer ??= hub.CallRouter.Invoke(methodDef, arguments);
+        Peer ??= hub.SafeCallRouter.Invoke(methodDef, arguments);
         Call = RpcOutboundCall.New(this);
         return Call;
     }
 
     public RpcOutboundCall? PrepareReroutedCall()
     {
-        if (MethodDef == null || Arguments == null)
+        if (MethodDef is null || Arguments is null)
             throw ActualLab.Internal.Errors.NotInvoked(nameof(PrepareCall));
 
         // Peer & Call
         var hub = MethodDef.Hub;
         var oldPeer = Peer;
-        Peer = hub.CallRouter.Invoke(MethodDef, Arguments);
+        Peer = hub.SafeCallRouter.Invoke(MethodDef, Arguments);
         Call = RpcOutboundCall.New(this);
-        if (Call != null) {
-            // We don't start trace here, coz it's either started already, or was sampled out
+        if (Call is not null) {
+            // We don't start trace here, coz it's either started already or was sampled out
             hub.OutboundMiddlewares.NullIfEmpty()?.OnPrepareCall(this, true);
         }
         if (ReferenceEquals(oldPeer, Peer))

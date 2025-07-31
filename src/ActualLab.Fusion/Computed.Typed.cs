@@ -47,7 +47,7 @@ public abstract class Computed<T> : Computed, IResult<T>
     protected override Task CreateValuePromise()
     {
         var (value, error) = base.Output;
-        return error == null
+        return error is null
             ? Task.FromResult((T)value!)
             : Task.FromException<T>(error);
     }

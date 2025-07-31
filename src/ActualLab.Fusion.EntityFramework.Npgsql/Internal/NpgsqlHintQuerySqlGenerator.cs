@@ -47,7 +47,7 @@ public class NpgsqlHintQuerySqlGenerator : NpgsqlQuerySqlGenerator
             foreach (var hint in tag[6..].Split(','))
                 hints.Add(hint);
         }
-        if (hints == null)
+        if (hints is null)
             return "";
 
         var sb = StringBuilderExt.Acquire();
@@ -59,7 +59,7 @@ public class NpgsqlHintQuerySqlGenerator : NpgsqlQuerySqlGenerator
 
                 var hint = (string?)null;
                 foreach (var h in g) {
-                    if (hint != null && !string.Equals(hint, h, StringComparison.Ordinal))
+                    if (hint is not null && !string.Equals(hint, h, StringComparison.Ordinal))
                         return ""; // Invalid hints
 
                     hint = h;

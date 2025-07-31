@@ -38,7 +38,7 @@ public class DbKeyValueStore<TDbContext,
             .ConfigureAwait(false);
         foreach (var item in items) {
             var dbKeyValue = dbKeyValues.GetValueOrDefault(item.Key);
-            if (dbKeyValue == null) {
+            if (dbKeyValue is null) {
                 dbKeyValue = CreateDbKeyValue(item.Key, item.Value, item.ExpiresAt);
                 dbContext.Add(dbKeyValue);
             }
@@ -82,7 +82,7 @@ public class DbKeyValueStore<TDbContext,
         _ = PseudoGet(shard, key);
 
         var dbKeyValue = await KeyValueResolver.Get(shard, key, cancellationToken).ConfigureAwait(false);
-        if (dbKeyValue == null)
+        if (dbKeyValue is null)
             return null;
         var expiresAt = dbKeyValue.ExpiresAt;
         if (expiresAt.HasValue && expiresAt.GetValueOrDefault() < Clocks.SystemClock.Now.ToDateTime())

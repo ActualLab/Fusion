@@ -86,7 +86,7 @@ public abstract class StatefulComponentBase : CircuitHubComponentBase, IStateful
 
         State = state ?? throw new ArgumentNullException(nameof(state));
         state.AddEventHandler(stateChangedEventKind, StateChanged);
-        if (stateInitializeOptions != null && state is IHasInitialize hasInitialize)
+        if (stateInitializeOptions is not null && state is IHasInitialize hasInitialize)
             hasInitialize.Initialize(stateInitializeOptions);
     }
 

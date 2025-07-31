@@ -36,7 +36,7 @@ public class TestRpcCallTracer(RpcMethodDef method) : RpcCallTracer(method)
         {
             Interlocked.Increment(ref _tracer._exitCount);
             var resultTask = call.ResultTask;
-            if (resultTask != null && !resultTask.IsCompletedSuccessfully())
+            if (resultTask is not null && !resultTask.IsCompletedSuccessfully())
                 Interlocked.Increment(ref _tracer._errorCount);
         }
     }

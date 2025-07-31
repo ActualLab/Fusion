@@ -12,9 +12,7 @@ public class ScreenshotServiceTest(ITestOutputHelper @out) : SimpleFusionTestBas
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddService<ScreenshotService>();
-        fusion.AddClient<IScreenshotService>(nameof(ReconnectTester));
-        fusion.Rpc.Service<IScreenshotService>().HasServer<ScreenshotService>();
+        fusion.AddClientAndServer<IScreenshotService, ScreenshotService>();
     }
 
     [Fact]

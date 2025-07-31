@@ -121,7 +121,7 @@ public class OperationReprocessor : IOperationReprocessor
         var isReprocessingAllowed =
             context.IsOutermost // Should be a top-level command
             && command is not ISystemCommand // No reprocessing for system commands
-            && context.TryGetOperation() == null // Operation isn't started yet
+            && context.TryGetOperation() is null // Operation isn't started yet
             && !Invalidation.IsActive // No invalidation is running
             && Settings.Filter.Invoke(command, context);
         if (!isReprocessingAllowed) {
@@ -129,7 +129,7 @@ public class OperationReprocessor : IOperationReprocessor
             return;
         }
 
-        if (CommandContext != null)
+        if (CommandContext is not null)
             throw Errors.InternalError(
                 $"{GetType().GetName()} cannot be used more than once in the same command execution pipeline.");
         CommandContext = context;
@@ -145,7 +145,7 @@ public class OperationReprocessor : IOperationReprocessor
             }
             catch (Exception error) when (!error.IsCancellationOf(cancellationToken)) {
                 LastError = error;
-                if (context.TryGetOperation() == null)
+                if (context.TryGetOperation() is null)
                     throw; // No Operation -> no retry
                 if (!this.WillRetry(error, out var transiency))
                     throw; // The error can't be reprocessed -> no retry

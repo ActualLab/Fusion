@@ -20,7 +20,7 @@ public sealed class ComputeMethodDef : MethodDef
         }
 
         var computedOptions = interceptor.Hub.ComputedOptionsProvider.GetComputedOptions(type, method);
-        if (computedOptions == null) {
+        if (computedOptions is null) {
             IsValid = false;
             return;
         }

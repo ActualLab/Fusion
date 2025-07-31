@@ -104,7 +104,7 @@ public readonly struct DbAuthServiceBuilder<TDbContext,
                 var oldQueryTransformer = options.QueryTransformer;
                 Expression<Func<IQueryable<TDbUser>, IQueryable<TDbUser>>> queryTransformer =
                     q => q.Include(u => u.Identities);
-                if (oldQueryTransformer != null) {
+                if (oldQueryTransformer is not null) {
                     var pQuery = oldQueryTransformer.Parameters[0];
                     var eBody = queryTransformer.Body.Replace(pQuery, oldQueryTransformer.Body);
                     queryTransformer = Expression.Lambda<Func<IQueryable<TDbUser>, IQueryable<TDbUser>>>(

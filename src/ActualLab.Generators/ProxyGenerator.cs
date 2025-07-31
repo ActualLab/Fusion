@@ -14,7 +14,7 @@ public class ProxyGenerator : IIncrementalGenerator
         _processedTypes.Clear();
         var items = context.SyntaxProvider
             .CreateSyntaxProvider(CouldBeAugmented, MustAugment)
-            .Where(i => i.TypeDef != null)
+            .Where(i => i.TypeDef is not null)
             .Collect();
         context.RegisterSourceOutput(items, Generate);
         _processedTypes.Clear();
@@ -38,7 +38,7 @@ public class ProxyGenerator : IIncrementalGenerator
         var typeDef = (TypeDeclarationSyntax)context.Node;
 
         var typeSymbol = semanticModel.GetDeclaredSymbol(typeDef, cancellationToken);
-        if (typeSymbol == null)
+        if (typeSymbol is null)
             return default;
         if (typeSymbol.IsSealed)
             return default;
@@ -79,7 +79,7 @@ public class ProxyGenerator : IIncrementalGenerator
         try {
             WriteDebug?.Invoke($"Found {items.Length} type(s) to generate proxies.");
             foreach (var (semanticModel, typeDef) in items) {
-                if (typeDef == null)
+                if (typeDef is null)
                     continue;
 
                 var typeGenerator = new ProxyTypeGenerator(context, semanticModel, typeDef);

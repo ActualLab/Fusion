@@ -35,10 +35,10 @@ public abstract record Requirement<
 
     public static Requirement<T> MustExist {
         get {
-            if (_mustExist != null)
+            if (_mustExist is not null)
                 return _mustExist;
             lock (MustExistLock) {
-                if (_mustExist != null)
+                if (_mustExist is not null)
                     return _mustExist;
 
                 Requirement<T>? mustExist;
@@ -51,8 +51,8 @@ public abstract record Requirement<
                         .GetProperty(MustExistFieldOrPropertyName, BindingFlags.Public | BindingFlags.Static)
                         ?.GetValue(null);
                     mustExist = propertyValue as Requirement<T>;
-                    if (mustExist == null) {
-                        if (propertyValue != null)
+                    if (mustExist is null) {
+                        if (propertyValue is not null)
                             throw Errors.InternalError("MustExist property or field must return Requirement<T>.");
 
                         mustExist = MustExistRequirement<T>.Default;

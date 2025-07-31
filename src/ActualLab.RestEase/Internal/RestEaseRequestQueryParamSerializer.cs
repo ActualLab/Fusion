@@ -26,7 +26,7 @@ public class RestEaseRequestQueryParamSerializer : RequestQueryParamSerializer
         if (ReferenceEquals(value, null))
             yield break;
         var sValue = SerializeSimpleType(value, info);
-        if (sValue != null) {
+        if (sValue is not null) {
             yield return new KeyValuePair<string, string?>(name, sValue);
             yield break;
         }
@@ -63,7 +63,7 @@ public class RestEaseRequestQueryParamSerializer : RequestQueryParamSerializer
 
         // Simple type
         var serialized = SerializeSimpleType(value, info);
-        if (serialized != null) {
+        if (serialized is not null) {
             map.Add(name, serialized);
             return map;
         }

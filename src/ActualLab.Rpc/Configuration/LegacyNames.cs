@@ -11,7 +11,7 @@ public sealed class LegacyNames
 
     public LegacyName? this[Version version] {
         get {
-            if (_items == null || _items.Length == 0)
+            if (_items is null || _items.Length == 0)
                 return null;
 
             var index = Array.BinarySearch(_items, new LegacyName("", version), LegacyName.MaxVersionComparer);

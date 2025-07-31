@@ -52,7 +52,7 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
     public CancellationToken GracefulDisposeToken { get; }
     public Task UpdateCycleTask { get; private set; } = null!;
     public Task? WhenDisposed => _whenDisposed;
-    public override bool IsDisposed => _whenDisposed != null;
+    public override bool IsDisposed => _whenDisposed is not null;
 
     protected ComputedState(IComputedStateOptions options, IServiceProvider services, bool initialize = true)
         : base(options, services, false)
@@ -96,13 +96,13 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
     public virtual void Dispose()
     {
         // Double-check locking
-        if (_whenDisposed != null)
+        if (_whenDisposed is not null)
             return;
         lock (Lock) {
-            if (_whenDisposed != null)
+            if (_whenDisposed is not null)
                 return;
 
-            // UpdateCycleTask == null if Initialize wasn't called somehow
+            // UpdateCycleTask is null if Initialize wasn't called somehow
             _whenDisposed = UpdateCycleTask ?? Task.CompletedTask;
         }
         GC.SuppressFinalize(this);

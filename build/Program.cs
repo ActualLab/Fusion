@@ -293,7 +293,7 @@ internal static class Program
     private static FilePath? FindInPath(string fileName)
     {
         var paths = Environment.GetEnvironmentVariable("PATH");
-        if (paths == null)
+        if (paths is null)
             return null;
 
         foreach (var path in paths.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)) {

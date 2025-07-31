@@ -44,7 +44,7 @@ public class PluginHandle<TPlugin> : IPluginHandle<TPlugin>
     {
         var requestedType = typeof(TPlugin);
         var pluginImplTypes = Plugins.TypesByBaseTypeOrderedByDependency.GetValueOrDefault(requestedType);
-        if (pluginImplTypes == null)
+        if (pluginImplTypes.IsEmpty)
             return Enumerable.Empty<object>();
 
         var pluginInfos = (

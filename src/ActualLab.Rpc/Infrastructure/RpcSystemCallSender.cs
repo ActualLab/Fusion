@@ -72,7 +72,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         RpcHeader[]? headers = null)
     {
         var (value, error) = result;
-        return error == null
+        return error is null
             ? Ok(peer, inboundCall, value, needsArgumentPolymorphism, headers)
             : Error(peer, inboundCall, result.Error!, headers);
     }
@@ -86,7 +86,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
             var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
             var call = context.PrepareCallForSendNoWait(OkMethodDef, ArgumentList.New(result))!;
             var inboundHash = inboundCall.Context.Message.Headers.TryGet(WellKnownRpcHeaders.Hash);
-            if (inboundHash == null)
+            if (inboundHash is null)
                 return call.SendNoWait(needsArgumentPolymorphism);
 
             var (message, hash) = call.CreateMessageWithHashHeader(call.Context.RelatedId, needsArgumentPolymorphism);

@@ -71,7 +71,7 @@ public sealed class ComputedRegistry
         OnOperation(random);
         if (_storage.TryGetValue(key, out var handle)) {
             var value = (Computed?)handle.Target;
-            if (value != null)
+            if (value is not null)
                 return value;
 
             if (_storage.TryRemove(key, handle))
@@ -134,7 +134,7 @@ public sealed class ComputedRegistry
         if (!(ReferenceEquals(target, computed) || ReferenceEquals(target, null)))
             return;
 
-        // handle.Target == null (is gone, i.e. to be pruned)
+        // handle.Target is null (is gone, i.e. to be pruned)
         // or pointing to the right computation object
         if (_storage.TryRemove(key, handle))
             handle.Free();
@@ -160,7 +160,7 @@ public sealed class ComputedRegistry
     public Task Prune()
     {
         lock (_lock) {
-            if (_pruneTask == null || _pruneTask.IsCompleted) {
+            if (_pruneTask is null || _pruneTask.IsCompleted) {
                 using var _ = ExecutionContextExt.TrySuppressFlow();
                 _pruneTask = Task.Run(PruneUnsafe);
             }
@@ -183,7 +183,7 @@ public sealed class ComputedRegistry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ReportAccess(Computed computed, bool isNew)
     {
-        if (OnAccess != null && computed.Input.Function is ComputeMethodFunction)
+        if (OnAccess is not null && computed.Input.Function is ComputeMethodFunction)
             OnAccess.Invoke(computed, isNew);
     }
 

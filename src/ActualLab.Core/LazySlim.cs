@@ -37,9 +37,9 @@ public sealed class LazySlim<TValue> : ILazySlim<TValue>
     public TValue Value {
         get {
             // Double-check locking
-            if (_factory == null) return field;
+            if (_factory is null) return field;
             lock (this) {
-                if (_factory == null) return field;
+                if (_factory is null) return field;
                 field = _factory.Invoke();
                 _factory = null;
             }
@@ -60,7 +60,7 @@ public sealed class LazySlim<TValue> : ILazySlim<TValue>
     }
 
     public override string ToString()
-        => $"{GetType().GetName()}({(_factory == null ? Value?.ToString() : "...")})";
+        => $"{GetType().GetName()}({(_factory is null ? Value?.ToString() : "...")})";
 }
 
 public sealed class LazySlim<TArg0, TValue> : ILazySlim<TValue>
@@ -71,9 +71,9 @@ public sealed class LazySlim<TArg0, TValue> : ILazySlim<TValue>
     public TValue Value {
         get {
             // Double-check locking
-            if (_factory == null) return field;
+            if (_factory is null) return field;
             lock (this) {
-                if (_factory == null) return field;
+                if (_factory is null) return field;
                 field = _factory.Invoke(_arg0);
                 _factory = null;
                 _arg0 = default!;
@@ -97,7 +97,7 @@ public sealed class LazySlim<TArg0, TValue> : ILazySlim<TValue>
     }
 
     public override string ToString()
-        => $"{GetType().GetName()}({(_factory == null ? Value?.ToString() : "...")})";
+        => $"{GetType().GetName()}({(_factory is null ? Value?.ToString() : "...")})";
 }
 
 public sealed class LazySlim<TArg0, TArg1, TValue> : ILazySlim<TValue>
@@ -109,9 +109,9 @@ public sealed class LazySlim<TArg0, TArg1, TValue> : ILazySlim<TValue>
     public TValue Value {
         get {
             // Double-check locking
-            if (_factory == null) return field;
+            if (_factory is null) return field;
             lock (this) {
-                if (_factory == null) return field;
+                if (_factory is null) return field;
                 field = _factory.Invoke(_arg0, _arg1);
                 _factory = null;
                 _arg0 = default!;
@@ -138,5 +138,5 @@ public sealed class LazySlim<TArg0, TArg1, TValue> : ILazySlim<TValue>
     }
 
     public override string ToString()
-        => $"{GetType().GetName()}({(_factory == null ? Value?.ToString() : "...")})";
+        => $"{GetType().GetName()}({(_factory is null ? Value?.ToString() : "...")})";
 }

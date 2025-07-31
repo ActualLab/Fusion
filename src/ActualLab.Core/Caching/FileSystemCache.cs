@@ -24,7 +24,7 @@ public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, T
 #pragma warning restore CA2007
             var fileStream = fileStreamWrapper.Target;
             var pairs = Deserialize(await GetText(fileStream, cancellationToken).ConfigureAwait(false));
-            return pairs != null && pairs.TryGetValue(key, out var v) ? v : Option<TValue>.None;
+            return pairs is not null && pairs.TryGetValue(key, out var v) ? v : Option<TValue>.None;
         }
         catch (IOException) {
             return default;
@@ -56,7 +56,7 @@ public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, T
                 newText = Serialize(pairs);
                 await SetText(fileStream, newText, cancellationToken).ConfigureAwait(false);
             }
-            if (newText == null)
+            if (newText is null)
                 File.Delete(fileName);
         }
         catch (IOException) {}
@@ -77,7 +77,7 @@ public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, T
 
     protected virtual async Task<string?> GetText(FileStream? fileStream, CancellationToken cancellationToken)
     {
-        if (fileStream == null)
+        if (fileStream is null)
             return null;
         try {
             fileStream.Seek(0, SeekOrigin.Begin);
@@ -92,7 +92,7 @@ public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, T
 
     protected virtual async ValueTask SetText(FileStream? fileStream, string? text, CancellationToken cancellationToken)
     {
-        if (fileStream == null)
+        if (fileStream is null)
             return;
         fileStream.Seek(0, SeekOrigin.Begin);
 #pragma warning disable CA2007
@@ -106,12 +106,12 @@ public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, T
     }
 
     protected virtual Dictionary<TKey, TValue>? Deserialize(string? source)
-        => source == null
+        => source is null
             ? null
             : JsonConvert.DeserializeObject<Dictionary<TKey, TValue>>(source);
 
     protected virtual string? Serialize(Dictionary<TKey, TValue>? source)
-        => source == null || source.Count == 0
+        => source is null || source.Count == 0
             ? null
             : JsonConvert.SerializeObject(source);
 }

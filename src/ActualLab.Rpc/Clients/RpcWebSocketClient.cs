@@ -78,7 +78,7 @@ public class RpcWebSocketClient(
     public virtual async Task<RpcConnection> ConnectRemote(
         RpcClientPeer clientPeer, Uri? uri, CancellationToken cancellationToken)
     {
-        if (uri == null) {
+        if (uri is null) {
             // The expected behavior for null URI is to wait indefinitely
             Log.LogWarning("'{PeerRef}': No connection URL - waiting for peer termination", clientPeer.Ref);
             await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -101,7 +101,7 @@ public class RpcWebSocketClient(
                         await o.ConnectAsync(uri!, connectToken).ConfigureAwait(false);
                         return o;
                     }
-                    catch when (o != null) {
+                    catch when (o is not null) {
                         try {
                             await o.DisposeAsync().ConfigureAwait(false);
                         }

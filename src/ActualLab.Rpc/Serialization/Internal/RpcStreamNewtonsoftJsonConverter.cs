@@ -10,7 +10,7 @@ public class RpcStreamNewtonsoftJsonConverter : JsonConverter
     private static readonly ConcurrentDictionary<Type, JsonConverter?> ConverterCache = new();
 
     public override bool CanConvert(Type objectType)
-        => GetConverter(objectType) != null;
+        => GetConverter(objectType) is not null;
 
     public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue,
         JsonSerializer serializer)

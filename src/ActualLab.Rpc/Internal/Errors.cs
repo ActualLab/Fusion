@@ -8,6 +8,13 @@ public static class Errors
     public static Exception UnknownCallType(byte callTypeId)
         => new KeyNotFoundException($"Unknown CallTypeId: {callTypeId}.");
 
+    public static Exception UnspecifiedServiceMode(Type serviceType)
+        => new InvalidOperationException($"Service '{serviceType.GetName()}' requires Mode to be specified.");
+    public static Exception UnspecifiedServerResolver(Type serviceType, RpcServiceMode mode)
+        => new InvalidOperationException($"Service '{serviceType.GetName()}' is registered as {mode} and requires ServerResolver to be specified.");
+    public static Exception UnexpectedServerResolver(Type serviceType, RpcServiceMode mode)
+        => new InvalidOperationException($"Service '{serviceType.GetName()}' is registered as {mode} and requires ServerResolver to be null.");
+
     public static Exception ServiceTypeConflict(Type serviceType)
         => new InvalidOperationException($"Service '{serviceType.GetName()}' is already registered.");
     public static Exception ServiceNameConflict(Type serviceType1, Type serviceType2, string serviceName)

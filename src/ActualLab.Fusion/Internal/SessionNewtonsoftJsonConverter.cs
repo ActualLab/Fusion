@@ -14,6 +14,6 @@ public class SessionNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<Sess
         Newtonsoft.Json.JsonSerializer serializer)
     {
         var value = (string?) reader.Value;
-        return value == null! ? null : new Session(value);
+        return value is null ? null : new Session(value);
     }
 }

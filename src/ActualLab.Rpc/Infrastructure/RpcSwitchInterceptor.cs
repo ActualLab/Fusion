@@ -5,7 +5,7 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public class RpcSwitchInterceptor : RpcInterceptor
 {
-    public readonly RpcSafeCallRouter CallRouter;
+    public readonly RpcSafeCallRouter SafeCallRouter;
     public readonly object? LocalTarget;
     public readonly object? RemoteTarget;
 
@@ -18,7 +18,7 @@ public class RpcSwitchInterceptor : RpcInterceptor
         object? remoteTarget)
         : base(settings, services, serviceDef)
     {
-        CallRouter = Hub.CallRouter;
+        SafeCallRouter = Hub.SafeCallRouter;
         LocalTarget = localTarget;
         RemoteTarget = remoteTarget;
     }
@@ -35,12 +35,12 @@ public class RpcSwitchInterceptor : RpcInterceptor
         var remoteCallAsyncInvoker = methodDef.SelectAsyncInvokerUntyped(proxy, RemoteTarget)
             ?? throw Errors.NoRemoteCallInvoker();
         return invocation => {
-            var peer = CallRouter.Invoke(rpcMethodDef, invocation.Arguments);
+            var peer = SafeCallRouter.Invoke(rpcMethodDef, invocation.Arguments);
             Task resultTask;
             if (peer.Ref.CanBeRerouted)
                 resultTask = InvokeWithRerouting(rpcMethodDef, localCallAsyncInvoker, remoteCallAsyncInvoker, invocation, peer);
-            else if (peer.ConnectionKind == RpcPeerConnectionKind.Local) {
-                if (localCallAsyncInvoker == null)
+            else if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
+                if (localCallAsyncInvoker is null)
                     throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
                 resultTask = localCallAsyncInvoker.Invoke(invocation);
@@ -64,7 +64,7 @@ public class RpcSwitchInterceptor : RpcInterceptor
     {
         var context = invocation.Context as RpcOutboundContext ?? RpcOutboundContext.Current ?? new();
         while (true) {
-            peer ??= CallRouter.Invoke(methodDef, invocation.Arguments);
+            peer ??= SafeCallRouter.Invoke(methodDef, invocation.Arguments);
             try {
                 Task resultTask;
                 if (peer.ConnectionKind == RpcPeerConnectionKind.Local) {

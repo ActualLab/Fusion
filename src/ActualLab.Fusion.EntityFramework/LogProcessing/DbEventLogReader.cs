@@ -91,7 +91,7 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
         dbContext.EnableChangeTracking(false);
 
         var entry = await GetEntry(dbContext, key, cancellationToken).ConfigureAwait(false);
-        if (entry == null)
+        if (entry is null)
             throw new LogEntryNotFoundException();
         if (entry.State != LogEntryState.New)
             return false;

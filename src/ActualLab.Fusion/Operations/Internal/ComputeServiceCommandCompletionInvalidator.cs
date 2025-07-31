@@ -26,7 +26,7 @@ public class ComputeServiceCommandCompletionInvalidator(
     [field: AllowNull, MaybeNull]
     protected RpcHub RpcHub => field ??= Services.GetRequiredService<RpcHub>();
     [field: AllowNull, MaybeNull]
-    protected RpcSafeCallRouter CallRouter => field ??= RpcHub.InternalServices.CallRouter;
+    protected RpcSafeCallRouter RpcSafeCallRouter => field ??= RpcHub.InternalServices.SafeCallRouter;
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
@@ -88,7 +88,7 @@ public class ComputeServiceCommandCompletionInvalidator(
         }
 
         finalHandler = CommandHandlerResolver.GetCommandHandlerChain(command).FinalHandler as IMethodCommandHandler;
-        if (finalHandler == null || finalHandler.ParameterTypes.Length != 2)
+        if (finalHandler is null || finalHandler.ParameterTypes.Length != 2)
             return false;
 
         // The code below doesn't work for local RPC servers:
@@ -100,7 +100,7 @@ public class ComputeServiceCommandCompletionInvalidator(
         /*
         if (requireLocalHandler) {
             var rpcServiceDef = RpcHub.ServiceRegistry.Get(finalHandler.ServiceType);
-            if (rpcServiceDef != null) {
+            if (rpcServiceDef is not null) {
                 if (!rpcServiceDef.HasServer)
                     return false; // All RPC clients are remote handlers
 
@@ -150,7 +150,7 @@ public class ComputeServiceCommandCompletionInvalidator(
     {
         var operationName = command.GetOperationName("", "-inv");
         var activity = FusionInstruments.ActivitySource.StartActivity(operationName);
-        if (activity != null) {
+        if (activity is not null) {
             var tags = new ActivityTagsCollection { { "command", command.ToString() } };
             var activityEvent = new ActivityEvent(operationName, tags: tags);
             activity.AddEvent(activityEvent);

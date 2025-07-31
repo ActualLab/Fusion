@@ -76,7 +76,7 @@ public static class FilePathExt
         while (!textReader.EndOfStream) {
             cancellationToken.ThrowIfCancellationRequested();
             var line = await textReader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
-            if (line == null)
+            if (line is null)
                 break;
 
             yield return line;
@@ -114,8 +114,10 @@ public static class FilePathExt
         using var writer = File.OpenWrite(path);
         using var textWriter = new StreamWriter(writer, encoding);
         await foreach (var line in lines.WithCancellation(cancellationToken).ConfigureAwait(false)) {
-            if (line == null!)
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+            if (line is null)
                 continue;
+
             await textWriter.WriteLineAsync(line).ConfigureAwait(false);
         }
     }

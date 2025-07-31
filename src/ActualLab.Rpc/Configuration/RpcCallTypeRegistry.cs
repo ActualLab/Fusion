@@ -22,7 +22,7 @@ public static class RpcCallTypeRegistry
     public static (Type InboundCallType, Type OutboundCallType) Resolve(byte callTypeId)
     {
         var item = _callTypes[callTypeId];
-        if (item.InboundCallType == null)
+        if (item.InboundCallType is null)
             throw Errors.UnknownCallType(callTypeId);
         return item!;
     }
@@ -52,7 +52,7 @@ public static class RpcCallTypeRegistry
             if (existingItem == item)
                 return;
 
-            if (existingItem.InboundCallType != null)
+            if (existingItem.InboundCallType is not null)
                 throw ActualLab.Internal.Errors.KeyAlreadyExists();
 
             _callTypes[callTypeId] = item;

@@ -45,11 +45,11 @@ public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
 
     public void TryStart(LazySlim<ShardRef, RpcShardPeerRef> lazy)
     {
-        if (_rerouteTokenSource != null)
+        if (_rerouteTokenSource is not null)
             return;
 
         var rerouteTokenSource = new CancellationTokenSource();
-        if (Interlocked.CompareExchange(ref _rerouteTokenSource, rerouteTokenSource, null) != null)
+        if (Interlocked.CompareExchange(ref _rerouteTokenSource, rerouteTokenSource, null) is not null)
             return;
 
         _ = Task.Run(async () => {

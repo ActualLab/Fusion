@@ -42,7 +42,7 @@ public class RedisConnector
         async Task<Temporary<IConnectionMultiplexer>> CompleteAsync(CancellationToken ct)
         {
             var current = state.Last;
-            while (current.Value == null)
+            while (current.Value is null)
                 current = await current.WhenNext(ct).ConfigureAwait(false);
             return await current.Value.WaitAsync(ct).ConfigureAwait(false);
         }
@@ -52,12 +52,12 @@ public class RedisConnector
     {
         lock (Lock) {
             var multiplexerTask = State.Value;
-            if (multiplexerTask != null) {
+            if (multiplexerTask is not null) {
                 if (!multiplexerTask.IsCompletedSuccessfully())
                     return;
 
                 var (multiplexer, _) = multiplexerTask.GetAwaiter().GetResult();
-                if (failedMultiplexer != null && !ReferenceEquals(failedMultiplexer, multiplexer))
+                if (failedMultiplexer is not null && !ReferenceEquals(failedMultiplexer, multiplexer))
                     return;
             }
 

@@ -11,9 +11,9 @@ public sealed class ByIdAndVersionParameterComparer<TId, TVersion> : ParameterCo
     {
         if (ReferenceEquals(oldValue, newValue))
             return true; // Might be the most frequent case
-        if (oldValue == null)
-            return newValue == null;
-        if (newValue == null)
+        if (oldValue is null)
+            return newValue is null;
+        if (newValue is null)
             return false;
 
         var oldVersion = ((IHasVersion<TVersion>)oldValue).Version;

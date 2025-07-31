@@ -56,7 +56,7 @@ public class DbSessionInfoRepo<TDbContext,
         TDbContext dbContext, string sessionId, CancellationToken cancellationToken = default)
     {
         var dbSessionInfo = await Get(dbContext, sessionId, true, cancellationToken).ConfigureAwait(false);
-        if (dbSessionInfo == null) {
+        if (dbSessionInfo is null) {
             var session = new Session(sessionId);
             var sessionInfo = new SessionInfo(session, Clocks.SystemClock.Now);
             dbSessionInfo = dbContext.Add(
@@ -76,7 +76,7 @@ public class DbSessionInfoRepo<TDbContext,
         var dbSessionInfo = await dbContext.Set<TDbSessionInfo>().ForNoKeyUpdate()
             .FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken)
             .ConfigureAwait(false);
-        var isDbSessionInfoFound = dbSessionInfo != null;
+        var isDbSessionInfoFound = dbSessionInfo is not null;
         dbSessionInfo ??= new() {
             Id = sessionId,
             CreatedAt = sessionInfo.CreatedAt,

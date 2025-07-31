@@ -86,7 +86,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
     {
         Settings = settings;
         var keyExtractor = Settings.KeyExtractor;
-        if (keyExtractor == null) {
+        if (keyExtractor is null) {
             var shard = DbHub.ShardRegistry.HasSingleShard ? DbShard.Single : DbShard.Template;
             using var dbContext = DbHub.ContextFactory.CreateDbContext(shard);
             var keyPropertyName = dbContext.Model
@@ -133,7 +133,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
     public async ValueTask DisposeAsync()
     {
         var batchProcessors = Interlocked.Exchange(ref _batchProcessors, null);
-        if (batchProcessors == null)
+        if (batchProcessors is null)
             return;
         await batchProcessors.Values
             .Select(p => p.DisposeAsync().AsTask())
@@ -186,7 +186,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
         // Applying QueryTransformer
         var qt = Settings.QueryTransformer;
-        var eBody = qt == null
+        var eBody = qt is null
             ? eWhere
             : qt.Body.Replace(qt.Parameters[0], eWhere);
 
@@ -203,7 +203,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
                 && m.IsGenericMethod
                 && m.GetGenericArguments().Length == 1)
             ?.MakeGenericMethod(typeof(TKey[]));
-        if (mExecute == null)
+        if (mExecute is null)
             throw Errors.CannotCompileQuery();
 
         // Creating compiled query invoker
@@ -228,7 +228,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         var ePredicate = (Expression?)null;
         for (var i = 0; i < batchSize; i++) {
             var eCondition = Expression.Equal(eKey, pKeys[i]);
-            ePredicate = ePredicate == null ? eCondition : Expression.OrElse(ePredicate, eCondition);
+            ePredicate = ePredicate is null ? eCondition : Expression.OrElse(ePredicate, eCondition);
         }
         var lPredicate = Expression.Lambda<Func<TDbEntity, bool>>(ePredicate!, pEntity);
 
@@ -238,7 +238,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
         // Applying QueryTransformer
         var qt = Settings.QueryTransformer;
-        var eBody = qt == null
+        var eBody = qt is null
             ? eWhere
             : qt.Body.Replace(qt.Parameters[0], eWhere);
 
@@ -258,7 +258,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
                 && m.IsGenericMethod
                 && m.GetGenericArguments().Length == batchSize)
             ?.MakeGenericMethod(pKeys.Select(p => p.Type).ToArray());
-        if (mExecute == null)
+        if (mExecute is null)
             throw Errors.BatchSizeIsTooLarge();
 
         // Creating compiled query invoker
@@ -274,7 +274,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
     protected BatchProcessor<TKey, TDbEntity?> GetBatchProcessor(string shard)
     {
         var batchProcessors = _batchProcessors;
-        if (batchProcessors == null)
+        if (batchProcessors is null)
             throw ActualLab.Internal.Errors.AlreadyDisposed(GetType());
 
         return batchProcessors.GetOrAdd(shard, static (shard1, self) => self.CreateBatchProcessor(shard1), this);
@@ -300,7 +300,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         var activity = FusionInstruments.ActivitySource
             .IfEnabled(Settings.IsTracingEnabled)
             .StartActivity(GetType(), nameof(ProcessBatch));
-        if (activity == null)
+        if (activity is null)
             return activity;
 
         activity.AddShardTags(shard)?.AddTag("batchSize", batchSize.ToString(CultureInfo.InvariantCulture));

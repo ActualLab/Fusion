@@ -21,7 +21,7 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
         var mustBeUsed =
-            context.OuterContext != null // Should be a nested context
+            context.OuterContext is not null // Should be a nested context
             && ComputeServiceCommandCompletionInvalidator.IsRequired(command, false, out _)
             && !Invalidation.IsActive;
         if (!mustBeUsed) {
@@ -31,7 +31,7 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
 
         var operation = context.TryGetOperation();
         var operationItemsBackup = PropertyBag.Empty;
-        if (operation != null) {
+        if (operation is not null) {
             operationItemsBackup = operation.Items.Snapshot;
             operation.Items.Snapshot = PropertyBag.Empty;
         }
@@ -40,7 +40,7 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
         }
         finally {
-            if (operation != null) {
+            if (operation is not null) {
                 // There was an operation already
                 var operationItems = operation.Items;
                 operation.NestedOperations = operation.NestedOperations.Add(new(command, operationItems.Snapshot));
@@ -49,7 +49,7 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
             else {
                 // There was no operation, but it could be requested inside one of the nested commands
                 operation = context.TryGetOperation();
-                if (operation != null) {
+                if (operation is not null) {
                     // The operation is requested inside the nested command, so we have to make a couple fixes:
                     // - Add a nested operation that corresponds to the current command
                     // - Replace its Items with an empty bag

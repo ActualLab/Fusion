@@ -102,7 +102,7 @@ public class PluginSetInfo
             a => ToHashSet(
                 a.GetReferencedAssemblies()
                     .Select(assemblyNames.GetValueOrDefault)
-                    .Where(x => x != null)))!;
+                    .Where(x => x is not null)))!;
     }
 
     private static HashSet<Assembly> GetAssemblyDependencies(Assembly assembly, HashSet<Assembly>? result = null)

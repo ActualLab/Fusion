@@ -66,7 +66,7 @@ public sealed class UIActionTracker(
                     Interlocked.Decrement(ref _runningActionCount);
 
                     var result = action.UntypedResult;
-                    if (result == null) {
+                    if (result is null) {
                         Log.LogError("UI action has completed w/o a result: {Action}", action);
                         return;
                     }

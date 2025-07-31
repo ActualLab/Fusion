@@ -25,7 +25,7 @@ public class RpcNonRoutingInterceptor : RpcInterceptor
         return invocation => {
             var context = invocation.Context as RpcOutboundContext ?? RpcOutboundContext.Current ?? new();
             var call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
-            if (call == null)
+            if (call is null)
                 throw RpcRerouteException.MustRerouteToLocal();
 
             var resultTask = call.Invoke(AssumeConnected);

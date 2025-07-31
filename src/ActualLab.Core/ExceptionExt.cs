@@ -15,7 +15,7 @@ public static class ExceptionExt
 
     public static IReadOnlyList<Exception> Flatten(this Exception? exception)
     {
-        if (exception == null)
+        if (exception is null)
             return Array.Empty<Exception>();
 
         var result = new List<Exception>();
@@ -25,7 +25,8 @@ public static class ExceptionExt
         void Traverse(List<Exception> list, Exception ex) {
             if (ex is AggregateException ae) {
                 foreach (var e in ae.InnerExceptions)
-                    if (e != null!)
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+                    if (e is not null)
                         Traverse(list, e);
             }
             if (ex.InnerException is { } ie)
@@ -36,7 +37,7 @@ public static class ExceptionExt
 
     public static bool Any(this Exception? exception, Func<Exception, bool> predicate)
     {
-        if (exception == null)
+        if (exception is null)
             return false;
         if (predicate.Invoke(exception))
             return true;

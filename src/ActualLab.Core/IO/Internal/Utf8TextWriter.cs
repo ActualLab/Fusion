@@ -41,7 +41,7 @@ public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(
 
     public override void Write(char[] buffer, int index, int count)
     {
-        if (buffer == null)
+        if (buffer is null)
             throw new ArgumentNullException(nameof(buffer));
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -55,7 +55,7 @@ public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(
 
     public override void Write(string? value)
     {
-        if (value == null)
+        if (value is null)
             return;
 
         _sb.Append(value);

@@ -205,7 +205,7 @@ public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
     /// <param name="untypedValue">Untyped value.</param>
     /// <param name="error">Error, if it's an error.</param>
     public Result(object? untypedValue, Exception? error)
-        => _valueOrErrorBox = error == null ? untypedValue : new ErrorBox(error);
+        => _valueOrErrorBox = error is null ? untypedValue : new ErrorBox(error);
 
     /// <inheritdoc />
     public void Deconstruct(out object? untypedValue, out Exception? error)
@@ -224,7 +224,7 @@ public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
     public override string ToString()
     {
         var errorBox = _valueOrErrorBox as ErrorBox;
-        return $"{nameof(Result)}({(errorBox != null ? $"Error: {errorBox.Error}" : _valueOrErrorBox?.ToString())})";
+        return $"{nameof(Result)}({(errorBox is not null ? $"Error: {errorBox.Error}" : _valueOrErrorBox?.ToString())})";
     }
 
     /// <inheritdoc />
@@ -280,21 +280,21 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool HasValue {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Error == null;
+        get => Error is null;
     }
 
     /// <inheritdoc />
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool HasError {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Error != null;
+        get => Error is not null;
     }
 
     /// <inheritdoc />
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public T Value {
         get {
-            if (Error != null)
+            if (Error is not null)
                 ExceptionDispatchInfo.Capture(Error).Throw();
             return ValueOrDefault!;
         }
@@ -302,7 +302,7 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
 
     /// <inheritdoc />
     // ReSharper disable once HeapView.BoxingAllocation
-    object? IResult.Value => Error == null ? Value : null;
+    object? IResult.Value => Error is null ? Value : null;
 
     /// <summary>
     /// Constructor.
@@ -311,7 +311,7 @@ public readonly partial struct Result<T> : IResult<T>, IEquatable<Result<T>>
     /// <param name="error"><see cref="Error"/> value.</param>
     public Result(T valueOrDefault, Exception? error = null)
     {
-        if (error != null)
+        if (error is not null)
             valueOrDefault = default!;
         ValueOrDefault = valueOrDefault;
         Error = error;

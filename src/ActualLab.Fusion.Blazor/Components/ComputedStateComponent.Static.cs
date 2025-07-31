@@ -40,7 +40,7 @@ public abstract partial class ComputedStateComponent
         => CreateDefaultStateOptionsCache.GetOrAdd(componentType,
             static componentType => {
                 var type = componentType;
-                while (type != null) {
+                while (type is not null) {
                     if (type.IsGenericType
                         && type.GetGenericTypeDefinition() is var gtd
                         && gtd == typeof(ComputedStateComponent<>)) {

@@ -67,7 +67,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         if (Invalidation.IsActive) {
             _ = Get(user.Id, default).AssertCompleted();
             existingUser = context.Operation.Items.KeylessGet<User>();
-            if (existingUser == null)
+            if (existingUser is null)
                 _ = Count(default).AssertCompleted();
             return;
         }
@@ -80,10 +80,10 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         if (orUpdate) {
             existingUser = await dbContext.Users.FindAsync(DbKey.Compose(userId), cancellationToken);
             context.Operation.Items.KeylessSet(existingUser);
-            if (existingUser != null!)
+            if (existingUser is not null)
                 dbContext.Users.Update(user);
         }
-        if (existingUser == null)
+        if (existingUser is null)
             dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }

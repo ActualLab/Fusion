@@ -12,7 +12,7 @@ public sealed class DispatchingComputedStateComponentStateWithExecutionContextFl
     protected override Task Compute(CancellationToken cancellationToken)
     {
         var executionContext = ExecutionContext.Capture();
-        return executionContext == null
+        return executionContext is null
             ? Dispatcher.InvokeAsync(ComputeTaskFactory)
             : Dispatcher.InvokeAsync(() => ExecutionContextExt.Start(executionContext, ComputeTaskFactory));
     }

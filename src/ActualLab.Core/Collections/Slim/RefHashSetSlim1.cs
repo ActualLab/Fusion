@@ -8,20 +8,20 @@ public struct RefHashSetSlim1<T> : IRefHashSetSlim<T>
 
     private readonly bool HasSet {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _set != null;
+        get => _set is not null;
     }
 
     public readonly int Count {
         get {
             if (HasSet) return _set!.Count;
-            if (_item == null) return 0;
+            if (_item is null) return 0;
             return 1;
         }
     }
 
     public readonly bool Contains(T item)
     {
-        if (item == null)
+        if (item is null)
             throw new ArgumentNullException(nameof(item));
 
         if (HasSet) return _set!.Contains(item);
@@ -31,14 +31,14 @@ public struct RefHashSetSlim1<T> : IRefHashSetSlim<T>
 
     public bool Add(T item)
     {
-        if (item == null)
+        if (item is null)
             throw new ArgumentNullException(nameof(item));
 
         if (HasSet) return _set!.Add(item);
 
         // Item 1
         // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-        if (_item == null) {
+        if (_item is null) {
             _item = item;
             return true;
         }
@@ -53,13 +53,13 @@ public struct RefHashSetSlim1<T> : IRefHashSetSlim<T>
 
     public bool Remove(T item)
     {
-        if (item == null)
+        if (item is null)
             throw new ArgumentNullException(nameof(item));
 
         if (HasSet) return _set!.Remove(item);
 
         // Item 1
-        if (_item == null) return false;
+        if (_item is null) return false;
         if (_item == item) {
             _item = default!;
             return true;
@@ -81,7 +81,7 @@ public struct RefHashSetSlim1<T> : IRefHashSetSlim<T>
                     yield return item;
                 yield break;
             }
-            if (_item == null) yield break;
+            if (_item is null) yield break;
             yield return _item;
         }
     }
@@ -93,7 +93,7 @@ public struct RefHashSetSlim1<T> : IRefHashSetSlim<T>
                 action(state, item);
             return;
         }
-        if (_item == null) return;
+        if (_item is null) return;
         action(state, _item);
     }
 
@@ -105,7 +105,7 @@ public struct RefHashSetSlim1<T> : IRefHashSetSlim<T>
                 aggregator(ref state, item);
             return;
         }
-        if (_item == null) return;
+        if (_item is null) return;
         aggregator(ref state, _item);
     }
 
@@ -116,7 +116,7 @@ public struct RefHashSetSlim1<T> : IRefHashSetSlim<T>
                 state = aggregator(state, item);
             return state;
         }
-        if (_item == null) return state;
+        if (_item is null) return state;
         state = aggregator(state, _item);
         return state;
     }
@@ -129,7 +129,7 @@ public struct RefHashSetSlim1<T> : IRefHashSetSlim<T>
                 target[index++] = item;
             return;
         }
-        if (_item == null) return;
+        if (_item is null) return;
         target[index] = _item;
     }
 }

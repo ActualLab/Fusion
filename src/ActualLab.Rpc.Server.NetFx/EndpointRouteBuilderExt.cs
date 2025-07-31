@@ -6,8 +6,8 @@ public static class EndpointRouteBuilderExt
 {
     public static IAppBuilder MapRpcServer(this IAppBuilder appBuilder, IServiceProvider services)
     {
-        if (appBuilder == null) throw new ArgumentNullException(nameof(appBuilder));
-        if (services == null) throw new ArgumentNullException(nameof(services));
+        if (appBuilder is null) throw new ArgumentNullException(nameof(appBuilder));
+        if (services is null) throw new ArgumentNullException(nameof(services));
 
         var server = services.GetRequiredService<RpcWebSocketServer>();
         var settings = server.Settings;

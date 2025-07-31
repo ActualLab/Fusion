@@ -52,7 +52,7 @@ public class AsyncLockSet<TKey>(
         while (true) {
             var entry = _entries.GetOrAdd(key, static (key1, self) => new Entry(self, key1), this);
             var asyncLock = entry.TryBeginUse();
-            if (asyncLock != null)
+            if (asyncLock is not null)
                 return (asyncLock, entry);
 
             spinWait.SpinOnce(); // Safe for WASM
@@ -96,7 +96,7 @@ public class AsyncLockSet<TKey>(
         {
             lock (this) {
                 var asyncLock = _asyncLock;
-                if (asyncLock != null)
+                if (asyncLock is not null)
                     ++_useCount;
                 return asyncLock;
             }
@@ -107,7 +107,7 @@ public class AsyncLockSet<TKey>(
         {
             var mustRelease = false;
             lock (this) {
-                if (_asyncLock != null && --_useCount == 0) {
+                if (_asyncLock is not null && --_useCount == 0) {
                     _asyncLock = null;
                     mustRelease = true;
                 }

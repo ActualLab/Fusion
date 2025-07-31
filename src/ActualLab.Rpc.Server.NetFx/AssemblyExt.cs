@@ -10,7 +10,7 @@ public static class AssemblyExt
             .Where(t => !t.IsAbstract && !t.IsGenericTypeDefinition)
             .Where(t => typeof(IHttpController).IsAssignableFrom(t)
                 || t.Name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase));
-        if (fullNamePrefixFilter != null)
+        if (fullNamePrefixFilter is not null)
             q = q.Where(c => (c.FullName ?? string.Empty).StartsWith(fullNamePrefixFilter, StringComparison.Ordinal));
         return q;
     }

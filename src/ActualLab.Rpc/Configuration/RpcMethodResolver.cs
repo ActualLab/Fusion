@@ -17,7 +17,7 @@ public sealed class RpcMethodResolver
 
     public RpcMethodDef? this[in RpcMethodRef methodRef] {
         get {
-            if (MethodByRef != null && MethodByRef.TryGetValue(methodRef, out var methodEntry))
+            if (MethodByRef is not null && MethodByRef.TryGetValue(methodRef, out var methodEntry))
                 return methodEntry.Method;
 
             return NextResolver?[methodRef];
@@ -26,7 +26,7 @@ public sealed class RpcMethodResolver
 
     public RpcMethodDef? this[string fullName] {
         get {
-            if (MethodByFullName != null && MethodByFullName.TryGetValue(fullName, out var methodEntry))
+            if (MethodByFullName is not null && MethodByFullName.TryGetValue(fullName, out var methodEntry))
                 return methodEntry.Method;
 
             return NextResolver?[fullName];
@@ -35,7 +35,7 @@ public sealed class RpcMethodResolver
 
     public RpcMethodDef? this[int id] {
         get {
-            if (MethodByHashCode != null && MethodByHashCode.TryGetValue(id, out var methodEntry))
+            if (MethodByHashCode is not null && MethodByHashCode.TryGetValue(id, out var methodEntry))
                 return methodEntry.Method;
 
             return NextResolver?[id];
@@ -108,11 +108,11 @@ public sealed class RpcMethodResolver
             var serviceVersion = legacyServiceName?.MaxVersion ?? VersionExt.MaxValue;
             foreach (var method in service.Methods) {
                 var legacyMethodName = method.LegacyNames[version];
-                if (legacyMethodName == null && legacyServiceName == null)
+                if (legacyMethodName is null && legacyServiceName is null)
                     continue; // No overrides
 
                 var methodName = legacyMethodName?.Name ?? method.Name;
-                var methodVersion = legacyMethodName == null ? serviceVersion : legacyMethodName.MaxVersion;
+                var methodVersion = legacyMethodName is null ? serviceVersion : legacyMethodName.MaxVersion;
 
                 var fullName = RpcMethodDef.ComposeFullName(serviceName, methodName);
                 var methodRef = new RpcMethodRef(fullName, method);
@@ -158,7 +158,7 @@ public sealed class RpcMethodResolver
     public override string ToString()
     {
         var sMethods = "[]";
-        if (MethodByFullName != null) {
+        if (MethodByFullName is not null) {
             var methods = MethodByFullName
                 .OrderBy(x => x.Key, StringComparer.Ordinal)
                 .Select(x => $"{Environment.NewLine}  {x.Key} -> {x.Value}");

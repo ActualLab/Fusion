@@ -8,7 +8,7 @@ public static class HttpContextExt
     public static T GetRequiredService<T>(this IDependencyScope dependencyScope)
     {
         var service = GetService<T>(dependencyScope);
-        if (service == null)
+        if (service is null)
             throw new InvalidOperationException($"Required service '{typeof(T)}' is not registered.");
         return service;
     }

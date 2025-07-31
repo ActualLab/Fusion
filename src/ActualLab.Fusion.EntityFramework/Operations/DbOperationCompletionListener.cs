@@ -35,7 +35,7 @@ public class DbOperationCompletionListener<TDbContext>
 
     public Task OnOperationCompleted(Operation operation, CommandContext? commandContext)
     {
-        if (commandContext == null)
+        if (commandContext is null)
             return Task.CompletedTask; // Not a local operation
 
         if (operation.Scope is not DbOperationScope<TDbContext> operationScope)

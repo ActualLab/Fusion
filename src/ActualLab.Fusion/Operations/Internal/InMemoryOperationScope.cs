@@ -26,7 +26,7 @@ public sealed class InMemoryOperationScope : IOperationScope
     public static InMemoryOperationScope GetOrCreate(CommandContext context)
     {
         var operation = context.TryGetOperation();
-        if (operation != null)
+        if (operation is not null)
             return operation.Scope as InMemoryOperationScope
                 ?? throw Errors.WrongOperationScopeType(typeof(InMemoryOperationScope), operation.Scope?.GetType());
 

@@ -21,7 +21,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
             var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo != null) {
+            if (invSessionInfo is not null) {
                 _ = GetUser(shard, invSessionInfo.UserId, default);
                 _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             }
@@ -46,7 +46,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var dbUser = await Users
             .GetByUserIdentity(dbContext, authenticatedIdentity, true, cancellationToken)
             .ConfigureAwait(false);
-        if (dbUser == null) {
+        if (dbUser is null) {
             (dbUser, isNewUser) = await Users
                 .GetOrCreateOnSignIn(dbContext, user, cancellationToken)
                 .ConfigureAwait(false);
@@ -85,7 +85,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var shard = ShardResolver.Resolve(command);
         if (Invalidation.IsActive) {
             var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo == null)
+            if (invSessionInfo is null)
                 return null!;
 
             _ = GetSessionInfo(session, default); // Must go first!
@@ -101,7 +101,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         await using var _1 = dbContext.ConfigureAwait(false);
 
         var dbSessionInfo = await Sessions.Get(dbContext, session.Id, true, cancellationToken).ConfigureAwait(false);
-        var isNew = dbSessionInfo == null;
+        var isNew = dbSessionInfo is null;
         var now = Clocks.SystemClock.Now;
         var sessionInfo = SessionConverter.ToModel(dbSessionInfo)
             ?? SessionConverter.NewModel() with { SessionHash = session.Hash };
@@ -138,7 +138,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var dbSessionInfo = await Sessions.Get(dbContext, session.Id, true, cancellationToken).ConfigureAwait(false);
         var sessionInfo = SessionConverter.ToModel(dbSessionInfo);
-        if (sessionInfo == null)
+        if (sessionInfo is null)
             throw new KeyNotFoundException();
         VersionChecker.RequireExpected(sessionInfo.Version, expectedVersion);
         sessionInfo = sessionInfo with {

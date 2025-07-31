@@ -24,7 +24,7 @@ public sealed record JsonRpcMessage(
 
     public static List<string>? FormatHeaders(RpcHeader[]? headers)
     {
-        if (headers == null || headers.Length == 0)
+        if (headers is null || headers.Length == 0)
             return null;
 
         var result = new List<string>();
@@ -38,7 +38,7 @@ public sealed record JsonRpcMessage(
 
     public RpcHeader[]? ParseHeaders()
     {
-        if (Headers == null || Headers.Count == 0)
+        if (Headers is null || Headers.Count == 0)
             return null;
 
         var buffer = _headerBuffer ??= new List<RpcHeader>(HeaderBufferCapacity);

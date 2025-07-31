@@ -44,7 +44,7 @@ public static class TestRunnerInfo
         => IsGitHubAction() || IsTeamCityAgent();
 
     public static bool IsTeamCityAgent()
-        => TeamCity.Version != null;
+        => TeamCity.Version is not null;
 
     public static bool IsGitHubAction()
         => GitHub.IsActionRunning;

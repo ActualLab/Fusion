@@ -20,12 +20,12 @@ public class DbCartService(IServiceProvider services)
 
         await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
         var dbCart = await dbContext.Carts.FindAsync(DbKey.Compose(cartId), cancellationToken);
-        if (cart == null) {
-            if (dbCart != null)
+        if (cart is null) {
+            if (dbCart is not null)
                 dbContext.Remove(dbCart);
         }
         else {
-            if (dbCart != null) {
+            if (dbCart is not null) {
                 await dbContext.Entry(dbCart).Collection(c => c.Items).LoadAsync(cancellationToken);
                 // Removing what doesn't exist in cart.Items
                 dbCart.Items.RemoveAll(i => !cart.Items.ContainsKey(i.DbProductId));
@@ -62,7 +62,7 @@ public class DbCartService(IServiceProvider services)
         dbContext.EnableChangeTracking(true); // Otherwise LoadAsync below won't work
 
         var dbCart = await dbContext.Carts.FindAsync(DbKey.Compose(id), cancellationToken);
-        if (dbCart == null)
+        if (dbCart is null)
             return null;
 
         await dbContext.Entry(dbCart).Collection(c => c.Items).LoadAsync(cancellationToken);
@@ -74,7 +74,7 @@ public class DbCartService(IServiceProvider services)
     public virtual async Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default)
     {
         var cart = await Get(id, cancellationToken);
-        if (cart == null)
+        if (cart is null)
             return 0;
 
         var total = 0M;

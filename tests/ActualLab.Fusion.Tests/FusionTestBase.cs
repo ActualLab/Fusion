@@ -108,8 +108,9 @@ public abstract class FusionTestBase : RpcTestBase
         var rpc = fusion.Rpc;
         if (!isClient) {
             fusion.AddService<ITimeService, TimeService>();
+            // Just to trigger invocation of a few methods:
             rpc.Service<ITimeService>().Remove();
-            rpc.Service<ITimeServer>().HasServer<ITimeService>().HasName(nameof(ITimeService));
+            rpc.Service<ITimeServer>().IsServer<ITimeService>().HasName(nameof(ITimeService));
             fusion.AddService<IUserService, UserService>();
             fusion.AddService<IScreenshotService, ScreenshotService>();
             fusion.AddService<IEdgeCaseService, EdgeCaseService>();

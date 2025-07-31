@@ -23,7 +23,7 @@ public class TestTextWriter(ITestOutputHelper? downstream = null) : TextWriter, 
 
     public override void Write(string? value)
     {
-        if (value == null)
+        if (value is null)
             throw new ArgumentNullException(nameof(value));
 
         Prefix.Append(value);
@@ -36,7 +36,7 @@ public class TestTextWriter(ITestOutputHelper? downstream = null) : TextWriter, 
 
         var lines = Prefix.ToString().Split(EnvNewLine);
         // lines.Length >= 1 here for sure
-        if (Downstream != null)
+        if (Downstream is not null)
             foreach (var line in lines.Take(lines.Length))
                 Downstream.WriteLine(line);
         Prefix.Clear();

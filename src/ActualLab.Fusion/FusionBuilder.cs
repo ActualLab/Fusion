@@ -47,6 +47,9 @@ public readonly struct FusionBuilder
         RpcServiceMode defaultServiceMode,
         bool saveDefaultServiceMode)
     {
+        if (defaultServiceMode is RpcServiceMode.ClientAndServer)
+            throw new ArgumentOutOfRangeException(nameof(defaultServiceMode));
+
         Services = services;
         Commander = services.AddCommander();
         if (services.FindInstance<FusionTag>() is { } fusionTag) {
@@ -134,8 +137,7 @@ public readonly struct FusionBuilder
 
         // Compute system calls service + call type
         if (!Rpc.Configuration.Services.ContainsKey(typeof(IRpcComputeSystemCalls))) {
-            Rpc.Service<IRpcComputeSystemCalls>().HasServer<RpcComputeSystemCalls>().HasName(RpcComputeSystemCalls.Name);
-            services.AddSingleton(c => new RpcComputeSystemCalls(c));
+            Rpc.AddClientAndServer<IRpcComputeSystemCalls, RpcComputeSystemCalls>(RpcComputeSystemCalls.Name);
             services.AddSingleton(c => new RpcComputeSystemCallSender(c));
             RpcComputeCallType.Register();
         }
@@ -145,6 +147,9 @@ public readonly struct FusionBuilder
 
     internal FusionBuilder(FusionBuilder fusion, RpcServiceMode defaultServiceMode, bool setDefaultServiceMode)
     {
+        if (defaultServiceMode is RpcServiceMode.ClientAndServer)
+            throw new ArgumentOutOfRangeException(nameof(defaultServiceMode));
+
         Services = fusion.Services;
         Commander = fusion.Commander;
         Rpc = fusion.Rpc;
@@ -158,6 +163,8 @@ public readonly struct FusionBuilder
         DefaultServiceMode = defaultServiceMode.Or(fusionTag.DefaultServiceMode);
         fusionTag.DefaultServiceMode = DefaultServiceMode;
     }
+
+    // WithServiceMode
 
     public FusionBuilder WithServiceMode(
         RpcServiceMode serviceMode,
@@ -255,7 +262,7 @@ public readonly struct FusionBuilder
             c => c.FusionHub().NewRemoteComputeServiceProxy(serviceType, serviceType, null));
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType);
-        Rpc.Service(serviceType).HasName(name);
+        Rpc.Service(serviceType).HasName(name).IsClient();
         return this;
     }
 
@@ -335,7 +342,7 @@ public readonly struct FusionBuilder
         AddComputeService(serviceType, implementationType, false);
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType);
-        Rpc.Service(serviceType).HasServer(serviceType).HasName(name);
+        Rpc.Service(serviceType).HasName(name).IsServer(serviceType);
         return this;
     }
 
@@ -363,13 +370,13 @@ public readonly struct FusionBuilder
             c => c.FusionHub().NewRemoteComputeServiceProxy(serviceType, implementationType, null));
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType);
-        Rpc.Service(serviceType).HasServer(serviceType).HasName(name);
+        Rpc.Service(serviceType).HasName(name).IsDistributed();
         return this;
     }
 
     public FusionBuilder AddDistributedServicePair<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
         (string name = "", bool addCommandHandlers = true)
         => AddDistributedServicePair(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
     public FusionBuilder AddDistributedServicePair(
@@ -390,7 +397,31 @@ public readonly struct FusionBuilder
         });
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType);
-        Rpc.Service(serviceType).HasServer(implementationType).HasName(name);
+        Rpc.Service(serviceType).HasName(name).IsDistributedPair(implementationType);
+        return this;
+    }
+
+    public FusionBuilder AddClientAndServer<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+        (string name = "", bool addCommandHandlers = true)
+        => AddClientAndServer(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
+    public FusionBuilder AddClientAndServer(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
+        string name = "",
+        bool addCommandHandlers = true)
+    {
+        // ~ RpcBuilder.AddClientAndServer, but for Compute Service
+
+        if (!typeof(IComputeService).IsAssignableFrom(serviceType))
+            throw Errors.MustImplement<IComputeService>(serviceType, nameof(serviceType));
+
+        AddClient(serviceType, name, false);
+        AddComputeService(implementationType, false);
+        if (addCommandHandlers)
+            Commander.AddHandlers(implementationType);
+        Rpc.Service(serviceType).HasName(name).IsClientAndServer(implementationType);
         return this;
     }
 

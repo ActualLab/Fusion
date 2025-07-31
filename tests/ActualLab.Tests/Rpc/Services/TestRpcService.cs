@@ -103,7 +103,7 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
 
     public virtual ValueTask<RpcNoWait> MaybeSet(string key, string? value)
     {
-        if (value == null)
+        if (value is null)
             _values.Remove(key, out _);
         else
             _values[key] = value;

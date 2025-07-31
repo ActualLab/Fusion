@@ -30,7 +30,7 @@ public sealed partial record RpcMessage
     {
         var headers = Headers.OrEmpty();
         return $"{nameof(RpcMessageV1)} #{RelatedId}/{CallTypeId}: {MethodRef.GetFullMethodName()}, "
-            + (Arguments != null
+            + (Arguments is not null
                 ? $"Arguments: {Arguments}"
                 : $"ArgumentData: {new ByteString(ArgumentData).ToString(16)}")
             + (headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");

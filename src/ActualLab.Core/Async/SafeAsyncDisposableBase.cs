@@ -10,7 +10,7 @@ public abstract class SafeAsyncDisposableBase : IAsyncDisposable, IDisposable, I
     private volatile int _isDisposing;
     private volatile Task? _disposeTask;
 
-    public bool IsDisposed => _disposeTask != null;
+    public bool IsDisposed => _disposeTask is not null;
     public Task? WhenDisposed => _disposeTask;
 
     public void Dispose()
@@ -30,7 +30,7 @@ public abstract class SafeAsyncDisposableBase : IAsyncDisposable, IDisposable, I
             var spinWait = new SpinWait();
             while (true) {
                 disposeTask = _disposeTask;
-                if (disposeTask != null)
+                if (disposeTask is not null)
                     return disposeTask.ToValueTask();
                 spinWait.SpinOnce(); // Safe for WASM
             }

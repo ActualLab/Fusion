@@ -36,7 +36,7 @@ public abstract class RedisSubBase : ProcessorBase
     protected override async Task DisposeAsyncCore()
     {
         var whenSubscribed = WhenSubscribed;
-        if (whenSubscribed == null)
+        if (whenSubscribed is null)
             return;
 
         try {
@@ -60,7 +60,7 @@ public abstract class RedisSubBase : ProcessorBase
 
     public Task Subscribe()
     {
-        if (WhenSubscribed != null!)
+        if (WhenSubscribed is not null)
             return WhenSubscribed;
 
         lock (Lock) {
@@ -76,7 +76,7 @@ public abstract class RedisSubBase : ProcessorBase
                         .ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) {
-                    if (WhenDisposed != null)
+                    if (WhenDisposed is not null)
                         throw;
                     if (timeoutCts.IsCancellationRequested)
                         throw new TimeoutException();

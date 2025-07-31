@@ -18,7 +18,7 @@ public static class RpcActivityInjector
     public static bool TryExtract(RpcHeader[]? headers, out ActivityContext activityContext)
     {
         var traceParent = headers.TryGet(WellKnownRpcHeaders.W3CTraceParent);
-        if (traceParent == null) {
+        if (traceParent is null) {
             activityContext = default;
             return false;
         }

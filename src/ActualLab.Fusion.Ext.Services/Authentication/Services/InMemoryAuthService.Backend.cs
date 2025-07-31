@@ -22,7 +22,7 @@ public partial class InMemoryAuthService
             _ = GetSessionInfo(session, default); // Must go first!
             _ = GetAuthInfo(session, default);
             var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo != null) {
+            if (invSessionInfo is not null) {
                 _ = GetUser(shard, invSessionInfo.UserId, default);
                 _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             }
@@ -49,10 +49,10 @@ public partial class InMemoryAuthService
 
         // And find the existing user
         var existingUser = GetByUserIdentity(shard, authenticatedIdentity);
-        if (existingUser == null && !user.Id.IsNullOrEmpty())
+        if (existingUser is null && !user.Id.IsNullOrEmpty())
             existingUser = Users.GetValueOrDefault((shard, user.Id));
 
-        if (existingUser != null) {
+        if (existingUser is not null) {
             // Merge if found
             user = MergeUsers(existingUser, user);
         }
@@ -104,7 +104,7 @@ public partial class InMemoryAuthService
 
         InMemoryOperationScope.Require();
         var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
-        context.Operation.Items.KeylessSet(sessionInfo == null); // invIsNew
+        context.Operation.Items.KeylessSet(sessionInfo is null); // invIsNew
         sessionInfo ??= new SessionInfo(session, Clocks.SystemClock.Now);
         sessionInfo = sessionInfo with {
             IPAddress = ipAddress.IsNullOrEmpty() ? sessionInfo.IPAddress : ipAddress,
@@ -130,7 +130,7 @@ public partial class InMemoryAuthService
 
         InMemoryOperationScope.Require();
         var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
-        if (sessionInfo == null || sessionInfo.IsSignOutForced)
+        if (sessionInfo is null || sessionInfo.IsSignOutForced)
             throw new KeyNotFoundException();
 
         sessionInfo = sessionInfo with {

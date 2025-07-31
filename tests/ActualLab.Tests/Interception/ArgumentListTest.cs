@@ -33,7 +33,7 @@ public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
             }
 
             var method = GetType().GetMethod($"Format{length}", BindingFlags.Static | BindingFlags.NonPublic);
-            if (method != null) {
+            if (method is not null) {
                 var invoker = l1.GetInvoker(method);
                 var result = (string)invoker.Invoke(null, l1)!;
                 Out.WriteLine($"Invoker result: {result}");

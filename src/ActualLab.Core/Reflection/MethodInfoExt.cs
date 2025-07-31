@@ -12,7 +12,7 @@ public static class MethodInfoExt
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static MethodInfo? GetBaseOrDeclaringMethod(this MethodInfo method)
     {
-        if (method == null)
+        if (method is null)
             throw new ArgumentNullException(nameof(method));
         if (method.IsConstructedGenericMethod())
             return method.GetGenericMethodDefinition();
@@ -24,7 +24,7 @@ public static class MethodInfoExt
             var baseType = method1.ReflectedType == declaringType
                 ? declaringType!.BaseType
                 : declaringType;
-            if (baseType == null)
+            if (baseType is null)
                 return null;
 
             var veryBaseMethod = method1.GetBaseDefinition();
@@ -66,7 +66,7 @@ public static class MethodInfoExt
         var isEndOfChain = method == methodDef;
         if (isEndOfChain || method.DeclaringType == method.ReflectedType) {
             var attr = method.GetCustomAttributes(false).OfType<TAttr>().FirstOrDefault();
-            if (attr != null)
+            if (attr is not null)
                 return attr;
         }
         var type = method.ReflectedType;
@@ -76,7 +76,7 @@ public static class MethodInfoExt
 
         if (inheritFromInterfaces && !type!.IsInterface) {
             var interfaces = type.GetInterfaces().ToHashSet();
-            if (baseType != null)
+            if (baseType is not null)
                 interfaces.ExceptWith(baseType.GetInterfaces());
             foreach (var @interface in interfaces) {
                 var map = type.GetInterfaceMap(@interface);
@@ -87,14 +87,14 @@ public static class MethodInfoExt
                         continue;
                     var iMethod = map.InterfaceMethods[index];
                     var attr = iMethod.GetCustomAttributes(false).OfType<TAttr>().FirstOrDefault();
-                    if (attr != null)
+                    if (attr is not null)
                         return attr;
                 }
             }
         }
-        if (inheritFromBaseTypes && baseType != null && !isEndOfChain) {
+        if (inheritFromBaseTypes && baseType is not null && !isEndOfChain) {
             var baseMethod = method.GetBaseOrDeclaringMethod();
-            if (baseMethod == null)
+            if (baseMethod is null)
                 return null;
             return GetAttributeInternal<TAttr>(baseMethod, methodDef, inheritFromInterfaces, inheritFromBaseTypes);
         }
@@ -115,7 +115,7 @@ public static class MethodInfoExt
 
         if (inheritFromInterfaces && !type!.IsInterface) {
             var interfaces = type.GetInterfaces().ToHashSet();
-            if (baseType != null)
+            if (baseType is not null)
                 interfaces.ExceptWith(baseType.GetInterfaces());
             foreach (var @interface in interfaces) {
                 if (!excluded.Add(@interface))
@@ -131,9 +131,9 @@ public static class MethodInfoExt
                 }
             }
         }
-        if (inheritFromBaseTypes && baseType != null && !isEndOfChain) {
+        if (inheritFromBaseTypes && baseType is not null && !isEndOfChain) {
             var baseMethod = method.GetBaseOrDeclaringMethod();
-            if (baseMethod != null)
+            if (baseMethod is not null)
                 AddAttributes(result, excluded, baseMethod, methodDef, inheritFromInterfaces, inheritFromBaseTypes);
         }
     }

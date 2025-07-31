@@ -13,8 +13,8 @@ public class DefaultParameterComparer : ParameterComparer
     // Mostly copied from Microsoft.AspNetCore.Components.ChangeDetection
     public override bool AreEqual(object? oldValue, object? newValue)
     {
-        var oldIsNotNull = oldValue != null;
-        var newIsNotNull = newValue != null;
+        var oldIsNotNull = oldValue is not null;
+        var newIsNotNull = newValue is not null;
         if (oldIsNotNull != newIsNotNull)
             return false; // One's null and the other isn't, so different
 

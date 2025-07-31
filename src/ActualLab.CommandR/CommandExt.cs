@@ -19,7 +19,7 @@ public static class CommandExt
     public static Type GetResultType(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type commandType)
     {
-        if (commandType == null)
+        if (commandType is null)
             throw new ArgumentNullException(nameof(commandType));
 
         var result = ResultTypeCache.GetOrAdd(commandType, static tCommand => {

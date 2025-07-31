@@ -49,7 +49,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
             if (force)
                 _ = IsSignOutForced(session, default);
             var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo != null) {
+            if (invSessionInfo is not null) {
                 _ = GetUser(shard, invSessionInfo.UserId, default);
                 _ = GetUserSessions(shard, invSessionInfo.UserId, default);
             }
@@ -59,7 +59,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         // Let's handle special kinds of sign-out first, which only trigger "primary" sign-out version
         if (isKickCommand) {
             var user = await GetUser(session, cancellationToken).ConfigureAwait(false);
-            if (user == null)
+            if (user is null)
                 return;
 
             var userSessions = await GetUserSessions(shard, user.Id, cancellationToken).ConfigureAwait(false);
@@ -79,7 +79,8 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var dbSessionInfo = await Sessions.GetOrCreate(dbContext, session.Id, cancellationToken).ConfigureAwait(false);
         var sessionInfo = SessionConverter.ToModel(dbSessionInfo);
-        if (sessionInfo == null! || sessionInfo.IsSignOutForced)
+        // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+        if (sessionInfo is null || sessionInfo.IsSignOutForced)
             return;
 
         context.Operation.Items.KeylessSet(sessionInfo);
@@ -101,7 +102,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var shard = ShardResolver.Resolve(command);
         if (Invalidation.IsActive) {
             var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo != null)
+            if (invSessionInfo is not null)
                 _ = GetUser(shard, invSessionInfo.UserId, default);
             return;
         }
@@ -115,7 +116,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var dbUserId = UserIdHandler.Parse(sessionInfo.UserId, false);
         var dbUser = await Users.Get(dbContext, dbUserId, true, cancellationToken).ConfigureAwait(false);
-        if (dbUser == null)
+        if (dbUser is null)
             throw EntityFramework.Internal.Errors.EntityNotFound(Users.UserEntityType);
 
         await Users.Edit(dbContext, dbUser, command, cancellationToken).ConfigureAwait(false);
@@ -126,7 +127,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         Session session, CancellationToken cancellationToken = default)
     {
         var sessionInfo = await GetSessionInfo(session, cancellationToken).ConfigureAwait(false);
-        if (sessionInfo == null)
+        if (sessionInfo is null)
             return;
 
         var delta = Clocks.SystemClock.Now - sessionInfo.LastSeenAt;
@@ -164,7 +165,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         session.RequireValid();
         var shard = ShardResolver.Resolve(session);
         var dbSessionInfo = await Sessions.Get(shard, session.Id, cancellationToken).ConfigureAwait(false);
-        return dbSessionInfo == null ? null : SessionConverter.ToModel(dbSessionInfo);
+        return dbSessionInfo is null ? null : SessionConverter.ToModel(dbSessionInfo);
     }
 
     // [ComputeMethod] inherited
@@ -185,7 +186,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         Session session, CancellationToken cancellationToken = default)
     {
         var user = await GetUser(session, cancellationToken).ConfigureAwait(false);
-        if (user == null)
+        if (user is null)
             return ImmutableArray<SessionInfo>.Empty;
 
         var shard = ShardResolver.Resolve(session);

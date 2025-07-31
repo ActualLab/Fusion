@@ -10,11 +10,11 @@ public class RestEaseRequestBodySerializer : RequestBodySerializer
 
     public override HttpContent? SerializeBody<T>(T body, RequestBodySerializerInfo info)
     {
-        if (body == null)
+        if (body is null)
             return null;
 
         var content = new StringContent(Serializer.Write<T>(body));
-        if (content.Headers.ContentType == null)
+        if (content.Headers.ContentType is null)
             content.Headers.ContentType = new MediaTypeHeaderValue(ContentType);
         else
             content.Headers.ContentType.MediaType = ContentType;

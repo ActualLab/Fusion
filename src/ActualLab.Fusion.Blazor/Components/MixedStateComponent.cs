@@ -16,7 +16,7 @@ public abstract class MixedStateComponent<TState, TMutableState> : ComputedState
 
     protected void SetMutableState(MutableState<TMutableState> mutableState)
     {
-        if (MutableState != null)
+        if (MutableState is not null)
             throw Errors.AlreadyInitialized(nameof(MutableState));
 
         MutableState = mutableState ?? throw new ArgumentNullException(nameof(mutableState));

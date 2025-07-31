@@ -79,7 +79,7 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         var dbTodo = await dbContext
             .FindAsync<DbTodo>(DbKey.Compose(DbTodo.ComposeKey(folder, id)), cancellationToken)
             .ConfigureAwait(false);
-        if (dbTodo != null) {
+        if (dbTodo is not null) {
             dbContext.Remove(dbTodo);
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }

@@ -27,6 +27,7 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     {
         var hub = Hub!; // The implicit RpcHub resolution here freezes RpcConfiguration
         foreach (var (_, service) in hub.Configuration.Services) {
+            service.Validate();
             var serviceDef = hub.ServiceDefBuilder.Invoke(hub, service);
             if (_serviceByName.TryGetValue(serviceDef.Name, out var existingServiceDef))
                 throw Errors.ServiceNameConflict(serviceDef.Type, existingServiceDef.Type, serviceDef.Name);
@@ -55,7 +56,7 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     public void DumpTo(ILogger? log, LogLevel logLevel, string title, bool dumpMethods = true)
     {
         log = log.IfEnabled(logLevel);
-        if (log == null)
+        if (log is null)
             return;
 
         var sb = StringBuilderExt.Acquire();
@@ -90,7 +91,7 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
 
     public RpcMethodResolver GetServerMethodResolver(VersionSet? versions)
     {
-        if (versions == null)
+        if (versions is null)
             return ServerMethodResolver;
 
         return _serverMethodResolvers.GetOrAdd(versions,

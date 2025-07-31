@@ -42,7 +42,7 @@ public class RpcInboundContext
     {
         var methodRef = Message.MethodRef;
         var method = methodRef.Target ?? Peer.ServerMethodResolver[methodRef];
-        if (method == null || method.IsSystem)
+        if (method is null || method.IsSystem)
             return method;
 
         return Peer.InboundCallFilter.Invoke(Peer, method) ? method : null;

@@ -8,11 +8,11 @@ public class HasIdEqualityComparer<T> : IEqualityComparer<IHasId<T>>
     {
         if (ReferenceEquals(x, y))
             return true;
-        if (x == null)
-            return y == null;
-        return y != null && EqualityComparer<T>.Default.Equals(x.Id, y.Id);
+        if (x is null)
+            return y is null;
+        return y is not null && EqualityComparer<T>.Default.Equals(x.Id, y.Id);
     }
 
     public int GetHashCode(IHasId<T>? obj)
-        => obj == null ? 0 : EqualityComparer<T>.Default.GetHashCode(obj.Id!);
+        => obj is null ? 0 : EqualityComparer<T>.Default.GetHashCode(obj.Id!);
 }

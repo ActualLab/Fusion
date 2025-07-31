@@ -3,5 +3,5 @@ namespace ActualLab.Serialization;
 public static class ExceptionInfoExt
 {
     public static ExceptionInfo ToExceptionInfo(this Exception? error)
-        => error == null ? default : new ExceptionInfo(error);
+        => error is null ? default : new ExceptionInfo(error);
 }

@@ -156,10 +156,10 @@ public sealed class CommandContext<TResult> : CommandContext
         ResultSource = new TaskCompletionSource<TResult>();
 
         var outerContext = isOutermost ? null : Current;
-        if (outerContext != null && outerContext.Commander != commander)
+        if (outerContext is not null && outerContext.Commander != commander)
             outerContext = null;
 
-        if (outerContext == null) {
+        if (outerContext is null) {
             OuterContext = null;
             OutermostContext = this;
             ServiceScope = Commander.Services.CreateScope();

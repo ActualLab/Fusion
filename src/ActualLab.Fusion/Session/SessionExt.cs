@@ -8,7 +8,7 @@ public static class SessionExt
         => session == Session.Default;
 
     public static bool IsValid([NotNullWhen(true)] this Session? session)
-        => session != null && Session.Validator.Invoke(session);
+        => session is not null && Session.Validator.Invoke(session);
 
     public static Session RequireValid(this Session? session)
         => session.IsValid()

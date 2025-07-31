@@ -488,7 +488,7 @@ public virtual async Task<decimal> GetTotal(
 {
     // Dependency: this.Get(id)!
     var cart = await Get(id, cancellationToken);
-    if (cart == null)
+    if (cart is null)
         return 0;
     var total = 0M;
     foreach (var (productId, quantity) in cart.Items) {
@@ -529,7 +529,7 @@ public virtual Task Edit(EditCommand<Product> command, CancellationToken cancell
         return Task.CompletedTask;
     }
 
-    if (product == null)
+    if (product is null)
         _products.Remove(productId, out _);
     else
         _products[productId] = product;
@@ -815,7 +815,7 @@ Here is an example of how to use such resolvers:
 public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)
 {
     var dbProduct = await _productResolver.Get(id, cancellationToken);
-    if (dbProduct == null)
+    if (dbProduct is null)
         return null;
     return new Product() { Id = dbProduct.Id, Price = dbProduct.Price };
 }
@@ -827,7 +827,7 @@ Guess why this important? Look at the production-grade `GetTotal` code:
 public virtual async Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default)
 {
     var cart = await Get(id, cancellationToken);
-    if (cart == null)
+    if (cart is null)
         return 0;
     var itemTotals = await Task.WhenAll(cart.Items.Select(async item => {
         var product = await _products.Get(item.Key, cancellationToken);

@@ -123,7 +123,7 @@
     private async Task PingPong(CancellationToken cancellationToken)
     {
         var clientSideService = Services.GetService<SimpleClientSideService>();
-        if (clientSideService == null) {
+        if (clientSideService is null) {
             _lastPong = "Switch to WASM - Blazor Server can't play ping-pong!";
             StateHasChanged();
             return;

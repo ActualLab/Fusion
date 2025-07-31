@@ -18,14 +18,14 @@ public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null
     // Returns a task that always succeeds
     public Task Run()
     {
-        if (_whenRunning != null)
+        if (_whenRunning is not null)
             return _whenRunning;
         lock (Lock) {
 #pragma warning disable MA0100
-            if (_whenRunning != null)
+            if (_whenRunning is not null)
                 return _whenRunning;
 
-            if (StopToken.IsCancellationRequested || WhenDisposed != null) {
+            if (StopToken.IsCancellationRequested || WhenDisposed is not null) {
                 // We behave here like if OnStart() was cancelled right in the very beginning.
                 // In this case _whenRunning would store a task that successfully completed.
                 return _whenRunning = Task.CompletedTask;

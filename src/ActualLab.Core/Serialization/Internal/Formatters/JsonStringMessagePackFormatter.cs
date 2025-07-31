@@ -7,7 +7,7 @@ public sealed class JsonStringMessagePackFormatter : IMessagePackFormatter<JsonS
 {
     public void Serialize(ref MessagePackWriter writer, JsonString? value, MessagePackSerializerOptions options)
     {
-        if (value == null)
+        if (value is null)
             writer.WriteNil();
         else
             options.Resolver.GetFormatterWithVerify<string>().Serialize(ref writer, value.Value, options);

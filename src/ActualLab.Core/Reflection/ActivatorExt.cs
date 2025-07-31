@@ -30,7 +30,7 @@ public static class ActivatorExt
         if (type.IsValueType)
             return default!;
         var hasDefaultCtor = HasDefaultCtorCache.GetOrAdd(type,
-            key => ((Type)key).GetConstructor(Type.EmptyTypes) != null);
+            key => ((Type)key).GetConstructor(Type.EmptyTypes) is not null);
         if (hasDefaultCtor)
             return (T)type.CreateInstance();
         if (failIfNoDefaultConstructor)
@@ -166,7 +166,7 @@ public static class ActivatorExt
     }
 
     public static Delegate? CreateConstructorDelegate(ConstructorInfo? ctor, params Type[] argumentTypes)
-        =>  ctor == null
+        =>  ctor is null
             ? null
             : RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
                 ? CreateConstructorDelegateDM(ctor, argumentTypes)

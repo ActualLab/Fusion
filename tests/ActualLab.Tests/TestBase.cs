@@ -17,7 +17,7 @@ public abstract class TestBase(ITestOutputHelper @out) : IAsyncLifetime
     [field: AllowNull, MaybeNull]
     protected string LongTestNameHash {
         get {
-            if (field != null)
+            if (field is not null)
                 return field;
 
             var testType = GetType();
@@ -29,7 +29,7 @@ public abstract class TestBase(ITestOutputHelper @out) : IAsyncLifetime
     [field: AllowNull, MaybeNull]
     protected string ShortTestNameHash {
         get {
-            if (field != null)
+            if (field is not null)
                 return field;
 
             var testType = GetType();

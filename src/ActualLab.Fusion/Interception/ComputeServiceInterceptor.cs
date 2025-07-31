@@ -50,7 +50,7 @@ public class ComputeServiceInterceptor : Interceptor
     {
         var type = proxyType.NonProxyType();
         var options = Hub.ComputedOptionsProvider.GetComputedOptions(type, method);
-        if (options == null)
+        if (options is null)
             return null;
 
         var methodDef = new ComputeMethodDef(type, method, this);
@@ -70,7 +70,7 @@ public class ComputeServiceInterceptor : Interceptor
             if (method.DeclaringType == typeof(object))
                 continue;
             var options = Hub.ComputedOptionsProvider.GetComputedOptions(type, method);
-            if (options == null)
+            if (options is null)
                 continue;
 
             if (method.IsStatic)
@@ -87,7 +87,7 @@ public class ComputeServiceInterceptor : Interceptor
                 throw Errors.ComputeMethodAttributeOnNonAsyncMethod(method);
 
             var unwrappedReturnType = returnType.GetTaskOrValueTaskArgument();
-            if (unwrappedReturnType == null)
+            if (unwrappedReturnType is null)
                 throw Errors.ComputeMethodAttributeOnAsyncMethodReturningNonGenericTask(method);
             if (unwrappedReturnType == typeof(RpcNoWait))
                 throw Errors.ComputeMethodAttributeOnAsyncMethodReturningRpcNoWait(method);

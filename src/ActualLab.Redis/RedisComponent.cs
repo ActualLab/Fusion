@@ -48,7 +48,7 @@ public sealed class RedisComponent<T>(RedisConnector connector, Func<IConnection
     private bool TryGetTask([NotNullWhen(true)] out Task<Temporary<T>>? resultTask)
     {
         resultTask = _resultTask;
-        if (resultTask == null)
+        if (resultTask is null)
             return false;
 
         if (!resultTask.IsCompletedSuccessfully())

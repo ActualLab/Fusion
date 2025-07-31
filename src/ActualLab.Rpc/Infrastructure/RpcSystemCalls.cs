@@ -69,7 +69,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
             foreach (var callId in callIds) {
                 var call = inboundCalls.Get(callId);
                 var reprocessTask = call?.TryReprocess(completedStage, readerToken);
-                if (reprocessTask == null)
+                if (reprocessTask is null)
                     unknownCallIds.Add(callId);
             }
         }
@@ -106,7 +106,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
         var peer = context.Peer;
         var inboundCallId = context.Message.RelatedId;
         var inboundCall = peer.InboundCalls.Get(inboundCallId);
-        if (inboundCall != null) {
+        if (inboundCall is not null) {
             peer.Log.IfEnabled(LogLevel.Debug)
                 ?.LogDebug("Remote call cancelled on the client side: {Call}", inboundCall);
             inboundCall.Cancel();
@@ -199,7 +199,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
 
         if (systemCallKind == RpcSystemCallKind.Ok) { // Next frequent path
             var outboundCall = context.Peer.OutboundCalls.Get(context.Message.RelatedId);
-            if (outboundCall == null)
+            if (outboundCall is null)
                 return false;
 
             var outboundMethodDef = outboundCall.MethodDef;
@@ -210,7 +210,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
 
         if (systemCallKind == RpcSystemCallKind.Item) {
             stream = context.Peer.RemoteObjects.Get(context.Message.RelatedId) as RpcStream;
-            if (stream == null)
+            if (stream is null)
                 return false;
 
             arguments = stream.CreateStreamItemArguments();
@@ -220,7 +220,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
 
         // If we're here, systemCallKind == RpcSystemCallKind.Batch
         stream = context.Peer.RemoteObjects.Get(context.Message.RelatedId) as RpcStream;
-        if (stream == null)
+        if (stream is null)
             return false;
 
         needsArgumentPolymorphism = RpcArgumentSerializer.IsPolymorphic(stream.ItemType);

@@ -29,7 +29,7 @@ public static class CancellationTokenSourceExt
 
     public static void CancelAndDisposeSilently(this CancellationTokenSource? cancellationTokenSource)
     {
-        if (cancellationTokenSource == null)
+        if (cancellationTokenSource is null)
             return;
 
         try {
@@ -49,7 +49,7 @@ public static class CancellationTokenSourceExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void DisposeSilently(this CancellationTokenSource? cancellationTokenSource)
     {
-        if (cancellationTokenSource == null)
+        if (cancellationTokenSource is null)
             return;
 
         try {

@@ -20,7 +20,7 @@ public static class FileExt
 #if !NETSTANDARD2_0
         return File.WriteAllTextAsync(path, contents, encoding, cancellationToken);
 #else
-        if (path == null)
+        if (path is null)
             throw new ArgumentNullException(nameof(path));
         if (path.Length == 0)
             throw new ArgumentException("EmptyPath", nameof(path));
@@ -48,7 +48,7 @@ public static class FileExt
 #if !NETSTANDARD2_0
         return File.ReadAllTextAsync(path, encoding, cancellationToken);
 #else
-        if (path == null)
+        if (path is null)
             throw new ArgumentNullException(nameof(path));
         if (path.Length == 0)
             throw new ArgumentException("EmptyPath", nameof(path));

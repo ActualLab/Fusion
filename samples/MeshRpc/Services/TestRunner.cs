@@ -81,7 +81,7 @@ public class TestRunner(IServiceProvider services) : WorkerBase
                         fixupActions.Add("wait 200ms");
                         await Task.Delay(200, cancellationToken).ConfigureAwait(false);
                     }
-                    if (computed != null) {
+                    if (computed is not null) {
                         // The logic below does ~ what computed.Synchronize() does, but step-by-step w/ logging
                         var whenSynchronized = computed.WhenSynchronized(cancellationToken);
                         if (!whenSynchronized.IsCompleted) {

@@ -3,7 +3,7 @@ namespace ActualLab.Resilience.Internal;
 public sealed record DelayChaosMaker(RandomTimeSpan Duration, ChaosMaker? Next = null) : ChaosMaker
 {
     public override string ToString()
-        => Next == null
+        => Next is null
             ? $"Delay({Duration})"
             : $"{Next}.Delayed({Duration})";
 

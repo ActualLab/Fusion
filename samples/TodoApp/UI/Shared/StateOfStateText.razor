@@ -36,7 +36,7 @@
     }
 #pragma warning restore BL0007
 
-    private bool IsLoading => _snapshot == null || _snapshot.UpdateCount == 0;
+    private bool IsLoading => _snapshot is null || _snapshot.UpdateCount == 0;
     private bool IsUpdating => _snapshot is { } s && s.WhenUpdating().IsCompleted;
     private bool IsInvalidated => _snapshot is { } s && s.Computed.IsInvalidated();
 

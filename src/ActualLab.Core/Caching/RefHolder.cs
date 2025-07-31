@@ -11,7 +11,7 @@ public class RefHolder
         get {
             foreach (var list in _lists) {
                 lock (list) {
-                    if (list.First != null)
+                    if (list.First is not null)
                         return false;
                 }
             }

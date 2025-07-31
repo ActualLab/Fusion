@@ -26,7 +26,7 @@ public static class DbSetExt
         where TEntity: class
     {
         var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
-        if (hintFormatter == null)
+        if (hintFormatter is null)
             return dbSet;
 
         var mHints = MemoryBuffer<DbHint>.Lease(false);
@@ -43,7 +43,7 @@ public static class DbSetExt
         where TEntity: class
     {
         var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
-        if (hintFormatter == null)
+        if (hintFormatter is null)
             return dbSet;
 
         var mHints = MemoryBuffer<DbHint>.Lease(false);
@@ -62,7 +62,7 @@ public static class DbSetExt
         where TEntity: class
     {
         var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
-        if (hintFormatter == null)
+        if (hintFormatter is null)
             return dbSet;
 
         var mHints = MemoryBuffer<DbHint>.Lease(false);
@@ -84,7 +84,7 @@ public static class DbSetExt
             return dbSet;
 
         var hintFormatter = dbSet.GetInfrastructure().GetService<IDbHintFormatter>();
-        if (hintFormatter == null)
+        if (hintFormatter is null)
             return dbSet;
 
         var mHints = MemoryBuffer<DbHint>.Lease(false);

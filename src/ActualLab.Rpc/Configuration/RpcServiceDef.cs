@@ -20,9 +20,10 @@ public sealed class RpcServiceDef
     public Type Type { get; }
     public ServiceResolver? ServerResolver { get; init; }
     public string Name { get; init; }
+    public RpcServiceMode Mode { get; init; }
     public bool IsSystem { get; init; }
     public bool IsBackend { get; init; }
-    public bool HasServer => ServerResolver != null;
+    public bool HasServer => ServerResolver is not null;
     [field: AllowNull, MaybeNull]
     public object Server => field ??= ServerResolver.Resolve(Hub.Services);
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
@@ -41,6 +42,7 @@ public sealed class RpcServiceDef
 
         Hub = hub;
         Name = name;
+        Mode = service.Mode;
         Type = service.Type;
         ServerResolver = service.ServerResolver;
         IsSystem = typeof(IRpcSystemService).IsAssignableFrom(Type);
@@ -49,6 +51,7 @@ public sealed class RpcServiceDef
         LegacyNames = new LegacyNames(Type
             .GetCustomAttributes<LegacyNameAttribute>(false)
             .Select(x => LegacyName.New(x)));
+
     }
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]
@@ -84,17 +87,18 @@ public sealed class RpcServiceDef
 
     public override string ToString()
     {
-        if (_toStringCached != null)
+        if (_toStringCached is not null)
             return _toStringCached;
 
         var serverInfo = HasServer  ? $" -> {ServerResolver}" : "";
-        var kindInfo = (IsSystem, IsBackend) switch {
-            (true, true) => " [System,Backend]",
-            (true, false) => " [System]",
-            (false, true) => " [Backend]",
+        var flags = (IsSystem, IsBackend) switch {
+            (true, true) => ",System,Backend",
+            (true, false) => ",System",
+            (false, true) => ",Backend",
             _ => "",
         };
-        return _toStringCached = $"'{Name}'{kindInfo}: {Type.GetName()}{serverInfo}, {Methods.Count} method(s)";
+        var attributes = $"[{Mode:G}{flags}]";
+        return _toStringCached = $"'{Name}'{attributes}: {Type.GetName()}{serverInfo}, {Methods.Count} method(s)";
     }
 
     public RpcMethodDef? GetMethod(MethodInfo method)
@@ -105,7 +109,7 @@ public sealed class RpcServiceDef
     public RpcMethodDef? GetOrFindMethod(MethodInfo method)
         => _getOrFindMethodCache.GetOrAdd(method, static (methodInfo, self) => {
             var methodDef = self.GetMethod(methodInfo);
-            if (methodDef != null)
+            if (methodDef is not null)
                 return methodDef;
             if (!methodInfo.IsPublic || typeof(InterfaceProxy).IsAssignableFrom(methodInfo.ReflectedType))
                 return null;

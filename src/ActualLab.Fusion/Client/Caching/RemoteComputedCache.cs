@@ -60,7 +60,7 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
     public async ValueTask<RpcCacheEntry?> Get(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
     {
         var methodDef = AnyMethodResolver[key.Name];
-        if (methodDef == null)
+        if (methodDef is null)
             return null;
 
         try {

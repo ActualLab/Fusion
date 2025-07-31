@@ -14,7 +14,7 @@ public sealed record RpcPeerConnectionState(
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsConnected()
-        => Handshake != null;
+        => Handshake is not null;
 
     // NextXxx
 
@@ -27,6 +27,6 @@ public sealed record RpcPeerConnectionState(
         => new(connection, handshake, null, 0, readerTokenSource);
 
     public RpcPeerConnectionState NextDisconnected(Exception? error = null)
-        => error == null ? Disconnected
+        => error is null ? Disconnected
             : new RpcPeerConnectionState(null, null, error, TryIndex + 1);
 }

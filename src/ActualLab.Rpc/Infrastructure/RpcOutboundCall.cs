@@ -44,10 +44,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public static RpcOutboundCall? New(RpcOutboundContext context)
     {
         var peer = context.Peer;
-        if (peer == null)
-            throw Errors.InternalError("context.Peer == null.");
+        if (peer is null)
+            throw Errors.InternalError("context.Peer is null.");
 
-        if (peer.ConnectionKind == RpcPeerConnectionKind.Local)
+        if (peer.ConnectionKind is RpcPeerConnectionKind.Local)
             return null;
 
         return FactoryCache.GetOrAdd(new(context.CallTypeId, context.MethodDef!.UnwrappedReturnType),
@@ -180,9 +180,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var arguments = Context.Arguments!;
         var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
         var headers = Context.Headers;
-        if (hash != null)
+        if (hash is not null)
             headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
-        if (activity != null)
+        if (activity is not null)
             headers = RpcActivityInjector.Inject(headers, activity.Context);
         return new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
     }
@@ -212,7 +212,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 #endif
             if (ResultSource.TrySetResult(result)) {
                 CompleteAndUnregister(notifyCancelled: false);
-                if (context != null)
+                if (context is not null)
                     Context.CacheInfoCapture?.CaptureValueFromLock(context.Message);
             }
         }
@@ -224,7 +224,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         lock (Lock) {
             var cacheInfoCapture = Context.CacheInfoCapture;
             var cacheEntry = cacheInfoCapture?.CacheEntry;
-            if (cacheEntry == null) {
+            if (cacheEntry is null) {
                 SetError(Internal.Errors.MatchButNoCachedEntry(), null);
                 return;
             }
@@ -241,7 +241,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 #endif
             if (ResultSource.TrySetResult(result)) {
                 CompleteAndUnregister(notifyCancelled: false);
-                if (context != null)
+                if (context is not null)
                     cacheInfoCapture?.CaptureValueFromLock(cacheEntry.Value);
             }
         }
@@ -255,12 +255,12 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var cancellationToken = oce?.CancellationToken ?? default;
 
         lock (Lock) {
-            var isResultSet = oce != null
+            var isResultSet = oce is not null
                 ? ResultSource.TrySetCanceled(cancellationToken)
                 : ResultSource.TrySetException(error);
             if (isResultSet) {
-                CompleteAndUnregister(notifyCancelled: context == null && !assumeCancelled);
-                Context.CacheInfoCapture?.CaptureErrorFromLock(oce != null, error, cancellationToken);
+                CompleteAndUnregister(notifyCancelled: context is null && !assumeCancelled);
+                Context.CacheInfoCapture?.CaptureErrorFromLock(oce is not null, error, cancellationToken);
             }
         }
     }
@@ -316,14 +316,14 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public bool IsPeerChanged()
     {
         var methodDef = MethodDef;
-        return Peer != methodDef.Hub.CallRouter.Invoke(methodDef, Context.Arguments!);
+        return Peer != methodDef.Hub.SafeCallRouter.Invoke(methodDef, Context.Arguments!);
     }
 
     public void SetRerouteError()
     {
         var error = RpcRerouteException.MustReroute();
-        // This SetError call not only sets the error, but also
-        // invalidates computed method calls awaiting the invalidation.
+        // This SetError call not only sets the error but also invalidates
+        // computed method calls awaiting the invalidation.
         // See RpcOutboundComputeCall.SetError / when it calls SetInvalidatedUnsafe.
         SetError(error, context: null, assumeCancelled: true);
     }

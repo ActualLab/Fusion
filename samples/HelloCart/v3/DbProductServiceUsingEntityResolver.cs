@@ -13,6 +13,8 @@ public class DbProductServiceUsingEntityResolver(IServiceProvider services) : Db
     public override async Task<Product?> Get(string id, CancellationToken cancellationToken = default)
     {
         var dbProduct = await ProductResolver.Get(id, cancellationToken);
-        return dbProduct == null ? null : new Product(dbProduct.Id, dbProduct.Price);
+        return dbProduct is null
+            ? null
+            : new Product(dbProduct.Id, dbProduct.Price);
     }
 }

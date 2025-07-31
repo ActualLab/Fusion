@@ -56,7 +56,7 @@ public class ProxyTypeGenerator
     private ClassDeclarationSyntax? ClassDef { get; }
     private InterfaceDeclarationSyntax? InterfaceDef { get; }
     private bool IsGenericType { get; }
-    private bool IsInterfaceProxy => InterfaceDef != null;
+    private bool IsInterfaceProxy => InterfaceDef is not null;
     private bool IsFullProxy { get; }
     private bool IsAsyncOnlyProxy => !IsFullProxy;
 
@@ -186,14 +186,14 @@ public class ProxyTypeGenerator
             .Where(m => m.MethodKind == MethodKind.Constructor && m.DeclaredAccessibility.HasFlag(Accessibility.Public))
             .ToList()!;
         if (constructors.Count == 0) {
-            if (ClassDef != null)
+            if (ClassDef is not null)
                 return false;
 
             constructors = [null];
         }
 
         foreach (var ctor in constructors) {
-            if (ctor != null) {
+            if (ctor is not null) {
                 var parameters = ctor.Parameters
                     .Select(p => Parameter(Identifier(p.Name)).WithType(p.Type.ToTypeRef()))
                     .ToArray();
@@ -333,7 +333,7 @@ public class ProxyTypeGenerator
                     .WithBody(body));
 
             // KeepCode statement for this method
-            var isAsync = unwrappedReturnType != null;
+            var isAsync = unwrappedReturnType is not null;
             var keepGenericMethodName = isAsync
                 ? CodeKeeperKeepAsyncMethodGenericMethodName
                 : CodeKeeperKeepSyncMethodGenericMethodName;
@@ -410,7 +410,7 @@ public class ProxyTypeGenerator
                 WriteDebug?.Invoke("  [+]");
                 processedMethods.Add(method);
                 var overriddenMethod = method.OverriddenMethod;
-                while (overriddenMethod != null) {
+                while (overriddenMethod is not null) {
                     processedMethods.Add(overriddenMethod);
                     overriddenMethod = overriddenMethod.OverriddenMethod;
                 }
@@ -462,7 +462,7 @@ public class ProxyTypeGenerator
                         unwrappedReturnType = IdentifierName(returnTypeName[(bracketIndex + 1)..^1]);
                 }
             }
-            if (IsAsyncOnlyProxy && unwrappedReturnType == null) {
+            if (IsAsyncOnlyProxy && unwrappedReturnType is null) {
                 WriteDebug?.Invoke("  [-] Non-async method in async-only proxy");
                 continue;
             }
@@ -470,7 +470,7 @@ public class ProxyTypeGenerator
             // Check for [ProxyIgnore]
             var m = method;
             var mustIgnore = false;
-            while (m != null) {
+            while (m is not null) {
                 if (m.GetAttributes().Any(a => Equals(a.AttributeClass?.ToFullName(), ProxyIgnoreAttributeName))) {
                     mustIgnore = true;
                     break;

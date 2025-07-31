@@ -9,12 +9,12 @@ public static partial class AsyncEnumerableExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IAsyncEnumerable<T> SkipNullItems<T>(this IAsyncEnumerable<T?> source)
         where T : class
-        => source.Where(x => x != null)!;
+        => source.Where(x => x is not null)!;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IAsyncEnumerable<T> SkipNullItems<T>(this IAsyncEnumerable<T?> source)
         where T : struct
-        => source.Where(x => x != null).Select(x => x!.Value);
+        => source.Where(x => x is not null).Select(x => x!.Value);
 
     // SkipSyncItems
 

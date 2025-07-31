@@ -44,7 +44,7 @@ public sealed class GCHandlePool(GCHandlePool.Options settings) : IDisposable
     {
         if (_queue.TryDequeue(out var handle)) {
             _opCounter.Decrement(random);
-            if (target != null)
+            if (target is not null)
                 handle.Target = target;
             return handle;
         }

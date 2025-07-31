@@ -18,7 +18,7 @@ public class SessionTypeConverter : TypeConverter
 
     public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object? value)
     {
-        if (value == null)
+        if (value is null)
             return null;
         if (value is string s)
             return new Session(s);

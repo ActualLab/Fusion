@@ -7,14 +7,14 @@ namespace ActualLab.Fusion.Interception;
 public class ComputedOptionsProvider(IServiceProvider services)
 {
     protected readonly bool HasRemoteComputedCache =
-        services.GetService<IRemoteComputedCache>() != null;
+        services.GetService<IRemoteComputedCache>() is not null;
 
     public virtual ComputedOptions? GetComputedOptions(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
         MethodInfo method)
     {
         var options = ComputedOptions.Get(type, method);
-        if (options == null || options.RemoteComputedCacheMode == RemoteComputedCacheMode.NoCache)
+        if (options is null || options.RemoteComputedCacheMode == RemoteComputedCacheMode.NoCache)
             return options;
 
         if (!HasRemoteComputedCache)

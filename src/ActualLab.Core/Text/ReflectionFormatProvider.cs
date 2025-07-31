@@ -26,13 +26,13 @@ public sealed class ReflectionFormatProvider : IFormatProvider, ICustomFormatter
         var propertyFormat = formats.Length > 1 ? formats[1] : null;
 
         var getter = arg?.GetType().GetProperty(propertyName)?.GetGetMethod();
-        if (getter == null)
+        if (getter is null)
             return arg is IFormattable formattable
                 ? formattable.ToString(format, formatProvider)
                 : arg?.ToString() ?? "";
 
         var value = getter.Invoke(arg, null);
-        return propertyFormat == null
+        return propertyFormat is null
             ? (value?.ToString() ?? "") + suffix
             : string.Format(CultureInfo.InvariantCulture, $"{{0:{propertyFormat}}}", value);
     }

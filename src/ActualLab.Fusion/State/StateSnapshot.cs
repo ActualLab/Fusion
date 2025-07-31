@@ -18,7 +18,7 @@ public sealed class StateSnapshot
         State = state;
         Computed = computed;
         LastNonErrorComputed = computed;
-        if (prevSnapshot == null) {
+        if (prevSnapshot is null) {
             UpdateCount = 0;
             ErrorCount = 0;
             RetryCount = 0;
@@ -26,7 +26,7 @@ public sealed class StateSnapshot
         }
 
         var error = computed.Error;
-        if (error == null) {
+        if (error is null) {
             LastNonErrorComputed = computed;
             UpdateCount = 1 + prevSnapshot.UpdateCount;
             ErrorCount = prevSnapshot.ErrorCount;

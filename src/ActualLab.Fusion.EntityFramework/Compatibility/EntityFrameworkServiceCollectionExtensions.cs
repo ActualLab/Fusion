@@ -85,7 +85,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         int poolSize = 128)
         where TContext : DbContext
     {
-        if (optionsAction == null) throw new ArgumentNullException(nameof(optionsAction));
+        if (optionsAction is null) throw new ArgumentNullException(nameof(optionsAction));
 
         return AddPooledDbContextFactory<TContext>(serviceCollection, (_, ob) => optionsAction(ob), poolSize);
     }
@@ -133,8 +133,8 @@ public static class EntityFrameworkServiceCollectionExtensions
         int poolSize = 128)
         where TContext : DbContext
     {
-        if (serviceCollection == null) throw new ArgumentNullException(nameof(serviceCollection));
-        if (optionsAction == null) throw new ArgumentNullException(nameof(optionsAction));
+        if (serviceCollection is null) throw new ArgumentNullException(nameof(serviceCollection));
+        if (optionsAction is null) throw new ArgumentNullException(nameof(optionsAction));
 
         AddPoolingOptions<TContext>(serviceCollection, optionsAction, poolSize);
 

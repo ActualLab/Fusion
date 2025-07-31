@@ -11,15 +11,15 @@ public class JSRuntimeInfo
     public bool IsRemote { get; init; }
     public Func<object?> ClientProxyGetter { get; init; } = () => null;
     public object? ClientProxy => field ??= ClientProxyGetter.Invoke();
-    public bool IsPrerendering => IsRemote && ClientProxy == null;
-    public bool IsInteractive => Runtime != null && !IsPrerendering;
+    public bool IsPrerendering => IsRemote && ClientProxy is null;
+    public bool IsInteractive => Runtime is not null && !IsPrerendering;
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume server-side code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "We assume server-side code is fully preserved")]
     public JSRuntimeInfo(IJSRuntime? runtime)
     {
         Runtime = runtime;
-        if (runtime == null)
+        if (runtime is null)
             return;
 
         var type = runtime.GetType();
@@ -33,7 +33,7 @@ public class JSRuntimeInfo
             return;
 
         var fClientProxy = type.GetField("_clientProxy", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (fClientProxy == null)
+        if (fClientProxy is null)
             return;
 
         var clientProxyGetter = fClientProxy.GetGetter<object?, object?>(true);

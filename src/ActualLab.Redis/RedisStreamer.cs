@@ -40,7 +40,8 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
             cancellationToken.ThrowIfCancellationRequested(); // Redis doesn't support cancellation
             var database = await RedisDb.Database.Get(cancellationToken).ConfigureAwait(false);
             var entries = await database.StreamReadAsync(Key, position, 10).ConfigureAwait(false);
-            if (entries == null! || entries.Length == 0) {
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+            if (entries is null || entries.Length == 0) {
                 var appendResult = await appendNotificationTask
                     .WaitResultAsync(Settings.Clock, Settings.AppendCheckPeriod, cancellationToken)
                     .ConfigureAwait(false);
@@ -119,7 +120,7 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
             // No cancellation for AppendEnd - it should propagate it
             await AppendEnd(database, error, appendPub).ConfigureAwait(false);
         }
-        if (error != null)
+        if (error is not null)
             throw error;
         cancellationToken.ThrowIfCancellationRequested();
     }
@@ -162,7 +163,7 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
         RedisPub appendPub)
     {
         var finalStatus = Settings.EndedStatus;
-        if (error != null)
+        if (error is not null)
             finalStatus = Settings.ErrorSerializer.Write(error);
         await database.StreamAddAsync(
                 Key, Settings.StatusKey, finalStatus,

@@ -97,7 +97,7 @@ public partial class SandboxedKeyValueStore<TContext>(
     protected virtual async Task<KeyChecker> GetKeyChecker(
         Session session, CancellationToken cancellationToken = default)
     {
-        if (session == null!)
+        if (session is null)
             throw Errors.KeyViolatesSandboxedKeyValueStoreConstraints();
 
         var user = await Auth.GetUser(session, cancellationToken).ConfigureAwait(false);
@@ -106,7 +106,7 @@ public partial class SandboxedKeyValueStore<TContext>(
             Prefix = string.Format(CultureInfo.InvariantCulture, Settings.SessionKeyPrefixFormat, session.Id),
             ExpirationTime = Settings.SessionKeyExpirationTime,
         };
-        if (user != null)
+        if (user is not null)
             keyChecker = keyChecker with {
                 SecondaryPrefix = string.Format(CultureInfo.InvariantCulture, Settings.UserKeyPrefixFormat, user.Id),
                 SecondaryExpirationTime = Settings.UserKeyExpirationTime,

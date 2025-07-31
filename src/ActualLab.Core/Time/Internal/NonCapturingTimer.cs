@@ -8,7 +8,7 @@ public static class NonCapturingTimer
         TimeSpan dueTime,
         TimeSpan period)
     {
-        if (callback == null)
+        if (callback is null)
             throw new ArgumentNullException(nameof(callback));
         var isFlowSuppressed = false;
         try {

@@ -13,7 +13,7 @@ public readonly record struct RetryDelayLogger(
 
     public void LogError(Exception error)
     {
-        if (Tag == null)
+        if (Tag is null)
             Log?.LogError(error, "Can't {Action}: {Error}", Action, error.Message);
         else
             Log?.LogError(error, "{Tag}: can't {Action}: {Error}", Tag, Action, error.Message);
@@ -24,7 +24,7 @@ public readonly record struct RetryDelayLogger(
         if (duration <= TimeSpan.Zero)
             return;
 
-        if (Tag == null)
+        if (Tag is null)
             Log.IfEnabled(LogLevel)?.Log(LogLevel, "Will {Action} in {DelayDuration} (#{TryIndex})",
                 Action, duration.ToShortString(), tryIndex);
         else
@@ -34,7 +34,7 @@ public readonly record struct RetryDelayLogger(
 
     public void LogLimitExceeded()
     {
-        if (Tag == null)
+        if (Tag is null)
             Log?.LogWarning("Can't {Action}: retry limit exceeded", Action);
         else
             Log?.LogWarning("{Tag}: can't {Action}: retry limit exceeded", Tag, Action);

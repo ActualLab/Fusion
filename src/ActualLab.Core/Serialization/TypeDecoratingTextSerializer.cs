@@ -79,7 +79,7 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
 
     public override string Write(object? value, Type type)
     {
-        if (value == null)
+        if (value is null)
             return "";
 
         var sb = StringBuilderExt.Acquire();
@@ -121,7 +121,7 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
 
     protected string WriteLegacy(object? value, Type type)
     {
-        if (value == null)
+        if (value is null)
             return "";
 
         using var f = ListFormat.Default.CreateFormatter();

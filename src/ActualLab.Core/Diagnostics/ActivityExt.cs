@@ -37,7 +37,7 @@ public static class ActivityExt
 
     public static Activity Finalize(this Activity activity, Exception? error, CancellationToken cancellationToken)
     {
-        if (error == null || !IsError.Invoke(error))
+        if (error is null || !IsError.Invoke(error))
             return activity;
 
         if (error.IsCancellationOf(cancellationToken)) {
@@ -52,7 +52,7 @@ public static class ActivityExt
 
     public static Activity Finalize(this Activity activity, Exception? error, bool detectCancellation = false)
     {
-        if (error == null || !IsError.Invoke(error))
+        if (error is null || !IsError.Invoke(error))
             return activity;
 
         if (detectCancellation && error is OperationCanceledException) {

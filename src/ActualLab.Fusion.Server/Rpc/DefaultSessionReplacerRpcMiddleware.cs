@@ -9,7 +9,7 @@ public class DefaultSessionReplacerRpcMiddleware(IServiceProvider services)
     public override Task OnBeforeCall(RpcInboundCall call)
     {
         var connection = call.Context.Peer.ConnectionState.Value.Connection as SessionBoundRpcConnection;
-        if (connection == null)
+        if (connection is null)
             return Task.CompletedTask;
 
         var arguments = call.Arguments;

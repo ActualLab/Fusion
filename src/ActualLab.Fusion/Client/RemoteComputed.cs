@@ -36,7 +36,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         : base(options, input, output, true, SkipComputedRegistration.Option)
     {
         CallSource = AsyncTaskMethodBuilderExt.New<RpcOutboundComputeCall?>();
-        if (call != null) {
+        if (call is not null) {
             CallSource.SetResult(call);
             SynchronizedSource = AlwaysSynchronized.Source;
         }
@@ -46,7 +46,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         ComputedRegistry.Instance.Register(this);
 
         // This should go after .Register(this)
-        if (call != null)
+        if (call is not null)
             this.BindWhenInvalidatedToCall(call);
         StartAutoInvalidation();
     }

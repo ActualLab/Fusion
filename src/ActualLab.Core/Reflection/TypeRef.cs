@@ -91,7 +91,7 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
     {
         var result = ResolveCache.GetOrAdd(assemblyQualifiedName,
             static aqn => Type.GetType(aqn, false, false));
-        if (result == null)
+        if (result is null)
             ResolveCache.TryRemove(assemblyQualifiedName, out _); // Potential memory lead / attack vector
         return result;
     }

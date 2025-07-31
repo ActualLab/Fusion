@@ -58,7 +58,7 @@ public struct ArrayBuffer<T>
     public void Release()
     {
         // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-        if (Buffer != null)
+        if (Buffer is not null)
             Pool.Return(Buffer, MustClean);
         Buffer = null!;
     }

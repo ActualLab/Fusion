@@ -13,10 +13,10 @@ public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unch
 
     public bool IsLockedLocally {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _isLockedLocally?.Value != null;
+        get => _isLockedLocally?.Value is not null;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set {
-            if (_isLockedLocally == null)
+            if (_isLockedLocally is null)
                 return;
 
             _isLockedLocally.Value = value ? LockedTag.Instance : null;
@@ -66,7 +66,7 @@ public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void MarkLockedLocally()
         {
-            if (asyncLock == null)
+            if (asyncLock is null)
                 return;
 
             asyncLock.IsLockedLocally = true;
@@ -75,7 +75,7 @@ public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
         {
-            if (asyncLock == null)
+            if (asyncLock is null)
                 return;
 
             asyncLock.IsLockedLocally = false;

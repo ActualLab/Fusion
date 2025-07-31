@@ -97,7 +97,6 @@ public static class RpcDefaultDelegates
 
     // Call routing
 
-    // See also: RpcSafeCallRouter
     public static RpcCallRouter CallRouter { get; set; } =
         static (method, arguments) => RpcPeerRef.Default;
 
@@ -147,14 +146,14 @@ public static class RpcDefaultDelegates
 
     // WebSocket channel
 
+    public static Func<RpcPeer, PropertyBag, RpcFrameDelayerFactory?> FrameDelayerProvider { get; set; } =
+        RpcFrameDelayerProviders.None;
+
     public static RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; set; } =
         static (peer, properties) => WebSocketChannel<RpcMessage>.Options.Default with {
             Serializer = peer.Hub.SerializationFormats.Get(peer.Ref).MessageSerializerFactory.Invoke(peer),
             FrameDelayerFactory = FrameDelayerProvider.Invoke(peer, properties),
         };
-
-    public static Func<RpcPeer, PropertyBag, RpcFrameDelayerFactory?> FrameDelayerProvider { get; set; } =
-        RpcFrameDelayerProviders.None;
 
     // Call tracing and logging
 

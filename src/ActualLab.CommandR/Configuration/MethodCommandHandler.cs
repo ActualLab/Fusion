@@ -50,7 +50,7 @@ public sealed record MethodCommandHandler<
             return (Task)Method.Invoke(service, arguments)!;
         }
         catch (TargetInvocationException tie) {
-            if (tie.InnerException != null)
+            if (tie.InnerException is not null)
                 throw tie.InnerException;
             throw;
         }
@@ -94,7 +94,7 @@ public static class MethodCommandHandler
         double? priorityOverride = null)
     {
         var attr = GetAttribute(method);
-        if (attr == null)
+        if (attr is null)
             return null;
 
         var isFilter = attr.IsFilter;

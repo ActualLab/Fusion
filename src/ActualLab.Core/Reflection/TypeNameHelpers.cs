@@ -7,11 +7,11 @@ public static class TypeNameHelpers
     public static string GetAssemblyQualifiedName(this Type type, bool fullName = true, ISerializationBinder? binder = null)
     {
         string aqn;
-        if (binder == null)
+        if (binder is null)
             aqn = type.AssemblyQualifiedName!;
         else {
             binder.BindToName(type, out string? assemblyName, out string? typeName);
-            aqn = typeName + (assemblyName == null ? "" : ", " + assemblyName);
+            aqn = typeName + (assemblyName is null ? "" : ", " + assemblyName);
         }
         return fullName ? aqn : RemoveAssemblyDetails(aqn);
     }

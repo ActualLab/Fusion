@@ -50,7 +50,7 @@ public sealed partial class RpcMessageV1
     {
         var headers = Headers.OrEmpty();
         return $"{nameof(RpcMessageV1)} #{RelatedId}/{CallTypeId}: {Service}.{Method}, "
-            + (Arguments != null
+            + (Arguments is not null
                 ? $"Arguments: {Arguments}"
                 : $"ArgumentData: {ArgumentData.ToString(16)}")
             + (headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "");

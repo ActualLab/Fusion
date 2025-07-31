@@ -91,7 +91,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         dbContext.EnableChangeTracking(false);
 
         var entry = await GetEntry(dbContext, key, cancellationToken).ConfigureAwait(false);
-        if (entry == null)
+        if (entry is null)
             throw new LogEntryNotFoundException();
         if (entry.State != LogEntryState.New)
             return false;
@@ -108,7 +108,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
             return nextIndex;
 
         var startEntry = await GetStartEntry(shard, cancellationToken).ConfigureAwait(false);
-        if (startEntry == null)
+        if (startEntry is null)
             return null;
 
         nextIndex = NextIndexes.GetOrAdd(shard, startEntry.Index);

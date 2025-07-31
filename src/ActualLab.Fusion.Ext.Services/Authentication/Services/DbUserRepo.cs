@@ -83,7 +83,7 @@ public class DbUserRepo<TDbContext,
         TDbUser? dbUser;
         if (!DbUserIdHandler.IsNone(dbUserId)) {
             dbUser = await Get(dbContext, dbUserId, false, cancellationToken).ConfigureAwait(false);
-            if (dbUser != null)
+            if (dbUser is not null)
                 return (dbUser, false);
         }
 
@@ -95,7 +95,7 @@ public class DbUserRepo<TDbContext,
     public virtual async Task Edit(TDbContext dbContext, TDbUser dbUser, Auth_EditUser command,
         CancellationToken cancellationToken = default)
     {
-        if (command.Name != null) {
+        if (command.Name is not null) {
             dbUser.Name = command.Name;
             dbUser.Version = VersionGenerator.NextVersion(dbUser.Version);
         }
@@ -128,7 +128,7 @@ public class DbUserRepo<TDbContext,
         var dbUser = await dbUsers
             .FirstOrDefaultAsync(u => Equals(u.Id, userId), cancellationToken)
             .ConfigureAwait(false);
-        if (dbUser != null)
+        if (dbUser is not null)
             await dbContext.Entry(dbUser).Collection(nameof(DbUser<object>.Identities))
                 .LoadAsync(cancellationToken).ConfigureAwait(false);
         return dbUser;
@@ -147,7 +147,7 @@ public class DbUserRepo<TDbContext,
         var dbUserIdentity = await dbUserIdentities
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
             .ConfigureAwait(false);
-        if (dbUserIdentity == null)
+        if (dbUserIdentity is null)
             return null;
 
         var user = await Get(dbContext, dbUserIdentity.DbUserId, forUpdate, cancellationToken).ConfigureAwait(false);

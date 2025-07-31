@@ -8,9 +8,9 @@ public sealed class ByIdParameterComparer<TId> : ParameterComparer
     {
         if (ReferenceEquals(oldValue, newValue))
             return true; // Might be the most frequent case
-        if (oldValue == null)
-            return newValue == null;
-        if (newValue == null)
+        if (oldValue is null)
+            return newValue is null;
+        if (newValue is null)
             return false;
 
         var oldId = ((IHasId<TId>)oldValue).Id;

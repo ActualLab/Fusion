@@ -23,7 +23,7 @@ public sealed class ServiceResolver
     }
 
     public override string ToString()
-        => Resolver == null
+        => Resolver is null
             ? Type.GetName()
             : "*" + Type.GetName();
 

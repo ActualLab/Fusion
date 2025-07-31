@@ -214,13 +214,16 @@ public readonly partial struct ApiArray<T>(T[] items)
                 copy[i] = updater.Invoke(item);
             }
         }
-        return copy == null ? this : new ApiArray<T>(copy);
+        return copy is null
+            ? this
+            : new ApiArray<T>(copy);
     }
 
     // Without
 
     public ApiArray<T> Without(T item)
     {
+        // ReSharper disable once LocalVariableHidesPrimaryConstructorParameter
         var items = Items;
         if (items.Length == 0)
             return this;

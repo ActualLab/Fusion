@@ -49,7 +49,7 @@ public class FileLock(FilePath path, IEnumerable<TimeSpan>? retryIntervals = nul
             catch (UnauthorizedAccessException e) {
                 error = e;
             }
-            if (fs != null)
+            if (fs is not null)
                 break;
             if (!retryInterval.MoveNext())
 #if !NETSTANDARD2_0

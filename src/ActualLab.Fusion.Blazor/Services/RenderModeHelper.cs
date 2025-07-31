@@ -14,7 +14,7 @@ public class RenderModeHelper(CircuitHub circuitHub)
     public virtual string GetCurrentModeTitle()
     {
         var currentMode = CurrentMode;
-        if (currentMode == null)
+        if (currentMode is null)
             return "Loading...";
 
         var actualMode = string.Equals(currentMode.Key, "a")
@@ -22,7 +22,7 @@ public class RenderModeHelper(CircuitHub circuitHub)
                 ? RenderModeDef.ByKey.GetValueOrDefault("w")
                 : RenderModeDef.ByKey.GetValueOrDefault("s")
             : null;
-        return actualMode == null
+        return actualMode is null
             ? currentMode.Title
             : $"{currentMode.Title} ({actualMode.Title})";
     }

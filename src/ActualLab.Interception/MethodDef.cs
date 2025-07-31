@@ -126,7 +126,7 @@ public partial class MethodDef
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsInstanceOfUnwrappedReturnType(object? candidate)
-        => candidate == null
+        => candidate is null
             ? IsUnwrappedReturnTypeClassOrNullable
             : UnwrappedReturnType.IsInstanceOfType(candidate);
 

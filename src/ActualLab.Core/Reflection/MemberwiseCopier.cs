@@ -49,7 +49,7 @@ public static class MemberwiseCopier
         (T source, T target, Func<MemberwiseCopier<T>, MemberwiseCopier<T>>? configurator = null)
     {
         var copier = MemberwiseCopier<T>.Default;
-        if (configurator != null)
+        if (configurator is not null)
             copier = configurator(MemberwiseCopier<T>.Default);
         return copier.Invoke(source, target);
     }

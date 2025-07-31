@@ -46,7 +46,7 @@ public class RpcWebHost(
                         return options with { FrameDelayerFactory = rpcFrameDelayerFactory };
                     };
                 });
-            if (ControllerAssembly != null) {
+            if (ControllerAssembly is not null) {
 #if NETFRAMEWORK
                 var controllerTypes = ControllerAssembly.GetControllerTypes().ToArray();
                 services.AddControllersAsServices(controllerTypes);

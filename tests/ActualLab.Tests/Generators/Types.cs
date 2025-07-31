@@ -100,7 +100,7 @@ public class AltClassProxy
         var invocation = new Invocation(this, _cachedMethodInfo!,
             ArgumentList.New(x, cancellationToken),
             intercepted);
-        if (_cachedIntercept == null)
+        if (_cachedIntercept is null)
             throw new InvalidOperationException("No interceptor!.");
         return _cachedIntercept.Invoke(invocation);
     }

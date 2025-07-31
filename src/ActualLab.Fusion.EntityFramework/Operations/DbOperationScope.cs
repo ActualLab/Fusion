@@ -31,7 +31,7 @@ public abstract class DbOperationScope : IOperationScope
     public Operation Operation { get; protected init; } = null!;
     public string Shard { get; protected set; } = DbShard.Single;
     public bool IsTransient => false;
-    public bool IsUsed => MasterDbContext != null;
+    public bool IsUsed => MasterDbContext is not null;
     public bool? IsCommitted { get; protected set; }
     public bool HasEvents { get; protected set; }
 
@@ -84,7 +84,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         IsolationLevel isolationLevel = IsolationLevel.Unspecified)
     {
         var operation = context.TryGetOperation();
-        if (operation != null)
+        if (operation is not null)
             return operation.Scope as DbOperationScope<TDbContext>
                 ?? throw Fusion.Operations.Internal.Errors.WrongOperationScopeType(
                     typeof(DbOperationScope<TDbContext>),
@@ -149,14 +149,14 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         if (IsCommitted.HasValue)
             throw ActualLab.Fusion.Operations.Internal.Errors.OperationScopeIsAlreadyClosed();
 
-        if (MasterDbContext == null) // !IsUsed
+        if (MasterDbContext is null) // !IsUsed
             await CreateMasterDbContext(shard, cancellationToken).ConfigureAwait(false);
         else if (!string.Equals(Shard, shard, StringComparison.Ordinal))
             throw Errors.WrongDbOperationScopeShard(GetType(), Shard, shard);
 
         var database = dbContext.Database;
         database.DisableAutoTransactionsAndSavepoints();
-        if (Connection != null) {
+        if (Connection is not null) {
             var oldConnection = database.GetDbConnection();
             dbContext.SuppressDispose();
             database.SetDbConnection(Connection);
@@ -178,7 +178,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             return;
         }
 
-        if (MasterDbContext == null) { // !IsUsed
+        if (MasterDbContext is null) { // !IsUsed
             IsCommitted = true;
             return;
         }
@@ -186,7 +186,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         try {
             var now = Clocks.SystemClock.Now;
             Operation.LoggedAt = now;
-            if (Operation.Command == null)
+            if (Operation.Command is null)
                 throw ActualLab.Fusion.Operations.Internal.Errors.OperationHasNoCommand();
 
             var dbContext = MasterDbContext;
@@ -217,7 +217,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                         var existingDbEvent = await dbEvents
                             .FindAsync(DbKey.Compose(dbEvent.Uuid), cancellationToken)
                             .ConfigureAwait(false);
-                        if (existingDbEvent == null)
+                        if (existingDbEvent is null)
                             dbEvents.Add(dbEvent);
                         else if (conflictStrategy == KeyConflictStrategy.Update) {
                             if (existingDbEvent.State != LogEntryState.New)
@@ -259,7 +259,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                     var committedDbOperation = await verifierDbContext
                         .FindAsync<DbOperation>(DbKey.Compose(dbOperation.Index), cancellationToken)
                         .ConfigureAwait(false);
-                    if (committedDbOperation != null)
+                    if (committedDbOperation is not null)
                         IsCommitted = true;
                 }
                 catch {
@@ -323,7 +323,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                 .ConfigureAwait(false);
             if (!database.IsInMemory()) {
                 Connection = database.GetDbConnection();
-                if (Connection == null)
+                if (Connection is null)
                     throw ActualLab.Internal.Errors.InternalError("No DbConnection.");
             }
 
@@ -371,7 +371,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
     protected virtual async ValueTask TryDetachExecutionStrategy()
     {
-        if (ExecutionStrategy == null)
+        if (ExecutionStrategy is null)
             return;
 
         try {

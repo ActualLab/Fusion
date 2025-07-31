@@ -57,9 +57,9 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
         // 2. Is there Func<,> service?
         var tryConverterFn = Services.GetService<Func<TSource, Option<TTarget>>>();
         var converterFn = Services.GetService<Func<TSource, TTarget>>();
-        if (tryConverterFn != null)
+        if (tryConverterFn is not null)
             return FuncConverter<TSource>.New(tryConverterFn, converterFn);
-        if (converterFn != null)
+        if (converterFn is not null)
             return FuncConverter<TSource>.New(converterFn);
 
         // 3. Does TSource impl. IConvertibleTo<Option<TTarget>> or IConvertibleTo<TTarget>?
@@ -84,7 +84,7 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
                 null,
                 [typeof(string), typeof(TTarget).MakeByRefType()],
                 null);
-            if (mTryParse != null && mTryParse.ReturnType == typeof(bool)) {
+            if (mTryParse is not null && mTryParse.ReturnType == typeof(bool)) {
                 var tryParseFn = (TryParseFunc<TTarget>)mTryParse.CreateDelegate(typeof(TryParseFunc<TTarget>));
 
                 Option<TTarget> TryConvert(TSource source) =>
@@ -102,7 +102,7 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
                 null,
                 [typeof(string)],
                 null);
-            if (mParse != null && mParse.ReturnType == tTarget) {
+            if (mParse is not null && mParse.ReturnType == tTarget) {
                 var fn = (Func<TSource, TTarget>)mParse.CreateDelegate(typeof(Func<TSource, TTarget>));
                 return FuncConverter<TSource>.New(fn);
             }

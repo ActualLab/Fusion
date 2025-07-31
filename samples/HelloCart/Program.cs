@@ -26,7 +26,7 @@ while(true) {
     // WriteLine("  4: 3 + client-server mode");
     Write("Type 1..5: ");
     var input = args.SingleOrDefault();
-    if (input != null)
+    if (input is not null)
         WriteLine(input);
     else
         input = await ConsoleExt.ReadLineAsync() ?? "";
@@ -38,7 +38,7 @@ while(true) {
         "5" => new AppV5(),
         _ => null,
     };
-    if (app != null)
+    if (app is not null)
         break;
     WriteLine("Invalid selection.");
     WriteLine();
@@ -74,7 +74,7 @@ while (true) {
         var productId = parts[0].Trim();
         var price = decimal.Parse(parts[1].Trim());
         var product = await productService.Get(productId);
-        if (product == null)
+        if (product is null)
             throw new KeyNotFoundException("Specified product doesn't exist.");
 
         var command = new EditCommand<Product>(product with { Price = price });

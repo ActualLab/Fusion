@@ -6,10 +6,10 @@ public static class ServiceResolverExt
 {
     public static object? TryResolve(this ServiceResolver? resolver, IServiceProvider services)
     {
-        if (resolver == null)
+        if (resolver is null)
             return null;
 
-        if (resolver.Resolver == null)
+        if (resolver.Resolver is null)
             return services.GetService(resolver.Type);
 
         var service = resolver.Resolver.Invoke(services);
@@ -24,10 +24,10 @@ public static class ServiceResolverExt
 
     public static object Resolve(this ServiceResolver? resolver, IServiceProvider services)
     {
-        if (resolver == null)
+        if (resolver is null)
             throw new ArgumentNullException(nameof(resolver));
 
-        if (resolver.Resolver == null)
+        if (resolver.Resolver is null)
             return services.GetRequiredService(resolver.Type);
 
         var service = resolver.Resolver.Invoke(services);

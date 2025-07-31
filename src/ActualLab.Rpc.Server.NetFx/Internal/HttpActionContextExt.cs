@@ -17,10 +17,10 @@ public static class HttpActionContextExt
         IDictionary<object, object>? items = null;
         if (requestProperties.TryGetValue(ItemsKey, out var obj)) {
             items = obj as IDictionary<object,object>;
-            if (items == null && obj != null)
+            if (items is null && obj is not null)
                 throw Errors.InternalError($"'{ItemsKey}' key is used by something else.");
         }
-        if (items == null) {
+        if (items is null) {
             items = new Dictionary<object, object>();
             requestProperties[ItemsKey] = items;
         }

@@ -1,4 +1,4 @@
-@if (Exception != null) {
+@if (Exception is not null) {
     <Error @key="@Exception" Title="@Title" Dismissed="@Dismissed">@Exception.Message</Error>
 }
 

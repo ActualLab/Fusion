@@ -29,7 +29,7 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e) {
-            if (activity == null || !ActivityExt.IsError(e))
+            if (activity is null || !ActivityExt.IsError(e))
                 throw;
 
             activity.Finalize(e, cancellationToken);
@@ -51,7 +51,7 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
             return true;
 
         // Do not trace system commands & any nested command they run
-        for (var c = context; c != null; c = c.OuterContext)
+        for (var c = context; c is not null; c = c.OuterContext)
             if (c.UntypedCommand is ISystemCommand)
                 return false;
 
@@ -63,7 +63,7 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
     {
         var operationName = command.GetOperationName();
         var activity = CommanderInstruments.ActivitySource.StartActivity(operationName);
-        if (activity != null) {
+        if (activity is not null) {
             var tags = new ActivityTagsCollection { { "command", command.ToString() } };
             var activityEvent = new ActivityEvent(operationName, tags: tags);
             activity.AddEvent(activityEvent);

@@ -48,7 +48,7 @@ public readonly partial struct Tile<T>
 
     public void Deconstruct(out T start, out T end)
     {
-        if (Layer == null)
+        if (Layer is null)
             throw Errors.UnboundTile();
         start = Range.Start;
         end = Range.End;
@@ -57,7 +57,7 @@ public readonly partial struct Tile<T>
     public override string ToString()
     {
         var typeName = GetType().Name;
-        return Layer == null
+        return Layer is null
             ? $"{typeName}(unbound)"
             : $"{typeName}({Range.Start}..{Range.End})";
     }
@@ -78,7 +78,7 @@ public readonly partial struct Tile<T>
     public Tile<T>[] Smaller()
     {
         var smallerLayer = Layer.Smaller;
-        if (smallerLayer == null)
+        if (smallerLayer is null)
             return [];
 
         var a = Layer.Arithmetics;

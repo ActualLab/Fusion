@@ -85,7 +85,7 @@ public abstract class Interceptor : IHasServices
             throw Errors.InvalidProxyType(proxy.GetType(), typeof(IRequiresFullProxy));
 
         proxy.RequireProxy<IProxy>().Interceptor = this;
-        if (proxyTarget != null)
+        if (proxyTarget is not null)
             proxy.RequireProxy<InterfaceProxy>().ProxyTarget = proxyTarget;
         // ReSharper disable once SuspiciousTypeConversion.Global
         if (initialize && proxy is INotifyInitialized notifyInitialized)
@@ -99,7 +99,7 @@ public abstract class Interceptor : IHasServices
     public void Intercept(Invocation invocation)
     {
         var handler = SelectHandler(invocation);
-        if (handler != null)
+        if (handler is not null)
             handler.Invoke(invocation);
         else
             invocation.InvokeIntercepted();
@@ -114,7 +114,7 @@ public abstract class Interceptor : IHasServices
     public TResult Intercept<TResult>(Invocation invocation)
     {
         var handler = SelectHandler(invocation);
-        return handler != null
+        return handler is not null
             ? (TResult)handler.Invoke(invocation)!
             : invocation.InvokeIntercepted<TResult>();
     }
@@ -130,7 +130,7 @@ public abstract class Interceptor : IHasServices
     public object? InterceptUntyped(Invocation invocation)
     {
         var handler = SelectHandler(invocation);
-        return handler != null
+        return handler is not null
             ? handler.Invoke(invocation)!
             : invocation.InvokeInterceptedUntyped();
     }
@@ -192,7 +192,7 @@ public abstract class Interceptor : IHasServices
     protected Func<Invocation, object?>? CreateHandler(MethodInfo method, Invocation initialInvocation)
     {
         var methodDef = GetMethodDef(method, initialInvocation.Proxy.GetType());
-        if (methodDef == null)
+        if (methodDef is null)
             return null;
 
         if (UsesUntypedHandlers)

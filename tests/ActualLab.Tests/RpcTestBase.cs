@@ -55,7 +55,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 
         try {
             var hostedServices = _services?.HostedServices();
-            if (hostedServices != null)
+            if (hostedServices is not null)
                 await hostedServices.Stop();
         }
         catch {

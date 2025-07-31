@@ -86,11 +86,11 @@ public sealed class WebSocketChannel<T> : Channel<T>
         StopToken = _stopCts.Token;
 
         TextSerializer = settings.Serializer as ITextSerializer<T>; // ITextSerializer<T> is also IByteSerializer<T>
-        ByteSerializer = TextSerializer == null ? settings.Serializer : null;
+        ByteSerializer = TextSerializer is null ? settings.Serializer : null;
         ProjectingByteSerializer = ByteSerializer as IProjectingByteSerializer<T>;
         if (ProjectingByteSerializer is { AllowProjection: false })
             ProjectingByteSerializer = null;
-        (DataFormat, MessageType) = TextSerializer != null
+        (DataFormat, MessageType) = TextSerializer is not null
             ? (DataFormat.Text, WebSocketMessageType.Text)
             : (DataFormat.Bytes, WebSocketMessageType.Binary);
 
@@ -141,7 +141,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     public async ValueTask Close()
     {
         var stopCts = Interlocked.Exchange(ref _stopCts, null);
-        if (stopCts == null)
+        if (stopCts is null)
             return;
 
         stopCts.CancelAndDisposeSilently();
@@ -157,7 +157,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         var writer = _readChannel.Writer;
         try {
-            var items = ProjectingByteSerializer != null
+            var items = ProjectingByteSerializer is not null
                 ? ReadAllProjecting(cancellationToken)
                 : ReadAll(cancellationToken);
             // ReSharper disable once UseCancellationTokenForIAsyncEnumerable
@@ -233,7 +233,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             : TrySerializeText;
         while (true) {
             // When we are here, the sync read part is completed, so WaitToReadAsync will likely await.
-            if (whenMustFlush != null) {
+            if (whenMustFlush is not null) {
                 if (whenMustFlush.IsCompleted) {
                     // Flush is required right now.
                     // We aren't going to check WaitToReadAsync, coz most likely it's going to await.
@@ -252,10 +252,10 @@ public sealed class WebSocketChannel<T> : Channel<T>
             }
 
             // If we're here, it's either:
-            // - whenMustFlush == null -> we only need to await for waitToReadTask or WaitToReadAsync
+            // - whenMustFlush is null -> we only need to await for waitToReadTask or WaitToReadAsync
             // - both whenMustFlush and waitToReadTask are completed
             bool canRead;
-            if (waitToReadTask != null) {
+            if (waitToReadTask is not null) {
                 canRead = await waitToReadTask.ConfigureAwait(false);
                 waitToReadTask = null;
             }
@@ -277,7 +277,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                     whenMustFlush = null;
                 }
             }
-            if (whenMustFlush == null && _writeBuffer.WrittenCount > 0) {
+            if (whenMustFlush is null && _writeBuffer.WrittenCount > 0) {
                 // If we're here, the write flush isn't "planned" yet + there is some data to flush.
                 whenMustFlush = frameDelayer.Invoke(_writeBuffer.WrittenCount);
             }
@@ -412,7 +412,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
 
         var status = WebSocketCloseStatus.NormalClosure;
         var message = "Ok.";
-        if (error != null) {
+        if (error is not null) {
             status = WebSocketCloseStatus.InternalServerError;
             message = "Internal Server Error.";
             Log?.LogInformation(error, "WebSocket is closing after an error");

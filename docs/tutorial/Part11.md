@@ -32,7 +32,7 @@ public async Task InvokeAsync(HttpContext httpContext, RequestDelegate next)
         cookies.TryGetValue(cookieName, out var sessionId);
         var session = string.IsNullOrEmpty(sessionId) ? null : new Session(sessionId);
 
-        if (session == null) {
+        if (session is null) {
             session = SessionFactory.CreateSession();
             var responseCookies = httpContext.Response.Cookies;
             responseCookies.Append(cookieName, session.Id, Cookie.Build(httpContext));

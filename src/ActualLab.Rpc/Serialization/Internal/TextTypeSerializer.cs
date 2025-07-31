@@ -44,7 +44,7 @@ public static class TextTypeSerializer
     public static void ReadExactItemType(ref ReadOnlyMemory<byte> data, Type expectedType)
     {
         var itemType = ReadItemType(ref data);
-        if (itemType == null || itemType == expectedType)
+        if (itemType is null || itemType == expectedType)
             return;
 
         throw Errors.CannotDeserializeUnexpectedPolymorphicArgumentType(expectedType, itemType);
@@ -53,7 +53,7 @@ public static class TextTypeSerializer
     public static Type ReadDerivedItemType(ref ReadOnlyMemory<byte> data, Type expectedType)
     {
         var itemType = ReadItemType(ref data);
-        if (itemType == null)
+        if (itemType is null)
             return expectedType;
         if (expectedType.IsAssignableFrom(itemType))
             return itemType;

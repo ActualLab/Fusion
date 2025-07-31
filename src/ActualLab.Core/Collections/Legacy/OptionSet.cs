@@ -37,7 +37,7 @@ public sealed partial class OptionSet
             var spinWait = new SpinWait();
             var items = _items;
             while (true) {
-                var newItems = value != null
+                var newItems = value is not null
                     ? items.SetItem(key, value)
                     : items.Remove(key);
                 var oldItems = Interlocked.CompareExchange(ref _items, newItems, items);
@@ -66,16 +66,16 @@ public sealed partial class OptionSet
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains<T>()
-        => this[typeof(T).ToIdentifierSymbol()] != null;
+        => this[typeof(T).ToIdentifierSymbol()] is not null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains(string key)
-        => this[key] != null;
+        => this[key] is not null;
 
     public bool TryGet<T>(out T value)
     {
         var objValue = this[typeof(T).ToIdentifierSymbol()];
-        if (objValue == null) {
+        if (objValue is null) {
             value = default!;
             return false;
         }
@@ -93,7 +93,7 @@ public sealed partial class OptionSet
     public T GetOrDefault<T>(T @default = default!)
     {
         var value = this[typeof(T).ToIdentifierSymbol()];
-        return value != null ? (T) value : @default;
+        return value is not null ? (T) value : @default;
     }
 
     // ReSharper disable once HeapView.PossibleBoxingAllocation

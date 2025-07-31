@@ -33,7 +33,7 @@ public static class DbEntityResolverExt
             .ConfigureAwait(false);
         var result = new Dictionary<TKey, TDbEntity>();
         foreach (var entity in entities)
-            if (entity != null!)
+            if (entity is not null)
                 result.Add(resolver.KeyExtractor(entity), entity);
         return result;
     }

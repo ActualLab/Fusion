@@ -26,7 +26,7 @@ public abstract class MutableState : State, IMutableState
         get => base.Error;
         [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all used constructors are preserved")]
         set {
-            var result = value == null
+            var result = value is null
                 ? Result.NewUntyped(OutputType.GetDefaultValue(), null)
                 : Result.NewUntypedError(value!);
             Set(result);

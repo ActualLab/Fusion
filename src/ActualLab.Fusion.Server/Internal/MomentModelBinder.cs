@@ -6,7 +6,7 @@ public class MomentModelBinder : IModelBinder
 {
     public Task BindModelAsync(ModelBindingContext bindingContext)
     {
-        if (bindingContext == null)
+        if (bindingContext is null)
             throw new ArgumentNullException(nameof(bindingContext));
 
         try {

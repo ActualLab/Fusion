@@ -33,7 +33,7 @@ public class RpcServerPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions 
             lock (Lock) {
                 nextConnection = _nextConnection;
                 var connection = nextConnection.Value;
-                if (connection != null) {
+                if (connection is not null) {
                     _nextConnection = nextConnection.SetNext(null); // This allows SetConnection to work properly
                     return connection;
                 }
@@ -41,7 +41,7 @@ public class RpcServerPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions 
             try {
                 var closeTimeout = Hub.ServerPeerCloseTimeoutProvider.Invoke(this);
                 await nextConnection
-                    .When(x => x != null, cancellationToken)
+                    .When(x => x is not null, cancellationToken)
                     .WaitAsync(closeTimeout, cancellationToken)
                     .ConfigureAwait(false);
             }

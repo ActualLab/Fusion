@@ -20,7 +20,7 @@ public static class ExecutionStrategyExt
 
         var mShouldRetryOn = tStrategy.GetMethod(
             "ShouldRetryOn", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (mShouldRetryOn != null) {
+        if (mShouldRetryOn is not null) {
             var pError = Expression.Parameter(typeof(Exception), "error");
             var eBody = Expression.Call(pStrategy, mShouldRetryOn, pError);
             ShouldRetryOnCached = (Func<ExecutionStrategy, Exception, bool>) Expression
@@ -66,7 +66,7 @@ public static class ExecutionStrategyExt
         if (CurrentCached is not { } current)
             return false;
 
-        if (ExecutionStrategy.Current == null) {
+        if (ExecutionStrategy.Current is null) {
             var executionStrategy = dbContext.Database.CreateExecutionStrategy();
             if (executionStrategy is ExecutionStrategy es) {
                 current.Value = es;

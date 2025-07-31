@@ -116,7 +116,7 @@ public static class GenerationHelpers
         => PrivateFieldDef(type, name, true, initializer);
     public static FieldDeclarationSyntax PrivateFieldDef(TypeSyntax type, SyntaxToken name, bool isStatic, ExpressionSyntax? initializer = null)
     {
-        var initializerClause = initializer == null
+        var initializerClause = initializer is null
             ? null
             : EqualsValueClause(initializer);
         var fieldDeclaration = FieldDeclaration(
@@ -148,7 +148,7 @@ public static class GenerationHelpers
                     typeSyntax,
                     SingleVariableDesignation(varIdentifier))),
             trueStatement,
-            falseStatement != null ? ElseClause(falseStatement) : null);
+            falseStatement is not null ? ElseClause(falseStatement) : null);
 
     public static StatementSyntax AlwaysReturnStatement(bool returnsVoid, ExpressionSyntax expression)
         => !returnsVoid

@@ -46,7 +46,7 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
 
     public OldExceptionInfo(Exception? exception)
     {
-        if (exception == null) {
+        if (exception is null) {
             TypeRef = default;
             _message = "";
         } else {
@@ -100,11 +100,11 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
 
         var wrappedType = exceptionInfo.WrappedTypeRef.Resolve();
         var wrappedException = CreateStandardException(wrappedType, exceptionInfo.Message);
-        if (wrappedException == null)
+        if (wrappedException is null)
             return null;
 
         var ctor = type.GetConstructor(ExceptionCtorArgumentTypes1);
-        if (ctor == null)
+        if (ctor is null)
             return null;
         return (Exception) type.CreateInstance(exceptionInfo.Message, wrappedException);
     }
@@ -115,7 +115,7 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
             return null;
 
         var ctor = type.GetConstructor(ExceptionCtorArgumentTypes1);
-        if (ctor != null) {
+        if (ctor is not null) {
             try {
                 return (Exception) type.CreateInstance(message, (Exception?) null);
             }
@@ -125,7 +125,7 @@ public readonly partial struct OldExceptionInfo : IEquatable<OldExceptionInfo>
         }
 
         ctor = type.GetConstructor(ExceptionCtorArgumentTypes2);
-        if (ctor == null)
+        if (ctor is null)
             return null;
 
         var parameter = ctor.GetParameters().SingleOrDefault();

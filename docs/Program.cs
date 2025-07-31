@@ -18,7 +18,7 @@ public class Program
             WriteLine($"---- {type.Name} started ----");
 
             var method = type.GetMethod("Run", BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
-            if (method == null)
+            if (method is null)
                 throw new InvalidOperationException($"'{type.Name}' type doesn't have 'Run' method.");
 
             var result = method.Invoke(null, []);

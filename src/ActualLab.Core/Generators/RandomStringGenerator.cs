@@ -54,7 +54,7 @@ public class RandomStringGenerator : Generator<string>, IDisposable
 
     public string Next(int length, string? alphabet = null)
     {
-        if (alphabet == null)
+        if (alphabet is null)
             alphabet = Alphabet;
         else if (alphabet.Length < 1)
             throw new ArgumentOutOfRangeException(nameof(alphabet));

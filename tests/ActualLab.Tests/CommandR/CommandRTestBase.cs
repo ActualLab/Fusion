@@ -55,7 +55,7 @@ public class CommandRTestBase(ITestOutputHelper @out) : TestBase(@out)
         });
 
         var commander = services.AddCommander();
-        if (CommandHandlerFilter != null)
+        if (CommandHandlerFilter is not null)
             commander.AddHandlerFilter(CommandHandlerFilter);
 
         services.AddFusion();

@@ -37,7 +37,7 @@ public static partial class ComputedImpl
     private static bool TryUseExistingWithCallOptions(Computed? existing, ComputeContext context) {
         var callOptions = context.CallOptions;
         var mustGetExisting = (callOptions & CallOptions.GetExisting) != 0;
-        if (existing == null)
+        if (existing is null)
             return mustGetExisting;
 
         var mustInvalidate = (callOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
@@ -74,7 +74,7 @@ public static partial class ComputedImpl
         //   so we simply won't get to this method if it was used
         // - Since CallOptions.Invalidate implies GetExisting, it also can't be used here
         // So the only possible option is CallOptions.Capture
-        if (existing == null || !existing.IsConsistent())
+        if (existing is null || !existing.IsConsistent())
             return false;
 
         UseNew(existing, context);
@@ -89,19 +89,19 @@ public static partial class ComputedImpl
     }
 
     public static T GetValueOrDefault<T>(Computed<T>? computed, ComputeContext context)
-        => computed == null || CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting)
+        => computed is null || CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting)
             ? default!
             : computed.Value;
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume type constructors are preserved")]
     public static object? GetValueOrDefaultUntyped(Computed? computed, ComputeContext context, Type outputType)
-        => computed == null || CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting)
+        => computed is null || CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting)
             ? outputType.GetDefaultValue()!
             : computed.Value;
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume Task<T> constructors are preserved")]
     public static Task GetValueOrDefaultAsTask(Computed? computed, ComputeContext context, Type outputType)
-        => computed == null || CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting)
+        => computed is null || CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting)
             ? TaskExt.FromDefaultResult(outputType)
             : computed.GetValuePromise();
 

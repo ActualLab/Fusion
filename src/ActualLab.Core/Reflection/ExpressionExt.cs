@@ -38,19 +38,19 @@ public static class ExpressionExt
     public static (Type memberType, string memberName) MemberTypeAndName<T, TValue>(
         this Expression<Func<T, TValue>> expression)
     {
-        if (expression == null)
+        if (expression is null)
             throw new ArgumentNullException(nameof(expression));
         var memberExpression = expression.Body as MemberExpression;
 
         (Type memberType, string memberName) TypeAndName(MemberExpression me)
             => (me.Member.ReturnType(), me.Member.Name);
 
-        if (memberExpression != null)
+        if (memberExpression is not null)
             return TypeAndName(memberExpression);
         if (!(expression.Body is UnaryExpression body))
             throw Errors.ExpressionDoesNotSpecifyAMember(expression.ToString());
         memberExpression = body.Operand as MemberExpression;
-        if (memberExpression == null)
+        if (memberExpression is null)
             throw Errors.ExpressionDoesNotSpecifyAMember(expression.ToString());
 
         return TypeAndName(memberExpression);

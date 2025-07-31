@@ -24,7 +24,7 @@ public readonly partial struct PropertyBag : IEquatable<PropertyBag>
     public PropertyBagItem[]? RawItems {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _items;
-        init => _items = value != null && value.Length != 0 ? value : null;
+        init => _items = value is not null && value.Length != 0 ? value : null;
     }
 
     // Computed properties
@@ -43,7 +43,7 @@ public readonly partial struct PropertyBag : IEquatable<PropertyBag>
 
     public object? this[string key] {
         get {
-            if (_items == null || key.IsNullOrEmpty())
+            if (_items is null || key.IsNullOrEmpty())
                 return null;
 
             var index = Array.IndexOf(_items, PropertyBagItem.NewKey(key));
@@ -62,7 +62,7 @@ public readonly partial struct PropertyBag : IEquatable<PropertyBag>
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public PropertyBag(PropertyBagItem[]? rawItems)
     {
-        if (rawItems != null && rawItems.Length != 0)
+        if (rawItems is not null && rawItems.Length != 0)
             _items = rawItems.SortInPlace(PropertyBagItem.Comparer);
     }
 
@@ -71,11 +71,11 @@ public readonly partial struct PropertyBag : IEquatable<PropertyBag>
 
     public PropertyBag Set(string key, object? value)
     {
-        if (value == null)
+        if (value is null)
             return Remove(key);
 
         var item = PropertyBagItem.New(key, value);
-        if (_items == null)
+        if (_items is null)
             return new PropertyBag([item]);
 
         var index = Array.IndexOf(_items, item);
@@ -119,7 +119,7 @@ public readonly partial struct PropertyBag : IEquatable<PropertyBag>
     {
         if (key.IsNullOrEmpty())
             throw new ArgumentOutOfRangeException(nameof(key));
-        if (_items == null)
+        if (_items is null)
             return this;
 
         var index = Array.IndexOf(_items, PropertyBagItem.NewKey(key));
@@ -139,7 +139,7 @@ public readonly partial struct PropertyBag : IEquatable<PropertyBag>
 
     public bool Equals(PropertyBag other) => ReferenceEquals(_items, other._items);
     public override bool Equals(object? obj) => obj is PropertyBag other && Equals(other);
-    public override int GetHashCode() => _items == null ? 0 : RuntimeHelpers.GetHashCode(_items);
+    public override int GetHashCode() => _items is null ? 0 : RuntimeHelpers.GetHashCode(_items);
     public static bool operator ==(PropertyBag x, PropertyBag y) => Equals(x, y);
     public static bool operator !=(PropertyBag x, PropertyBag y) => !Equals(x, y);
 }

@@ -10,7 +10,7 @@ public static class RpcHeadersExt
 
     public static int IndexOf(this RpcHeader[]? headers, in RpcHeaderKey key)
     {
-        if (headers == null || headers.Length == 0)
+        if (headers is null || headers.Length == 0)
             return -1;
 
         for (var index = 0; index < headers.Length; index++) {
@@ -24,7 +24,7 @@ public static class RpcHeadersExt
 
     public static int IndexOf(this RpcHeader[]? headers, in RpcHeader header)
     {
-        if (headers == null || headers.Length == 0)
+        if (headers is null || headers.Length == 0)
             return -1;
 
         for (var index = 0; index < headers.Length; index++) {
@@ -38,7 +38,7 @@ public static class RpcHeadersExt
 
     public static string? TryGet(this RpcHeader[]? headers, in RpcHeaderKey key)
     {
-        if (headers == null || headers.Length == 0)
+        if (headers is null || headers.Length == 0)
             return null;
 
         foreach (var h in headers)
@@ -50,7 +50,7 @@ public static class RpcHeadersExt
 
     public static RpcHeader[] With(this RpcHeader[]? headers, in RpcHeader newHeader)
     {
-        if (headers == null || headers.Length == 0)
+        if (headers is null || headers.Length == 0)
             return [newHeader];
 
         var result = new RpcHeader[headers.Length + 1];
@@ -61,7 +61,7 @@ public static class RpcHeadersExt
 
     public static RpcHeader[] With(this RpcHeader[]? headers, in RpcHeader newHeader1, in RpcHeader newHeader2)
     {
-        if (headers == null || headers.Length == 0)
+        if (headers is null || headers.Length == 0)
             return [newHeader1, newHeader2];
 
         var result = new RpcHeader[headers.Length + 2];
@@ -77,7 +77,7 @@ public static class RpcHeadersExt
         if (newHeaderCount == 0)
             return headers;
 
-        if (headers == null || (headers.Length is var headersLength && headersLength == 0))
+        if (headers is null || (headers.Length is var headersLength && headersLength == 0))
             return newHeaders.ToArray();
 
         var result = new RpcHeader[headersLength + newHeaderCount];
@@ -89,7 +89,7 @@ public static class RpcHeadersExt
 
     public static RpcHeader[] WithOrSkip(this RpcHeader[]? headers, in RpcHeader header)
     {
-        if (headers == null || headers.Length == 0)
+        if (headers is null || headers.Length == 0)
             return [header];
 
         if (headers.IndexOf(header.Key) >= 0)
@@ -103,7 +103,7 @@ public static class RpcHeadersExt
 
     public static RpcHeader[] WithOrReplace(this RpcHeader[]? headers, in RpcHeader header)
     {
-        if (headers == null || headers.Length == 0)
+        if (headers is null || headers.Length == 0)
             return [header];
 
         if (headers.IndexOf(header.Key) is var index && index >= 0) {

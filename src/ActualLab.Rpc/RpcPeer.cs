@@ -100,7 +100,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
         sender ??= Sender;
         try {
-            return sender == null || sender.TryWrite(message)
+            return sender is null || sender.TryWrite(message)
                 ? Task.CompletedTask
                 : CompleteAsync(this, message, sender);
         }
@@ -126,7 +126,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     }
 
     public bool IsConnected()
-        => ConnectionState.Value.Handshake != null;
+        => ConnectionState.Value.Handshake is not null;
 
     public bool IsConnected(
         [NotNullWhen(true)] out RpcHandshake? handshake,
@@ -135,7 +135,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         var connectionState = ConnectionState.Value;
         handshake = connectionState.Handshake;
         sender = connectionState.Sender;
-        return handshake != null;
+        return handshake is not null;
     }
 
     public async Task<(RpcHandshake Handshake, ChannelWriter<RpcMessage> Sender)> WhenConnected(
@@ -206,7 +206,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             // We want to make sure ConnectionState doesn't change while this method runs
             // and no one else cancels ReaderTokenSource
             connectionState = _connectionState;
-            if (expectedState != null && expectedState != connectionState)
+            if (expectedState is not null && expectedState != connectionState)
                 return Task.CompletedTask;
             if (connectionState.IsFinal || !connectionState.Value.IsConnected())
                 return Task.CompletedTask;
@@ -288,7 +288,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                             }, handshakeToken)
                             .WaitAsync(handshakeToken)
                             .ConfigureAwait(false);
-                        if (handshake.RemoteApiVersionSet == null)
+                        if (handshake.RemoteApiVersionSet is null)
                             handshake = handshake with { RemoteApiVersionSet = new() };
                     }
                     catch (OperationCanceledException) {
@@ -341,7 +341,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     error = isReaderAbort ? null : e;
                 }
                 if (cancellationToken.IsCancellationRequested) {
-                    var isTerminal = error != null && Hub.PeerTerminalErrorDetector.Invoke(error);
+                    var isTerminal = error is not null && Hub.PeerTerminalErrorDetector.Invoke(error);
                     if (!isTerminal)
                         error = RpcReconnectFailedException.StopRequested(error);
                 }
@@ -364,12 +364,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 connectionState = _connectionState;
                 error = connectionState.Value.Error;
                 if (!connectionState.IsFinal) {
-                    var isTerminal = error != null && Hub.PeerTerminalErrorDetector.Invoke(error);
+                    var isTerminal = error is not null && Hub.PeerTerminalErrorDetector.Invoke(error);
                     if (!isTerminal)
                         error = new RpcReconnectFailedException(error);
                     SetConnectionState(connectionState.Value.NextDisconnected(error));
                 }
-                else if (error == null) {
+                else if (error is null) {
                     Log.LogError("The final connection state must have a non-null Error");
                     error = RpcReconnectFailedException.Unspecified();
                 }
@@ -420,7 +420,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 #endif
         var connectionState = _connectionState;
         var oldState = connectionState.Value;
-        if ((expectedState != null && connectionState != expectedState) || ReferenceEquals(newState, oldState)) {
+        if ((expectedState is not null && connectionState != expectedState) || ReferenceEquals(newState, oldState)) {
 #if NET9_0_OR_GREATER
             Lock.Exit();
 #else
@@ -446,7 +446,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             _connectionState = connectionState = nextConnectionState;
             _serverMethodResolver = GetServerMethodResolver(newState.Handshake);
             _handshake = newState.Handshake;
-            if (newState.Error != null && Hub.PeerTerminalErrorDetector.Invoke(newState.Error)) {
+            if (newState.Error is not null && Hub.PeerTerminalErrorDetector.Invoke(newState.Error)) {
                 terminalError = newState.Error;
                 connectionState.TrySetFinal(terminalError);
             }
@@ -469,13 +469,13 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 #endif
 
             // The code below is responsible solely for logging - all important stuff is already done
-            if (terminalError != null)
+            if (terminalError is not null)
                 Log.LogInformation("'{PeerRef}': Can't (re)connect, will shut down", Ref);
             else if (newState.IsConnected())
                 Log.LogInformation("'{PeerRef}': Connected", Ref);
             else {
                 var e = newState.Error;
-                if (e != null)
+                if (e is not null)
                     Log.LogInformation(e, "'{PeerRef}': Disconnected: {ErrorMessage}", Ref, e.Message);
                 else
                     Log.LogInformation("'{PeerRef}': Disconnected", Ref);

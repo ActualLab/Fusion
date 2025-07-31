@@ -28,7 +28,7 @@ public abstract class RemoteComputeMethodFunction(
 
     public readonly RpcHub RpcHub = hub.RpcHub;
     public readonly RpcMethodDef RpcMethodDef = rpcMethodDef;
-    public readonly RpcSafeCallRouter RpcCallRouter = hub.RpcHub.InternalServices.CallRouter;
+    public readonly RpcSafeCallRouter RpcSafeCallRouter = hub.RpcHub.InternalServices.SafeCallRouter;
     public readonly IRemoteComputedCache? RemoteComputedCache = hub.RemoteComputedCache;
     public readonly object? LocalTarget = localTarget;
 
@@ -59,13 +59,13 @@ public abstract class RemoteComputeMethodFunction(
         var startedAt = CpuTimestamp.Now;
         while (true) {
             try {
-                var peer = RpcCallRouter.Invoke(RpcMethodDef, typedInput.Invocation.Arguments);
-                if (peer.ConnectionKind == RpcPeerConnectionKind.Local) {
-                    // Local compute / no RPC call scenario
+                var peer = RpcSafeCallRouter.Invoke(RpcMethodDef, typedInput.Invocation.Arguments);
+                if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
+                    // Local computation / no RPC call scenario
                     var computed = NewReplicaComputed(typedInput);
                     using var _ = Computed.BeginCompute(computed);
-                    // LocalTarget != null -> proxy is a DistributedPair service & the Service.Method is invoked
-                    if (LocalTarget != null) {
+                    // LocalTarget is not null -> proxy is a DistributedPair service and the Service.Method is invoked
+                    if (LocalTarget is not null) {
                         try {
                             await MethodDef.TargetAsyncInvoker
                                 .Invoke(LocalTarget!, typedInput.Invocation.Arguments)
@@ -78,7 +78,7 @@ public abstract class RemoteComputeMethodFunction(
                         }
                     }
 
-                    // LocalTarget == null -> proxy is either:
+                    // LocalTarget is null -> proxy is either:
                     // - a pure client (interface proxy), so InvokeIntercepted will fail for it
                     //   (there is no base.Method)
                     // - or a Distributed mode service, so its base.Method should be invoked
@@ -103,9 +103,9 @@ public abstract class RemoteComputeMethodFunction(
                 // RPC call scenario
                 try {
                     var cache = GetCache(typedInput);
-                    // existing != null -> it's invalidated, and since cached value is even more outdated,
+                    // existing is not null -> it's invalidated, and since the cached value is even more outdated,
                     // it doesn't make sense to fetch it
-                    return existing == null && cache != null
+                    return existing is null && cache is not null
                         ? await ComputeCachedOrRpc(typedInput, cache, peer, cancellationToken)
                             .ConfigureAwait(false)
                         : await ComputeRpc(typedInput, cache, existing, peer, cancellationToken)
@@ -141,7 +141,7 @@ public abstract class RemoteComputeMethodFunction(
 
         var existingRemoteComputed = existing as IRemoteComputed;
         var existingCacheEntry = existingRemoteComputed?.CacheEntry;
-        var cacheInfoCapture = cache != null
+        var cacheInfoCapture = cache is not null
             ? new RpcCacheInfoCapture(existingCacheEntry ?? RpcCacheEntry.RequestHash)
             : null;
         var (result, call) = await SendRpcCall(input, peer, cacheInfoCapture, cancellationToken).ConfigureAwait(false);
@@ -150,11 +150,11 @@ public abstract class RemoteComputeMethodFunction(
             throw e; // We treat server-side cancellations the same way as client-side cancellations
 
         RpcCacheEntry? cacheEntry = null;
-        if (cacheInfoCapture != null && cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueOrError)) {
+        if (cacheInfoCapture is not null && cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueOrError)) {
             // dataSource.Task should be already completed at this point, so no WaitAsync(cancellationToken)
             var cacheValue = cacheValueOrError as RpcCacheValue;
 
-            if (existingCacheEntry == null)
+            if (existingCacheEntry is null)
                 cacheEntry = UpdateCache(cache!, cacheKey, cacheValue, value);
             else {
                 if (cacheValue is not null && cacheValue.HashOrDataEquals(existingCacheEntry.Value))
@@ -190,7 +190,7 @@ public abstract class RemoteComputeMethodFunction(
         }
 
         var cacheEntry = await cache.Get(input, cacheKey, cancellationToken).ConfigureAwait(false);
-        if (cacheEntry == null)
+        if (cacheEntry is null)
             // No cacheEntry was captured -> perform RPC call and update cache
             return await ComputeRpc(input, cache, null, peer, cancellationToken).ConfigureAwait(false);
 
@@ -243,7 +243,7 @@ public abstract class RemoteComputeMethodFunction(
         var cacheInfoCapture = new RpcCacheInfoCapture(existingCacheEntry ?? RpcCacheEntry.RequestHash);
         var (result, call) = await SendRpcCall(input, peer, cacheInfoCapture, default).ConfigureAwait(false);
         var (value, error) = result;
-        if (call == null || error is RpcRerouteException) {
+        if (call is null || error is RpcRerouteException) {
             await InvalidateToReroute(cachedComputed, result.Error).ConfigureAwait(false);
             return;
         }
@@ -303,24 +303,6 @@ public abstract class RemoteComputeMethodFunction(
 
     // Protected methods
 
-    protected internal virtual async Task<Computed> TryRecomputeForSynchronizer(
-        ComputedInput input,
-        CancellationToken cancellationToken = default)
-    {
-        // This method does exactly what TryRecompute does, but with two changes:
-        // - it assumes ComputeContext.None is used
-        // - and returns Computed<T> instead of T.
-        using var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
-
-        var existing = ComputedRegistry.Instance.Get(input); // = input.GetExistingComputed()
-        if (existing != null && existing.IsConsistent())
-            return existing;
-
-        releaser.MarkLockedLocally();
-        var computed = await ProduceComputedImpl(input, existing, cancellationToken).ConfigureAwait(false);
-        return computed;
-    }
-
     protected async ValueTask<(Result Result, RpcOutboundComputeCall? Call)> SendRpcCall(
         ComputeMethodInput input,
         RpcPeer peer,
@@ -352,7 +334,7 @@ public abstract class RemoteComputeMethodFunction(
         try {
             _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(computeCallInterceptor, invocation);
             call = context.Call as RpcOutboundComputeCall;
-            if (call == null) {
+            if (call is null) {
                 Log.LogWarning(
                     "SendRpcCall({Input}, {Peer}, ...) got null call somehow - will try to reroute...",
                     input, peer);
@@ -379,7 +361,7 @@ public abstract class RemoteComputeMethodFunction(
         Computed? existing = null)
     {
         var updateLogLevel = LogCacheEntryUpdateSettings.LogLevel;
-        if (existing != null && CacheLog.IfEnabled(updateLogLevel) is { } cacheLog) {
+        if (existing is not null && CacheLog.IfEnabled(updateLogLevel) is { } cacheLog) {
             if (LogCacheEntryUpdateSettings.MaxDataLength is var maxDataLength and > 0)
                 cacheLog.Log(updateLogLevel, "Entry update: {Input}, value: {OldValue} -> {NewValue}",
                     existing.Input, ((IRemoteComputed)existing).CacheEntry?.Value.ToString(maxDataLength), value?.ToString(maxDataLength));
@@ -529,7 +511,7 @@ public sealed class RemoteComputeMethodFunction<T>(
         // which means that only CallOptions.Capture can be used.
 
         var computed = input.GetExistingComputed();
-        if (computed == null || !computed.IsConsistent())
+        if (computed is null || !computed.IsConsistent())
             computed = await ProduceComputed(input, ComputeContext.None, cancellationToken).ConfigureAwait(false);
 
         for (var updateCount = 0;; updateCount++) {

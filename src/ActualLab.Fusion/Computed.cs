@@ -127,7 +127,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
     }
 
     public object? GetUntypedValueOrErrorBox()
-        => Error != null ? new ErrorBox(Error) : Value;
+        => Error is not null ? new ErrorBox(Error) : Value;
 
     // ToString & GetHashCode
 
@@ -141,7 +141,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     public Task GetValuePromise()
     {
-        if (_untypedValuePromise != null)
+        if (_untypedValuePromise is not null)
             return _untypedValuePromise;
 
         lock (Lock)
@@ -170,7 +170,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
             ComputedImpl.UseNew(this, context);
             // it can also become inconsistent here & later, and UseNew handles this.
             // So overall, Use(...) guarantees the dependency chain will be there even
-            // if computed is invalidated right after above "if".
+            // if computed is invalidated right after the above "if".
             return GetValuePromise();
         }
 
@@ -236,7 +236,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
                 _dependencies.Clear();
                 _dependants.Apply(default(Unit), static (_, usedByEntry) => {
                     var c = usedByEntry.Input.GetExistingComputed();
-                    if (c != null && c.Version == usedByEntry.Version)
+                    if (c is not null && c.Version == usedByEntry.Version)
                         c.Invalidate(); // Invalidate doesn't throw - ever
                 });
                 _dependants.Clear();
@@ -301,7 +301,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
         TimeSpan timeout;
         var error = Error;
-        if (error == null) {
+        if (error is null) {
             timeout = Options.AutoInvalidationDelay;
             if (timeout != TimeSpan.MaxValue)
                 this.Invalidate(timeout);
@@ -434,7 +434,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
             var oldCount = _dependants.Count;
             foreach (var entry in _dependants.Items) {
                 var c = entry.Input.GetExistingComputed();
-                if (c != null && c.Version == entry.Version)
+                if (c is not null && c.Version == entry.Version)
                     replacement.Add(entry);
             }
             _dependants = replacement;

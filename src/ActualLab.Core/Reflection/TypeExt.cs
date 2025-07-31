@@ -72,7 +72,7 @@ public static partial class TypeExt
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] this Type type,
         bool addSelf = false, bool addInterfaces = false)
     {
-        if (type == null)
+        if (type is null)
             throw new ArgumentNullException(nameof(type));
 
         if (addSelf) {
@@ -82,7 +82,7 @@ public static partial class TypeExt
         }
 
         var baseType = type.BaseType;
-        while (baseType != typeof(object) && baseType != null) {
+        while (baseType != typeof(object) && baseType is not null) {
             yield return baseType;
             baseType = baseType.BaseType;
         }
@@ -112,7 +112,7 @@ public static partial class TypeExt
             yield break;
 
         var baseTypes = type.GetAllBaseTypes(true, true);
-        if (interfaceFilter != null)
+        if (interfaceFilter is not null)
             baseTypes = baseTypes.Where(interfaceFilter);
         foreach (var baseType in baseTypes)
         foreach (var method in baseType.GetMethods(bindingFlags))
@@ -154,7 +154,7 @@ public static partial class TypeExt
                         .Select(t => t.GetName(useFullArgumentNames1, useFullArgumentNames1));
                     name = $"{name}<{argumentNames.ToDelimitedString(",")}>";
                 }
-                if (type1.DeclaringType != null)
+                if (type1.DeclaringType is not null)
                     name = $"{type1.DeclaringType.GetName(useFullName1)}+{name}";
                 else if (useFullName1)
                     name = $"{type1.Namespace}.{name}";
@@ -177,7 +177,7 @@ public static partial class TypeExt
                         .Select(t => t.ToIdentifierName(useFullArgumentNames1, useFullArgumentNames1));
                     name = string.Join("_", EnumerableExt.One(name).Concat(argumentNames));
                 }
-                if (type1.DeclaringType != null)
+                if (type1.DeclaringType is not null)
                     name = $"{type1.DeclaringType.ToIdentifierName(useFullName1)}_{name}";
                 else if (useFullName1)
                     name = $"{type1.Namespace}_{name}";
@@ -192,7 +192,7 @@ public static partial class TypeExt
             static t => new Symbol(IdentifierSymbolPrefix + t.ToIdentifierName(true, true)));
 
     public static bool IsTaskOrValueTask(this Type type)
-        => type.GetTaskOrValueTaskType() != null;
+        => type.GetTaskOrValueTaskType() is not null;
 
     public static Type? GetTaskOrValueTaskType(this Type type)
     {
@@ -208,14 +208,14 @@ public static partial class TypeExt
             }
 
             var baseType = type1.BaseType;
-            return baseType == null ? null : GetTaskOrValueTaskType(baseType);
+            return baseType is null ? null : GetTaskOrValueTaskType(baseType);
         });
     }
 
     public static Type? GetTaskOrValueTaskArgument(this Type type)
     {
         var taskType = type.GetTaskOrValueTaskType();
-        if (taskType == null)
+        if (taskType is null)
             throw new ArgumentOutOfRangeException(nameof(type));
         return taskType.IsGenericType
             ? taskType.GenericTypeArguments.SingleOrDefault()

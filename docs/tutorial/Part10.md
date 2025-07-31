@@ -241,7 +241,7 @@ public virtual async Task SignOut(
     if (Invalidation.IsActive) {
         // Fetch operation item
         var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
-        if (invSessionInfo != null) {
+        if (invSessionInfo is not null) {
             // Use it
             _ = GetUser(invSessionInfo.UserId, default);
             _ = GetUserSessions(invSessionInfo.UserId, default);
@@ -614,7 +614,7 @@ public override async Task SignOut(
             _ = GetOptions(session, default);
         }
         var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
-        if (invSessionInfo != null) {
+        if (invSessionInfo is not null) {
             _ = GetUser(invSessionInfo.UserId, default);
             _ = GetUserSessions(invSessionInfo.UserId, default);
         }

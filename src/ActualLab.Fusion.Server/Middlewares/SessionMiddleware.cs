@@ -71,7 +71,7 @@ public class SessionMiddleware : IMiddleware, IHasServices
         var cancellationToken = httpContext.RequestAborted;
         var originalSession = GetSession(httpContext);
         var session = originalSession;
-        if (session != null && Auth != null) {
+        if (session is not null && Auth is not null) {
             try {
                 var isSignOutForced = await Auth.IsSignOutForced(session, cancellationToken).ConfigureAwait(false);
                 if (isSignOutForced) {

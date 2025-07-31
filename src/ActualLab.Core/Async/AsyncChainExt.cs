@@ -51,7 +51,7 @@ public static class AsyncChainExt
 
     public static AsyncChain LogError(this AsyncChain asyncChain, ILogger? log)
     {
-        if (log == null)
+        if (log is null)
             return asyncChain;
 
         return asyncChain with {
@@ -73,7 +73,7 @@ public static class AsyncChainExt
         => asyncChain.Log(LogLevel.Information, log);
     public static AsyncChain Log(this AsyncChain asyncChain, LogLevel logLevel, ILogger? log)
     {
-        if (log == null)
+        if (log is null)
             return asyncChain;
 
         return asyncChain with {
@@ -102,7 +102,7 @@ public static class AsyncChainExt
 
     public static AsyncChain Trace(this AsyncChain asyncChain, Func<Activity?>? activityFactory, ILogger? log = null)
     {
-        if (activityFactory == null)
+        if (activityFactory is null)
             return asyncChain.LogError(log);
 
         return asyncChain with {

@@ -27,7 +27,7 @@ public sealed class RedisTaskSub : RedisSubBase
         // last time it was awaited, so if it's the case,
         // we should return it here, because in fact the message
         // we were waiting for earlier is here now.
-        if (unprocessedMessageTask != null)
+        if (unprocessedMessageTask is not null)
             return unprocessedMessageTask;
         var nextMessageSource = _nextMessageSource;
         if (!nextMessageSource.Task.IsCompleted)
@@ -50,7 +50,7 @@ public sealed class RedisTaskSub : RedisSubBase
     private void Reset()
     {
         _nextMessageSource = TaskCompletionSourceExt.New<RedisValue>();
-        if (WhenDisposed != null)
+        if (WhenDisposed is not null)
             _nextMessageSource.TrySetCanceled();
     }
 }
@@ -84,7 +84,7 @@ public sealed class RedisTaskSub<T> : RedisSubBase
         // last time it was awaited, so if it's the case,
         // we should return it here, because in fact the message
         // we were waiting for earlier is here now.
-        if (unresolvedMessageTask != null)
+        if (unresolvedMessageTask is not null)
             return unresolvedMessageTask;
         var nextMessageSource = _nextMessageSource;
         if (!nextMessageSource.Task.IsCompleted)
@@ -114,7 +114,7 @@ public sealed class RedisTaskSub<T> : RedisSubBase
     private void Reset()
     {
         _nextMessageSource = TaskCompletionSourceExt.New<T>();
-        if (WhenDisposed != null)
+        if (WhenDisposed is not null)
             _nextMessageSource.TrySetCanceled();
     }
 }

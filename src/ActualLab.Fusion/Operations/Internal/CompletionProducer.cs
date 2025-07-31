@@ -24,7 +24,7 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
             return Task.CompletedTask; // We skip operations w/o Command
 
         return Task.Run(async () => {
-            var isLocal = commandContext != null;
+            var isLocal = commandContext is not null;
             var operationType = isLocal ? "Local" : "External";
             try {
                 await Commander.Call(CompleteAsync.New(operation), true).ConfigureAwait(false);

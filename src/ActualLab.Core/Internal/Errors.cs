@@ -112,11 +112,11 @@ public static class Errors
     public static Exception NotInvoked(string methodName)
         => new InvalidOperationException($"'{methodName}' must be invoked first.");
     public static Exception AlreadyInitialized(string? propertyName = null)
-        => new InvalidOperationException(propertyName == null
+        => new InvalidOperationException(propertyName is null
             ? "Already initialized."
             : $"Property {propertyName} is already initialized.");
     public static Exception NotInitialized(string? propertyName = null)
-        => new InvalidOperationException(propertyName == null
+        => new InvalidOperationException(propertyName is null
             ? "Not initialized."
             : $"Property {propertyName} is not initialized.");
 
@@ -157,7 +157,7 @@ public static class Errors
         => Format(target.GetName(), value);
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We jsonify string here, so no reflection is needed")]
     public static Exception Format(string target, string? value)
-        => Format($"Invalid {target} format: {(value == null ? "null" : JsonFormatter.Format(value))}");
+        => Format($"Invalid {target} format: {(value is null ? "null" : JsonFormatter.Format(value))}");
 
     public static Exception Invalid7BitEncoded<TValue>()
         => Format($"Invalid 7-bit encoded {typeof(TValue).GetName()}");

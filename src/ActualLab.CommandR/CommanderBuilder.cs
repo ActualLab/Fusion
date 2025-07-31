@@ -119,7 +119,7 @@ public readonly struct CommanderBuilder
             if (gInterface != typeof(ICommandHandler<>))
                 continue;
             var tCommand = tInterface.GetGenericArguments().SingleOrDefault();
-            if (tCommand == null)
+            if (tCommand is null)
                 continue;
 
             var method = implementationType.GetInterfaceMap(tInterface).TargetMethods.Single();
@@ -150,7 +150,7 @@ public readonly struct CommanderBuilder
                 continue;
 
             var handler = MethodCommandHandler.TryNew(serviceType, method, priorityOverride);
-            if (handler == null)
+            if (handler is null)
                 continue;
 
             AddHandler(handler);

@@ -26,7 +26,7 @@ public class RpcReconnectFailedException : Exception
     public RpcReconnectFailedException(string? message)
         : this(message, innerException: null) { }
     public RpcReconnectFailedException(Exception? innerException)
-        : base(innerException == null
+        : base(innerException is null
             ? DefaultMessage
             : $"{DefaultMessagePrefix} {innerException.Message}", innerException) { }
     public RpcReconnectFailedException(string? message, Exception? innerException)

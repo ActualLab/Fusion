@@ -9,7 +9,7 @@ public struct HashSetSlim1<T> : IHashSetSlim<T>
 
     private readonly bool HasSet {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _set != null;
+        get => _set is not null;
     }
 
     public readonly int Count {

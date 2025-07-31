@@ -80,7 +80,7 @@ public static partial class TaskCompletionSourceExt
             ? cancellationToken.IsCancellationRequested
                 ? target.TrySetCanceled(cancellationToken)
                 : target.TrySetCanceled()
-            : task.Exception != null
+            : task.Exception is not null
                 ? target.TrySetException(task.Exception.GetBaseException())
                 : target.TrySetResult();
 
@@ -107,7 +107,7 @@ public static partial class TaskCompletionSourceExt
     public static void SetFromResult(this TaskCompletionSource target, Result<Unit> result, CancellationToken cancellationToken = default)
     {
         var error = result.Error;
-        if (error == null)
+        if (error is null)
             target.SetResult();
         else if (error is OperationCanceledException) {
 #if NET5_0_OR_GREATER
@@ -127,7 +127,7 @@ public static partial class TaskCompletionSourceExt
     public static bool TrySetFromResult(this TaskCompletionSource target, Result<Unit> result, CancellationToken cancellationToken = default)
     {
         var error = result.Error;
-        return error == null
+        return error is null
             ? target.TrySetResult()
             : error is OperationCanceledException
                 ? cancellationToken.IsCancellationRequested

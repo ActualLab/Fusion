@@ -32,7 +32,7 @@ public abstract class RpcInboundCall : RpcCall
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
     public static RpcInboundCall New(byte callTypeId, RpcInboundContext context, RpcMethodDef? methodDef)
     {
-        if (methodDef == null) {
+        if (methodDef is null) {
             var notFoundMethodDef = context.Peer.Hub.SystemCallSender.NotFoundMethodDef;
             var message = context.Message;
             var (service, method) = message.MethodRef.GetServiceAndMethodName();
@@ -71,7 +71,7 @@ public abstract class RpcInboundCall : RpcCall
     {
         var message = Context.Message;
         var headers = message.Headers.OrEmpty();
-        var arguments = Arguments != null
+        var arguments = Arguments is not null
             ? Arguments.ToString()
             : $"ArgumentData: {message.ArgumentData}";
         var relatedId = message.RelatedId;
@@ -89,7 +89,7 @@ public abstract class RpcInboundCall : RpcCall
             MethodDef.FullName,
             arguments,
             headers.Length > 0 ? $", Headers: {headers.ToDelimitedString()}" : "",
-            relatedObject != null ? $" for [{relatedObject}]" : "",
+            relatedObject is not null ? $" for [{relatedObject}]" : "",
             completedStageName.IsNullOrEmpty() ? "" : $" @{completedStageName}");
         return result;
     }
@@ -100,7 +100,7 @@ public abstract class RpcInboundCall : RpcCall
         if (NoWait) {
             try {
                 Arguments ??= DeserializeArguments();
-                if (Arguments == null)
+                if (Arguments is null)
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
 
                 // NoWait call arguments aren't validated
@@ -127,7 +127,7 @@ public abstract class RpcInboundCall : RpcCall
                     Trace = tracer.StartInboundTrace(this);
 
                 Arguments ??= DeserializeArguments();
-                if (Arguments == null)
+                if (Arguments is null)
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
 
                 // Before call
@@ -136,7 +136,7 @@ public abstract class RpcInboundCall : RpcCall
 
                 // Call
                 MethodDef.CallValidator?.Invoke(this);
-                ResultTask = inboundMiddlewares != null
+                ResultTask = inboundMiddlewares is not null
                     ? InvokeTarget(inboundMiddlewares)
                     : InvokeTarget();
             }
@@ -151,7 +151,7 @@ public abstract class RpcInboundCall : RpcCall
     {
         lock (Lock) {
             var existingCall = Context.Peer.InboundCalls.Get(Id);
-            if (existingCall != this || ResultTask == null)
+            if (existingCall != this || ResultTask is null)
                 return null;
 
             return WhenProcessed = completedStage switch {
@@ -231,7 +231,7 @@ public abstract class RpcInboundCall : RpcCall
         var argumentSerializer = peer.ArgumentSerializer;
         var arguments = message.Arguments;
         var methodDef = MethodDef;
-        if (arguments == null) {
+        if (arguments is null) {
             arguments = methodDef.ArgumentListType.Factory.Invoke();
             var needsArgumentPolymorphism = methodDef.HasPolymorphicArguments;
             if (!needsArgumentPolymorphism)

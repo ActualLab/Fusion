@@ -58,7 +58,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
 
     public bool Equals(ComputeMethodInput? other)
     {
-        if (other == null || HashCode != other.HashCode || !ReferenceEquals(MethodDef, other.MethodDef))
+        if (other is null || HashCode != other.HashCode || !ReferenceEquals(MethodDef, other.MethodDef))
             return false;
 
         var invocation = Invocation;

@@ -8,7 +8,7 @@ public static class StringBuilderCompatExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Append(this StringBuilder sb, ArraySegment<char> chars)
     {
-        if (sb == null)
+        if (sb is null)
             throw new ArgumentNullException(nameof(sb));
 
         sb.Append(chars.Array, chars.Offset, chars.Count);

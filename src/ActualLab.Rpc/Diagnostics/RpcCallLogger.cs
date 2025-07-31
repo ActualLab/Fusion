@@ -10,7 +10,7 @@ public class RpcCallLogger(RpcPeer peer, RpcCallLoggerFilter filter, ILogger? lo
     public LogLevel LogLevel { get; } = logLevel;
 
     public bool IsLogged(RpcCall call)
-        => Log != null && Filter.Invoke(Peer, call);
+        => Log is not null && Filter.Invoke(Peer, call);
 
     public virtual void LogInbound(RpcInboundCall call)
         => Log?.Log(LogLevel, "'{PeerRef}': {Call}", Peer.Ref, call);

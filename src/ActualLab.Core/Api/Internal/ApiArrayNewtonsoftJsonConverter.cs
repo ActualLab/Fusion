@@ -14,7 +14,7 @@ public class ApiArrayNewtonsoftJsonConverter : JsonConverter
     private static readonly ConcurrentDictionary<Type, JsonConverter?> ConverterCache = new();
 
     public override bool CanConvert(Type objectType)
-        => GetConverter(objectType) != null;
+        => GetConverter(objectType) is not null;
 
     public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
         => GetConverter(objectType)!.ReadJson(reader, objectType, existingValue, serializer);
@@ -71,7 +71,7 @@ public class ApiArrayNewtonsoftJsonConverter : JsonConverter
             JsonSerializer serializer)
         {
             var items = serializer.Deserialize<T[]?>(reader);
-            if (items == null)
+            if (items is null)
                 return null;
 
             return new(items);

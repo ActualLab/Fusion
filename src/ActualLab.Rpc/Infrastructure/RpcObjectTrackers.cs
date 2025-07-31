@@ -13,7 +13,7 @@ public abstract class RpcObjectTracker
     public RpcPeer Peer {
         get;
         protected set {
-            if (field != null)
+            if (field is not null)
                 throw Errors.AlreadyInitialized(nameof(Peer));
 
             field = value;

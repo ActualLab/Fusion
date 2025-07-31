@@ -18,21 +18,21 @@ public class DbProductService(IServiceProvider services)
 
         await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
         var dbProduct = await dbContext.Products.FindAsync(DbKey.Compose(productId), cancellationToken);
-        if (product == null) {
-            if (dbProduct != null)
+        if (product is null) {
+            if (dbProduct is not null)
                 dbContext.Remove(dbProduct);
         }
         else {
-            if (dbProduct != null)
+            if (dbProduct is not null)
                 dbProduct.Price = product.Price;
             else
                 dbContext.Add(new DbProduct { Id = productId, Price = product.Price });
         }
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // Adding LogMessageCommand as event
+        // Adding LogMessageCommand as an event
         var context = CommandContext.GetCurrent();
-        var message = product == null
+        var message = product is null
             ? $"Product removed: {productId}"
             : $"Product updated: {productId} with Price = {product.Price}";
         var logEvent = new LogMessageCommand(Ulid.NewUlid().ToString(), message);
@@ -45,7 +45,7 @@ public class DbProductService(IServiceProvider services)
     {
         await using var dbContext = await DbHub.CreateDbContext(cancellationToken);
         var dbProduct = await dbContext.Products.FindAsync(DbKey.Compose(id), cancellationToken);
-        if (dbProduct == null)
+        if (dbProduct is null)
             return null;
 
         return new Product(dbProduct.Id, dbProduct.Price);

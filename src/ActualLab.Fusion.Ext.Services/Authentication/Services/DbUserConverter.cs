@@ -31,7 +31,7 @@ public class DbUserConverter<TDbContext, TDbUser, TDbUserId>(IServiceProvider se
             if (!userIdentity.IsValid)
                 continue;
             var foundIdentity = identities.GetValueOrDefault(userIdentity.Id);
-            if (foundIdentity != null) {
+            if (foundIdentity is not null) {
                 foundIdentity.Secret = secret;
                 continue;
             }

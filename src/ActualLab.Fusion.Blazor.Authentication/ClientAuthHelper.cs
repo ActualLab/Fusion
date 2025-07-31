@@ -23,7 +23,7 @@ public class ClientAuthHelper(IServiceProvider services) : IHasServices
 
     public virtual async ValueTask<(string Name, string DisplayName)[]> GetSchemas()
     {
-        if (CachedSchemas != null)
+        if (CachedSchemas is not null)
             return CachedSchemas;
 
         var sSchemas = await JSRuntime

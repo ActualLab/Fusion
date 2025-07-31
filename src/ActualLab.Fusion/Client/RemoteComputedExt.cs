@@ -11,7 +11,7 @@ public static class RemoteComputedExt
     {
         if (!computed.CallSource.TrySetResult(call)) {
             // Another call is already bound
-            if (call == null) {
+            if (call is null) {
                 // Call from OnInvalidated - we need to cancel the old call
                 var boundCall = computed.WhenCallBound.GetAwaiter().GetResult();
                 boundCall?.SetInvalidated(true);
@@ -24,7 +24,7 @@ public static class RemoteComputedExt
         }
         // If we're here, the computed is bound to the specified call
 
-        if (call != null) // Otherwise the null call originates from OnInvalidated
+        if (call is not null) // Otherwise the null call originates from OnInvalidated
             computed.BindWhenInvalidatedToCall(call);
         return true;
     }

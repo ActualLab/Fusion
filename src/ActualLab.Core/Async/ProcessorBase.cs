@@ -12,7 +12,7 @@ public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDis
     protected CancellationTokenSource StopTokenSource { get; }
 
     public CancellationToken StopToken { get; }
-    public bool IsDisposed => _disposeTask != null;
+    public bool IsDisposed => _disposeTask is not null;
     public Task? WhenDisposed => _disposeTask;
 
     protected ProcessorBase(CancellationTokenSource? stopTokenSource = null)
@@ -29,7 +29,7 @@ public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDis
     {
         Task disposeTask;
         lock (Lock) {
-            if (_disposeTask == null) {
+            if (_disposeTask is null) {
                 StopTokenSource.CancelAndDisposeSilently();
                 _disposeTask = DisposeAsyncCore();
             }

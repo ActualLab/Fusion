@@ -12,7 +12,7 @@ public sealed class JsonifyErrorsAttribute : ExceptionFilterAttribute
         var actionContext = actionExecutedContext.ActionContext;
         var services = actionContext.GetAppServices();
 
-        if (actionExecutedContext.Response != null)
+        if (actionExecutedContext.Response is not null)
             return; // response already setup, log, do nothing
 
         var log = services.GetRequiredService<ILogger<JsonifyErrorsAttribute>>();

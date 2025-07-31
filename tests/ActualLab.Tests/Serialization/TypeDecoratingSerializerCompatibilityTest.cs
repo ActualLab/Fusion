@@ -18,7 +18,7 @@ public class TypeDecoratingSerializerCompatibilityTest(ITestOutputHelper @out) :
         foreach (var shape in shapes) {
             AssertPassesThrough(shape, legacy, modern);
             AssertPassesThrough(shape, modern, modern);
-            if (shape != null)
+            if (shape is not null)
                 Assert.ThrowsAny<Exception>(
                     () => AssertPassesThrough(shape, modern, legacy));
         }

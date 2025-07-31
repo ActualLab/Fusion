@@ -95,7 +95,7 @@ public class ScopedInterceptorTest(ITestOutputHelper @out) : TestBase(@out)
                         var proxy = Proxies.New(typeof(IScopedServiceTestService), interceptor);
                         // ReSharper disable once SuspiciousTypeConversion.Global
                         return (IScopedServiceTestService)proxy;
-                    }));
+                    }), RpcServiceMode.Server);
             })
             .BuildServiceProvider();
 

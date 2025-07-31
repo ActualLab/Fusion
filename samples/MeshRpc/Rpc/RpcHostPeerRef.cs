@@ -17,6 +17,8 @@ public sealed record RpcHostPeerRef : RpcPeerRef, IMeshPeerRef
     public override RpcPeerConnectionKind GetConnectionKind(RpcHub hub)
     {
         var ownHost = hub.Services.GetRequiredService<Host>();
-        return HostId == ownHost.Id ? RpcPeerConnectionKind.Local : RpcPeerConnectionKind.Remote;
+        return HostId == ownHost.Id
+            ? RpcPeerConnectionKind.Local
+            : RpcPeerConnectionKind.Remote;
     }
 }

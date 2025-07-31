@@ -27,10 +27,10 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
             var arguments = invocation.Arguments;
             var command = arguments.Get<ICommand>(0);
             var context = CommandContext.Current;
-            if (context == null) {
+            if (context is null) {
                 // The logic below detects inbound RPC calls & reroutes them to local Commander
                 var rpcInboundContext = RpcInboundContext.Current;
-                if (rpcInboundContext != null) {
+                if (rpcInboundContext is not null) {
                     var call = rpcInboundContext.Call;
                     var callMethodDef = call.MethodDef;
                     var callServiceDef = callMethodDef.Service;
@@ -102,7 +102,7 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
             if (method.DeclaringType == typeof(object))
                 continue;
             var attr = MethodCommandHandler.GetAttribute(method);
-            if (attr == null)
+            if (attr is null)
                 continue;
 
             var methodDef = new CommandHandlerMethodDef(type, method);

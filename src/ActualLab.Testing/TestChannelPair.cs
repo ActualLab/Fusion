@@ -18,7 +18,7 @@ public class TestChannelPair<T> : ChannelPair<T>
             SingleReader = false,
             SingleWriter = false,
         };
-        if (Out == null) {
+        if (Out is null) {
             var cp = ChannelPair.CreateTwisted<T>(options);
             Channel1 = cp.Channel1;
             Channel2 = cp.Channel2;

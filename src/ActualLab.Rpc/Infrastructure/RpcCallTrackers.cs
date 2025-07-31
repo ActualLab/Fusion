@@ -15,7 +15,7 @@ public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
     public RpcPeer Peer {
         get;
         protected set {
-            if (field != null)
+            if (field is not null)
                 throw Errors.AlreadyInitialized(nameof(Peer));
 
             field = value;
@@ -128,7 +128,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     }
                     // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
                     if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Log) != 0) {
-                        if (error != null)
+                        if (error is not null)
                             Peer.Log.LogError(error,
                                 "{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout})",
                                 Peer.Ref, call, elapsed.ToShortString(), timeouts.Timeout.ToShortString());
@@ -180,7 +180,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         async Task Resend(List<RpcOutboundCall> calls) {
             foreach (var call in calls) {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (call.GetReconnectStage(true) != null)
+                if (call.GetReconnectStage(true) is not null)
                     await call.SendRegistered(false).ConfigureAwait(false);
             }
         }

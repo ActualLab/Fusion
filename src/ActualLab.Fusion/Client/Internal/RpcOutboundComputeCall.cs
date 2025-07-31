@@ -72,7 +72,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
             // we'll need to await for invalidation
             var cacheInfoCapture = Context.CacheInfoCapture;
             var cacheEntry = cacheInfoCapture?.CacheEntry;
-            if (cacheEntry == null) {
+            if (cacheEntry is null) {
                 var error = Errors.MatchButNoCachedEntry();
                 SetError(error, context: null);
                 Peer.InternalServices.Log.LogError(error,
@@ -100,7 +100,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
     public override void SetError(Exception error, RpcInboundContext? context, bool assumeCancelled = false)
     {
         // SetError call not only sets the error, but also invalidates computed method calls
-        // awaiting the invalidation if context == null.
+        // awaiting the invalidation if context is null.
 
         var oce = error as OperationCanceledException;
         if (error is RpcRerouteException)
@@ -109,14 +109,14 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
 
         // We always use Lock to update ResultSource and call CacheInfoCapture.CaptureXxx
         lock (Lock) {
-            var isResultSet = oce != null
+            var isResultSet = oce is not null
                 ? ResultSource.TrySetCanceled(cancellationToken)
                 : ResultSource.TrySetException(error);
             if (isResultSet) {
                 CompleteKeepRegistered();
-                Context.CacheInfoCapture?.CaptureErrorFromLock(oce != null, error, cancellationToken);
+                Context.CacheInfoCapture?.CaptureErrorFromLock(oce is not null, error, cancellationToken);
             }
-            if (context == null) // Non-peer set
+            if (context is null) // Non-peer set
                 SetInvalidatedUnsafe(!assumeCancelled);
         }
     }

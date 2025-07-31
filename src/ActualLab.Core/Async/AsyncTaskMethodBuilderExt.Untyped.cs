@@ -101,7 +101,7 @@ public static partial class AsyncTaskMethodBuilderExt
 
     public static void SetFromTask(this AsyncTaskMethodBuilder target, Task task)
     {
-        if (task.Exception != null)
+        if (task.Exception is not null)
             target.SetException(task.Exception.GetBaseException());
         else
             target.SetResult();
@@ -109,7 +109,7 @@ public static partial class AsyncTaskMethodBuilderExt
 
     public static void TrySetFromTask(this AsyncTaskMethodBuilder target, Task task)
     {
-        if (task.Exception != null)
+        if (task.Exception is not null)
             target.TrySetException(task.Exception.GetBaseException());
         else
             target.TrySetResult();
@@ -138,7 +138,7 @@ public static partial class AsyncTaskMethodBuilderExt
     public static void SetFromResult(this AsyncTaskMethodBuilder target, Result<Unit> result)
     {
         var error = result.Error;
-        if (error == null)
+        if (error is null)
             target.SetResult();
         else
             target.SetException(error);
@@ -147,7 +147,7 @@ public static partial class AsyncTaskMethodBuilderExt
     public static bool TrySetFromResult(this AsyncTaskMethodBuilder target, Result<Unit> result)
     {
         var error = result.Error;
-        return error == null
+        return error is null
             ? target.TrySetResult()
             : target.TrySetException(error);
     }

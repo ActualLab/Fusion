@@ -52,7 +52,7 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
 
         using var _ = ExecutionContextExt.TrySuppressFlow();
         return Task.Run(async () => {
-            var isLocal = commandContext != null;
+            var isLocal = commandContext is not null;
             var isFromLocalAgent = string.Equals(operation.HostId, HostId.Id, StringComparison.Ordinal);
             // An important assertion
             if (isLocal != isFromLocalAgent) {

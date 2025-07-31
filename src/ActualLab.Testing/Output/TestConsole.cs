@@ -19,7 +19,7 @@ public class TestConsole : IConsole
 
     public TestConsole(ITestOutputHelper? testOutput = null)
     {
-        if (testOutput == null)
+        if (testOutput is null)
             return;
 
         var testTextWriter = new TestTextWriter(testOutput);

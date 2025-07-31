@@ -14,7 +14,7 @@ public static class MemberwiseCloner
     public static T Invoke<T>(T source)
     {
         var oSource = (object?) source;
-        if (oSource == null)
+        if (oSource is null)
             return default!;
         return (T)MemberwiseCloneFunc(oSource);
     }

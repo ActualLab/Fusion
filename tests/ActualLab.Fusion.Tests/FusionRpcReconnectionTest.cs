@@ -13,9 +13,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddService<ReconnectTester>();
-        fusion.AddClient<IReconnectTester>(nameof(ReconnectTester));
-        fusion.Rpc.Service<IReconnectTester>().HasServer<ReconnectTester>();
+        fusion.AddClientAndServer<IReconnectTester, ReconnectTester>();
     }
 
     [Fact]

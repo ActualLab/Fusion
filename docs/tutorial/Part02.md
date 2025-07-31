@@ -165,8 +165,8 @@ interface IResult<T> {
     T ValueOrDefault { get; } // Never throws an error
     T Value { get; } // Throws Error when HasError
     Exception? Error { get; }
-    bool HasValue { get; } // Error == null
-    bool HasError { get; } // Error != null
+    bool HasValue { get; } // Error is null
+    bool HasError { get; } // Error is not null
 
     void Deconstruct(out T value, out Exception? error);
     bool IsValue(out T value);

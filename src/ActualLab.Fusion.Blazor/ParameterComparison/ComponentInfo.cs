@@ -37,7 +37,7 @@ public sealed class ComponentInfo
 
         var parameterComparerProvider = ParameterComparerProvider.Instance;
         var parameters = new Dictionary<string, ComponentParameterInfo>(StringComparer.Ordinal);
-        if (parentComponentInfo != null)
+        if (parentComponentInfo is not null)
             parameters.AddRange(parentComponentInfo.Parameters);
 
         var hasCustomParameterComparers = parentComponentInfo?.HasCustomParameterComparers ?? false;
@@ -45,9 +45,9 @@ public sealed class ComponentInfo
         foreach (var property in type.GetProperties(bindingFlags)) {
             var pa = property.GetCustomAttribute<ParameterAttribute>(true);
             CascadingParameterAttribute? cpa = null;
-            if (pa == null) {
+            if (pa is null) {
                 cpa = property.GetCustomAttribute<CascadingParameterAttribute>(true);
-                if (cpa == null)
+                if (cpa is null)
                     continue; // Not a parameter
             }
 
@@ -55,7 +55,7 @@ public sealed class ComponentInfo
             hasCustomParameterComparers |= comparer is not DefaultParameterComparer;
             var parameter = new ComponentParameterInfo() {
                 Property = property,
-                IsCascading = cpa != null,
+                IsCascading = cpa is not null,
                 IsCapturingUnmatchedValues = pa?.CaptureUnmatchedValues ?? false,
                 CascadingParameterName = cpa?.Name,
                 Comparer = comparer,

@@ -56,7 +56,7 @@ public class DefaultMessagePackResolver : IFormatterResolver
         {
             foreach (var resolver in Resolvers) {
                 var formatter = resolver.GetFormatter<T>();
-                if (formatter != null) {
+                if (formatter is not null) {
                     Formatter = formatter;
                     return;
                 }

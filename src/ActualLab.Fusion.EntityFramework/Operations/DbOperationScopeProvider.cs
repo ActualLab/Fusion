@@ -36,12 +36,12 @@ public class DbOperationScopeProvider(IServiceProvider services)
                 throw;
 
             var operationReprocessor = context.Items.KeylessGet<IOperationReprocessor>();
-            if (operationReprocessor == null)
+            if (operationReprocessor is null)
                 throw;
 
             var allErrors = error.Flatten();
             var transientError = allErrors.FirstOrDefault(scope.IsTransientFailure);
-            if (transientError == null)
+            if (transientError is null)
                 throw;
 
             // It's a transient failure - let's tag it so that IOperationReprocessor retries on it

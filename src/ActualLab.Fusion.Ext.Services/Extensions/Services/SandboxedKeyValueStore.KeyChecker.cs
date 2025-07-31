@@ -16,7 +16,7 @@ public partial class SandboxedKeyValueStore<TContext>
         {
             if (keyPrefix.StartsWith(Prefix, StringComparison.Ordinal))
                 return;
-            if (SecondaryPrefix != null && keyPrefix.StartsWith(SecondaryPrefix, StringComparison.Ordinal))
+            if (SecondaryPrefix is not null && keyPrefix.StartsWith(SecondaryPrefix, StringComparison.Ordinal))
                 return;
 
             throw Errors.KeyViolatesSandboxedKeyValueStoreConstraints();
@@ -36,7 +36,7 @@ public partial class SandboxedKeyValueStore<TContext>
                     : maxExpiresAt;
                 return;
             }
-            if (SecondaryPrefix != null && key.StartsWith(SecondaryPrefix, StringComparison.Ordinal)) {
+            if (SecondaryPrefix is not null && key.StartsWith(SecondaryPrefix, StringComparison.Ordinal)) {
                 if (!SecondaryExpirationTime.HasValue)
                     return;
                 var maxExpiresAt = Clock.Now + SecondaryExpirationTime.GetValueOrDefault();

@@ -97,7 +97,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
                 minSet = _timers.ExtractMinSet(_minPriority);
                 ++_minPriority;
             }
-            if (_fireHandler != null && minSet.Count != 0) {
+            if (_fireHandler is not null && minSet.Count != 0) {
                 foreach (var (timer, _) in minSet) {
                     try {
                         _fireHandler(timer);

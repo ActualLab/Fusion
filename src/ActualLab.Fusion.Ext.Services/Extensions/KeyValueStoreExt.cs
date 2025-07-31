@@ -68,7 +68,7 @@ public static class KeyValueStoreExt
         CancellationToken cancellationToken = default)
     {
         var sValue = await keyValueStore.Get(shard, key, cancellationToken).ConfigureAwait(false);
-        return sValue == null ? Option<T>.None : NewtonsoftJsonSerialized.New<T>(sValue).Value;
+        return sValue is null ? Option<T>.None : NewtonsoftJsonSerialized.New<T>(sValue).Value;
     }
 
     public static async ValueTask<T?> Get<T>(this IKeyValueStore keyValueStore,
@@ -76,7 +76,7 @@ public static class KeyValueStoreExt
         CancellationToken cancellationToken = default)
     {
         var sValue = await keyValueStore.Get(shard, key, cancellationToken).ConfigureAwait(false);
-        return sValue == null ? default : NewtonsoftJsonSerialized.New<T>(sValue).Value;
+        return sValue is null ? default : NewtonsoftJsonSerialized.New<T>(sValue).Value;
     }
 
     // ListKeysByPrefix

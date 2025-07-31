@@ -305,7 +305,7 @@ override DateTime GetCurrentTimeWithOffset(TimeSpan offset) {
     finally {
         // Let's setup a dependent-dependency link; again,
         // the real logic is very different from this.
-        if (dependant != null)
+        if (dependant is not null)
             result.Invalidated += () => dependant.Invalidate();
     }
 }  
@@ -678,7 +678,7 @@ sample:
 
     <p>Server Time: @time</p>
 
-    @if (error != null) {
+    @if (error is not null) {
         <div class="alert alert-warning" role="alert">
             Update error: @error.Message
         </div>

@@ -14,7 +14,7 @@ public sealed class CommandHandlerMethodDef : MethodDef
         ) : base(type, method)
     {
         var commandHandler = MethodCommandHandler.TryNew(method.ReflectedType!, method);
-        if (commandHandler == null) {
+        if (commandHandler is null) {
             IsValid = false;
             return; // Can be only when attr.IsEnabled == false
         }

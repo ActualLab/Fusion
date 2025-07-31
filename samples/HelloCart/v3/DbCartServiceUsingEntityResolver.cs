@@ -13,15 +13,17 @@ public class DbCartServiceUsingEntityResolver(IServiceProvider services)
     public override async Task<Cart?> Get(string id, CancellationToken cancellationToken = default)
     {
         var dbCart = await CartResolver.Get(id, cancellationToken);
-        return dbCart == null ? null : new Cart(dbCart.Id) {
-            Items = dbCart.Items.ToImmutableDictionary(i => i.DbProductId, i => i.Quantity),
-        };
+        return dbCart is null
+            ? null
+            : new Cart(dbCart.Id) {
+                Items = dbCart.Items.ToImmutableDictionary(i => i.DbProductId, i => i.Quantity),
+            };
     }
 
     public override async Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default)
     {
         var cart = await Get(id, cancellationToken);
-        if (cart == null)
+        if (cart is null)
             return 0;
 
         var itemTotals = await Task.WhenAll(cart.Items.Select(async item => {

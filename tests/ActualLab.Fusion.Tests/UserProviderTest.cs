@@ -196,7 +196,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
             (await users1.Count()).Should().Be(count1);
 
             var cUser2 = await Computed.Capture(() => users2.Get(user.Id));
-            cUser2 = await cUser2.When(x => x != null).WaitAsync(syncTimeout);
+            cUser2 = await cUser2.When(x => x is not null).WaitAsync(syncTimeout);
             var user2 = cUser2.Value;
             user2.Should().NotBeNull();
             user2!.Id.Should().Be(user.Id);

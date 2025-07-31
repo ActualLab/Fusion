@@ -104,7 +104,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
                 .OrderByDescending(e => e.LoggedAt)
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
-            if (lastCandidate == null)
+            if (lastCandidate is null)
                 return 0;
 
 #if NET7_0_OR_GREATER

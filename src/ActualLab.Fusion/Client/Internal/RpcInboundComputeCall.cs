@@ -29,7 +29,7 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
     {
         lock (Lock) {
             var existingCall = Context.Peer.InboundCalls.Get(Id);
-            if (existingCall != this || ResultTask == null)
+            if (existingCall != this || ResultTask is null)
                 return null;
 
             return WhenProcessed = completedStage switch {
@@ -48,7 +48,7 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
                 trace.Complete(this);
                 Trace = null;
             }
-            if (Context.Peer.Handshake is { ProtocolVersion: <= 1 } && UntypedComputed != null) {
+            if (Context.Peer.Handshake is { ProtocolVersion: <= 1 } && UntypedComputed is not null) {
                 // '@' is required to make it compatible with pre-v7.2 versions
                 var versionHeader = new RpcHeader(WellKnownRpcHeaders.Version, UntypedComputed.Version.FormatVersion('@'));
                 ResultHeaders = ResultHeaders.WithOrReplace(versionHeader);
@@ -102,7 +102,7 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
         }
         finally {
             var computed = ccs.Context.TryGetCaptured<TResult>();
-            if (computed != null) {
+            if (computed is not null) {
                 lock (Lock)
                     Computed ??= computed;
             }
@@ -122,7 +122,7 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
             }
             finally {
                 var computed = ccs.Context.TryGetCaptured<TResult>();
-                if (computed != null) {
+                if (computed is not null) {
                     lock (Lock)
                         Computed ??= computed;
                 }

@@ -73,7 +73,7 @@ public sealed class ArgumentListType
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is fully preserved")]
     private ArgumentListType(bool useGenerics, ReadOnlySpan<Type?> key)
     {
-        Type[] itemTypes = key.ToArray().TakeWhile(x => x != null).ToArray()!;
+        Type[] itemTypes = key.ToArray().TakeWhile(x => x is not null).ToArray()!;
         ItemTypes = itemTypes;
         ItemCount = itemTypes.Length;
         if (useGenerics) {
@@ -109,7 +109,7 @@ public sealed class ArgumentListType
 
     public override string ToString()
     {
-        if (_toString != null)
+        if (_toString is not null)
             return _toString;
 
         var s = $"[<{ItemTypes.Select(x => x.GetName()).ToDelimitedString()}>]";

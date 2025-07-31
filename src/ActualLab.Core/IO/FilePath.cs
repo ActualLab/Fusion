@@ -92,7 +92,7 @@ public readonly partial struct FilePath : IEquatable<FilePath>, IComparable<File
 
     public FilePath ToAbsolute(FilePath? basePath = null)
     {
-        if (basePath != null)
+        if (basePath is not null)
 #if !NETSTANDARD2_0
             return Path.GetFullPath(Value, basePath.Value);
 #else

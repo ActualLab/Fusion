@@ -18,7 +18,7 @@ public abstract class DispatchingComputedStateComponentState<T>: ComputedStateCo
         // - Or its other callers assume it may fail due to GracefulDisposeToken cancellation.
         ComputeTaskFactory = () => {
             var computeTaskIfDisposed = GetComputeTaskIfDisposed();
-            return computeTaskIfDisposed != null
+            return computeTaskIfDisposed is not null
                 ? (Task<T>)computeTaskIfDisposed
                 : Component.ComputeState(GracefulDisposeToken);
         };

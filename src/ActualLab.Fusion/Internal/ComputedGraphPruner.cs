@@ -51,7 +51,7 @@ public sealed class ComputedGraphPruner : WorkerBase
             // the same time - they'll both may end up activate themselves here
             var prevGraphPruner = computedRegistry.GraphPruner;
             while (prevGraphPruner != this) {
-                if (prevGraphPruner != null)
+                if (prevGraphPruner is not null)
                     await prevGraphPruner.WhenActivated.ConfigureAwait(false);
                 prevGraphPruner = computedRegistry.ChangeGraphPruner(this, prevGraphPruner);
             }

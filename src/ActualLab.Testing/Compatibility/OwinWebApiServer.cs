@@ -100,7 +100,7 @@ internal sealed class WebApiStartup
         var config = new HttpConfiguration();
         Configure(config);
 
-        if (_configureAppBuilder != null)
+        if (_configureAppBuilder is not null)
             _configureAppBuilder(appBuilder);
         var appBuilders = _serviceProvider.GetServices<Action<IAppBuilder>>();
         foreach (var service in appBuilders) {
@@ -112,7 +112,7 @@ internal sealed class WebApiStartup
 
     private void Configure(HttpConfiguration config)
     {
-        if (_setupConfiguration != null)
+        if (_setupConfiguration is not null)
             _setupConfiguration(config);
         var configBuilders = _serviceProvider.GetServices<Action<HttpConfiguration>>();
         foreach (var service in configBuilders) {

@@ -9,7 +9,7 @@ public sealed class CommandHandlerChain
 
     public CommandHandler[] Items => _items ?? [];
     public int Length => Items.Length;
-    public int FinalHandlerIndex => _items == null ? -1 : _finalHandlerIndex;
+    public int FinalHandlerIndex => _items is null ? -1 : _finalHandlerIndex;
     public CommandHandler this[int index] => Items[index];
     public CommandHandler? FinalHandler => _finalHandlerIndex < 0 ? null : _items?[_finalHandlerIndex];
 

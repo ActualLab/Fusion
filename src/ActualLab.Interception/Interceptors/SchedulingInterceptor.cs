@@ -26,13 +26,13 @@ public sealed class SchedulingInterceptor : Interceptor
         if (!methodDef.IsAsyncMethod)
             return static invocation => invocation.InvokeInterceptedUntyped();
 
-        var asyncInvoker = NextInterceptor != null
+        var asyncInvoker = NextInterceptor is not null
             ? invocation => methodDef.InterceptorAsyncInvoker.Invoke(NextInterceptor, invocation)
             : methodDef.InterceptedAsyncInvoker;
         var taskFactoryResolver = TaskFactoryResolver;
         return invocation => {
             var taskFactory = taskFactoryResolver.Invoke(invocation);
-            if (taskFactory == null)
+            if (taskFactory is null)
                 return invocation.InvokeInterceptedUntyped();
 
             var task = taskFactory.StartNew(() => (Task<TUnwrapped>)asyncInvoker.Invoke(invocation)).Unwrap();

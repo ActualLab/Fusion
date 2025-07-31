@@ -41,8 +41,9 @@ public abstract class DbEntityConverter<TDbContext, TDbEntity, TModel>(IServiceP
 #endif
     public virtual TDbEntity? ToEntity(TModel? source)
     {
-        if (source == null)
+        if (source is null)
             return null;
+
         var dbEntity = NewEntity();
         UpdateEntity(source, dbEntity);
         return dbEntity;
@@ -53,7 +54,7 @@ public abstract class DbEntityConverter<TDbContext, TDbEntity, TModel>(IServiceP
 #endif
     public virtual TModel? ToModel(TDbEntity? source)
     {
-        if (source == null)
+        if (source is null)
             return default;
         var model = NewModel();
         model = UpdateModel(source, model);

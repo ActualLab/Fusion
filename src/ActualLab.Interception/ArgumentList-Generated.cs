@@ -223,7 +223,7 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
         Type? itemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != typeof(T0)) {
+            if (itemType is not null && itemType != typeof(T0)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
@@ -409,7 +409,7 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
 
     public bool Equals(ArgumentListG1<T0>? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!EqualityComparer<T0>.Default.Equals(Item0, other.Item0))
@@ -513,7 +513,7 @@ public sealed record ArgumentListS1 : ArgumentList1
         expectedItemType = _type.ItemTypes[0];
         if (!expectedItemType.IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
@@ -698,7 +698,7 @@ public sealed record ArgumentListS1 : ArgumentList1
 
     public bool Equals(ArgumentListS1? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item0, other.Item0))
@@ -824,14 +824,14 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
         Type? itemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != typeof(T0)) {
+            if (itemType is not null && itemType != typeof(T0)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
         }
         if (!typeof(T1).IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != typeof(T1)) {
+            if (itemType is not null && itemType != typeof(T1)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
@@ -1051,7 +1051,7 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
 
     public bool Equals(ArgumentListG2<T0, T1>? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!EqualityComparer<T1>.Default.Equals(Item1, other.Item1))
@@ -1183,7 +1183,7 @@ public sealed record ArgumentListS2 : ArgumentList2
         expectedItemType = _type.ItemTypes[0];
         if (!expectedItemType.IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
@@ -1191,7 +1191,7 @@ public sealed record ArgumentListS2 : ArgumentList2
         expectedItemType = _type.ItemTypes[1];
         if (!expectedItemType.IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
@@ -1406,7 +1406,7 @@ public sealed record ArgumentListS2 : ArgumentList2
 
     public bool Equals(ArgumentListS2? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item1, other.Item1))
@@ -1559,21 +1559,21 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
         Type? itemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != typeof(T0)) {
+            if (itemType is not null && itemType != typeof(T0)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
         }
         if (!typeof(T1).IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != typeof(T1)) {
+            if (itemType is not null && itemType != typeof(T1)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
         }
         if (!typeof(T2).IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != typeof(T2)) {
+            if (itemType is not null && itemType != typeof(T2)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
@@ -1827,7 +1827,7 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
 
     public bool Equals(ArgumentListG3<T0, T1, T2>? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!EqualityComparer<T2>.Default.Equals(Item2, other.Item2))
@@ -1986,7 +1986,7 @@ public sealed record ArgumentListS3 : ArgumentList3
         expectedItemType = _type.ItemTypes[0];
         if (!expectedItemType.IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
@@ -1994,7 +1994,7 @@ public sealed record ArgumentListS3 : ArgumentList3
         expectedItemType = _type.ItemTypes[1];
         if (!expectedItemType.IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
@@ -2002,7 +2002,7 @@ public sealed record ArgumentListS3 : ArgumentList3
         expectedItemType = _type.ItemTypes[2];
         if (!expectedItemType.IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
@@ -2247,7 +2247,7 @@ public sealed record ArgumentListS3 : ArgumentList3
 
     public bool Equals(ArgumentListS3? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item2, other.Item2))
@@ -2427,28 +2427,28 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
         Type? itemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != typeof(T0)) {
+            if (itemType is not null && itemType != typeof(T0)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
         }
         if (!typeof(T1).IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != typeof(T1)) {
+            if (itemType is not null && itemType != typeof(T1)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
         }
         if (!typeof(T2).IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != typeof(T2)) {
+            if (itemType is not null && itemType != typeof(T2)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
         }
         if (!typeof(T3).IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != typeof(T3)) {
+            if (itemType is not null && itemType != typeof(T3)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -2736,7 +2736,7 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
 
     public bool Equals(ArgumentListG4<T0, T1, T2, T3>? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!EqualityComparer<T3>.Default.Equals(Item3, other.Item3))
@@ -2922,7 +2922,7 @@ public sealed record ArgumentListS4 : ArgumentList4
         expectedItemType = _type.ItemTypes[0];
         if (!expectedItemType.IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
@@ -2930,7 +2930,7 @@ public sealed record ArgumentListS4 : ArgumentList4
         expectedItemType = _type.ItemTypes[1];
         if (!expectedItemType.IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
@@ -2938,7 +2938,7 @@ public sealed record ArgumentListS4 : ArgumentList4
         expectedItemType = _type.ItemTypes[2];
         if (!expectedItemType.IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
@@ -2946,7 +2946,7 @@ public sealed record ArgumentListS4 : ArgumentList4
         expectedItemType = _type.ItemTypes[3];
         if (!expectedItemType.IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -3221,7 +3221,7 @@ public sealed record ArgumentListS4 : ArgumentList4
 
     public bool Equals(ArgumentListS4? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item3, other.Item3))
@@ -3430,28 +3430,28 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
         Type? expectedItemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != typeof(T0)) {
+            if (itemType is not null && itemType != typeof(T0)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
         }
         if (!typeof(T1).IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != typeof(T1)) {
+            if (itemType is not null && itemType != typeof(T1)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
         }
         if (!typeof(T2).IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != typeof(T2)) {
+            if (itemType is not null && itemType != typeof(T2)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
         }
         if (!typeof(T3).IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != typeof(T3)) {
+            if (itemType is not null && itemType != typeof(T3)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -3459,7 +3459,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -3780,7 +3780,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
 
     public bool Equals(ArgumentListG5<T0, T1, T2, T3>? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item4, other.Item4))
@@ -3993,7 +3993,7 @@ public sealed record ArgumentListS5 : ArgumentList5
         expectedItemType = _type.ItemTypes[0];
         if (!expectedItemType.IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
@@ -4001,7 +4001,7 @@ public sealed record ArgumentListS5 : ArgumentList5
         expectedItemType = _type.ItemTypes[1];
         if (!expectedItemType.IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
@@ -4009,7 +4009,7 @@ public sealed record ArgumentListS5 : ArgumentList5
         expectedItemType = _type.ItemTypes[2];
         if (!expectedItemType.IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
@@ -4017,7 +4017,7 @@ public sealed record ArgumentListS5 : ArgumentList5
         expectedItemType = _type.ItemTypes[3];
         if (!expectedItemType.IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -4025,7 +4025,7 @@ public sealed record ArgumentListS5 : ArgumentList5
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -4330,7 +4330,7 @@ public sealed record ArgumentListS5 : ArgumentList5
 
     public bool Equals(ArgumentListS5? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item4, other.Item4))
@@ -4566,28 +4566,28 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
         Type? expectedItemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != typeof(T0)) {
+            if (itemType is not null && itemType != typeof(T0)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
         }
         if (!typeof(T1).IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != typeof(T1)) {
+            if (itemType is not null && itemType != typeof(T1)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
         }
         if (!typeof(T2).IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != typeof(T2)) {
+            if (itemType is not null && itemType != typeof(T2)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
         }
         if (!typeof(T3).IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != typeof(T3)) {
+            if (itemType is not null && itemType != typeof(T3)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -4595,7 +4595,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -4603,7 +4603,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
         expectedItemType = _type.ItemTypes[5];
         if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
@@ -4954,7 +4954,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
 
     public bool Equals(ArgumentListG6<T0, T1, T2, T3>? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item5, other.Item5))
@@ -5194,7 +5194,7 @@ public sealed record ArgumentListS6 : ArgumentList6
         expectedItemType = _type.ItemTypes[0];
         if (!expectedItemType.IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
@@ -5202,7 +5202,7 @@ public sealed record ArgumentListS6 : ArgumentList6
         expectedItemType = _type.ItemTypes[1];
         if (!expectedItemType.IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
@@ -5210,7 +5210,7 @@ public sealed record ArgumentListS6 : ArgumentList6
         expectedItemType = _type.ItemTypes[2];
         if (!expectedItemType.IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
@@ -5218,7 +5218,7 @@ public sealed record ArgumentListS6 : ArgumentList6
         expectedItemType = _type.ItemTypes[3];
         if (!expectedItemType.IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -5226,7 +5226,7 @@ public sealed record ArgumentListS6 : ArgumentList6
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -5234,7 +5234,7 @@ public sealed record ArgumentListS6 : ArgumentList6
         expectedItemType = _type.ItemTypes[5];
         if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
@@ -5569,7 +5569,7 @@ public sealed record ArgumentListS6 : ArgumentList6
 
     public bool Equals(ArgumentListS6? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item5, other.Item5))
@@ -5832,28 +5832,28 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
         Type? expectedItemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != typeof(T0)) {
+            if (itemType is not null && itemType != typeof(T0)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
         }
         if (!typeof(T1).IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != typeof(T1)) {
+            if (itemType is not null && itemType != typeof(T1)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
         }
         if (!typeof(T2).IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != typeof(T2)) {
+            if (itemType is not null && itemType != typeof(T2)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
         }
         if (!typeof(T3).IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != typeof(T3)) {
+            if (itemType is not null && itemType != typeof(T3)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -5861,7 +5861,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -5869,7 +5869,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
         expectedItemType = _type.ItemTypes[5];
         if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
@@ -5877,7 +5877,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
         expectedItemType = _type.ItemTypes[6];
         if (!expectedItemType.IsValueType) {
             itemType = _item6?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[6] = itemType;
             }
@@ -6258,7 +6258,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
 
     public bool Equals(ArgumentListG7<T0, T1, T2, T3>? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item6, other.Item6))
@@ -6525,7 +6525,7 @@ public sealed record ArgumentListS7 : ArgumentList7
         expectedItemType = _type.ItemTypes[0];
         if (!expectedItemType.IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
@@ -6533,7 +6533,7 @@ public sealed record ArgumentListS7 : ArgumentList7
         expectedItemType = _type.ItemTypes[1];
         if (!expectedItemType.IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
@@ -6541,7 +6541,7 @@ public sealed record ArgumentListS7 : ArgumentList7
         expectedItemType = _type.ItemTypes[2];
         if (!expectedItemType.IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
@@ -6549,7 +6549,7 @@ public sealed record ArgumentListS7 : ArgumentList7
         expectedItemType = _type.ItemTypes[3];
         if (!expectedItemType.IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -6557,7 +6557,7 @@ public sealed record ArgumentListS7 : ArgumentList7
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -6565,7 +6565,7 @@ public sealed record ArgumentListS7 : ArgumentList7
         expectedItemType = _type.ItemTypes[5];
         if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
@@ -6573,7 +6573,7 @@ public sealed record ArgumentListS7 : ArgumentList7
         expectedItemType = _type.ItemTypes[6];
         if (!expectedItemType.IsValueType) {
             itemType = _item6?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[6] = itemType;
             }
@@ -6938,7 +6938,7 @@ public sealed record ArgumentListS7 : ArgumentList7
 
     public bool Equals(ArgumentListS7? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item6, other.Item6))
@@ -7228,28 +7228,28 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
         Type? expectedItemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != typeof(T0)) {
+            if (itemType is not null && itemType != typeof(T0)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
         }
         if (!typeof(T1).IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != typeof(T1)) {
+            if (itemType is not null && itemType != typeof(T1)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
         }
         if (!typeof(T2).IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != typeof(T2)) {
+            if (itemType is not null && itemType != typeof(T2)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
         }
         if (!typeof(T3).IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != typeof(T3)) {
+            if (itemType is not null && itemType != typeof(T3)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -7257,7 +7257,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -7265,7 +7265,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
         expectedItemType = _type.ItemTypes[5];
         if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
@@ -7273,7 +7273,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
         expectedItemType = _type.ItemTypes[6];
         if (!expectedItemType.IsValueType) {
             itemType = _item6?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[6] = itemType;
             }
@@ -7281,7 +7281,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
         expectedItemType = _type.ItemTypes[7];
         if (!expectedItemType.IsValueType) {
             itemType = _item7?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[7] = itemType;
             }
@@ -7692,7 +7692,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
 
     public bool Equals(ArgumentListG8<T0, T1, T2, T3>? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item7, other.Item7))
@@ -7986,7 +7986,7 @@ public sealed record ArgumentListS8 : ArgumentList8
         expectedItemType = _type.ItemTypes[0];
         if (!expectedItemType.IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
@@ -7994,7 +7994,7 @@ public sealed record ArgumentListS8 : ArgumentList8
         expectedItemType = _type.ItemTypes[1];
         if (!expectedItemType.IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
@@ -8002,7 +8002,7 @@ public sealed record ArgumentListS8 : ArgumentList8
         expectedItemType = _type.ItemTypes[2];
         if (!expectedItemType.IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
@@ -8010,7 +8010,7 @@ public sealed record ArgumentListS8 : ArgumentList8
         expectedItemType = _type.ItemTypes[3];
         if (!expectedItemType.IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -8018,7 +8018,7 @@ public sealed record ArgumentListS8 : ArgumentList8
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -8026,7 +8026,7 @@ public sealed record ArgumentListS8 : ArgumentList8
         expectedItemType = _type.ItemTypes[5];
         if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
@@ -8034,7 +8034,7 @@ public sealed record ArgumentListS8 : ArgumentList8
         expectedItemType = _type.ItemTypes[6];
         if (!expectedItemType.IsValueType) {
             itemType = _item6?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[6] = itemType;
             }
@@ -8042,7 +8042,7 @@ public sealed record ArgumentListS8 : ArgumentList8
         expectedItemType = _type.ItemTypes[7];
         if (!expectedItemType.IsValueType) {
             itemType = _item7?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[7] = itemType;
             }
@@ -8437,7 +8437,7 @@ public sealed record ArgumentListS8 : ArgumentList8
 
     public bool Equals(ArgumentListS8? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item7, other.Item7))
@@ -8754,28 +8754,28 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
         Type? expectedItemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != typeof(T0)) {
+            if (itemType is not null && itemType != typeof(T0)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
         }
         if (!typeof(T1).IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != typeof(T1)) {
+            if (itemType is not null && itemType != typeof(T1)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
         }
         if (!typeof(T2).IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != typeof(T2)) {
+            if (itemType is not null && itemType != typeof(T2)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
         }
         if (!typeof(T3).IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != typeof(T3)) {
+            if (itemType is not null && itemType != typeof(T3)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -8783,7 +8783,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -8791,7 +8791,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
         expectedItemType = _type.ItemTypes[5];
         if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
@@ -8799,7 +8799,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
         expectedItemType = _type.ItemTypes[6];
         if (!expectedItemType.IsValueType) {
             itemType = _item6?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[6] = itemType;
             }
@@ -8807,7 +8807,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
         expectedItemType = _type.ItemTypes[7];
         if (!expectedItemType.IsValueType) {
             itemType = _item7?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[7] = itemType;
             }
@@ -8815,7 +8815,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
         expectedItemType = _type.ItemTypes[8];
         if (!expectedItemType.IsValueType) {
             itemType = _item8?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[8] = itemType;
             }
@@ -9256,7 +9256,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
 
     public bool Equals(ArgumentListG9<T0, T1, T2, T3>? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item8, other.Item8))
@@ -9577,7 +9577,7 @@ public sealed record ArgumentListS9 : ArgumentList9
         expectedItemType = _type.ItemTypes[0];
         if (!expectedItemType.IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
@@ -9585,7 +9585,7 @@ public sealed record ArgumentListS9 : ArgumentList9
         expectedItemType = _type.ItemTypes[1];
         if (!expectedItemType.IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
@@ -9593,7 +9593,7 @@ public sealed record ArgumentListS9 : ArgumentList9
         expectedItemType = _type.ItemTypes[2];
         if (!expectedItemType.IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
@@ -9601,7 +9601,7 @@ public sealed record ArgumentListS9 : ArgumentList9
         expectedItemType = _type.ItemTypes[3];
         if (!expectedItemType.IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -9609,7 +9609,7 @@ public sealed record ArgumentListS9 : ArgumentList9
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -9617,7 +9617,7 @@ public sealed record ArgumentListS9 : ArgumentList9
         expectedItemType = _type.ItemTypes[5];
         if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
@@ -9625,7 +9625,7 @@ public sealed record ArgumentListS9 : ArgumentList9
         expectedItemType = _type.ItemTypes[6];
         if (!expectedItemType.IsValueType) {
             itemType = _item6?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[6] = itemType;
             }
@@ -9633,7 +9633,7 @@ public sealed record ArgumentListS9 : ArgumentList9
         expectedItemType = _type.ItemTypes[7];
         if (!expectedItemType.IsValueType) {
             itemType = _item7?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[7] = itemType;
             }
@@ -9641,7 +9641,7 @@ public sealed record ArgumentListS9 : ArgumentList9
         expectedItemType = _type.ItemTypes[8];
         if (!expectedItemType.IsValueType) {
             itemType = _item8?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[8] = itemType;
             }
@@ -10066,7 +10066,7 @@ public sealed record ArgumentListS9 : ArgumentList9
 
     public bool Equals(ArgumentListS9? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item8, other.Item8))
@@ -10410,28 +10410,28 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
         Type? expectedItemType;
         if (!typeof(T0).IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != typeof(T0)) {
+            if (itemType is not null && itemType != typeof(T0)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
         }
         if (!typeof(T1).IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != typeof(T1)) {
+            if (itemType is not null && itemType != typeof(T1)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
         }
         if (!typeof(T2).IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != typeof(T2)) {
+            if (itemType is not null && itemType != typeof(T2)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
         }
         if (!typeof(T3).IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != typeof(T3)) {
+            if (itemType is not null && itemType != typeof(T3)) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -10439,7 +10439,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -10447,7 +10447,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
         expectedItemType = _type.ItemTypes[5];
         if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
@@ -10455,7 +10455,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
         expectedItemType = _type.ItemTypes[6];
         if (!expectedItemType.IsValueType) {
             itemType = _item6?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[6] = itemType;
             }
@@ -10463,7 +10463,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
         expectedItemType = _type.ItemTypes[7];
         if (!expectedItemType.IsValueType) {
             itemType = _item7?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[7] = itemType;
             }
@@ -10471,7 +10471,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
         expectedItemType = _type.ItemTypes[8];
         if (!expectedItemType.IsValueType) {
             itemType = _item8?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[8] = itemType;
             }
@@ -10479,7 +10479,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
         expectedItemType = _type.ItemTypes[9];
         if (!expectedItemType.IsValueType) {
             itemType = _item9?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[9] = itemType;
             }
@@ -10950,7 +10950,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
 
     public bool Equals(ArgumentListG10<T0, T1, T2, T3>? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item9, other.Item9))
@@ -11298,7 +11298,7 @@ public sealed record ArgumentListS10 : ArgumentList10
         expectedItemType = _type.ItemTypes[0];
         if (!expectedItemType.IsValueType) {
             itemType = _item0?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[0] = itemType;
             }
@@ -11306,7 +11306,7 @@ public sealed record ArgumentListS10 : ArgumentList10
         expectedItemType = _type.ItemTypes[1];
         if (!expectedItemType.IsValueType) {
             itemType = _item1?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[1] = itemType;
             }
@@ -11314,7 +11314,7 @@ public sealed record ArgumentListS10 : ArgumentList10
         expectedItemType = _type.ItemTypes[2];
         if (!expectedItemType.IsValueType) {
             itemType = _item2?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[2] = itemType;
             }
@@ -11322,7 +11322,7 @@ public sealed record ArgumentListS10 : ArgumentList10
         expectedItemType = _type.ItemTypes[3];
         if (!expectedItemType.IsValueType) {
             itemType = _item3?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[3] = itemType;
             }
@@ -11330,7 +11330,7 @@ public sealed record ArgumentListS10 : ArgumentList10
         expectedItemType = _type.ItemTypes[4];
         if (!expectedItemType.IsValueType) {
             itemType = _item4?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[4] = itemType;
             }
@@ -11338,7 +11338,7 @@ public sealed record ArgumentListS10 : ArgumentList10
         expectedItemType = _type.ItemTypes[5];
         if (!expectedItemType.IsValueType) {
             itemType = _item5?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[5] = itemType;
             }
@@ -11346,7 +11346,7 @@ public sealed record ArgumentListS10 : ArgumentList10
         expectedItemType = _type.ItemTypes[6];
         if (!expectedItemType.IsValueType) {
             itemType = _item6?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[6] = itemType;
             }
@@ -11354,7 +11354,7 @@ public sealed record ArgumentListS10 : ArgumentList10
         expectedItemType = _type.ItemTypes[7];
         if (!expectedItemType.IsValueType) {
             itemType = _item7?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[7] = itemType;
             }
@@ -11362,7 +11362,7 @@ public sealed record ArgumentListS10 : ArgumentList10
         expectedItemType = _type.ItemTypes[8];
         if (!expectedItemType.IsValueType) {
             itemType = _item8?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[8] = itemType;
             }
@@ -11370,7 +11370,7 @@ public sealed record ArgumentListS10 : ArgumentList10
         expectedItemType = _type.ItemTypes[9];
         if (!expectedItemType.IsValueType) {
             itemType = _item9?.GetType();
-            if (itemType != null && itemType != expectedItemType) {
+            if (itemType is not null && itemType != expectedItemType) {
                 itemTypes ??= CreateNonDefaultItemTypes();
                 itemTypes[9] = itemType;
             }
@@ -11825,7 +11825,7 @@ public sealed record ArgumentListS10 : ArgumentList10
 
     public bool Equals(ArgumentListS10? other)
     {
-        if (other == null)
+        if (other is null)
             return false;
 
         if (!Equals(Item9, other.Item9))
@@ -12005,4 +12005,3 @@ public sealed record ArgumentListS10 : ArgumentList10
         }
     }
 }
-

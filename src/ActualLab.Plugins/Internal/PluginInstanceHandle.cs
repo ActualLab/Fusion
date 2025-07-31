@@ -29,7 +29,7 @@ public class PluginInstanceHandle<TPluginImpl> : IPluginInstanceHandle<TPluginIm
     {
         var pluginType = typeof(TPluginImpl);
         var pluginInfo = plugins.InfoByType.GetValueOrDefault(pluginType);
-        if (pluginInfo == null)
+        if (pluginInfo is null)
             throw Errors.UnknownPluginImplementationType(pluginType);
         if (pluginFilters.Any(f => !f.IsEnabled(pluginInfo)))
             throw Errors.PluginDisabled(pluginType);
@@ -45,7 +45,7 @@ public class PluginInstanceHandle<TPluginImpl> : IPluginInstanceHandle<TPluginIm
 
         var lazyInstance = _lazyInstance;
         _lazyInstance = null;
-        var disposable = lazyInstance == null ? null : lazyInstance.Value as IDisposable;
+        var disposable = lazyInstance is null ? null : lazyInstance.Value as IDisposable;
         disposable?.Dispose();
     }
 

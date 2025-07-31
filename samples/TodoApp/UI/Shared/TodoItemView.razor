@@ -8,7 +8,7 @@
     Log.LogInformation(
         "Rendering item #{Id} (Computed.Version = {Version}, IsConsistent = {IsConsistent}): {Item}",
         Id, c.Version, c.IsConsistent(), m);
-    if (m == null)
+    if (m is null)
         return;
 }
 
@@ -37,7 +37,7 @@
     private Task InvertDone()
     {
         var item = State.Value;
-        if (item == null)
+        if (item is null)
             return Task.CompletedTask;
 
         item = item with { IsDone = !item.IsDone };
@@ -48,7 +48,7 @@
     {
         title = title.Trim();
         var item = State.Value;
-        if (item == null || item.Title == title)
+        if (item is null || item.Title == title)
             return Task.CompletedTask;
 
         item = item with { Title = title };
@@ -58,7 +58,7 @@
     private Task Remove()
     {
         var item = State.Value;
-        if (item == null)
+        if (item is null)
             return Task.CompletedTask;
 
         return UICommander.Run(new Todos_Remove(Session, item.Id));

@@ -36,7 +36,7 @@ public record ComputedOptions
             ? method.GetAttribute<RemoteComputeMethodAttribute>(true, true)
             : null;
         var a = rma ?? cma;
-        if (a == null)
+        if (a is null)
             return null;
 
         var defaultOptions = isClientServiceMethod ? ClientDefault : Default;

@@ -27,7 +27,7 @@ public class ParameterComparerProvider
     public static ParameterComparer Get(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type? comparerType)
     {
-        if (comparerType == null)
+        if (comparerType is null)
             return DefaultParameterComparer.Instance;
 
         return Cache.GetOrAdd(comparerType, static comparerType1 => {
@@ -47,19 +47,19 @@ public class ParameterComparerProvider
     public virtual Type? GetComparerType(PropertyInfo property)
     {
         var type = property.GetCustomAttribute<ParameterComparerAttribute>(true)?.ComparerType;
-        if (type != null)
+        if (type is not null)
             return type;
 
         type = GetKnownComparerType(property);
-        if (type != null)
+        if (type is not null)
             return type;
 
         type = property.PropertyType.GetCustomAttribute<ParameterComparerAttribute>(true)?.ComparerType;
-        if (type != null)
+        if (type is not null)
             return type;
 
         type = property.DeclaringType?.GetCustomAttribute<ParameterComparerAttribute>(true)?.ComparerType;
-        if (type != null)
+        if (type is not null)
             return type;
 
         return null;

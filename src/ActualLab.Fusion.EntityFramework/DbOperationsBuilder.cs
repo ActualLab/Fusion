@@ -139,7 +139,7 @@ public readonly struct DbOperationsBuilder<TDbContext>
         if (!typeof(IOperationCompletionListener).IsAssignableFrom(listenerType))
             throw ActualLab.Internal.Errors.MustBeAssignableTo<IOperationCompletionListener>(listenerType, nameof(listenerType));
 
-        var descriptor = factory != null
+        var descriptor = factory is not null
             ? ServiceDescriptor.Singleton(typeof(IOperationCompletionListener), factory)
             : ServiceDescriptor.Singleton(typeof(IOperationCompletionListener), listenerType);
         Services.TryAddEnumerable(descriptor);
