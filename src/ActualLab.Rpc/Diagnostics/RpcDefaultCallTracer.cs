@@ -50,6 +50,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
         if (!TraceInbound)
             return null;
 
+        Activity.Current = null; // No current activity for any inbound call
         var headers = call.Context.Message.Headers;
         var activity = headers is not null && RpcActivityInjector.TryExtract(headers, out var activityContext)
             ? ActivitySource.StartActivity(InboundCallName, ActivityKind.Server,

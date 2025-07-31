@@ -96,6 +96,7 @@ public abstract class RpcInboundCall : RpcCall
 
     public virtual Task Process(CancellationToken cancellationToken)
     {
+        RpcInboundContext.Current = Context;
         var peer = Context.Peer;
         if (NoWait) {
             try {

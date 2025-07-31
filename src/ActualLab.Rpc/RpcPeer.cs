@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
@@ -331,15 +332,26 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         return Task.WhenAll(tasks);
                     }, readerToken);
 
-                    while (await reader.WaitToReadAsync(readerToken).ConfigureAwait(false))
-                    while (reader.TryRead(out var message))
-                        _ = ProcessMessage(message, peerChangedToken, readerToken);
+                    RpcInboundContext.Current = null;
+                    Activity.Current = null;
+                    try {
+                        while (await reader.WaitToReadAsync(readerToken).ConfigureAwait(false)) {
+                            while (reader.TryRead(out var message))
+                                _ = ProcessMessage(message, peerChangedToken, readerToken);
+                        }
+                    }
+                    finally {
+                        // Reset AsyncLocals that might be set by ProcessMessage
+                        RpcInboundContext.Current = null;
+                        Activity.Current = null;
+                    }
                 }
                 catch (Exception e) {
                     var isReaderAbort = readerToken.IsCancellationRequested
                         && !cancellationToken.IsCancellationRequested;
                     error = isReaderAbort ? null : e;
                 }
+
                 if (cancellationToken.IsCancellationRequested) {
                     var isTerminal = error is not null && Hub.PeerTerminalErrorDetector.Invoke(error);
                     if (!isTerminal)
@@ -399,7 +411,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     {
         try {
             var context = InboundContextFactory.Invoke(this, message, peerChangedToken);
-            using var scope = context.Activate();
             _ = context.Call.Process(cancellationToken);
             return context;
         }

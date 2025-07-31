@@ -8,7 +8,10 @@ public class RpcInboundContext
 {
     private static readonly AsyncLocal<RpcInboundContext?> CurrentLocal = new();
 
-    public static RpcInboundContext? Current => CurrentLocal.Value;
+    public static RpcInboundContext? Current {
+        get => CurrentLocal.Value;
+        set => CurrentLocal.Value = value;
+    }
 
     public readonly RpcPeer Peer;
     public readonly RpcMessage Message;
@@ -33,9 +36,6 @@ public class RpcInboundContext
         Call = initializeCall ? RpcInboundCall.New(message.CallTypeId, this, GetMethodDef()) : null!;
     }
 
-    public Scope Activate()
-        => new(this);
-
     // Nested types
 
     private RpcMethodDef? GetMethodDef()
@@ -46,35 +46,5 @@ public class RpcInboundContext
             return method;
 
         return Peer.InboundCallFilter.Invoke(Peer, method) ? method : null;
-    }
-
-    public readonly struct Scope : IDisposable
-    {
-        private readonly RpcInboundContext? _oldContext;
-
-        public readonly RpcInboundContext Context;
-
-        internal Scope(RpcInboundContext context)
-        {
-            Context = context;
-            _oldContext = CurrentLocal.Value;
-            TryActivate(context);
-        }
-
-        internal Scope(RpcInboundContext context, RpcInboundContext? oldContext)
-        {
-            Context = context;
-            _oldContext = oldContext;
-            TryActivate(context);
-        }
-
-        public void Dispose()
-            => TryActivate(_oldContext);
-
-        private void TryActivate(RpcInboundContext? context)
-        {
-            if (Context != _oldContext)
-                CurrentLocal.Value = context;
-        }
     }
 }
