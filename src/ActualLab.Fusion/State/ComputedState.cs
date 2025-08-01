@@ -200,15 +200,14 @@ public abstract class ComputedState<T> : ComputedState, IState<T>
     public bool IsInitial(out T value)
     {
         var snapshot = Snapshot;
-        value = ((Computed<T>)snapshot.LastNonErrorComputed).Value;
+        value = ((Computed<T>)snapshot.Computed).Value;
         return snapshot.IsInitial;
     }
 
     public bool IsInitial(out T value, out Exception? error)
     {
         var snapshot = Snapshot;
-        value = ((Computed<T>)snapshot.LastNonErrorComputed).Value;
-        error = snapshot.Computed.Error;
+        (value, error) = (Computed<T>)snapshot.Computed;
         return snapshot.IsInitial;
     }
 
