@@ -87,6 +87,9 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
     public void TryReroute()
     {
+        if (!Peer.Ref.IsRerouted)
+            return;
+
         foreach (var call in this)
             if (call.IsPeerChanged())
                 call.SetRerouteError();

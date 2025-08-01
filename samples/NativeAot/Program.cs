@@ -36,7 +36,10 @@ var services = new ServiceCollection()
         rpc.AddWebSocketClient();
     })
     .AddFusion(fusion => {
-        fusion.AddClientAndServer<ITestService, TestService>();
+        // We could use .AddDistributedServicePair, but Loopback connection = infinite call loop there
+        fusion.AddClient<ITestService>(addCommandHandlers: false);
+        fusion.AddComputeService<TestService>();
+        fusion.Rpc.Service<ITestService>().IsClientAndServer<TestService>();
     })
     .AddSingleton<RpcCallRouter>(_ => (method, args) => RpcPeerRef.Loopback)
     .BuildServiceProvider();

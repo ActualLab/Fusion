@@ -35,7 +35,7 @@ public class ComputeServiceCommandCompletionInvalidator(
     {
         var operation = completion.Operation;
         var command = operation.Command;
-        if (Invalidation.IsActive || !IsRequired(command, true, out _)) {
+        if (Invalidation.IsActive || !IsRequired(command, out _)) {
             // The handler is unused for the current completion
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
@@ -77,10 +77,7 @@ public class ComputeServiceCommandCompletionInvalidator(
         }
     }
 
-    public virtual bool IsRequired(
-        ICommand? command,
-        bool requireLocalHandler,
-        [MaybeNullWhen(false)] out IMethodCommandHandler finalHandler)
+    public virtual bool IsRequired(ICommand? command, [MaybeNullWhen(false)] out IMethodCommandHandler finalHandler)
     {
         if (command is null or IApiCommand) {
             finalHandler = null;
@@ -91,30 +88,15 @@ public class ComputeServiceCommandCompletionInvalidator(
         if (finalHandler is null || finalHandler.ParameterTypes.Length != 2)
             return false;
 
-        // The code below doesn't work for local RPC servers:
-        // - It assumes CallRouter is used for any non-client, but in reality
-        //   it is used only by distributed services. Local RPC servers don't use it.
-        // - And the default implementation of call router tells any call is routed
-        //   to RpcPeerRef.Default, i.e., a remote one.
-        // TODO: Fix this.
-        /*
-        if (requireLocalHandler) {
-            var rpcServiceDef = RpcHub.ServiceRegistry.Get(finalHandler.ServiceType);
-            if (rpcServiceDef is not null) {
-                if (!rpcServiceDef.HasServer)
-                    return false; // All RPC clients are remote handlers
-
-                // If we're here, the handler is either an RPC server or a distributed service
-                var methodDef = rpcServiceDef.GetMethod(finalHandler.Method);
-                if (methodDef is not null) {
-                    var arguments = ArgumentList.New(command, CancellationToken.None);
-                    var rpcPeer = CallRouter.Invoke(methodDef, arguments);
-                    if (rpcPeer.ConnectionKind != RpcPeerConnectionKind.Local)
-                        return false; // Non-local = routed to an RPC client
-                }
-            }
+        var rpcServiceDef = RpcHub.ServiceRegistry.Get(finalHandler.ServiceType);
+        if (rpcServiceDef is { Mode: RpcServiceMode.Client }) {
+            // The command is handled by a pure RPC client. It means that:
+            // - Another host will process it, and thus it is responsible for adding it to the operation log, etc.
+            // - This host cannot process its invalidation anyway, since Invalidation.Begin() block
+            //   enforces local routing for any command method call (see FusionRpcDefaultDelegates.CallRouter),
+            //   and this host doesn't have a service (server) to handle such a call.
+            return false;
         }
-        */
 
         var handlerServiceType = finalHandler.GetHandlerServiceType();
         var service = Services.GetService(handlerServiceType);
@@ -128,7 +110,7 @@ public class ComputeServiceCommandCompletionInvalidator(
         MutablePropertyBag operationItems,
         int index)
     {
-        if (!IsRequired(command, true, out var handler))
+        if (!IsRequired(command, out var handler))
             return index;
 
         operation.Items = operationItems;

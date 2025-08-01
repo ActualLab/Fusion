@@ -5,7 +5,6 @@ using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Interception;
 using ActualLab.Interception;
 using ActualLab.Rpc;
-using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Internal;
 

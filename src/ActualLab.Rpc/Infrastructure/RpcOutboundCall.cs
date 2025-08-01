@@ -315,8 +315,15 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public bool IsPeerChanged()
     {
+        var peer = Peer;
+        if (peer is { Ref.IsRerouted: false }) {
+            // IsPeerChanged() is called from TryReroute(), which checks this condition,
+            // but since this is a public method, we need to check it here as well.
+            return false;
+        }
+
         var methodDef = MethodDef;
-        return Peer != methodDef.Hub.SafeCallRouter.Invoke(methodDef, Context.Arguments!);
+        return peer != methodDef.Hub.SafeCallRouter.Invoke(methodDef, Context.Arguments!);
     }
 
     public void SetRerouteError()

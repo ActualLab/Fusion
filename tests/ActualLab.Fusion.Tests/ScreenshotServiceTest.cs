@@ -12,7 +12,7 @@ public class ScreenshotServiceTest(ITestOutputHelper @out) : SimpleFusionTestBas
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddClientAndServer<IScreenshotService, ScreenshotService>();
+        fusion.AddDistributedServicePair<IScreenshotService, ScreenshotService>();
     }
 
     [Fact]

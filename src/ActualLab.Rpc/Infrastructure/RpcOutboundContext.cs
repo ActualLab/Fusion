@@ -109,14 +109,19 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         // Peer & Call
         var hub = MethodDef.Hub;
         var oldPeer = Peer;
-        Peer = hub.SafeCallRouter.Invoke(MethodDef, Arguments);
+        // Local calls are special: they are never rerouted.
+        // That's because any call router must route command method calls to local peers
+        // when Invalidation.IsActive, and if it happened for a given call,
+        // it has to run locally no matter what.
+        if (oldPeer is null || oldPeer.Ref != RpcPeerRef.Local)
+            Peer = hub.SafeCallRouter.Invoke(MethodDef, Arguments);
         Call = RpcOutboundCall.New(this);
         if (Call is not null) {
             // We don't start trace here, coz it's either started already or was sampled out
             hub.OutboundMiddlewares.NullIfEmpty()?.OnPrepareCall(this, true);
         }
         if (ReferenceEquals(oldPeer, Peer))
-            Peer.Log.LogWarning("The call {Call} is rerouted to the same peer {Peer}", Call, Peer);
+            Peer?.Log.LogWarning("The call {Call} is rerouted to the same peer {Peer}", Call, Peer);
         return Call;
     }
 

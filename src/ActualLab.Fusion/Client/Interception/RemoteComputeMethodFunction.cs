@@ -64,7 +64,7 @@ public abstract class RemoteComputeMethodFunction(
                     // Local computation / no RPC call scenario
                     var computed = NewReplicaComputed(typedInput);
                     using var _ = Computed.BeginCompute(computed);
-                    // LocalTarget is not null -> proxy is a DistributedPair service and the Service.Method is invoked
+                    // LocalTarget is not null -> proxy is a DistributedPair service, and the Service.Method is invoked
                     if (LocalTarget is not null) {
                         try {
                             await MethodDef.TargetAsyncInvoker

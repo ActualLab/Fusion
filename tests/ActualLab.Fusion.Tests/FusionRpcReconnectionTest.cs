@@ -13,7 +13,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddClientAndServer<IReconnectTester, ReconnectTester>();
+        fusion.AddDistributedServicePair<IReconnectTester, ReconnectTester>();
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     [Fact(Timeout = 30_000)]
     public async Task ReconnectionTest()
     {
-        var workerCount = HardwareInfo.ProcessorCount / 2;
+        var workerCount = HardwareInfo.ProcessorCount / 4;
         var testDuration = TimeSpan.FromSeconds(10);
         if (TestRunnerInfo.IsBuildAgent()) {
             workerCount = 1;

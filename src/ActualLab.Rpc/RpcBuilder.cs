@@ -134,11 +134,10 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcInterceptorOptions.Default);
 
         // System services
-        if (!Configuration.Services.ContainsKey(typeof(IRpcSystemCalls))) {
-            AddClientAndServer<IRpcSystemCalls, RpcSystemCalls>(RpcSystemCalls.Name);
-            services.AddSingleton(c => new RpcSystemCallSender(c));
-        }
+        AddSystemService<IRpcSystemCalls, RpcSystemCalls>(RpcSystemCalls.Name);
+        services.AddSingleton(c => new RpcSystemCallSender(c));
 
+        // And finally, invoke the configuration action
         configure?.Invoke(this);
     }
 
@@ -275,12 +274,13 @@ public readonly struct RpcBuilder
         if (!serviceType.IsAssignableFrom(proxyBaseType))
             throw ActualLab.Internal.Errors.MustBeAssignableTo(proxyBaseType, serviceType, nameof(proxyBaseType));
 
+        object ProxyFactory(IServiceProvider c)
+            => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, proxyBaseType);
+
         if (serviceType == proxyBaseType)
-            Services.AddSingleton(serviceType,
-                c => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, proxyBaseType));
+            Services.AddSingleton(serviceType, ProxyFactory);
         else {
-            Services.AddSingleton(proxyBaseType,
-                c => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, proxyBaseType));
+            Services.AddSingleton(proxyBaseType, ProxyFactory);
             Services.AddAlias(serviceType, proxyBaseType);
         }
         Service(serviceType).HasName(name).IsClient();
@@ -337,7 +337,7 @@ public readonly struct RpcBuilder
         //   - either its own (TImplementation) methods,
         //   - or its internal TService client.
         // RPC:
-        // - TService is configured as server resolving to TService, i.e. it routes incoming calls
+        // - TService is configured as server resolving to TService, i.e., it routes incoming calls
 
         if (!typeof(IRpcService).IsAssignableFrom(serviceType))
             throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
@@ -409,14 +409,53 @@ public readonly struct RpcBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         string name = "")
     {
+        if (!typeof(IRpcService).IsAssignableFrom(serviceType))
+            throw ActualLab.Internal.Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
+        if (!serviceType.IsAssignableFrom(implementationType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
+        if (!serviceType.IsAssignableFrom(clientProxyBaseType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(clientProxyBaseType, serviceType, nameof(clientProxyBaseType));
+        if (!implementationType.IsClass)
+            throw ActualLab.Internal.Errors.MustBeClass(implementationType, nameof(implementationType));
+
+        object ProxyFactory(IServiceProvider c) {
+            var implementation = c.GetRequiredService(implementationType);
+            return c.RpcHub().InternalServices.NewRoutingProxy(serviceType, clientProxyBaseType, implementation);
+        }
+
+        if (serviceType == clientProxyBaseType)
+            Services.AddSingleton(serviceType, ProxyFactory);
+        else {
+            Services.AddSingleton(clientProxyBaseType, ProxyFactory);
+            Services.AddAlias(serviceType, clientProxyBaseType);
+        }
+        Services.Add(new ServiceDescriptor(implementationType, implementationType, ServiceLifetime.Singleton));
+        Service(serviceType).HasName(name).IsClientAndServer(implementationType);
+        return this;
+    }
+
+    public RpcBuilder AddSystemService<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+        (string name = "")
+        where TService : class
+        where TImplementation : class, TService
+        => AddSystemService(typeof(TService), typeof(TImplementation), name);
+    public RpcBuilder AddSystemService(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
+        string name = "")
+    {
+        if (!typeof(IRpcSystemService).IsAssignableFrom(serviceType))
+            throw ActualLab.Internal.Errors.MustImplement<IRpcSystemService>(serviceType, nameof(serviceType));
         if (!serviceType.IsAssignableFrom(implementationType))
             throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
         if (!implementationType.IsClass)
             throw ActualLab.Internal.Errors.MustBeClass(implementationType, nameof(implementationType));
 
-        AddClient(serviceType, clientProxyBaseType, name);
-        Services.Add(new ServiceDescriptor(implementationType, implementationType, ServiceLifetime.Singleton));
-        Service(serviceType).IsClientAndServer(implementationType);
+        Services.AddSingleton(serviceType, c => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, serviceType));
+        Services.AddSingleton(implementationType);
+        Service(serviceType).HasName(name).IsClientAndServer(implementationType);
         return this;
     }
 

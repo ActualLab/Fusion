@@ -361,8 +361,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 if (!connectionState.IsFinal)
                     continue;
 
-                if (Ref.IsRerouted)
-                    OutboundCalls.TryReroute();
+                OutboundCalls.TryReroute();
                 break;
             }
         }

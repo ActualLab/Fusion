@@ -128,7 +128,12 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
             HostUrlResolver = (_, _) => WebHost.ServerUri.ToString(),
         });
         services.AddSingleton<RpcCallRouter>(_ => {
-            return (method, arguments) => RpcPeerRef.GetDefaultPeerRef(ConnectionKind, method.IsBackend);
+            return (method, arguments) => {
+                if (method.IsCommand && Invalidation.IsActive)
+                    return RpcPeerRef.Local; // Commands in invalidation mode must always execute locally
+
+                return RpcPeerRef.GetDefaultPeerRef(ConnectionKind, method.IsBackend);
+            };
         });
         services.AddSingleton<RpcSerializationFormatResolver>(
             _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()));

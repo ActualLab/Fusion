@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Conversion;
-using ActualLab.DependencyInjection.Internal;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
@@ -94,17 +93,13 @@ public readonly struct FusionBuilder
         // CommandR, command completion and invalidation
         var commander = Commander;
 
-        // Transient operation scope & its provider
-        if (!services.HasService<InMemoryOperationScopeProvider>()) {
-            services.AddSingleton(c => new InMemoryOperationScopeProvider(c));
-            commander.AddHandlers<InMemoryOperationScopeProvider>();
-        }
+        // Transient operation scope and its provider
+        services.AddSingleton(c => new InMemoryOperationScopeProvider(c));
+        commander.AddHandlers<InMemoryOperationScopeProvider>();
 
         // Nested command logger
-        if (!services.HasService<NestedOperationLogger>()) {
-            services.AddSingleton(c => new NestedOperationLogger(c));
-            commander.AddHandlers<NestedOperationLogger>();
-        }
+        services.AddSingleton(c => new NestedOperationLogger(c));
+        commander.AddHandlers<NestedOperationLogger>();
 
         // Operation completion - notifier & producer
         services.AddSingleton(_ => new OperationCompletionNotifier.Options());
@@ -117,31 +112,27 @@ public readonly struct FusionBuilder
 
         // Command completion handler performing invalidations
         services.AddSingleton(_ => new ComputeServiceCommandCompletionInvalidator.Options());
-        if (!services.HasService<ComputeServiceCommandCompletionInvalidator>()) {
-            services.AddSingleton(c => new ComputeServiceCommandCompletionInvalidator(
-                c.GetRequiredService<ComputeServiceCommandCompletionInvalidator.Options>(), c));
-            commander.AddHandlers<ComputeServiceCommandCompletionInvalidator>();
-        }
+        services.AddSingleton(c => new ComputeServiceCommandCompletionInvalidator(
+            c.GetRequiredService<ComputeServiceCommandCompletionInvalidator.Options>(), c));
+        commander.AddHandlers<ComputeServiceCommandCompletionInvalidator>();
 
         // Completion terminator
-        if (!services.HasService<CompletionTerminator>()) {
-            services.AddSingleton(_ => new CompletionTerminator());
-            commander.AddHandlers<CompletionTerminator>();
-        }
+        services.AddSingleton(_ => new CompletionTerminator());
+        commander.AddHandlers<CompletionTerminator>();
 
         // Core authentication services
         services.AddScoped<ISessionResolver>(c => new SessionResolver(c));
         services.AddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
 
-        // RPC
+        // RPC:
+        // 1. Replace RpcCallRouter
+        services.AddSingleton(_ => FusionRpcDefaultDelegates.CallRouter);
+        // 2. Register IRpcComputeSystemCalls service and RpcComputeCallType
+        Rpc.AddSystemService<IRpcComputeSystemCalls, RpcComputeSystemCalls>(RpcComputeSystemCalls.Name);
+        services.AddSingleton(c => new RpcComputeSystemCallSender(c));
+        RpcComputeCallType.Register();
 
-        // Compute system calls service + call type
-        if (!Rpc.Configuration.Services.ContainsKey(typeof(IRpcComputeSystemCalls))) {
-            Rpc.AddClientAndServer<IRpcComputeSystemCalls, RpcComputeSystemCalls>(RpcComputeSystemCalls.Name);
-            services.AddSingleton(c => new RpcComputeSystemCallSender(c));
-            RpcComputeCallType.Register();
-        }
-
+        // And finally, invoke the configuration action
         configure?.Invoke(this);
     }
 
@@ -398,30 +389,6 @@ public readonly struct FusionBuilder
         if (addCommandHandlers)
             Commander.AddHandlers(serviceType);
         Rpc.Service(serviceType).HasName(name).IsDistributedPair(implementationType);
-        return this;
-    }
-
-    public FusionBuilder AddClientAndServer<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (string name = "", bool addCommandHandlers = true)
-        => AddClientAndServer(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
-    public FusionBuilder AddClientAndServer(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        string name = "",
-        bool addCommandHandlers = true)
-    {
-        // ~ RpcBuilder.AddClientAndServer, but for Compute Service
-
-        if (!typeof(IComputeService).IsAssignableFrom(serviceType))
-            throw Errors.MustImplement<IComputeService>(serviceType, nameof(serviceType));
-
-        AddClient(serviceType, name, false);
-        AddComputeService(implementationType, false);
-        if (addCommandHandlers)
-            Commander.AddHandlers(implementationType);
-        Rpc.Service(serviceType).HasName(name).IsClientAndServer(implementationType);
         return this;
     }
 
