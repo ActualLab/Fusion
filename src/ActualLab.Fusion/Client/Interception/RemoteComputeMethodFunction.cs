@@ -500,7 +500,7 @@ public sealed class RemoteComputeMethodFunction<T>(
         CancellationToken cancellationToken)
         => ProduceValuePromiseImpl(input, context, synchronizer, cancellationToken);
 
-    protected async Task<T> ProduceValuePromiseImpl(
+    private async Task<T> ProduceValuePromiseImpl(
         ComputedInput input,
         ComputeContext context,
         ComputedSynchronizer synchronizer,
