@@ -28,7 +28,7 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
             var command = arguments.Get<ICommand>(0);
             var context = CommandContext.Current;
             if (context is null) {
-                // The logic below detects inbound RPC calls & reroutes them to local Commander
+                // The logic below detects inbound RPC calls and reroutes them to local Commander
                 var rpcInboundContext = RpcInboundContext.Current;
                 if (rpcInboundContext is not null) {
                     var call = rpcInboundContext.Call;
@@ -55,8 +55,8 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
                     }
                 }
 
-                // We're outside the ICommander pipeline
-                // and current inbound Rpc call isn't "ours"
+                // We're outside the ICommander pipeline,
+                // and the current inbound Rpc call isn't "ours"
                 throw Errors.DirectCommandHandlerCallsAreNotAllowed();
             }
 
