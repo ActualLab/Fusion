@@ -338,8 +338,8 @@ public readonly struct FusionBuilder
     }
 
     public FusionBuilder AddDistributedService<
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
         (string name = "", bool addCommandHandlers = true)
         => AddDistributedService(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
     public FusionBuilder AddDistributedService(
@@ -366,8 +366,8 @@ public readonly struct FusionBuilder
     }
 
     public FusionBuilder AddDistributedServicePair<
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
         (string name = "", bool addCommandHandlers = true)
         => AddDistributedServicePair(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
     public FusionBuilder AddDistributedServicePair(

@@ -320,8 +320,8 @@ public readonly struct RpcBuilder
     }
 
     public RpcBuilder AddDistributedService<
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
         (string name = "")
         where TService : class
         where TImplementation : class, TService
