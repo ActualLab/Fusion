@@ -1,5 +1,5 @@
 @using ActualLab.OS
-@implements IDisposable
+@inherits CircuitHubComponentBase
 
 <CascadingAuthState UsePresenceReporter="true">
     <ThemeProvider Theme="@Theme">
@@ -19,8 +19,6 @@
 @code {
     private Theme Theme { get; } = new() { IsGradient = true, IsRounded = false };
 
-    [Inject] private CircuitHub CircuitHub { get; set; } = null!;
-    private IServiceProvider Services => CircuitHub.Services;
     private ISessionResolver SessionResolver => CircuitHub.SessionResolver;
 
     [Parameter] public string SessionId { get; set; } = "";
@@ -41,7 +39,4 @@
         if (CircuitHub.IsInteractive)
             CircuitHub.Initialize(this.GetDispatcher(), RenderModeDef.GetOrDefault(RenderModeKey));
     }
-
-    public void Dispose()
-        => CircuitHub.Dispose();
 }

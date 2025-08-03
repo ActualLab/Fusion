@@ -48,12 +48,11 @@ public static class ClientStartup
         // The block of code below is totally optional.
         // It makes Fusion to delay initial compute method RCP calls if they're resolved as "hit" into the local cache.
         // I.e., we can postpone a majority (or all) of RPC calls on startup to let the app start a bit faster.
-        // Note that it makes sense only if there are hundreeds or thousands of such calls.
-        //
+        // Note that it makes sense only if there are hundreds or thousands of such calls.
         // We use a single instance of the initial delay task - we want it to be
         // an absolute delay from the app start rather than a relative delay for each call.
         var hitToCallDelayTask = Task
-            .Delay(TimeSpan.FromSeconds(2)) // Initial delay of 2 seconds
+            .Delay(TimeSpan.FromSeconds(1)) // Initial delay of 1 second
             .ContinueWith(_ => RemoteComputedCache.HitToCallDelayer = null, TaskScheduler.Default); // Reset the delayer once the initial delay is over
         RemoteComputedCache.HitToCallDelayer = (input, peer) => {
             peer.InternalServices.Log.LogDebug("'{PeerRef}': Delaying {Input}", peer.Ref, input);
