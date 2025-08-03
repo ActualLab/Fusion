@@ -25,8 +25,7 @@
     private CancellationTokenSource? _stopTokenSource;
     private TodoItem? _item;
 
-    [Parameter]
-    public string Id { get; set; } = null!;
+    [Parameter] public string Id { get; set; } = null!;
 
     public void Dispose()
         => _stopTokenSource?.CancelAndDisposeSilently();

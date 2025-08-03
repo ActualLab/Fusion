@@ -4,10 +4,8 @@
 <span class="@CssClass">@State.Value</span>
 
 @code {
-    [Parameter]
-    public string CssClass { get; set; } = "";
-    [Parameter]
-    public Moment ExpiresAt { get; set; }
+    [Parameter] public string CssClass { get; set; } = "";
+    [Parameter] public Moment ExpiresAt { get; set; }
 
     protected override async Task<string> ComputeState(CancellationToken cancellationToken)
     {

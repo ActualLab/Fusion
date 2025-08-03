@@ -21,8 +21,7 @@
     [Inject] private RpcPeerStateMonitor Monitor { get; init; } = null!;
     [Inject] private MomentClock Clock { get; init; } = null!;
 
-    [Parameter]
-    public string CssClass { get; set; } = "";
+    [Parameter] public string CssClass { get; set; } = "";
 
     protected override void OnInitialized()
         => SetState(Monitor.State);

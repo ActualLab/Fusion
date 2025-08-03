@@ -45,8 +45,7 @@
 @code {
     private (string Name, string DisplayName)[] AuthSchemas { get; set; } = [];
 
-    [Parameter]
-    public string CssClass { get; set; } = "";
+    [Parameter] public string CssClass { get; set; } = "";
 
     protected override Task<User?> ComputeState(CancellationToken cancellationToken)
         => Auth.GetUser(Session, cancellationToken);

@@ -3,10 +3,7 @@
 }
 
 @code {
-    [Parameter]
-    public string Title { get; set; } = "Error!";
-    [Parameter]
-    public Exception? Exception { get; set; }
-    [Parameter]
-    public EventCallback Dismissed { get; set; }
+    [Parameter] public string Title { get; set; } = "Error!";
+    [Parameter] public Exception? Exception { get; set; }
+    [Parameter] public EventCallback Dismissed { get; set; }
 }

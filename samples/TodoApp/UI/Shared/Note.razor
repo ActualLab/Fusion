@@ -4,12 +4,8 @@
 </Alert>
 
 @code {
-    [Parameter]
-    public string CssClass { get; set; } = "";
-    [Parameter]
-    public Color Color { get; set; } = Color.Primary;
-    [Parameter]
-    public string Title { get; set; } = "Note:";
-    [Parameter]
-    public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string CssClass { get; set; } = "";
+    [Parameter] public Color Color { get; set; } = Color.Primary;
+    [Parameter] public string Title { get; set; } = "Note:";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
 }

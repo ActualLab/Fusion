@@ -28,8 +28,7 @@
 </Addons>
 
 @code {
-    [Parameter]
-    public string Id { get; set; } = null!;
+    [Parameter] public string Id { get; set; } = null!;
 
     protected override Task<TodoItem?> ComputeState(CancellationToken cancellationToken)
         => TodoApi.Get(Session, Ulid.Parse(Id), cancellationToken);
