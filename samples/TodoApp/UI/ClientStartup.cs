@@ -45,8 +45,11 @@ public static class ClientStartup
             // DefaultClientFormatKey = "json3",
         };
 
-        // The code below is totally optional.
+        // The block of code below is totally optional.
         // It makes Fusion to delay initial compute method RCP calls if they're resolved as "hit" into the local cache.
+        // I.e., we can postpone a majority (or all) of RPC calls on startup to let the app start a bit faster.
+        // Note that it makes sense only if there are hundreeds or thousands of such calls.
+        //
         // We use a single instance of the initial delay task - we want it to be
         // an absolute delay from the app start rather than a relative delay for each call.
         var hitToCallDelayTask = Task
@@ -115,7 +118,6 @@ public static class ClientStartup
             // Uncomment to make computed state components to re-render only on re-computation of their state.
             // Click on DefaultOptions to see when they re-render by default.
             // ComputedStateComponent.DefaultOptions = ComputedStateComponentOptions.RecomputeStateOnParameterChange;
-            // ComputedRenderStateComponent.DefaultOptions = ComputedStateComponentOptions.RecomputeStateOnParameterChange;
 
             // Blazorise
             services.AddBlazorise(options => {
