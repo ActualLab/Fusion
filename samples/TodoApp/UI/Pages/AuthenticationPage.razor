@@ -5,8 +5,6 @@
 @inject ClientAuthHelper ClientAuthHelper
 @inject IFusionTime FusionTime
 
-<h1>Authentication</h1>
-
 @{
     if (State.IsInitial(out var state, out var error)) {
         <Note Title="Loading..."/>
@@ -17,6 +15,8 @@
     var usedAuthSchemas = user.Identities.Select(kv => kv.Key.Schema).ToHashSet();
     var unusedAuthSchemas = AuthSchemas.Where(p => !usedAuthSchemas.Contains(p.Name)).ToArray();
 }
+
+<h1>Authentication</h1>
 
 <WhenException Title="Update error:" Exception="@error" />
 
