@@ -24,7 +24,7 @@ public abstract class ComputedSynchronizer
 
     public int MaxUpdateCountOnSynchronize { get; init; }
 
-    public ComputeSynchronizerScope Activate()
+    public ComputedSynchronizerScope Activate()
         => new(this);
 
     public virtual bool IsSynchronized(Computed computed)

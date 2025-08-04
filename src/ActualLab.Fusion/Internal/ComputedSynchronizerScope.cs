@@ -1,13 +1,13 @@
 namespace ActualLab.Fusion.Internal;
 
-public readonly struct ComputeSynchronizerScope : IDisposable
+public readonly struct ComputedSynchronizerScope : IDisposable
 {
     private readonly ComputedSynchronizer? _oldSynchronizer;
 
     public readonly ComputedSynchronizer? Synchronizer;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal ComputeSynchronizerScope(ComputedSynchronizer synchronizer)
+    internal ComputedSynchronizerScope(ComputedSynchronizer synchronizer)
     {
         _oldSynchronizer = ComputedSynchronizer.CurrentLocal.Value;
         Synchronizer = synchronizer;
