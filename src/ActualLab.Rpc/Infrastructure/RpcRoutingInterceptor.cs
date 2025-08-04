@@ -67,10 +67,6 @@ public class RpcRoutingInterceptor : RpcInterceptor
                 await Hub.RerouteDelayer.Invoke(cancellationToken).ConfigureAwait(false);
                 call = context.PrepareReroutedCall();
             }
-            catch (Exception e) {
-                Log.LogWarning(e, "[Debug] Exception!");
-                throw;
-            }
         }
     }
 }
