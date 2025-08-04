@@ -1,6 +1,13 @@
 #!/bin/bash
-export DOTNET_ReadyToRun=0 
-export DOTNET_TieredPGO=1 
-export DOTNET_TC_QuickJitForLoops=1 
+# Disables use of ReadyToRun images / enables more aggressive optimization
+# export DOTNET_ReadyToRun=0
 
-dotnet run --no-launch-profile -c:Release -f:net6.0 --project tests/Stl.Fusion.Tests.PerformanceTestRunner/Stl.Fusion.Tests.PerformanceTestRunner.csproj
+runtime=$1
+if [ -z "$runtime" ]; then
+  runtime=net9.0
+fi
+shift
+
+dotnet build -p:UseMultitargeting=true -c:Release -f:$runtime \
+  tests/ActualLab.Fusion.Tests.PerformanceTestRunner/ActualLab.Fusion.Tests.PerformanceTestRunner.csproj
+dotnet "./artifacts/tests/bin/ActualLab.Fusion.Tests.PerformanceTestRunner/release_$runtime/ActualLab.Fusion.Tests.PerformanceTestRunner.dll" "$@"
