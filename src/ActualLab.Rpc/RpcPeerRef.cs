@@ -39,8 +39,7 @@ public abstract partial class RpcPeerRef(bool isServer)
         if (!IsRerouted)
             return Address;
 
-        _toStringCached ??= "<*>" + Address;
-        return _toStringCached;
+        return _toStringCached ??= "<*>" + Address;
     }
 
     /// <summary>
