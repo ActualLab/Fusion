@@ -14,7 +14,7 @@ public partial class RpcPeerRef
     private static RpcPeerRef? _backendLocal;
     private static RpcPeerRef? _backendNone;
 
-    public const string DefaultData = "default";
+    public const string DefaultHostId = "default";
 
     [field: AllowNull, MaybeNull]
     public static RpcPeerRef Default { get => field ??= GetDefaultPeerRef(); set; }
@@ -29,13 +29,13 @@ public partial class RpcPeerRef
         => RpcPeerRefAddress.Parse(address);
 
     public static RpcPeerRef NewServer(
-        string data,
+        string hostInfo,
         bool isBackend = false,
         RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
-        => NewServer(data, "", isBackend, connectionKind);
+        => NewServer(hostInfo, "", isBackend, connectionKind);
 
     public static RpcPeerRef NewServer(
-        string data,
+        string hostInfo,
         string serializationFormat,
         bool isBackend = false,
         RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
@@ -43,25 +43,25 @@ public partial class RpcPeerRef
             IsBackend = isBackend,
             ConnectionKind = connectionKind,
             SerializationFormat = serializationFormat,
-            HostId = data,
+            HostInfo = hostInfo,
         }.Initialize();
 
     public static RpcPeerRef NewClient(
-        string data,
+        string hostInfo,
         bool isBackend = false,
         RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
-        => NewClient(data, "", isBackend, connectionKind);
+        => NewClient(hostInfo, "", isBackend, connectionKind);
 
     public static RpcPeerRef NewClient(
-        string data,
+        string hostInfo,
         string serializationFormat,
         bool isBackend = false,
         RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
-        => new RpcPeerRef() {
+        => new RpcClientPeerRef() {
             IsBackend = isBackend,
             ConnectionKind = connectionKind,
             SerializationFormat = serializationFormat,
-            HostId = data,
+            HostInfo = hostInfo,
         }.Initialize();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -70,14 +70,14 @@ public partial class RpcPeerRef
 
     public static RpcPeerRef GetDefaultPeerRef(RpcPeerConnectionKind kind, bool isBackend = false)
         => (kind, isBackend) switch {
-            (RpcPeerConnectionKind.Remote, false) => _remote ??= NewClient(DefaultData),
-            (RpcPeerConnectionKind.Loopback, false) => _loopback ??= NewClient(DefaultData, false, RpcPeerConnectionKind.Loopback),
-            (RpcPeerConnectionKind.Local, false) => _local ??= NewClient(DefaultData, false, RpcPeerConnectionKind.Local),
-            (RpcPeerConnectionKind.None, false) => _none ??= NewClient(DefaultData, false, RpcPeerConnectionKind.None),
-            (RpcPeerConnectionKind.Remote, true) => _backendRemote ??= NewClient(DefaultData, true),
-            (RpcPeerConnectionKind.Loopback, true) => _backendLoopback ??= NewClient(DefaultData, true, RpcPeerConnectionKind.Loopback),
-            (RpcPeerConnectionKind.Local, true) => _backendLocal ??= NewClient(DefaultData, true, RpcPeerConnectionKind.Local),
-            (RpcPeerConnectionKind.None, true) => _backendNone ??= NewClient(DefaultData, true, RpcPeerConnectionKind.None),
+            (RpcPeerConnectionKind.Remote, false) => _remote ??= NewClient(DefaultHostId),
+            (RpcPeerConnectionKind.Loopback, false) => _loopback ??= NewClient(DefaultHostId, false, RpcPeerConnectionKind.Loopback),
+            (RpcPeerConnectionKind.Local, false) => _local ??= NewClient(DefaultHostId, false, RpcPeerConnectionKind.Local),
+            (RpcPeerConnectionKind.None, false) => _none ??= NewClient(DefaultHostId, false, RpcPeerConnectionKind.None),
+            (RpcPeerConnectionKind.Remote, true) => _backendRemote ??= NewClient(DefaultHostId, true),
+            (RpcPeerConnectionKind.Loopback, true) => _backendLoopback ??= NewClient(DefaultHostId, true, RpcPeerConnectionKind.Loopback),
+            (RpcPeerConnectionKind.Local, true) => _backendLocal ??= NewClient(DefaultHostId, true, RpcPeerConnectionKind.Local),
+            (RpcPeerConnectionKind.None, true) => _backendNone ??= NewClient(DefaultHostId, true, RpcPeerConnectionKind.None),
             _ => throw new ArgumentOutOfRangeException(nameof(kind)),
         };
 }

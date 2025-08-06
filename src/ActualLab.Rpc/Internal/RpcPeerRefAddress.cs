@@ -5,7 +5,7 @@ namespace ActualLab.Rpc.Internal;
 public static class RpcPeerRefAddress
 {
     public const char TagDelimiter = '.';
-    public const string HostIdDelimiter = "://";
+    public const string HostInfoDelimiter = "://";
     public const string ServerTag = "server";
     public const string BackendTag = "backend";
 
@@ -16,7 +16,7 @@ public static class RpcPeerRefAddress
         AddTag(sb, peerRef.IsBackend ? BackendTag : "");
         AddTag(sb, peerRef.IsServer ? ServerTag : "");
         AddTag(sb, peerRef.SerializationFormat);
-        sb.Append(HostIdDelimiter).Append(peerRef.HostId);
+        sb.Append(HostInfoDelimiter).Append(peerRef.HostInfo);
         return sb.ToStringAndRelease();
     }
 
@@ -28,11 +28,11 @@ public static class RpcPeerRefAddress
         if (address.IsNullOrEmpty())
             return null;
 
-        var dataDelimiterIndex = address.IndexOf(HostIdDelimiter, StringComparison.Ordinal);
+        var dataDelimiterIndex = address.IndexOf(HostInfoDelimiter, StringComparison.Ordinal);
         if (dataDelimiterIndex < 0)
             return null;
 
-        var hostId = address[(dataDelimiterIndex + HostIdDelimiter.Length)..];
+        var hostInfo = address[(dataDelimiterIndex + HostInfoDelimiter.Length)..];
         var s = address.AsSpan(0, dataDelimiterIndex);
         if (!RpcPeerConnectionKindExt.TryParse(GetNextTag(ref s), out var connectionKind))
             return null;
@@ -41,19 +41,19 @@ public static class RpcPeerRefAddress
         var isServer = HasNextTag(ref s, ServerTag);
         var serializationFormat = GetNextTag(ref s).ToString();
         var peerRef = isServer
-            ? new RpcServerPeerRef {
+            ? (RpcPeerRef)new RpcServerPeerRef {
                 Address = address,
                 IsBackend = isBackend,
                 ConnectionKind = connectionKind,
                 SerializationFormat = serializationFormat,
-                HostId = hostId,
+                HostInfo = hostInfo,
             }
-            : new RpcPeerRef {
+            : new RpcClientPeerRef {
                 Address = address,
                 IsBackend = isBackend,
                 ConnectionKind = connectionKind,
                 SerializationFormat = serializationFormat,
-                HostId = hostId,
+                HostInfo = hostInfo,
             };
         if (initialize)
             peerRef.Initialize();

@@ -49,7 +49,7 @@ async Task RunClient()
     var services = new ServiceCollection()
         .AddFusion(fusion => {
             fusion.Rpc.AddWebSocketClient(_ => new RpcWebSocketClient.Options() {
-                HostUrlResolver = (_, peer) => peer.Ref.HostId // peer.Ref.Id is the host URL in this sample
+                HostUrlResolver = (_, peer) => peer.Ref.HostInfo // peer.Ref.Id is the host URL in this sample
             });
             fusion.AddClient<IChat>();
         })

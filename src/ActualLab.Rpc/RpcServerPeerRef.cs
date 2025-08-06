@@ -4,6 +4,8 @@ namespace ActualLab.Rpc;
 
 public class RpcServerPeerRef : RpcPeerRef
 {
+    public override bool IsServer => true;
+
     // Equality of RpcServerPeerRef is based on the Address property
 
     protected bool Equals(RpcServerPeerRef other)

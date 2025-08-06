@@ -2,9 +2,11 @@ using ActualLab.Rpc;
 
 namespace Samples.MeshRpc;
 
-public sealed class RpcHostPeerRef : RpcPeerRef, IMeshPeerRef
+public sealed class RpcHostPeerRef : RpcClientPeerRef, IMeshPeerRef
 {
     private static readonly ConcurrentDictionary<HostRef, RpcHostPeerRef> Cache = new();
+
+    public string HostId { get; }
 
     public static RpcHostPeerRef Get(HostRef hostRef)
         => Cache.GetOrAdd(hostRef, key => new RpcHostPeerRef(key));
@@ -12,7 +14,7 @@ public sealed class RpcHostPeerRef : RpcPeerRef, IMeshPeerRef
     // Constructor is private to ensure all instances are created through the Get method
     private RpcHostPeerRef(HostRef hostRef)
     {
-        HostId = hostRef.Id;
+        HostInfo = HostId = hostRef.Id;
         Initialize();
     }
 }

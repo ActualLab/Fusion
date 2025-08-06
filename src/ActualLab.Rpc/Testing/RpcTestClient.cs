@@ -39,7 +39,7 @@ public class RpcTestClient(
     public IReadOnlyDictionary<RpcPeerRef, RpcTestConnection> Connections => _connections;
 
     public RpcTestConnection CreateDefaultConnection()
-        => CreateConnection(RpcPeerRef.DefaultData, "server-default");
+        => CreateConnection(RpcPeerRef.DefaultHostId, "server-default");
 
     public RpcTestConnection CreateRandomConnection()
     {

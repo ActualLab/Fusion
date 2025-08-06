@@ -5,18 +5,19 @@ using Errors = ActualLab.Internal.Errors;
 namespace ActualLab.Rpc;
 
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
-public partial class RpcPeerRef
+public abstract partial class RpcPeerRef
 {
     private string? _toStringCached;
     private string DebugValue => IsInitialized ? ToString() : "<uninitialized>";
 
     protected bool IsInitialized { get; set; }
 
-    public bool IsServer => this is RpcServerPeerRef;
     public bool IsBackend { get; init; }
     public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
     public string SerializationFormat { get; init; } = "";
-    public string HostId { get; init; } = "";
+    public string HostInfo { get; init; } = "";
+
+    public abstract bool IsServer { get; }
 
     // Properties that require initialization
     public string Address {

@@ -3,13 +3,14 @@ using Pastel;
 
 namespace Samples.MeshRpc;
 
-public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
+public sealed class RpcShardPeerRef : RpcClientPeerRef, IMeshPeerRef
 {
     private static readonly ConcurrentDictionary<ShardRef, LazySlim<ShardRef, RpcShardPeerRef>> Cache = new();
 
     private volatile CancellationTokenSource? _rerouteTokenSource;
 
     public ShardRef ShardRef { get; }
+    public string HostId { get; }
     public override CancellationToken RerouteToken => _rerouteTokenSource?.Token ?? CancellationToken.None;
 
     public static RpcShardPeerRef Get(ShardRef shardRef)
@@ -35,7 +36,7 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
         var meshState = MeshState.State.Value;
         ShardRef = shardRef;
         HostId = meshState.GetShardHost(shardRef)?.Id ?? "null";
-        Address = $"rpc://{shardRef}-v{meshState.Version}->{HostId}";
+        HostInfo = $"{shardRef}-v{meshState.Version}->{HostId}";
         Initialize();
     }
 
