@@ -2,7 +2,7 @@ namespace ActualLab.Rpc;
 
 public class RpcServerPeerRef() : RpcPeerRef(true)
 {
-    protected int HashCode {
+    protected int AddressHashCode {
         get {
             if (field != 0)
                 return field;
@@ -23,12 +23,12 @@ public class RpcServerPeerRef() : RpcPeerRef(true)
 
 #pragma warning disable MA0001
     protected bool Equals(RpcServerPeerRef other)
-        => HashCode == other.HashCode && Address.Equals(other.Address);
+        => AddressHashCode == other.AddressHashCode && Address.Equals(other.Address);
 
     public override bool Equals(object? obj)
         => ReferenceEquals(this, obj) || (obj is RpcServerPeer other && Equals(other));
 
     public override int GetHashCode()
-        => HashCode;
+        => AddressHashCode;
 #pragma warning restore MA0001
 }
