@@ -2,6 +2,9 @@ using ActualLab.CommandR.Internal;
 
 namespace ActualLab.CommandR.Commands;
 
+/// <summary>
+/// A command that executes locally.
+/// </summary>
 public interface ILocalCommand : ICommand
 {
     public Task Run(CommandContext context, CancellationToken cancellationToken);

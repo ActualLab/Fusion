@@ -15,6 +15,7 @@ public sealed partial record VersionSet(
 ) {
     public static readonly Version ZeroVersion = new();
     public static readonly ListFormat ListFormat = ListFormat.CommaSeparated;
+    public static readonly VersionSet Empty = new();
 
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     [field: AllowNull, MaybeNull]

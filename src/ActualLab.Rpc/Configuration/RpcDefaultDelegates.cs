@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
-using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
@@ -13,10 +12,7 @@ namespace ActualLab.Rpc;
 [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
 public static class RpcDefaultDelegates
 {
-    private static readonly ConcurrentDictionary<Type, bool> IsCommandTypeCache = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly string KeepAliveMethodName = $"{nameof(IRpcSystemCalls.KeepAlive)}:1";
-
-    public static string CommandInterfaceFullName { get; set; } = "ActualLab.CommandR.ICommand";
 
     // Configuration related
 
@@ -27,13 +23,7 @@ public static class RpcDefaultDelegates
         static (service, method) => new RpcMethodDef(service, service.Type, method);
 
     public static RpcBackendServiceDetector BackendServiceDetector { get; set; } =
-        static serviceType =>
-            typeof(IBackendService).IsAssignableFrom(serviceType)
-            || serviceType.Name.EndsWith("Backend", StringComparison.Ordinal);
-
-    public static RpcCommandTypeDetector CommandTypeDetector { get; set; } =
-        static type => IsCommandTypeCache.GetOrAdd(type,
-            static t => t.GetInterfaces().Any(x => CommandInterfaceFullName.Equals(x.FullName, StringComparison.Ordinal)));
+        static serviceType => typeof(IBackendService).IsAssignableFrom(serviceType);
 
     public static RpcServiceScopeResolver ServiceScopeResolver { get; set; } =
         static service => service.IsBackend
@@ -130,6 +120,9 @@ public static class RpcDefaultDelegates
         static (hub, peerRef) => peerRef.IsServer
             ? new RpcServerPeer(hub, peerRef)
             : new RpcClientPeer(hub, peerRef);
+
+    public static RpcPeerConnectionKindResolver PeerConnectionKindResolver { get; set; } =
+        static (hub, peerRef) => peerRef.ConnectionKind;
 
     public static RpcPeerTerminalErrorDetector PeerTerminalErrorDetector { get; set; } =
         static error => error is RpcReconnectFailedException;

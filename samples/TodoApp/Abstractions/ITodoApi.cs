@@ -47,11 +47,11 @@ public sealed partial record TodoSummary(
 public sealed partial record Todos_AddOrUpdate(
     [property: DataMember] Session Session,
     [property: DataMember] TodoItem Item
-) : ISessionCommand<TodoItem>, IApiCommand;
+) : ISessionCommand<TodoItem>, IDelegatingCommand;
 
 [DataContract, MemoryPackable, MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public sealed partial record Todos_Remove(
     [property: DataMember] Session Session,
     [property: DataMember] Ulid Id
-) : ISessionCommand<Unit>, IApiCommand;
+) : ISessionCommand<Unit>, IDelegatingCommand;

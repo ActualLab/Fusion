@@ -3,7 +3,7 @@ using Pastel;
 
 namespace Samples.MeshRpc;
 
-public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
+public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
 {
     private static readonly ConcurrentDictionary<ShardRef, LazySlim<ShardRef, RpcShardPeerRef>> Cache = new();
 
@@ -40,7 +40,7 @@ public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
         : base(GetKey(shardRef))
     {
         ShardRef = shardRef;
-        HostId = Key.Split(" -> ")[1];
+        HostId = Parsed.Unparsed.Split(" -> ")[1];
     }
 
     public void TryStart(LazySlim<ShardRef, RpcShardPeerRef> lazy)
@@ -63,13 +63,5 @@ public sealed record RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
             await _rerouteTokenSource.CancelAsync();
             Console.WriteLine($"{Key}: rerouted.".Pastel(ConsoleColor.Yellow));
         }, CancellationToken.None);
-    }
-
-    public override RpcPeerConnectionKind GetConnectionKind(RpcHub hub)
-    {
-        var ownHost = hub.Services.GetRequiredService<Host>();
-        return HostId == ownHost.Id
-            ? RpcPeerConnectionKind.Local
-            : RpcPeerConnectionKind.Remote;
     }
 }

@@ -1,6 +1,8 @@
+using ActualLab.Rpc.Infrastructure;
+
 namespace ActualLab.Rpc;
 
-public partial record RpcPeerRef
+public partial class RpcPeerRef
 {
     private static RpcPeerRef? _remote;
     private static RpcPeerRef? _loopback;
@@ -9,27 +11,48 @@ public partial record RpcPeerRef
     private static RpcPeerRef? _backendLoopback;
     private static RpcPeerRef? _backendLocal;
 
-    public const string DefaultKey = "default";
-    public const string LoopbackKeyPrefix = "loopback:";
-    public const string LocalKeyPrefix = "local:";
+    public const string DefaultClientId = "default";
 
     public static RpcPeerRef Default { get; set; } = GetDefaultPeerRef();
     public static RpcPeerRef Loopback { get; set; } = GetDefaultPeerRef(RpcPeerConnectionKind.Loopback, true);
     public static RpcPeerRef Local { get; set; } = GetDefaultPeerRef(RpcPeerConnectionKind.Local, true);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string ComposeKey(string prefix, string serializationFormat)
-        => $"{prefix}${serializationFormat}";
+    public static Func<string, ParsedRpcPeerRef> Parse { get; set; } = ParsedRpcPeerRef.Parse;
 
-    public static RpcPeerRef NewServer(string clientId, string serializationFormat, bool isBackend = false)
-        => new(ComposeKey(clientId, serializationFormat), true, isBackend);
-    public static RpcPeerRef NewServer(string key,  bool isBackend = false)
-        => new(key, true, isBackend);
+    public static RpcPeerRef NewServer(
+        string clientId,
+        bool isBackend = false,
+        RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
+        => NewServer(clientId, "", isBackend, connectionKind);
 
-    public static RpcPeerRef NewClient(string clientId, string serializationFormat, bool isBackend = false)
-        => new(ComposeKey(clientId, serializationFormat), false, isBackend);
-    public static RpcPeerRef NewClient(string key, bool isBackend = false)
-        => new(key, false, isBackend);
+    public static RpcPeerRef NewServer(
+        string clientId,
+        string serializationFormat,
+        bool isBackend = false,
+        RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
+        => new(new ParsedRpcPeerRef() {
+            IsServer = true,
+            IsBackend = isBackend,
+            SerializationFormatKey = serializationFormat,
+            Unparsed = clientId,
+        });
+
+    public static RpcPeerRef NewClient(
+        string clientId,
+        bool isBackend = false,
+        RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
+        => NewClient(clientId, "", isBackend, connectionKind);
+
+    public static RpcPeerRef NewClient(
+        string clientId,
+        string serializationFormat,
+        bool isBackend = false,
+        RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
+        => new(new ParsedRpcPeerRef() {
+            IsBackend = isBackend,
+            SerializationFormatKey = serializationFormat,
+            Unparsed = clientId,
+        });
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static RpcPeerRef GetDefaultPeerRef(bool isBackend = false)
@@ -37,12 +60,12 @@ public partial record RpcPeerRef
 
     public static RpcPeerRef GetDefaultPeerRef(RpcPeerConnectionKind kind, bool isBackend = false)
         => (kind, isBackend) switch {
-            (RpcPeerConnectionKind.Remote, false) => _remote ??= NewClient(DefaultKey),
-            (RpcPeerConnectionKind.Loopback, false) => _loopback ??= NewClient(LoopbackKeyPrefix + DefaultKey),
-            (RpcPeerConnectionKind.Local, false) => _local ??= NewClient(LocalKeyPrefix + DefaultKey),
-            (RpcPeerConnectionKind.Remote, true) => _backendRemote ??= NewClient(DefaultKey, true),
-            (RpcPeerConnectionKind.Loopback, true) => _backendLoopback ??= NewClient(LoopbackKeyPrefix + DefaultKey, true),
-            (RpcPeerConnectionKind.Local, true) => _backendLocal ??= NewClient(LocalKeyPrefix + DefaultKey, true),
+            (RpcPeerConnectionKind.Remote, false) => _remote ??= NewClient(DefaultClientId),
+            (RpcPeerConnectionKind.Loopback, false) => _loopback ??= NewClient(DefaultClientId, false, RpcPeerConnectionKind.Loopback),
+            (RpcPeerConnectionKind.Local, false) => _local ??= NewClient(DefaultClientId, false, RpcPeerConnectionKind.Local),
+            (RpcPeerConnectionKind.Remote, true) => _backendRemote ??= NewClient(DefaultClientId, true),
+            (RpcPeerConnectionKind.Loopback, true) => _backendLoopback ??= NewClient(DefaultClientId, true, RpcPeerConnectionKind.Loopback),
+            (RpcPeerConnectionKind.Local, true) => _backendLocal ??= NewClient(DefaultClientId, true, RpcPeerConnectionKind.Local),
             _ => throw new ArgumentOutOfRangeException(nameof(kind)),
         };
 }

@@ -12,7 +12,6 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcServiceDefBuilder ServiceDefBuilder => Hub.ServiceDefBuilder;
     public RpcMethodDefBuilder MethodDefBuilder => Hub.MethodDefBuilder;
     public RpcBackendServiceDetector BackendServiceDetector => Hub.BackendServiceDetector;
-    public RpcCommandTypeDetector CommandTypeDetector => Hub.CommandTypeDetector;
     public RpcCallTimeoutsProvider CallTimeoutsProvider => Hub.CallTimeoutsProvider;
     public RpcCallValidatorProvider CallValidatorProvider => Hub.CallValidatorProvider;
     public RpcServiceScopeResolver ServiceScopeResolver => Hub.ServiceScopeResolver;
@@ -23,6 +22,7 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcInboundMiddlewares InboundMiddlewares => Hub.InboundMiddlewares;
     public RpcOutboundMiddlewares OutboundMiddlewares => Hub.OutboundMiddlewares;
     public RpcPeerFactory PeerFactory => Hub.PeerFactory;
+    public RpcPeerConnectionKindResolver PeerConnectionKindResolver => Hub.PeerConnectionKindResolver;
     public RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer => Hub.ClientPeerReconnectDelayer;
     public RpcServerPeerCloseTimeoutProvider ServerPeerCloseTimeoutProvider => Hub.ServerPeerCloseTimeoutProvider;
     public RpcPeerTerminalErrorDetector PeerTerminalErrorDetector => Hub.PeerTerminalErrorDetector;

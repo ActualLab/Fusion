@@ -1,11 +1,15 @@
 namespace ActualLab.CommandR.Commands;
+using Interception;
+using Rpc;
 
 /// <summary>
-/// A tagging interface for commands that can't be initiated by the client.
+/// A tagging interface indicating that a command can be handled only by a backend peer,
+/// i.e., a peer <see cref="RpcPeer.Versions"/> defining a version
+/// for <see cref="RpcDefaults.BackendScope"/>.
+/// Otherwise, it will be rejected with an error.
 /// </summary>
 /// <remarks>
-/// Fusion doesn't do anything special for such commands,
-/// but some of its own commands are decorated with this interface.
+/// <see cref="CommandServiceInterceptor"/> is responsible for checks associated with this interface.
 /// </remarks>
 public interface IBackendCommand : ICommand;
 

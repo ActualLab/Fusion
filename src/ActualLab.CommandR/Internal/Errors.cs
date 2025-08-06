@@ -10,6 +10,9 @@ public static class Errors
     public static Exception DirectCommandHandlerCallsAreNotAllowed()
         => new NotSupportedException(
             "Direct command handler calls on command service proxies are not allowed. Use ICommander.Call(...) instead.");
+    public static Exception BackendCommandRequiresBackendPeer()
+        => new NotSupportedException(
+            "Backend command requires a peer with Ref.IsBackend.");
 
     public static Exception NoHandlerFound(Type commandType)
         => new InvalidOperationException($"No handler is found for command '{commandType}'.");

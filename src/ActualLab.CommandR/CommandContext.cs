@@ -49,7 +49,7 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
     public static CommandContext New(
         ICommander commander, ICommand command, bool isOutermost)
     {
-        if (!isOutermost && (command is IOutermostCommand || Current?.UntypedCommand is IApiCommand))
+        if (!isOutermost && (command is IOutermostCommand || Current?.UntypedCommand is IDelegatingCommand))
             isOutermost = true;
 
         var tCommandResult = command.GetResultType();

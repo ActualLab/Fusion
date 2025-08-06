@@ -69,8 +69,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
         Hub = hub;
         Ref = peerRef;
-        ConnectionKind = peerRef.GetConnectionKind(hub);
-        Versions = versions ?? peerRef.GetVersions();
+        ConnectionKind = hub.PeerConnectionKindResolver.Invoke(hub, peerRef);
+        if (ConnectionKind is RpcPeerConnectionKind.None)
+            ConnectionKind = RpcPeerConnectionKind.Remote; // RpcPeer.ConnectionKind should never be None
+        Versions = versions ?? peerRef.Versions;
         // ReSharper disable once VirtualMemberCallInConstructor
         _serverMethodResolver = GetServerMethodResolver(null);
 

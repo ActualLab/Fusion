@@ -105,7 +105,6 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
         services.AddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);
         services.AddSingleton(_ => RpcDefaultDelegates.BackendServiceDetector);
-        services.AddSingleton(_ => RpcDefaultDelegates.CommandTypeDetector);
         services.AddSingleton(_ => RpcDefaultDelegates.CallTimeoutsProvider);
         services.AddSingleton(_ => RpcDefaultDelegates.CallValidatorProvider);
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceScopeResolver);
@@ -113,6 +112,7 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.CallRouter);
         services.AddSingleton(_ => RpcDefaultDelegates.HashProvider);
         services.AddSingleton(_ => RpcDefaultDelegates.RerouteDelayer);
+        services.AddSingleton(_ => RpcDefaultDelegates.PeerConnectionKindResolver);
         services.AddSingleton(_ => RpcDefaultDelegates.InboundContextFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.PeerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.ServerConnectionFactory);

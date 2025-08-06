@@ -24,6 +24,9 @@ public class RpcClientPeer : RpcPeer
         RpcPeerConnectionState connectionState,
         CancellationToken cancellationToken)
     {
+        if (Ref.ConnectionKind is RpcPeerConnectionKind.None)
+            throw RpcReconnectFailedException.ReconnectFailed(Ref);
+
         var delay = ReconnectDelayer.GetDelay(this, connectionState.TryIndex, connectionState.Error, cancellationToken);
         if (delay.IsLimitExceeded)
             throw RpcReconnectFailedException.ReconnectFailed(Ref);

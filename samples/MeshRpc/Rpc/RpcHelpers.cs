@@ -1,12 +1,17 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
+using ActualLab.Rpc.Infrastructure;
 
 namespace Samples.MeshRpc;
 
-public sealed class RpcHelpers
+public sealed class RpcHelpers(IServiceProvider services) : RpcServiceBase(services)
 {
     private static readonly RpcCallTimeouts CallTimeouts = new(null, 60);
+
+    [field: AllowNull, MaybeNull]
+    public Host OwnHost => field ??= Services.GetRequiredService<Host>();
 
     public RpcCallTimeouts GetCallTimeouts(RpcMethodDef method)
         => CallTimeouts;
@@ -44,5 +49,21 @@ public sealed class RpcHelpers
 
         var host = MeshState.State.Value.HostById.GetValueOrDefault(meshPeerRef.HostId);
         return host?.Url ?? "";
+    }
+
+    public RpcPeerConnectionKind GetPeerConnectionKind(RpcHub hub, RpcPeerRef peerRef)
+    {
+        var connectionKind = peerRef.ConnectionKind;
+        var hostId = peerRef switch {
+            RpcHostPeerRef hostPeerRef => hostPeerRef.HostId,
+            RpcShardPeerRef shardPeerRef => shardPeerRef.HostId,
+            _ => null
+        };
+        if (hostId is null || connectionKind != RpcPeerConnectionKind.Remote)
+            return connectionKind;
+
+        return hostId == OwnHost.Id
+            ? RpcPeerConnectionKind.Local
+            : RpcPeerConnectionKind.Remote;
     }
 }

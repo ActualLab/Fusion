@@ -35,11 +35,11 @@ public class OperationReprocessor : IOperationReprocessor
         {
             if (FusionDefaults.Mode != FusionMode.Server)
                 return false; // Only server can do the reprocessing
-            if (command is IApiCommand)
-                return false; // No reprocessing for IApiCommands
+            if (command is IDelegatingCommand)
+                return false; // No reprocessing for IDelegatingCommand
 
             // No reprocessing for commands running from scoped Commander instances,
-            // i.e. no reprocessing for UI commands:
+            // i.e., no reprocessing for UI commands:
             // - the underlying backend commands are anyway reprocessed on the server side
             // - so reprocessing UI commands means N*N times reprocessing.
             return !context.Commander.Services.IsScoped();

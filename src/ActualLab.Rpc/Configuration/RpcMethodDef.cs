@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
+using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
@@ -8,8 +9,13 @@ namespace ActualLab.Rpc;
 
 public sealed class RpcMethodDef : MethodDef
 {
+    public static string CommandInterfaceFullName { get; set; } = "ActualLab.CommandR.ICommand";
+    public static string BackendCommandInterfaceFullName { get; set; } = "ActualLab.CommandR.IBackendCommand";
+
     private static readonly HashSet<string> StreamMethodNames
         = new(StringComparer.Ordinal) { "Ack", "AckEnd", "B", "I", "End" };
+    private static readonly ConcurrentDictionary<Type, (bool, bool)> IsCommandTypeCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     private string? _toStringCached;
 
@@ -61,8 +67,13 @@ public sealed class RpcMethodDef : MethodDef
         Hub = service.Hub;
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);
         IsSystem = service.IsSystem;
-        IsBackend = service.IsBackend;
         IsStream = IsSystem && StreamMethodNames.Contains(method.Name);
+        IsCommand = false;
+        IsBackend = service.IsBackend;
+        if (ParameterTypes.Length == 2 && ParameterTypes[1] == typeof(CancellationToken)) {
+            IsCommand = IsCommandType(ParameterTypes[0], out bool isBackendCommand);
+            IsBackend |= isBackendCommand;
+        }
         HasPolymorphicArguments = ParameterTypes.Any(RpcArgumentSerializer.IsPolymorphic);
         HasPolymorphicResult = RpcArgumentSerializer.IsPolymorphic(UnwrappedReturnType);
 
@@ -78,9 +89,6 @@ public sealed class RpcMethodDef : MethodDef
             .GetCustomAttributes<LegacyNameAttribute>(false)
             .Select(x => LegacyName.New(x, nameSuffix)));
 
-        IsCommand = ParameterTypes.Length == 2
-            && ParameterTypes[1] == typeof(CancellationToken)
-            && Hub.CommandTypeDetector(ParameterTypes[0]);
         Timeouts = Hub.CallTimeoutsProvider.Invoke(this).Normalize();
         CallValidator = Hub.CallValidatorProvider.Invoke(this);
 
@@ -137,5 +145,21 @@ public sealed class RpcMethodDef : MethodDef
         return this == systemCallSender.BatchMethodDef
             || this == systemCallSender.ItemMethodDef
             || this == systemCallSender.EndMethodDef;
+    }
+
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
+    public static bool IsCommandType(Type type, out bool isBackendCommand)
+    {
+        (var isCommand, isBackendCommand) = IsCommandTypeCache.GetOrAdd(
+            type,
+            static t => {
+                var interfaces = t.GetInterfaces();
+                var isCommand = interfaces.Any(x => CommandInterfaceFullName.Equals(x.FullName, StringComparison.Ordinal));
+                var isBackendCommand = isCommand && interfaces.Any(x => BackendCommandInterfaceFullName.Equals(x.FullName, StringComparison.Ordinal));
+                return (isCommand, isBackendCommand);
+            });
+        return isCommand;
     }
 }

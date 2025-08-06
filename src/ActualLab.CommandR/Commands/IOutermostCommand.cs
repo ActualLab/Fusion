@@ -1,6 +1,6 @@
 namespace ActualLab.CommandR.Commands;
 
 /// <summary>
-/// A tagging interface for commands which ensures they always run as the outermost ones.
+/// A tagging interface that ensures the command always run as the outermost one.
 /// </summary>
 public interface IOutermostCommand : ICommand;

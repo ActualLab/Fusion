@@ -9,7 +9,6 @@ namespace ActualLab.Rpc;
 public delegate RpcServiceDef RpcServiceDefBuilder(RpcHub hub, RpcServiceBuilder service);
 public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodInfo method);
 public delegate bool RpcBackendServiceDetector(Type serviceType);
-public delegate bool RpcCommandTypeDetector(Type type);
 public delegate string RpcServiceScopeResolver(RpcServiceDef serviceDef);
 public delegate string RpcHashProvider(ReadOnlyMemory<byte> bytes);
 
@@ -30,6 +29,7 @@ public delegate RpcCallTimeouts RpcCallTimeoutsProvider(RpcMethodDef methodDef);
 
 // RpcPeer management
 public delegate RpcPeer RpcPeerFactory(RpcHub hub, RpcPeerRef peerRef);
+public delegate RpcPeerConnectionKind RpcPeerConnectionKindResolver(RpcHub hub, RpcPeerRef peerRef);
 public delegate void RpcPeerTracker(RpcPeer peer);
 public delegate bool RpcPeerTerminalErrorDetector(Exception error);
 

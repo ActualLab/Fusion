@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Diagnostics;
-using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 
@@ -79,7 +78,7 @@ public class ComputeServiceCommandCompletionInvalidator(
 
     public virtual bool IsRequired(ICommand? command, [MaybeNullWhen(false)] out IMethodCommandHandler finalHandler)
     {
-        if (command is null or IApiCommand) {
+        if (command is null or IDelegatingCommand) {
             finalHandler = null;
             return false;
         }

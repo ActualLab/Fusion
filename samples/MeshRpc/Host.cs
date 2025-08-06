@@ -3,8 +3,6 @@ using ActualLab.Fusion.Server;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Server;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Hosting;
 using Pastel;
 using Samples.MeshRpc.Services;
 using static Samples.MeshRpc.HostFactorySettings;
@@ -76,6 +74,7 @@ public sealed class Host : WorkerBase
         });
         services.AddSingleton<RpcCallTimeoutsProvider>(c => c.GetRequiredService<RpcHelpers>().GetCallTimeouts);
         services.AddSingleton<RpcCallRouter>(c => c.GetRequiredService<RpcHelpers>().RouteCall);
+        services.AddSingleton<RpcPeerConnectionKindResolver>(c => c.GetRequiredService<RpcHelpers>().GetPeerConnectionKind);
         if (UseRemoteComputedCache)
             services.AddSingleton(SharedRemoteComputedCache);
 

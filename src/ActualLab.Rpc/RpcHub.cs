@@ -11,7 +11,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcServiceDefBuilder ServiceDefBuilder;
     internal readonly RpcMethodDefBuilder MethodDefBuilder;
     internal readonly RpcBackendServiceDetector BackendServiceDetector;
-    internal readonly RpcCommandTypeDetector CommandTypeDetector;
     internal readonly RpcCallTimeoutsProvider CallTimeoutsProvider;
     internal readonly RpcCallValidatorProvider CallValidatorProvider;
     internal readonly RpcServiceScopeResolver ServiceScopeResolver;
@@ -23,6 +22,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcInboundMiddlewares InboundMiddlewares;
     internal readonly RpcOutboundMiddlewares OutboundMiddlewares;
     internal readonly RpcPeerFactory PeerFactory;
+    internal readonly RpcPeerConnectionKindResolver PeerConnectionKindResolver;
     internal readonly RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer;
     internal readonly RpcServerPeerCloseTimeoutProvider ServerPeerCloseTimeoutProvider;
     internal readonly RpcPeerTerminalErrorDetector PeerTerminalErrorDetector;
@@ -71,7 +71,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
         MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
         BackendServiceDetector = services.GetRequiredService<RpcBackendServiceDetector>();
-        CommandTypeDetector = services.GetRequiredService<RpcCommandTypeDetector>();
         CallTimeoutsProvider = services.GetRequiredService<RpcCallTimeoutsProvider>();
         CallValidatorProvider = services.GetRequiredService<RpcCallValidatorProvider>();
         ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();
@@ -83,6 +82,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         InboundMiddlewares = services.GetRequiredService<RpcInboundMiddlewares>();
         OutboundMiddlewares = services.GetRequiredService<RpcOutboundMiddlewares>();
         PeerFactory = services.GetRequiredService<RpcPeerFactory>();
+        PeerConnectionKindResolver = services.GetRequiredService<RpcPeerConnectionKindResolver>();
         ClientPeerReconnectDelayer = services.GetRequiredService<RpcClientPeerReconnectDelayer>();
         ServerPeerCloseTimeoutProvider = services.GetRequiredService<RpcServerPeerCloseTimeoutProvider>();
         PeerTerminalErrorDetector = services.GetRequiredService<RpcPeerTerminalErrorDetector>();
