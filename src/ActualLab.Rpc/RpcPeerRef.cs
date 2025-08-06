@@ -56,23 +56,12 @@ public partial class RpcPeerRef(Symbol id) : IEquatable<RpcPeerRef>, IHasId<Symb
         }
     }
 
-    // Equality
+    // Equality - must rely on Id only
 
     public bool Equals(RpcPeerRef? other)
         => ReferenceEquals(this, other) || (other is not null && Id.Equals(other.Id));
-
     public override bool Equals(object? obj)
-    {
-        if (obj is null)
-            return false;
-        if (ReferenceEquals(this, obj))
-            return true;
-        if (obj.GetType() != GetType())
-            return false;
-
-        return Equals((RpcPeerRef)obj);
-    }
-
+        => ReferenceEquals(this, obj) || (obj is RpcPeerRef other && Id.Equals(other.Id));
     public override int GetHashCode()
         => Id.GetHashCode();
 }
