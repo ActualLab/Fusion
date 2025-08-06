@@ -3,7 +3,7 @@ using Pastel;
 
 namespace Samples.MeshRpc;
 
-public sealed class RpcShardPeerRef : RpcClientPeerRef, IMeshPeerRef
+public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
 {
     private static readonly ConcurrentDictionary<ShardRef, LazySlim<ShardRef, RpcShardPeerRef>> Cache = new();
 
@@ -37,6 +37,7 @@ public sealed class RpcShardPeerRef : RpcClientPeerRef, IMeshPeerRef
         ShardRef = shardRef;
         HostId = meshState.GetShardHost(shardRef)?.Id ?? "null";
         HostInfo = $"{shardRef}-v{meshState.Version}->{HostId}";
+        UseReferentialEquality = true;
         Initialize();
     }
 

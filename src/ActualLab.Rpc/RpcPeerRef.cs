@@ -5,12 +5,10 @@ using Errors = ActualLab.Internal.Errors;
 namespace ActualLab.Rpc;
 
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
-public abstract partial class RpcPeerRef(bool isServer)
+public partial class RpcPeerRef(bool isServer = false) : IEquatable<RpcPeerRef>
 {
     private string? _toStringCached;
     private string DebugValue => IsInitialized ? ToString() : "<uninitialized>";
-
-    protected bool IsInitialized { get; set; }
 
     public bool IsServer { get; } = isServer;
     public bool IsBackend { get; init; }
@@ -33,6 +31,21 @@ public abstract partial class RpcPeerRef(bool isServer)
     public virtual CancellationToken RerouteToken => default;
     public bool CanBeRerouted => RerouteToken.CanBeCanceled;
     public bool IsRerouted => RerouteToken.IsCancellationRequested;
+
+    // Protected properties
+    protected bool IsInitialized { get; set; }
+    protected bool UseReferentialEquality { get; init; }
+    protected int AddressHashCode {
+        get {
+            if (field != 0)
+                return field;
+
+            field = Address.GetOrdinalHashCode();
+            if (field == 0)
+                field = -1;
+            return field;
+        }
+    }
 
     public override string ToString()
     {
@@ -79,6 +92,35 @@ public abstract partial class RpcPeerRef(bool isServer)
             cancellationToken.ThrowIfCancellationRequested();
         }
     }
+
+#pragma warning disable MA0001
+
+    // Equality: UseReferentialEquality determines whether it is referential or based on Address.
+    // By default, UseReferentialEquality is false, meaning equality is based on Address.
+    //
+    // The equality of RpcServerPeerRef MUST BE based on the Address property,
+    // so two RpcServerPeerRef instances with the same Address are considered equal.
+    // This is necessary to make sure an RPC client can reconnect to exactly the same peer rather than a new one.
+    // See RpcWebSocketServer.Invoke and RpcWebSocketServerPeerRefFactory implementations,
+    // they use the 'clientId' parameter to construct a new RpcServerPeerRef on each WebSocket connection.
+    //
+    // The equality of RpcClientPeerRef CAN BE based on the Address property or referential.
+    // Referential equality must be a preference when such refs are always cached / reused.
+
+    public bool Equals(RpcPeerRef? other)
+        => UseReferentialEquality
+            ? ReferenceEquals(this, other)
+            : other is not null && AddressHashCode == other.AddressHashCode && Address.Equals(other.Address);
+
+    public override bool Equals(object? obj)
+        => ReferenceEquals(this, obj) || (obj is RpcPeerRef other && Equals(other));
+
+    public override int GetHashCode()
+        => UseReferentialEquality
+            ? RuntimeHelpers.GetHashCode(this)
+            : AddressHashCode;
+
+#pragma warning restore MA0001
 
     // Protected methods
 

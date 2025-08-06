@@ -39,7 +39,7 @@ public partial class RpcPeerRef
         string serializationFormat,
         bool isBackend = false,
         RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
-        => new RpcServerPeerRef() {
+        => new RpcPeerRef(isServer: true) {
             IsBackend = isBackend,
             ConnectionKind = connectionKind,
             SerializationFormat = serializationFormat,
@@ -57,7 +57,7 @@ public partial class RpcPeerRef
         string serializationFormat,
         bool isBackend = false,
         RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
-        => new RpcClientPeerRef() {
+        => new RpcPeerRef() {
             IsBackend = isBackend,
             ConnectionKind = connectionKind,
             SerializationFormat = serializationFormat,

@@ -40,21 +40,13 @@ public static class RpcPeerRefAddress
         var isBackend = HasNextTag(ref s, BackendTag);
         var isServer = HasNextTag(ref s, ServerTag);
         var serializationFormat = GetNextTag(ref s).ToString();
-        var peerRef = isServer
-            ? (RpcPeerRef)new RpcServerPeerRef {
-                Address = address,
-                IsBackend = isBackend,
-                ConnectionKind = connectionKind,
-                SerializationFormat = serializationFormat,
-                HostInfo = hostInfo,
-            }
-            : new RpcClientPeerRef {
-                Address = address,
-                IsBackend = isBackend,
-                ConnectionKind = connectionKind,
-                SerializationFormat = serializationFormat,
-                HostInfo = hostInfo,
-            };
+        var peerRef = new RpcPeerRef(isServer) {
+            Address = address,
+            IsBackend = isBackend,
+            ConnectionKind = connectionKind,
+            SerializationFormat = serializationFormat,
+            HostInfo = hostInfo,
+        };
         if (initialize)
             peerRef.Initialize();
         return peerRef;

@@ -2,7 +2,7 @@ using ActualLab.Rpc;
 
 namespace Samples.MeshRpc;
 
-public sealed class RpcHostPeerRef : RpcClientPeerRef, IMeshPeerRef
+public sealed class RpcHostPeerRef : RpcPeerRef, IMeshPeerRef
 {
     private static readonly ConcurrentDictionary<HostRef, RpcHostPeerRef> Cache = new();
 
@@ -15,6 +15,7 @@ public sealed class RpcHostPeerRef : RpcClientPeerRef, IMeshPeerRef
     private RpcHostPeerRef(HostRef hostRef)
     {
         HostInfo = HostId = hostRef.Id;
+        UseReferentialEquality = true;
         Initialize();
     }
 }

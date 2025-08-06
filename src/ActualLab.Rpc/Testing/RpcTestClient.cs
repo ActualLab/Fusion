@@ -39,15 +39,15 @@ public class RpcTestClient(
     public IReadOnlyDictionary<RpcPeerRef, RpcTestConnection> Connections => _connections;
 
     public RpcTestConnection CreateDefaultConnection()
-        => CreateConnection(RpcPeerRef.DefaultHostId, "server-default");
+        => CreateConnection(RpcPeerRef.DefaultHostId, RpcPeerRef.DefaultHostId);
 
     public RpcTestConnection CreateRandomConnection()
     {
-        var pairId = Interlocked.Increment(ref _lastPairId);
-        return CreateConnection($"client-{pairId}", $"server-{pairId}");
+        var pairId = Interlocked.Increment(ref _lastPairId).ToString("x8");
+        return CreateConnection(pairId, pairId);
     }
 
-    public RpcTestConnection CreateConnection(string clientId, string serverId)
+    public RpcTestConnection CreateConnection(string clientHostInfo, string serverHostInfo)
     {
         var serializationFormatResolver = Services.GetRequiredService<RpcSerializationFormatResolver>();
         var defaultClientFormatKey = serializationFormatResolver.DefaultClientFormatKey;
@@ -59,20 +59,20 @@ public class RpcTestClient(
             ? serializationFormat
             : "";
 
-        var clientPeerRef = RpcPeerRef.NewClient(clientId, clientSerializationFormat);
-        var serverPeerRef = RpcPeerRef.NewServer(serverId, serializationFormat);
+        var clientPeerRef = RpcPeerRef.NewClient(clientHostInfo, clientSerializationFormat);
+        var serverPeerRef = RpcPeerRef.NewServer(serverHostInfo, serializationFormat);
         return CreateConnection(clientPeerRef, serverPeerRef);
     }
 
     public RpcTestConnection CreateConnection(RpcPeerRef clientPeerRef, RpcPeerRef serverPeerRef)
     {
-        if (_connections.TryGetValue(clientPeerRef, out var peerState))
-            return peerState;
+        if (_connections.TryGetValue(clientPeerRef, out var connection))
+            return connection;
 
-        peerState = new RpcTestConnection(this, clientPeerRef, serverPeerRef);
-        _connections.TryAdd(clientPeerRef, peerState);
-        _connections.TryAdd(serverPeerRef, peerState);
-        return peerState;
+        connection = new RpcTestConnection(this, clientPeerRef, serverPeerRef);
+        _connections.TryAdd(clientPeerRef, connection);
+        _connections.TryAdd(serverPeerRef, connection);
+        return connection;
     }
 
     public override async Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
