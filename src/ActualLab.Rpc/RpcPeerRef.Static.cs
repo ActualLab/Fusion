@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
@@ -15,10 +16,14 @@ public partial class RpcPeerRef
 
     public const string DefaultData = "default";
 
-    public static RpcPeerRef Default { get; set; } = GetDefaultPeerRef();
-    public static RpcPeerRef Loopback { get; set; } = GetDefaultPeerRef(RpcPeerConnectionKind.Loopback, true);
-    public static RpcPeerRef Local { get; set; } = GetDefaultPeerRef(RpcPeerConnectionKind.Local, true);
-    public static RpcPeerRef None { get; set; } = GetDefaultPeerRef(RpcPeerConnectionKind.None, true);
+    [field: AllowNull, MaybeNull]
+    public static RpcPeerRef Default { get => field ??= GetDefaultPeerRef(); set; }
+    [field: AllowNull, MaybeNull]
+    public static RpcPeerRef Loopback { get => field ??= GetDefaultPeerRef(RpcPeerConnectionKind.Loopback, true); set; }
+    [field: AllowNull, MaybeNull]
+    public static RpcPeerRef Local { get => field ??= GetDefaultPeerRef(RpcPeerConnectionKind.Local, true); set; }
+    [field: AllowNull, MaybeNull]
+    public static RpcPeerRef None { get => field ??= GetDefaultPeerRef(RpcPeerConnectionKind.None, true); set; }
 
     public static Func<string, ParsedRpcPeerRef> Parser { get; set; } = ParsedRpcPeerRef.Parse;
 
@@ -36,6 +41,7 @@ public partial class RpcPeerRef
         => new(new ParsedRpcPeerRef() {
             IsServer = true,
             IsBackend = isBackend,
+            ConnectionKind = connectionKind,
             SerializationFormat = serializationFormat,
             Data = data,
         });
@@ -53,6 +59,7 @@ public partial class RpcPeerRef
         RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
         => new(new ParsedRpcPeerRef() {
             IsBackend = isBackend,
+            ConnectionKind = connectionKind,
             SerializationFormat = serializationFormat,
             Data = data,
         });
