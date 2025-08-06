@@ -1,16 +1,14 @@
 namespace ActualLab.Text;
 
+#pragma warning disable MA0021
+
 public static class StringExt
 {
     // GetXxxHashCode
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetOrdinalHashCode(this string source)
-#if !NETSTANDARD2_0
-        => StringComparer.Ordinal.GetHashCode(source);
-#else
-        => source.AsSpan().GetXxHash3();
-#endif
+        => source.GetHashCode();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong GetXxHash3L(this string source)

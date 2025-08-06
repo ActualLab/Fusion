@@ -1,42 +1,67 @@
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.Rpc.Infrastructure;
+using System.Diagnostics;
+using ActualLab.Rpc.Internal;
+using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Rpc;
 
-public partial class RpcPeerRef(Symbol id) : IEquatable<RpcPeerRef>, IHasId<Symbol>
+[DebuggerDisplay("{" + nameof(DebugValue) + "}")]
+public partial class RpcPeerRef
 {
-    // We want this class to be slim (until parsed), but equatable.
-    // That's why it has just two fields: Parsed and Id.
-    [field: AllowNull, MaybeNull]
-    protected ParsedRpcPeerRef Parsed => field ??= Parser.Invoke(Id.Value);
+    private string? _toStringCached;
+    private string DebugValue => IsInitialized ? ToString() : "<uninitialized>";
 
-    public Symbol Id { get; } = id;
-    public bool IsServer => Parsed.IsServer;
-    public bool IsBackend => Parsed.IsBackend;
-    public string SerializationFormat => Parsed.SerializationFormat;
-    public RpcPeerConnectionKind ConnectionKind => Parsed.ConnectionKind;
-    public VersionSet Versions => Parsed.Versions;
-    public string Data => Parsed.Data;
+    protected bool IsInitialized { get; set; }
+
+    public bool IsServer => this is RpcServerPeerRef;
+    public bool IsBackend { get; init; }
+    public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
+    public string SerializationFormat { get; init; } = "";
+    public string HostId { get; init; } = "";
+
+    // Properties that require initialization
+    public string Address {
+        get { ThrowIfUninitialized(); return field; }
+        set;
+    } = "";
+
+    public VersionSet Versions {
+        get { ThrowIfUninitialized(); return field; }
+        set;
+    } = VersionSet.Empty;
+
+    // Rerouting-related properties
     public virtual CancellationToken RerouteToken => default;
-
-    public bool CanBeRerouted {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => RerouteToken.CanBeCanceled;
-    }
-
-    public bool IsRerouted {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => RerouteToken.IsCancellationRequested;
-    }
-
-    public RpcPeerRef(ParsedRpcPeerRef parsed)
-        : this(parsed.Id)
-        => Parsed = parsed;
+    public bool CanBeRerouted => RerouteToken.CanBeCanceled;
+    public bool IsRerouted => RerouteToken.IsCancellationRequested;
 
     public override string ToString()
-        => IsRerouted
-            ? "<*>" + Id.Value
-            : Id.Value;
+    {
+        if (!IsRerouted)
+            return Address;
+
+        _toStringCached ??= "<*>" + Address;
+        return _toStringCached;
+    }
+
+    /// <summary>
+    /// This method must be called for any RpcPeerRef instance before using it.
+    /// </summary>
+    public RpcPeerRef Initialize()
+    {
+        IsInitialized = true; // Required to access Address and Versions properties
+        try {
+            if (Address.IsNullOrEmpty())
+                Address = RpcPeerRefAddress.Format(this);
+            if (Versions.IsEmpty)
+                Versions = RpcDefaults.GetVersions(IsBackend);
+        }
+        catch {
+            // If initialization fails, reset the state to uninitialized
+            IsInitialized = false;
+            throw;
+        }
+        return this;
+    }
 
     // WhenXxx
 
@@ -56,12 +81,11 @@ public partial class RpcPeerRef(Symbol id) : IEquatable<RpcPeerRef>, IHasId<Symb
         }
     }
 
-    // Equality - must rely on Id only
+    // Protected methods
 
-    public bool Equals(RpcPeerRef? other)
-        => ReferenceEquals(this, other) || (other is not null && Id.Equals(other.Id));
-    public override bool Equals(object? obj)
-        => ReferenceEquals(this, obj) || (obj is RpcPeerRef other && Id.Equals(other.Id));
-    public override int GetHashCode()
-        => Id.GetHashCode();
+    protected void ThrowIfUninitialized()
+    {
+        if (!IsInitialized)
+            throw Errors.NotInitialized();
+    }
 }

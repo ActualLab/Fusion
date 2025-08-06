@@ -5,7 +5,7 @@ using MessagePack;
 
 namespace ActualLab.Text;
 
-#pragma warning disable CA1721
+#pragma warning disable MA0001, MA0021, CA1307, CA1721
 
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(SymbolMessagePackFormatter))]
@@ -44,9 +44,7 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
             this = default;
         else {
             _value = value;
-#pragma warning disable MA0021, CA1307
-            _hashCode = value.GetOrdinalHashCode();
-#pragma warning restore MA0021, CA1307
+            _hashCode = value.GetHashCode();
         }
     }
 
@@ -83,11 +81,14 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(Symbol other)
         => _hashCode == other._hashCode
-           && (ReferenceEquals(Value, other.Value) || Value.AsSpan().SequenceEqual(other.Value.AsSpan()));
-    public override bool Equals(object? obj) => obj is Symbol other && Equals(other);
+            && (ReferenceEquals(Value, other.Value) || Value.Equals(other.Value));
+    public override bool Equals(object? obj)
+        => obj is Symbol other && Equals(other);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override int GetHashCode() => _hashCode;
-    public int CompareTo(Symbol other) => string.CompareOrdinal(Value, other.Value);
+    public override int GetHashCode()
+        => _hashCode;
+    public int CompareTo(Symbol other)
+        => string.CompareOrdinal(Value, other.Value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(Symbol left, Symbol right) => left.Equals(right);
@@ -109,7 +110,7 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
     private Symbol(SerializationInfo info, StreamingContext context)
     {
         _value = info.GetString(nameof(Value)) ?? "";
-        _hashCode = _value.Length == 0 ? 0 : _value.GetOrdinalHashCode();
+        _hashCode = _value.Length == 0 ? 0 : _value.GetHashCode();
     }
 #pragma warning restore CS8618
 

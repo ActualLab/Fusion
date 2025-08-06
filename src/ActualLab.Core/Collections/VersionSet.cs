@@ -21,6 +21,9 @@ public sealed partial record VersionSet(
     [field: AllowNull, MaybeNull]
     public string Value => field ??= Format();
 
+    // Computed properties
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    public bool IsEmpty => Items.Count == 0;
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public int Count => Items.Count;
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -136,7 +139,7 @@ public sealed partial record VersionSet(
 
     private string Format()
     {
-        if (Items.Count == 0)
+        if (IsEmpty)
             return "";
 
         using var formatter = ListFormat.CreateFormatter();

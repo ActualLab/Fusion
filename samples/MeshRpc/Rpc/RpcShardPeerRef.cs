@@ -10,14 +10,7 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
     private volatile CancellationTokenSource? _rerouteTokenSource;
 
     public ShardRef ShardRef { get; }
-    public string HostId { get; }
     public override CancellationToken RerouteToken => _rerouteTokenSource?.Token ?? CancellationToken.None;
-
-    public static string GetId(ShardRef shardRef)
-    {
-        var meshState = MeshState.State.Value;
-        return $"rpc://{shardRef}-v{meshState.Version}->{meshState.GetShardHost(shardRef)?.Id ?? "null"}";
-    }
 
     public static RpcShardPeerRef Get(ShardRef shardRef)
     {
@@ -36,11 +29,14 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
         }
     }
 
+    // Constructor is private to ensure all instances are created through the Get method
     private RpcShardPeerRef(ShardRef shardRef)
-        : base(GetId(shardRef))
     {
+        var meshState = MeshState.State.Value;
         ShardRef = shardRef;
-        HostId = Data.Split("->")[1];
+        HostId = meshState.GetShardHost(shardRef)?.Id ?? "null";
+        Address = $"rpc://{shardRef}-v{meshState.Version}->{HostId}";
+        Initialize();
     }
 
     public void TryStart(LazySlim<ShardRef, RpcShardPeerRef> lazy)
@@ -53,7 +49,7 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
             return;
 
         _ = Task.Run(async () => {
-            Console.WriteLine($"{Id}: created.".Pastel(ConsoleColor.Green));
+            Console.WriteLine($"{Address}: created.".Pastel(ConsoleColor.Green));
             var computed = MeshState.State.Computed;
             if (HostId == "null")
                 await computed.When(x => x.Hosts.Length > 0, CancellationToken.None).ConfigureAwait(false);
@@ -61,7 +57,7 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
                 await computed.When(x => !x.HostById.ContainsKey(HostId), CancellationToken.None).ConfigureAwait(false);
             Cache.TryRemove(ShardRef, lazy);
             await _rerouteTokenSource.CancelAsync();
-            Console.WriteLine($"{Id}: rerouted.".Pastel(ConsoleColor.Yellow));
+            Console.WriteLine($"{Address}: rerouted.".Pastel(ConsoleColor.Yellow));
         }, CancellationToken.None);
     }
 }

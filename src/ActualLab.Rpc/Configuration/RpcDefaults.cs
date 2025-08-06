@@ -55,4 +55,7 @@ public static class RpcDefaults
     static RpcDefaults()
         // This assignment has to run at last
         => Mode = OSInfo.IsAnyClient ? RpcMode.Client : RpcMode.Server;
+
+    public static VersionSet GetVersions(bool isBackend)
+        => isBackend ? BackendPeerVersions : ApiPeerVersions;
 }

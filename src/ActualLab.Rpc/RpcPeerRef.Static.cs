@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc;
 
@@ -25,7 +25,8 @@ public partial class RpcPeerRef
     [field: AllowNull, MaybeNull]
     public static RpcPeerRef None { get => field ??= GetDefaultPeerRef(RpcPeerConnectionKind.None, true); set; }
 
-    public static Func<string, ParsedRpcPeerRef> Parser { get; set; } = ParsedRpcPeerRef.Parse;
+    public static RpcPeerRef FromAddress(string address)
+        => RpcPeerRefAddress.Parse(address);
 
     public static RpcPeerRef NewServer(
         string data,
@@ -38,13 +39,12 @@ public partial class RpcPeerRef
         string serializationFormat,
         bool isBackend = false,
         RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
-        => new(new ParsedRpcPeerRef() {
-            IsServer = true,
+        => new RpcServerPeerRef() {
             IsBackend = isBackend,
             ConnectionKind = connectionKind,
             SerializationFormat = serializationFormat,
-            Data = data,
-        });
+            HostId = data,
+        }.Initialize();
 
     public static RpcPeerRef NewClient(
         string data,
@@ -57,12 +57,12 @@ public partial class RpcPeerRef
         string serializationFormat,
         bool isBackend = false,
         RpcPeerConnectionKind connectionKind = RpcPeerConnectionKind.Remote)
-        => new(new ParsedRpcPeerRef() {
+        => new RpcPeerRef() {
             IsBackend = isBackend,
             ConnectionKind = connectionKind,
             SerializationFormat = serializationFormat,
-            Data = data,
-        });
+            HostId = data,
+        }.Initialize();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static RpcPeerRef GetDefaultPeerRef(bool isBackend = false)

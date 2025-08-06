@@ -133,8 +133,6 @@ public static class Errors
         => new InvalidOperationException(
             "Got RpcRerouteException from remote peer, which should never happen.");
 
-    public static Exception InvalidRpcPeerRefIdFormat(string id)
-        => InvalidRpcPeerRefIdFormat<RpcPeerRef>(id);
-    public static Exception InvalidRpcPeerRefIdFormat<T>(string id)
-        => new ArgumentException($"Invalid {typeof(T).GetName()}.{nameof(RpcPeerRef.Id)} format: \"{id}\".", id);
+    public static Exception InvalidRpcPeerRefAddress(string id)
+        => new ArgumentException($"Invalid {nameof(RpcPeerRef)}.{nameof(RpcPeerRef.Address)}: \"{id}\".", id);
 }
