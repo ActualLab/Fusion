@@ -1,8 +1,6 @@
 namespace ActualLab.Rpc;
 
-public class RpcClientPeerRef : RpcPeerRef
+public class RpcClientPeerRef() : RpcPeerRef(false)
 {
-    public override bool IsServer => false;
-
-    // Equality of RpcClientPeerRef is reference-based
+    // The equality of RpcClientPeerRef is the same as for RpcPeerRef, i.e., reference-based
 }
