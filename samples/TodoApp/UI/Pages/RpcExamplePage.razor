@@ -140,8 +140,8 @@
     {
         var peer = Services.RpcHub().GetClientPeer(RpcPeerRef.Default);
         // RpcNoWait calls are simply dropped if there is no connection -
-        // that's why it makes sense to wait for connection before sending the first ping.
-        // Try disconnecting the
+        // that's why it makes sense to wait for a connection before sending the first ping.
+        // Try disconnecting the client and refresh the page to see how it works.
         await peer.WhenConnected(cancellationToken);
         while (true) {
             var message = $"Ping {Interlocked.Increment(ref _lastPingIndex)}";

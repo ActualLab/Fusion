@@ -252,11 +252,12 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
         // This test may fail due to other tests, so we retry it for up to 5s
         await TestExt.When(async () => {
+            var baseCancellationCount = await client.GetCancellationCount();
             var cts = new CancellationTokenSource(100);
             var result = await client.Delay(TimeSpan.FromMilliseconds(300), cts.Token).ResultAwait();
             result.Error.Should().BeAssignableTo<OperationCanceledException>();
             var cancellationCount = await client.GetCancellationCount();
-            cancellationCount.Should().Be(1);
+            (cancellationCount - baseCancellationCount).Should().Be(1);
         }, TimeSpan.FromSeconds(5));
 
         await AssertNoCalls(clientPeer, Out);

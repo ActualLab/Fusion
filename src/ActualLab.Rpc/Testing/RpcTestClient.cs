@@ -39,7 +39,7 @@ public class RpcTestClient(
     public IReadOnlyDictionary<RpcPeerRef, RpcTestConnection> Connections => _connections;
 
     public RpcTestConnection CreateDefaultConnection()
-        => CreateConnection(RpcPeerRef.Default.Key, "server-default");
+        => CreateConnection(RpcPeerRef.DefaultData, "server-default");
 
     public RpcTestConnection CreateRandomConnection()
     {
@@ -50,17 +50,17 @@ public class RpcTestClient(
     public RpcTestConnection CreateConnection(string clientId, string serverId)
     {
         var serializationFormatResolver = Services.GetRequiredService<RpcSerializationFormatResolver>();
-        var serializationFormatKey = Settings.SerializationFormatKey;
-        if (serializationFormatKey.IsNullOrEmpty())
-            serializationFormatKey = serializationFormatResolver.DefaultClientFormatKey;
+        var defaultClientFormatKey = serializationFormatResolver.DefaultClientFormatKey;
+        var serializationFormat = Settings.SerializationFormatKey;
+        if (serializationFormat.IsNullOrEmpty())
+            serializationFormat = defaultClientFormatKey;
+        var clientSerializationFormat =
+            !string.Equals(serializationFormat, defaultClientFormatKey, StringComparison.Ordinal)
+            ? serializationFormat
+            : "";
 
-        var clientPeerRef = string.Equals(
-            serializationFormatKey,
-            serializationFormatResolver.DefaultClientFormatKey,
-            StringComparison.Ordinal)
-            ? RpcPeerRef.NewClient(clientId)
-            : RpcPeerRef.NewClient(clientId, serializationFormatKey);
-        var serverPeerRef = RpcPeerRef.NewServer(serverId, serializationFormatKey);
+        var clientPeerRef = RpcPeerRef.NewClient(clientId, clientSerializationFormat);
+        var serverPeerRef = RpcPeerRef.NewServer(serverId, serializationFormat);
         return CreateConnection(clientPeerRef, serverPeerRef);
     }
 

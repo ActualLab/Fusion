@@ -3,14 +3,20 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
-public partial class RpcPeerRef(Symbol key) : IEquatable<RpcPeerRef>, IHasId<Symbol>
+public partial class RpcPeerRef(Symbol id) : IEquatable<RpcPeerRef>, IHasId<Symbol>
 {
+    // We want this class to be slim (until parsed), but equatable.
+    // That's why it has just two fields: Parsed and Id.
     [field: AllowNull, MaybeNull]
-    protected ParsedRpcPeerRef Parsed => field ??= Parse(Key.Value);
+    protected ParsedRpcPeerRef Parsed => field ??= Parser.Invoke(Id.Value);
 
-    Symbol IHasId<Symbol>.Id => Key;
-    public Symbol Key { get; } = key;
-
+    public Symbol Id { get; } = id;
+    public bool IsServer => Parsed.IsServer;
+    public bool IsBackend => Parsed.IsBackend;
+    public string SerializationFormat => Parsed.SerializationFormat;
+    public RpcPeerConnectionKind ConnectionKind => Parsed.ConnectionKind;
+    public VersionSet Versions => Parsed.Versions;
+    public string Data => Parsed.Data;
     public virtual CancellationToken RerouteToken => default;
 
     public bool CanBeRerouted {
@@ -23,23 +29,14 @@ public partial class RpcPeerRef(Symbol key) : IEquatable<RpcPeerRef>, IHasId<Sym
         get => RerouteToken.IsCancellationRequested;
     }
 
-    public bool IsServer => Parsed.IsServer;
-    public bool IsBackend => Parsed.IsBackend;
-    public string SerializationFormatKey => Parsed.SerializationFormatKey;
-    public RpcPeerConnectionKind ConnectionKind => Parsed.ConnectionKind;
-    public VersionSet Versions => Parsed.Versions;
-
     public RpcPeerRef(ParsedRpcPeerRef parsed)
-        : this(parsed.Key)
+        : this(parsed.Id)
         => Parsed = parsed;
 
     public override string ToString()
-    {
-        var result = Key.Value;
-        if (IsRerouted)
-            result = "[rerouted]" + result;
-        return result;
-    }
+        => IsRerouted
+            ? "<*>" + Id.Value
+            : Id.Value;
 
     // WhenXxx
 
@@ -62,7 +59,7 @@ public partial class RpcPeerRef(Symbol key) : IEquatable<RpcPeerRef>, IHasId<Sym
     // Equality
 
     public bool Equals(RpcPeerRef? other)
-        => ReferenceEquals(this, other) || (other is not null && Key.Equals(other.Key));
+        => ReferenceEquals(this, other) || (other is not null && Id.Equals(other.Id));
 
     public override bool Equals(object? obj)
     {
@@ -77,5 +74,5 @@ public partial class RpcPeerRef(Symbol key) : IEquatable<RpcPeerRef>, IHasId<Sym
     }
 
     public override int GetHashCode()
-        => Key.GetHashCode();
+        => Id.GetHashCode();
 }

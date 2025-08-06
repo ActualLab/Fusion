@@ -1,112 +1,112 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
+using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
 public record ParsedRpcPeerRef
 {
-    public const string LoopbackKeyPrefix = "loopback:";
-    public const string LocalKeyPrefix = "local:";
-    public const string NoneKeyPrefix = "none:";
-    public const string BackendKeyPrefix = "backend.";
-    public const string ServerKeyPrefix = "server.";
-    public const char SerializationFormatDelimiter = '.';
+    protected const char TagDelimiter = '.';
+    protected const string DataDelimiter = "://";
+    protected const string BackendTag = "backend";
+    protected const string ServerTag = "server";
 
     [field: AllowNull, MaybeNull]
-    public string Key {
-        get => field ??= FormatKey();
+    public string Id {
+        get => field ??= FormatId();
         init;
     }
 
     public bool IsServer { get; init; }
     public bool IsBackend { get; init; }
-    public string SerializationFormatKey { get; init; } = "";
     public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
+    public string SerializationFormat { get; init; } = "";
     public VersionSet Versions { get; init; } = VersionSet.Empty;
-    public string Unparsed { get; init; } = "";
+    public string Data { get; init; } = "";
 
-    public static ParsedRpcPeerRef Parse(string key)
+    public static ParsedRpcPeerRef Parse(string id)
     {
-        if (key.IsNullOrEmpty())
-            throw new ArgumentException("Key cannot be empty.", nameof(key));
+        if (id is null)
+            throw new ArgumentNullException(nameof(id));
 
-        var s = key;
-        var connectionKind = RpcPeerConnectionKind.Remote;
-        if (HasPrefix(ref s, LocalKeyPrefix))
-            connectionKind = RpcPeerConnectionKind.Local;
-        else if (HasPrefix(ref s, LoopbackKeyPrefix))
-            connectionKind = RpcPeerConnectionKind.Loopback;
-        else if (HasPrefix(ref s, NoneKeyPrefix))
-            connectionKind = RpcPeerConnectionKind.None;
+        var dataDelimiterIndex = id.IndexOf(DataDelimiter, StringComparison.Ordinal);
+        if (dataDelimiterIndex < 0)
+            throw Errors.InvalidRpcPeerRefIdFormat(id);
 
-        var isBackend = HasPrefix(ref s, BackendKeyPrefix);
-        var isServer = HasPrefix(ref s, BackendKeyPrefix);
-        var serializationFormatKey = GetDelimitedPrefix(ref s, SerializationFormatDelimiter) ?? "";
+        var data = id[(dataDelimiterIndex + DataDelimiter.Length)..];
+        var s = id.AsSpan(0, dataDelimiterIndex);
+
+        if (!RpcPeerConnectionKindExt.TryParse(GetNextTag(ref s), out var connectionKind))
+            throw Errors.InvalidRpcPeerRefIdFormat(id);
+
+        var isBackend = HasNextTag(ref s, BackendTag);
+        var isServer = HasNextTag(ref s, ServerTag);
+        var serializationFormat = GetNextTag(ref s).ToString();
         var versions = isBackend
             ? RpcDefaults.BackendPeerVersions
             : RpcDefaults.ApiPeerVersions;
 
         return new ParsedRpcPeerRef {
-            Key = key,
+            Id = id,
             IsServer = isServer,
             IsBackend = isBackend,
             ConnectionKind = connectionKind,
-            SerializationFormatKey = serializationFormatKey,
+            SerializationFormat = serializationFormat,
             Versions = versions,
-            Unparsed = s,
+            Data = data,
         };
     }
 
     // Protected methods
 
-    protected virtual string FormatKey()
+    protected virtual string FormatId()
     {
         var sb = StringBuilderExt.Acquire();
-        sb.Append(ConnectionKind switch {
-            RpcPeerConnectionKind.Remote => "",
-            RpcPeerConnectionKind.Loopback => LoopbackKeyPrefix,
-            RpcPeerConnectionKind.Local => LocalKeyPrefix,
-            RpcPeerConnectionKind.None => NoneKeyPrefix,
-            _ => throw new ArgumentOutOfRangeException(nameof(ConnectionKind), ConnectionKind, null),
-        });
-        if (IsBackend)
-            sb.Append(BackendKeyPrefix);
-        if (IsServer)
-            sb.Append(ServerKeyPrefix);
-        if (!SerializationFormatKey.IsNullOrEmpty())
-            sb.Append(SerializationFormatKey).Append(SerializationFormatDelimiter);
-        sb.Append(Unparsed);
+        AddTag(sb, ConnectionKind.Format());
+        AddTag(sb, IsBackend ? BackendTag : "");
+        AddTag(sb, IsServer ? ServerTag : "");
+        AddTag(sb, SerializationFormat);
+        sb.Append(DataDelimiter).Append(Data);
         return sb.ToStringAndRelease();
     }
 
     // Helpers
 
-    protected static bool HasPrefix(ref string s, string prefix) {
-        if (!s.StartsWith(prefix, StringComparison.Ordinal))
+    protected static void AddTag(StringBuilder sb, string tag)
+    {
+        if (tag.IsNullOrEmpty())
+            return;
+
+        if (sb.Length != 0)
+            sb.Append(TagDelimiter);
+        sb.Append(tag);
+    }
+
+    protected static ReadOnlySpan<char> GetNextTag(ref ReadOnlySpan<char> s)
+    {
+        if (s.IsEmpty)
+            return "";
+
+        var delimiterIndex = s.IndexOf(TagDelimiter);
+        if (delimiterIndex < 0)
+            return s;
+
+        var attribute = s[..delimiterIndex];
+        s = s[(delimiterIndex + 1)..];
+        return attribute;
+    }
+
+    protected static bool HasNextTag(ref ReadOnlySpan<char> s, string tag)
+    {
+        if (!s.StartsWith(tag, StringComparison.Ordinal))
             return false;
 
-        s = s[prefix.Length..];
+        var skipLength = tag.Length;
+        if (s.Length > skipLength && s[skipLength] == TagDelimiter)
+            skipLength++;
+
+        s = s[skipLength..];
         return true;
     }
 
-    protected static string? GetDelimitedPrefix(ref string s, char delimiter)
-    {
-        var delimiterIndex = s.IndexOf(delimiter);
-        if (delimiterIndex < 0)
-            return null;
-
-        var prefix = s[..delimiterIndex];
-        s = s[(delimiterIndex + 1)..];
-        return prefix;
-    }
-
-    protected static string? GetDelimitedSuffix(ref string s, char delimiter)
-    {
-        var delimiterIndex = s.LastIndexOf(delimiter);
-        if (delimiterIndex < 0)
-            return null;
-
-        var prefix = s[(delimiterIndex + 1)..];
-        s = s[..delimiterIndex];
-        return prefix;
-    }
 }

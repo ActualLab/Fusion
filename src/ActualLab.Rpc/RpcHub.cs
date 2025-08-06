@@ -50,13 +50,15 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public RpcLimits Limits { get; }
     public MomentClock Clock { get; }
 
-    // Most useful peers are cached
+    // The most useful peers are cached
     [field: AllowNull, MaybeNull]
     public RpcClientPeer DefaultPeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.Default);
     [field: AllowNull, MaybeNull]
     public RpcClientPeer LoopbackPeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.Loopback);
     [field: AllowNull, MaybeNull]
     public RpcClientPeer LocalPeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.Local);
+    [field: AllowNull, MaybeNull]
+    public RpcClientPeer NonePeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.None);
 
     public RpcHub(IServiceProvider services)
     {

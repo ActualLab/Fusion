@@ -49,7 +49,7 @@ public sealed record RpcSerializationFormatResolver(
         => this.Get(isServer ? DefaultServerFormatKey : DefaultClientFormatKey);
 
     public RpcSerializationFormat Get(RpcPeerRef peerRef)
-        => Get(peerRef.SerializationFormatKey, peerRef.IsServer);
+        => Get(peerRef.SerializationFormat, peerRef.IsServer);
 
     public RpcSerializationFormat Get(string key, bool isServer)
     {
