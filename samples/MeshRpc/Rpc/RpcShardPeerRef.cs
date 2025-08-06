@@ -40,7 +40,7 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
         : base(GetId(shardRef))
     {
         ShardRef = shardRef;
-        HostId = Parsed.Data.Split(" -> ")[1];
+        HostId = Data.Split("->")[1];
     }
 
     public void TryStart(LazySlim<ShardRef, RpcShardPeerRef> lazy)

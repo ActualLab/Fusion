@@ -84,16 +84,17 @@ public record ParsedRpcPeerRef
 
     protected static ReadOnlySpan<char> GetNextTag(ref ReadOnlySpan<char> s)
     {
-        if (s.IsEmpty)
-            return "";
-
         var delimiterIndex = s.IndexOf(TagDelimiter);
-        if (delimiterIndex < 0)
-            return s;
-
-        var attribute = s[..delimiterIndex];
-        s = s[(delimiterIndex + 1)..];
-        return attribute;
+        ReadOnlySpan<char> tag;
+        if (delimiterIndex < 0) {
+            tag = s;
+            s = ReadOnlySpan<char>.Empty;
+        }
+        else {
+            tag = s[..delimiterIndex];
+            s = s[(delimiterIndex + 1)..];
+        }
+        return tag;
     }
 
     protected static bool HasNextTag(ref ReadOnlySpan<char> s, string tag)
