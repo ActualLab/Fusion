@@ -5,12 +5,12 @@ using Errors = ActualLab.Internal.Errors;
 namespace ActualLab.Rpc;
 
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
-public partial class RpcPeerRef(bool isServer = false) : IEquatable<RpcPeerRef>
+public partial class RpcPeerRef : IEquatable<RpcPeerRef>
 {
     private string? _toStringCached;
     private string DebugValue => IsInitialized ? ToString() : "<uninitialized>";
 
-    public bool IsServer { get; } = isServer;
+    public bool IsServer { get; init; }
     public bool IsBackend { get; init; }
     public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
     public string SerializationFormat { get; init; } = "";
