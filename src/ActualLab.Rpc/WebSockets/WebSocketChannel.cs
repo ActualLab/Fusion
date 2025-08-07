@@ -24,12 +24,14 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public RpcFrameDelayerFactory? FrameDelayerFactory { get; init; }
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public IByteSerializer<T> Serializer { get; init; } = ActualLab.Serialization.ByteSerializer.Default.ToTyped<T>();
-        public ChannelOptions ReadChannelOptions { get; init; } = new UnboundedChannelOptions() {
+        public ChannelOptions ReadChannelOptions { get; init; } = new BoundedChannelOptions(256) {
+            FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
             SingleWriter = true,
             AllowSynchronousContinuations = true,
         };
-        public ChannelOptions WriteChannelOptions { get; init; } = new UnboundedChannelOptions() {
+        public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(256) {
+            FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
             SingleWriter = false,
             AllowSynchronousContinuations = true,
