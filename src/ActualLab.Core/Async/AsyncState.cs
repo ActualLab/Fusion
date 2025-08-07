@@ -56,7 +56,7 @@ public sealed class AsyncState<T>(T value)
     public AsyncState<T> LastNonFinal {
         get {
             var current = this;
-            while (current._nextSource.Task is { IsCompletedSuccessfully: true } nextTask)
+            while (current._nextSource.Task is { } nextTask && nextTask.IsCompletedSuccessfully())
                 current = nextTask.Result;
             return current;
         }
