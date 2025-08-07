@@ -40,7 +40,7 @@ public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
 
     public override void Set(RpcCacheKey key, RpcCacheValue value)
     {
-        var buffer = ArrayPoolBuffer<byte>.NewOrReset(ref _writeBuffer, 4096, 65536, false);
+        var buffer = ArrayPoolBuffer<byte>.NewOrRenew(ref _writeBuffer, 4096, 65536, false);
         MemoryPackSerializer.Serialize(buffer, value);
         var sValue = Convert.ToBase64String(buffer.WrittenSpan);
         _storage.SetItemAsString(GetStringKey(key), sValue);

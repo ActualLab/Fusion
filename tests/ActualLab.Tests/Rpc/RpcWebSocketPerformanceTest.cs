@@ -36,6 +36,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     [InlineData(1, 1, 300)]
     [InlineData(1, 3, 100)]
     [InlineData(1, 3, 1_000)]
+    [InlineData(1, 3, 10_000)]
     public async Task GetBytesTest(int passCount, int threadCount, int itemCount)
     {
         Out.WriteLine($"Thread count: {threadCount}");
@@ -62,6 +63,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     [InlineData(1, 1, 300)]
     [InlineData(1, 3, 100)]
     [InlineData(1, 3, 1_000)]
+    [InlineData(1, 3, 10_000)]
     public async Task GetMemoryTest(int passCount, int threadCount, int itemCount)
     {
         Out.WriteLine($"Thread count: {threadCount}");

@@ -16,7 +16,7 @@ public class RpcByteMessageSerializer(RpcPeer peer)
         public static int MaxInefficiencyFactor { get; set; } = 4;
     }
 
-    // Settings - they affect only on performance (i.e. wire format won't change if you change them)
+    // Settings - they affect only performance (i.e., a wire format won't change if you change them)
     public bool AllowProjection { get; init; } = Defaults.AllowProjection;
     public int MinProjectionSize { get; init; } = Defaults.MinProjectionSize;
     public int MaxInefficiencyFactor { get; init; } = Defaults.MaxInefficiencyFactor;

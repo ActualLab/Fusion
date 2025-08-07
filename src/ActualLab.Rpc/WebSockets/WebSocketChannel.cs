@@ -15,22 +15,22 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         public static readonly Options Default = new();
 
-        public int WriteFrameSize { get; init; } = 16_000; // The min. MTU is 1500, we don't want to buffer way more
-        public int MinWriteBufferSize { get; init; } = 32_768; // Rented ~just once, so it can be large
-        public int MinReadBufferSize { get; init; } = 32_768; // Rented ~just once, so it can be large
-        public int RetainedBufferSize { get; init; } = 65_536; // Read buffer is released when it hits this size
-        public int BufferResetPeriod { get; init; } = 64;
+        public int WriteFrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU) minus some reserve
+        public int MinWriteBufferSize { get; init; } = 24_000; // Rented ~just once, so it can be large
+        public int MinReadBufferSize { get; init; } = 24_000; // Rented ~just once, so it can be large
+        public int RetainedBufferSize { get; init; } = 120_000; // Read buffer is released when it hits this size
+        public int BufferRenewPeriod { get; init; } = 100; // Per flush/read cycle
         public int MaxItemSize { get; init; } = 130_000_000; // 130 MB;
         public RpcFrameDelayerFactory? FrameDelayerFactory { get; init; }
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public IByteSerializer<T> Serializer { get; init; } = ActualLab.Serialization.ByteSerializer.Default.ToTyped<T>();
-        public ChannelOptions ReadChannelOptions { get; init; } = new BoundedChannelOptions(256) {
+        public ChannelOptions ReadChannelOptions { get; init; } = new BoundedChannelOptions(240) {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
             SingleWriter = true,
             AllowSynchronousContinuations = true,
         };
-        public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(256) {
+        public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(240) {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
             SingleWriter = false,
@@ -47,7 +47,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private readonly ArrayPoolBuffer<byte> _writeBuffer;
     private readonly int _writeFrameSize;
     private readonly int _retainedBufferSize;
-    private readonly int _bufferResetPeriod;
+    private readonly int _bufferRenewPeriod;
     private readonly int _maxItemSize;
     private readonly MeterSet _meters = StaticMeters;
     private int _readBufferResetCounter;
@@ -102,7 +102,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         if (_writeFrameSize <= 0)
             throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.WriteFrameSize)} must be positive.");
         _retainedBufferSize = settings.RetainedBufferSize;
-        _bufferResetPeriod = settings.BufferResetPeriod;
+        _bufferRenewPeriod = settings.BufferRenewPeriod;
         _maxItemSize = settings.MaxItemSize;
         _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, false);
 
@@ -315,8 +315,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
             _meters.OutgoingFrameSizeHistogram.Record(part.Length);
         }
 
-        if (MustReset(ref _writeBufferResetCounter))
-            _writeBuffer.Reset(Settings.MinWriteBufferSize, _retainedBufferSize);
+        if (MustRenewBuffer(ref _writeBufferResetCounter))
+            _writeBuffer.Renew(Settings.MinWriteBufferSize, _retainedBufferSize);
         else
             _writeBuffer.Reset();
     }
@@ -353,8 +353,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
                         yield return value;
                 }
 
-                if (MustReset(ref _readBufferResetCounter))
-                    readBuffer.Reset(minReadBufferSize, _retainedBufferSize);
+                if (MustRenewBuffer(ref _readBufferResetCounter))
+                    readBuffer.Renew(minReadBufferSize, _retainedBufferSize);
                 else
                     readBuffer.Reset();
             }
@@ -395,8 +395,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
 
                 if (gotAnyProjection)
                     readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize, false);
-                else if (MustReset(ref _readBufferResetCounter))
-                    readBuffer.Reset(minReadBufferSize, _retainedBufferSize);
+                else if (MustRenewBuffer(ref _readBufferResetCounter))
+                    readBuffer.Renew(minReadBufferSize, _retainedBufferSize);
                 else
                     readBuffer.Reset();
             }
@@ -566,9 +566,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool MustReset(ref int counter)
+    private bool MustRenewBuffer(ref int counter)
     {
-        if (++counter < _bufferResetPeriod)
+        if (++counter < _bufferRenewPeriod)
             return false;
 
         counter = 0;

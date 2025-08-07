@@ -64,24 +64,24 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArrayPoolBuffer<T> NewOrReset(
+    public static ArrayPoolBuffer<T> NewOrRenew(
         ref ArrayPoolBuffer<T>? buffer, int minCapacity, int maxCapacity)
     {
         if (buffer is null)
             return buffer = new ArrayPoolBuffer<T>(minCapacity);
 
-        buffer.Reset(minCapacity, maxCapacity);
+        buffer.Renew(minCapacity, maxCapacity);
         return buffer;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ArrayPoolBuffer<T> NewOrReset(
+    public static ArrayPoolBuffer<T> NewOrRenew(
         ref ArrayPoolBuffer<T>? buffer, int minCapacity, int maxCapacity, bool mustClear)
     {
         if (buffer is null)
             return buffer = new ArrayPoolBuffer<T>(minCapacity, mustClear);
 
-        buffer.Reset(minCapacity, maxCapacity);
+        buffer.Renew(minCapacity, maxCapacity);
         return buffer;
     }
 
@@ -161,13 +161,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     public void Reset()
         => _position = 0;
 
-    public void Reset(int capacity)
-    {
-        _position = 0;
-        ReplaceBuffer(capacity);
-    }
-
-    public void Reset(int capacity, int maxCapacity)
+    public void Renew(int capacity, int maxCapacity)
     {
         _position = 0;
         if (_array.Length > maxCapacity)

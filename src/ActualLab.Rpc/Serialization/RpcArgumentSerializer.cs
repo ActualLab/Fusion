@@ -21,18 +21,17 @@ public abstract class RpcArgumentSerializer(bool forcePolymorphism)
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected static ArrayPoolBuffer<byte> GetWriteBuffer(int sizeHint)
-        => sizeHint >= CopyThreshold
-            ? new ArrayPoolBuffer<byte>(NoPool, 256 + sizeHint, false)
-            : ArrayPoolBuffer<byte>.NewOrReset(ref _writeBuffer, WriteBufferCapacity, WriteBufferReplaceCapacity,
-                false);
+        => sizeHint > CopyThreshold
+            ? new ArrayPoolBuffer<byte>(NoPool, 240 + sizeHint, false)
+            : ArrayPoolBuffer<byte>.NewOrRenew(ref _writeBuffer, WriteBufferCapacity, WriteBufferReplaceCapacity, false);
 
     protected static ReadOnlyMemory<byte> GetWriteBufferMemory(ArrayPoolBuffer<byte> buffer)
     {
         var memory = buffer.WrittenMemory;
-        if (ReferenceEquals(buffer.Pool, NoPool))
+        if (!ReferenceEquals(buffer, _writeBuffer))
             return memory; // This buffer isn't pooled, so it's safe to return its memory directly
 
-        if (memory.Length < CopyThreshold)
+        if (memory.Length <= CopyThreshold)
             return memory.ToArray();
 
         _writeBuffer = null;
