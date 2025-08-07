@@ -32,11 +32,14 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         AssertEqual(user.PassThroughAllSerializers(Out), user);
     }
 
-    [Fact]
-    public void OldToNewUserSerialization()
+    [Fact(Skip =
+        "Must be executed manually: MemoryPack caches formatters, "
+        + "so StringAsSymbolMemoryPackFormatterAttribute.Formatter is accessed just once.")]
+    public void OldAndNewUserSerializationCompatibility()
     {
         StringAsSymbolMemoryPackFormatterAttribute.IsEnabled = true;
         try {
+            // Old to new
             var oldUser = new OldUser("b", "bob");
             var newUser = oldUser.AssertPassesThroughMemoryPackSerializer<OldUser, User>(AssertEqual, Out);
             newUser.Claims.Count.Should().Be(0);
@@ -50,19 +53,10 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             newUser = oldUser.AssertPassesThroughMemoryPackSerializer<OldUser, User>(AssertEqual, Out);
             newUser.Claims.Count.Should().Be(2);
             newUser.Identities.Count.Should().Be(2);
-        }
-        finally {
-            StringAsSymbolMemoryPackFormatterAttribute.IsEnabled = false;
-        }
-    }
 
-    [Fact]
-    public void NewToOldUserSerialization()
-    {
-        StringAsSymbolMemoryPackFormatterAttribute.IsEnabled = true;
-        try {
-            var newUser = new User("b", "bob");
-            var oldUser = newUser.AssertPassesThroughMemoryPackSerializer<User, OldUser>(AssertEqual, Out);
+            // New to old
+            newUser = new User("b", "bob");
+            oldUser = newUser.AssertPassesThroughMemoryPackSerializer<User, OldUser>(AssertEqual, Out);
             oldUser.Claims.Count.Should().Be(0);
             oldUser.Identities.Count.Should().Be(0);
 
