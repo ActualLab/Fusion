@@ -147,7 +147,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         var connectionState = ConnectionState;
         while (true) {
             try {
-                connectionState = await connectionState.WhenConnected(cancellationToken).ConfigureAwait(false);
+                connectionState = await connectionState.Last.WhenConnected(cancellationToken).ConfigureAwait(false);
                 var vConnectionState = connectionState.Value;
                 if (vConnectionState.Handshake is not { } handshake)
                     continue;
@@ -197,10 +197,13 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
+    public Task Disconnect(CancellationToken cancellationToken = default)
+        => Disconnect(null, null, cancellationToken);
+    public Task Disconnect(Exception? error, CancellationToken cancellationToken = default)
+        => Disconnect(error, null, cancellationToken);
     public Task Disconnect(
-        bool abortReader = false,
-        Exception? error = null,
-        AsyncState<RpcPeerConnectionState>? expectedState = null)
+        Exception? error, AsyncState<RpcPeerConnectionState>? expectedState,
+        CancellationToken cancellationToken = default)
     {
         AsyncState<RpcPeerConnectionState> connectionState;
         CancellationTokenSource? readerTokenSource;
@@ -209,7 +212,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             // We want to make sure ConnectionState doesn't change while this method runs
             // and no one else cancels ReaderTokenSource
             connectionState = _connectionState;
-            if (expectedState is not null && expectedState != connectionState)
+            if (expectedState is not null && !ReferenceEquals(expectedState, connectionState))
                 return Task.CompletedTask;
             if (connectionState.IsFinal || !connectionState.Value.IsConnected())
                 return Task.CompletedTask;
@@ -219,10 +222,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             _sender = null;
         }
         sender?.TryComplete(error);
-        if (abortReader)
-            readerTokenSource.CancelAndDisposeSilently();
-        // ReSharper disable once MethodSupportsCancellation
-        return connectionState.WhenNext();
+        readerTokenSource.CancelAndDisposeSilently();
+        // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+        return connectionState.WhenDisconnected(cancellationToken);
     }
 
     public void ResetTryIndex()
@@ -265,6 +267,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionState.Value.IsConnected())
                         connectionState = SetConnectionState(connectionState.Value.NextDisconnected(), connectionState).RequireNonFinal();
 
+                    // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                     var connection = await GetConnection(connectionState.Value, cancellationToken).ConfigureAwait(false);
                     var channel = connection.Channel;
                     var sender = channel.Writer;

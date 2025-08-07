@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Channels;
+using ActualLab.Internal;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Testing;
@@ -28,7 +29,7 @@ public class RpcTestConnection
         protected set {
             lock (_lock) {
                 if (_channels.IsFinal)
-                    return;
+                    throw Errors.AlreadyDisposed();
                 if (ReferenceEquals(_channels.Value, value))
                     return;
 
@@ -54,73 +55,67 @@ public class RpcTestConnection
 
     public async Task Connect(ChannelPair<RpcMessage> channels, CancellationToken cancellationToken = default)
     {
+        await Disconnect(cancellationToken).ConfigureAwait(false);
         var clientConnectionState = ClientPeer.ConnectionState;
         var serverConnectionState = ServerPeer.ConnectionState;
-        Disconnect();
-        await clientConnectionState.WhenDisconnected(cancellationToken).ConfigureAwait(false);
-        await serverConnectionState.WhenDisconnected(cancellationToken).ConfigureAwait(false);
-
-        clientConnectionState = ClientPeer.ConnectionState;
-        serverConnectionState = ServerPeer.ConnectionState;
         Channels = channels;
         await clientConnectionState.WhenConnected(cancellationToken).ConfigureAwait(false);
         await serverConnectionState.WhenConnected(cancellationToken).ConfigureAwait(false);
     }
 
-    public void Disconnect(Exception? error = null)
+    public Task Disconnect(CancellationToken cancellationToken = default)
+        => Disconnect(null, cancellationToken);
+    public async Task Disconnect(Exception? error, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         Channels = null;
-        _ = ClientPeer.Disconnect(true, error);
-        _ = ServerPeer.Disconnect(true, error);
+        var disconnectTask1 = ClientPeer.Disconnect(error, cancellationToken);
+        var disconnectTask2 = ServerPeer.Disconnect(error, cancellationToken);
+        await Task.WhenAll(disconnectTask1, disconnectTask2).ConfigureAwait(false);
     }
 
     public Task Reconnect(CancellationToken cancellationToken = default)
         => Reconnect(null, cancellationToken);
     public async Task Reconnect(TimeSpan? connectDelay, CancellationToken cancellationToken = default)
     {
-        Disconnect();
+        await Disconnect(cancellationToken).ConfigureAwait(false);
         var delay = (connectDelay ?? TimeSpan.FromMilliseconds(50)).Positive();
         if (delay > TimeSpan.Zero)
             await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
         await Connect(cancellationToken).ConfigureAwait(false);
     }
 
-    public void Terminate()
+    public Task Terminate(CancellationToken cancellationToken)
     {
-        lock (_lock) {
-            if (_channels.IsFinal)
-                return;
-
-            if (!ReferenceEquals(_channels.Value, null))
-                _channels = _channels.SetNext(null);
-            _channels.SetFinal(RpcReconnectFailedException.DisconnectedExplicitly());
-        }
-        _ = ClientPeer.Disconnect();
-        _ = ServerPeer.Disconnect();
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+            _channels.TrySetFinal(RpcReconnectFailedException.DisconnectedExplicitly());
+        var disconnectTask1 = ClientPeer.Disconnect(cancellationToken);
+        var disconnectTask2 = ServerPeer.Disconnect(cancellationToken);
+        return Task.WhenAll(disconnectTask1, disconnectTask2);
     }
 
     public async Task<Channel<RpcMessage>> PullClientChannel(CancellationToken cancellationToken)
     {
         // ReSharper disable once InconsistentlySynchronizedField
-        var channels = await WhenConnected(cancellationToken).ConfigureAwait(false);
+        var channels = await WhenChannelsReady(cancellationToken).ConfigureAwait(false);
         var serverConnection = new RpcConnection(channels.Channel2);
-        ServerPeer.SetConnection(serverConnection);
+        await ServerPeer.SetConnection(serverConnection, cancellationToken).ConfigureAwait(false);
         return channels.Channel1;
     }
 
     // Protected methods
 
-    protected async ValueTask<ChannelPair<RpcMessage>> WhenConnected(CancellationToken cancellationToken)
+    protected async ValueTask<ChannelPair<RpcMessage>> WhenChannelsReady(CancellationToken cancellationToken)
     {
         // ReSharper disable once InconsistentlySynchronizedField
         await foreach (var channels in _channels.Last.Changes(cancellationToken).ConfigureAwait(false)) {
             if (channels is null)
-                continue;
+                continue; // Disconnected
             if (channels.Channel1.Reader.Completion.IsCompleted)
-                continue;
+                continue; // Channel1 is closed
             if (channels.Channel2.Reader.Completion.IsCompleted)
-                continue;
-
+                continue;  // Channel2 is closed
             return channels;
         }
 

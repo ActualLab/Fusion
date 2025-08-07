@@ -14,14 +14,14 @@ public class RpcTestClient(
         public static Options Default { get; set; } = new();
 
         public string SerializationFormatKey { get; init; } = "";
-        public BoundedChannelOptions ChannelOptions { get; init; } = WebSocketChannel<RpcMessage>.Options.Default.WriteChannelOptions;
+        public ChannelOptions ChannelOptions { get; init; } = WebSocketChannel<RpcMessage>.Options.Default.WriteChannelOptions;
         public Func<RpcTestClient, ChannelPair<RpcMessage>> ConnectionFactory { get; init; } = DefaultConnectionFactory;
 
         public static ChannelPair<RpcMessage> DefaultConnectionFactory(RpcTestClient testClient)
         {
             var settings = testClient.Settings;
-            var channel1 = Channel.CreateBounded<RpcMessage>(settings.ChannelOptions);
-            var channel2 = Channel.CreateBounded<RpcMessage>(settings.ChannelOptions);
+            var channel1 = ChannelExt.Create<RpcMessage>(settings.ChannelOptions);
+            var channel2 = ChannelExt.Create<RpcMessage>(settings.ChannelOptions);
             var connection = ChannelPair.CreateTwisted(channel1, channel2);
             return connection;
         }

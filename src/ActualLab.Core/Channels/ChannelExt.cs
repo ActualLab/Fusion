@@ -2,6 +2,19 @@ namespace ActualLab.Channels;
 
 public static partial class ChannelExt
 {
+    public static Channel<T> Create<T>(ChannelOptions options)
+        => options switch {
+            BoundedChannelOptions boundedChannelOptions
+                => Channel.CreateBounded<T>(boundedChannelOptions),
+            UnboundedChannelOptions unboundedChannelOptions
+                => Channel.CreateUnbounded<T>(unboundedChannelOptions),
+#if NET9_0_OR_GREATER
+            UnboundedPrioritizedChannelOptions<T> unboundedPrioritizedChannelOptions
+                => Channel.CreateUnboundedPrioritized(unboundedPrioritizedChannelOptions),
+#endif
+            _ => throw new ArgumentOutOfRangeException(nameof(options))
+        };
+
     public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(
         this ChannelReader<T> channel,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)

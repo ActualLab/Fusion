@@ -22,7 +22,7 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
 
     public abstract Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken);
 
-    public virtual Task<RpcConnection> ConnectLoopback(RpcClientPeer clientPeer, CancellationToken cancellationToken)
+    public virtual async Task<RpcConnection> ConnectLoopback(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
         var serverPeerRef = RpcPeerRef.NewServer(
             clientPeer.ClientId,
@@ -37,7 +37,7 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
         var serverConnection = new RpcConnection(channelPair.Channel2, PropertyBag.Empty.KeylessSet((RpcPeer)serverPeer)) {
             IsLocal = true,
         };
-        serverPeer.SetConnection(serverConnection);
-        return Task.FromResult(clientConnection);
+        await serverPeer.SetConnection(serverConnection, cancellationToken).ConfigureAwait(false);
+        return clientConnection;
     }
 }

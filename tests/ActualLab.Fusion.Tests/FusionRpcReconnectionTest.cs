@@ -159,10 +159,11 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         }
     }
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 60_000)]
     public async Task ReconnectionTest()
     {
-        var workerCount = HardwareInfo.ProcessorCount / 4;
+        UseLogging = false;
+        var workerCount = HardwareInfo.ProcessorCount / 2;
         var testDuration = TimeSpan.FromSeconds(10);
         if (TestRunnerInfo.IsBuildAgent()) {
             workerCount = 1;
@@ -171,27 +172,30 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var endAt = CpuTimestamp.Now + testDuration;
         var tasks = Enumerable.Range(0, workerCount)
-            .Select(i => Task.Run(() => Worker(i, endAt)))
+            .Select(i => Task.Run(() => Worker(i.ToString(), endAt)))
             .ToArray();
         await Task.Delay(testDuration);
-        var counts = (await Task.WhenAll(tasks)).Aggregate(new long[3], (x, y) => [x[0] + y[0], x[1] + y[1], x[2] + y[2]]);
+        var counts = (await WhenAll(tasks, Out)).Aggregate(new long[3], (x, y) => [x[0] + y[0], x[1] + y[1], x[2] + y[2]]);
         Out.WriteLine($"Call counts: {counts[0]} ok, {counts[1]} timeouts, {counts[2]} cancellations");
         counts[0].Should().BeGreaterThan(0);
     }
 
-    private async Task<long[]> Worker(int workerIndex, CpuTimestamp endAt)
+    private async Task<long[]> Worker(string workerId, CpuTimestamp endAt)
     {
-        Out.WriteLine($"Worker #{workerIndex}: started");
+        void Write(string message)
+            => Out.WriteLine($"Worker #{workerId}: {message}");
+
+        Write("started");
+        var (successCount, timeoutCount, cancellationCount) = (0L, 0L, 0L);
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
         var client = services.GetRequiredService<IReconnectTester>();
         await client.Delay(1, 1); // Warm-up
 
         var disruptorCts = new CancellationTokenSource();
-        var disruptorTask = Task.Run(() => ConnectionDisruptor(disruptorCts.Token), CancellationToken.None);
+        var disruptorTask = ConnectionDisruptor(workerId, connection, disruptorCts.Token);
         try {
             var rnd = new Random();
-            var (successCount, timeoutCount, cancellationCount) = (0L, 0L, 0L);
             while (CpuTimestamp.Now < endAt) {
                 var delay = rnd.Next(10, 100);
                 var invDelay = rnd.Next(10, 100);
@@ -209,9 +213,9 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
                 }
                 else {
                     // Cancellation case
-                    var cts = new CancellationTokenSource(maxWaitTime);
+                    var timeoutCts = new CancellationTokenSource(maxWaitTime);
                     try {
-                        var result = await client.Delay(delay, invDelay, cts.Token);
+                        var result = await client.Delay(delay, invDelay, timeoutCts.Token);
                         result.Should().Be((delay, invDelay));
                         successCount++;
                     }
@@ -219,36 +223,21 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
                         cancellationCount++;
                     }
                     finally {
-                        cts.CancelAndDisposeSilently();
+                        timeoutCts.CancelAndDisposeSilently();
                     }
                 }
             }
-
-            Out.WriteLine($"Worker #{workerIndex}: {successCount} ok, {timeoutCount} timeouts, {cancellationCount} cancellations");
-            disruptorCts.CancelAndDisposeSilently();
-            // await disruptorTask.SuppressCancellationAwait();
-
-            // await connection.Connect();
-            // await Delay(1); // Enough for calls & invalidations to complete
-            // await AssertNoCalls(connection.ClientPeer, Out);
-            // await AssertNoCalls(connection.ServerPeer, Out);
-            Out.WriteLine($"Worker #{workerIndex}: stopped");
-            return [successCount, timeoutCount, cancellationCount];
         }
         finally {
+            Write("stopping ConnectionDisruptor");
             disruptorCts.CancelAndDisposeSilently();
+            await disruptorTask;
         }
 
-        async Task ConnectionDisruptor(CancellationToken cancellationToken)
-        {
-            var rnd1 = new Random();
-            while (CpuTimestamp.Now < endAt) {
-                await Task.Delay(rnd1.Next(50, 150), cancellationToken);
-                connection.Disconnect();
-                await Task.Delay(rnd1.Next(10, 40), cancellationToken);
-                await connection.Connect(cancellationToken).WaitAsync(cancellationToken);
-            }
-        }
+        Write($"{successCount} ok, {timeoutCount} timeouts, {cancellationCount} cancellations");
+        // await AssertNoCalls(connection.ClientPeer, Out);
+        // await AssertNoCalls(connection.ServerPeer, Out);
+        return [successCount, timeoutCount, cancellationCount];
     }
 
     // Protected methods

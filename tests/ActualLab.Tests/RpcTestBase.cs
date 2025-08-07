@@ -23,13 +23,14 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
     private IServiceProvider? _services;
     private IServiceProvider? _clientServices;
 
-    public RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
-    public RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
-    public string SerializationFormat { get; set; } = RpcSerializationFormatResolver.Default.DefaultClientFormatKey;
-    public bool ExposeBackend { get; init; } = false;
-    public bool UseTestClock { get; init; }
-    public bool UseLogging { get; init; } = true;
-    public bool IsLogEnabled { get; init; } = true;
+    protected RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
+    protected RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
+    protected string SerializationFormat { get; set; } = RpcSerializationFormatResolver.Default.DefaultClientFormatKey;
+    protected bool ExposeBackend { get; init; } = false;
+    protected bool UseTestClock { get; init; }
+    protected bool UseLogging { get; init; } = true;
+    protected bool UseDebugLog { get; set; } = true;
+    protected bool IsLogEnabled { get; init; } = true;
 
     public IServiceProvider Services => _services ??= CreateServices();
     public IServiceProvider ClientServices => _clientServices ??= CreateServices(true);
@@ -112,7 +113,8 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
                 logging.ClearProviders();
                 logging.SetMinimumLevel(LogLevel.Debug);
                 logging.AddFilter(LogFilter);
-                logging.AddDebug();
+                if (UseDebugLog)
+                    logging.AddDebug();
                 // XUnit logging requires weird setup b/c otherwise it filters out
                 // everything below LogLevel.Information
                 logging.AddProvider(

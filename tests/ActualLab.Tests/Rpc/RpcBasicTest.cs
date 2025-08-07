@@ -46,15 +46,13 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     public async Task WhenConnectedTest2()
     {
         await using var services = CreateServices();
-        var testConnection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
-        var peer = testConnection.ClientPeer;
+        var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
+        var peer = connection.ClientPeer;
 
         await peer.WhenConnected();
         peer.WhenConnected().IsCompletedSuccessfully().Should().BeTrue();
 
-        testConnection.Disconnect();
-        await peer.ConnectionState.WhenDisconnected();
-
+        await connection.Disconnect();
         var whenConnectedResult = await peer.WhenConnected(TimeSpan.FromSeconds(1)).ResultAwait();
         whenConnectedResult.Error.Should().BeOfType<TimeoutException>();
 
@@ -150,8 +148,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
             () => client.OnHello(null!)); // That's due to RpcCallValidator
 #endif
 
-        connection.Disconnect();
-        await clientPeer.ConnectionState.WhenDisconnected();
+        await connection.Disconnect();
         // NOTE: It won't throw under the debugger due to debug mode timeouts
         await Assert.ThrowsAsync<TimeoutException>(
             () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(2))));
@@ -307,6 +304,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         if (TestRunnerInfo.IsBuildAgent())
             iterationCount = 100;
 
+        UseLogging = false;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
         var client = services.GetRequiredService<ITestRpcServiceClient>();
@@ -333,6 +331,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         if (TestRunnerInfo.IsBuildAgent())
             itemCount = 100;
 
+        UseLogging = false;
         await using var services = CreateServices();
         var client = services.GetRequiredService<ITestRpcServiceClient>();
         var stream = await client.StreamInt32(200);

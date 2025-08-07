@@ -1,5 +1,6 @@
 using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
+using ActualLab.Channels;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Diagnostics;
@@ -23,14 +24,12 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public RpcFrameDelayerFactory? FrameDelayerFactory { get; init; }
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public IByteSerializer<T> Serializer { get; init; } = ActualLab.Serialization.ByteSerializer.Default.ToTyped<T>();
-        public BoundedChannelOptions ReadChannelOptions { get; init; } = new(128) {
-            FullMode = BoundedChannelFullMode.Wait,
+        public ChannelOptions ReadChannelOptions { get; init; } = new UnboundedChannelOptions() {
             SingleReader = true,
             SingleWriter = true,
             AllowSynchronousContinuations = true,
         };
-        public BoundedChannelOptions WriteChannelOptions { get; init; } = new(128) {
-            FullMode = BoundedChannelFullMode.Wait,
+        public ChannelOptions WriteChannelOptions { get; init; } = new UnboundedChannelOptions() {
             SingleReader = true,
             SingleWriter = false,
             AllowSynchronousContinuations = true,
@@ -105,8 +104,8 @@ public sealed class WebSocketChannel<T> : Channel<T>
         _maxItemSize = settings.MaxItemSize;
         _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, false);
 
-        _readChannel = Channel.CreateBounded<T>(settings.ReadChannelOptions);
-        _writeChannel = Channel.CreateBounded<T>(settings.WriteChannelOptions);
+        _readChannel = ChannelExt.Create<T>(settings.ReadChannelOptions);
+        _writeChannel = ChannelExt.Create<T>(settings.WriteChannelOptions);
         Reader = _readChannel.Reader;
         Writer = _writeChannel.Writer;
 

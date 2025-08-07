@@ -206,7 +206,9 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
                 await clock.Delay(Limits.ObjectReleasePeriod, cancellationToken).ConfigureAwait(false);
                 var keepAliveDelay = CpuTimestamp.Now - new CpuTimestamp(Interlocked.Read(ref _lastKeepAliveAt));
                 if (keepAliveDelay > Limits.KeepAliveTimeout) {
-                    await Peer.Disconnect(true, Internal.Errors.KeepAliveTimeout()).ConfigureAwait(false);
+                    await Peer
+                        .Disconnect(Internal.Errors.KeepAliveTimeout(), cancellationToken)
+                        .ConfigureAwait(false);
                     return;
                 }
                 var minLastKeepAliveAt = CpuTimestamp.Now - Limits.ObjectReleaseTimeout;

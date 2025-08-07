@@ -75,7 +75,7 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         await state.Computed.When(x => x.Kind == RpcPeerStateKind.JustConnected).WaitAsync(TimeSpan.FromSeconds(1));
         await state.Computed.When(x => x.Kind == RpcPeerStateKind.Connected).WaitAsync(TimeSpan.FromSeconds(2));
 
-        _ = clientPeer.Disconnect(false, new InvalidOperationException("Disconnected!"));
+        _ = clientPeer.Disconnect(new InvalidOperationException("Disconnected!"));
         await state.Computed.When(x => x.Kind == RpcPeerStateKind.JustDisconnected).WaitAsync(TimeSpan.FromSeconds(1));
         await state.Computed.When(x => x.Kind == RpcPeerStateKind.Disconnected).WaitAsync(TimeSpan.FromSeconds(5));
 

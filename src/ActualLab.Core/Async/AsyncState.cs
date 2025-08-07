@@ -8,6 +8,7 @@ public interface IAsyncState
     public bool HasNext { get; }
     public IAsyncState? Next { get; }
     public IAsyncState Last { get; }
+    public IAsyncState LastNonFinal { get; }
     public Task WhenNext();
     public Task WhenNext(CancellationToken cancellationToken);
 }
@@ -17,6 +18,7 @@ public interface IAsyncState<out T> : IAsyncState, IAsyncEnumerable<IAsyncState<
     public T Value { get; }
     public new IAsyncState<T>? Next { get; }
     public new IAsyncState<T> Last { get; }
+    public new IAsyncState<T> LastNonFinal { get; }
 
     public Task<IAsyncState> When(Func<T, bool> predicate, CancellationToken cancellationToken = default);
     public IAsyncEnumerable<T> Changes(CancellationToken cancellationToken = default);
@@ -25,16 +27,16 @@ public interface IAsyncState<out T> : IAsyncState, IAsyncEnumerable<IAsyncState<
 public sealed class AsyncState<T>(T value)
     : IAsyncState<T>, IAsyncEnumerable<AsyncState<T>>
 {
-    private readonly AsyncTaskMethodBuilder<AsyncState<T>> _next = AsyncTaskMethodBuilderExt.New<AsyncState<T>>();
+    private readonly AsyncTaskMethodBuilder<AsyncState<T>> _nextSource = AsyncTaskMethodBuilderExt.New<AsyncState<T>>();
 
     public T Value { get; } = value;
-    public bool IsFinal => _next.Task.IsFaultedOrCancelled();
+    public bool IsFinal => _nextSource.Task.IsFaultedOrCancelled();
 
     // Next
     IAsyncState? IAsyncState.Next => Next;
     IAsyncState<T>? IAsyncState<T>.Next => Next;
-    public AsyncState<T>? Next => _next.Task.IsCompleted ? _next.Task.Result : null;
-    public bool HasNext => _next.Task.IsCompleted;
+    public AsyncState<T>? Next => _nextSource.Task.IsCompleted ? _nextSource.Task.Result : null;
+    public bool HasNext => _nextSource.Task.IsCompleted;
 
     // Last
     IAsyncState IAsyncState.Last => Last;
@@ -44,6 +46,18 @@ public sealed class AsyncState<T>(T value)
             var current = this;
             while (current.Next is { } next)
                 current = next;
+            return current;
+        }
+    }
+
+    // LastNonFinal
+    IAsyncState IAsyncState.LastNonFinal => LastNonFinal;
+    IAsyncState<T> IAsyncState<T>.LastNonFinal => LastNonFinal;
+    public AsyncState<T> LastNonFinal {
+        get {
+            var current = this;
+            while (current._nextSource.Task is { IsCompletedSuccessfully: true } nextTask)
+                current = nextTask.Result;
             return current;
         }
     }
@@ -80,19 +94,19 @@ public sealed class AsyncState<T>(T value)
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     Task IAsyncState.WhenNext()
-        => _next.Task;
+        => _nextSource.Task;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     Task IAsyncState.WhenNext(CancellationToken cancellationToken)
-        => _next.Task.WaitAsync(cancellationToken);
+        => _nextSource.Task.WaitAsync(cancellationToken);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Task<AsyncState<T>> WhenNext()
-        => _next.Task;
+        => _nextSource.Task;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Task<AsyncState<T>> WhenNext(CancellationToken cancellationToken)
-        => _next.Task.WaitAsync(cancellationToken);
+        => _nextSource.Task.WaitAsync(cancellationToken);
 
     Task<IAsyncState> IAsyncState<T>.When(Func<T, bool> predicate, CancellationToken cancellationToken)
         => When(predicate, cancellationToken)
@@ -127,30 +141,30 @@ public sealed class AsyncState<T>(T value)
     {
         var next = new AsyncState<T>(value);
         // ReSharper disable once PossiblyImpureMethodCallOnReadonlyVariable
-        _next.SetResult(next);
+        _nextSource.SetResult(next);
         return next;
     }
 
     public AsyncState<T> TrySetNext(T value)
     {
         var next = new AsyncState<T>(value);
-        return _next.TrySetResult(next) ? next : this;
+        return _nextSource.TrySetResult(next) ? next : this;
     }
 
     // SetFinal & TrySetFinal
 
     public void SetFinal(Exception error)
         // ReSharper disable once PossiblyImpureMethodCallOnReadonlyVariable
-        => _next.SetException(error);
+        => _nextSource.SetException(error);
 
     public void SetFinal(CancellationToken cancellationToken)
-        => _next.TrySetCanceled(cancellationToken);
+        => _nextSource.TrySetCanceled(cancellationToken);
 
     public bool TrySetFinal(Exception error)
-        => _next.TrySetException(error);
+        => _nextSource.TrySetException(error);
 
     public bool TrySetFinal(CancellationToken cancellationToken)
-        => _next.TrySetCanceled(cancellationToken);
+        => _nextSource.TrySetCanceled(cancellationToken);
 
     // RequireNonFinal
 
@@ -159,7 +173,7 @@ public sealed class AsyncState<T>(T value)
         if (!IsFinal)
             return this;
 
-        _ = _next.Task.GetAwaiter().GetResult(); // Must throw in case there is an error
+        _ = _nextSource.Task.GetAwaiter().GetResult(); // Must throw in case there is an error
         throw Errors.AsyncStateIsFinal();
     }
 
@@ -168,7 +182,7 @@ public sealed class AsyncState<T>(T value)
         if (!IsFinal)
             return this;
 
-        _ = _next.Task.GetAwaiter().GetResult(); // Must throw in case there is an error
+        _ = _nextSource.Task.GetAwaiter().GetResult(); // Must throw in case there is an error
         throw errorFactory.Invoke();
     }
 }

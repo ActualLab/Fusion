@@ -7,19 +7,26 @@ public class RpcServerPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions 
 {
     private volatile AsyncState<RpcConnection?> _nextConnection = new(null);
 
-    public void SetConnection(RpcConnection connection)
+    public async Task SetConnection(RpcConnection connection, CancellationToken cancellationToken = default)
     {
-        AsyncState<RpcPeerConnectionState> connectionState;
-        lock (Lock) {
-            connectionState = ConnectionState;
-            if (connectionState.Value.Connection == connection)
-                return; // Already using connection
-            if (_nextConnection.Value == connection)
-                return; // Already "scheduled" to use connection
+        while (true) {
+            AsyncState<RpcPeerConnectionState> connectionState;
+            bool mustDisconnect;
+            lock (Lock) {
+                connectionState = ConnectionState;
+                if (connectionState.Value.Connection == connection)
+                    return; // Already using connection
+                if (_nextConnection.Value == connection)
+                    break;
 
-            _nextConnection = _nextConnection.SetNext(connection);
+                _nextConnection = _nextConnection.SetNext(connection);
+                mustDisconnect = true;
+            }
+            if (mustDisconnect)
+                await Disconnect(null, connectionState, cancellationToken).ConfigureAwait(false);
+            else // Otherwise we just wait for the next connection to happen
+                await connectionState.WhenNext(cancellationToken).ConfigureAwait(false);
         }
-        _ = Disconnect(true, null, connectionState);
     }
 
     // Protected methods

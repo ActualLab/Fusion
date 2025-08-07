@@ -95,7 +95,7 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
 
         var batchDelay = 100;
 
-        var services = CreateLoggingServices(Out);
+        var services = CreateLoggingServices(Out, useDebugLog: false);
         await using var processor = new BatchProcessor<int, int>() {
             BatchSize = 10,
             WorkerPolicy = new BatchProcessorWorkerPolicy() {

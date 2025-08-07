@@ -26,13 +26,36 @@ public static class TestHelpers
         }
     }
 
-    public static IServiceProvider CreateLoggingServices(ITestOutputHelper @out)
+    public static Task<T[]> WhenAll<T>(Task<T>[] tasks, ITestOutputHelper @out)
+        => WhenAll(tasks, TimeSpan.FromSeconds(10), @out);
+    public static async Task<T[]> WhenAll<T>(Task<T>[] tasks, TimeSpan timeout, ITestOutputHelper @out)
+    {
+        var whenAll = Task.WhenAll(tasks).WaitAsync(timeout);
+        while (true) {
+            await Task.WhenAny(whenAll, Task.Delay(1000));
+            if (whenAll.IsCompleted)
+                break;
+
+            var remaining = tasks
+                .Select((task, index) => (task, index))
+                .Where(p => !p.task.IsCompleted)
+                .ToList();
+            if (remaining.Count == 0)
+                break;
+
+            @out.WriteLine($"Waiting for: {remaining.Select(p => $"#{p.index}").ToDelimitedString()}");
+        }
+        return await whenAll;
+    }
+
+    public static IServiceProvider CreateLoggingServices(ITestOutputHelper @out, bool useDebugLog = true)
     {
         var services = new ServiceCollection();
         services.AddLogging(logging => {
             logging.ClearProviders();
             logging.SetMinimumLevel(LogLevel.Debug);
-            logging.AddDebug();
+            if (useDebugLog)
+                logging.AddDebug();
             logging.Services.AddSingleton<ILoggerProvider>(_ => {
 #pragma warning disable CS0618
                 return new XunitTestOutputLoggerProvider(

@@ -8,6 +8,9 @@ namespace ActualLab.Tests.Plugins;
 
 public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
 {
+    protected bool UseLogging { get; set; } = true;
+    protected bool UseDebugLog { get; set; } = true;
+
     [Fact]
     public void PluginHostBuilderTest()
     {
@@ -73,18 +76,20 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
         var hostBuilder = new PluginHostBuilder()
             .UsePluginFilter(typeof(ITestPlugin))
             .ConfigureServices(services => {
-                services.AddLogging(logging => {
-                    logging.ClearProviders();
-                    logging.SetMinimumLevel(LogLevel.Debug);
-                    logging.AddDebug();
-                    logging.AddProvider(
+                if (UseLogging)
+                    services.AddLogging(logging => {
+                        logging.ClearProviders();
+                        logging.SetMinimumLevel(LogLevel.Debug);
+                        if (UseDebugLog)
+                            logging.AddDebug();
+                        logging.AddProvider(
 #pragma warning disable CS0618
-                        new XunitTestOutputLoggerProvider(
-                            new TestOutputHelperAccessor() { Output = Out },
-                            (_, level) => level >= LogLevel.Debug));
+                            new XunitTestOutputLoggerProvider(
+                                new TestOutputHelperAccessor() { Output = Out },
+                                (_, level) => level >= LogLevel.Debug));
 #pragma warning restore CS0618
+                    });
                 });
-            });
         if (mustClearCache) {
             var serviceProvider = hostBuilder.ServiceProviderFactory(hostBuilder.Services);
             var pluginFinder = serviceProvider.GetService<IPluginFinder>();
