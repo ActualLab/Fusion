@@ -112,13 +112,30 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
             ? ReferenceEquals(this, other)
             : other is not null && AddressHashCode == other.AddressHashCode && Address.Equals(other.Address);
 
-    public override bool Equals(object? obj)
-        => ReferenceEquals(this, obj) || (obj is RpcPeerRef other && Equals(other));
+    public sealed override bool Equals(object? obj)
+    {
+        if (ReferenceEquals(this, obj))
+            return true;
+        if (UseReferentialEquality)
+            return false; // We already know the references are different
 
-    public override int GetHashCode()
+        return obj is RpcPeerRef other
+            && AddressHashCode == other.AddressHashCode
+            && Address.Equals(other.Address);
+    }
+
+    public sealed override int GetHashCode()
         => UseReferentialEquality
             ? RuntimeHelpers.GetHashCode(this)
             : AddressHashCode;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator ==(RpcPeerRef? left, RpcPeerRef? right)
+        => left is not null && left.Equals(right);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator !=(RpcPeerRef? left, RpcPeerRef? right)
+        => !(left is not null && left.Equals(right));
 
 #pragma warning restore MA0001
 
