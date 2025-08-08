@@ -1,9 +1,11 @@
+using ActualLab.Resilience;
+
 namespace ActualLab.Rpc;
 
 #pragma warning disable SYSLIB0051
 
 [Serializable]
-public class RpcReconnectFailedException : Exception
+public class RpcReconnectFailedException : Exception, ITransientException
 {
     private const string DefaultMessage = "Impossible to (re)connect: the remote host is unreachable.";
     private const string DefaultMessagePrefix = "Impossible to (re)connect:";

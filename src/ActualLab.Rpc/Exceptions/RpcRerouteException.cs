@@ -1,9 +1,11 @@
+using ActualLab.Resilience;
+
 namespace ActualLab.Rpc;
 
 #pragma warning disable SYSLIB0051
 
 [Serializable]
-public class RpcRerouteException : OperationCanceledException
+public class RpcRerouteException : OperationCanceledException, ITransientException
 {
     private const string DefaultMessage = "Call must be re-routed to another RPC peer.";
     private const string RerouteToLocalMessage = "Call must be re-routed to local service.";

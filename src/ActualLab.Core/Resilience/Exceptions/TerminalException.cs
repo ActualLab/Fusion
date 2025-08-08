@@ -3,7 +3,7 @@ namespace ActualLab.Resilience;
 #pragma warning disable SYSLIB0051
 
 /// <summary>
-/// A tagging interface for any exception that might be "cured" by retrying the operation.
+/// A tagging interface for any exception that leads to the application or DI container shutdown.
 /// </summary>
 public interface ITerminalException;
 
