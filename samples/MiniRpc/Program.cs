@@ -113,8 +113,8 @@ public class Chat : IChat
 
     public virtual async Task<int> GetWordCount(CancellationToken cancellationToken = default)
     {
-        // Note that GetRecentMessages call here becomes a dependency of WordCount call,
-        // and that's why it gets invalidated automatically.
+        // NOTE: GetRecentMessages() is a compute method, so GetWordCount() call becomes dependent on it,
+        // and that's why it gets invalidated automatically when GetRecentMessages() is invalidated.
         var messages = await GetRecentMessages(cancellationToken).ConfigureAwait(false);
         return messages
             .Select(m => m.Split(" ", StringSplitOptions.RemoveEmptyEntries).Length)
@@ -132,7 +132,7 @@ public class Chat : IChat
         }
 
         using var _1 = Invalidation.Begin();
-        _ = GetRecentMessages(default); // No need to invalidate GetWordCount
+        _ = GetRecentMessages(default); // No need to invalidate GetWordCount(), coz it depends on GetRecentMessages()
         return Task.CompletedTask;
     }
 }

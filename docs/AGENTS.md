@@ -26,13 +26,16 @@ Code snippet format:
 The source block in `.cs` file:
 ```cs
 #region PartXX_SnippetId
-// Code
+// This snippet is referenced from AGENTS.md
 #endregion
 ```
 
 The reference / embedding block in `.md` file:
 ```md
 <!-- snippet: PartXX_SnippetId -->
+```cs
+// This snippet is referenced from AGENTS.md
+```
 <!-- endSnippet -->
 ```
 

@@ -29,10 +29,10 @@ public interface IChatService : IComputeService
 {
     [ComputeMethod]
     Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default);
-    
+
     [ComputeMethod]
     Task<int> GetWordCount(CancellationToken cancellationToken = default);
-    
+
     Task Post(string message, CancellationToken cancellationToken = default);
 }
 ```
@@ -46,8 +46,7 @@ Now let's implement the server-side service:
 ```cs
 public class ChatService : IChatService
 {
-    // ReSharper disable once ChangeFieldTypeToSystemThreadingLock
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private List<string> _posts = new();
 
     public virtual Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default)
@@ -55,8 +54,8 @@ public class ChatService : IChatService
 
     public virtual async Task<int> GetWordCount(CancellationToken cancellationToken = default)
     {
-        // Note that GetRecentMessages call here becomes a dependency of WordCount call,
-        // and that's why it gets invalidated automatically.
+        // NOTE: GetRecentMessages() is a compute method, so GetWordCount() call becomes dependent on it,
+        // and that's why it gets invalidated automatically when GetRecentMessages() is invalidated.
         var messages = await GetRecentMessages(cancellationToken).ConfigureAwait(false);
         return messages
             .Select(m => m.Split(" ", StringSplitOptions.RemoveEmptyEntries).Length)
@@ -74,7 +73,7 @@ public class ChatService : IChatService
         }
 
         using var _1 = Invalidation.Begin();
-        _ = GetRecentMessages(default); // No need to invalidate GetWordCount
+        _ = GetRecentMessages(default); // No need to invalidate GetWordCount(), coz it depends on GetRecentMessages()
         return Task.CompletedTask;
     }
 }
@@ -95,7 +94,7 @@ public static WebApplication CreateHost()
         fusion.AddWebServer();
         fusion.AddService<IChatService, ChatService>();
     });
-    
+
     var app = builder.Build();
     app.UseWebSockets();
     app.MapRpcWebSocketServer();
@@ -132,41 +131,108 @@ Now we can use our client to interact with the server:
 
 <!-- snippet: Part02_ClientUsage -->
 ```cs
-// Create and start the server
-var app = CreateHost();
-await app.StartAsync("http://localhost:22222/");
-WriteLine("Host started.");
+public static async Task Run()
+{
+    await (new[] { "both" } switch {
+        ["server"] => RunServer(),
+        ["client"] => RunClient(),
+        _ => Task.WhenAll(RunServer(), RunClient()),
+    });
+}
 
-// Create client services
-var services = CreateClientServices("http://localhost:22222/");
-var chat = services.GetRequiredService<IChatService>();
-
-// Observe messages
-var cMessages = await Computed.Capture(() => chat.GetRecentMessages());
-_ = Task.Run(async () => {
-    await foreach (var (messages, _, version) in cMessages.Changes()) {
-        WriteLine($"Messages changed (version: {version}):");
-        foreach (var message in messages)
-            WriteLine($"- {message}");
+public static async Task RunServer()
+{
+    var app = CreateHost();
+    try {
+        await app.RunAsync("http://localhost:22222/");
     }
-});
+    catch (Exception error) {
+        Error.WriteLine($"Server failed: {error.Message}");
+    }
+}
 
-// Observe word count
-var cWordCount = await Computed.Capture(() => chat.GetWordCount());
-_ = Task.Run(async () => {
-    await foreach (var (wordCount, _) in cWordCount.Changes())
-        WriteLine($"Word count changed: {wordCount}");
-});
+public static async Task RunClient()
+{
+    // Create client services
+    var services = CreateClientServices("http://localhost:22222/");
+    var chatClient = services.GetRequiredService<IChatService>();
 
-// Post some messages
-await chat.Post("Hello, World!");
-await Task.Delay(1000);
-await chat.Post("This is a test message.");
-await Task.Delay(1000);
-await chat.Post("Another message for testing.");
+    // Observe GetWordCount()
+    var cWordCount0 = await Computed.Capture(() => chatClient.GetWordCount());
+    _ = Task.Run(async () => {
+        await foreach (var cWordCount in cWordCount0.Changes())
+            WriteLine($"GetWordCount() -> {cWordCount}, Value: {cWordCount.Value}");
+    });
 
-await Task.Delay(2000);
-await app.StopAsync();
+    // Observe GetRecentMessages()
+    var cMessages0 = await Computed.Capture(() => chatClient.GetRecentMessages());
+    _ = Task.Run(async () => {
+        await foreach (var cMessages in cMessages0.Changes()) {
+            await Task.Delay(25); // We delay the output to print GetWordCount() first
+            WriteLine($"GetRecentMessages() -> {cMessages}, Value:");
+            foreach (var message in cMessages.Value)
+                WriteLine($"- {message}");
+            WriteLine();
+        }
+    });
+
+    // Post some messages
+    await chatClient.Post("Hello, World!");
+    await Task.Delay(100);
+    await chatClient.Post("Let's count to 3!");
+    string[] data = ["One", "Two", "Three"];
+    for (var i = 1; i <= 3; i++) {
+        await Task.Delay(1000);
+        await chatClient.Post(data.Take(i).ToDelimitedString());
+    }
+    await Task.Delay(1000);
+    await chatClient.Post("Done counting!");
+    await Task.Delay(1000);
+
+    /* The output:
+    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4u, State: Consistent), Value: 0
+    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.d5, State: Invalidated), Value:
+
+    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.h5, State: Consistent), Value: 2
+    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.l5, State: Consistent), Value:
+    - Hello, World!
+
+    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.p5, State: Consistent), Value: 6
+    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.4q, State: Consistent), Value:
+    - Hello, World!
+    - Let's count to 3!
+
+    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.d0, State: Consistent), Value: 7
+    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.cp, State: Consistent), Value:
+    - Hello, World!
+    - Let's count to 3!
+    - One
+
+    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4v, State: Consistent), Value: 9
+    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.gp, State: Consistent), Value:
+    - Hello, World!
+    - Let's count to 3!
+    - One
+    - One, Two
+
+    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.ou, State: Consistent), Value: 12
+    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.8v, State: Consistent), Value:
+    - Hello, World!
+    - Let's count to 3!
+    - One
+    - One, Two
+    - One, Two, Three
+
+    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.h0, State: Consistent), Value: 14
+    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.kp, State: Consistent), Value:
+    - Hello, World!
+    - Let's count to 3!
+    - One
+    - One, Two
+    - One, Two, Three
+    - Done counting!
+    */
+}
 ```
 <!-- endSnippet -->
 

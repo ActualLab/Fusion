@@ -4,6 +4,10 @@ using static System.Console;
 
 namespace Docs;
 
+#region PartXX_SnippetId
+// This snippet is referenced from AGENTS.md
+#endregion
+
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Docs")]
 [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Docs")]
 public class Program

@@ -350,9 +350,10 @@ using var computedState = stateFactory.NewComputed(
                 (s, e) => WriteLine($"{clock.Elapsed:g}s: {e}, Value: {s.Value}, Computed: {s.Computed}"));
         },
     },
-    // This lambda describes how the computed state is computed - essentially, it's a compute method written as a lambda.
+    // This lambda describes how the computed state is computed -
+    // essentially, it's a compute method written as a lambda.
     async (state, cancellationToken) => {
-        // We intentionally delay the computation here to show how initial value works
+        // We intentionally delay the computation here to show how the initial value works
         await Task.Delay(100, cancellationToken);
         var counter = await counters.Get("a");
         // state.Use() is required to track the state usage inside a compute method
