@@ -81,7 +81,7 @@ public class RpcWebHost(
     protected override void ConfigureAppBuilder(IServiceProvider services, IAppBuilder builder)
     {
         base.ConfigureAppBuilder(services, builder);
-        builder.MapRpcServer(services);
+        builder.MapRpcWebSocketServer(services);
     }
 #endif
 }
