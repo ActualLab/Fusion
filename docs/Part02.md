@@ -27,13 +27,16 @@ First, we define a common interface that both the server-side service and client
 // The interface for our chat service
 public interface IChatService : IComputeService
 {
+    // Compute methods - they'll cache the output not only on the server side
+    // but on the client side as well!
     [ComputeMethod]
     Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default);
-
     [ComputeMethod]
     Task<int> GetWordCount(CancellationToken cancellationToken = default);
 
+    // Regular methods
     Task Post(string message, CancellationToken cancellationToken = default);
+    Task<int> GetWordCountPlainRpc(CancellationToken cancellationToken = default);
 }
 ```
 <!-- endSnippet -->
@@ -62,6 +65,9 @@ public class ChatService : IChatService
             .Sum();
     }
 
+    public Task<int> GetWordCountPlainRpc(CancellationToken cancellationToken = default)
+        => GetWordCount(cancellationToken);
+
     public virtual Task Post(string message, CancellationToken cancellationToken = default)
     {
         lock (_lock) {
@@ -80,7 +86,34 @@ public class ChatService : IChatService
 ```
 <!-- endSnippet -->
 
-### 3. Server Setup
+### 3. Performance Comparison
+
+Compute methods provide powerful caching and invalidation features, but they do have some overhead compared to regular methods. We've already added the `GetWordCountPlainRpc` method to our interface and implementation. When we run a performance test with 1 million calls to each method, we can see the difference:
+
+```cs
+// Performance comparison: 1M calls to GetWordCountPlainRpc vs GetWordCount
+WriteLine("Performance comparison: 1M calls to GetWordCountPlainRpc vs GetWordCount");
+var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+// Test GetWordCountPlainRpc (regular method)
+for (int i = 0; i < 1000000; i++) {
+    await chatClient.GetWordCountPlainRpc();
+}
+stopwatch.Stop();
+WriteLine($"GetWordCountPlainRpc: {stopwatch.ElapsedMilliseconds} ms");
+
+// Test GetWordCount (compute method)
+stopwatch.Restart();
+for (int i = 0; i < 1000000; i++) {
+    await chatClient.GetWordCount();
+}
+stopwatch.Stop();
+WriteLine($"GetWordCount: {stopwatch.ElapsedMilliseconds} ms");
+```
+
+The regular method `GetWordCountPlainRpc` will typically be faster than the compute method `GetWordCount` because it doesn't have the overhead of caching and dependency tracking. However, the compute method provides automatic caching and invalidation, which can be more efficient in scenarios where the same values are requested multiple times.
+
+### 4. Server Setup
 
 To host our service, we need to set up a web server:
 
@@ -103,7 +136,7 @@ public static WebApplication CreateHost()
 ```
 <!-- endSnippet -->
 
-### 4. Client Setup
+### 5. Client Setup
 
 On the client side, we need to set up the service provider with the client proxy:
 
@@ -125,7 +158,7 @@ public static IServiceProvider CreateClientServices(string baseUrl)
 ```
 <!-- endSnippet -->
 
-### 5. Using the Client
+### 6. Using the Client
 
 Now we can use our client to interact with the server:
 
@@ -157,14 +190,14 @@ public static async Task RunClient()
     var services = CreateClientServices("http://localhost:22222/");
     var chatClient = services.GetRequiredService<IChatService>();
 
-    // Observe GetWordCount()
+    // Start GetWordCount() change observer
     var cWordCount0 = await Computed.Capture(() => chatClient.GetWordCount());
     _ = Task.Run(async () => {
         await foreach (var cWordCount in cWordCount0.Changes())
             WriteLine($"GetWordCount() -> {cWordCount}, Value: {cWordCount.Value}");
     });
 
-    // Observe GetRecentMessages()
+    // Start GetRecentMessages() change observer
     var cMessages0 = await Computed.Capture(() => chatClient.GetRecentMessages());
     _ = Task.Run(async () => {
         await foreach (var cMessages in cMessages0.Changes()) {
@@ -188,6 +221,23 @@ public static async Task RunClient()
     await Task.Delay(1000);
     await chatClient.Post("Done counting!");
     await Task.Delay(1000);
+
+    // Remote compute method call vs plain RPC call performance comparison
+    WriteLine("100K calls to GetWordCount() vs GetWordCountPlainRpc() - run in Release!");
+    WriteLine("- Warmup...");
+    for (int i = 0; i < 100_000; i++)
+        await chatClient.GetWordCount().ConfigureAwait(false);
+    for (int i = 0; i < 100_000; i++)
+        await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
+    WriteLine("- Benchmarking...");
+    var stopwatch = Stopwatch.StartNew();
+    for (int i = 0; i < 100_000; i++)
+        await chatClient.GetWordCount().ConfigureAwait(false);
+    WriteLine($"- GetWordCount():         {stopwatch.Elapsed.ToShortString()}");
+    stopwatch.Restart();
+    for (int i = 0; i < 100_000; i++)
+        await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
+    WriteLine($"- GetWordCountPlainRpc(): {stopwatch.Elapsed.ToShortString()}");
 
     /* The output:
     GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4u, State: Consistent), Value: 0
@@ -231,6 +281,12 @@ public static async Task RunClient()
     - One, Two
     - One, Two, Three
     - Done counting!
+
+    100K calls to GetWordCount() vs GetWordCountPlainRpc() - run in Release!
+    - Warmup...
+    - Benchmarking...
+    - GetWordCount():         12.187ms
+    - GetWordCountPlainRpc(): 2.474s
     */
 }
 ```

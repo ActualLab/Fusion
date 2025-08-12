@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ActualLab.Fusion.Server;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
@@ -10,13 +11,16 @@ namespace Docs;
 // The interface for our chat service
 public interface IChatService : IComputeService
 {
+    // Compute methods - they'll cache the output not only on the server side
+    // but on the client side as well!
     [ComputeMethod]
     Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default);
-
     [ComputeMethod]
     Task<int> GetWordCount(CancellationToken cancellationToken = default);
 
+    // Regular methods
     Task Post(string message, CancellationToken cancellationToken = default);
+    Task<int> GetWordCountPlainRpc(CancellationToken cancellationToken = default);
 }
 #endregion
 
@@ -38,6 +42,9 @@ public class ChatService : IChatService
             .Select(m => m.Split(" ", StringSplitOptions.RemoveEmptyEntries).Length)
             .Sum();
     }
+
+    public Task<int> GetWordCountPlainRpc(CancellationToken cancellationToken = default)
+        => GetWordCount(cancellationToken);
 
     public virtual Task Post(string message, CancellationToken cancellationToken = default)
     {
@@ -118,14 +125,14 @@ public static class Part02
         var services = CreateClientServices("http://localhost:22222/");
         var chatClient = services.GetRequiredService<IChatService>();
 
-        // Observe GetWordCount()
+        // Start GetWordCount() change observer
         var cWordCount0 = await Computed.Capture(() => chatClient.GetWordCount());
         _ = Task.Run(async () => {
             await foreach (var cWordCount in cWordCount0.Changes())
                 WriteLine($"GetWordCount() -> {cWordCount}, Value: {cWordCount.Value}");
         });
 
-        // Observe GetRecentMessages()
+        // Start GetRecentMessages() change observer
         var cMessages0 = await Computed.Capture(() => chatClient.GetRecentMessages());
         _ = Task.Run(async () => {
             await foreach (var cMessages in cMessages0.Changes()) {
@@ -149,6 +156,23 @@ public static class Part02
         await Task.Delay(1000);
         await chatClient.Post("Done counting!");
         await Task.Delay(1000);
+
+        // Remote compute method call vs plain RPC call performance comparison
+        WriteLine("100K calls to GetWordCount() vs GetWordCountPlainRpc() - run in Release!");
+        WriteLine("- Warmup...");
+        for (int i = 0; i < 100_000; i++)
+            await chatClient.GetWordCount().ConfigureAwait(false);
+        for (int i = 0; i < 100_000; i++)
+            await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
+        WriteLine("- Benchmarking...");
+        var stopwatch = Stopwatch.StartNew();
+        for (int i = 0; i < 100_000; i++)
+            await chatClient.GetWordCount().ConfigureAwait(false);
+        WriteLine($"- GetWordCount():         {stopwatch.Elapsed.ToShortString()}");
+        stopwatch.Restart();
+        for (int i = 0; i < 100_000; i++)
+            await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
+        WriteLine($"- GetWordCountPlainRpc(): {stopwatch.Elapsed.ToShortString()}");
 
         /* The output:
         GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4u, State: Consistent), Value: 0
@@ -192,6 +216,12 @@ public static class Part02
         - One, Two
         - One, Two, Three
         - Done counting!
+
+        100K calls to GetWordCount() vs GetWordCountPlainRpc() - run in Release!
+        - Warmup...
+        - Benchmarking...
+        - GetWordCount():         12.187ms
+        - GetWordCountPlainRpc(): 2.474s
         */
     }
     #endregion
