@@ -5,7 +5,7 @@ using static System.Console;
 namespace Docs;
 
 #region PartXX_SnippetId
-// This snippet is referenced from AGENTS.md
+// This snippet is referenced from .instructions.md
 #endregion
 
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Docs")]
