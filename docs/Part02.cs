@@ -11,7 +11,7 @@ namespace Docs;
 // The interface for our chat service
 public interface IChatService : IComputeService
 {
-    // Compute methods - they'll cache the output not only on the server side
+    // Compute methods - they cache the output not only on the server side
     // but on the client side as well!
     [ComputeMethod]
     Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default);
@@ -35,7 +35,7 @@ public class ChatService : IChatService
 
     public virtual async Task<int> GetWordCount(CancellationToken cancellationToken = default)
     {
-        // NOTE: GetRecentMessages() is a compute method, so GetWordCount() call becomes dependent on it,
+        // NOTE: GetRecentMessages() is a compute method, so the GetWordCount() call becomes dependent on it,
         // and that's why it gets invalidated automatically when GetRecentMessages() is invalidated.
         var messages = await GetRecentMessages(cancellationToken).ConfigureAwait(false);
         return messages
@@ -49,7 +49,7 @@ public class ChatService : IChatService
     public virtual Task Post(string message, CancellationToken cancellationToken = default)
     {
         lock (_lock) {
-            var posts = _posts.ToList(); // We can't update the list itself (it's shared), but can re-create it
+            var posts = _posts.ToList(); // We can't update the list itself (it's shared), but we can re-create it
             posts.Add(message);
             if (posts.Count > 10)
                 posts.RemoveAt(0);

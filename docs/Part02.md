@@ -1,41 +1,37 @@
 # ActualLab.Rpc and Compute Service Clients
 
-Fusion is designed with distributed applications in mind, 
+Fusion is designed with distributed applications in mind,
 and one of its key features is the ability to expose Compute Services
-over the network via `ActualLab.Rpc` and consume such services 
-via Compute Service Clients. 
+over the network via `ActualLab.Rpc` and consume such services
+via Compute Service Clients.
 
 ## What is ActualLab.Rpc?
 
-ActualLab.Rpc is a high-performance RPC framework for .NET that provides 
-a way to call methods on remote services as if they were local. 
-It uses **WebSockets** as low-level transport, but it's built to run on top of 
-nearly any packet-based or streaming protocol, so it will support 
+ActualLab.Rpc is a high-performance RPC framework for .NET that provides
+a way to call methods on remote services as if they were local.
+It uses **WebSockets** as low-level transport, but it's built to run on top of
+nearly any packet-based or streaming protocol, so it will support
 WebTransport in the near future.
 
-And finally, it is designed to be fast, efficient, and extendable enough 
+It is designed to be fast, efficient, and extensible enough
 to support Fusion's Remote Compute Service scenario.
 
-If you want to learn more about ActualLab.Rpc performance, check out this video:
+If you want to learn more about ActualLab.Rpc performance, check out this video:<br/>
 [<img src="./img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc - the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak)
 
 ## What is Compute Service Client?
 
-It's a remote (client-side) proxy of a Compute Services built on top of the **ActualLab.Rpc** 
-infrastructure, that takes the behavior of `Computed<T>` into account to be way more
-efficient than an identical plain RPC client.
+Compute Service Clients are remote (client-side) proxies for Compute Services built on top of the ActualLab.Rpc
+infrastructure. They take the behavior of `Computed<T>` into account to be significantly more
+efficient than equivalent plain RPC clients:
 
-Compute Service Clients provide a number of benefits:
+1. **Consistent Behavior**: They back the result of any call with `Computed<T>` that mimics the matching `Computed<T>` on the server side. This means client-side proxies can be used in other client-side Compute Services, and invalidation of a server-side dependency will trigger invalidation of its client-side replica.
 
-1. **Consistent Behavior**: They similarly back the result to any call with `Computed<T>` that mimics matching `Computed<T>` on the server side. This means client-side proxies can be used in other client-side Compute Services, and invalidation of a server-side dependency will trigger invalidation of its client-side replica.
+2. **Efficient Caching**: They cache consistent `Computed<T>` replicas, and they won't make a remote call when a *consistent* replica is still available. This provides exactly the same behavior as Compute Services, replacing "computation" with an "RPC call responsible for the computation."
 
-2. **Efficient Caching**: They similarly cache consistent replicas. In other words, Compute Service clients won't make a remote call in case a *consistent* replica is still available. This provides exactly the same behavior as for Compute Services if we replace "computation" with "RPC call".
+3. **Automatic Invalidation**: Client-side replicas  of `Computed<T>` are automatically invalidated when their server-side counterparts get invalidated, ensuring eventual consistency across the network.
 
-3. **Automatic Invalidation**: Client-side computed values are automatically invalidated when their server-side counterparts are invalidated, ensuring data consistency across the network.
-
-Compute Service clients communicate with the server over WebSocket channels - internally they use `ActualLab.Rpc` infrastructure to make such calls, as well as to receive notifications about server-side invalidations.
-
-Resilience features like reconnection on disconnect and refresh of every replica of `Computed<T>` on reconnect are bundled - `ActualLab.Rpc` and `ActualLab.Fusion.Client` take care of that.
+4. Resilience features like transparent reconnection on disconnect, persistent client-side caching, and ETag-style checks for every computed replica on reconnect are bundled - `ActualLab.Rpc` and `ActualLab.Fusion.Client` take care of that.
 
 ## Creating a Compute Service Client
 
@@ -50,7 +46,7 @@ First, we define a common interface that both the server-side service and client
 // The interface for our chat service
 public interface IChatService : IComputeService
 {
-    // Compute methods - they'll cache the output not only on the server side
+    // Compute methods - they cache the output not only on the server side
     // but on the client side as well!
     [ComputeMethod]
     Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default);
@@ -80,7 +76,7 @@ public class ChatService : IChatService
 
     public virtual async Task<int> GetWordCount(CancellationToken cancellationToken = default)
     {
-        // NOTE: GetRecentMessages() is a compute method, so GetWordCount() call becomes dependent on it,
+        // NOTE: GetRecentMessages() is a compute method, so the GetWordCount() call becomes dependent on it,
         // and that's why it gets invalidated automatically when GetRecentMessages() is invalidated.
         var messages = await GetRecentMessages(cancellationToken).ConfigureAwait(false);
         return messages
@@ -94,7 +90,7 @@ public class ChatService : IChatService
     public virtual Task Post(string message, CancellationToken cancellationToken = default)
     {
         lock (_lock) {
-            var posts = _posts.ToList(); // We can't update the list itself (it's shared), but can re-create it
+            var posts = _posts.ToList(); // We can't update the list itself (it's shared), but we can re-create it
             posts.Add(message);
             if (posts.Count > 10)
                 posts.RemoveAt(0);
@@ -102,7 +98,7 @@ public class ChatService : IChatService
         }
 
         using var _1 = Invalidation.Begin();
-        _ = GetRecentMessages(default); // No need to invalidate GetWordCount(), coz it depends on GetRecentMessages()
+        _ = GetRecentMessages(default); // No need to invalidate GetWordCount(), because it depends on GetRecentMessages()
         return Task.CompletedTask;
     }
 }
