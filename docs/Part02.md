@@ -1,8 +1,31 @@
-# Compute Service Clients
+# ActualLab.Rpc and Compute Service Clients
 
-Compute Service Clients are remote proxies of Compute Services that take the behavior of `Computed<T>` into account to be more efficient than identical web API clients.
+Fusion is designed with distributed applications in mind, 
+and one of its key features is the ability to expose Compute Services
+over the network via `ActualLab.Rpc` and consume such services 
+via Compute Service Clients. 
 
-They provide several key benefits:
+## What is ActualLab.Rpc?
+
+ActualLab.Rpc is a high-performance RPC framework for .NET that provides 
+a way to call methods on remote services as if they were local. 
+It uses **WebSockets** as low-level transport, but it's built to run on top of 
+nearly any packet-based or streaming protocol, so it will support 
+WebTransport in the near future.
+
+And finally, it is designed to be fast, efficient, and extendable enough 
+to support Fusion's Remote Compute Service scenario.
+
+If you want to learn more about ActualLab.Rpc performance, check out this video:
+[<img src="./img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc - the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak)
+
+## What is Compute Service Client?
+
+It's a remote (client-side) proxy of a Compute Services built on top of the **ActualLab.Rpc** 
+infrastructure, that takes the behavior of `Computed<T>` into account to be way more
+efficient than an identical plain RPC client.
+
+Compute Service Clients provide a number of benefits:
 
 1. **Consistent Behavior**: They similarly back the result to any call with `Computed<T>` that mimics matching `Computed<T>` on the server side. This means client-side proxies can be used in other client-side Compute Services, and invalidation of a server-side dependency will trigger invalidation of its client-side replica.
 
@@ -12,7 +35,7 @@ They provide several key benefits:
 
 Compute Service clients communicate with the server over WebSocket channels - internally they use `ActualLab.Rpc` infrastructure to make such calls, as well as to receive notifications about server-side invalidations.
 
-Resilience features like reconnect on disconnect and refresh of every replica of `Computed<T>` on reconnect are bundled - `ActualLab.Rpc` and `ActualLab.Fusion.Client` take care of that.
+Resilience features like reconnection on disconnect and refresh of every replica of `Computed<T>` on reconnect are bundled - `ActualLab.Rpc` and `ActualLab.Fusion.Client` take care of that.
 
 ## Creating a Compute Service Client
 

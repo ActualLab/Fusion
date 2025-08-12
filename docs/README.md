@@ -20,10 +20,9 @@ to build and run everything.
 ## Documentation
 
 - [Part 0: NuGet packages](./Part00.md)
-- [Part 1: Computed Values, Compute Services, and Compute Methods](./Part01.md)
+- [Part 1: Core Concepts: Computed Values, Compute Services, Methods, and State](./Part01.md)
+- [Part 2: ActualLab.Rpc and Compute Service Clients](./Part02.md)
 <!--
-- [Part 3: State: IState&lt;T&gt; and Its Flavors](./Part03.md)
-- [Part 4: Compute Service Clients](./Part04.md)
 - [Part 5: Fusion on Server-Side Only](./Part05.md)
 - [Part 6: Real-time UI in Blazor Apps](./Part06.md)
 - [Part 7: Real-time UI in JS / React Apps](./Part07.md)
