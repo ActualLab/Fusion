@@ -8,13 +8,16 @@ public static class EndpointRouteBuilderExt
 {
     public static IEndpointRouteBuilder MapRpcWebSocketServer(this IEndpointRouteBuilder endpoints)
     {
+        if (endpoints is null)
+            throw new ArgumentNullException(nameof(endpoints));
+
         var services = endpoints.ServiceProvider;
         var server = services.GetRequiredService<RpcWebSocketServer>();
         var settings = server.Settings;
 
-        endpoints.MapGet(server.Settings.RequestPath, HandleRequest(false));
+        endpoints.Map(settings.RequestPath, HandleRequest(isBackend: false));
         if (settings.ExposeBackend)
-            endpoints.MapGet(server.Settings.BackendRequestPath, HandleRequest(true));
+            endpoints.Map(settings.BackendRequestPath, HandleRequest(isBackend: true));
         return endpoints;
 
         RequestDelegate HandleRequest(bool isBackend)
