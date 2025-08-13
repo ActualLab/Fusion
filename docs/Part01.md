@@ -225,7 +225,7 @@ for (var i = 0; i <= 3; i++) {
 ```
 <!-- endSnippet -->
 
-### Computed<T>.When() and Changes() Methods
+### Computed.When() and Changes() Methods
 
 You already saw `WhenInvalidated()` method in action. Let's look at two more useful methods:
 - `When()` method allows you to await for a computed value to satisfy certain predicate. 
