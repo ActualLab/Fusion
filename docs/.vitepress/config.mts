@@ -46,6 +46,8 @@ export default defineConfig({
 
     socialLinks: [
       { icon: 'github', link: 'https://github.com/ActualLab/Fusion' }
-    ]
+    ],
+
+    outline: [2, 3]
   }
 })
