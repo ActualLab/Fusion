@@ -287,7 +287,7 @@ GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessa
 
 Computed Service Clients are invalidation-aware, which means they also eliminate unnecessary RPC calls.
 The RPC call is deemed unnecessary, if:
-- The client finds a compute replica for it (i.e., for the same call to the same service with the same arguments)
+- The client finds a `Computed<T>` replica for it (i.e., for the same call to the same service with the same arguments)
 - And this replica is still in `Consistent` state (i.e., wasn't invalidated from the moment it was created).
 
 In other words, Computed Service Clients cache call results and reuse them  
