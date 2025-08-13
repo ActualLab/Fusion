@@ -225,6 +225,47 @@ for (var i = 0; i <= 3; i++) {
 ```
 <!-- endSnippet -->
 
+### Computed<T>.When() and Changes() Methods
+
+You already saw `WhenInvalidated()` method in action. Let's look at two more useful methods:
+- `When()` method allows you to await for a computed value to satisfy certain predicate. 
+  It returns a `Task<Computed<T>>`.
+- `Changes()` method allows you to observe changes in a computed value over time. 
+  It returns an `IAsyncEnumerable<Computed<T>>`, which yields the current value first,
+  and new computed values as they become available. 
+  The async enumerable it builds is going to yield the items until the moment it gets canceled.
+
+And finally, the example below shows that you can deconstruct a `Computed<T>` instance to get 
+its `ValueOrDefault` and `Error` properties. Since `Value` property is not accessed during 
+the deconstruction, it doesn't throw an exception if the computed value has an `Error`.
+
+<!-- snippet: Part01_When_And_Changes_Methods -->
+```cs
+_ = Task.Run(async () => {
+    // This is going to be our update loop
+    for (var i = 0; i <= 5; i++) {
+        await Task.Delay(333);
+        counters.Increment("a");
+    }
+});
+
+var clock = Stopwatch.StartNew();
+var computed = await Computed.Capture(() => counters.Sum("a", "b"));
+
+// Computed<T>.When(..) example:
+computed = await computed.When(x => x >= 10); // ~= .Changes().When(predicate).First()
+
+// Computed<T>.Changes() example:
+IAsyncEnumerable<Computed<int>> changes = computed.Changes();
+
+_ = Task.Run(async () => {
+    await foreach (var (value, error) in changes) // Computed<T> deconstruction example
+        WriteLine($"{clock.Elapsed:g}s: Value = {value}, Error = {error}");
+});
+await Task.Delay(5000); // Wait for the changes to be processed
+```
+<!-- endSnippet -->
+
 ## 3. `State<T>` and Its Variants
 
 State is the last missing piece of a puzzle. 

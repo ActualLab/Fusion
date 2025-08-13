@@ -160,6 +160,34 @@ public static class Part01
         }
 
         {
+            WriteLine($"{Environment.NewLine}Computed<T>.When() and .Changes() methods:");
+            #region Part01_When_And_Changes_Methods
+            _ = Task.Run(async () => {
+                // This is going to be our update loop
+                for (var i = 0; i <= 5; i++) {
+                    await Task.Delay(333);
+                    counters.Increment("a");
+                }
+            });
+
+            var clock = Stopwatch.StartNew();
+            var computed = await Computed.Capture(() => counters.Sum("a", "b"));
+
+            // Computed<T>.When(..) example:
+            computed = await computed.When(x => x >= 10); // ~= .Changes().When(predicate).First()
+
+            // Computed<T>.Changes() example:
+            IAsyncEnumerable<Computed<int>> changes = computed.Changes();
+
+            _ = Task.Run(async () => {
+                await foreach (var (value, error) in changes) // Computed<T> deconstruction example
+                    WriteLine($"{clock.Elapsed:g}s: Value = {value}, Error = {error}");
+            });
+            await Task.Delay(5000); // Wait for the changes to be processed
+            #endregion
+        }
+
+        {
             WriteLine($"{Environment.NewLine}MutableState:");
             #region Part01_MutableState
             var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<IStateFactory>()
