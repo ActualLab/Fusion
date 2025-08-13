@@ -37,11 +37,11 @@ efficient than equivalent plain RPC clients:
 
 Let's create a simple chat service that demonstrates how Compute Service Clients work. 
 
-### 1. Common Interface
+### 1. Shared Service Interface
 
 First, we define a common interface that both the server-side service 
 and client-side proxy will implement. It will allow us to use them interchangeably 
-in our code, so can map the interface to:: 
+in our code, so we can map the interface to: 
 - a compute service implementation on the server side (e.g., in Blazor Server) 
 - a compute service client on the client side (WASM, MAUI, etc.).
 
@@ -64,7 +64,7 @@ public interface IChatService : IComputeService
 ```
 <!-- endSnippet -->
 
-### 2. Server-Side Implementation
+### 2. Server-Side Compute Service (Implementation)
 
 Now let's implement the server-side compute service:
 
@@ -163,11 +163,35 @@ fusion.AddClient<IChatService>(); // Adds the chat service client (Compute Servi
 ```
 <!-- endSnippet -->
 
-### 4. Using Compute Service Client
+### 4. Client Usage
 
-As you may guess, API-wise there is no difference between the Compute Service and its client.
-Not only it behaves the same, but since it serves the replicas of server-side computed values under the hood,  
-even `Computed.Capture(...)` and `Computed<T>.Changes()` work the same way:
+API-wise, there is no difference between the Compute Service and its client.
+
+But the similarity goes even further: it serves the replicas of server-side computed 
+values under the hood, so it also behaves the same. In particular: 
+- `Computed.Capture(...)` and `Computed<T>.Changes()` work the same way with the client
+- If your client hosts local Compute Services, the computed values they
+  produce can be dependent on computed values produced by Compute Service Client.
+ 
+In other words, there is no difference between the Compute Service and its client.
+And that's what makes Compute Services so powerful: they allow building reactive 
+services that can be local, remote, or even a mix of both (later you'll learn
+Fusion also supports distributed call routing and service meshes), and no matter
+which kind of service you use, they behave the same way.
+
+And finally, this is what powers the client-side reactivity in all Fusion + Blazor samples.
+
+Fusion's `ComputedStateComponent<T>` uses `ComputedState<T>` under the hood, 
+so when such states get (re)computed, their outputs become dependent on 
+the output of Compute Service Client(s) they call, which, in turn, "mirror" 
+the server-side Compute Service outputs. So:
+- when the corresponding server-side `Computed<T>` gets invalidated,
+- ActualLab.Rpc call tracker subscribed to it sends ~ `Invalidate(callId)` message to the client,
+- which invalidates the client-side `Computed<T>` replica of that server-side computed value,
+- which triggers the invalidation of the client-side `Computed<T>` values depending on it,
+- some of such computed instances are associated with `ComputedStateComponent<T>.State`-s, 
+- which triggers re-computation of these states,
+- which, in turn, triggers re-rendering of corresponding `ComputedStateComponent<T>`-s.
 
 <!-- snippet: Part02_RunClient -->
 ```cs
@@ -259,22 +283,22 @@ GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessa
 <!-- endSnippet -->
 
 
-### 5. Client Performance
+## Client Performance
 
-Computed Service Clients are invalidation-aware, which means they also eliminate unnecessary remote calls.
-The call is unnecessary, when the client:
-- Was able to find a compute replica for it (i.e. for the same call to the same service with the same arguments)
-- And this replica is still consistent at the moment the new call is made.
+Computed Service Clients are invalidation-aware, which means they also eliminate unnecessary RPC calls.
+The RPC call is deemed unnecessary, when:
+- The client finds a compute replica for it (i.e., for the same call to the same service with the same arguments)
+- And this replica is still in `Consistent` state (i.e., wasn't invalidated from the moment it was created).
 
-In other words, Computed Service Clients cache call results and reuse them until they learn from the server
-that some of these results are invalidated.
+In other words, Computed Service Clients cache call results and reuse them  
+until the moment they learn from the server that some of these results are invalidated.
 
-As you may guess, this feature turns such clients into almost exact replicas of server-side Compute Services behavior-wise:
+And that's why performance-wise, such clients are exact replicas of server-side Compute Services:
 - They resort to RPC only when they don't have a cached value for a given call, 
   or a re-computation (due to invalidation) happened on the server side
 - Otherwise, they respond instantly.
 
-Now, let's see this in action. We've already added the `GetWordCountPlainRpc` method to our interface
+Let's see this in action. We've already added the `GetWordCountPlainRpc` method to our interface
 and implementation - and since it's not a compute method, it won't benefit from Fusion's caching features 
 for compute methods.
 
