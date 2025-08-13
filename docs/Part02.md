@@ -293,7 +293,7 @@ The RPC call is deemed unnecessary, if:
 In other words, Computed Service Clients cache call results and reuse them  
 until the moment they learn from the server that some of these results are invalidated.
 
-And that's why performance-wise, such clients are exact replicas of server-side Compute Services:
+And that's why performance-wise, such clients are almost exact replicas of server-side Compute Services:
 - They resort to RPC only when they don't have a cached value for a given call, 
   or a re-computation (due to invalidation) happened on the server side
 - Otherwise, they respond instantly.
