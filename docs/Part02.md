@@ -1,4 +1,4 @@
-# ActualLab.Rpc and Compute Service Clients
+# ActualLab.Rpc, Compute Service Clients, and Distributed Real-Time Updates
 
 Fusion is designed with distributed applications in mind,
 and one of its key features is the ability to expose Compute Services
@@ -33,15 +33,19 @@ efficient than equivalent plain RPC clients:
 
 4. Resilience features like transparent reconnection on disconnect, persistent client-side caching, and ETag-style checks for every computed replica on reconnect are bundled - `ActualLab.Rpc` and `ActualLab.Fusion.Client` take care of that.
 
-## Creating a Compute Service Client
+## Using ActualLab.Rpc to create Compute Service Client 
 
-Let's create a simple chat service that demonstrates how Compute Service Clients work. We'll need both server and client implementations.
+Let's create a simple chat service that demonstrates how Compute Service Clients work. 
 
 ### 1. Common Interface
 
-First, we define a common interface that both the server-side service and client-side proxy will implement:
+First, we define a common interface that both the server-side service 
+and client-side proxy will implement. It will allow us to use them interchangeably 
+in our code, so can map the interface to:: 
+- a compute service implementation on the server side (e.g., in Blazor Server) 
+- a compute service client on the client side (WASM, MAUI, etc.).
 
-<!-- snippet: Part02_CommonServices -->
+<!-- snippet: Part02_SharedApi -->
 ```cs
 // The interface for our chat service
 public interface IChatService : IComputeService
@@ -62,7 +66,7 @@ public interface IChatService : IComputeService
 
 ### 2. Server-Side Implementation
 
-Now let's implement the server-side service:
+Now let's implement the server-side compute service:
 
 <!-- snippet: Part02_ServerImplementation -->
 ```cs
@@ -71,9 +75,11 @@ public class ChatService : IChatService
     private readonly Lock _lock = new();
     private List<string> _posts = new();
 
+    // It's a [ComputeMethod] method -> it has to be virtual to allow Fusion to override it
     public virtual Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default)
         => Task.FromResult(_posts);
 
+    // It's a [ComputeMethod] method -> it has to be virtual to allow Fusion to override it
     public virtual async Task<int> GetWordCount(CancellationToken cancellationToken = default)
     {
         // NOTE: GetRecentMessages() is a compute method, so the GetWordCount() call becomes dependent on it,
@@ -84,10 +90,12 @@ public class ChatService : IChatService
             .Sum();
     }
 
+    // Regular method
     public Task<int> GetWordCountPlainRpc(CancellationToken cancellationToken = default)
         => GetWordCount(cancellationToken);
 
-    public virtual Task Post(string message, CancellationToken cancellationToken = default)
+    // Regular method
+    public Task Post(string message, CancellationToken cancellationToken = default)
     {
         lock (_lock) {
             var posts = _posts.ToList(); // We can't update the list itself (it's shared), but we can re-create it
@@ -105,221 +113,216 @@ public class ChatService : IChatService
 ```
 <!-- endSnippet -->
 
-### 3. Performance Comparison
+### 3. Configuration
 
-Compute methods provide powerful caching and invalidation features, but they do have some overhead compared to regular methods. We've already added the `GetWordCountPlainRpc` method to our interface and implementation. When we run a performance test with 1 million calls to each method, we can see the difference:
-
-```cs
-// Performance comparison: 1M calls to GetWordCountPlainRpc vs GetWordCount
-WriteLine("Performance comparison: 1M calls to GetWordCountPlainRpc vs GetWordCount");
-var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-// Test GetWordCountPlainRpc (regular method)
-for (int i = 0; i < 1000000; i++) {
-    await chatClient.GetWordCountPlainRpc();
-}
-stopwatch.Stop();
-WriteLine($"GetWordCountPlainRpc: {stopwatch.ElapsedMilliseconds} ms");
-
-// Test GetWordCount (compute method)
-stopwatch.Restart();
-for (int i = 0; i < 1000000; i++) {
-    await chatClient.GetWordCount();
-}
-stopwatch.Stop();
-WriteLine($"GetWordCount: {stopwatch.ElapsedMilliseconds} ms");
-```
-
-The regular method `GetWordCountPlainRpc` will typically be faster than the compute method `GetWordCount` because it doesn't have the overhead of caching and dependency tracking. However, the compute method provides automatic caching and invalidation, which can be more efficient in scenarios where the same values are requested multiple times.
-
-### 4. Server Setup
-
-To host our service, we need to set up a web server:
+We'll use ASP.NET Core Web Host to host the ActualLab.Rpc server 
+that exposes `IChatService`:
 
 <!-- snippet: Part02_ServerSetup -->
 ```cs
-public static WebApplication CreateHost()
-{
-    var builder = WebApplication.CreateBuilder();
-    builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
-    builder.Services.AddFusion(RpcServiceMode.Server, fusion => {
-        fusion.AddWebServer();
-        fusion.AddService<IChatService, ChatService>();
-    });
+var builder = WebApplication.CreateBuilder();
+builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
 
-    var app = builder.Build();
-    app.UseWebSockets();
-    app.MapRpcWebSocketServer();
-    return app;
+// Adding Fusion.
+// RpcServiceMode.Server is going to be the default mode for further `fusion.AddService()` calls,
+// which means that any compute service added via `fusion.AddService()` will be shared via RPC as well.
+var fusion = builder.Services.AddFusion(RpcServiceMode.Server);
+fusion.AddWebServer(); // Adds the RPC server middleware
+fusion.AddService<IChatService, ChatService>(RpcServiceMode.Server); // Adds the chat service impl. (Compute Service)
+
+var app = builder.Build();
+app.UseWebSockets(); // Enable WebSockets support on Kestrel server
+app.MapRpcWebSocketServer(); // Map the ActualLab.Rpc WebSocket server endpoint ("/rpc/ws")
+```
+<!-- endSnippet -->
+
+<!-- snippet: Part02_RunServer -->
+```cs
+try {
+    await app.RunAsync("http://localhost:22222/").WaitAsync(cancellationToken);
+}
+catch (Exception error) {
+    if (error.IsCancellationOf(cancellationToken))
+        await app.StopAsync();
+    else
+        Error.WriteLine($"Server failed: {error.Message}");
 }
 ```
 <!-- endSnippet -->
 
-### 5. Client Setup
-
-On the client side, we need to set up the service provider with the client proxy:
+As for the client-side, we need to:
+1. Configure `IServiceProvider` to use both Fusion and ActualLab.Rpc
+2. Make Fusion to register Compute Service Client (in fact, an "advanced" RPC client) for `IChatService`.
 
 <!-- snippet: Part02_ClientSetup -->
 ```cs
-public static IServiceProvider CreateClientServices(string baseUrl)
-{
-    var services = new ServiceCollection()
-        .AddLogging(logging => {
-            logging.ClearProviders();
-            logging.SetMinimumLevel(LogLevel.Debug).AddConsole();
-        })
-        .AddFusion(fusion => {
-            fusion.Rpc.AddWebSocketClient(baseUrl);
-            fusion.AddClient<IChatService>();
-        });
-    return services.BuildServiceProvider();
-}
+var fusion = services.AddFusion(); // No default RpcServiceMode, so it will be set to RpcServiceMode.Local
+var rpc = fusion.Rpc; // The same as services.AddRpc(), but slightly faster, since FusionBuilder already did it
+rpc.AddWebSocketClient("http://localhost:22222/"); // Adds the WebSocket client for ActualLab.Rpc
+fusion.AddClient<IChatService>(); // Adds the chat service client (Compute Service Client)
 ```
 <!-- endSnippet -->
 
-### 6. Using the Client
+### 4. Using Compute Service Client
 
-Now we can use our client to interact with the server:
+As you may guess, API-wise there is no difference between the Compute Service and its client.
+Not only it behaves the same, but since it serves the replicas of server-side computed values under the hood,  
+even `Computed.Capture(...)` and `Computed<T>.Changes()` work the same way:
 
-<!-- snippet: Part02_ClientUsage -->
+<!-- snippet: Part02_RunClient -->
 ```cs
-public static async Task Run()
-{
-    await (new[] { "both" } switch {
-        ["server"] => RunServer(),
-        ["client"] => RunClient(),
-        _ => Task.WhenAll(RunServer(), RunClient()),
-    });
-}
+var services = CreateClientServiceProvider();
+var chatClient = services.GetRequiredService<IChatService>();
 
-public static async Task RunServer()
-{
-    var app = CreateHost();
-    try {
-        await app.RunAsync("http://localhost:22222/");
+// Start GetWordCount() change observer
+var cWordCount0 = await Computed.Capture(() => chatClient.GetWordCount());
+_ = Task.Run(async () => {
+    await foreach (var cWordCount in cWordCount0.Changes())
+        WriteLine($"GetWordCount() -> {cWordCount}, Value: {cWordCount.Value}");
+});
+
+// Start GetRecentMessages() change observer
+var cMessages0 = await Computed.Capture(() => chatClient.GetRecentMessages());
+_ = Task.Run(async () => {
+    await foreach (var cMessages in cMessages0.Changes()) {
+        await Task.Delay(25); // We delay the output to print GetWordCount() first
+        WriteLine($"GetRecentMessages() -> {cMessages}, Value:");
+        foreach (var message in cMessages.Value)
+            WriteLine($"- {message}");
+        WriteLine();
     }
-    catch (Exception error) {
-        Error.WriteLine($"Server failed: {error.Message}");
-    }
-}
+});
 
-public static async Task RunClient()
-{
-    // Create client services
-    var services = CreateClientServices("http://localhost:22222/");
-    var chatClient = services.GetRequiredService<IChatService>();
-
-    // Start GetWordCount() change observer
-    var cWordCount0 = await Computed.Capture(() => chatClient.GetWordCount());
-    _ = Task.Run(async () => {
-        await foreach (var cWordCount in cWordCount0.Changes())
-            WriteLine($"GetWordCount() -> {cWordCount}, Value: {cWordCount.Value}");
-    });
-
-    // Start GetRecentMessages() change observer
-    var cMessages0 = await Computed.Capture(() => chatClient.GetRecentMessages());
-    _ = Task.Run(async () => {
-        await foreach (var cMessages in cMessages0.Changes()) {
-            await Task.Delay(25); // We delay the output to print GetWordCount() first
-            WriteLine($"GetRecentMessages() -> {cMessages}, Value:");
-            foreach (var message in cMessages.Value)
-                WriteLine($"- {message}");
-            WriteLine();
-        }
-    });
-
-    // Post some messages
-    await chatClient.Post("Hello, World!");
-    await Task.Delay(100);
-    await chatClient.Post("Let's count to 3!");
-    string[] data = ["One", "Two", "Three"];
-    for (var i = 1; i <= 3; i++) {
-        await Task.Delay(1000);
-        await chatClient.Post(data.Take(i).ToDelimitedString());
-    }
+// Post some messages
+await chatClient.Post("Hello, World!");
+await Task.Delay(100);
+await chatClient.Post("Let's count to 3!");
+string[] data = ["One", "Two", "Three"];
+for (var i = 1; i <= 3; i++) {
     await Task.Delay(1000);
-    await chatClient.Post("Done counting!");
-    await Task.Delay(1000);
-
-    // Remote compute method call vs plain RPC call performance comparison
-    WriteLine("100K calls to GetWordCount() vs GetWordCountPlainRpc() - run in Release!");
-    WriteLine("- Warmup...");
-    for (int i = 0; i < 100_000; i++)
-        await chatClient.GetWordCount().ConfigureAwait(false);
-    for (int i = 0; i < 100_000; i++)
-        await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
-    WriteLine("- Benchmarking...");
-    var stopwatch = Stopwatch.StartNew();
-    for (int i = 0; i < 100_000; i++)
-        await chatClient.GetWordCount().ConfigureAwait(false);
-    WriteLine($"- GetWordCount():         {stopwatch.Elapsed.ToShortString()}");
-    stopwatch.Restart();
-    for (int i = 0; i < 100_000; i++)
-        await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
-    WriteLine($"- GetWordCountPlainRpc(): {stopwatch.Elapsed.ToShortString()}");
-
-    /* The output:
-    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4u, State: Consistent), Value: 0
-    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.d5, State: Invalidated), Value:
-
-    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.h5, State: Consistent), Value: 2
-    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.l5, State: Consistent), Value:
-    - Hello, World!
-
-    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.p5, State: Consistent), Value: 6
-    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.4q, State: Consistent), Value:
-    - Hello, World!
-    - Let's count to 3!
-
-    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.d0, State: Consistent), Value: 7
-    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.cp, State: Consistent), Value:
-    - Hello, World!
-    - Let's count to 3!
-    - One
-
-    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4v, State: Consistent), Value: 9
-    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.gp, State: Consistent), Value:
-    - Hello, World!
-    - Let's count to 3!
-    - One
-    - One, Two
-
-    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.ou, State: Consistent), Value: 12
-    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.8v, State: Consistent), Value:
-    - Hello, World!
-    - Let's count to 3!
-    - One
-    - One, Two
-    - One, Two, Three
-
-    GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.h0, State: Consistent), Value: 14
-    GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.kp, State: Consistent), Value:
-    - Hello, World!
-    - Let's count to 3!
-    - One
-    - One, Two
-    - One, Two, Three
-    - Done counting!
-
-    100K calls to GetWordCount() vs GetWordCountPlainRpc() - run in Release!
-    - Warmup...
-    - Benchmarking...
-    - GetWordCount():         12.187ms
-    - GetWordCountPlainRpc(): 2.474s
-    */
+    await chatClient.Post(data.Take(i).ToDelimitedString());
 }
+await Task.Delay(1000);
+await chatClient.Post("Done counting!");
+await Task.Delay(1000);
 ```
 <!-- endSnippet -->
 
-## How It Works
+The output:
 
-When you run this example, you'll see that:
+<!-- snippet: Part02_Output -->
+```cs
+/* The output:
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4u, State: Consistent), Value: 0
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.d5, State: Invalidated), Value:
 
-1. The client automatically caches consistent replicas of computed values
-2. When a command is executed on the server, the relevant computed values are invalidated on the client
-3. The client automatically refreshes its cached values when they become invalidated
-4. The WebSocket connection provides real-time updates with automatic reconnection
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.h5, State: Consistent), Value: 2
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.l5, State: Consistent), Value:
+- Hello, World!
 
-This approach provides a seamless experience where client-side code can work with remote services almost as if they were local, while still benefiting from efficient caching and automatic invalidation.
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.p5, State: Consistent), Value: 6
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.4q, State: Consistent), Value:
+- Hello, World!
+- Let's count to 3!
+
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.d0, State: Consistent), Value: 7
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.cp, State: Consistent), Value:
+- Hello, World!
+- Let's count to 3!
+- One
+
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4v, State: Consistent), Value: 9
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.gp, State: Consistent), Value:
+- Hello, World!
+- Let's count to 3!
+- One
+- One, Two
+
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.ou, State: Consistent), Value: 12
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.8v, State: Consistent), Value:
+- Hello, World!
+- Let's count to 3!
+- One
+- One, Two
+- One, Two, Three
+
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.h0, State: Consistent), Value: 14
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.kp, State: Consistent), Value:
+- Hello, World!
+- Let's count to 3!
+- One
+- One, Two
+- One, Two, Three
+- Done counting!
+*/
+```
+<!-- endSnippet -->
+
+
+### 5. Client Performance
+
+Computed Service Clients are invalidation-aware, which means they also eliminate unnecessary remote calls.
+The call is unnecessary, when the client:
+- Was able to find a compute replica for it (i.e. for the same call to the same service with the same arguments)
+- And this replica is still consistent at the moment the new call is made.
+
+In other words, Computed Service Clients cache call results and reuse them until they learn from the server
+that some of these results are invalidated.
+
+As you may guess, this feature turns such clients into almost exact replicas of server-side Compute Services behavior-wise:
+- They resort to RPC only when they don't have a cached value for a given call, 
+  or a re-computation (due to invalidation) happened on the server side
+- Otherwise, they respond instantly.
+
+Now, let's see this in action. We've already added the `GetWordCountPlainRpc` method to our interface
+and implementation - and since it's not a compute method, it won't benefit from Fusion's caching features 
+for compute methods.
+
+<!-- snippet: Part02_Benchmark -->
+```cs
+// Benchmarking remote compute method calls and plain RPC calls - run in Release mode!
+WriteLine("100K calls to GetWordCount() vs GetWordCountPlainRpc():");
+WriteLine("- Warmup...");
+for (int i = 0; i < 100_000; i++)
+    await chatClient.GetWordCount().ConfigureAwait(false);
+for (int i = 0; i < 100_000; i++)
+    await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
+WriteLine("- Benchmarking...");
+var stopwatch = Stopwatch.StartNew();
+for (int i = 0; i < 100_000; i++)
+    await chatClient.GetWordCount().ConfigureAwait(false);
+WriteLine($"- GetWordCount():         {stopwatch.Elapsed.ToShortString()}");
+stopwatch.Restart();
+for (int i = 0; i < 100_000; i++)
+    await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
+WriteLine($"- GetWordCountPlainRpc(): {stopwatch.Elapsed.ToShortString()}");
+```
+<!-- endSnippet -->
+
+The output:
+
+<!-- snippet: Part02_Benchmark_Output -->
+```cs
+/* The output:
+100K calls to GetWordCount() vs GetWordCountPlainRpc() - run in Release!
+- Warmup...
+- Benchmarking...
+- GetWordCount():         12.187ms
+- GetWordCountPlainRpc(): 2.474s
+*/
+```
+<!-- endSnippet -->
+
+As you can see, Compute Service Client processes about **10,000,000 calls/s** 
+on a single CPU core in the "cache hit" scenario.
+
+A bit more robust test would produce 18M call/s, or 55ns per-call timing on the same machine;
+for the comparison, a single `Dictionary<TKey, TValue>` lookup requires ~5-10ns on .NET 9.
+
+And it's 100x faster than local RPC via ActualLab.Rpc, which translates to **300-1000x 
+speedup compared to RPC via SignalR, gRPC, or HTTP client**.
+
+If you are interested in more robust benchmarks, check out `Benchmark` and `RpcBenchmark`
+projects in [Fusion Samples](https://github.com/ActualLab/Fusion.Samples).
 
 #### [Next: Part 03 &raquo;](./Part03.md) | [Documentation Home](./README.md)
