@@ -29,13 +29,4 @@ public static class ServiceProviderExt
         interceptor.BindTo(proxy, proxyTarget, initialize);
         return proxy;
     }
-
-    // GetTypeViewFactory
-
-    public static ITypeViewFactory TypeViewFactory(this IServiceProvider services)
-        => services.GetService<ITypeViewFactory>() ?? Interception.TypeViewFactory.Default;
-
-    public static TypeViewFactory<TView> TypeViewFactory<TView>(this IServiceProvider services)
-        where TView : class
-        => services.TypeViewFactory().For<TView>();
 }

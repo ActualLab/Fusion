@@ -7,16 +7,6 @@ namespace ActualLab.Interception;
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume proxy-related code is preserved")]
 public static class ServiceCollectionExt
 {
-    // TypeViewFactory
-
-    public static IServiceCollection AddTypeViewFactory(this IServiceCollection services)
-    {
-        services.AddSingleton(_ => TypeViewInterceptor.Options.Default);
-        services.AddSingleton<TypeViewInterceptor>();
-        services.AddSingleton<ITypeViewFactory, TypeViewFactory>();
-        return services;
-    }
-
     // Typed factories
 
     public static IServiceCollection UseTypedFactories(this IServiceCollection services)

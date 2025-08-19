@@ -191,7 +191,7 @@ public partial class MethodDef
         }
 
         if (!ReferenceEquals(target, null) && !ReferenceEquals(target, proxy)) {
-            // There is target & target is not proxy -> invoke its method
+            // There is a target, and the target is not proxy -> invoke its method
             var invoker = (Func<object, ArgumentList, Task<TUnwrapped>>)TargetAsyncInvoker;
             return invocation => invoker.Invoke(target, invocation.Arguments);
         }
@@ -215,7 +215,7 @@ public partial class MethodDef
         }
 
         if (!ReferenceEquals(target, null) && !ReferenceEquals(target, proxy)) {
-            // There is target & target is not proxy -> invoke its method
+            // There is a target, and the target is not proxy -> invoke its method
             var invoker = TargetAsyncInvoker;
             return invocation => invoker.Invoke(target, invocation.Arguments);
         }
