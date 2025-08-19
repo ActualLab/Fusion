@@ -46,9 +46,9 @@ public class RpcSwitchInterceptor : RpcInterceptor
                 resultTask = localCallAsyncInvoker.Invoke(invocation);
             }
             else {
-                var context = invocation.Context as RpcOutboundContext ?? RpcOutboundContext.Current ?? new();
+                using var scope = RpcOutboundContext.UseOrActivateNew();
+                var context = scope.Context;
                 context.Peer = peer; // We already know the peer, so let's skip RpcCallRouter call
-                invocation = invocation.With(context);
                 resultTask = remoteCallAsyncInvoker.Invoke(invocation);
             }
             return rpcMethodDef.UniversalAsyncResultWrapper.Invoke(resultTask);
@@ -62,8 +62,9 @@ public class RpcSwitchInterceptor : RpcInterceptor
         Invocation invocation,
         RpcPeer? peer)
     {
-        var context = invocation.Context as RpcOutboundContext ?? RpcOutboundContext.Current ?? new();
-        while (true) {
+        using var scope = RpcOutboundContext.UseOrActivateNew();
+        var context = scope.Context;
+        for (var tryIndex = 0;; tryIndex++) {
             peer ??= SafeCallRouter.Invoke(methodDef, invocation.Arguments);
             try {
                 Task resultTask;
@@ -72,8 +73,8 @@ public class RpcSwitchInterceptor : RpcInterceptor
                 }
                 else {
                     context.Peer = peer;
-                    invocation = invocation.With(context);
-                    resultTask = remoteCallAsyncInvoker.Invoke(invocation);
+                    using (tryIndex != 0 ? context.Activate() : default) // .Activate() is needed only after "await"
+                        resultTask = remoteCallAsyncInvoker.Invoke(invocation);
                 }
                 return await methodDef.TaskToUntypedValueTaskConverter.Invoke(resultTask).ConfigureAwait(false);
             }

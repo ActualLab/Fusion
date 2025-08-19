@@ -17,31 +17,31 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
     }
 
     public readonly RpcServiceDef RpcServiceDef;
-    public readonly RpcInterceptor NonComputeCallInterceptor;
-    public readonly RpcInterceptor ComputeCallInterceptor;
+    public readonly RpcInterceptor NonComputeCallRpcInterceptor;
+    public readonly RpcInterceptor ComputeCallRpcInterceptor;
     public readonly object? LocalTarget;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public RemoteComputeServiceInterceptor(Options settings,
         FusionHub hub,
-        RpcInterceptor nonComputeCallInterceptor,
-        RpcInterceptor computeCallInterceptor,
+        RpcInterceptor nonComputeCallRpcInterceptor,
+        RpcInterceptor computeCallRpcInterceptor,
         object? localTarget
         ) : base(settings, hub)
     {
-        RpcServiceDef = nonComputeCallInterceptor.ServiceDef;
-        if (!ReferenceEquals(RpcServiceDef, computeCallInterceptor.ServiceDef))
-            throw new ArgumentOutOfRangeException(nameof(computeCallInterceptor),
-                $"{nameof(computeCallInterceptor)}.ServiceDef != {nameof(nonComputeCallInterceptor)}.ServiceDef.");
+        RpcServiceDef = nonComputeCallRpcInterceptor.ServiceDef;
+        if (!ReferenceEquals(RpcServiceDef, computeCallRpcInterceptor.ServiceDef))
+            throw new ArgumentOutOfRangeException(nameof(computeCallRpcInterceptor),
+                $"{nameof(computeCallRpcInterceptor)}.ServiceDef != {nameof(nonComputeCallRpcInterceptor)}.ServiceDef.");
 
-        NonComputeCallInterceptor = nonComputeCallInterceptor;
-        ComputeCallInterceptor = computeCallInterceptor;
+        NonComputeCallRpcInterceptor = nonComputeCallRpcInterceptor;
+        ComputeCallRpcInterceptor = computeCallRpcInterceptor;
         LocalTarget = localTarget;
     }
 
     public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
         => GetHandler(invocation) // Compute service method
-            ?? NonComputeCallInterceptor.SelectHandler(invocation); // Regular or command service method
+            ?? NonComputeCallRpcInterceptor.SelectHandler(invocation); // Regular or command service method
 
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]
     protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)

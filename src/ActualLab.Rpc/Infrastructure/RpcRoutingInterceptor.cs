@@ -25,7 +25,8 @@ public class RpcRoutingInterceptor : RpcInterceptor
         var localCallAsyncInvoker = methodDef.SelectAsyncInvokerUntyped(initialInvocation.Proxy, LocalTarget);
         return invocation => {
             Task resultTask;
-            var context = invocation.Context as RpcOutboundContext ?? RpcOutboundContext.Current ?? new();
+            using var scope = RpcOutboundContext.UseOrActivateNew();
+            var context = scope.Context;
             var call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
             var peer = context.Peer!;
             if (peer.Ref.CanBeRerouted)
@@ -50,7 +51,7 @@ public class RpcRoutingInterceptor : RpcInterceptor
         Func<Invocation, Task>? localCallAsyncInvoker)
     {
         var cancellationToken = context.CallCancelToken;
-        while (true) {
+        for (var tryIndex = 0;; tryIndex++) {
             if (call is null) {
                 if (localCallAsyncInvoker is null)
                     throw RpcRerouteException.MustRerouteToLocal();
@@ -60,7 +61,10 @@ public class RpcRoutingInterceptor : RpcInterceptor
             }
 
             try {
-                return await call.Invoke(AssumeConnected).ConfigureAwait(false);
+                Task<object?> resultTask;
+                using (tryIndex != 0 ? context.Activate() : default) // .Activate() is needed only after "await"
+                    resultTask = call.Invoke(AssumeConnected);
+                return await resultTask.ConfigureAwait(false);
             }
             catch (RpcRerouteException e) {
                 Log.LogWarning(e, "Rerouting: {Invocation}", invocation);

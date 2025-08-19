@@ -6,14 +6,12 @@ public readonly struct Invocation(
     object proxy,
     MethodInfo method,
     ArgumentList arguments,
-    Delegate interceptedDelegate,
-    object? context = null)
+    Delegate interceptedDelegate)
 {
     public readonly object Proxy = proxy;
     public readonly MethodInfo Method = method;
     public readonly ArgumentList Arguments = arguments;
     public readonly Delegate InterceptedDelegate = interceptedDelegate;
-    public readonly object? Context = context;
     public object? InterfaceProxyTarget => (Proxy as InterfaceProxy)?.ProxyTarget;
 
     public override string ToString()
@@ -37,13 +35,5 @@ public readonly struct Invocation(
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Invocation With(ArgumentList arguments)
-        => new(Proxy, Method, arguments, InterceptedDelegate, Context);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Invocation With(object? context)
-        => new(Proxy, Method, Arguments, InterceptedDelegate, context);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Invocation With(ArgumentList arguments, object? context)
-        => new(Proxy, Method, arguments, InterceptedDelegate, context);
+        => new(Proxy, Method, arguments, InterceptedDelegate);
 }

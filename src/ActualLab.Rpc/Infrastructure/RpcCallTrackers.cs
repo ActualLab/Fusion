@@ -203,7 +203,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     return calls;
 
                 Task<byte[]> reconnectTask;
-                using (var _ = new RpcOutboundContext(Peer).Activate())
+                using (new RpcOutboundContext(Peer).Activate())
                     reconnectTask = Peer.Hub.SystemCallSender.Client
                         .Reconnect(handshake.Index, completedStages, cancellationToken);
                 var failedCallData = await reconnectTask.ConfigureAwait(false);

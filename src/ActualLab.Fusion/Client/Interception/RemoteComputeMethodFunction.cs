@@ -309,30 +309,27 @@ public abstract class RemoteComputeMethodFunction(
         RpcCacheInfoCapture? cacheInfoCapture,
         CancellationToken cancellationToken)
     {
-        var context = new RpcOutboundContext(RpcComputeCallType.Id) {
-            Peer = peer,
-            CacheInfoCapture = cacheInfoCapture,
-        };
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;
         var remoteComputeServiceInterceptor = (RemoteComputeServiceInterceptor)proxy.Interceptor;
-        var computeCallInterceptor = remoteComputeServiceInterceptor.ComputeCallInterceptor;
+        var computeCallRpcInterceptor = remoteComputeServiceInterceptor.ComputeCallRpcInterceptor;
 
         var ctIndex = input.MethodDef.CancellationTokenIndex;
         if (ctIndex >= 0 && invocation.Arguments.GetCancellationToken(ctIndex) != cancellationToken) {
             // Fixing invocation: set CancellationToken + Context
             var arguments = invocation.Arguments.Duplicate();
             arguments.SetCancellationToken(ctIndex, cancellationToken);
-            invocation = invocation.With(arguments, context);
-        }
-        else {
-            // Nothing to fix: it's the same cancellation token, or there is no token
-            invocation = invocation.With(context);
+            invocation = invocation.With(arguments);
         }
 
         RpcOutboundComputeCall? call = null;
         try {
-            _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(computeCallInterceptor, invocation);
+            var context = new RpcOutboundContext(RpcComputeCallType.Id) {
+                Peer = peer,
+                CacheInfoCapture = cacheInfoCapture,
+            };
+            using (context.Activate())
+                _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(computeCallRpcInterceptor, invocation);
             call = context.Call as RpcOutboundComputeCall;
             if (call is null) {
                 Log.LogWarning(

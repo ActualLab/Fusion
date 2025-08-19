@@ -46,10 +46,16 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         RelatedId = relatedId;
     }
 
+    public static Scope UseOrActivateNew()
+        => _current is { } current
+            ? new Scope(current, current)
+            : new Scope(new(), null);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Scope Activate()
-        => new(this, _current);
+        => new(this);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundCall? PrepareCall(RpcMethodDef methodDef, ArgumentList arguments)
     {
         if (MethodDef != methodDef) {
@@ -133,21 +139,31 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
 
         public readonly RpcOutboundContext Context;
 
+        internal Scope(RpcOutboundContext context)
+        {
+            Context = context;
+            _oldContext = _current;
+            if (!ReferenceEquals(Context, _oldContext))
+                _current = Context;
+        }
+
         internal Scope(RpcOutboundContext context, RpcOutboundContext? oldContext)
         {
             Context = context;
             _oldContext = oldContext;
-            if (Context != _oldContext)
-                _current = context;
+            if (!ReferenceEquals(Context, _oldContext))
+                _current = Context;
         }
 
         public void Dispose()
         {
-            if (Context != _current)
+            if (ReferenceEquals(Context, _oldContext))
+                return; // Default or no-op instance
+
+            if (!ReferenceEquals(Context, _current))
                 throw Errors.RpcOutboundContextChanged();
 
-            if (Context != _oldContext)
-                _current = _oldContext;
+            _current = _oldContext;
         }
     }
 }
