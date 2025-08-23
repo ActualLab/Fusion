@@ -161,11 +161,11 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     public void Reset()
         => _position = 0;
 
-    public void Renew(int capacity, int maxCapacity)
+    public void Renew(int minCapacity, int maxCapacity)
     {
         _position = 0;
         if (_array.Length > maxCapacity)
-            ReplaceBuffer(capacity);
+            ReplaceBuffer(minCapacity);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

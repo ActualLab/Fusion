@@ -31,13 +31,7 @@ public sealed class RpcTextArgumentSerializerV1(ITextSerializer baseSerializer, 
             return span.ToArray();
         }
         finally {
-            ref var buffer = ref writer.Buffer;
-            if (buffer.Length <= Utf8BufferReplaceCapacity)
-                buffer.Clear();
-            else {
-                buffer.Dispose();
-                buffer = new Utf8ValueStringBuilder();
-            }
+            writer.Renew(Utf8BufferReplaceCapacity);
         }
     }
 

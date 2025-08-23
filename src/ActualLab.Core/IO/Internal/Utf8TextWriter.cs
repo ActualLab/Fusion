@@ -6,9 +6,9 @@ namespace ActualLab.IO.Internal;
 
 public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(formatProvider)
 {
-    private Utf8ValueStringBuilder _sb = ZString.CreateUtf8StringBuilder();
+    private Utf8ValueStringBuilder _buffer = ZString.CreateUtf8StringBuilder();
 
-    public ref Utf8ValueStringBuilder Buffer => ref _sb;
+    public ref Utf8ValueStringBuilder Buffer => ref _buffer;
     public override Encoding Encoding => EncodingExt.Utf8NoBom;
 
     public Utf8TextWriter()
@@ -17,27 +17,46 @@ public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(
 
     protected override void Dispose(bool disposing)
     {
-        _sb.Dispose();
+        _buffer.Dispose();
         base.Dispose(disposing);
     }
 
-    public override string ToString() => _sb.ToString();
+    public override string ToString()
+        => _buffer.ToString();
+
+    public void Clear()
+        => _buffer.Clear();
+
+    public void Renew(int maxCapacity)
+    {
+        if (_buffer.Length <= maxCapacity)
+            _buffer.Clear();
+        else {
+            _buffer.Dispose();
+            _buffer = ZString.CreateUtf8StringBuilder();
+        }
+    }
 
     public override void Close()
         => Dispose(true);
 
+    public override Task FlushAsync()
+        => Task.CompletedTask;
+
+    // WriteXxx
+
     public void WriteLiteral(byte value)
     {
-        var span = _sb.GetSpan(1);
+        var span = _buffer.GetSpan(1);
         span[0] = value;
-        _sb.Advance(1);
+        _buffer.Advance(1);
     }
 
     public void WriteLiteral(ReadOnlySpan<byte> bytes)
-        => _sb.AppendLiteral(bytes);
+        => _buffer.AppendLiteral(bytes);
 
     public override void Write(char value)
-        => _sb.Append(value);
+        => _buffer.Append(value);
 
     public override void Write(char[] buffer, int index, int count)
     {
@@ -50,7 +69,7 @@ public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(
         if (buffer.Length - index < count)
             throw new ArgumentException();
 
-        _sb.Append(buffer.AsSpan(index, count));
+        _buffer.Append(buffer.AsSpan(index, count));
     }
 
     public override void Write(string? value)
@@ -58,7 +77,7 @@ public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(
         if (value is null)
             return;
 
-        _sb.Append(value);
+        _buffer.Append(value);
     }
 
     public override Task WriteAsync(char value)
@@ -98,18 +117,18 @@ public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(
     }
 
     public override void Write(bool value)
-        => _sb.Append<bool>(value);
+        => _buffer.Append<bool>(value);
 
     public override void Write(decimal value)
-        => _sb.Append(value);
+        => _buffer.Append(value);
 
 #if !NETSTANDARD2_0
     public override void Write(ReadOnlySpan<char> buffer)
-        => _sb.Append(buffer);
+        => _buffer.Append(buffer);
 
     public override void WriteLine(ReadOnlySpan<char> buffer)
     {
-        _sb.Append(buffer);
+        _buffer.Append(buffer);
         WriteLine();
     }
 
@@ -135,7 +154,4 @@ public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(
         return Task.CompletedTask;
     }
 #endif
-
-    public override Task FlushAsync()
-        => Task.CompletedTask;
 }

@@ -1,7 +1,6 @@
 using ActualLab.Interception;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Serialization.Internal;
-using Cysharp.Text;
 
 namespace ActualLab.Rpc.Serialization;
 
@@ -13,7 +12,7 @@ public sealed class RpcTextArgumentSerializerV3(ITextSerializer baseSerializer)
     private static readonly byte Delimiter = 0x1F;
 
     [ThreadStatic] private static Utf8TextWriter? _utf8Buffer;
-    public static int Utf8BufferReplaceCapacity { get; set; } = 65536;
+    public static int Utf8BufferReplaceCapacity { get; set; } = 65536 * 2; // The base capacity is 65536
 
     public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool needsPolymorphism, int sizeHint)
     {
@@ -42,13 +41,7 @@ public sealed class RpcTextArgumentSerializerV3(ITextSerializer baseSerializer)
             return span.ToArray();
         }
         finally {
-            ref var buffer = ref writer.Buffer;
-            if (buffer.Length <= Utf8BufferReplaceCapacity)
-                buffer.Clear();
-            else {
-                buffer.Dispose();
-                buffer = new Utf8ValueStringBuilder();
-            }
+            writer.Renew(Utf8BufferReplaceCapacity);
         }
     }
 
