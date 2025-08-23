@@ -9,7 +9,7 @@ public sealed class NullByteSerializer : IByteSerializer
 {
     public static readonly NullByteSerializer Instance = new();
 
-    public object? Read(in ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         readLength = 0;
         return null;
@@ -29,7 +29,7 @@ public sealed class NullByteSerializer<T> : IByteSerializer<T>
 {
     public static readonly NullByteSerializer<T> Instance = new();
 
-    public T Read(in ReadOnlyMemory<byte> data, out int readLength)
+    public T Read(ReadOnlyMemory<byte> data, out int readLength)
     {
         readLength = 0;
         return default!;

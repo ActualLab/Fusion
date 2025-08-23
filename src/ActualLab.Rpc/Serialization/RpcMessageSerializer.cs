@@ -19,7 +19,7 @@ public abstract class RpcMessageSerializer(RpcPeer peer) : IByteSerializer<RpcMe
 
     public RpcPeer Peer { get; } = peer;
 
-    public abstract RpcMessage Read(in ReadOnlyMemory<byte> data, out int readLength);
+    public abstract RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength);
     public abstract void Write(IBufferWriter<byte> bufferWriter, RpcMessage value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

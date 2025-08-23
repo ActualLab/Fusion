@@ -6,10 +6,10 @@ namespace ActualLab.Serialization;
 
 public static class ByteSerializerExt
 {
-    // ReadAndConsume - with ref data argument
+    // Read (and advance) - with ref data argument
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static object? ReadAndAdvance(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data, Type type)
+    public static object? Read(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data, Type type)
     {
         var result = serializer.Read(data, type, out var readLength);
         data = data[readLength..];
@@ -17,7 +17,7 @@ public static class ByteSerializerExt
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T ReadAndAdvance<T>(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data)
+    public static T Read<T>(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data)
         where T : class // Avoid generic methods w/ struct params + boxing
     {
         var result = (T)serializer.Read(data, typeof(T), out var readLength)!;
@@ -26,15 +26,7 @@ public static class ByteSerializerExt
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static object? ReadAndAdvance<T>(this IByteSerializer<T> serializer, ref ReadOnlyMemory<byte> data, Type type)
-    {
-        var result = serializer.Read(data, out var readLength);
-        data = data[readLength..];
-        return result;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T ReadAndAdvance<T>(this IByteSerializer<T> serializer, ref ReadOnlyMemory<byte> data)
+    public static T Read<T>(this IByteSerializer<T> serializer, ref ReadOnlyMemory<byte> data)
         where T : class // Avoid generic methods w/ struct params + boxing
     {
         var result = serializer.Read(data, out var readLength)!;

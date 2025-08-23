@@ -10,7 +10,7 @@ public sealed class CastingByteSerializer<T>(
     public IByteSerializer UntypedSerializer { get; } = untypedSerializer;
     public Type SerializedType { get; } = serializedType;
 
-    public T Read(in ReadOnlyMemory<byte> data, out int readLength)
+    public T Read(ReadOnlyMemory<byte> data, out int readLength)
         => (T) UntypedSerializer.Read(data, SerializedType, out readLength)!;
 
     public void Write(IBufferWriter<byte> bufferWriter, T value)

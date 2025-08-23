@@ -34,7 +34,7 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
     public IByteSerializer Serializer { get; } = serializer;
     public Func<Type, bool> TypeFilter { get; } = typeFilter ?? (_ => true);
 
-    public override object? Read(in ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         var actualTypeRef = (TypeRef)Serializer.Read(data, typeof(TypeRef), out var typeRefLength)!;
         if (actualTypeRef == default) {

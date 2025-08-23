@@ -25,7 +25,7 @@ public sealed class AsymmetricTextSerializer : ITextSerializer
 
     public object? Read(string data, Type type)
         => Reader.Read(data, type);
-    public object? Read(in ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
         => Reader.Read(data, type, out readLength);
     public object? Read(ReadOnlyMemory<char> data, Type type)
         => Reader.Read(data, type);
@@ -53,7 +53,7 @@ public class AsymmetricTextSerializer<T> : ITextSerializer<T>
 
     public T Read(string data)
         => Reader.Read(data);
-    public T Read(in ReadOnlyMemory<byte> data, out int readLength)
+    public T Read(ReadOnlyMemory<byte> data, out int readLength)
         => Reader.Read(data, out readLength);
     public T Read(ReadOnlyMemory<char> data)
         => Reader.Read(data);

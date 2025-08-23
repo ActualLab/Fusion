@@ -6,7 +6,7 @@ namespace ActualLab.Rpc.Serialization;
 
 public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSerializer(peer)
 {
-    public override RpcMessage Read(in ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
+    public override RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
     {
         var reader = new MemoryReader(data);
 
@@ -62,7 +62,7 @@ public class RpcByteMessageSerializerCompact(RpcPeer peer) : RpcByteMessageSeria
         return new RpcMessage(callTypeId, relatedId, methodRef, argumentData, headers);
     }
 
-    public override RpcMessage Read(in ReadOnlyMemory<byte> data, out int readLength)
+    public override RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength)
     {
         var reader = new MemoryReader(data);
 

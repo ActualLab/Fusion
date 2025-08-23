@@ -4,7 +4,7 @@ namespace ActualLab.Serialization;
 
 public interface IByteSerializer
 {
-    public object? Read(in ReadOnlyMemory<byte> data, Type type, out int readLength);
+    public object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength);
     public void Write(IBufferWriter<byte> bufferWriter, object? value, Type type);
 
     public IByteSerializer<T> ToTyped<T>(Type? serializedType = null);
@@ -12,7 +12,7 @@ public interface IByteSerializer
 
 public interface IByteSerializer<T>
 {
-    public T Read(in ReadOnlyMemory<byte> data, out int readLength);
+    public T Read(ReadOnlyMemory<byte> data, out int readLength);
     public void Write(IBufferWriter<byte> bufferWriter, T value);
 }
 
@@ -25,5 +25,5 @@ public interface IProjectingByteSerializer<T> : IByteSerializer<T>
 {
     public bool AllowProjection { get; }
 
-    public T Read(in ReadOnlyMemory<byte> data, out int readLength, out bool isProjection);
+    public T Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection);
 }

@@ -21,7 +21,7 @@ public sealed class RpcTextMessageSerializer(RpcPeer peer)
     public RpcMessage Read(ReadOnlyMemory<char> data)
         => throw Errors.NotSupported("This method shouldn't be used.");
 
-    public override RpcMessage Read(in ReadOnlyMemory<byte> data, out int readLength)
+    public override RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength)
     {
         var reader = new Utf8JsonReader(data.Span);
         var m = (JsonRpcMessage)JsonSerializer.Deserialize(ref reader, typeof(JsonRpcMessage), JsonRpcMessageContext.Default)!;

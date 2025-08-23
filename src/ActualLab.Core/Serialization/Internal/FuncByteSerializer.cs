@@ -10,7 +10,7 @@ public class FuncByteSerializer<T>(
     public Func<ReadOnlyMemory<byte>, (T Value, int ReadLength)> Reader { get; } = reader;
     public Action<IBufferWriter<byte>, T> Writer { get; } = writer;
 
-    public T Read(in ReadOnlyMemory<byte> data, out int readLength)
+    public T Read(ReadOnlyMemory<byte> data, out int readLength)
     {
         var result = Reader.Invoke(data);
         readLength = result.ReadLength;

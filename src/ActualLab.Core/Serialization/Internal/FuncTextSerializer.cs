@@ -17,7 +17,7 @@ public class FuncTextSerializer<T>(
     public T Read(string data)
         => Reader.Invoke(data);
 
-    public T Read(in ReadOnlyMemory<byte> data, out int readLength)
+    public T Read(ReadOnlyMemory<byte> data, out int readLength)
     {
         var decoder = EncodingExt.Utf8NoBom.GetDecoder();
         var buffer = ZString.CreateStringBuilder(); // Fine here: it is used zero-alloc IBufferWriter<char>

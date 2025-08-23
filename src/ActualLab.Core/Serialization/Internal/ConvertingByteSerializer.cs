@@ -8,7 +8,7 @@ public sealed class ConvertingByteSerializer<T, TInner>(
     BiConverter<T, TInner> converter
     ) : IByteSerializer<T>
 {
-    public T Read(in ReadOnlyMemory<byte> data, out int readLength)
+    public T Read(ReadOnlyMemory<byte> data, out int readLength)
     {
         var inner = serializer.Read(data, out readLength);
         return converter.Backward.Invoke(inner);

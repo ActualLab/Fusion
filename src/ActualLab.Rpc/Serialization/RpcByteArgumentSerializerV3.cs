@@ -41,7 +41,7 @@ public sealed class RpcByteArgumentSerializerV3(IByteSerializer baseSerializer) 
                 continue;
             }
 
-            var item = baseSerializer.ReadAndAdvance(ref data, type);
+            var item = baseSerializer.Read(ref data, type);
             arguments.SetUntyped(i, item);
         }
     }
@@ -81,10 +81,10 @@ public sealed class RpcByteArgumentSerializerV3(IByteSerializer baseSerializer) 
             object? item;
             if (IsPolymorphic(type)) {
                 var itemType = ByteTypeSerializer.ReadDerivedItemType(ref data, type);
-                item = baseSerializer.ReadAndAdvance(ref data, itemType);
+                item = baseSerializer.Read(ref data, itemType);
             }
             else
-                item = baseSerializer.ReadAndAdvance(ref data, type);
+                item = baseSerializer.Read(ref data, type);
             arguments.SetUntyped(i, item);
         }
     }

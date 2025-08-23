@@ -21,7 +21,7 @@ public class RpcByteMessageSerializer(RpcPeer peer)
     public int MinProjectionSize { get; init; } = Defaults.MinProjectionSize;
     public int MaxInefficiencyFactor { get; init; } = Defaults.MaxInefficiencyFactor;
 
-    public virtual RpcMessage Read(in ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
+    public virtual RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
     {
         var reader = new MemoryReader(data);
 
@@ -81,7 +81,7 @@ public class RpcByteMessageSerializer(RpcPeer peer)
         return new RpcMessage(callTypeId, relatedId, methodRef, argumentData, headers);
     }
 
-    public override RpcMessage Read(in ReadOnlyMemory<byte> data, out int readLength)
+    public override RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength)
     {
         var reader = new MemoryReader(data);
 

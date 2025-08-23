@@ -75,7 +75,7 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
     public IByteSerializer<T> ToTyped<T>(Type? serializedType = null)
         => (IByteSerializer<T>)GetTypedSerializer(serializedType ?? typeof(T));
 
-    public virtual object? Read(in ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public virtual object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         var serializer = _typedSerializerCache.GetOrAdd(type,
             static (type1, self) => (MessagePackByteSerializer)typeof(MessagePackByteSerializer<>)
@@ -111,7 +111,7 @@ public class MessagePackByteSerializer<T>(MessagePackSerializerOptions options, 
 {
     public Type SerializedType { get; } = serializedType;
 
-    public override object? Read(in ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         if (type != SerializedType)
             throw Errors.SerializedTypeMismatch(SerializedType, type);
@@ -128,7 +128,7 @@ public class MessagePackByteSerializer<T>(MessagePackSerializerOptions options, 
         Write(bufferWriter, (T)value!);
     }
 
-    public T Read(in ReadOnlyMemory<byte> data, out int readLength)
+    public T Read(ReadOnlyMemory<byte> data, out int readLength)
         => MessagePackSerializer.Deserialize<T>(data, Options, out readLength);
 
     public void Write(IBufferWriter<byte> bufferWriter, T value)
