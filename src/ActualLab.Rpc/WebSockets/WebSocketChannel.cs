@@ -2,7 +2,6 @@ using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
 using ActualLab.Channels;
 using ActualLab.IO;
-using ActualLab.IO.Internal;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.WebSockets.Internal;
 using Errors = ActualLab.Rpc.Internal.Errors;

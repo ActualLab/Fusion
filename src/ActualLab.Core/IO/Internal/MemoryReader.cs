@@ -1,3 +1,4 @@
+using ActualLab.Internal;
 
 namespace ActualLab.IO.Internal;
 
@@ -26,7 +27,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
             2 => Remaining.ReadUnchecked<ushort>(1),
             4 => Remaining.ReadUnchecked<uint>(1),
             8 => Remaining.ReadUnchecked<ulong>(1),
-            _ => throw ActualLab.Internal.Errors.Format("Invalid message format."),
+            _ => throw Errors.Format("Invalid message format."),
         };
         Advance(size + 1);
         return result;
@@ -39,7 +40,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
             2 => Remaining.ReadUnchecked<ushort>(offset),
             4 => Remaining.ReadUnchecked<uint>(offset),
             8 => Remaining.ReadUnchecked<ulong>(offset),
-            _ => throw ActualLab.Internal.Errors.Format("Invalid message format."),
+            _ => throw Errors.Format("Invalid message format."),
         };
         Advance(size + offset);
         return result;

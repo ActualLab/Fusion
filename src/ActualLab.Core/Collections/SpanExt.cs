@@ -1,13 +1,18 @@
-namespace ActualLab.IO.Internal;
+namespace ActualLab.Collections;
 
-public static class UnsafeSpanExt
+public static class SpanExt
 {
     // AsSpanUnsafe
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Span<T> AsSpanUnsafe<T>(this ReadOnlySpan<T> readOnlySpan)
+#if NET9_0_OR_GREATER
         => Unsafe.As<ReadOnlySpan<T>, Span<T>>(ref readOnlySpan);
-        // => MemoryMarshal.CreateSpan(ref MemoryMarshal.GetReference(readOnlySpan), readOnlySpan.Length);
+#else
+        => MemoryMarshal.CreateSpan(ref MemoryMarshal.GetReference(readOnlySpan), readOnlySpan.Length);
+#endif
+#endif
 
     // ReadUnchecked
 

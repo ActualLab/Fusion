@@ -1,4 +1,3 @@
-using ActualLab.IO.Internal;
 using MessagePack;
 
 namespace ActualLab.Rpc;
