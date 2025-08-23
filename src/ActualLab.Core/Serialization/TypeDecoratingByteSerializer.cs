@@ -14,6 +14,7 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
 #else
     private static readonly object StaticLock = new();
 #endif
+    private static readonly object DefaultTypeRefAsObject = default(TypeRef);
     private static volatile TypeDecoratingByteSerializer? _default;
 
     public static TypeDecoratingByteSerializer Default {
@@ -33,9 +34,9 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
     public IByteSerializer Serializer { get; } = serializer;
     public Func<Type, bool> TypeFilter { get; } = typeFilter ?? (_ => true);
 
-    public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public override object? Read(in ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
-        var actualTypeRef = Serializer.Read<TypeRef>(data, out var typeRefLength);
+        var actualTypeRef = (TypeRef)Serializer.Read(data, typeof(TypeRef), out var typeRefLength)!;
         if (actualTypeRef == default) {
             readLength = typeRefLength;
             return null;
@@ -56,13 +57,13 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
     public override void Write(IBufferWriter<byte> bufferWriter, object? value, Type type)
     {
         if (ReferenceEquals(value, null)) {
-            Serializer.Write(bufferWriter, default(TypeRef));
+            Serializer.Write(bufferWriter, DefaultTypeRefAsObject, typeof(TypeRef));
             return;
         }
 
         var actualType = value.GetType();
         var actualTypeRef = new TypeRef(actualType).WithoutAssemblyVersions();
-        Serializer.Write(bufferWriter, actualTypeRef);
+        Serializer.Write(bufferWriter, actualTypeRef, typeof(TypeRef));
         Serializer.Write(bufferWriter, value, actualType);
     }
 }

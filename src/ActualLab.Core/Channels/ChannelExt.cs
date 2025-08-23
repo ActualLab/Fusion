@@ -141,11 +141,14 @@ public static partial class ChannelExt
             Channel.CreateBounded<T>(channelOptions));
 
         _ = downstreamChannel.Connect(pair.Channel1,
-            serializer.Read,
+            Read,
             Write,
             ChannelCopyMode.CopyAllSilently,
             cancellationToken);
         return pair.Channel2;
+
+        T Read(ReadOnlyMemory<byte> data)
+            => serializer.Read(data, out _);
 
         ReadOnlyMemory<byte> Write(T value) {
             using var bufferWriter = serializer.Write(value);

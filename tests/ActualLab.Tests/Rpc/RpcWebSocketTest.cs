@@ -393,6 +393,7 @@ public class RpcWebSocketTest : RpcTestBase
         Out.WriteLine($"{totalIterationCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
 
         await AssertNoCalls(peer, Out);
+        return;
 
         async Task<TimeSpan> Run(int count) {
             var startedAt = CpuTimestamp.Now;
@@ -432,6 +433,7 @@ public class RpcWebSocketTest : RpcTestBase
         var totalItemCount = threadCount * itemCount;
         Out.WriteLine($"{itemCount}: {totalItemCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
         await AssertNoCalls(peer, Out);
+        return;
 
         async Task<TimeSpan> Run(int count)
         {

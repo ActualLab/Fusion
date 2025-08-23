@@ -55,7 +55,7 @@ public sealed class RedisChannelSub<T>(
     protected override void OnMessage(RedisChannel redisChannel, RedisValue redisValue)
     {
         try {
-            var value = Serializer.Read(redisValue);
+            var value = Serializer.Read(redisValue, out _);
             _channel.Writer.TryWrite(value);
         }
         catch (Exception e) {

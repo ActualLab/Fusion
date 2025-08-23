@@ -12,7 +12,7 @@ public sealed class ConvertingTextSerializer<T, TInner>(
 
     // Read
 
-    public T Read(ReadOnlyMemory<byte> data, out int readLength)
+    public T Read(in ReadOnlyMemory<byte> data, out int readLength)
     {
         var inner = serializer.Read(data, out readLength);
         return converter.Backward.Invoke(inner);

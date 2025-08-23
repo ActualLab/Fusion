@@ -41,11 +41,11 @@ public class TypeEvolutionTester<TOld, TNew>
         AssertEqual(value, v0);
 
         using var buffer = new ArrayPoolBuffer<byte>(false);
-        s.Write(buffer, value);
+        s.Write(buffer, value, typeof(TOld));
         var bytes = buffer.WrittenMemory;
         var json2 = Encoding.UTF8.GetDecoder().Convert(bytes.Span);
         json2.Should().Be(json);
-        var v1 = s.Read<TNew>(bytes);
+        var v1 = (TNew)s.Read(bytes, typeof(TNew), out _)!;
         AssertEqual(value, v1);
     }
 
@@ -60,11 +60,11 @@ public class TypeEvolutionTester<TOld, TNew>
         AssertEqual(value, v0);
 
         using var buffer = new ArrayPoolBuffer<byte>(false);
-        s.Write(buffer, value);
+        s.Write(buffer, value, typeof(TOld));
         var bytes = buffer.WrittenMemory;
         var json2 = Encoding.UTF8.GetDecoder().Convert(bytes.Span);
         json2.Should().Be(json);
-        var v1 = s.Read<TNew>(bytes);
+        var v1 = (TNew)s.Read(bytes, typeof(TNew), out _)!;
         AssertEqual(value, v1);
     }
 
@@ -73,15 +73,15 @@ public class TypeEvolutionTester<TOld, TNew>
     public void CheckMessagePackByteSerializer(TOld value, ITestOutputHelper? output = null)
     {
         var s = new MessagePackByteSerializer();
-        using var buffer = s.Write(value);
+        using var buffer = s.Write(value, typeof(TOld));
         var bytes = buffer.WrittenMemory.ToArray();
         Output?.WriteLine($"MessagePackByteSerializer: {JsonFormatter.Format(bytes)}");
-        s.Write(buffer, value);
+        s.Write(buffer, value, typeof(TOld));
 
         bytes = buffer.WrittenMemory.ToArray();
-        var v0 = s.Read<TNew>(bytes, out var readLength);
+        var v0 = (TNew)s.Read(bytes, typeof(TNew), out var readLength)!;
         AssertEqual(value, v0);
-        var v1 = s.Read<TNew>(bytes.AsMemory(readLength));
+        var v1 = (TNew)s.Read(bytes.AsMemory(readLength), typeof(TNew), out _)!;
         AssertEqual(value, v1);
     }
 
@@ -90,15 +90,15 @@ public class TypeEvolutionTester<TOld, TNew>
     public void CheckMemoryPackByteSerializer(TOld value, ITestOutputHelper? output = null)
     {
         var s = new MemoryPackByteSerializer();
-        using var buffer = s.Write(value);
+        using var buffer = s.Write(value, typeof(TOld));
         var bytes = buffer.WrittenMemory.ToArray();
         Output?.WriteLine($"MemoryPackByteSerializer: {JsonFormatter.Format(bytes)}");
-        s.Write(buffer, value);
+        s.Write(buffer, value, typeof(TOld));
 
         bytes = buffer.WrittenMemory.ToArray();
-        var v0 = s.Read<TNew>(bytes, out var readLength);
+        var v0 = (TNew)s.Read(bytes, typeof(TNew), out var readLength)!;
         AssertEqual(value, v0);
-        var v1 = s.Read<TNew>(bytes.AsMemory(readLength));
+        var v1 = (TNew)s.Read(bytes.AsMemory(readLength), typeof(TNew), out _)!;
         AssertEqual(value, v1);
     }
 }

@@ -101,7 +101,7 @@ public sealed class RedisTaskSub<T> : RedisSubBase
     protected override void OnMessage(RedisChannel redisChannel, RedisValue redisValue)
     {
         try {
-            var value = Serializer.Read(redisValue);
+            var value = Serializer.Read(redisValue, out _);
             lock (Lock)
                 _nextMessageSource.TrySetResult(value);
         }

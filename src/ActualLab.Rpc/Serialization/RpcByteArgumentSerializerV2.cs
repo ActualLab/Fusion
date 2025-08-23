@@ -120,7 +120,7 @@ public sealed class RpcByteArgumentSerializerV2(IByteSerializer baseSerializer, 
         public override T OnStruct<T>(int index)
             => typeof(T) == typeof(CancellationToken)
                 ? default!
-                : Serializer.Read<T>(ref Data);
+                : (T)Serializer.ReadAndAdvance(ref Data, typeof(T))!;
     }
 
     private sealed class ItemPolymorphicDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
@@ -129,7 +129,7 @@ public sealed class RpcByteArgumentSerializerV2(IByteSerializer baseSerializer, 
         public override object? OnClass(Type type, int index)
         {
             var itemType = ByteTypeSerializer.ReadDerivedItemType(ref Data, type);
-            return Serializer.Read(ref Data, itemType);
+            return Serializer.ReadAndAdvance(ref Data, itemType);
         }
 
         public override object? OnAny(Type type, int index, object? defaultValue)
@@ -137,10 +137,10 @@ public sealed class RpcByteArgumentSerializerV2(IByteSerializer baseSerializer, 
             if (type.IsValueType)
                 return type == typeof(CancellationToken)
                     ? defaultValue
-                    : Serializer.Read(ref Data, type);
+                    : Serializer.ReadAndAdvance(ref Data, type);
 
             var itemType = ByteTypeSerializer.ReadDerivedItemType(ref Data, type);
-            return Serializer.Read(ref Data, itemType);
+            return Serializer.ReadAndAdvance(ref Data, itemType);
         }
     }
 
@@ -150,7 +150,7 @@ public sealed class RpcByteArgumentSerializerV2(IByteSerializer baseSerializer, 
         public override object? OnClass(Type type, int index)
         {
             ByteTypeSerializer.ReadExactItemType(ref Data, type);
-            return Serializer.Read(ref Data, type);
+            return Serializer.ReadAndAdvance(ref Data, type);
         }
 
         public override object? OnAny(Type type, int index, object? defaultValue)
@@ -158,10 +158,10 @@ public sealed class RpcByteArgumentSerializerV2(IByteSerializer baseSerializer, 
             if (type.IsValueType)
                 return type == typeof(CancellationToken)
                     ? defaultValue
-                    : Serializer.Read(ref Data, type);
+                    : Serializer.ReadAndAdvance(ref Data, type);
 
             ByteTypeSerializer.ReadExactItemType(ref Data, type);
-            return Serializer.Read(ref Data, type);
+            return Serializer.ReadAndAdvance(ref Data, type);
         }
     }
 
@@ -169,11 +169,11 @@ public sealed class RpcByteArgumentSerializerV2(IByteSerializer baseSerializer, 
         : ItemDeserializer(serializer, data)
     {
         public override object? OnClass(Type type, int index)
-            => Serializer.Read(ref Data, type);
+            => Serializer.ReadAndAdvance(ref Data, type);
 
         public override object? OnAny(Type type, int index, object? defaultValue)
             => type == typeof(CancellationToken)
                 ? defaultValue
-                : Serializer.Read(ref Data, type);
+                : Serializer.ReadAndAdvance(ref Data, type);
     }
 }

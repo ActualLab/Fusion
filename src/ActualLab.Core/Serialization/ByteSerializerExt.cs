@@ -1,4 +1,3 @@
-using System.Buffers;
 using ActualLab.Conversion;
 using ActualLab.IO;
 using ActualLab.Serialization.Internal;
@@ -7,26 +6,19 @@ namespace ActualLab.Serialization;
 
 public static class ByteSerializerExt
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static object? Read(this IByteSerializer serializer, ReadOnlyMemory<byte> data, Type type)
-        => serializer.Read(data, type, out _);
+    // ReadAndConsume - with ref data argument
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static object? Read(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data, Type type)
+    public static object? ReadAndAdvance(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data, Type type)
     {
         var result = serializer.Read(data, type, out var readLength);
         data = data[readLength..];
         return result;
     }
 
-    // Read w/o Type & readLength arguments
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T Read<T>(this IByteSerializer serializer, ReadOnlyMemory<byte> data)
-        => (T)serializer.Read(data, typeof(T), out _)!;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T Read<T>(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data)
+    public static T ReadAndAdvance<T>(this IByteSerializer serializer, ref ReadOnlyMemory<byte> data)
+        where T : class // Avoid generic methods w/ struct params + boxing
     {
         var result = (T)serializer.Read(data, typeof(T), out var readLength)!;
         data = data[readLength..];
@@ -34,27 +26,30 @@ public static class ByteSerializerExt
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T Read<T>(this IByteSerializer<T> serializer, ReadOnlyMemory<byte> data)
-        => serializer.Read(data, out _);
+    public static object? ReadAndAdvance<T>(this IByteSerializer<T> serializer, ref ReadOnlyMemory<byte> data, Type type)
+    {
+        var result = serializer.Read(data, out var readLength);
+        data = data[readLength..];
+        return result;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T Read<T>(this IByteSerializer serializer, ReadOnlyMemory<byte> data, out int readLength)
-        => (T)serializer.Read(data, typeof(T), out readLength)!;
-
-    // Write w/o last Type argument
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Write<T>(this IByteSerializer serializer, IBufferWriter<byte> bufferWriter, T value)
-        // ReSharper disable once HeapView.PossibleBoxingAllocation
-        => serializer.Write(bufferWriter, value, typeof(T));
+    public static T ReadAndAdvance<T>(this IByteSerializer<T> serializer, ref ReadOnlyMemory<byte> data)
+        where T : class // Avoid generic methods w/ struct params + boxing
+    {
+        var result = serializer.Read(data, out var readLength)!;
+        data = data[readLength..];
+        return result;
+    }
 
     // Write w/o IBufferWriter<byte> argument
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArrayPoolBuffer<byte> Write<T>(this IByteSerializer serializer, T value)
-        // ReSharper disable once HeapView.PossibleBoxingAllocation
+        where T : class // Avoid generic methods w/ struct params + boxing
         => serializer.Write(value, typeof(T));
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArrayPoolBuffer<byte> Write(this IByteSerializer serializer, object? value, Type type)
     {
         var bufferWriter = new ArrayPoolBuffer<byte>(false);
@@ -62,6 +57,7 @@ public static class ByteSerializerExt
         return bufferWriter;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArrayPoolBuffer<byte> Write<T>(this IByteSerializer<T> serializer, T value)
     {
         var bufferWriter = new ArrayPoolBuffer<byte>(false);

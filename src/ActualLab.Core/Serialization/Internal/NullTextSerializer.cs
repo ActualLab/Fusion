@@ -16,7 +16,7 @@ public sealed class NullTextSerializer : ITextSerializer
     public object? Read(string data, Type type)
         => null;
 
-    public object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public object? Read(in ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         readLength = 0;
         return null;
@@ -59,7 +59,7 @@ public sealed class NullTextSerializer<T> : ITextSerializer<T>
     public T Read(string data)
         => default!;
 
-    public T Read(ReadOnlyMemory<byte> data, out int readLength)
+    public T Read(in ReadOnlyMemory<byte> data, out int readLength)
     {
         readLength = 0;
         return default!;

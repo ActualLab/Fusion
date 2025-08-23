@@ -30,7 +30,7 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
     public async IAsyncEnumerable<T> Read([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var appendSub = GetAppendSub();
-        await using var _ = appendSub.ConfigureAwait(false);
+        await using var _1 = appendSub.ConfigureAwait(false);
         await appendSub.Subscribe().ConfigureAwait(false);
 
         var position = (RedisValue)"0-0";
@@ -64,7 +64,7 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
                 }
 
                 var data = (ReadOnlyMemory<byte>)entry[Settings.ItemKey];
-                var item = serializer.Read(data);
+                var item = serializer.Read(data, out _);
                 yield return item;
 
                 position = entry.Id;

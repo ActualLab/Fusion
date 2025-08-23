@@ -117,7 +117,7 @@ public sealed class RedisQueue<T> : IAsyncDisposable
             var database = await RedisDb.Database.Get(cancellationToken).ConfigureAwait(false);
             var value = await database.ListRightPopAsync(Key).ConfigureAwait(false);
             if (!value.IsNullOrEmpty)
-                return Settings.Serializer.Read(value);
+                return Settings.Serializer.Read(value, out _);
             var notificationResult = await nextMessageTask
                 .WaitResultAsync(Settings.Clock, Settings.EnqueueCheckPeriod, cancellationToken)
                 .ConfigureAwait(false);

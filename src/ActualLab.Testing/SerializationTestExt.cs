@@ -175,7 +175,7 @@ public static class SerializationTestExt
         using var buffer = s.Write(value, typeof(object));
         var v0 = buffer.WrittenMemory.ToArray();
         output?.WriteLine($"TypeDecoratingByteSerializer: {v0.AsByteString()}");
-        var result = (T)s.Read<object>(v0);
+        var result = (T)s.Read(v0, typeof(object), out _)!;
 
         output?.WriteLine($"PassThroughTypeDecoratingByteSerializer -> {result}");
         return result;
@@ -195,7 +195,7 @@ public static class SerializationTestExt
         var bytes = buffer.WrittenMemory;
         var json2 = Encoding.UTF8.GetDecoder().Convert(bytes.Span);
         json2.Should().Be(json);
-        var v0 = s.Read(bytes);
+        var v0 = s.Read(bytes, out _);
         var json3 = s.Write(v0);
         json3.Should().Be(json);
 
@@ -225,7 +225,7 @@ public static class SerializationTestExt
         var bytes = buffer.WrittenMemory;
         var json2 = Encoding.UTF8.GetDecoder().Convert(bytes.Span);
         json2.Should().Be(json);
-        var v0 = s.Read(bytes);
+        var v0 = s.Read(bytes, out _);
         var json3 = s.Write(v0);
         json3.Should().Be(json);
 
@@ -246,7 +246,7 @@ public static class SerializationTestExt
         var v0 = buffer.WrittenMemory.ToArray();
         var json0 = MessagePackSerializer.ConvertToJson(v0, MessagePackByteSerializer.DefaultOptions);
         output?.WriteLine($"MessagePackByteSerializer: {json0} as {v0.AsByteString()}");
-        value = s.Read(v0);
+        value = s.Read(v0, out _);
 
         var v1 = MessagePackSerialized.New(value);
         var json1 = MessagePackSerializer.ConvertToJson(v0, MessagePackByteSerializer.DefaultOptions);
@@ -269,7 +269,7 @@ public static class SerializationTestExt
         using var buffer = s.Write(value);
         var v0 = buffer.WrittenMemory.ToArray();
         output?.WriteLine($"MemoryPackByteSerializer: {v0.AsByteString()}");
-        value = s.Read(v0);
+        value = s.Read(v0, out _);
 
         var v1 = MemoryPackSerialized.New(value);
         output?.WriteLine($"MemoryPackSerialized: {v1.Data.AsByteString()}");

@@ -12,7 +12,7 @@ public abstract class TextSerializerBase : ITextSerializer
 
     // Read
 
-    public virtual object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public virtual object? Read(in ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         var decoder = EncodingExt.Utf8NoBom.GetDecoder();
         var buffer = ZString.CreateStringBuilder(); // Fine here: it is used zero-alloc IBufferWriter<char>

@@ -10,7 +10,7 @@ public class ConvertingSerializerTest(ITestOutputHelper @out) : TestBase(@out)
         var serializer = ByteSerializer.Default.ToTyped<string>().Convert(BiConverter.Identity<string>());
         var value = "test";
         var data = serializer.Write(value).WrittenMemory;
-        serializer.Read(data).Should().Be(value);
+        serializer.Read(data, out _).Should().Be(value);
     }
 
     [Fact]

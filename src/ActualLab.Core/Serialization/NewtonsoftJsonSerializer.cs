@@ -77,7 +77,7 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
         return _jsonSerializer.Deserialize(reader, type);
     }
 
-    public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public override object? Read(in ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         var streamReader = new StreamReader(data.AsStream()); // No need to dispose
         var reader = new JsonTextReader(streamReader) { CloseInput = false }; // No need to dispose

@@ -79,7 +79,7 @@ public class SystemJsonSerializer : TextSerializerBase
 
     public override object? Read(string data, Type type)
         => JsonSerializer.Deserialize(data, type, Options);
-    public override object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength)
+    public override object? Read(in ReadOnlyMemory<byte> data, Type type, out int readLength)
     {
         var reader = new Utf8JsonReader(data.Span);
         var result = JsonSerializer.Deserialize(ref reader, type, Options);

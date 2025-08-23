@@ -100,7 +100,7 @@ public class MessagePackSerializationTest(ITestOutputHelper @out) : TestBase(@ou
     private void Test<T>(T value, string expectedJson)
     {
         var s = new MessagePackByteSerializer(MessagePackByteSerializer.DefaultOptions);
-        var bytes = s.Write(value).WrittenSpan.ToArray();
+        var bytes = s.Write(value, typeof(T)).WrittenSpan.ToArray();
         var json = MessagePackSerializer.ConvertToJson(bytes, MessagePackByteSerializer.DefaultOptions);
         json.Should().Be(expectedJson);
     }
@@ -108,7 +108,7 @@ public class MessagePackSerializationTest(ITestOutputHelper @out) : TestBase(@ou
     private void Test<T>(T value, Action<string> assertion)
     {
         var s = new MessagePackByteSerializer(MessagePackByteSerializer.DefaultOptions);
-        var bytes = s.Write(value).WrittenSpan.ToArray();
+        var bytes = s.Write(value, typeof(T)).WrittenSpan.ToArray();
         var json = MessagePackSerializer.ConvertToJson(bytes, MessagePackByteSerializer.DefaultOptions);
         assertion.Invoke(json);
     }

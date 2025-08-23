@@ -78,13 +78,13 @@ public readonly partial struct UniSerialized<T>
         try {
 #if !NETSTANDARD2_0
             if (serializerKind != SerializerKind.MemoryPack) {
-                buffer = serializer.Write(value);
+                buffer = serializer.Write(value, typeof(T));
                 return buffer.WrittenSpan.ToArray();
             }
 
             using var stateSnapshot = MemoryPackSerializer.ResetWriterState();
 #endif
-            buffer = serializer.Write(value);
+            buffer = serializer.Write(value, typeof(T));
             return buffer.WrittenSpan.ToArray();
         }
         finally {
@@ -103,10 +103,10 @@ public readonly partial struct UniSerialized<T>
         var serializer = serializerKind.GetDefaultSerializer();
 #if !NETSTANDARD2_0
         if (serializerKind != SerializerKind.MemoryPack)
-            return serializer.Read<T>(bytes);
+            return (T)serializer.Read(bytes, typeof(T), out _)!;
 
         using var stateSnapshot = MemoryPackSerializer.ResetReaderState();
 #endif
-        return serializer.Read<T>(bytes);
+        return (T)serializer.Read(bytes, typeof(T), out _)!;
     }
 }

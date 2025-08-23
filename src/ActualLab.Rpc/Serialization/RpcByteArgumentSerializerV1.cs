@@ -8,7 +8,9 @@ namespace ActualLab.Rpc.Serialization;
 public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, bool forcePolymorphism = false)
     : RpcArgumentSerializer(forcePolymorphism)
 {
-    private readonly byte[] _defaultTypeRefBytes = baseSerializer.Write(default(TypeRef)).WrittenSpan.ToArray();
+    private static readonly object DefaultTypeRefAsObject = default(TypeRef);
+    private readonly byte[] _defaultTypeRefBytes
+        = baseSerializer.Write(default(TypeRef), typeof(TypeRef)).WrittenSpan.ToArray();
 
     public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool needsPolymorphism, int sizeHint)
     {
@@ -39,7 +41,7 @@ public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, 
         public override void OnStruct<T>(T item, int index)
         {
             if (typeof(T) != typeof(CancellationToken))
-                Serializer.Write(Buffer, item);
+                Serializer.Write(Buffer, item, typeof(T));
         }
     }
 
@@ -49,8 +51,10 @@ public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, 
         public override void OnClass(Type type, object? item, int index)
         {
             var itemType = item?.GetType() ?? type;
-            var typeRef = itemType == type ? default : new TypeRef(itemType).WithoutAssemblyVersions();
-            Serializer.Write(Buffer, typeRef);
+            var typeRef = itemType == type
+                ? DefaultTypeRefAsObject
+                : new TypeRef(itemType).WithoutAssemblyVersions();
+            Serializer.Write(Buffer, typeRef, typeof(TypeRef));
             Serializer.Write(Buffer, item, itemType);
         }
 
@@ -63,8 +67,10 @@ public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, 
             }
 
             var itemType = item?.GetType() ?? type;
-            var typeRef = itemType == type ? default : new TypeRef(itemType).WithoutAssemblyVersions();
-            Serializer.Write(Buffer, typeRef);
+            var typeRef = itemType == type
+                ? DefaultTypeRefAsObject
+                : new TypeRef(itemType).WithoutAssemblyVersions();
+            Serializer.Write(Buffer, typeRef, typeof(TypeRef));
             Serializer.Write(Buffer, item, itemType);
         }
     }
@@ -112,7 +118,7 @@ public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, 
         public override T OnStruct<T>(int index)
             => typeof(T) == typeof(CancellationToken)
                 ? default!
-                : Serializer.Read<T>(ref Data);
+                : (T)Serializer.ReadAndAdvance(ref Data, typeof(T))!;
     }
 
     private sealed class ItemPolymorphicDeserializer(IByteSerializer serializer, ReadOnlyMemory<byte> data)
@@ -121,12 +127,12 @@ public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, 
         [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
         public override object? OnClass(Type type, int index)
         {
-            var typeRef = Serializer.Read<TypeRef>(ref Data);
+            var typeRef = (TypeRef)Serializer.ReadAndAdvance(ref Data, typeof(TypeRef))!;
             var itemType = typeRef == default ? type : typeRef.Resolve();
             if (itemType != type && !type.IsAssignableFrom(itemType))
                 throw Errors.CannotDeserializeUnexpectedPolymorphicArgumentType(type, itemType);
 
-            return Serializer.Read(ref Data, itemType);
+            return Serializer.ReadAndAdvance(ref Data, itemType);
         }
 
         [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
@@ -135,14 +141,14 @@ public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, 
             if (type.IsValueType)
                 return type == typeof(CancellationToken)
                     ? defaultValue
-                    : Serializer.Read(ref Data, type);
+                    : Serializer.ReadAndAdvance(ref Data, type);
 
-            var typeRef = Serializer.Read<TypeRef>(ref Data);
+            var typeRef = (TypeRef)Serializer.ReadAndAdvance(ref Data, typeof(TypeRef))!;
             var itemType = typeRef == default ? type : typeRef.Resolve();
             if (itemType != type && !type.IsAssignableFrom(itemType))
                 throw Errors.CannotDeserializeUnexpectedPolymorphicArgumentType(type, itemType);
 
-            return Serializer.Read(ref Data, itemType);
+            return Serializer.ReadAndAdvance(ref Data, itemType);
         }
     }
 
@@ -152,11 +158,11 @@ public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, 
     {
         public override object? OnClass(Type type, int index)
         {
-            var typeRef = Serializer.Read<TypeRef>(ref Data);
+            var typeRef = (TypeRef)Serializer.ReadAndAdvance(ref Data, typeof(TypeRef))!;
             if (typeRef != default && typeRef.Resolve() is var itemType && itemType != type)
                 throw Errors.CannotDeserializeUnexpectedArgumentType(type, itemType);
 
-            return Serializer.Read(ref Data, type);
+            return Serializer.ReadAndAdvance(ref Data, type);
         }
 
         public override object? OnAny(Type type, int index, object? defaultValue)
@@ -164,13 +170,13 @@ public sealed class RpcByteArgumentSerializerV1(IByteSerializer baseSerializer, 
             if (type.IsValueType)
                 return type == typeof(CancellationToken)
                     ? defaultValue
-                    : Serializer.Read(ref Data, type);
+                    : Serializer.ReadAndAdvance(ref Data, type);
 
-            var typeRef = Serializer.Read<TypeRef>(ref Data);
+            var typeRef = (TypeRef)Serializer.ReadAndAdvance(ref Data, typeof(TypeRef))!;
             if (typeRef != default && typeRef.Resolve() is var itemType && itemType != type)
                 throw Errors.CannotDeserializeUnexpectedArgumentType(type, itemType);
 
-            return Serializer.Read(ref Data, type);
+            return Serializer.ReadAndAdvance(ref Data, type);
         }
     }
 }

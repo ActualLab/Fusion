@@ -4,6 +4,7 @@ using ActualLab.Channels;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.WebSockets.Internal;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.WebSockets;
@@ -39,7 +40,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     }
 
     private static readonly MeterSet StaticMeters = new();
-    private const int MinMessageSize = 32;
+    private const int MinWriteSpanSize = 64;
 
     private volatile CancellationTokenSource? _stopCts;
     private readonly Channel<T> _readChannel;
@@ -187,34 +188,26 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private async Task RunWriter(CancellationToken cancellationToken)
     {
         try {
-            var reader = _writeChannel.Reader;
-            if (DataFormat == DataFormat.Bytes) {
-                // Binary -> we build frames
-                if (Settings.FrameDelayerFactory?.Invoke() is { } frameDelayer) {
-                    // There is a write delay -> we use more complex write logic
-                    await RunWriterWithFrameDelayer(reader, frameDelayer, cancellationToken).ConfigureAwait(false);
-                    return;
-                }
-
-                // Simpler logic for no write delay case
-                while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false)) {
-                    while (reader.TryRead(out var item)) {
-                        if (TrySerializeBytes(item, _writeBuffer) && _writeBuffer.WrittenCount >= _writeFrameSize)
-                            await FlushWriteBuffer(false, cancellationToken).ConfigureAwait(false);
-                    }
-                    // Final flush before await
-                    if (_writeBuffer.WrittenCount != 0)
-                        await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
-                }
+            if (Settings.FrameDelayerFactory?.Invoke() is { } frameDelayer) {
+                // There is a frame delayer -> we use more complex write logic
+                await RunWriterWithFrameDelayer(frameDelayer, cancellationToken).ConfigureAwait(false);
+                return;
             }
-            else {
-                // Text -> no frames
-                while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false)) {
-                    while (reader.TryRead(out var item)) {
-                        if (TrySerializeText(item, _writeBuffer))
-                            await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
-                    }
+
+            // Simpler logic for no frame delayer case
+            var reader = _writeChannel.Reader;
+            Func<T, ArrayPoolBuffer<byte>, bool> trySerialize = DataFormat == DataFormat.Bytes
+                ? TrySerializeBytes
+                : TrySerializeText;
+
+            while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false)) {
+                while (reader.TryRead(out var item)) {
+                    if (trySerialize.Invoke(item, _writeBuffer) && _writeBuffer.WrittenCount >= _writeFrameSize)
+                        await FlushFrame(cancellationToken).ConfigureAwait(false);
                 }
+                // Final flush before await
+                if (_writeBuffer.WrittenCount != 0)
+                    await FlushFrame(cancellationToken).ConfigureAwait(false);
             }
         }
         finally {
@@ -222,16 +215,15 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
     }
 
-    private async Task RunWriterWithFrameDelayer(
-        ChannelReader<T> reader,
-        RpcFrameDelayer frameDelayer,
-        CancellationToken cancellationToken)
+    private async Task RunWriterWithFrameDelayer(RpcFrameDelayer frameDelayer, CancellationToken cancellationToken)
     {
         Task? whenMustFlush = null; // null = no flush required / nothing to flush
         Task<bool>? waitToReadTask = null;
+        var reader = _writeChannel.Reader;
         Func<T, ArrayPoolBuffer<byte>, bool> trySerialize = DataFormat == DataFormat.Bytes
             ? TrySerializeBytes
             : TrySerializeText;
+
         while (true) {
             // When we are here, the sync read part is completed, so WaitToReadAsync will likely await.
             if (whenMustFlush is not null) {
@@ -239,7 +231,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                     // Flush is required right now.
                     // We aren't going to check WaitToReadAsync, coz most likely it's going to await.
                     if (_writeBuffer.WrittenCount != 0)
-                        await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
+                        await FlushFrame(cancellationToken).ConfigureAwait(false);
                     whenMustFlush = null;
                 }
                 else {
@@ -270,7 +262,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                     continue; // Nothing is written
 
                 if (_writeBuffer.WrittenCount >= _writeFrameSize) {
-                    await FlushWriteBuffer(false, cancellationToken).ConfigureAwait(false);
+                    await FlushFrame(cancellationToken).ConfigureAwait(false);
                     // We just "crossed" _writeFrameSize boundary, so the flush we just made
                     // flushed everything except maybe the most recent item.
                     // We can safely "declare" that if any flush was expected before that moment,
@@ -279,41 +271,26 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 }
             }
             if (whenMustFlush is null && _writeBuffer.WrittenCount > 0) {
-                // If we're here, the write flush isn't "planned" yet + there is some data to flush.
+                // If we're here, the flush isn't "planned" yet + there is some data to flush.
                 whenMustFlush = frameDelayer.Invoke(_writeBuffer.WrittenCount);
             }
         }
-        // Final write flush
-        await FlushWriteBuffer(true, cancellationToken).ConfigureAwait(false);
+        // Final flush
+        if (_writeBuffer.WrittenCount != 0)
+            await FlushFrame(cancellationToken).ConfigureAwait(false);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private async ValueTask FlushWriteBuffer(bool completely, CancellationToken cancellationToken)
+    private async ValueTask FlushFrame(CancellationToken cancellationToken)
     {
         var memory = _writeBuffer.WrittenMemory;
-        if (memory.Length == 0)
+        if (memory.Length == 0) // We can't get here (see the calls to this method), but just in case...
             return;
 
-        for (var start = 0; start < memory.Length; start += _writeFrameSize) {
-            var length = Math.Min(_writeFrameSize, memory.Length - start);
-            // length is always > 0 below
-            var end = start + length;
-            var part = memory[start..end];
-            if (length < _writeFrameSize && !completely) {
-                // Copy part into the beginning of _writeBuffer
-                if (start != 0)
-                    part.CopyTo(MemoryMarshal.AsMemory(memory));
-                _writeBuffer.Position = length;
-                return;
-            }
-            var isEndOfMessage = end == memory.Length;
-
-            await WebSocket
-                .SendAsync(part, MessageType, isEndOfMessage, cancellationToken)
-                .ConfigureAwait(false);
-            // _meters.OutgoingFrameCounter.Add(1);
-            _meters.OutgoingFrameSizeHistogram.Record(part.Length);
-        }
+        await WebSocket
+            .SendAsync(memory, MessageType, true, cancellationToken)
+            .ConfigureAwait(false);
+        _meters.OutgoingFrameSizeHistogram.Record(memory.Length);
 
         if (MustRenewBuffer(ref _writeBufferResetCounter))
             _writeBuffer.Renew(Settings.MinWriteBufferSize, _retainedBufferSize);
@@ -325,9 +302,11 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         var minReadBufferSize = Settings.MinReadBufferSize;
         var readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize, false);
+        TryDeserializeFunc tryDeserialize = DataFormat == DataFormat.Bytes
+            ? TryDeserializeBytes
+            : TryDeserializeText;
         try {
             while (true) {
-                T value;
                 var readMemory = readBuffer.GetMemory(minReadBufferSize);
                 var arraySegment = new ArraySegment<byte>(readBuffer.Array, readBuffer.WrittenCount, readMemory.Length);
                 var r = await WebSocket.ReceiveAsync(arraySegment, cancellationToken).ConfigureAwait(false);
@@ -340,18 +319,12 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 // _meters.IncomingFrameCounter.Add(1);
                 _meters.IncomingFrameSizeHistogram.Record(r.Count);
                 if (!r.EndOfMessage)
-                    continue;
+                    continue; // Continue reading into the same buffer
 
                 var buffer = readBuffer.WrittenMemory;
-                if (DataFormat == DataFormat.Bytes) {
-                    while (buffer.Length != 0)
-                        if (TryDeserializeBytes(ref buffer, out value))
-                            yield return value;
-                }
-                else {
-                    if (TryDeserializeText(buffer, out value))
+                while (buffer.Length != 0)
+                    if (tryDeserialize.Invoke(ref buffer, out var value))
                         yield return value;
-                }
 
                 if (MustRenewBuffer(ref _readBufferResetCounter))
                     readBuffer.Renew(minReadBufferSize, _retainedBufferSize);
@@ -437,7 +410,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         _meters.OutgoingItemCounter.Add(1);
         var startOffset = buffer.WrittenCount;
         try {
-            buffer.GetSpan(MinMessageSize);
+            buffer.GetSpan(MinWriteSpanSize);
             buffer.Advance(4);
             ByteSerializer!.Write(buffer, value);
             var size = buffer.WrittenCount - startOffset;
@@ -464,11 +437,21 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         _meters.OutgoingItemCounter.Add(1);
         var startOffset = buffer.WrittenCount;
+        var itemStartOffset = startOffset;
+        if (startOffset != 0) {
+            // Write the delimiter
+            var delimiterSpan = buffer.GetSpan(2);
+            delimiterSpan[0] = WebSocketChannelImpl.LineFeed;
+            delimiterSpan[1] = WebSocketChannelImpl.RecordSeparator;
+            buffer.Advance(2);
+            itemStartOffset = buffer.WrittenCount;
+        }
         try {
             TextSerializer!.Write(buffer, value);
-            var size = buffer.WrittenCount - startOffset;
+            var size = buffer.WrittenCount - itemStartOffset;
             if (size > _maxItemSize)
                 throw Errors.ItemSizeExceedsTheLimit();
+
             return true;
         }
         catch (Exception e) {
@@ -548,20 +531,31 @@ public sealed class WebSocketChannel<T> : Channel<T>
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private bool TryDeserializeText(ReadOnlyMemory<byte> bytes, out T value)
+    private bool TryDeserializeText(ref ReadOnlyMemory<byte> bytes, out T value)
     {
         _meters.IncomingItemCounter.Add(1);
+        var rsIndex = bytes.Span.IndexOf(WebSocketChannelImpl.RecordSeparator);
+        var size = rsIndex < 0
+            ? bytes.Length
+            : rsIndex; // Full delimiter is (LF, RS), so we "trim" LF here
         try {
-            if (bytes.Length > _maxItemSize)
+            if (size <= 0)
+                throw Errors.InvalidItemSize();
+            if (size > _maxItemSize)
                 throw Errors.ItemSizeExceedsTheLimit();
 
-            value = TextSerializer!.Read(bytes);
+            value = TextSerializer!.Read(bytes[..size], out _);
             return true;
         }
         catch (Exception e) {
             ErrorLog?.LogError(e, "Couldn't deserialize: {Data}", new TextOrBytes(DataFormat.Text, bytes));
             value = default!;
             return false;
+        }
+        finally {
+            bytes = size < bytes.Length
+                ? bytes[(size + 1)..]
+                : default; // Empty memory
         }
     }
 
@@ -609,4 +603,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 "By", "WebSocketChannel's outgoing frame size in bytes.");
         }
     }
+
+    private delegate bool TryDeserializeFunc(ref ReadOnlyMemory<byte> data, out T value);
 }

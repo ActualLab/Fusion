@@ -5,17 +5,20 @@ namespace ActualLab.Serialization;
 
 public static class TextSerializerExt
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static object? ReadDelimited(this ITextSerializer serializer, ref ReadOnlyMemory<byte> data, Type type, byte delimiter)
+    public static object? ReadDelimited(
+        this ITextSerializer serializer,
+        ref ReadOnlyMemory<byte> data,
+        Type type,
+        byte delimiter)
     {
         object? result;
         var delimiterIndex = data.Span.IndexOf(delimiter);
         if (delimiterIndex < 0) {
-            result = serializer.Read(data, type);
+            result = serializer.Read(data, type, out _);
             data = default;
         }
         else {
-            result = serializer.Read(data[..delimiterIndex], type);
+            result = serializer.Read(data[..delimiterIndex], type, out _);
             data = data.Slice(delimiterIndex + 1);
         }
         return result;

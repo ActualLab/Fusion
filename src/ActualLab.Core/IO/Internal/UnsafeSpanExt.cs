@@ -2,6 +2,13 @@ namespace ActualLab.IO.Internal;
 
 public static class UnsafeSpanExt
 {
+    // AsSpanUnsafe
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Span<T> AsSpanUnsafe<T>(this ReadOnlySpan<T> readOnlySpan)
+        => Unsafe.As<ReadOnlySpan<T>, Span<T>>(ref readOnlySpan);
+        // => MemoryMarshal.CreateSpan(ref MemoryMarshal.GetReference(readOnlySpan), readOnlySpan.Length);
+
     // ReadUnchecked
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

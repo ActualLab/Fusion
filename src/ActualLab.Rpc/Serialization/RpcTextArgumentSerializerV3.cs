@@ -8,7 +8,9 @@ namespace ActualLab.Rpc.Serialization;
 public sealed class RpcTextArgumentSerializerV3(ITextSerializer baseSerializer)
     : RpcArgumentSerializer(false)
 {
-    private static readonly byte Delimiter = 0x1e; // Record separator in ASCII / UTF8
+    // We use US (Unit separator, 0x1F) character here.
+    // RS (Record separator, 0x1E) is used by WebSocketChannel to compose N-message frames.
+    private static readonly byte Delimiter = 0x1F;
 
     [ThreadStatic] private static Utf8TextWriter? _utf8Buffer;
     public static int Utf8BufferReplaceCapacity { get; set; } = 65536;
