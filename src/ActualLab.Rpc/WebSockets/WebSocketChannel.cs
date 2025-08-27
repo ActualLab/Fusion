@@ -343,6 +343,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         var minReadBufferSize = Settings.MinReadBufferSize;
         var readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize, false);
+        TryProjectingDeserializeFunc tryProjectingDeserialize = RequiresItemSize
+            ? TryProjectingDeserializeBytesWithItemSize
+            : TryProjectingDeserializeBytes;
         try {
             while (true) {
                 var readMemory = readBuffer.GetMemory(minReadBufferSize);
@@ -362,7 +365,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                 var buffer = readBuffer.WrittenMemory;
                 var gotAnyProjection = false;
                 while (buffer.Length != 0) {
-                    if (TryProjectingDeserializeBytes(ref buffer, out var value, out var isProjection))
+                    if (tryProjectingDeserialize.Invoke(ref buffer, out var value, out var isProjection))
                         yield return value;
 
                     gotAnyProjection |= isProjection;
@@ -667,4 +670,5 @@ public sealed class WebSocketChannel<T> : Channel<T>
     }
 
     private delegate bool TryDeserializeFunc(ref ReadOnlyMemory<byte> data, out T value);
+    private delegate bool TryProjectingDeserializeFunc(ref ReadOnlyMemory<byte> bytes, out T value, out bool isProjection);
 }

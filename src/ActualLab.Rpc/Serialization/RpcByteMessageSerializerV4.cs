@@ -8,15 +8,8 @@ namespace ActualLab.Rpc.Serialization;
 #pragma warning disable MA0069
 
 public class RpcByteMessageSerializerV4(RpcPeer peer)
-    : RpcMessageSerializer(peer), IProjectingByteSerializer<RpcMessage>
+    : RpcByteMessageSerializer(peer), IProjectingByteSerializer<RpcMessage>
 {
-    public static class Defaults
-    {
-        public static bool AllowProjection { get; set; } = false;
-        public static int MinProjectionSize { get; set; } = 8192;
-        public static int MaxInefficiencyFactor { get; set; } = 4;
-    }
-
     // Settings - they affect only performance (i.e., a wire format won't change if you change them)
     public bool AllowProjection { get; init; } = Defaults.AllowProjection;
     public int MinProjectionSize { get; init; } = Defaults.MinProjectionSize;
@@ -145,8 +138,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
     {
         var utf8Name = value.MethodRef.Utf8Name;
         var argumentData = value.ArgumentData;
-        var requestedLength = 32 + utf8Name.Length + argumentData.Length;
-        var writer = new SpanWriter(bufferWriter.GetSpan(requestedLength));
+        var writer = new SpanWriter(bufferWriter.GetSpan(32 + utf8Name.Length + argumentData.Length));
 
         // CallTypeId and headerCount
         var headers = value.Headers ?? RpcHeadersExt.Empty;

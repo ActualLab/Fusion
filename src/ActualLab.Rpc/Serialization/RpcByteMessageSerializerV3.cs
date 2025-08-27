@@ -7,15 +7,8 @@ namespace ActualLab.Rpc.Serialization;
 #pragma warning disable MA0069
 
 public class RpcByteMessageSerializerV3(RpcPeer peer)
-    : RpcMessageSerializer(peer), IProjectingByteSerializer<RpcMessage>, IRequiresItemSize
+    : RpcByteMessageSerializer(peer), IProjectingByteSerializer<RpcMessage>, IRequiresItemSize
 {
-    public static class Defaults
-    {
-        public static bool AllowProjection { get; set; } = false;
-        public static int MinProjectionSize { get; set; } = 8192;
-        public static int MaxInefficiencyFactor { get; set; } = 4;
-    }
-
     // Settings - they affect only performance (i.e., a wire format won't change if you change them)
     public bool AllowProjection { get; init; } = Defaults.AllowProjection;
     public int MinProjectionSize { get; init; } = Defaults.MinProjectionSize;
@@ -144,9 +137,7 @@ public class RpcByteMessageSerializerV3(RpcPeer peer)
     {
         var utf8Name = value.MethodRef.Utf8Name;
         var argumentData = value.ArgumentData;
-        var requestedLength = 32 + utf8Name.Length + argumentData.Length;
-
-        var writer = new SpanWriter(bufferWriter.GetSpan(requestedLength));
+        var writer = new SpanWriter(bufferWriter.GetSpan(32 + utf8Name.Length + argumentData.Length));
 
         // CallTypeId
         writer.Remaining[0] = value.CallTypeId;
@@ -179,11 +170,10 @@ public class RpcByteMessageSerializerV3(RpcPeer peer)
                 encoder.Convert(h.Value.AsSpan(), encodeBuffer);
                 var valueSpan = encodeBuffer.WrittenSpan;
 
-                var headerLength = 3 + key.Length + valueSpan.Length;
-                writer = new SpanWriter(bufferWriter.GetSpan(headerLength));
+                writer = new SpanWriter(bufferWriter.GetSpan(8 + key.Length + valueSpan.Length));
                 writer.WriteL1Span(key.Span);
                 writer.WriteL2Span(valueSpan);
-                bufferWriter.Advance(headerLength);
+                bufferWriter.Advance(writer.Offset);
                 encodeBuffer.Reset();
             }
         }

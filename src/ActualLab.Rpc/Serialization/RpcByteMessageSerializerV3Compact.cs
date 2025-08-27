@@ -122,9 +122,7 @@ public class RpcByteMessageSerializerV3Compact(RpcPeer peer) : RpcByteMessageSer
     public override void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
     {
         var argumentData = value.ArgumentData;
-        var requestedLength = 32 + argumentData.Length;
-
-        var writer = new SpanWriter(bufferWriter.GetSpan(requestedLength));
+        var writer = new SpanWriter(bufferWriter.GetSpan(32 + argumentData.Length));
 
         // MethodRef
         writer.Remaining.WriteUnchecked(value.MethodRef.HashCode);
@@ -157,11 +155,10 @@ public class RpcByteMessageSerializerV3Compact(RpcPeer peer) : RpcByteMessageSer
                 encoder.Convert(h.Value.AsSpan(), encodeBuffer);
                 var valueSpan = encodeBuffer.WrittenSpan;
 
-                var headerLength = 3 + key.Length + valueSpan.Length;
-                writer = new SpanWriter(bufferWriter.GetSpan(headerLength));
+                writer = new SpanWriter(bufferWriter.GetSpan(8 + key.Length + valueSpan.Length));
                 writer.WriteL1Span(key.Span);
                 writer.WriteL2Span(valueSpan);
-                bufferWriter.Advance(headerLength);
+                bufferWriter.Advance(writer.Offset);
                 encodeBuffer.Reset();
             }
         }

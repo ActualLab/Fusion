@@ -123,8 +123,7 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
     public override void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
     {
         var argumentData = value.ArgumentData;
-        var requestedLength = 32 + argumentData.Length;
-        var writer = new SpanWriter(bufferWriter.GetSpan(requestedLength));
+        var writer = new SpanWriter(bufferWriter.GetSpan(32 + argumentData.Length));
 
         // CallTypeId and headerCount
         var headers = value.Headers ?? RpcHeadersExt.Empty;
