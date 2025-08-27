@@ -14,7 +14,7 @@ public static class RpcCallTypeRegistry
 
     static RpcCallTypeRegistry()
     {
-        _callTypes = new (Type?, Type?)[256];
+        _callTypes = new (Type?, Type?)[8];
         _callTypes[RpcCallTypes.Regular] = (typeof(RpcInboundCall<>), typeof(RpcOutboundCall<>));
     }
 

@@ -7,8 +7,7 @@ namespace ActualLab.Tests.Rpc;
 
 public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
-    protected string SerializationFormat { get; set; }
-        = RpcSerializationFormatResolver.Default.DefaultClientFormatKey;
+    protected string SerializationFormat { get; set; } = RpcTestBase.DefaultSerializationFormat;
     protected bool UseLogging { get; set; } = true;
     protected bool UseDebugLog { get; set; } = true;
 

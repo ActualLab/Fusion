@@ -20,7 +20,57 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
     public void Advance(int count)
         => Remaining = Remaining.Slice(count);
 
+    public uint ReadUInt()
+    {
+        var result = 0u;
+        var offset = 0;
+        for (var shift = 0; shift < 32; shift += 8)
+            result |= (uint)Remaining[offset++] << shift;
+        Advance(offset);
+        return result;
+    }
+
+    public ulong ReadULong()
+    {
+        var result = 0ul;
+        var offset = 0;
+        for (var shift = 0; shift < 64; shift += 8)
+            result |= (ulong)Remaining[offset++] << shift;
+        Advance(offset);
+        return result;
+    }
+
+    public uint ReadVarUInt()
+    {
+        var result = 0u;
+        var offset = 0;
+        var shift = 0;
+        byte b;
+        do {
+            b = Remaining[offset++];
+            result |= (uint)(b & 0x7F) << shift;
+            shift += 7;
+        } while ((b & 0x80) != 0);
+        Advance(offset);
+        return result;
+    }
+
     public ulong ReadVarULong()
+    {
+        var result = 0ul;
+        var offset = 0;
+        var shift = 0;
+        byte b;
+        do {
+            b = Remaining[offset++];
+            result |= (ulong)(b & 0x7F) << shift;
+            shift += 7;
+        } while ((b & 0x80) != 0);
+        Advance(offset);
+        return result;
+    }
+
+    public ulong ReadAltVarULong()
     {
         var size = Remaining[0];
         var result = size switch {
@@ -33,20 +83,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
-    public ulong ReadVarULong(int offset)
-    {
-        var size = Remaining[offset++];
-        var result = size switch {
-            2 => Remaining.ReadUnchecked<ushort>(offset),
-            4 => Remaining.ReadUnchecked<uint>(offset),
-            8 => Remaining.ReadUnchecked<ulong>(offset),
-            _ => throw Errors.Format("Invalid message format."),
-        };
-        Advance(size + offset);
-        return result;
-    }
-
-    public ReadOnlySpan<byte> ReadSpanL1()
+    public ReadOnlySpan<byte> ReadL1Span()
     {
         var end = 1 + Remaining.ReadUnchecked<byte>();
         var result = Remaining[1..end];
@@ -54,7 +91,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
-    public ReadOnlyMemory<byte> ReadMemoryL1()
+    public ReadOnlyMemory<byte> ReadL1Memory()
     {
         var start = Offset + 1;
         var end = start + Remaining.ReadUnchecked<byte>();
@@ -63,7 +100,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
-    public ReadOnlySpan<byte> ReadSpanL2()
+    public ReadOnlySpan<byte> ReadL2Span()
     {
         var end = 2 + Remaining.ReadUnchecked<ushort>();
         var result = Remaining[2..end];
@@ -71,7 +108,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
-    public ReadOnlyMemory<byte> ReadMemoryL2()
+    public ReadOnlyMemory<byte> ReadL2Memory()
     {
         var start = Offset + 2;
         var end = start + Remaining.ReadUnchecked<ushort>();
@@ -80,7 +117,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
-    public ReadOnlySpan<byte> ReadSpanL4()
+    public ReadOnlySpan<byte> ReadL4Span()
     {
         var end = 4 + Remaining.ReadUnchecked<int>();
         var result = Remaining[4..end];
@@ -88,12 +125,35 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
-    public ReadOnlyMemory<byte> ReadMemoryL4()
+    public ReadOnlyMemory<byte> ReadL4Memory()
     {
         var start = Offset + 4;
         var end = start + Remaining.ReadUnchecked<int>();
         var result = Memory[start..end];
         Advance(end - start + 4);
+        return result;
+    }
+
+    public ReadOnlySpan<byte> ReadLVarSpan()
+    {
+        var size = (int)ReadVarUInt();
+        if (size < 0)
+            throw Errors.Format("Invalid message format.");
+
+        var result = Remaining[..size];
+        Advance(size);
+        return result;
+    }
+
+    public ReadOnlyMemory<byte> ReadLVarMemory()
+    {
+        var size = (int)ReadVarUInt();
+        if (size < 0)
+            throw Errors.Format("Invalid message format.");
+
+        var start = Offset;
+        var result = Memory[start..(start + size)];
+        Advance(size);
         return result;
     }
 }

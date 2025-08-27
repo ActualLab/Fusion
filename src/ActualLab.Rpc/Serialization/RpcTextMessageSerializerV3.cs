@@ -7,7 +7,7 @@ namespace ActualLab.Rpc.Serialization;
 
 #pragma warning disable MA0069
 
-public sealed class RpcTextMessageSerializer(RpcPeer peer)
+public sealed class RpcTextMessageSerializerV3(RpcPeer peer)
     : RpcMessageSerializer(peer), ITextSerializer<RpcMessage>
 {
     private static readonly byte Delimiter = (byte)'\n';

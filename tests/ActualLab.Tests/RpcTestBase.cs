@@ -16,6 +16,8 @@ namespace ActualLab.Tests;
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
+    public static string DefaultSerializationFormat => "mempack4c";
+
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
     protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.GetDefaultPeerRef();
     protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.GetDefaultPeerRef(true);
@@ -25,7 +27,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 
     protected RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
     protected RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
-    protected string SerializationFormat { get; set; } = RpcSerializationFormatResolver.Default.DefaultClientFormatKey;
+    protected string SerializationFormat { get; set; } = DefaultSerializationFormat;
     protected bool ExposeBackend { get; init; } = false;
     protected bool UseTestClock { get; init; }
     protected bool UseLogging { get; init; } = true;

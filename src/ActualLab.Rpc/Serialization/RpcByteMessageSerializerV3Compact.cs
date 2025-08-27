@@ -4,44 +4,26 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Serialization;
 
-#pragma warning disable MA0069
-
-public class RpcByteMessageSerializer(RpcPeer peer)
-    : RpcMessageSerializer(peer), IProjectingByteSerializer<RpcMessage>
+public class RpcByteMessageSerializerV3Compact(RpcPeer peer) : RpcByteMessageSerializerV3(peer)
 {
-    public static class Defaults
-    {
-        public static bool AllowProjection { get; set; } = false;
-        public static int MinProjectionSize { get; set; } = 8192;
-        public static int MaxInefficiencyFactor { get; set; } = 4;
-    }
-
-    // Settings - they affect only performance (i.e., a wire format won't change if you change them)
-    public bool AllowProjection { get; init; } = Defaults.AllowProjection;
-    public int MinProjectionSize { get; init; } = Defaults.MinProjectionSize;
-    public int MaxInefficiencyFactor { get; init; } = Defaults.MaxInefficiencyFactor;
-
-    public virtual RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
+    public override RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
     {
         var reader = new MemoryReader(data);
 
+        // MethodRef
+        var hashCode = reader.Remaining.ReadUnchecked<int>();
+        var methodDef = ServerMethodResolver[hashCode];
+        var methodRef = methodDef?.Ref ?? new RpcMethodRef(default, hashCode);
+
         // CallTypeId
-        var callTypeId = reader.Remaining[0];
-        reader.Advance(1);
+        var callTypeId = reader.Remaining[4];
+        reader.Advance(5);
 
         // RelatedId
-        var relatedId = (long)reader.ReadVarULong();
-
-        // MethodRef
-        var blob = reader.ReadMemoryL2();
-        var methodRef = new RpcMethodRef(blob);
-        var methodDef = ServerMethodResolver[methodRef];
-        // We can't have MethodRef bound to blob, coz the blob can be overwritten,
-        // so we replace it with either the matching one from registry, or make a blob copy.
-        methodRef = methodDef?.Ref ?? new RpcMethodRef(blob.ToArray(), methodRef.HashCode);
+        var relatedId = (long)reader.ReadAltVarULong();
 
         // ArgumentData
-        blob = reader.ReadMemoryL4();
+        var blob = reader.ReadL4Memory();
         isProjection = AllowProjection && blob.Length >= MinProjectionSize && IsProjectable(blob);
         var argumentData = isProjection ? blob : (ReadOnlyMemory<byte>)blob.ToArray();
 
@@ -56,11 +38,11 @@ public class RpcByteMessageSerializer(RpcPeer peer)
             try {
                 for (var i = 0; i < headerCount; i++) {
                     // key
-                    blob = reader.ReadMemoryL1();
+                    blob = reader.ReadL1Memory();
                     var key = new RpcHeaderKey(blob);
 
                     // h.Value
-                    var valueSpan = reader.ReadSpanL2();
+                    var valueSpan = reader.ReadL2Span();
                     decoder.Convert(valueSpan, decodeBuffer);
 #if !NETSTANDARD2_0
                     var value = new string(decodeBuffer.WrittenSpan);
@@ -85,23 +67,20 @@ public class RpcByteMessageSerializer(RpcPeer peer)
     {
         var reader = new MemoryReader(data);
 
+        // MethodRef
+        var hashCode = reader.Remaining.ReadUnchecked<int>();
+        var methodDef = ServerMethodResolver[hashCode];
+        var methodRef = methodDef?.Ref ?? new RpcMethodRef(default, hashCode);
+
         // CallTypeId
-        var callTypeId = reader.Remaining[0];
-        reader.Advance(1);
+        var callTypeId = reader.Remaining[4];
+        reader.Advance(5);
 
         // RelatedId
-        var relatedId = (long)reader.ReadVarULong();
-
-        // MethodRef
-        var blob = reader.ReadMemoryL2();
-        var methodRef = new RpcMethodRef(blob);
-        var methodDef = ServerMethodResolver[methodRef];
-        // We can't have MethodRef bound to blob, coz the blob can be overwritten,
-        // so we replace it with either the matching one from registry, or make a blob copy.
-        methodRef = methodDef?.Ref ?? new RpcMethodRef(blob.ToArray(), methodRef.HashCode);
+        var relatedId = (long)reader.ReadAltVarULong();
 
         // ArgumentData
-        blob = reader.ReadMemoryL4();
+        var blob = reader.ReadL4Memory();
         var argumentData = (ReadOnlyMemory<byte>)blob.ToArray();
 
         // Headers
@@ -115,11 +94,11 @@ public class RpcByteMessageSerializer(RpcPeer peer)
             try {
                 for (var i = 0; i < headerCount; i++) {
                     // key
-                    blob = reader.ReadMemoryL1();
+                    blob = reader.ReadL1Memory();
                     var key = new RpcHeaderKey(blob);
 
                     // h.Value
-                    var valueSpan = reader.ReadSpanL2();
+                    var valueSpan = reader.ReadL2Span();
                     decoder.Convert(valueSpan, decodeBuffer);
 #if !NETSTANDARD2_0
                     var value = new string(decodeBuffer.WrittenSpan);
@@ -142,24 +121,23 @@ public class RpcByteMessageSerializer(RpcPeer peer)
 
     public override void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
     {
-        var utf8Name = value.MethodRef.Utf8Name;
         var argumentData = value.ArgumentData;
-        var requestedLength = 1 + 9 + (2 + utf8Name.Length) + (4 + argumentData.Length) + 1;
+        var requestedLength = 32 + argumentData.Length;
 
         var writer = new SpanWriter(bufferWriter.GetSpan(requestedLength));
 
+        // MethodRef
+        writer.Remaining.WriteUnchecked(value.MethodRef.HashCode);
+
         // CallTypeId
-        writer.Remaining[0] = value.CallTypeId;
-        writer.Advance(1);
+        writer.Remaining[4] = value.CallTypeId;
+        writer.Advance(5);
 
         // RelatedId
-        writer.WriteVarULong((ulong)value.RelatedId);
-
-        // MethodRef
-        writer.WriteSpanL2(utf8Name.Span);
+        writer.WriteAltVarULong((ulong)value.RelatedId);
 
         // ArgumentData
-        writer.WriteSpanL4(argumentData.Span);
+        writer.WriteL4Span(argumentData.Span);
 
         // Headers
         var headers = value.Headers ?? RpcHeadersExt.Empty;
@@ -181,8 +159,8 @@ public class RpcByteMessageSerializer(RpcPeer peer)
 
                 var headerLength = 3 + key.Length + valueSpan.Length;
                 writer = new SpanWriter(bufferWriter.GetSpan(headerLength));
-                writer.WriteSpanL1(key.Span);
-                writer.WriteSpanL2(valueSpan);
+                writer.WriteL1Span(key.Span);
+                writer.WriteL2Span(valueSpan);
                 bufferWriter.Advance(headerLength);
                 encodeBuffer.Reset();
             }
@@ -192,19 +170,4 @@ public class RpcByteMessageSerializer(RpcPeer peer)
             throw;
         }
     }
-
-    // Private methods
-
-#pragma warning disable CA1822
-    protected bool IsProjectable(ReadOnlyMemory<byte> data)
-    {
-#if !NETSTANDARD2_0
-        return MemoryMarshal.TryGetArray(data, out var segment)
-            && segment.Array is { } array
-            && array.Length <= MaxInefficiencyFactor * data.Length;
-#else
-        return false;
-#endif
-    }
-#pragma warning restore CA1822
 }
