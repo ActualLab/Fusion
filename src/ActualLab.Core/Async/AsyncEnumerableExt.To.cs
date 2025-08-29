@@ -4,8 +4,6 @@ namespace ActualLab.Async;
 
 public static partial class AsyncEnumerableExt
 {
-    private static readonly UnboundedChannelOptions DefaultUnboundedChannelOptions = new();
-
     // ToResults
 
     public static async IAsyncEnumerable<Result<T>> ToResults<T>(
@@ -39,56 +37,23 @@ public static partial class AsyncEnumerableExt
         }
     }
 
-    // ToUnboundedChannel
+    // ToChannel
 
-    public static Channel<T> ToUnboundedChannel<T>(
-        this IEnumerable<T> source,
-        CancellationToken cancellationToken = default)
-        => source.ToUnboundedChannel(DefaultUnboundedChannelOptions, cancellationToken);
-
-    public static Channel<T> ToUnboundedChannel<T>(
-        this IEnumerable<T> source,
-        UnboundedChannelOptions options,
+    public static Channel<T> ToChannel<T>(
+        this IAsyncEnumerable<T> source,
+        ChannelOptions options,
         CancellationToken cancellationToken = default)
     {
-        var channel = Channel.CreateUnbounded<T>(options);
+        var channel = ChannelExt.Create<T>(options);
         _ = source.CopyTo(channel, ChannelCopyMode.CopyAllSilently, cancellationToken);
         return channel;
     }
 
-    public static Channel<T> ToUnboundedChannel<T>(
+    public static Channel<T> ToChannel<T>(
         this IAsyncEnumerable<T> source,
-        CancellationToken cancellationToken = default)
-        => source.ToUnboundedChannel(DefaultUnboundedChannelOptions, cancellationToken);
-
-    public static Channel<T> ToUnboundedChannel<T>(
-        this IAsyncEnumerable<T> source,
-        UnboundedChannelOptions options,
+        Channel<T> channel,
         CancellationToken cancellationToken = default)
     {
-        var channel = Channel.CreateUnbounded<T>(options);
-        _ = source.CopyTo(channel, ChannelCopyMode.CopyAllSilently, cancellationToken);
-        return channel;
-    }
-
-    // ToBoundedChannel
-
-    public static Channel<T> ToBoundedChannel<T>(
-        this IEnumerable<T> source,
-        BoundedChannelOptions options,
-        CancellationToken cancellationToken = default)
-    {
-        var channel = Channel.CreateBounded<T>(options);
-        _ = source.CopyTo(channel, ChannelCopyMode.CopyAllSilently, cancellationToken);
-        return channel;
-    }
-
-    public static Channel<T> ToBoundedChannel<T>(
-        this IAsyncEnumerable<T> source,
-        BoundedChannelOptions options,
-        CancellationToken cancellationToken = default)
-    {
-        var channel = Channel.CreateBounded<T>(options);
         _ = source.CopyTo(channel, ChannelCopyMode.CopyAllSilently, cancellationToken);
         return channel;
     }

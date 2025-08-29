@@ -32,7 +32,7 @@ public class TransformTest
         async Task TestOne(int? roundDuration, Func<Channel<int>, Channel<int>, Task> transform)
         {
             var source = Enumerable.Range(0, itemCount).ToArray();
-            var cSource = source.ToUnboundedChannel();
+            var cSource = source.ToChannel(new UnboundedChannelOptions());
             var cTarget = Channel.CreateUnbounded<int>();
 
             var start = Stopwatch.StartNew();

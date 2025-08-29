@@ -1,10 +1,11 @@
+using ActualLab.Channels;
 using ActualLab.Internal;
 
 namespace ActualLab.Collections;
 
 public static class EnumerableExt
 {
-    // Regular static methods
+    // One and Concat
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IEnumerable<T> One<T>(T value)
@@ -20,6 +21,8 @@ public static class EnumerableExt
             result = result.Concat(sequences[i]);
         return result;
     }
+
+    // ToArrayOfKnownLength
 
     public static T[] ToArrayOfKnownLength<T>(this IEnumerable<T> source, int length)
     {
@@ -42,6 +45,27 @@ public static class EnumerableExt
         return i == length
             ? result
             : throw new ArgumentOutOfRangeException(nameof(length));
+    }
+
+    // ToChannel
+
+    public static Channel<T> ToChannel<T>(
+        this IEnumerable<T> source,
+        ChannelOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        var channel = ChannelExt.Create<T>(options);
+        _ = source.CopyTo(channel, ChannelCopyMode.CopyAllSilently, cancellationToken);
+        return channel;
+    }
+
+    public static Channel<T> ToChannel<T>(
+        this IEnumerable<T> source,
+        Channel<T> channel,
+        CancellationToken cancellationToken = default)
+    {
+        _ = source.CopyTo(channel, ChannelCopyMode.CopyAllSilently, cancellationToken);
+        return channel;
     }
 
     // SkipNullItems

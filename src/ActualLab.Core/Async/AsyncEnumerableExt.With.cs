@@ -8,7 +8,7 @@ public static partial class AsyncEnumerableExt
         this IAsyncEnumerable<T> source,
         int bufferSize,
         CancellationToken cancellationToken = default)
-        => source.WithBuffer(bufferSize, true, cancellationToken);
+        => source.WithBuffer(bufferSize, allowSynchronousContinuations: true, cancellationToken);
 
     public static IAsyncEnumerable<T> WithBuffer<T>(
         this IAsyncEnumerable<T> source,
@@ -19,7 +19,7 @@ public static partial class AsyncEnumerableExt
         if (bufferSize < 1)
             return source;
 
-        var buffer = source.ToBoundedChannel(new(bufferSize) {
+        var buffer = source.ToChannel(new BoundedChannelOptions(bufferSize) {
             SingleReader = true,
             SingleWriter = true,
             AllowSynchronousContinuations = allowSynchronousContinuations,
@@ -35,7 +35,7 @@ public static partial class AsyncEnumerableExt
         if (options.Capacity < 1)
             return source;
 
-        var buffer = source.ToBoundedChannel(options, cancellationToken);
+        var buffer = source.ToChannel(options, cancellationToken);
         return buffer.Reader.ReadAllAsync(cancellationToken);
     }
 
