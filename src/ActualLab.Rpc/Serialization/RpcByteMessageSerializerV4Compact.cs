@@ -15,10 +15,10 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
         var headerCountAndCallTypeId = reader.Remaining[0];
         var headerCount = headerCountAndCallTypeId & 0x1F; // 5 lower bits for headerCount
         var callTypeId = (byte)(headerCountAndCallTypeId >> 5); // 3 upper bits for callTypeId
-        reader.Advance(1);
 
         // RelatedId
-        var relatedId = (long)reader.ReadVarUInt64();
+        var (relatedId, offset) = reader.Remaining.ReadVarUInt64(1);
+        reader.Advance(offset);
 
         // MethodRef
         var hashCode = (int)reader.ReadUInt32();
@@ -61,7 +61,7 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
         }
 
         readLength = reader.Offset;
-        return new RpcMessage(callTypeId, relatedId, methodRef, argumentData, headers);
+        return new RpcMessage(callTypeId, (long)relatedId, methodRef, argumentData, headers);
     }
 
     public override RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength)
@@ -72,10 +72,10 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
         var headerCountAndCallTypeId = reader.Remaining[0];
         var headerCount = headerCountAndCallTypeId & 0x1F; // 5 lower bits for headerCount
         var callTypeId = (byte)(headerCountAndCallTypeId >> 5); // 3 upper bits for callTypeId
-        reader.Advance(1);
 
         // RelatedId
-        var relatedId = (long)reader.ReadVarUInt64();
+        var (relatedId, offset) = reader.Remaining.ReadVarUInt64(1);
+        reader.Advance(offset);
 
         // MethodRef
         var hashCode = (int)reader.ReadUInt32();
@@ -117,7 +117,7 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
         }
 
         readLength = reader.Offset;
-        return new RpcMessage(callTypeId, relatedId, methodRef, argumentData, headers);
+        return new RpcMessage(callTypeId, (long)relatedId, methodRef, argumentData, headers);
     }
 
     public override void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
