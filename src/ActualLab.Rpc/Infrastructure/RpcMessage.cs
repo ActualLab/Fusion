@@ -29,7 +29,7 @@ public sealed partial record RpcMessage
     public override string ToString()
     {
         var headers = Headers.OrEmpty();
-        return $"{nameof(RpcMessageV1)} #{RelatedId}/{CallTypeId}: {MethodRef.GetFullMethodName()}, "
+        return $"{nameof(RpcMessageV1)} #{RelatedId}/{CallTypeId}: {MethodRef.FullName}, "
             + (Arguments is not null
                 ? $"Arguments: {Arguments}"
                 : $"ArgumentData: {new ByteString(ArgumentData).ToString(16)}")

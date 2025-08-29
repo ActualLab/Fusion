@@ -20,19 +20,25 @@ public ref struct SpanWriter(Span<byte> buffer)
 
     public void WriteUInt32(uint value)
     {
-        for (var offset = 0; offset < 4; offset++) {
-            Remaining[offset] = (byte)(value & 0xFF);
-            value >>= 8;
-        }
+        var span = Remaining;
+        span[0] = (byte)value;
+        span[1] = (byte)(value >> 8);
+        span[2] = (byte)(value >> 16);
+        span[3] = (byte)(value >> 24);
         Advance(4);
     }
 
     public void WriteUInt64(ulong value)
     {
-        for (var offset = 0; offset < 8; offset++) {
-            Remaining[offset] = (byte)(value & 0xFF);
-            value >>= 8;
-        }
+        var span = Remaining;
+        span[0] = (byte)value;
+        span[1] = (byte)(value >> 8);
+        span[2] = (byte)(value >> 16);
+        span[3] = (byte)(value >> 24);
+        span[4] = (byte)(value >> 32);
+        span[5] = (byte)(value >> 40);
+        span[6] = (byte)(value >> 48);
+        span[7] = (byte)(value >> 56);
         Advance(8);
     }
 
@@ -46,19 +52,20 @@ public ref struct SpanWriter(Span<byte> buffer)
 
     public void WriteAltVarUInt64(ulong value)
     {
+        var span = Remaining;
         if (value <= 0xFFFF) {
-            Remaining.WriteUnchecked(2);
-            Remaining.WriteUnchecked(1, (ushort)value);
+            span.WriteUnchecked(2);
+            span.WriteUnchecked(1, (ushort)value);
             Advance(3);
         }
         else if (value <= 0xFFFFFFFF) {
-            Remaining.WriteUnchecked(4);
-            Remaining.WriteUnchecked(1, (uint)value);
+            span.WriteUnchecked(4);
+            span.WriteUnchecked(1, (uint)value);
             Advance(5);
         }
         else {
-            Remaining.WriteUnchecked(8);
-            Remaining.WriteUnchecked(1, value);
+            span.WriteUnchecked(8);
+            span.WriteUnchecked(1, value);
             Advance(9);
         }
     }

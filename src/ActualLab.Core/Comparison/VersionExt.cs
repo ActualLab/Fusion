@@ -16,8 +16,8 @@ public static class VersionExt
             ? "<Inf>"
             : version.ToString();
 
-    public static Version Parse(string s, bool allowMaxValue = false)
+    public static Version Parse(string s, bool useMaxValueIfEmpty = false)
         => s.IsNullOrEmpty()
-            ? allowMaxValue ? MaxValue : throw Errors.Format<Version>()
+            ? useMaxValueIfEmpty ? MaxValue : throw Errors.Format<Version>()
             : Version.Parse(s[0] == 'v' ? s[1..] : s);
 }

@@ -16,7 +16,7 @@ public sealed class LegacyNames
 
             var index = Array.BinarySearch(_items, new LegacyName("", version), LegacyName.MaxVersionComparer);
             if (index < 0) {
-                index = ~index;
+                index = ~index; // No exact match -> return the next higher version (0.1 -> 0.2, etc.)
                 if (index >= _items.Length)
                     return null;
             }
@@ -24,11 +24,9 @@ public sealed class LegacyNames
         }
     }
 
-    public LegacyNames(LegacyName[] items)
-        => _items = items;
-
     public LegacyNames(IEnumerable<LegacyName> items)
-        => _items = items.ToImmutableSortedDictionary(x => x.MaxVersion ?? VersionExt.MaxValue, x => x).Values.ToArray();
+        // We could use OrderBy here, but we want to make sure there are no duplicates
+        => _items = items.ToImmutableSortedDictionary(x => x.MaxVersion, x => x).Values.ToArray();
 
     public override string ToString()
         => $"[ {Items.ToDelimitedString(", ")} ]";

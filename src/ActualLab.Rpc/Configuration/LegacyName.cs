@@ -15,7 +15,9 @@ public sealed record LegacyName(string Name, Version MaxVersion)
         if (attribute.Name.IsNullOrEmpty())
             throw Errors.Constraint(
                 $"{nameof(LegacyNameAttribute)}.{nameof(LegacyNameAttribute.Name)} cannot be empty.");
-        return new LegacyName(attribute.Name + suffix, VersionExt.Parse(attribute.MaxVersion, true));
+
+        var maxVersion = VersionExt.Parse(attribute.MaxVersion, useMaxValueIfEmpty: true);
+        return new LegacyName(attribute.Name + suffix, maxVersion);
     }
 
     // Equality

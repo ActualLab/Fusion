@@ -29,24 +29,35 @@ public static partial class SpanExt
 
     public static (uint Value, int Offset) ReadVarUInt32(this ReadOnlySpan<byte> span, int offset = 0)
     {
-        byte b;
         var value = 0u;
-        var shift = 0;
-        for (; shift < 28; shift += 7) {
-            b = span[offset++];
-            value |= (uint)(b & LowBits) << shift;
-            if (b <= LowBits)
-                return (value, offset);
-        }
 
-        // Read the 5th byte. Since we already read 28 bits (7 * 4),
-        // the value of this byte must fit within 4 bits (32 - 28),
-        // and it must not have the high bit set.
+        // 1st byte (shift = 0)
+        var b = span[offset++];
+        value |= (uint)(b & LowBits);
+        if (b <= LowBits) goto exit;
+
+        // 2nd byte (shift = 7)
+        b = span[offset++];
+        value |= (uint)(b & LowBits) << 7;
+        if (b <= LowBits) goto exit;
+
+        // 3rd byte (shift = 14)
+        b = span[offset++];
+        value |= (uint)(b & LowBits) << 14;
+        if (b <= LowBits) goto exit;
+
+        // 4th byte (shift = 21)
+        b = span[offset++];
+        value |= (uint)(b & LowBits) << 21;
+        if (b <= LowBits) goto exit;
+
+        // 5th byte (final, shift = 28). Must be <= 0x0F and without high bit.
         b = span[offset++];
         if (b > 15)
             throw Errors.InvalidVarLengthEncoding<uint>();
 
-        value |= (uint)b << shift;
+        value |= (uint)b << 28;
+    exit:
         return (value, offset);
     }
 
@@ -59,7 +70,7 @@ public static partial class SpanExt
             b = span[offset++];
             value |= (ulong)(b & LowBits) << shift;
             if (b <= LowBits)
-                return (value, offset);
+                goto exit;
         }
 
         // Read the 10th byte. Since we already read 63 bits (7 * 9),
@@ -70,6 +81,7 @@ public static partial class SpanExt
             throw Errors.InvalidVarLengthEncoding<ulong>();
 
         value |= (ulong)b << shift;
+    exit:
         return (value, offset);
     }
 }

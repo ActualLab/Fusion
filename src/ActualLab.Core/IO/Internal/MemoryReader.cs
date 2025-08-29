@@ -22,21 +22,28 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
 
     public uint ReadUInt32()
     {
-        var result = 0u;
-        var offset = 0;
-        for (var shift = 0; shift < 32; shift += 8)
-            result |= (uint)Remaining[offset++] << shift;
-        Advance(offset);
+        var span = Remaining;
+        var result = span[0]
+            | ((uint)span[1] << 8)
+            | ((uint)span[2] << 16)
+            | ((uint)span[3] << 24);
+        Advance(4);
         return result;
     }
 
     public ulong ReadUInt64()
     {
-        var result = 0ul;
-        var offset = 0;
-        for (var shift = 0; shift < 64; shift += 8)
-            result |= (ulong)Remaining[offset++] << shift;
-        Advance(offset);
+        var span = Remaining;
+        var result =
+            span[0]
+            | ((ulong)span[1] << 8)
+            | ((ulong)span[2] << 16)
+            | ((ulong)span[3] << 24)
+            | ((ulong)span[4] << 32)
+            | ((ulong)span[5] << 40)
+            | ((ulong)span[6] << 48)
+            | ((ulong)span[7] << 56);
+        Advance(8);
         return result;
     }
 
@@ -58,11 +65,12 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
 
     public ulong ReadAltVarUInt64()
     {
-        var size = Remaining[0];
+        var span = Remaining;
+        var size = span[0];
         var result = size switch {
-            2 => Remaining.ReadUnchecked<ushort>(1),
-            4 => Remaining.ReadUnchecked<uint>(1),
-            8 => Remaining.ReadUnchecked<ulong>(1),
+            2 => span.ReadUnchecked<ushort>(1),
+            4 => span.ReadUnchecked<uint>(1),
+            8 => span.ReadUnchecked<ulong>(1),
             _ => throw Errors.Format("Invalid message format."),
         };
         Advance(size + 1);
@@ -71,8 +79,9 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
 
     public ReadOnlySpan<byte> ReadL1Span()
     {
-        var end = 1 + Remaining.ReadUnchecked<byte>();
-        var result = Remaining[1..end];
+        var span = Remaining;
+        var end = 1 + span.ReadUnchecked<byte>();
+        var result = span[1..end];
         Advance(end);
         return result;
     }
@@ -88,8 +97,9 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
 
     public ReadOnlySpan<byte> ReadL2Span()
     {
-        var end = 2 + Remaining.ReadUnchecked<ushort>();
-        var result = Remaining[2..end];
+        var span = Remaining;
+        var end = 2 + span.ReadUnchecked<ushort>();
+        var result = span[2..end];
         Advance(end);
         return result;
     }
@@ -105,12 +115,13 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
 
     public ReadOnlySpan<byte> ReadL4Span(int maxSize)
     {
-        var size = Remaining.ReadUnchecked<int>();
+        var span = Remaining;
+        var size = span.ReadUnchecked<int>();
         if (size < 0 || size > maxSize)
             throw Errors.SizeLimitExceeded();
 
         var end = size + 4;
-        var result = Remaining[4..end];
+        var result = span[4..end];
         Advance(end);
         return result;
     }

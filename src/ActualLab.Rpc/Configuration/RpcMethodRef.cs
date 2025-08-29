@@ -16,7 +16,21 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
     public readonly int HashCode;
 
     [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
-    public bool HashName => Utf8Name.Length != 0;
+    public bool HasName => !Utf8Name.IsEmpty;
+
+    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    public string Name
+#if !NETSTANDARD2_0
+        => Utf8Name.IsEmpty ? "" : EncodingExt.Utf8NoBom.GetString(Utf8Name.Span);
+#else
+        => Utf8Name.IsEmpty ? "" : EncodingExt.Utf8NoBom.GetDecoder().Convert(Utf8Name.Span);
+#endif
+
+    [IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    public string FullName
+        => Target is not null
+            ? Target.FullName
+            : HasName ? Name : $"Service.Method<{(uint)HashCode:x8}>";
 
     [MemoryPackConstructor, SerializationConstructor]
     public RpcMethodRef(ReadOnlyMemory<byte> utf8Name)
@@ -44,29 +58,12 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
     }
 
     public override string ToString()
-        => $"('{GetFullMethodName()}', HashCode: 0x{(uint)HashCode:x8})";
-
-    public string GetFullMethodName()
-    {
-        if (Target is not null)
-            return Target.FullName;
-        if (HashName)
-#if !NETSTANDARD2_0
-            return EncodingExt.Utf8NoBom.GetString(Utf8Name.Span);
-#else
-            return EncodingExt.Utf8NoBom.GetDecoder().Convert(Utf8Name.Span);
-#endif
-        return $"Service.Method<{(uint)HashCode:x8}>";
-    }
+        => $"('{FullName}', HashCode: 0x{(uint)HashCode:x8})";
 
     public (string ServiceName, string MethodName) GetServiceAndMethodName()
-    {
-        if (Target is not null)
-            return (Target.Service.Name, Target.Name);
-
-        var fullName = GetFullMethodName();
-        return RpcMethodDef.SplitFullName(fullName);
-    }
+        => Target is not null
+            ? (Target.Service.Name, Target.Name)
+            : RpcMethodDef.SplitFullName(FullName);
 
     // Equality
 

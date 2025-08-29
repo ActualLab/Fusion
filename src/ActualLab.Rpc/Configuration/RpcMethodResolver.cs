@@ -33,12 +33,12 @@ public sealed class RpcMethodResolver
         }
     }
 
-    public RpcMethodDef? this[int id] {
+    public RpcMethodDef? this[int hashCode] {
         get {
-            if (MethodByHashCode is not null && MethodByHashCode.TryGetValue(id, out var methodEntry))
+            if (MethodByHashCode is not null && MethodByHashCode.TryGetValue(hashCode, out var methodEntry))
                 return methodEntry.Method;
 
-            return NextResolver?[id];
+            return NextResolver?[hashCode];
         }
     }
 
@@ -63,19 +63,7 @@ public sealed class RpcMethodResolver
                 methodByHashCode[hashCode] = entry;
             }
         }
-        if (methodByHashCode.Count != methodByRef.Count) {
-            var conflicts = methodByRef.Keys
-                .GroupBy(x => x.HashCode)
-                .Where(g => g.Count() > 1)
-                .SelectMany(x => x)
-                .OrderBy(x => x.HashCode).ThenBy(x => x.GetFullMethodName(), StringComparer.Ordinal)
-                .ToList();
-            foreach (var methodRef in conflicts) {
-                log?.LogError("RpcMethodRef.HashCode conflict for {MethodRef}", methodRef);
-                methodByHashCode[methodRef.HashCode] = default;
-            }
-        }
-
+        CheckHashCodeConflicts(methodByRef, methodByHashCode, log);
         MethodByFullName = methodByFullName;
         MethodByRef = methodByRef;
         MethodByHashCode = methodByHashCode;
@@ -112,19 +100,21 @@ public sealed class RpcMethodResolver
                     continue; // No overrides
 
                 var methodName = legacyMethodName?.Name ?? method.Name;
-                var methodVersion = legacyMethodName is null ? serviceVersion : legacyMethodName.MaxVersion;
+                var methodVersion = legacyMethodName?.MaxVersion ?? serviceVersion;
 
                 var fullName = RpcMethodDef.ComposeFullName(serviceName, methodName);
                 var methodRef = new RpcMethodRef(fullName, method);
                 var hashCode = methodRef.HashCode;
                 var entry = new MethodEntry(method, methodVersion);
                 if (!methodByRef.TryGetValue(methodRef, out var existingEntry)) {
-                    methodByRef.Add(methodRef, entry);
-                    methodByFullName.Add(fullName, entry);
+                    // No existing entry -> add a new one
+                    methodByRef[methodRef] = entry;
+                    methodByFullName[fullName] = entry;
                     methodByHashCode[hashCode] = entry;
                     continue;
                 }
 
+                // There is an existing entry -> check version to decide whether to override or not
                 var c = methodVersion.CompareTo(existingEntry.Version);
                 if (c == 0)
                     throw Errors.Constraint(
@@ -132,23 +122,39 @@ public sealed class RpcMethodResolver
                         $"are both mapped to '{serviceName}.{methodName}' in v{methodVersion.Format()}.");
 
                 if (c < 0) {
-                    // methodVersion < existingEntry.Version
+                    // methodVersion < existingEntry.Version -> override.
+                    // If there are many Service.Method names w/ the different versions,
+                    // we'll take the one with the lowest version:
+                    // - method.LegacyNames[version] call above finds the override for this or higher version
+                    // - if there are two or more overrides mapped to the same legacy name, the one with
+                    //   the lowest version should win, coz it's the one that was added first.
                     methodByRef[methodRef] = entry;
                     methodByFullName[fullName] = entry;
                     methodByHashCode[hashCode] = entry;
                 }
             }
         }
-        var conflicts = methodByRef.Keys.Concat(nextResolver.MethodByRef?.Keys ?? [])
-            .GroupBy(x => x.HashCode)
-            .Where(g => g.Count() > 1)
-            .SelectMany(x => x)
-            .OrderBy(x => x.HashCode).ThenBy(x => x.GetFullMethodName(), StringComparer.Ordinal)
-            .ToList();
-        foreach (var methodRef in conflicts) {
-            log?.LogError("RpcMethodRef.HashCode conflict for {MethodRef} @ {VersionSet}", methodRef, versions);
-            methodByHashCode[methodRef.HashCode] = default;
+        CheckHashCodeConflicts(methodByRef, methodByHashCode, log);
+        // Conflicts of legacy names with the non-legacy ones don't matter:
+        // we assume legacy method hashes override the non-legacy ones.
+        /*
+        var conflicts = (
+            from kv in methodByRef
+            let legacyMethodRef = kv.Key
+            let legacyMethodDef = kv.Value.Method
+            let version = kv.Value.Version
+            let maybeMatch = nextResolver.MethodByHashCode?.GetValueOrDefault(legacyMethodRef.HashCode)
+            where maybeMatch.HasValue
+            let methodDef = maybeMatch.GetValueOrDefault().Method
+            where !ReferenceEquals(legacyMethodDef, methodDef) // Hash match points to a different impl. method
+            select (legacyMethodRef, version, methodDef.Ref)
+            ).ToList();
+        foreach (var (legacyMethodRef, version, methodRef) in conflicts) {
+            log?.LogError("RpcMethodRef.HashCode conflict for {LegacyMethodRef} @ {Version} and {MethodRef}",
+                legacyMethodRef, version, methodRef);
+            methodByHashCode[legacyMethodRef.HashCode] = default;
         }
+        */
 
         MethodByRef = methodByRef.Count != 0 ? methodByRef : null;
         MethodByFullName = methodByFullName.Count != 0 ? methodByFullName : null;
@@ -165,6 +171,28 @@ public sealed class RpcMethodResolver
             sMethods = "[" + string.Join("", methods) + Environment.NewLine + "]";
         }
         return $"{nameof(RpcMethodResolver)}(Versions = \"{Versions}\", {nameof(MethodByRef)} = {sMethods})";
+    }
+
+    // Private methods
+
+    private static void CheckHashCodeConflicts(
+        Dictionary<RpcMethodRef, MethodEntry> methodByRef,
+        Dictionary<int, MethodEntry> methodByHashCode,
+        ILogger? log)
+    {
+        if (methodByHashCode.Count == methodByRef.Count)
+            return;
+
+        var conflicts = methodByRef.Keys
+            .GroupBy(x => x.HashCode)
+            .Where(g => g.Count() > 1)
+            .SelectMany(x => x)
+            .OrderBy(x => x.HashCode).ThenBy(x => x.FullName, StringComparer.Ordinal)
+            .ToList();
+        foreach (var methodRef in conflicts) {
+            log?.LogError("RpcMethodRef.HashCode conflict for {MethodRef}", methodRef);
+            methodByHashCode[methodRef.HashCode] = default;
+        }
     }
 
     // Nested type

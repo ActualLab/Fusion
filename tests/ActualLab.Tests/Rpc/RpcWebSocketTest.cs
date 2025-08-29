@@ -211,8 +211,7 @@ public class RpcWebSocketTest : RpcTestBase
         catch (RpcException e) {
             Out.WriteLine(e.Message);
             e.Message.Should().StartWith("Endpoint not found:");
-            e.Message.Should().Contain("NoSuchMethod");
-            e.Message.Should().Contain("ITestRpcService");
+            e.Message.Should().ContainAny("NoSuchMethod", "Service.Method<");
         }
 
         await AssertNoCalls(peer, Out);
