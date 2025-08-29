@@ -20,7 +20,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
     public void Advance(int count)
         => Remaining = Remaining.Slice(count);
 
-    public uint ReadUInt()
+    public uint ReadUInt32()
     {
         var result = 0u;
         var offset = 0;
@@ -30,7 +30,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
-    public ulong ReadULong()
+    public ulong ReadUInt64()
     {
         var result = 0ul;
         var offset = 0;
@@ -40,37 +40,23 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
-    public uint ReadVarUInt()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public uint ReadVarUInt32()
     {
-        var result = 0u;
-        var offset = 0;
-        var shift = 0;
-        byte b;
-        do {
-            b = Remaining[offset++];
-            result |= (uint)(b & 0x7F) << shift;
-            shift += 7;
-        } while ((b & 0x80) != 0);
-        Advance(offset);
-        return result;
+        var (value, size) = Remaining.ReadVarUInt32();
+        Advance(size);
+        return value;
     }
 
-    public ulong ReadVarULong()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ulong ReadVarUInt64()
     {
-        var result = 0ul;
-        var offset = 0;
-        var shift = 0;
-        byte b;
-        do {
-            b = Remaining[offset++];
-            result |= (ulong)(b & 0x7F) << shift;
-            shift += 7;
-        } while ((b & 0x80) != 0);
-        Advance(offset);
-        return result;
+        var (value, size) = Remaining.ReadVarUInt64();
+        Advance(size);
+        return value;
     }
 
-    public ulong ReadAltVarULong()
+    public ulong ReadAltVarUInt64()
     {
         var size = Remaining[0];
         var result = size switch {
@@ -117,39 +103,47 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
-    public ReadOnlySpan<byte> ReadL4Span()
+    public ReadOnlySpan<byte> ReadL4Span(int maxSize)
     {
-        var end = 4 + Remaining.ReadUnchecked<int>();
+        var size = Remaining.ReadUnchecked<int>();
+        if (size < 0 || size > maxSize)
+            throw Errors.SizeLimitExceeded();
+
+        var end = size + 4;
         var result = Remaining[4..end];
         Advance(end);
         return result;
     }
 
-    public ReadOnlyMemory<byte> ReadL4Memory()
+    public ReadOnlyMemory<byte> ReadL4Memory(int maxSize)
     {
+        var size = Remaining.ReadUnchecked<int>();
+        if (size < 0 || size > maxSize)
+            throw Errors.SizeLimitExceeded();
+
         var start = Offset + 4;
-        var end = start + Remaining.ReadUnchecked<int>();
+        var end = start + size;
         var result = Memory[start..end];
-        Advance(end - start + 4);
+        Advance(size + 4);
         return result;
     }
 
-    public ReadOnlySpan<byte> ReadLVarSpan()
+    public ReadOnlySpan<byte> ReadLVarSpan(int maxSize)
     {
-        var size = (int)ReadVarUInt();
-        if (size < 0)
-            throw Errors.Format("Invalid message format.");
+        var size = (int)ReadVarUInt32();
+        if (size < 0 || size > maxSize)
+            throw Errors.SizeLimitExceeded();
 
         var result = Remaining[..size];
         Advance(size);
         return result;
     }
 
-    public ReadOnlyMemory<byte> ReadLVarMemory()
+    public ReadOnlyMemory<byte> ReadLVarMemory(int maxSize)
     {
-        var size = (int)ReadVarUInt();
-        if (size < 0)
-            throw Errors.Format("Invalid message format.");
+        var size = (int)ReadVarUInt32();
+        if (size < 0 || size > maxSize)
+            throw Errors.SizeLimitExceeded();
 
         var start = Offset;
         var result = Memory[start..(start + size)];

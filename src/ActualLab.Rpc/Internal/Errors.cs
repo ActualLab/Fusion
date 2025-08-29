@@ -55,8 +55,6 @@ public static class Errors
             $"this scope should be used only in synchronous part of your code that happens " +
             $"right before the async method triggering the outgoing RPC call is invoked.");
 
-    public static Exception ItemSizeExceedsTheLimit()
-        => new SerializationException("The item size exceeds the limit.");
     public static Exception InvalidItemSize()
         => new SerializationException("Invalid item size. The remainder of the message will be dropped.");
     public static Exception InvalidItemTypeFormat()

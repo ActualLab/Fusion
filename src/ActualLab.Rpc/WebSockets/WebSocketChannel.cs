@@ -21,7 +21,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         public int MinReadBufferSize { get; init; } = 24_000; // Rented ~just once, so it can be large
         public int RetainedBufferSize { get; init; } = 120_000; // Read buffer is released when it hits this size
         public int BufferRenewPeriod { get; init; } = 100; // Per flush/read cycle
-        public int MaxItemSize { get; init; } = 130_000_000; // 130 MB;
         public RpcFrameDelayerFactory? FrameDelayerFactory { get; init; }
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public IByteSerializer<T> Serializer { get; init; } = ActualLab.Serialization.ByteSerializer.Default.ToTyped<T>();
@@ -49,7 +48,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private readonly int _writeFrameSize;
     private readonly int _retainedBufferSize;
     private readonly int _bufferRenewPeriod;
-    private readonly int _maxItemSize;
     private readonly MeterSet _meters = StaticMeters;
     private int _readBufferResetCounter;
     private int _writeBufferResetCounter;
@@ -106,7 +104,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
             throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.WriteFrameSize)} must be positive.");
         _retainedBufferSize = settings.RetainedBufferSize;
         _bufferRenewPeriod = settings.BufferRenewPeriod;
-        _maxItemSize = settings.MaxItemSize;
         _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, false);
 
         _readChannel = ChannelExt.Create<T>(settings.ReadChannelOptions);
@@ -441,8 +438,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
             ByteSerializer!.Write(buffer, value);
             var size = buffer.WrittenCount - startOffset;
             buffer.WrittenSpan.WriteUnchecked(startOffset, size);
-            if (size > _maxItemSize)
-                throw Errors.ItemSizeExceedsTheLimit();
 
             // Log?.LogInformation("Wrote: {Value}", value);
             // Log?.LogInformation("Data({Size}): {Data}",
@@ -463,21 +458,15 @@ public sealed class WebSocketChannel<T> : Channel<T>
     {
         _meters.OutgoingItemCounter.Add(1);
         var startOffset = buffer.WrittenCount;
-        var itemStartOffset = startOffset;
         if (startOffset != 0) {
             // Write the delimiter
             var delimiterSpan = buffer.GetSpan(2);
             delimiterSpan[0] = WebSocketChannelImpl.LineFeed;
             delimiterSpan[1] = WebSocketChannelImpl.RecordSeparator;
             buffer.Advance(2);
-            itemStartOffset = buffer.WrittenCount;
         }
         try {
             TextSerializer!.Write(buffer, value);
-            var size = buffer.WrittenCount - itemStartOffset;
-            if (size > _maxItemSize)
-                throw Errors.ItemSizeExceedsTheLimit();
-
             return true;
         }
         catch (Exception e) {
@@ -539,8 +528,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
             isSizeValid = size > 0 && size <= bytes.Length;
             if (!isSizeValid)
                 throw Errors.InvalidItemSize();
-            if (size > _maxItemSize)
-                throw Errors.ItemSizeExceedsTheLimit();
 
             var data = bytes[sizeof(int)..size];
             value = ByteSerializer!.Read(data, out int readSize);
@@ -572,8 +559,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
             isSizeValid = size > 0 && size <= bytes.Length;
             if (!isSizeValid)
                 throw Errors.InvalidItemSize();
-            if (size > _maxItemSize)
-                throw Errors.ItemSizeExceedsTheLimit();
 
             var data = bytes[sizeof(int)..size];
             value = ProjectingByteSerializer!.Read(data, out int readSize, out isProjection);
@@ -606,8 +591,6 @@ public sealed class WebSocketChannel<T> : Channel<T>
         try {
             if (size <= 0)
                 throw Errors.InvalidItemSize();
-            if (size > _maxItemSize)
-                throw Errors.ItemSizeExceedsTheLimit();
 
             value = TextSerializer!.Read(bytes[..size], out _);
             return true;

@@ -8,11 +8,12 @@ namespace ActualLab.Rpc.Serialization;
 #pragma warning disable MA0069
 
 public sealed class RpcTextMessageSerializerV3(RpcPeer peer)
-    : RpcMessageSerializer(peer), ITextSerializer<RpcMessage>
+    : RpcTextMessageSerializer(peer), ITextSerializer<RpcMessage>
 {
     private static readonly byte Delimiter = (byte)'\n';
     private static readonly byte[] DelimiterBytes = [Delimiter];
 
+    public int MaxArgumentDataSize { get; init; } = Defaults.MaxArgumentDataSize;
     public bool PreferStringApi => false;
 
     public RpcMessage Read(string data)
@@ -30,6 +31,8 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer)
         var tail = data.Slice((int)reader.BytesConsumed).Span;
         if (tail[0] == Delimiter)
             tail = tail[1..];
+        if (tail.Length > MaxArgumentDataSize)
+            throw Errors.SizeLimitExceeded();
 
         var argumentData = (ReadOnlyMemory<byte>)tail.ToArray();
         var result = new RpcMessage(m.CallType, m.RelatedId, methodRef, argumentData, m.ParseHeaders());
@@ -45,10 +48,14 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer)
 
     public override void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
     {
+        var argumentData = value.ArgumentData;
+        if (argumentData.Length > MaxArgumentDataSize)
+            throw Errors.SizeLimitExceeded();
+
         var writer = new Utf8JsonWriter(bufferWriter);
         JsonSerializer.Serialize(writer, new JsonRpcMessage(value), typeof(JsonRpcMessage), JsonRpcMessageContext.Default);
         writer.Flush();
         bufferWriter.Write(DelimiterBytes);
-        bufferWriter.Write(value.ArgumentData.Span);
+        bufferWriter.Write(argumentData.Span);
     }
 }

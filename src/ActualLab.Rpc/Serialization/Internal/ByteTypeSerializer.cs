@@ -1,9 +1,10 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.OS;
-using ActualLab.Rpc.Internal;
+using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Serialization.Internal;
 

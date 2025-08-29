@@ -1,4 +1,4 @@
-namespace ActualLab.IO.Internal;
+namespace ActualLab.Internal;
 
 [StructLayout(LayoutKind.Auto)]
 public ref struct SpanWriter(Span<byte> buffer)
@@ -6,19 +6,19 @@ public ref struct SpanWriter(Span<byte> buffer)
     public Span<byte> Span = buffer;
     public Span<byte> Remaining = buffer;
 
-    public int Offset {
+    public int Position {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Span.Length - Remaining.Length;
     }
 
     public override string ToString()
-        => $"{nameof(SpanWriter)} @ {Offset} / {Span.Length}";
+        => $"{nameof(SpanWriter)} @ {Position} / {Span.Length}";
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Advance(int count)
         => Remaining = Remaining.Slice(count);
 
-    public void WriteUInt(uint value)
+    public void WriteUInt32(uint value)
     {
         for (var offset = 0; offset < 4; offset++) {
             Remaining[offset] = (byte)(value & 0xFF);
@@ -27,7 +27,7 @@ public ref struct SpanWriter(Span<byte> buffer)
         Advance(4);
     }
 
-    public void WriteULong(ulong value)
+    public void WriteUInt64(ulong value)
     {
         for (var offset = 0; offset < 8; offset++) {
             Remaining[offset] = (byte)(value & 0xFF);
@@ -36,29 +36,15 @@ public ref struct SpanWriter(Span<byte> buffer)
         Advance(8);
     }
 
-    public void WriteVarUInt(uint value)
-    {
-        var offset = 0;
-        while (value >= 0x80) {
-            Remaining[offset++] = (byte)((value & 0x7F) | 0x80);
-            value >>= 7;
-        }
-        Remaining[offset++] = (byte)value;
-        Advance(offset);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void WriteVarUInt32(uint value, int offset = 0)
+        => Advance(Remaining.WriteVarUInt32(value, offset));
 
-    public void WriteVarULong(ulong value)
-    {
-        var offset = 0;
-        while (value >= 0x80) {
-            Remaining[offset++] = (byte)((value & 0x7F) | 0x80);
-            value >>= 7;
-        }
-        Remaining[offset++] = (byte)value;
-        Advance(offset);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void WriteVarUInt64(ulong value, int offset = 0)
+        => Advance(Remaining.WriteVarUInt64(value, offset));
 
-    public void WriteAltVarULong(ulong value)
+    public void WriteAltVarUInt64(ulong value)
     {
         if (value <= 0xFFFF) {
             Remaining.WriteUnchecked(2);
@@ -77,37 +63,38 @@ public ref struct SpanWriter(Span<byte> buffer)
         }
     }
 
-    public void WriteL1Span(ReadOnlySpan<byte> source)
+    public void WriteL1Span(ReadOnlySpan<byte> span)
     {
-        if (source.Length > 0xFF)
-            throw new ArgumentOutOfRangeException(nameof(source), "Source length exceeds 255 bytes.");
+        if (span.Length > 0xFF)
+            throw new ArgumentOutOfRangeException(nameof(span), "Source length exceeds 255 bytes.");
 
-        Remaining[0] = (byte)source.Length;
-        source.CopyTo(Remaining[1..]);
-        Advance(1 + source.Length);
+        Remaining[0] = (byte)span.Length;
+        span.CopyTo(Remaining[1..]);
+        Advance(1 + span.Length);
     }
 
-    public void WriteL2Span(ReadOnlySpan<byte> source)
+    public void WriteL2Span(ReadOnlySpan<byte> span)
     {
-        if (source.Length > 0xFFFF)
-            throw new ArgumentOutOfRangeException(nameof(source), "Source length exceeds 65535 bytes.");
+        if (span.Length > 0xFFFF)
+            throw new ArgumentOutOfRangeException(nameof(span), "Source length exceeds 65535 bytes.");
 
-        Remaining.WriteUnchecked((ushort)source.Length);
-        source.CopyTo(Remaining[2..]);
-        Advance(2 + source.Length);
+        Remaining.WriteUnchecked((ushort)span.Length);
+        span.CopyTo(Remaining[2..]);
+        Advance(2 + span.Length);
     }
 
-    public void WriteL4Span(ReadOnlySpan<byte> source)
+    public void WriteL4Span(ReadOnlySpan<byte> span)
     {
-        Remaining.WriteUnchecked(source.Length);
-        source.CopyTo(Remaining[4..]);
-        Advance(4 + source.Length);
+        Remaining.WriteUnchecked(span.Length);
+        Advance(4);
+        span.CopyTo(Remaining);
+        Advance(span.Length);
     }
 
-    public void WriteLVarSpan(ReadOnlySpan<byte> source)
+    public void WriteLVarSpan(ReadOnlySpan<byte> span)
     {
-        WriteVarUInt((uint)source.Length);
-        source.CopyTo(Remaining);
-        Advance(source.Length);
+        WriteVarUInt32((uint)span.Length);
+        span.CopyTo(Remaining);
+        Advance(span.Length);
     }
 }

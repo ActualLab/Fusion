@@ -15,7 +15,7 @@ public static class IncreasingSeqCompressor
                 throw new ArgumentOutOfRangeException(nameof(values));
 
             var span = writer.GetSpan(10);
-            var size = Bits.Write7BitEncoded((ulong)delta, span);
+            var size = span.WriteVarUInt64((ulong)delta);
             writer.Advance(size);
         }
         return writer.WrittenSpan.ToArray();
@@ -27,8 +27,8 @@ public static class IncreasingSeqCompressor
         var span = data.AsSpan();
         var lastValue = 0L;
         while (span.Length != 0) {
-            var size = Bits.Read7BitEncoded(span, out var delta);
-            span = span[size..];
+            var (delta, offset) = span.ReadVarUInt64();
+            span = span[offset..];
             lastValue += (long)delta;
             result.Add(lastValue);
         }

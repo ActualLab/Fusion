@@ -1,4 +1,5 @@
 using System.Buffers;
+using ActualLab.Internal;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Infrastructure;
 
@@ -20,10 +21,10 @@ public class RpcByteMessageSerializerV3Compact(RpcPeer peer) : RpcByteMessageSer
         reader.Advance(5);
 
         // RelatedId
-        var relatedId = (long)reader.ReadAltVarULong();
+        var relatedId = (long)reader.ReadAltVarUInt64();
 
         // ArgumentData
-        var blob = reader.ReadL4Memory();
+        var blob = reader.ReadL4Memory(MaxArgumentDataSize);
         isProjection = AllowProjection && blob.Length >= MinProjectionSize && IsProjectable(blob);
         var argumentData = isProjection ? blob : (ReadOnlyMemory<byte>)blob.ToArray();
 
@@ -77,10 +78,10 @@ public class RpcByteMessageSerializerV3Compact(RpcPeer peer) : RpcByteMessageSer
         reader.Advance(5);
 
         // RelatedId
-        var relatedId = (long)reader.ReadAltVarULong();
+        var relatedId = (long)reader.ReadAltVarUInt64();
 
         // ArgumentData
-        var blob = reader.ReadL4Memory();
+        var blob = reader.ReadL4Memory(MaxArgumentDataSize);
         var argumentData = (ReadOnlyMemory<byte>)blob.ToArray();
 
         // Headers
@@ -122,6 +123,9 @@ public class RpcByteMessageSerializerV3Compact(RpcPeer peer) : RpcByteMessageSer
     public override void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
     {
         var argumentData = value.ArgumentData;
+        if (argumentData.Length > MaxArgumentDataSize)
+            throw Errors.SizeLimitExceeded();
+
         var writer = new SpanWriter(bufferWriter.GetSpan(32 + argumentData.Length));
 
         // MethodRef
@@ -132,7 +136,7 @@ public class RpcByteMessageSerializerV3Compact(RpcPeer peer) : RpcByteMessageSer
         writer.Advance(5);
 
         // RelatedId
-        writer.WriteAltVarULong((ulong)value.RelatedId);
+        writer.WriteAltVarUInt64((ulong)value.RelatedId);
 
         // ArgumentData
         writer.WriteL4Span(argumentData.Span);
@@ -140,10 +144,10 @@ public class RpcByteMessageSerializerV3Compact(RpcPeer peer) : RpcByteMessageSer
         // Headers
         var headers = value.Headers ?? RpcHeadersExt.Empty;
         if (headers.Length > 0xFF)
-            throw ActualLab.Internal.Errors.Format("Header count must not exceed 255.");
+            throw Errors.Format("Header count must not exceed 255.");
 
         writer.Remaining[0] = (byte)headers.Length;
-        bufferWriter.Advance(writer.Offset + 1);
+        bufferWriter.Advance(writer.Position + 1);
         if (headers.Length == 0)
             return;
 
@@ -158,7 +162,7 @@ public class RpcByteMessageSerializerV3Compact(RpcPeer peer) : RpcByteMessageSer
                 writer = new SpanWriter(bufferWriter.GetSpan(8 + key.Length + valueSpan.Length));
                 writer.WriteL1Span(key.Span);
                 writer.WriteL2Span(valueSpan);
-                bufferWriter.Advance(writer.Offset);
+                bufferWriter.Advance(writer.Position);
                 encodeBuffer.Reset();
             }
         }

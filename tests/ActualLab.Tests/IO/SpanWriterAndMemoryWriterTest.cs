@@ -1,3 +1,4 @@
+using ActualLab.Internal;
 using ActualLab.IO.Internal;
 
 namespace ActualLab.Tests.IO;
@@ -5,22 +6,22 @@ namespace ActualLab.Tests.IO;
 public class SpanWriterAndMemoryWriterTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
-    public void UIntTest()
+    public void UInt32Test()
     {
         var memory = new Memory<byte>(new byte[64]);
         var span = new byte[64];
-        foreach (var value in UIntValues()) {
+        foreach (var value in UInt32Values()) {
             var writer = new SpanWriter(memory.Span);
-            writer.WriteUInt(value);
-            writer.Offset.Should().Be(4);
+            writer.WriteUInt32(value);
+            writer.Position.Should().Be(4);
 
             span.WriteUnchecked(value);
             span.ToArray().Should().Equal(memory.ToArray());
 
             var reader = new MemoryReader(memory);
-            var readValue = reader.ReadUInt();
+            var readValue = reader.ReadUInt32();
             readValue.Should().Be(value);
-            reader.Offset.Should().Be(writer.Offset);
+            reader.Offset.Should().Be(writer.Position);
 
             var spanReadValue = span.ReadUnchecked<uint>();
             spanReadValue.Should().Be(value);
@@ -28,22 +29,22 @@ public class SpanWriterAndMemoryWriterTest(ITestOutputHelper @out) : TestBase(@o
     }
 
     [Fact]
-    public void ULongTest()
+    public void UInt64Test()
     {
         var memory = new Memory<byte>(new byte[64]);
         var span = new byte[64];
-        foreach (var value in ULongValues()) {
+        foreach (var value in UInt64Values()) {
             var writer = new SpanWriter(memory.Span);
-            writer.WriteULong(value);
-            writer.Offset.Should().Be(8);
+            writer.WriteUInt64(value);
+            writer.Position.Should().Be(8);
 
             span.WriteUnchecked(value);
             span.ToArray().Should().Equal(memory.ToArray());
 
             var reader = new MemoryReader(memory);
-            var readValue = reader.ReadULong();
+            var readValue = reader.ReadUInt64();
             readValue.Should().Be(value);
-            reader.Offset.Should().Be(writer.Offset);
+            reader.Offset.Should().Be(writer.Position);
 
             var spanReadValue = span.ReadUnchecked<ulong>();
             spanReadValue.Should().Be(value);
@@ -51,69 +52,69 @@ public class SpanWriterAndMemoryWriterTest(ITestOutputHelper @out) : TestBase(@o
     }
 
     [Fact]
-    public void VarUIntTest()
+    public void VarUInt32Test()
     {
         var memory = new Memory<byte>(new byte[64]);
         var span = new byte[64];
-        foreach (var value in UIntValues()) {
+        foreach (var value in UInt32Values()) {
             var writer = new SpanWriter(memory.Span);
-            writer.WriteVarUInt(value);
-            writer.Offset.Should().BeGreaterThanOrEqualTo(1);
-            writer.Offset.Should().BeLessThanOrEqualTo(5);
+            writer.WriteVarUInt32(value);
+            writer.Position.Should().BeGreaterThanOrEqualTo(1);
+            writer.Position.Should().BeLessThanOrEqualTo(5);
 
-            span.WriteVarUInt(value);
+            span.WriteVarUInt32(value);
             span.ToArray().Should().Equal(memory.ToArray());
 
             var reader = new MemoryReader(memory);
-            var readValue = reader.ReadVarUInt();
+            var readValue = reader.ReadVarUInt32();
             readValue.Should().Be(value);
-            reader.Offset.Should().Be(writer.Offset);
+            reader.Offset.Should().Be(writer.Position);
 
-            var (spanReadValue, offset) = span.ReadVarUInt();
+            var (spanReadValue, offset) = span.ReadVarUInt32();
             spanReadValue.Should().Be(value);
-            offset.Should().Be(writer.Offset);
+            offset.Should().Be(writer.Position);
         }
     }
 
     [Fact]
-    public void VarULongTest()
+    public void VarUInt64Test()
     {
         var memory = new Memory<byte>(new byte[64]);
         var span = new byte[64];
-        foreach (var value in ULongValues()) {
+        foreach (var value in UInt64Values()) {
             var writer = new SpanWriter(memory.Span);
-            writer.WriteVarULong(value);
-            writer.Offset.Should().BeGreaterThanOrEqualTo(1);
-            writer.Offset.Should().BeLessThanOrEqualTo(10);
+            writer.WriteVarUInt64(value);
+            writer.Position.Should().BeGreaterThanOrEqualTo(1);
+            writer.Position.Should().BeLessThanOrEqualTo(10);
 
-            span.WriteVarULong(value);
+            span.WriteVarUInt64(value);
             span.ToArray().Should().Equal(memory.ToArray());
 
             var reader = new MemoryReader(memory);
-            var readValue = reader.ReadVarULong();
+            var readValue = reader.ReadVarUInt64();
             readValue.Should().Be(value);
-            reader.Offset.Should().Be(writer.Offset);
+            reader.Offset.Should().Be(writer.Position);
 
-            var (spanReadValue, offset) = span.ReadVarULong();
+            var (spanReadValue, offset) = span.ReadVarUInt64();
             spanReadValue.Should().Be(value);
-            offset.Should().Be(writer.Offset);
+            offset.Should().Be(writer.Position);
         }
     }
 
     [Fact]
-    public void L1ULongTest()
+    public void AltVarUInt64Test()
     {
         var memory = new Memory<byte>(new byte[64]);
-        foreach (var value in ULongValues()) {
+        foreach (var value in UInt64Values()) {
             var writer = new SpanWriter(memory.Span);
-            writer.WriteAltVarULong(value);
-            writer.Offset.Should().BeGreaterThanOrEqualTo(1);
-            writer.Offset.Should().BeLessThanOrEqualTo(10);
+            writer.WriteAltVarUInt64(value);
+            writer.Position.Should().BeGreaterThanOrEqualTo(1);
+            writer.Position.Should().BeLessThanOrEqualTo(10);
 
             var reader = new MemoryReader(memory);
-            var readValue = reader.ReadAltVarULong();
+            var readValue = reader.ReadAltVarUInt64();
             readValue.Should().Be(value);
-            reader.Offset.Should().Be(writer.Offset);
+            reader.Offset.Should().Be(writer.Position);
         }
     }
 
@@ -124,14 +125,14 @@ public class SpanWriterAndMemoryWriterTest(ITestOutputHelper @out) : TestBase(@o
         foreach (var bytes in ByteSequences(260)) {
             var writer = new SpanWriter(memory.Span);
             writer.WriteLVarSpan(bytes);
-            writer.Offset.Should().BeGreaterThanOrEqualTo(1);
-            writer.Offset.Should().BeLessThanOrEqualTo(bytes.Length + 5);
+            writer.Position.Should().BeGreaterThanOrEqualTo(1);
+            writer.Position.Should().BeLessThanOrEqualTo(bytes.Length + 5);
 
             var reader = new MemoryReader(memory);
-            var readValue = reader.ReadLVarSpan();
+            var readValue = reader.ReadLVarSpan(1024);
             readValue.Length.Should().Be(bytes.Length);
             readValue.ToArray().Should().Equal(bytes);
-            reader.Offset.Should().Be(writer.Offset);
+            reader.Offset.Should().Be(writer.Position);
         }
     }
 
@@ -141,7 +142,7 @@ public class SpanWriterAndMemoryWriterTest(ITestOutputHelper @out) : TestBase(@o
             yield return Enumerable.Range(0, i).Select(x => (byte)x).ToArray();
     }
 
-    private static IEnumerable<ulong> ULongValues()
+    private static IEnumerable<ulong> UInt64Values()
     {
         yield return 0ul;
         var v = 1ul;
@@ -153,7 +154,7 @@ public class SpanWriterAndMemoryWriterTest(ITestOutputHelper @out) : TestBase(@o
         yield return ulong.MaxValue;
     }
 
-    private static IEnumerable<uint> UIntValues()
+    private static IEnumerable<uint> UInt32Values()
     {
         yield return 0u;
         var v = 1u;

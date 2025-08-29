@@ -1,6 +1,6 @@
 namespace ActualLab.Collections;
 
-public static class SpanExt
+public static partial class SpanExt
 {
     // AsSpanUnsafe
 
@@ -72,55 +72,5 @@ public static class SpanExt
     {
         ref var byteRef = ref Unsafe.Add(ref MemoryMarshal.GetReference(span), byteOffset);
         Unsafe.WriteUnaligned(ref byteRef, value);
-    }
-
-    // ReadVarXxx
-
-    public static (uint Value, int Offset) ReadVarUInt(this ReadOnlySpan<byte> span, int offset = 0)
-    {
-        var result = 0u;
-        var shift = 0;
-        byte b;
-        do {
-            b = span[offset++];
-            result |= (uint)(b & 0x7F) << shift;
-            shift += 7;
-        } while ((b & 0x80) != 0);
-        return (result, offset);
-    }
-
-    public static (ulong Value, int Offset) ReadVarULong(this ReadOnlySpan<byte> span, int offset = 0)
-    {
-        var result = 0ul;
-        var shift = 0;
-        byte b;
-        do {
-            b = span[offset++];
-            result |= (ulong)(b & 0x7F) << shift;
-            shift += 7;
-        } while ((b & 0x80) != 0);
-        return (result, offset);
-    }
-
-    // WriteVarXxx
-
-    public static int WriteVarUInt(this Span<byte> span, uint value, int offset = 0)
-    {
-        while (value >= 0x80) {
-            span[offset++] = (byte)((value & 0x7F) | 0x80);
-            value >>= 7;
-        }
-        span[offset++] = (byte)value;
-        return offset;
-    }
-
-    public static int WriteVarULong(this Span<byte> span, ulong value, int offset = 0)
-    {
-        while (value >= 0x80) {
-            span[offset++] = (byte)((value & 0x7F) | 0x80);
-            value >>= 7;
-        }
-        span[offset++] = (byte)value;
-        return offset;
     }
 }

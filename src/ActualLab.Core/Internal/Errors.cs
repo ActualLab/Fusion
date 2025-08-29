@@ -159,6 +159,11 @@ public static class Errors
     public static Exception Format(string target, string? value)
         => Format($"Invalid {target} format: {(value is null ? "null" : JsonFormatter.Format(value))}");
 
-    public static Exception Invalid7BitEncoded<TValue>()
-        => Format($"Invalid 7-bit encoded {typeof(TValue).GetName()}");
+    public static Exception SizeLimitExceeded()
+        => SizeLimitExceeded("Item");
+    public static Exception SizeLimitExceeded(string target)
+        => new FormatException($"{target} size limit exceeded.");
+
+    public static Exception InvalidVarLengthEncoding<TValue>()
+        => Format($"Invalid variable length encoded {typeof(TValue).GetName()}");
 }

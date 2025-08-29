@@ -1,4 +1,5 @@
 using System.Buffers;
+using ActualLab.Internal;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Infrastructure;
 
@@ -13,6 +14,7 @@ public class RpcByteMessageSerializerV3(RpcPeer peer)
     public bool AllowProjection { get; init; } = Defaults.AllowProjection;
     public int MinProjectionSize { get; init; } = Defaults.MinProjectionSize;
     public int MaxInefficiencyFactor { get; init; } = Defaults.MaxInefficiencyFactor;
+    public int MaxArgumentDataSize { get; init; } = Defaults.MaxArgumentDataSize;
 
     public virtual RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
     {
@@ -23,7 +25,7 @@ public class RpcByteMessageSerializerV3(RpcPeer peer)
         reader.Advance(1);
 
         // RelatedId
-        var relatedId = (long)reader.ReadAltVarULong();
+        var relatedId = (long)reader.ReadAltVarUInt64();
 
         // MethodRef
         var blob = reader.ReadL2Memory();
@@ -34,7 +36,7 @@ public class RpcByteMessageSerializerV3(RpcPeer peer)
         methodRef = methodDef?.Ref ?? new RpcMethodRef(blob.ToArray(), methodRef.HashCode);
 
         // ArgumentData
-        blob = reader.ReadL4Memory();
+        blob = reader.ReadL4Memory(MaxArgumentDataSize);
         isProjection = AllowProjection && blob.Length >= MinProjectionSize && IsProjectable(blob);
         var argumentData = isProjection ? blob : (ReadOnlyMemory<byte>)blob.ToArray();
 
@@ -83,7 +85,7 @@ public class RpcByteMessageSerializerV3(RpcPeer peer)
         reader.Advance(1);
 
         // RelatedId
-        var relatedId = (long)reader.ReadAltVarULong();
+        var relatedId = (long)reader.ReadAltVarUInt64();
 
         // MethodRef
         var blob = reader.ReadL2Memory();
@@ -94,7 +96,7 @@ public class RpcByteMessageSerializerV3(RpcPeer peer)
         methodRef = methodDef?.Ref ?? new RpcMethodRef(blob.ToArray(), methodRef.HashCode);
 
         // ArgumentData
-        blob = reader.ReadL4Memory();
+        blob = reader.ReadL4Memory(MaxArgumentDataSize);
         var argumentData = (ReadOnlyMemory<byte>)blob.ToArray();
 
         // Headers
@@ -137,6 +139,9 @@ public class RpcByteMessageSerializerV3(RpcPeer peer)
     {
         var utf8Name = value.MethodRef.Utf8Name;
         var argumentData = value.ArgumentData;
+        if (argumentData.Length > MaxArgumentDataSize)
+            throw Errors.SizeLimitExceeded();
+
         var writer = new SpanWriter(bufferWriter.GetSpan(32 + utf8Name.Length + argumentData.Length));
 
         // CallTypeId
@@ -144,7 +149,7 @@ public class RpcByteMessageSerializerV3(RpcPeer peer)
         writer.Advance(1);
 
         // RelatedId
-        writer.WriteAltVarULong((ulong)value.RelatedId);
+        writer.WriteAltVarUInt64((ulong)value.RelatedId);
 
         // MethodRef
         writer.WriteL2Span(utf8Name.Span);
@@ -155,10 +160,10 @@ public class RpcByteMessageSerializerV3(RpcPeer peer)
         // Headers
         var headers = value.Headers ?? RpcHeadersExt.Empty;
         if (headers.Length > 0xFF)
-            throw ActualLab.Internal.Errors.Format("Header count must not exceed 255.");
+            throw Errors.Format("Header count must not exceed 255.");
 
         writer.Remaining[0] = (byte)headers.Length;
-        bufferWriter.Advance(writer.Offset + 1);
+        bufferWriter.Advance(writer.Position + 1);
         if (headers.Length == 0)
             return;
 
@@ -173,7 +178,7 @@ public class RpcByteMessageSerializerV3(RpcPeer peer)
                 writer = new SpanWriter(bufferWriter.GetSpan(8 + key.Length + valueSpan.Length));
                 writer.WriteL1Span(key.Span);
                 writer.WriteL2Span(valueSpan);
-                bufferWriter.Advance(writer.Offset);
+                bufferWriter.Advance(writer.Position);
                 encodeBuffer.Reset();
             }
         }

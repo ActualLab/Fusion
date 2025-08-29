@@ -18,15 +18,15 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
         reader.Advance(1);
 
         // RelatedId
-        var relatedId = (long)reader.ReadVarULong();
+        var relatedId = (long)reader.ReadVarUInt64();
 
         // MethodRef
-        var hashCode = (int)reader.ReadUInt();
+        var hashCode = (int)reader.ReadUInt32();
         var methodDef = ServerMethodResolver[hashCode];
         var methodRef = methodDef?.Ref ?? new RpcMethodRef(default, hashCode);
 
         // ArgumentData
-        var blob = reader.ReadLVarMemory();
+        var blob = reader.ReadLVarMemory(MaxArgumentDataSize);
         isProjection = AllowProjection && blob.Length >= MinProjectionSize && IsProjectable(blob);
         var argumentData = isProjection ? blob : (ReadOnlyMemory<byte>)blob.ToArray();
 
@@ -43,7 +43,7 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
                     var key = new RpcHeaderKey(blob);
 
                     // h.Value
-                    var valueSpan = reader.ReadLVarSpan();
+                    var valueSpan = reader.ReadLVarSpan(MaxHeaderSize);
                     decoder.Convert(valueSpan, decodeBuffer);
 #if !NETSTANDARD2_0
                     var value = new string(decodeBuffer.WrittenSpan);
@@ -75,15 +75,15 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
         reader.Advance(1);
 
         // RelatedId
-        var relatedId = (long)reader.ReadVarULong();
+        var relatedId = (long)reader.ReadVarUInt64();
 
         // MethodRef
-        var hashCode = (int)reader.ReadUInt();
+        var hashCode = (int)reader.ReadUInt32();
         var methodDef = ServerMethodResolver[hashCode];
         var methodRef = methodDef?.Ref ?? new RpcMethodRef(default, hashCode);
 
         // ArgumentData
-        var blob = reader.ReadLVarMemory();
+        var blob = reader.ReadLVarMemory(MaxArgumentDataSize);
         var argumentData = (ReadOnlyMemory<byte>)blob.ToArray();
 
         // Headers
@@ -99,7 +99,7 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
                     var key = new RpcHeaderKey(blob);
 
                     // h.Value
-                    var valueSpan = reader.ReadLVarSpan();
+                    var valueSpan = reader.ReadLVarSpan(MaxHeaderSize);
                     decoder.Convert(valueSpan, decodeBuffer);
 #if !NETSTANDARD2_0
                     var value = new string(decodeBuffer.WrittenSpan);
@@ -123,6 +123,9 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
     public override void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
     {
         var argumentData = value.ArgumentData;
+        if (argumentData.Length > MaxArgumentDataSize)
+            throw Errors.SizeLimitExceeded();
+
         var writer = new SpanWriter(bufferWriter.GetSpan(32 + argumentData.Length));
 
         // CallTypeId and headerCount
@@ -131,19 +134,18 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
             throw Errors.Format("Header count must not exceed 31.");
 
         writer.Remaining[0] = (byte)(headers.Length | (value.CallTypeId << 5));
-        writer.Advance(1);
 
         // RelatedId
-        writer.WriteVarULong((ulong)value.RelatedId);
+        writer.WriteVarUInt64((ulong)value.RelatedId, 1);
 
         // MethodRef
-        writer.WriteUInt((uint)value.MethodRef.HashCode);
+        writer.WriteUInt32((uint)value.MethodRef.HashCode);
 
         // ArgumentData
         writer.WriteLVarSpan(argumentData.Span);
 
         // Commit to bufferWriter
-        bufferWriter.Advance(writer.Offset);
+        bufferWriter.Advance(writer.Position);
 
         // Headers
         if (headers.Length == 0)
@@ -160,7 +162,7 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
                 writer = new SpanWriter(bufferWriter.GetSpan(8 + key.Length + valueSpan.Length));
                 writer.WriteL1Span(key.Span);
                 writer.WriteLVarSpan(valueSpan);
-                bufferWriter.Advance(writer.Offset);
+                bufferWriter.Advance(writer.Position);
                 encodeBuffer.Reset();
             }
         }

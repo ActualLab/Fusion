@@ -1,4 +1,5 @@
 using System.Buffers;
+using ActualLab.Internal;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Infrastructure;
 using Errors = ActualLab.Internal.Errors;
@@ -14,6 +15,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
     public bool AllowProjection { get; init; } = Defaults.AllowProjection;
     public int MinProjectionSize { get; init; } = Defaults.MinProjectionSize;
     public int MaxInefficiencyFactor { get; init; } = Defaults.MaxInefficiencyFactor;
+    public int MaxArgumentDataSize { get; init; } = Defaults.MaxArgumentDataSize;
 
     public virtual RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength, out bool isProjection)
     {
@@ -26,10 +28,10 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
         reader.Advance(1);
 
         // RelatedId
-        var relatedId = (long)reader.ReadVarULong();
+        var relatedId = (long)reader.ReadVarUInt64();
 
         // MethodRef
-        var blob = reader.ReadLVarMemory();
+        var blob = reader.ReadLVarMemory(MaxMethodRefSize);
         var methodRef = new RpcMethodRef(blob);
         var methodDef = ServerMethodResolver[methodRef];
         // We can't have MethodRef bound to blob, coz the blob can be overwritten,
@@ -37,7 +39,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
         methodRef = methodDef?.Ref ?? new RpcMethodRef(blob.ToArray(), methodRef.HashCode);
 
         // ArgumentData
-        blob = reader.ReadLVarMemory();
+        blob = reader.ReadLVarMemory(MaxArgumentDataSize);
         isProjection = AllowProjection && blob.Length >= MinProjectionSize && IsProjectable(blob);
         var argumentData = isProjection ? blob : (ReadOnlyMemory<byte>)blob.ToArray();
 
@@ -54,7 +56,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
                     var key = new RpcHeaderKey(blob);
 
                     // h.Value
-                    var valueSpan = reader.ReadLVarSpan();
+                    var valueSpan = reader.ReadLVarSpan(MaxHeaderSize);
                     decoder.Convert(valueSpan, decodeBuffer);
 #if !NETSTANDARD2_0
                     var value = new string(decodeBuffer.WrittenSpan);
@@ -86,10 +88,10 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
         reader.Advance(1);
 
         // RelatedId
-        var relatedId = (long)reader.ReadVarULong();
+        var relatedId = (long)reader.ReadVarUInt64();
 
         // MethodRef
-        var blob = reader.ReadLVarMemory();
+        var blob = reader.ReadLVarMemory(MaxMethodRefSize);
         var methodRef = new RpcMethodRef(blob);
         var methodDef = ServerMethodResolver[methodRef];
         // We can't have MethodRef bound to blob, coz the blob can be overwritten,
@@ -97,7 +99,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
         methodRef = methodDef?.Ref ?? new RpcMethodRef(blob.ToArray(), methodRef.HashCode);
 
         // ArgumentData
-        blob = reader.ReadLVarMemory();
+        blob = reader.ReadLVarMemory(MaxArgumentDataSize);
         var argumentData = (ReadOnlyMemory<byte>)blob.ToArray();
 
         // Headers
@@ -113,7 +115,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
                     var key = new RpcHeaderKey(blob);
 
                     // h.Value
-                    var valueSpan = reader.ReadLVarSpan();
+                    var valueSpan = reader.ReadLVarSpan(MaxHeaderSize);
                     decoder.Convert(valueSpan, decodeBuffer);
 #if !NETSTANDARD2_0
                     var value = new string(decodeBuffer.WrittenSpan);
@@ -138,6 +140,9 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
     {
         var utf8Name = value.MethodRef.Utf8Name;
         var argumentData = value.ArgumentData;
+        if (argumentData.Length > MaxArgumentDataSize)
+            throw Errors.SizeLimitExceeded();
+
         var writer = new SpanWriter(bufferWriter.GetSpan(32 + utf8Name.Length + argumentData.Length));
 
         // CallTypeId and headerCount
@@ -146,10 +151,9 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
             throw Errors.Format("Header count must not exceed 31.");
 
         writer.Remaining[0] = (byte)(headers.Length | (value.CallTypeId << 5));
-        writer.Advance(1);
 
         // RelatedId
-        writer.WriteVarULong((ulong)value.RelatedId);
+        writer.WriteVarUInt64((ulong)value.RelatedId, 1);
 
         // MethodRef
         writer.WriteLVarSpan(utf8Name.Span);
@@ -158,7 +162,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
         writer.WriteLVarSpan(argumentData.Span);
 
         // Commit to bufferWriter
-        bufferWriter.Advance(writer.Offset);
+        bufferWriter.Advance(writer.Position);
 
         // Headers
         if (headers.Length == 0)
@@ -175,7 +179,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer)
                 writer = new SpanWriter(bufferWriter.GetSpan(8 + key.Length + valueSpan.Length));
                 writer.WriteL1Span(key.Span);
                 writer.WriteLVarSpan(valueSpan);
-                bufferWriter.Advance(writer.Offset);
+                bufferWriter.Advance(writer.Position);
                 encodeBuffer.Reset();
             }
         }
