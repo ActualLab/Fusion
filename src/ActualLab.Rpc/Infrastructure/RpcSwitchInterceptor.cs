@@ -37,8 +37,12 @@ public class RpcSwitchInterceptor : RpcInterceptor
         return invocation => {
             var peer = SafeCallRouter.Invoke(rpcMethodDef, invocation.Arguments);
             Task resultTask;
-            if (peer.Ref.CanBeRerouted)
-                resultTask = InvokeWithRerouting(rpcMethodDef, localCallAsyncInvoker, remoteCallAsyncInvoker, invocation, peer);
+            if (peer.Ref.CanBeRerouted) {
+                using var scope = RpcOutboundContext.UseOrActivateNew();
+                resultTask = InvokeWithRerouting(
+                    rpcMethodDef, scope.Context, peer,
+                    localCallAsyncInvoker, remoteCallAsyncInvoker, invocation);
+            }
             else if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                 if (localCallAsyncInvoker is null)
                     throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
@@ -57,13 +61,12 @@ public class RpcSwitchInterceptor : RpcInterceptor
 
     private async Task<object?> InvokeWithRerouting(
         RpcMethodDef methodDef,
+        RpcOutboundContext context,
+        RpcPeer? peer,
         Func<Invocation, Task> localCallAsyncInvoker,
         Func<Invocation, Task> remoteCallAsyncInvoker,
-        Invocation invocation,
-        RpcPeer? peer)
+        Invocation invocation)
     {
-        using var scope = RpcOutboundContext.UseOrActivateNew();
-        var context = scope.Context;
         for (var tryIndex = 0;; tryIndex++) {
             peer ??= SafeCallRouter.Invoke(methodDef, invocation.Arguments);
             try {

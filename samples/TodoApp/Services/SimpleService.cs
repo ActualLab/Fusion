@@ -26,8 +26,10 @@ public class SimpleService(ISimpleClientSideService clientSideService) : ISimple
     public async Task<RpcNoWait> Ping(string message)
     {
         var peer = RpcInboundContext.GetCurrent().Peer; // Get the peer for the current call
-        using var _ = new RpcOutboundContext(peer).Activate(); // Pre-routes the upcoming call to that peer
-        await clientSideService.Pong($"Pong to '{message}'").ConfigureAwait(false);
+        Task<RpcNoWait> pongTask;
+        using (new RpcOutboundContext(peer).Activate()) // No "await" inside this block!
+            pongTask = clientSideService.Pong($"Pong to '{message}'");
+        await pongTask.ConfigureAwait(false);
         return default;
     }
 

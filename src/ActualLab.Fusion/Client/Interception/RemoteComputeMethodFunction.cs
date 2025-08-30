@@ -328,7 +328,7 @@ public abstract class RemoteComputeMethodFunction(
                 Peer = peer,
                 CacheInfoCapture = cacheInfoCapture,
             };
-            using (context.Activate())
+            using (context.Activate()) // No "await" inside this block!
                 _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(computeCallRpcInterceptor, invocation);
             call = context.Call as RpcOutboundComputeCall;
             if (call is null) {

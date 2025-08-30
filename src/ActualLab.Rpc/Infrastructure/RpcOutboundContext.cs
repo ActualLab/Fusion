@@ -25,9 +25,6 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public RpcCacheInfoCapture? CacheInfoCapture;
     public RpcOutboundCallTrace? Trace;
 
-    public static RpcOutboundContext GetCurrent()
-        => Current ?? throw Errors.NoCurrentRpcOutboundContext();
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundContext(RpcHeader[]? headers = null)
         : this(0, headers)
@@ -140,12 +137,8 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         public readonly RpcOutboundContext Context;
 
         internal Scope(RpcOutboundContext context)
-        {
-            Context = context;
-            _oldContext = _current;
-            if (!ReferenceEquals(Context, _oldContext))
-                _current = Context;
-        }
+            : this(context, _current)
+        { }
 
         internal Scope(RpcOutboundContext context, RpcOutboundContext? oldContext)
         {
