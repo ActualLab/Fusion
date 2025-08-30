@@ -164,6 +164,6 @@ public static class Errors
     public static Exception SizeLimitExceeded(string target)
         => new FormatException($"{target} size limit exceeded.");
 
-    public static Exception InvalidVarLengthEncoding<TValue>()
-        => Format($"Invalid variable length encoded {typeof(TValue).GetName()}");
+    public static Exception InvalidVarLengthEncodedValue()
+        => Format("Invalid variable length encoded value.");
 }

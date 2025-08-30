@@ -29,34 +29,24 @@ public static partial class SpanExt
 
     public static (uint Value, int Offset) ReadVarUInt32(this ReadOnlySpan<byte> span, int offset = 0)
     {
+        byte b;
         var value = 0u;
+        var shift = 0;
+        for (; shift < 28; shift += 7) {
+            b = span[offset++];
+            value |= (uint)(b & LowBits) << shift;
+            if (b <= LowBits)
+                goto exit;
+        }
 
-        // 1st byte (shift = 0)
-        var b = span[offset++];
-        value |= (uint)(b & LowBits);
-        if (b <= LowBits) goto exit;
-
-        // 2nd byte (shift = 7)
-        b = span[offset++];
-        value |= (uint)(b & LowBits) << 7;
-        if (b <= LowBits) goto exit;
-
-        // 3rd byte (shift = 14)
-        b = span[offset++];
-        value |= (uint)(b & LowBits) << 14;
-        if (b <= LowBits) goto exit;
-
-        // 4th byte (shift = 21)
-        b = span[offset++];
-        value |= (uint)(b & LowBits) << 21;
-        if (b <= LowBits) goto exit;
-
-        // 5th byte (final, shift = 28). Must be <= 0x0F and without high bit.
+        // Read the 10th byte. Since we already read 63 bits (7 * 9),
+        // the value of this byte must fit within 1 bit (64 - 63),
+        // and it must not have the high bit set.
         b = span[offset++];
         if (b > 15)
-            throw Errors.InvalidVarLengthEncoding<uint>();
+            throw Errors.InvalidVarLengthEncodedValue();
 
-        value |= (uint)b << 28;
+        value |= (uint)b << shift;
     exit:
         return (value, offset);
     }
@@ -78,7 +68,7 @@ public static partial class SpanExt
         // and it must not have the high bit set.
         b = span[offset++];
         if (b > 1)
-            throw Errors.InvalidVarLengthEncoding<ulong>();
+            throw Errors.InvalidVarLengthEncodedValue();
 
         value |= (ulong)b << shift;
     exit:

@@ -437,7 +437,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             buffer.Advance(4);
             ByteSerializer!.Write(buffer, value);
             var size = buffer.WrittenCount - startOffset;
-            buffer.WrittenSpan.WriteUnchecked(startOffset, size);
+            buffer.WrittenSpan.WriteUnchecked(size, startOffset);
 
             // Log?.LogInformation("Wrote: {Value}", value);
             // Log?.LogInformation("Data({Size}): {Data}",

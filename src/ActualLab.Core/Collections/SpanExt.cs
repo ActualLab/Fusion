@@ -54,7 +54,7 @@ public static partial class SpanExt
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void WriteUnchecked<T>(this Span<byte> span, int byteOffset, T value)
+    public static void WriteUnchecked<T>(this Span<byte> span, T value, int byteOffset)
     {
         ref var byteRef = ref Unsafe.Add(ref MemoryMarshal.GetReference(span), byteOffset);
         Unsafe.WriteUnaligned(ref byteRef, value);
@@ -68,7 +68,7 @@ public static partial class SpanExt
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void WriteUnchecked<T>(this ReadOnlySpan<byte> span, int byteOffset, T value)
+    public static void WriteUnchecked<T>(this ReadOnlySpan<byte> span, T value, int byteOffset)
     {
         ref var byteRef = ref Unsafe.Add(ref MemoryMarshal.GetReference(span), byteOffset);
         Unsafe.WriteUnaligned(ref byteRef, value);

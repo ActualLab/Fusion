@@ -6,7 +6,7 @@ namespace ActualLab.Tests.Benchmarks;
 [Collection(nameof(PerformanceTests)), Trait("Category", nameof(PerformanceTests))]
 public class BenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
 {
-    void RunOne<T>(string title, int opCount, Func<int, T> action)
+    private void RunOne<T>(string title, int opCount, Func<int, T> action)
     {
         action(Math.Min(1, opCount / 10));
         var sw = Stopwatch.StartNew();
@@ -16,7 +16,7 @@ public class BenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
         Out.WriteLine($"{title} ({opCount}): {rate:N3} ops/s");
     }
 
-    void RunAll(int baseOpCount)
+    private void RunAll(int baseOpCount)
     {
         RunOne("Read ManagedThreadId", baseOpCount, opCount => {
             var sum = 0L;

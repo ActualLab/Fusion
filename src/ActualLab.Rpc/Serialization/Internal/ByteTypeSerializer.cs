@@ -30,7 +30,7 @@ public static class ByteTypeSerializer
                 throw new ArgumentOutOfRangeException(nameof(type), "Serialized type length exceeds 65535 bytes.");
 
             writer.Remaining.WriteUnchecked((ushort)nameSpan.Length); // Length
-            writer.Remaining.WriteUnchecked(2, unchecked((ushort)nameSpan.GetXxHash3L())); // 2-byte hash for faster lookups
+            writer.Remaining.WriteUnchecked(unchecked((ushort)nameSpan.GetXxHash3L()), 2); // 2-byte hash for faster lookups
             nameSpan.CopyTo(writer.Remaining[4..]);
             buffer.Advance(fullLength);
             return buffer.WrittenSpan.ToArray().AsByteString();

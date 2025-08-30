@@ -23,10 +23,12 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
     public uint ReadUInt32()
     {
         var span = Remaining;
-        var result = span[0]
-            | ((uint)span[1] << 8)
-            | ((uint)span[2] << 16)
-            | ((uint)span[3] << 24);
+        var result = BitConverter.IsLittleEndian
+            ? span.ReadUnchecked<uint>(0)
+            : span[0]
+                | ((uint)span[1] << 8)
+                | ((uint)span[2] << 16)
+                | ((uint)span[3] << 24);
         Advance(4);
         return result;
     }
@@ -34,15 +36,16 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
     public ulong ReadUInt64()
     {
         var span = Remaining;
-        var result =
-            span[0]
-            | ((ulong)span[1] << 8)
-            | ((ulong)span[2] << 16)
-            | ((ulong)span[3] << 24)
-            | ((ulong)span[4] << 32)
-            | ((ulong)span[5] << 40)
-            | ((ulong)span[6] << 48)
-            | ((ulong)span[7] << 56);
+        var result = BitConverter.IsLittleEndian
+            ? span.ReadUnchecked<ulong>(0)
+            : span[0]
+                | ((ulong)span[1] << 8)
+                | ((ulong)span[2] << 16)
+                | ((ulong)span[3] << 24)
+                | ((ulong)span[4] << 32)
+                | ((ulong)span[5] << 40)
+                | ((ulong)span[6] << 48)
+                | ((ulong)span[7] << 56);
         Advance(8);
         return result;
     }
