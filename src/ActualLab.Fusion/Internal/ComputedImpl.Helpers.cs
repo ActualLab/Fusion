@@ -122,7 +122,7 @@ public static partial class ComputedImpl
         }
 
         if (cancellationToken.IsCancellationRequested || error is RpcRerouteException) {
-            // !!! Cancellation of our own token & RpcRerouteException always "pass through"
+            // !!! Cancellation of our own token & RpcRerouteException always passes through
             computed.Invalidate(true); // Instant invalidation on cancellation
             computed.TrySetError(error);
             return SpecialTasks.MustThrow;
