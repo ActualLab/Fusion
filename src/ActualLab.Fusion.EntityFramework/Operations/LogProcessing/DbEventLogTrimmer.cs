@@ -10,6 +10,11 @@ public class DbEventLogTrimmer<TDbContext>
     public record Options : DbLogTrimmerOptions
     {
         public static Options Default { get; set; } = new();
+
+        // Trim condition:
+        // .Where(o => o.DelayUntil <= minDelayUntil && o.State != LogEntryState.New)
+        public Options()
+            => MaxEntryAge = TimeSpan.FromHours(1);
     }
 
     protected override IState<ImmutableHashSet<string>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;

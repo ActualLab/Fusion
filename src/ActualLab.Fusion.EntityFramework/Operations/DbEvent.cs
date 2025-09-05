@@ -8,8 +8,8 @@ using Microsoft.EntityFrameworkCore;
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
 [Table("_Events")]
-[Index(nameof(State), nameof(DelayUntil))] // "!IsProcessed & DelayUntil < now" queries
-[Index(nameof(DelayUntil))] // "DelayUntil < trimAt" queries
+[Index(nameof(State), nameof(DelayUntil))] // "State == New & DelayUntil < now" queries
+[Index(nameof(DelayUntil), nameof(State))] // "DelayUntil < trimAt && State != New" queries
 public sealed class DbEvent : IDbEventLogEntry
 {
     public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;
@@ -18,6 +18,8 @@ public sealed class DbEvent : IDbEventLogEntry
 
     [ConcurrencyCheck]
     public long Version { get; set; }
+
+    public LogEntryState State { get; set; }
 
     public DateTime LoggedAt {
         get => field.DefaultKind(DateTimeKind.Utc);
@@ -30,7 +32,6 @@ public sealed class DbEvent : IDbEventLogEntry
     }
 
     public string ValueJson { get; set; } = "";
-    public LogEntryState State { get; set; }
 
     public DbEvent() { }
     public DbEvent(OperationEvent model, VersionGenerator<long>? versionGenerator = null)

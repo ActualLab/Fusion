@@ -109,8 +109,8 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
 
 #if NET7_0_OR_GREATER
             return await dbContext.Set<TDbEntry>()
-                .Where(o => o.DelayUntil <= minDelayUntil)
-                .OrderBy(o => o.DelayUntil)
+                .Where(o => o.DelayUntil <= minDelayUntil && o.State != LogEntryState.New)
+                .OrderBy(o => o.DelayUntil).ThenBy(o => o.State)
                 .Take(batchSize)
                 .ExecuteDeleteAsync(cancellationToken)
                 .ConfigureAwait(false);
@@ -119,8 +119,8 @@ public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
             await using var _2 = tx.ConfigureAwait(false);
 
             var entries = await dbContext.Set<TDbEntry>(DbHintSet.UpdateSkipLocked)
-                .Where(o => o.DelayUntil <= minDelayUntil)
-                .OrderBy(o => o.DelayUntil)
+                .Where(o => o.DelayUntil <= minDelayUntil && o.State != LogEntryState.New)
+                .OrderBy(o => o.DelayUntil).ThenBy(o => o.State)
                 .Take(batchSize)
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
             if (entries.Count == 0)

@@ -15,7 +15,7 @@ public sealed class DbOperation : IDbIndexedLogEntry
 
     private long? _index;
 
-    // DbOperations are never updated, but only deleted, so...
+    // DbOperations are never updated but only deleted, so Version and State properties aren't used
     long IDbLogEntry.Version { get => 0; set { } }
     LogEntryState IDbLogEntry.State { get => default; set { } }
 

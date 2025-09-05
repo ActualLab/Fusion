@@ -7,7 +7,8 @@ public interface IDbLogTrimmer
 
 public record DbLogTrimmerOptions
 {
-    public TimeSpan MaxEntryAge { get; init; } = TimeSpan.FromDays(1);
+    // Should be greater than zero; higher values ensure entries are stored longer after processing
+    public TimeSpan MaxEntryAge { get; init; } = TimeSpan.FromHours(4);
 #if NET7_0_OR_GREATER
     public int BatchSize { get; init; } = 4096; // .NET 7+ uses ExecuteDeleteAsync
 #else

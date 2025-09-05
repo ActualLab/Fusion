@@ -11,6 +11,8 @@ public class DbOperationLogTrimmer<TDbContext>
     {
         public static Options Default { get; set; } = new();
 
+        // Trim condition:
+        // ~ .Where(e => e.LoggedAt < minLoggedAt)
         public Options()
             => MaxEntryAge = TimeSpan.FromMinutes(30);
     }
