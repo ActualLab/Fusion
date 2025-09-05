@@ -35,6 +35,11 @@ public static partial class TaskExt
 #endif
     }
 
+    // NeverEnding - a shortcut for Task.Delay(Timeout.Infinite)
+
+    public static Task NeverEnding(CancellationToken cancellationToken)
+        => Task.Delay(Timeout.Infinite, cancellationToken);
+
     // NewNeverEndingUnreferenced
 
     // The tasks these methods return aren't referenced,
@@ -42,7 +47,7 @@ public static partial class TaskExt
     // it may simply evaporate on the next GC cycle.
     //
     // Earlier such tasks were stored in a static var, which is actually wrong:
-    // if one of them get N dependencies, all of these N dependencies will stay
+    // if one of them gets N dependencies, all of these N dependencies will stay
     // in RAM forever, since there is no way to "unsubscribe" an awaiter.
     //
     // So the best option here is to return a task that won't prevent

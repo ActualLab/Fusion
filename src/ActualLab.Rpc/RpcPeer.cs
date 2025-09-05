@@ -243,7 +243,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     {
         if (ConnectionKind == RpcPeerConnectionKind.Local) {
             // It's a fake RpcPeer that exists solely to be "available"
-            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+            await TaskExt.NeverEnding(cancellationToken).ConfigureAwait(false);
             return;
         }
 

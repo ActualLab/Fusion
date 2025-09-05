@@ -78,7 +78,7 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
     // WhenXxx
 
     public async Task WhenRerouted()
-        => await TaskExt.NewNeverEndingUnreferenced().WaitAsync(RerouteToken).SilentAwait(false);
+        => await TaskExt.NeverEnding(RerouteToken).SilentAwait(false);
 
     public Task WhenRerouted(CancellationToken cancellationToken)
     {
@@ -88,7 +88,7 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
 
         async Task WhenReroutedWithCancellationToken(CancellationToken cancellationToken1) {
             using var tcs = RerouteToken.LinkWith(cancellationToken1);
-            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(tcs.Token).SilentAwait(false);
+            await TaskExt.NeverEnding(tcs.Token).SilentAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
         }
     }

@@ -13,12 +13,12 @@ public class MeshStateUpdater(IServiceProvider services) : WorkerBase
 
         var applicationLifetime = services.GetRequiredService<IHostApplicationLifetime>();
         try {
-            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(applicationLifetime.ApplicationStarted).SilentAwait(false);
+            await TaskExt.NeverEnding(applicationLifetime.ApplicationStarted).SilentAwait(false);
             if (cancellationToken.IsCancellationRequested)
                 return;
 
             MeshState.Register(ownHost);
-            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(applicationLifetime.ApplicationStopping).SilentAwait(false);
+            await TaskExt.NeverEnding(applicationLifetime.ApplicationStopping).SilentAwait(false);
         }
         finally {
             // Console.WriteLine($"{ownHost}: unregistering...".Pastel(ConsoleColor.Yellow));

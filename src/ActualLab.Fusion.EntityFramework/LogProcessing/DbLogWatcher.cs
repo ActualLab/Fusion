@@ -35,7 +35,7 @@ public abstract class DbLogWatcher<TDbContext, TDbEntry>(IServiceProvider servic
             this);
 
     protected override Task OnRun(CancellationToken cancellationToken)
-        => TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken);
+        => TaskExt.NeverEnding(cancellationToken);
 
     protected override async Task OnStop()
     {

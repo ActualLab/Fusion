@@ -8,8 +8,7 @@ public readonly record struct AsyncChain
 {
     public static readonly AsyncChain None = new("(no-operation)",
         _ => Task.CompletedTask);
-    public static readonly AsyncChain NeverEnding = new("(never-ending)",
-        cancellationToken => TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken));
+    public static readonly AsyncChain NeverEnding = new("(never-ending)", TaskExt.NeverEnding);
 
     public string Name { get; init; }
     public Func<CancellationToken, Task> Start { get; init; }

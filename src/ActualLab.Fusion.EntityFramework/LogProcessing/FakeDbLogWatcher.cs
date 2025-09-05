@@ -18,5 +18,5 @@ public class FakeDbLogWatcher<TDbContext, TDbEntry>
         => Task.CompletedTask;
 
     public Task WhenChanged(string shard, CancellationToken cancellationToken = default)
-        => TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken);
+        => TaskExt.NeverEnding(cancellationToken);
 }

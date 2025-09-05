@@ -9,7 +9,7 @@ public class RunItemTasksTest(ITestOutputHelper @out) : TestBase(@out)
         await GetItems().RunItemTasks(
             async (i, ct) => {
                 Out.WriteLine($"++ {i}");
-                await TaskExt.NewNeverEndingUnreferenced().WaitAsync(ct).SilentAwait();
+                await TaskExt.NeverEnding(ct).SilentAwait();
                 Out.WriteLine($"-? {i}");
                 await Task.Delay(300);
                 Out.WriteLine($"-- {i}");

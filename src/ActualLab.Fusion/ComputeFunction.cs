@@ -57,7 +57,7 @@ public abstract class ComputeFunction(FusionHub hub, Type outputType) : ICompute
                 releaser.Dispose();
                 releaser = default;
                 // Compute takes indefinitely long for disposed compute service's methods
-                await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+                await TaskExt.NeverEnding(cancellationToken).ConfigureAwait(false);
             }
 
             releaser.MarkLockedLocally();

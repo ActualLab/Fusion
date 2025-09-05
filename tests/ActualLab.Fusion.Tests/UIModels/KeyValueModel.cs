@@ -37,7 +37,7 @@ public class StringKeyValueModelState : ComputedState<KeyValueModel<string>>
         async Task<KeyValueModel<string>> Implementation(CancellationToken cancellationToken)
         {
             if (IsDisposed) // Never complete if the state is already disposed
-                await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+                await TaskExt.NeverEnding(cancellationToken).ConfigureAwait(false);
 
             var updateCount = ValueOrDefault?.UpdateCount ?? 0;
             var key = Locals.ValueOrDefault ?? "";

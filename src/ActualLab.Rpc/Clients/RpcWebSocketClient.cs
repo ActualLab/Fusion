@@ -81,7 +81,7 @@ public class RpcWebSocketClient(
         if (uri is null) {
             // The expected behavior for null URI is to wait indefinitely
             Log.LogWarning("'{PeerRef}': No connection URL - waiting for peer termination", clientPeer.Ref);
-            await TaskExt.NewNeverEndingUnreferenced().WaitAsync(cancellationToken).ConfigureAwait(false);
+            await TaskExt.NeverEnding(cancellationToken).ConfigureAwait(false);
         }
 
         // Log.LogInformation("'{PeerRef}': Connection URL: {Url}", clientPeer.Ref, uri);
