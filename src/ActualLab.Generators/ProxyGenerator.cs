@@ -95,7 +95,9 @@ public class ProxyGenerator : IIncrementalGenerator
                     ? $"{typeType.Name}{ProxyClassSuffix}.g.cs"
                     : $"{typeType.ContainingNamespace}.{typeType.Name}{ProxyClassSuffix}.g.cs";
                 context.AddSource(fileName, code);
+#if DEBUG
                 context.ReportDiagnostic(GenerateProxyTypeProcessedInfo(typeDef));
+#endif
             }
         }
         catch (Exception e) {
