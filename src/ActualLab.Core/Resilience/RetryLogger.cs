@@ -1,6 +1,8 @@
 namespace ActualLab.Resilience;
 
-public record RetryLogger(ILogger? Log, [CallerMemberName] string Action = "(unknown)")
+public sealed record RetryLogger(
+    ILogger? Log,
+    [CallerMemberName] string Action = "(unknown)")
 {
     public void LogError(Exception error, int failedTryCount, string reason)
         => LogError(error, failedTryCount, null, reason);
