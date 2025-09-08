@@ -15,22 +15,22 @@ public interface IRetryPolicy
 public record RetryPolicy(
     int? TryCount,
     TimeSpan? TryTimeout,
-    RetryDelaySeq RetryDelays
+    RetryDelaySeq Delays
     ) : IRetryPolicy
 {
     public TransiencyResolver TransiencyResolver { get; init; } = TransiencyResolvers.PreferTransient;
     public ExceptionFilter RetryOn { get; init; } = ExceptionFilters.AnyTransient;
 
-    public RetryPolicy(RetryDelaySeq RetryDelays)
-        : this(null, null, RetryDelays)
+    public RetryPolicy(RetryDelaySeq Delays)
+        : this(null, null, Delays)
     { }
 
-    public RetryPolicy(int? TryCount, RetryDelaySeq RetryDelays)
-        : this(TryCount, null, RetryDelays)
+    public RetryPolicy(int? TryCount, RetryDelaySeq Delays)
+        : this(TryCount, null, Delays)
     { }
 
-    public RetryPolicy(TimeSpan? TryTimeout, RetryDelaySeq RetryDelays)
-        : this(null, TryTimeout, RetryDelays)
+    public RetryPolicy(TimeSpan? TryTimeout, RetryDelaySeq Delays)
+        : this(null, TryTimeout, Delays)
     { }
 
     public bool MustRetry(int failedTryCount)
@@ -82,7 +82,7 @@ public record RetryPolicy(
                 }
 
                 lastError = ExceptionDispatchInfo.Capture(e);
-                var delay = RetryDelays[Math.Max(1, failedTryCount)];
+                var delay = Delays[Math.Max(1, failedTryCount)];
                 retryLogger?.LogRetry(e, failedTryCount, TryCount, delay);
                 if (delay > TimeSpan.Zero)
                     await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
