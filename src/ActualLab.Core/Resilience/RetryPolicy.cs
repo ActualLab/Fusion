@@ -1,4 +1,3 @@
-using System.Runtime.ExceptionServices;
 using ActualLab.Internal;
 
 namespace ActualLab.Resilience;
@@ -21,7 +20,7 @@ public record RetryPolicy(
     ) : IRetryPolicy
 {
     public TransiencyResolver TransiencyResolver { get; init; } = TransiencyResolvers.PreferTransient;
-    public ExceptionFilter RetryOn { get; init; } = ExceptionFilters.AnyTransient;
+    public ExceptionFilter RetryOn { get; init; } = ExceptionFilters.AnyNonTerminal;
 
     public RetryPolicy(RetryDelaySeq Delays)
         : this(null, null, Delays)

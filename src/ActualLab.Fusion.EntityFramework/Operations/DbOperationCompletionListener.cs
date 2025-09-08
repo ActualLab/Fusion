@@ -14,10 +14,9 @@ public class DbOperationCompletionListener<TDbContext>
         public static Options Default { get; set; } = new();
 
         public IRetryPolicy NotifyRetryPolicy { get; init; } = new RetryPolicy(
+            2, // Retry just once: both operation and event log readers have unconditional check periods
             TimeSpan.FromSeconds(10),
-            RetryDelaySeq.Exp(0.25, 1, 0.1, 2)) {
-            RetryOn = ExceptionFilters.AnyNonTerminal,
-        };
+            RetryDelaySeq.Exp(0.25, 1, 0.1, 2));
     }
 
     protected Options Settings { get; init; }

@@ -29,7 +29,8 @@ public abstract record DbOperationLogReaderOptions : DbLogReaderOptions
     protected DbOperationLogReaderOptions()
     {
         ReprocessPolicy = new RetryPolicy(
-            10, TimeSpan.FromSeconds(30),
+            5, // (Re)try count
+            TimeSpan.FromSeconds(30),
             RetryDelaySeq.Exp(0.25, 1, 0.1, 2)); // Up to 1 second, 2x longer on each iteration
     }
 }
@@ -39,6 +40,7 @@ public abstract record DbEventLogReaderOptions : DbLogReaderOptions
     protected DbEventLogReaderOptions()
     {
         ReprocessPolicy = new RetryPolicy(
+            5, // (Re)try count
             TimeSpan.FromMinutes(5),
             RetryDelaySeq.Exp(0.25, 1, 0.1, 2)); // Up to 1 second, 2x longer on each iteration
     }
