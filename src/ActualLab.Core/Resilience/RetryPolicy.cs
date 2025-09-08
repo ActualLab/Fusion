@@ -60,16 +60,23 @@ public record RetryPolicy(
         if (TryCount <= 0)
             throw Errors.Constraint("TryCount <= 0.");
 
-        var hasTimeout = TryTimeout.HasValue;
         var failedTryCount = 0;
-        ExceptionDispatchInfo? lastError = null;
         while (true) {
-            var timeoutCts = hasTimeout
-                ? cancellationToken.CreateLinkedTokenSource(TryTimeout.GetValueOrDefault())
-                : null;
-            var timeoutToken = timeoutCts?.Token ?? cancellationToken;
             try {
-                return await taskFactory.Invoke(timeoutToken).ConfigureAwait(false);
+                if (!TryTimeout.HasValue)
+                    return await taskFactory.Invoke(cancellationToken).ConfigureAwait(false);
+
+                // Timeout handling
+                var timeoutCts = cancellationToken.CreateLinkedTokenSource(TryTimeout.GetValueOrDefault());
+                try {
+                    return await taskFactory.Invoke(timeoutCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+                    throw new RetryPolicyTimeoutExceededException();
+                }
+                finally {
+                    timeoutCts.Dispose();
+                }
             }
             catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                 if (!MustRetry(e, ref failedTryCount, out var transiency)) {
@@ -81,21 +88,13 @@ public record RetryPolicy(
                     retryLogger?.LogError(e, failedTryCount, TryCount, reason);
                     throw;
                 }
-                if (hasTimeout && e.IsCancellationOf(timeoutToken)) {
-                    lastError?.Throw();
-                    throw new RetryPolicyTimeoutExceededException();
-                }
 
-                lastError = ExceptionDispatchInfo.Capture(e);
                 var delay = GetDelay(failedTryCount);
                 retryLogger?.LogRetry(e, failedTryCount, TryCount, delay);
                 if (delay > TimeSpan.Zero)
                     await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
                 else
                     await Task.Yield();
-            }
-            finally {
-                timeoutCts?.Dispose();
             }
         }
     }
