@@ -12,14 +12,14 @@ public static class RetryPolicyExt
     public static bool MustRetry(this IRetryPolicy policy, Exception error, out Transiency transiency)
         => policy.MustRetry(error, 0, out transiency);
 
-    public static bool MustRetry(this IRetryPolicy policy, Exception error, int tryCount)
-        => policy.MustRetry(error, ref tryCount, out _);
+    public static bool MustRetry(this IRetryPolicy policy, Exception error, int failedTryCount)
+        => policy.MustRetry(error, ref failedTryCount, out _);
 
-    public static bool MustRetry(this IRetryPolicy policy, Exception error, int tryCount, out Transiency transiency)
-        => policy.MustRetry(error, ref tryCount, out transiency);
+    public static bool MustRetry(this IRetryPolicy policy, Exception error, int failedTryCount, out Transiency transiency)
+        => policy.MustRetry(error, ref failedTryCount, out transiency);
 
-    public static bool MustRetry(this IRetryPolicy policy, Exception error, ref int tryCount)
-        => policy.MustRetry(error, ref tryCount, out _);
+    public static bool MustRetry(this IRetryPolicy policy, Exception error, ref int failedTryCount)
+        => policy.MustRetry(error, ref failedTryCount, out _);
 
     // Apply overloads
 
