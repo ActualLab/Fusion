@@ -49,7 +49,7 @@ public class RetryDelaySeqTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void WrongMinDelayTest()
     {
-        var s = RetryDelaySeq.Exp(0, 1);
+        var s = RetryDelaySeq.Exp(-1, 1);
         Assert.Throws<InvalidOperationException>(() => s[0]);
         Assert.Throws<InvalidOperationException>(() => s[1]);
     }

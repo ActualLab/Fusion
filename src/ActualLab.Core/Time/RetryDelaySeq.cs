@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using MessagePack;
 
 namespace ActualLab.Time;
@@ -15,6 +16,8 @@ public partial record RetryDelaySeq(
 {
     public const double DefaultSpread = 0.1;
     public const double DefaultMultiplier = 1.41421356237; // Math.Sqrt(2)
+    [field: AllowNull, MaybeNull]
+    public static RetryDelaySeq Zero => field ??= Fixed(TimeSpan.Zero, 0);
 
     public static RetryDelaySeq Fixed(double delayInSeconds, double spread = DefaultSpread)
         => Fixed(TimeSpan.FromSeconds(delayInSeconds), spread);
@@ -44,14 +47,17 @@ public partial record RetryDelaySeq(
 
     public virtual TimeSpan GetDelay(int failureCount)
     {
-        if (Min <= TimeSpan.Zero)
+        if (Min < TimeSpan.Zero)
             throw new InvalidOperationException(
-                $"{nameof(RetryDelaySeq)}.{nameof(Min)} must be greater than zero.");
+                $"{nameof(RetryDelaySeq)}.{nameof(Min)} must be non-negative.");
 
         if (failureCount <= 0)
             return TimeSpan.Zero;
-        if (Multiplier <= 1d) // Fixed, i.e. no exponential component
-            return Min.ToRandom(Spread).Next().Positive();
+
+        if (Multiplier <= 1d) {
+            // Fixed, i.e. no exponential component
+            return Spread <= 0d ? Min : Min.ToRandom(Spread).Next().Positive();
+        }
 
         try {
             var multiplier = Math.Pow(Multiplier, failureCount - 1);
