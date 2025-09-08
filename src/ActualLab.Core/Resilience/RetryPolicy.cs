@@ -5,7 +5,9 @@ namespace ActualLab.Resilience;
 
 public interface IRetryPolicy
 {
+    public bool MustRetry(int failedTryCount);
     public bool MustRetry(Exception error, ref int failedTryCount, out Transiency transiency);
+    public TimeSpan GetDelay(int failedTryCount);
     public Task<T> Apply<T>(
         Func<CancellationToken, Task<T>> taskFactory,
         RetryLogger? retryLogger = null,
@@ -47,6 +49,9 @@ public record RetryPolicy(
         return MustRetry(failedTryCount);
     }
 
+    public TimeSpan GetDelay(int failedTryCount)
+        => Delays[failedTryCount];
+
     public async Task<T> Apply<T>(
         Func<CancellationToken, Task<T>> taskFactory,
         RetryLogger? retryLogger = null,
@@ -82,10 +87,12 @@ public record RetryPolicy(
                 }
 
                 lastError = ExceptionDispatchInfo.Capture(e);
-                var delay = Delays[Math.Max(1, failedTryCount)];
+                var delay = GetDelay(failedTryCount);
                 retryLogger?.LogRetry(e, failedTryCount, TryCount, delay);
                 if (delay > TimeSpan.Zero)
                     await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                else
+                    await Task.Yield();
             }
             finally {
                 timeoutCts?.Dispose();
