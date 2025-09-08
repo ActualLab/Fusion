@@ -4,9 +4,11 @@ namespace ActualLab.Resilience;
 
 public interface IRetryPolicy
 {
-    public bool MustRetry(int failedTryCount);
+    public int? TryCount { get; init; }
+    public RetryDelaySeq Delays { get; init; }
+
     public bool MustRetry(Exception error, ref int failedTryCount, out Transiency transiency);
-    public TimeSpan GetDelay(int failedTryCount);
+
     public Task<T> Apply<T>(
         Func<CancellationToken, Task<T>> taskFactory,
         RetryLogger? retryLogger = null,
@@ -34,9 +36,6 @@ public record RetryPolicy(
         : this(null, TryTimeout, Delays)
     { }
 
-    public bool MustRetry(int failedTryCount)
-        => TryCount is not { } tryCount || failedTryCount < tryCount;
-
     public virtual bool MustRetry(Exception error, ref int failedTryCount, out Transiency transiency)
     {
         if (!RetryOn.Invoke(error, TransiencyResolver, out transiency))
@@ -45,7 +44,7 @@ public record RetryPolicy(
         if (transiency is not Transiency.SuperTransient)
             ++failedTryCount;
 
-        return MustRetry(failedTryCount);
+        return this.HasMoreRetries(failedTryCount);
     }
 
     public TimeSpan GetDelay(int failedTryCount)
@@ -79,7 +78,7 @@ public record RetryPolicy(
             }
             catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                 if (!MustRetry(e, ref failedTryCount, out var transiency)) {
-                    var reason = MustRetry(failedTryCount)
+                    var reason = this.HasMoreRetries(failedTryCount)
                         ? transiency is Transiency.Terminal
                             ? "terminal error"
                             : "non-retriable error"
