@@ -3,6 +3,15 @@ namespace ActualLab.Tests.Time;
 public class RetryDelaySeqTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]
+    public void ZeroTest()
+    {
+        var s = RetryDelaySeq.Zero;
+        s[0].Should().Be(TimeSpan.Zero);
+        s[1].Should().Be(TimeSpan.Zero);
+        s[1000].Should().Be(TimeSpan.Zero);
+    }
+
+    [Fact]
     public void FixedTest()
     {
         var s = RetryDelaySeq.Fixed(1).AssertPassesThroughAllSerializers();
