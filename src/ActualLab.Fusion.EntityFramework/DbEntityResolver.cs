@@ -367,10 +367,10 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
                     throw;
 
                 var transiency = TransiencyResolver.Invoke(e);
-                if (!transiency.IsTransient())
+                if (!transiency.IsAnyTransient())
                     throw;
 
-                if (!transiency.IsSuperTransient())
+                if (transiency is not Transiency.SuperTransient)
                     tryIndex++;
                 var delayLogger = new RetryDelayLogger("process batch", Log);
                 var delay = Settings.RetryDelayer.GetDelay(Math.Max(1, tryIndex), delayLogger, cancellationToken);

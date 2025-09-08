@@ -16,7 +16,7 @@ public class DbOperationCompletionListener<TDbContext>
         public IRetryPolicy NotifyRetryPolicy { get; init; } = new RetryPolicy(
             TimeSpan.FromSeconds(10),
             RetryDelaySeq.Exp(0.25, 1, 0.1, 2)) {
-            RetryOnNonTransient = true,
+            RetryOn = ExceptionFilters.AnyNonTerminal,
         };
     }
 

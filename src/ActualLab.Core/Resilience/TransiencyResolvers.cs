@@ -28,7 +28,7 @@ public static class TransiencyResolvers
     /// <summary>
     /// This detector is used by Fusion's IComputed by default, see
     /// FusionBuilder's constructor to understand how to replace it in
-    /// the DI container, or simply set this property to whatever you prefer
+    /// the DI container, or set this property to whatever you prefer
     /// before calling .AddFusion() for the first time.
     /// </summary>
     public static TransiencyResolver PreferTransient { get; set; }
@@ -65,7 +65,7 @@ public static class TransiencyResolvers
     /// <summary>
     /// This detector is used by Fusion's OperationReprocessor by default, see
     /// FusionBuilder.AddOperationReprocessor to understand how to replace it in
-    /// the DI container, or simply set this property to whatever you prefer
+    /// the DI container, or set this property to whatever you prefer
     /// before calling .AddFusion() for the first time.
     /// </summary>
     public static TransiencyResolver PreferNonTransient { get; set; }

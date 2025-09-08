@@ -74,7 +74,7 @@ public class OperationReprocessor : IOperationReprocessor
 
     public void MarkTransient(Exception error, Transiency transiency)
     {
-        if (!transiency.IsTransient())
+        if (!transiency.IsAnyTransient())
             throw new ArgumentOutOfRangeException(nameof(transiency));
 
         lock (KnownTransiencies)
@@ -92,7 +92,7 @@ public class OperationReprocessor : IOperationReprocessor
         // ReSharper disable once PossibleMultipleEnumeration
         foreach (var error in allErrors) {
             var transiency = TransiencyResolver.Invoke(error);
-            if (transiency.IsNonTransient())
+            if (!transiency.IsAnyTransient())
                 continue;
 
             lock (KnownTransiencies)
@@ -105,10 +105,10 @@ public class OperationReprocessor : IOperationReprocessor
     public virtual bool WillRetry(IReadOnlyList<Exception> allErrors, out Transiency transiency)
     {
         transiency = GetTransiency(allErrors);
-        if (transiency.IsNonTransient())
+        if (!transiency.IsAnyTransient())
             return false;
 
-        if (!transiency.IsSuperTransient() && TryIndex >= Settings.MaxRetryCount)
+        if (transiency is not Transiency.SuperTransient && TryIndex >= Settings.MaxRetryCount)
             return false;
 
         var operation = CommandContext.TryGetOperation();
@@ -150,7 +150,7 @@ public class OperationReprocessor : IOperationReprocessor
                 if (!this.WillRetry(error, out var transiency))
                     throw; // The error can't be reprocessed -> no retry
 
-                if (!transiency.IsSuperTransient())
+                if (transiency is not Transiency.SuperTransient)
                     TryIndex++;
                 context.ChangeOperation(null);
                 context.Items.Snapshot = itemsBackup;

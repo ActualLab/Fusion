@@ -11,23 +11,15 @@ public enum Transiency
 
 public static class TransiencyExt
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Transiency Or(this Transiency first, Transiency second)
         => first != Transiency.Unknown ? first : second;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Transiency Or(this Transiency first, Exception error, TransiencyResolver second)
         => first != Transiency.Unknown ? first : second.Invoke(error);
 
-    public static bool MustRetry(this Transiency transiency, bool retryOnNonTransient = false)
-        => !transiency.IsTerminal() && (retryOnNonTransient || transiency.IsTransient());
-
-    public static bool IsTerminal(this Transiency transiency)
-        => transiency is Transiency.Terminal;
-
-    public static bool IsNonTransient(this Transiency transiency)
-        => !(transiency is Transiency.Transient or Transiency.SuperTransient);
-
-    public static bool IsTransient(this Transiency transiency)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsAnyTransient(this Transiency transiency)
         => transiency is Transiency.Transient or Transiency.SuperTransient;
-
-    public static bool IsSuperTransient(this Transiency transiency)
-        => transiency == Transiency.SuperTransient;
 }

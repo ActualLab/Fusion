@@ -4,6 +4,23 @@ namespace ActualLab.Resilience;
 
 public static class RetryPolicyExt
 {
+    // MustRetry overloads
+
+    public static bool MustRetry(this IRetryPolicy policy, Exception error)
+        => policy.MustRetry(error, 0);
+
+    public static bool MustRetry(this IRetryPolicy policy, Exception error, out Transiency transiency)
+        => policy.MustRetry(error, 0, out transiency);
+
+    public static bool MustRetry(this IRetryPolicy policy, Exception error, int tryCount)
+        => policy.MustRetry(error, ref tryCount, out _);
+
+    public static bool MustRetry(this IRetryPolicy policy, Exception error, int tryCount, out Transiency transiency)
+        => policy.MustRetry(error, ref tryCount, out transiency);
+
+    public static bool MustRetry(this IRetryPolicy policy, Exception error, ref int tryCount)
+        => policy.MustRetry(error, ref tryCount, out _);
+
     // Apply overloads
 
     public static Task<T> Apply<T>(

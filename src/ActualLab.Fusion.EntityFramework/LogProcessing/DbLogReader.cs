@@ -89,7 +89,7 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
             if (!canReprocess)
                 throw;
 
-            var mustReprocess = Settings.ReprocessPolicy.MustRetry(e, out _);
+            var mustReprocess = Settings.ReprocessPolicy.MustRetry(e);
             var suffix = mustReprocess
                 ? ", will reprocess it"
                 : ", will discard it";

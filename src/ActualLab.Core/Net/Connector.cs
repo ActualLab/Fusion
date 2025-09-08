@@ -21,7 +21,7 @@ public sealed class Connector<TConnection> : WorkerBase
 
     public Func<TConnection, CancellationToken, Task>? Connected { get; init; }
     public TransiencyResolver TransiencyResolver { get; init; } = TransiencyResolvers.PreferTransient;
-    public bool ReconnectOnNonTransient { get; init; } = true;
+    public ExceptionFilter ReconnectOn { get; init; } = ExceptionFilters.AnyNonTerminal;
     public IRetryDelayer ReconnectDelayer { get; init; } = new RetryDelayer();
     public ILogger? Log { get; init; }
     public LogLevel LogLevel { get; init; } = LogLevel.Debug;
@@ -154,11 +154,8 @@ public sealed class Connector<TConnection> : WorkerBase
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            if (error is not null) {
-                var transiency = TransiencyResolver.Invoke(error);
-                if (!transiency.MustRetry(ReconnectOnNonTransient))
-                    throw error;
-            }
+            if (error is not null && !ReconnectOn.Invoke(error, TransiencyResolver))
+                throw error;
 
             if (state.Value.TryIndex is var tryIndex and > 0) {
                 var delayLogger = new RetryDelayLogger("reconnect", LogTag, Log, LogLevel);

@@ -5,7 +5,7 @@ namespace ActualLab.Resilience;
 
 public interface IRetryPolicy
 {
-    public bool MustRetry(Exception error, out Transiency transiency);
+    public bool MustRetry(Exception error, ref int tryCount, out Transiency transiency);
     public Task<T> Apply<T>(
         Func<CancellationToken, Task<T>> taskFactory,
         RetryLogger? retryLogger = null,
@@ -13,13 +13,13 @@ public interface IRetryPolicy
 }
 
 public record RetryPolicy(
-    int TryCount,
+    int? TryCount,
     TimeSpan? TryTimeout,
     RetryDelaySeq RetryDelays
     ) : IRetryPolicy
 {
     public TransiencyResolver TransiencyResolver { get; init; } = TransiencyResolvers.PreferTransient;
-    public bool RetryOnNonTransient { get; init; } = false;
+    public ExceptionFilter RetryOn { get; init; } = ExceptionFilters.AnyTransient;
 
     public RetryPolicy(int TryCount, RetryDelaySeq RetryDelays)
         : this(TryCount, null, RetryDelays)
@@ -29,10 +29,14 @@ public record RetryPolicy(
         : this(int.MaxValue, TryTimeout, RetryDelays)
     { }
 
-    public bool MustRetry(Exception error, out Transiency transiency)
+    public virtual bool MustRetry(Exception error, ref int tryCount, out Transiency transiency)
     {
-        transiency = TransiencyResolver.Invoke(error);
-        return transiency.MustRetry(RetryOnNonTransient);
+        if (!RetryOn.Invoke(error, TransiencyResolver, out transiency))
+            return false;
+
+        if (transiency is not Transiency.SuperTransient)
+            ++tryCount;
+        return true;
     }
 
     public async Task<T> Apply<T>(
@@ -43,32 +47,28 @@ public record RetryPolicy(
         if (TryCount <= 0)
             throw Errors.Constraint("TryCount <= 0.");
 
-        ExceptionDispatchInfo? lastError = null;
+        var hasTimeout = TryTimeout.HasValue;
         var tryIndex = 0;
+        ExceptionDispatchInfo? lastError = null;
         while (true) {
-            using var timeoutCts = cancellationToken.CreateLinkedTokenSource(TryTimeout);
-            var timeoutToken = timeoutCts.Token;
+            var timeoutCts = hasTimeout
+                ? cancellationToken.CreateLinkedTokenSource(TryTimeout.GetValueOrDefault())
+                : null;
+            var timeoutToken = timeoutCts?.Token ?? cancellationToken;
             try {
                 return await taskFactory.Invoke(timeoutToken).ConfigureAwait(false);
             }
-            catch (Exception e) {
-                if (!MustRetry(e, out var transiency)) {
-                    var reason = transiency.IsTerminal() ? "terminal error" : "non-transient error";
+            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+                if (!MustRetry(e, ref tryIndex, out var transiency)) {
+                    var reason = transiency is Transiency.Terminal ? "terminal error" : "non-transient error";
                     retryLogger?.LogError(e, tryIndex, TryCount, reason);
                     throw;
                 }
-
-                if (!transiency.IsSuperTransient())
-                    tryIndex++;
                 if (tryIndex >= TryCount) {
                     retryLogger?.LogError(e, tryIndex, TryCount, "no more retries");
                     throw;
                 }
-
-                if (e.IsCancellationOf(timeoutToken)) {
-                    if (cancellationToken.IsCancellationRequested)
-                        throw;
-
+                if (hasTimeout && e.IsCancellationOf(timeoutToken)) {
                     lastError?.Throw();
                     throw new RetryPolicyTimeoutExceededException();
                 }
@@ -78,6 +78,9 @@ public record RetryPolicy(
                 retryLogger?.LogRetry(e, tryIndex, TryCount, delay);
                 if (delay > TimeSpan.Zero)
                     await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
+            finally {
+                timeoutCts?.Dispose();
             }
         }
     }

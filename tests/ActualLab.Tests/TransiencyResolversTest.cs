@@ -6,10 +6,11 @@ namespace ActualLab.Tests;
 public class TransiencyResolversTest
 {
     [Fact]
-    public void WellKnownOnlyTest()
+    public void CoreOnlyTest()
     {
         var resolver = TransiencyResolvers.CoreOnly;
-        TestWellKnown(resolver);
+        TestCoreOnly(resolver);
+        resolver.Invoke(null).Should().Be(Transiency.Unknown);
         resolver.Invoke(new NullReferenceException()).Should().Be(Transiency.Unknown);
         resolver.Invoke(new ObjectDisposedException("Whatever")).Should().Be(Transiency.Unknown);
     }
@@ -18,7 +19,8 @@ public class TransiencyResolversTest
     public void PreferTransientTest()
     {
         var resolver = TransiencyResolvers.PreferTransient;
-        TestWellKnown(resolver);
+        TestCoreOnly(resolver);
+        resolver.Invoke(null).Should().Be(Transiency.Transient);
         resolver.Invoke(new NullReferenceException()).Should().Be(Transiency.NonTransient);
         resolver.Invoke(new ObjectDisposedException("Whatever")).Should().Be(Transiency.NonTransient);
 
@@ -32,7 +34,8 @@ public class TransiencyResolversTest
     public void PreferNonTransientTest()
     {
         var resolver = TransiencyResolvers.PreferNonTransient;
-        TestWellKnown(resolver);
+        TestCoreOnly(resolver);
+        resolver.Invoke(null).Should().Be(Transiency.NonTransient);
         resolver.Invoke(new NullReferenceException()).Should().Be(Transiency.NonTransient);
         resolver.Invoke(new ObjectDisposedException("Whatever")).Should().Be(Transiency.NonTransient);
 
@@ -44,7 +47,7 @@ public class TransiencyResolversTest
 
     // Private methods
 
-    private void TestWellKnown(TransiencyResolver resolver)
+    private void TestCoreOnly(TransiencyResolver resolver)
     {
         resolver.Invoke(new RetryRequiredException()).Should().Be(Transiency.SuperTransient);
         resolver.Invoke(new TransientException()).Should().Be(Transiency.Transient);

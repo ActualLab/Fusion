@@ -60,7 +60,7 @@ public static class AsyncChainExt
                     await asyncChain.Start(cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-                    if (asyncChain.TransiencyResolver.Invoke(e).IsTerminal())
+                    if (asyncChain.TransiencyResolver.Invoke(e) is Transiency.Terminal)
                         throw;
 
                     log.LogError(e, "{ChainName} failed", asyncChain.Name);
@@ -88,7 +88,7 @@ public static class AsyncChainExt
                     if (e.IsCancellationOf(cancellationToken))
                         log.IfEnabled(logLevel)?.Log(logLevel,
                             "{ChainName} completed (cancelled)", asyncChain.Name);
-                    else if (asyncChain.TransiencyResolver.Invoke(e).IsTerminal())
+                    else if (asyncChain.TransiencyResolver.Invoke(e) is Transiency.Terminal)
                         log.IfEnabled(logLevel)?.Log(logLevel,
                             "{ChainName} completed (terminal error)", asyncChain.Name);
                     else
@@ -128,7 +128,7 @@ public static class AsyncChainExt
                 await asyncChain.Start(cancellationToken).ConfigureAwait(false);
             }
             catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-                if (asyncChain.TransiencyResolver.Invoke(e).IsTerminal())
+                if (asyncChain.TransiencyResolver.Invoke(e) is Transiency.Terminal)
                     throw;
 
                 log?.IfEnabled(LogLevel.Error)?.LogError(e,
@@ -191,10 +191,10 @@ public static class AsyncChainExt
                 }
                 catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                     var transiency = asyncChain.TransiencyResolver.Invoke(e);
-                    if (transiency.IsTerminal())
+                    if (transiency is Transiency.Terminal)
                         throw;
 
-                    if (!transiency.IsSuperTransient())
+                    if (transiency is not Transiency.SuperTransient)
                         tryIndex++;
                 }
                 var retryDelay = retryDelays[Math.Max(1, tryIndex)];
@@ -224,10 +224,10 @@ public static class AsyncChainExt
                     }
                     catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                         var transiency = asyncChain.TransiencyResolver.Invoke(e);
-                        if (transiency.IsTerminal())
+                        if (transiency is Transiency.Terminal)
                             throw;
 
-                        if (!transiency.IsSuperTransient())
+                        if (transiency is not Transiency.SuperTransient)
                             tryIndex++;
                         if (tryIndex >= vTryCount)
                             throw;

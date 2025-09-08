@@ -464,7 +464,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         catch (ObjectDisposedException) {
             // We want to handle IServiceProvider disposal gracefully
         }
-        return transiencyResolver?.Invoke(error).IsTransient()
-            ?? TransiencyResolvers.PreferTransient.Invoke(error).IsTransient();
+        return transiencyResolver?.Invoke(error).IsAnyTransient()
+            ?? TransiencyResolvers.PreferTransient.Invoke(error).IsAnyTransient();
     }
 }
