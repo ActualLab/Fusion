@@ -28,11 +28,11 @@ public class MiscInfoTest(ITestOutputHelper @out) : TestBase(@out)
         var versionString = RuntimeInfo.DotNet.VersionString;
         if (version is null) {
 #if NET7_0
-        versionString.Should().StartWith("7.");
+            versionString.Should().StartWith("7.");
 #elif NET6_0
-        versionString.Should().StartWith("6.");
+            versionString.Should().StartWith("6.");
 #elif NET5_0
-        versionString.Should().StartWith("5.");
+            versionString.Should().StartWith("5.");
 #endif
         }
         else
