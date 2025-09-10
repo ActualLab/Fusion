@@ -26,7 +26,7 @@ public readonly partial record struct CpuTimestamp(
     public static CpuTimestamp Now {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
-#if NET9_0_OR_GREATER
+#if NET5_0_OR_GREATER
             return new CpuTimestamp(Stopwatch.GetTimestamp());
 #else
             return new CpuTimestamp(Constants.GetTimestamp.Invoke());
@@ -69,34 +69,34 @@ public readonly partial record struct CpuTimestamp(
         public static readonly long TickFrequency;
         // ReSharper disable once MemberHidesStaticFromOuterClass
         public static readonly double TickDuration;
-#if !NET9_0_OR_GREATER
+#if !NET5_0_OR_GREATER
         public static readonly Func<long> GetTimestamp;
 #endif
 
         static Constants()
         {
-#if NET9_0_OR_GREATER
+#if NET5_0_OR_GREATER
             TickFrequency = Stopwatch.Frequency;
 #else
             if (RuntimeCodegen.Mode != RuntimeCodegenMode.DynamicMethods) {
                 TickFrequency = Stopwatch.Frequency;
-                QueryPerformanceCounter = Stopwatch.GetTimestamp;
+                GetTimestamp = Stopwatch.GetTimestamp;
             }
             else {
                 var mQueryPerformanceCounter = typeof(Stopwatch)
                     .GetMethod(
-                        nameof(QueryPerformanceCounter),
+                        "QueryPerformanceCounter",
                         BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
                 if (mQueryPerformanceCounter is not null) {
                     // .NET + .NET Core, WASM
                     TickFrequency = Stopwatch.Frequency;
                     // ReSharper disable once RedundantSuppressNullableWarningExpression
-                    QueryPerformanceCounter = (Func<long>)mQueryPerformanceCounter!.CreateDelegate(typeof(Func<long>));
+                    GetTimestamp = (Func<long>)mQueryPerformanceCounter!.CreateDelegate(typeof(Func<long>));
                 }
                 else {
                     // .NET Framework
                     TickFrequency = 10_000_000;
-                    QueryPerformanceCounter = Stopwatch.GetTimestamp;
+                    GetTimestamp = Stopwatch.GetTimestamp;
                 }
             }
 #endif
