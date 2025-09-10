@@ -11,9 +11,6 @@
     <Compile Remove="Blazor\**" />
   </ItemGroup>
 
-  <ItemGroup Condition="!$(TargetFramework.StartsWith('net10'))">
-    <PackageReference Include="System.Net.WebSockets.Client" />
-  </ItemGroup>
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
