@@ -39,7 +39,7 @@ public abstract class FusionComponentBase : ComponentBase, IHandleEvent
 
         async Task CompleteAsync(Task task1) {
             try {
-                await task1;
+                await task1.ConfigureAwait(true);
             }
             catch {
                 // Avoiding exception filters for AOT runtime support.

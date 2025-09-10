@@ -229,7 +229,9 @@ public partial class Computed
     {
         using var ccs = BeginCaptureExisting();
         var task = producer.Invoke();
-        _ = task.AssertCompleted(); // The must be always synchronous in this case
+#pragma warning disable CA2025 // Ensure tasks using 'IDisposable' instances complete before the instances are disposed
+        _ = task.AssertCompleted(); // Compute method calls are always synchronous in this case
+#pragma warning restore CA2025
         return ccs.Context.TryGetCaptured<T>();
     }
 
@@ -238,7 +240,9 @@ public partial class Computed
     {
         using var ccs = BeginCaptureExisting();
         var task = producer.Invoke();
-        _ = task.AssertCompleted(); // The must be always synchronous in this case
+#pragma warning disable CA2025 // Ensure tasks using 'IDisposable' instances complete before the instances are disposed
+        _ = task.AssertCompleted(); // Compute method calls are always synchronous in this case
+#pragma warning restore CA2025
         return ccs.Context.TryGetCaptured<T>();
     }
 }

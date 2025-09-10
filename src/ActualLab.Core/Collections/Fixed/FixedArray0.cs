@@ -37,4 +37,6 @@ public readonly struct FixedArray0<T> : IEquatable<FixedArray0<T>>
         => obj is FixedArray0<T> other && Equals(other);
     public bool Equals(FixedArray0<T> other) => true;
     public override int GetHashCode() => 0;
+    public static bool operator ==(FixedArray0<T> left, FixedArray0<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray0<T> left, FixedArray0<T> right) => !left.Equals(right);
 }

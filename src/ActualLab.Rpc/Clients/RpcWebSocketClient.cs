@@ -52,7 +52,9 @@ public class RpcWebSocketClient(
                 url += requestPath;
             }
 
+#pragma warning disable CA1307
             var queryStart = url.IndexOf('?') < 0 ? '?' : '&';
+#pragma warning restore CA1307
             url = $"{url}{queryStart}{settings.ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}"
                 + $"&{settings.SerializationFormatParameterName}={peer.SerializationFormat.Key}";
             return new Uri(url, UriKind.Absolute);

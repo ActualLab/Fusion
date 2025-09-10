@@ -16,4 +16,6 @@ public readonly struct ParseOrNone : IEquatable<ParseOrNone>
     public bool Equals(ParseOrNone other) => true;
     public override bool Equals(object? obj) => obj is ParseOrNone;
     public override int GetHashCode() => 0;
+    public static bool operator ==(ParseOrNone left, ParseOrNone right) => left.Equals(right);
+    public static bool operator !=(ParseOrNone left, ParseOrNone right) => !left.Equals(right);
 }

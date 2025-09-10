@@ -8,7 +8,9 @@ public static class StringExt
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetOrdinalHashCode(this string source)
+#pragma warning disable CA1307 // string.GetHashCode() is faster than string.GetHashCode(StringComparison.Ordinal)
         => source.GetHashCode();
+#pragma warning restore CA1307
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong GetXxHash3L(this string source)

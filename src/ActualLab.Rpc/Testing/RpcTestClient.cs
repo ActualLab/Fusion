@@ -1,3 +1,4 @@
+using System.Globalization;
 using ActualLab.Channels;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
@@ -43,7 +44,7 @@ public class RpcTestClient(
 
     public RpcTestConnection CreateRandomConnection()
     {
-        var pairId = Interlocked.Increment(ref _lastPairId).ToString("x8");
+        var pairId = Interlocked.Increment(ref _lastPairId).ToString("x8", CultureInfo.InvariantCulture);
         return CreateConnection(pairId, pairId);
     }
 

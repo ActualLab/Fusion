@@ -73,6 +73,8 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
         => obj is RpcMethodRef other && Equals(other);
     public override int GetHashCode()
         => HashCode;
+    public static bool operator ==(RpcMethodRef left, RpcMethodRef right) => left.Equals(right);
+    public static bool operator !=(RpcMethodRef left, RpcMethodRef right) => !left.Equals(right);
 
     // Static methods
 

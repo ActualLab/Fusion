@@ -74,7 +74,10 @@ public static partial class AsyncEnumerableExt
 
         var nextTimeout = firstItemTimeout;
         while (true) {
-            var hasMoreTask = enumerator.MoveNextAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+#pragma warning disable MA0040
+            var hasMoreTask = enumerator.MoveNextAsync();
+#pragma warning restore MA0040
             var hasMore = hasMoreTask.IsCompleted
                 ? await hasMoreTask.ConfigureAwait(false)
                 : await hasMoreTask.AsTask()

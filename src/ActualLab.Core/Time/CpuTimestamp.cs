@@ -80,8 +80,8 @@ public readonly partial record struct CpuTimestamp(
                 if (mQueryPerformanceCounter is not null) {
                     // .NET + .NET Core, WASM
                     TickFrequency = Stopwatch.Frequency;
-                    QueryPerformanceCounter = (Func<long>)mQueryPerformanceCounter!
-                        .CreateDelegate(typeof(Func<long>));
+                    // ReSharper disable once RedundantSuppressNullableWarningExpression
+                    QueryPerformanceCounter = (Func<long>)mQueryPerformanceCounter!.CreateDelegate(typeof(Func<long>));
                 }
                 else {
                     // .NET Framework

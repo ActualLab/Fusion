@@ -13,7 +13,7 @@
   <PropertyGroup Condition="'$(UseMultitargeting)' == ''">
     <UseMultitargeting>false</UseMultitargeting>
     <!-- <UseMultitargeting>true</UseMultitargeting> -->
-    <TargetFramework Condition="!$(UseMultitargeting)">net9.0</TargetFramework>
+    <TargetFramework Condition="!$(UseMultitargeting)">net10.0</TargetFramework>
   </PropertyGroup>
 
   <!-- Common properties -->
@@ -106,9 +106,11 @@
     <!-- C# -->
     <!-- CA1062: Validate arguments of public methods -->
     <!-- CS1591: Missing XML comment for publicly visible type or member -->
+    <!-- CA1873: Evaluation of this argument may be expensive and unnecessary if logging is disabled -->
     <!-- CA2254: The logging message template should not vary between calls ... -->
+    <!-- CA2263: Prefer the generic overload ... -->
     <!-- CS8669: The annotation for nullable reference types should only be used in code within a '#nullable' annotations context. Auto-generated code requires an explicit '#nullable' directive in source. -->
-    <NoWarn>$(NoWarn);CA1062;CS1591;CA2254;CS8669</NoWarn>
+    <NoWarn>$(NoWarn);CA1062;CS1591;CA1873;CA2254;CA2263;CS8669</NoWarn>
     <!-- MA0009: Regular expressions should not be vulnerable to Denial of Service attacks -->
     <!-- MA0018: Do not declare static members on generic types -->
     <!-- MA0048: File name must match type name -->

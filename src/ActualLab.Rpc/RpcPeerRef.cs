@@ -107,10 +107,12 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
     // The equality of RpcClientPeerRef CAN BE based on the Address property or referential.
     // Referential equality must be a preference when such refs are always cached / reused.
 
+#pragma warning disable CA1307, CA1309, MA0001
     public bool Equals(RpcPeerRef? other)
         => UseReferentialEquality
             ? ReferenceEquals(this, other)
             : other is not null && AddressHashCode == other.AddressHashCode && Address.Equals(other.Address);
+#pragma warning restore CA1307, CA1309, MA0001
 
     public sealed override bool Equals(object? obj)
     {
@@ -119,9 +121,11 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
         if (UseReferentialEquality)
             return false; // We already know the references are different
 
+#pragma warning disable CA1307, CA1309, MA0001
         return obj is RpcPeerRef other
             && AddressHashCode == other.AddressHashCode
             && Address.Equals(other.Address);
+#pragma warning restore CA1307, CA1309, MA0001
     }
 
     public sealed override int GetHashCode()

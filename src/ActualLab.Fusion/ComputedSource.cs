@@ -86,8 +86,10 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
         AsyncLock = new AsyncLock(LockReentryMode.CheckedFail);
         Initialize(this, RuntimeHelpers.GetHashCode(this));
         lock (Lock)
+#pragma warning disable CA2214 // Do not call overridable methods in constructors
             // ReSharper disable once VirtualMemberCallInConstructor
             _computed = CreateComputed(initialOutput);
+#pragma warning restore CA2214
     }
 
     // ComputedInput

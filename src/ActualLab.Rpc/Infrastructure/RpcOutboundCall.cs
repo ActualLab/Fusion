@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using ActualLab.OS;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Diagnostics;
@@ -73,7 +74,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var result = string.Concat(
             DebugTypeName,
             isStream ? " ~" : " #",
-            (relatedId != 0 ? relatedId : Id).ToString(),
+            (relatedId != 0 ? relatedId : Id).ToString(CultureInfo.InvariantCulture),
             " ",
             methodDef?.FullName ?? "n/a",
             arguments?.ToString() ?? "(n/a)",

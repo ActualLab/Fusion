@@ -50,7 +50,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public LogLevel CallLogLevel { get; init; } = DefaultCallLogLevel;
 
     public AsyncState<RpcPeerConnectionState> ConnectionState => _connectionState;
+#pragma warning disable CA1721
     public RpcMethodResolver ServerMethodResolver => _serverMethodResolver;
+#pragma warning restore CA1721
     public RpcHandshake? Handshake => _handshake;
 
     public RpcPeerStopMode StopMode {
@@ -73,8 +75,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         if (ConnectionKind is RpcPeerConnectionKind.None)
             ConnectionKind = RpcPeerConnectionKind.Remote; // RpcPeer.ConnectionKind should never be None
         Versions = versions ?? peerRef.Versions;
+#pragma warning disable CA2214 // Do not call overridable methods in constructors
         // ReSharper disable once VirtualMemberCallInConstructor
         _serverMethodResolver = GetServerMethodResolver(null);
+#pragma warning restore CA2214
 
         SerializationFormat = Hub.SerializationFormats.Get(peerRef);
         ArgumentSerializer = SerializationFormat.ArgumentSerializer;

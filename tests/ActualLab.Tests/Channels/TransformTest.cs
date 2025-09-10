@@ -39,7 +39,7 @@ public class TransformTest
             await transform(cSource, cTarget).ConfigureAwait(false);
 
             var elapsed = start.ElapsedMilliseconds;
-            var target = cTarget.Reader.ToAsyncEnumerable().ToEnumerable().ToArray();
+            var target = cTarget.Reader.ToAsyncEnumerable().ToListAsync();
             target.Should().BeEquivalentTo(source);
             var expectedRounds = itemCount / concurrencyLevel +
                 (itemCount % concurrencyLevel != 0 ? 1 : 0);

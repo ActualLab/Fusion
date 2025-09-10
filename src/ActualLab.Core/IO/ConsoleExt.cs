@@ -25,6 +25,8 @@ public static class ConsoleExt
     public static Task<string?> ReadLineAsync()
     {
         var taskFactory = new TaskFactory(Scheduler);
+#pragma warning disable CA2008
         return taskFactory.StartNew(ReadLine);
+#pragma warning restore CA2008
     }
 }

@@ -73,7 +73,7 @@ public static class FilePathExt
         encoding ??= FileExt.DefaultReadEncoding;
         using var reader = File.OpenRead(path);
         using var textReader = new StreamReader(reader, encoding, detectEncodingFromByteOrderMarks);
-        while (!textReader.EndOfStream) {
+        while (true) {
             cancellationToken.ThrowIfCancellationRequested();
             var line = await textReader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
             if (line is null)

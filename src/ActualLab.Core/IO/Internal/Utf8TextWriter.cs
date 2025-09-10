@@ -64,10 +64,8 @@ public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(
             throw new ArgumentNullException(nameof(buffer));
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index));
-        if (count < 0)
+        if (count < 0 || buffer.Length - index < count)
             throw new ArgumentOutOfRangeException(nameof(count));
-        if (buffer.Length - index < count)
-            throw new ArgumentException();
 
         _buffer.Append(buffer.AsSpan(index, count));
     }

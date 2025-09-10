@@ -6,11 +6,6 @@ namespace ActualLab.Fusion;
 
 public abstract class ComputedSynchronizer
 {
-#if NET9_0_OR_GREATER
-    private static readonly Lock StaticLock = new();
-#else
-    private static readonly object StaticLock = new();
-#endif
     internal static readonly AsyncLocal<ComputedSynchronizer?> CurrentLocal = new();
 
     public static ComputedSynchronizer Default { get; set; } = Safe.Instance;

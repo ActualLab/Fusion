@@ -47,6 +47,7 @@
     <!-- CA1305: The behavior of 'int.ToString()' could vary -->
     <!-- CA1307: 'string.Contains(string)' has a method overload that takes a 'StringComparison' -->
     <!-- CA1310: The behavior of 'string.StartsWith(string)' could vary -->
+    <!-- CA1515: Because an application's API isn't typically referenced from outside the assembly, types can be made internal -->
     <!-- CA1721: The property name 'X' is confusing given the existence of method 'GetX' -->
     <!-- CA1812: C is an internal class that is apparently never instantiated. -->
     <!-- CA1822: Member 'Delay' does not access instance data and can be marked as static -->
@@ -57,7 +58,7 @@
     <!-- CA2016: Forward the 'cancellationToken' parameter to the 'Delay' method -->
     <!-- CA2201: Exception type System.NullReferenceException is reserved by the runtime -->
     <!-- CA2237: Add [Serializable] to WeirdException -->
-    <NoWarn>$(NoWarn);CA1032;CA1052;CA1303;CA1305;CA1307;CA1310;CA1721;CA1812;CA1822;CA1852;CA1861;CA1862</NoWarn>
+    <NoWarn>$(NoWarn);CA1032;CA1052;CA1303;CA1305;CA1307;CA1310;CA1515;CA1721;CA1812;CA1822;CA1852;CA1861;CA1862</NoWarn>
     <NoWarn>$(NoWarn);CA2007;CA2016;CA2201;CA2237</NoWarn>
     <!-- MA0002: Use an overload that has a IEqualityComparer<string> or IComparer<string> parameter -->
     <!-- MA0004: Use Task.ConfigureAwait(false) as the current SynchronizationContext is not needed -->
@@ -86,7 +87,7 @@
   </ItemGroup>
 
   <!-- Polyfills -->
-  <ItemGroup Condition="!($(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')))">
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')))">
     <PackageReference Include="PolySharp" PrivateAssets="all" />
   </ItemGroup>
 

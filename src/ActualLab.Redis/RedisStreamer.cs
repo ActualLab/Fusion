@@ -47,7 +47,9 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
                     .ConfigureAwait(false);
                 if (appendResult.HasValue)
                     appendNotificationTask = null;
+#pragma warning disable CA2025 // Ensure tasks using 'IDisposable' instances complete before the instances are disposed
                 appendNotificationTask = appendSub.NextMessage(appendNotificationTask);
+#pragma warning restore CA2025
                 continue;
             }
 

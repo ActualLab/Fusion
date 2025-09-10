@@ -151,7 +151,7 @@ public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
             static tResult => (Func<Exception, IResult>)ErrorInternalMethod
                 .MakeGenericMethod(tResult)
                 .CreateDelegate(typeof(Func<Exception, IResult>))
-            ).Invoke(error);
+        ).Invoke(error);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result NewUntyped(object? untypedValueOrErrorBox) => new(untypedValueOrErrorBox);

@@ -56,4 +56,4 @@ public sealed record JsonRpcMessage(
 
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(JsonRpcMessage))]
-internal partial class JsonRpcMessageContext : JsonSerializerContext;
+internal sealed partial class JsonRpcMessageContext : JsonSerializerContext;

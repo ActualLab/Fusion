@@ -9,7 +9,7 @@ namespace ActualLab.Interception.Trimming;
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
 public class ProxyCodeKeeper : CodeKeeper
 {
-    protected MethodDefCodeKeeper MethodDefCodeKeeper => Get<MethodDefCodeKeeper>();
+    protected static MethodDefCodeKeeper MethodDefCodeKeeper => Get<MethodDefCodeKeeper>();
 
     static ProxyCodeKeeper()
         => _ = Proxies.Cache;

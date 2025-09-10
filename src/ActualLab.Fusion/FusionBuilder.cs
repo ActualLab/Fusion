@@ -25,6 +25,7 @@ public readonly struct FusionBuilder
     public RpcServiceMode DefaultServiceMode { get; }
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
+    [UnconditionalSuppressMessage("Trimming", "IL2110", Justification = "CodeKeepers are used only to retain the code")]
     [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
     static FusionBuilder() => CodeKeeper.AddFakeAction(
         static () => {

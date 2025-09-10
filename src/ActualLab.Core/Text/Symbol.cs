@@ -81,7 +81,9 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(Symbol other)
         => _hashCode == other._hashCode
+#pragma warning disable CA1307, CA1309 // string.Equals() is faster than string.Equals(a, b, StringComparison.Ordinal)
             && (ReferenceEquals(Value, other.Value) || Value.Equals(other.Value));
+#pragma warning restore CA1307, CA1309
     public override bool Equals(object? obj)
         => obj is Symbol other && Equals(other);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -110,7 +112,9 @@ public readonly partial struct Symbol : IEquatable<Symbol>, IComparable<Symbol>,
     private Symbol(SerializationInfo info, StreamingContext context)
     {
         _value = info.GetString(nameof(Value)) ?? "";
+#pragma warning disable CA1307 // string.GetHashCode() is faster than string.GetHashCode(StringComparison.Ordinal)
         _hashCode = _value.Length == 0 ? 0 : _value.GetHashCode();
+#pragma warning restore CA1307
     }
 #pragma warning restore CS8618
 

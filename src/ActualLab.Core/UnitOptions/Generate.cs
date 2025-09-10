@@ -16,4 +16,6 @@ public readonly struct Generate : IEquatable<Generate>
     public bool Equals(Generate other) => true;
     public override bool Equals(object? obj) => obj is Generate;
     public override int GetHashCode() => 0;
+    public static bool operator ==(Generate left, Generate right) => left.Equals(right);
+    public static bool operator !=(Generate left, Generate right) => !left.Equals(right);
 }

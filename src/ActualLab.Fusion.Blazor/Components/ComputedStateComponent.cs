@@ -55,7 +55,7 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
     private async Task CompleteOnInitializedFlowAsync(Task whenInitialized)
     {
         await whenInitialized.SuppressCancellationAwait(); // Blazor views lifecycle method cancellations as ~normal completions
-        await OnSetParametersFlow(true);
+        await OnSetParametersFlow(true).ConfigureAwait(false); // .ConfigureAwait(false) is ok here (very last call)
     }
 
     private Task OnSetParametersFlow(bool isInitializing)

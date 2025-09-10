@@ -1,3 +1,4 @@
+using System.Globalization;
 using ActualLab.Interception;
 
 namespace ActualLab.Fusion.Interception;
@@ -25,7 +26,11 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     }
 
     public override string ToString()
-        => string.Concat(Category, Invocation.Arguments.ToString(), "-Hash=", HashCode.ToString());
+        => string.Concat(
+            Category,
+            Invocation.Arguments.ToString(),
+            "-Hash=",
+            HashCode.ToString(CultureInfo.InvariantCulture));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override ComputedOptions GetComputedOptions()

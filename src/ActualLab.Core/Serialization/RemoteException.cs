@@ -7,7 +7,9 @@ namespace ActualLab.Serialization;
 [Serializable]
 public class RemoteException : Exception, ITransientException
 {
+#pragma warning disable CA2235
     public ExceptionInfo ExceptionInfo { get; }
+#pragma warning restore CA2235
 
     public RemoteException()
         : this(ExceptionInfo.None)  { }

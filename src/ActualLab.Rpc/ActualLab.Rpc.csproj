@@ -6,16 +6,18 @@
     <Description>ActualLab.Rpc - fast RPC library relying on ActualLab.Generators.</Description>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Net.WebSockets" />
-  </ItemGroup>
-
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('net10'))">
+    <PackageReference Include="System.Net.WebSockets" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">
     <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
+    <PackageReference Include="Microsoft.Extensions.Http" VersionOverride="$(MicrosoftExtensionsVersion9)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
     <PackageReference Include="Microsoft.Extensions.Http" VersionOverride="$(MicrosoftExtensionsVersion8)" />
@@ -23,7 +25,7 @@
   <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
     <PackageReference Include="Microsoft.Extensions.Http" VersionOverride="$(MicrosoftExtensionsVersion7)" />
   </ItemGroup>
-  <ItemGroup Condition="!($(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
     <PackageReference Include="Microsoft.Extensions.Http" VersionOverride="$(MicrosoftExtensionsVersion6)" />
   </ItemGroup>
 

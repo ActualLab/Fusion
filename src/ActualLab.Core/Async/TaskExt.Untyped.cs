@@ -52,8 +52,10 @@ public static partial class TaskExt
 
     // FromCancelled
 
+#pragma warning disable CA1068
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "FromTypedTaskInternal is preserved")]
     public static Task FromCancelled(CancellationToken cancellationToken, Type resultType)
+#pragma warning restore CA1068
         => GenericInstanceCache
             .Get<Func<CancellationToken, Task>>(typeof(GetUntypedResultSynchronouslyFactory<>), resultType)
             .Invoke(cancellationToken);

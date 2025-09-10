@@ -113,6 +113,9 @@ public struct <#= className #> : IEquatable<<#= className #>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(<#= className #> left, <#= className #> right) => left.Equals(right);
+    public static bool operator !=(<#= className #> left, <#= className #> right) => !left.Equals(right);
 }
 <#
     }

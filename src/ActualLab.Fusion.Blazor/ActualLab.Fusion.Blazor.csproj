@@ -22,11 +22,17 @@
   <Target Name="PrepareProjectReferences" />
   <!-- End of workaround -->
 
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">
     <PackageReference Include="Microsoft.AspNetCore.Components" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
+    <PackageReference Include="Microsoft.AspNetCore.Components" VersionOverride="$(BlazorVersion9)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" VersionOverride="$(BlazorVersion9)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" VersionOverride="$(BlazorVersion9)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" VersionOverride="$(BlazorVersion9)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
     <PackageReference Include="Microsoft.AspNetCore.Components" VersionOverride="$(BlazorVersion8)" />

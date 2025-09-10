@@ -9,14 +9,16 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
 {
     private readonly Dictionary<Type, RpcServiceDef> _services = new();
     private readonly Dictionary<string, RpcServiceDef> _serviceByName = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<VersionSet, RpcMethodResolver> _serverMethodResolvers = new();
+    private readonly ConcurrentDictionary<VersionSet, RpcMethodResolver> _legacyServerMethodResolvers = new();
 
     public static LogLevel ConstructionDumpLogLevel { get; set; } = OSInfo.IsAnyClient ? LogLevel.None : LogLevel.Information;
 
     public int Count => _serviceByName.Count;
     public RpcServiceDef this[Type serviceType] => Get(serviceType) ?? throw Errors.NoService(serviceType);
     public RpcServiceDef this[string serviceName] => Get(serviceName) ?? throw Errors.NoService(serviceName);
+#pragma warning disable CA1721
     public RpcMethodResolver ServerMethodResolver { get; }
+#pragma warning restore CA1721
     public RpcMethodResolver AnyMethodResolver { get; }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -94,7 +96,8 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
         if (versions is null)
             return ServerMethodResolver;
 
-        return _serverMethodResolvers.GetOrAdd(versions,
+        return _legacyServerMethodResolvers.GetOrAdd(
+            versions,
             static (versions, self) => new RpcMethodResolver(self, versions, self.ServerMethodResolver, self.Log),
             this);
     }

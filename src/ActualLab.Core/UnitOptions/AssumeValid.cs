@@ -16,4 +16,6 @@ public readonly struct AssumeValid : IEquatable<AssumeValid>
     public bool Equals(AssumeValid other) => true;
     public override bool Equals(object? obj) => obj is AssumeValid;
     public override int GetHashCode() => 0;
+    public static bool operator ==(AssumeValid left, AssumeValid right) => left.Equals(right);
+    public static bool operator !=(AssumeValid left, AssumeValid right) => !left.Equals(right);
 }

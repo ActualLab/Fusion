@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using ActualLab.Interception;
 using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
@@ -84,7 +85,7 @@ public abstract class RpcInboundCall : RpcCall
         var result = string.Concat(
             DebugTypeName,
             MethodDef.IsStream ? " ~" : " #",
-            relatedId.ToString(),
+            relatedId.ToString(CultureInfo.InvariantCulture),
             " ",
             MethodDef.FullName,
             arguments,

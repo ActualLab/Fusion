@@ -21,12 +21,12 @@
     <ProjectReference Include="..\ActualLab.Core\ActualLab.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
-    <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net4')))">
+    <PackageReference Include="System.Runtime.Loader" />
   </ItemGroup>
 
-  <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
-    <PackageReference Include="System.Runtime.Loader" />
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
+    <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

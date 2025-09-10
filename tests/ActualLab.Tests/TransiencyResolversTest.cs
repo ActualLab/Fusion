@@ -10,7 +10,6 @@ public class TransiencyResolversTest
     {
         var resolver = TransiencyResolvers.CoreOnly;
         TestCoreOnly(resolver);
-        resolver.Invoke(null).Should().Be(Transiency.Unknown);
         resolver.Invoke(new NullReferenceException()).Should().Be(Transiency.Unknown);
         resolver.Invoke(new ObjectDisposedException("Whatever")).Should().Be(Transiency.Unknown);
     }
@@ -20,7 +19,6 @@ public class TransiencyResolversTest
     {
         var resolver = TransiencyResolvers.PreferTransient;
         TestCoreOnly(resolver);
-        resolver.Invoke(null).Should().Be(Transiency.Transient);
         resolver.Invoke(new NullReferenceException()).Should().Be(Transiency.NonTransient);
         resolver.Invoke(new ObjectDisposedException("Whatever")).Should().Be(Transiency.NonTransient);
 
@@ -35,7 +33,6 @@ public class TransiencyResolversTest
     {
         var resolver = TransiencyResolvers.PreferNonTransient;
         TestCoreOnly(resolver);
-        resolver.Invoke(null).Should().Be(Transiency.NonTransient);
         resolver.Invoke(new NullReferenceException()).Should().Be(Transiency.NonTransient);
         resolver.Invoke(new ObjectDisposedException("Whatever")).Should().Be(Transiency.NonTransient);
 

@@ -16,6 +16,8 @@ public readonly partial struct RpcNoWait : IEquatable<RpcNoWait>
     public bool Equals(RpcNoWait other) => true;
     public override bool Equals(object? obj) => obj is RpcNoWait;
     public override int GetHashCode() => 0;
+    public static bool operator ==(RpcNoWait left, RpcNoWait right) => left.Equals(right);
+    public static bool operator !=(RpcNoWait left, RpcNoWait right) => !left.Equals(right);
 
     // Nested types
 

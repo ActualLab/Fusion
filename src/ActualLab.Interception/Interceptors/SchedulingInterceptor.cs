@@ -35,7 +35,9 @@ public sealed class SchedulingInterceptor : Interceptor
             if (taskFactory is null)
                 return invocation.InvokeInterceptedUntyped();
 
+#pragma warning disable CA2008 // Do not create tasks without passing a TaskScheduler
             var task = taskFactory.StartNew(() => (Task<TUnwrapped>)asyncInvoker.Invoke(invocation)).Unwrap();
+#pragma warning restore CA2008
             return methodDef.ReturnsValueTask
                 ? methodDef.IsAsyncVoidMethod
                     ? new ValueTask(task)

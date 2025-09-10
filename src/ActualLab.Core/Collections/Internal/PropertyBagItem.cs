@@ -70,7 +70,9 @@ public partial record struct PropertyBagItem(
         => New(source.key.ToIdentifierSymbol(), source.value);
 
     // Equality - relies only on Key property
+#pragma warning disable CA1307, CA1309 // string.Equals() is faster than string.Equals(a, b, StringComparison.Ordinal)
     public readonly bool Equals(PropertyBagItem other) => Key.Equals(other.Key);
+#pragma warning restore CA1307, CA1309
     public override readonly int GetHashCode() => Key.GetOrdinalHashCode();
 
     // CompareTo

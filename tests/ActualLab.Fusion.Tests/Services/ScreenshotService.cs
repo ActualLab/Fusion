@@ -98,6 +98,8 @@ public class ScreenshotService : IScreenshotService
                     computed.Value.Dispose();
             }, TaskScheduler.Default);
         };
+#pragma warning disable CA2025 // Ensure tasks using 'IDisposable' instances complete before the instances are disposed
         return Task.FromResult(bScreen);
+#pragma warning restore CA2025
     }
 }

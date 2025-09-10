@@ -15,10 +15,10 @@ public readonly struct RpcCallTypeKey(byte callTypeId, Type callResultType) : IE
 
     public bool Equals(RpcCallTypeKey other)
         => ReferenceEquals(CallResultType, other.CallResultType) && CallTypeId == other.CallTypeId;
-
     public override bool Equals(object? obj)
         => obj is RpcCallTypeKey other && Equals(other);
-
     public override int GetHashCode()
         => CallResultType.GetHashCode() + CallTypeId;
+    public static bool operator ==(RpcCallTypeKey left, RpcCallTypeKey right) => left.Equals(right);
+    public static bool operator !=(RpcCallTypeKey left, RpcCallTypeKey right) => !left.Equals(right);
 }

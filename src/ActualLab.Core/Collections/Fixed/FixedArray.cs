@@ -95,6 +95,9 @@ public struct FixedArray1<T> : IEquatable<FixedArray1<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray1<T> left, FixedArray1<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray1<T> left, FixedArray1<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -188,6 +191,9 @@ public struct FixedArray2<T> : IEquatable<FixedArray2<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray2<T> left, FixedArray2<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray2<T> left, FixedArray2<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -282,6 +288,9 @@ public struct FixedArray3<T> : IEquatable<FixedArray3<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray3<T> left, FixedArray3<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray3<T> left, FixedArray3<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -377,6 +386,9 @@ public struct FixedArray4<T> : IEquatable<FixedArray4<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray4<T> left, FixedArray4<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray4<T> left, FixedArray4<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -473,6 +485,9 @@ public struct FixedArray5<T> : IEquatable<FixedArray5<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray5<T> left, FixedArray5<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray5<T> left, FixedArray5<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -570,6 +585,9 @@ public struct FixedArray6<T> : IEquatable<FixedArray6<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray6<T> left, FixedArray6<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray6<T> left, FixedArray6<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -668,6 +686,9 @@ public struct FixedArray7<T> : IEquatable<FixedArray7<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray7<T> left, FixedArray7<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray7<T> left, FixedArray7<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -767,6 +788,9 @@ public struct FixedArray8<T> : IEquatable<FixedArray8<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray8<T> left, FixedArray8<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray8<T> left, FixedArray8<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -867,6 +891,9 @@ public struct FixedArray9<T> : IEquatable<FixedArray9<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray9<T> left, FixedArray9<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray9<T> left, FixedArray9<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -968,6 +995,9 @@ public struct FixedArray10<T> : IEquatable<FixedArray10<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray10<T> left, FixedArray10<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray10<T> left, FixedArray10<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -1070,6 +1100,9 @@ public struct FixedArray11<T> : IEquatable<FixedArray11<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray11<T> left, FixedArray11<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray11<T> left, FixedArray11<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -1173,6 +1206,9 @@ public struct FixedArray12<T> : IEquatable<FixedArray12<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray12<T> left, FixedArray12<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray12<T> left, FixedArray12<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -1277,6 +1313,9 @@ public struct FixedArray13<T> : IEquatable<FixedArray13<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray13<T> left, FixedArray13<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray13<T> left, FixedArray13<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -1382,6 +1421,9 @@ public struct FixedArray14<T> : IEquatable<FixedArray14<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray14<T> left, FixedArray14<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray14<T> left, FixedArray14<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -1488,6 +1530,9 @@ public struct FixedArray15<T> : IEquatable<FixedArray15<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray15<T> left, FixedArray15<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray15<T> left, FixedArray15<T> right) => !left.Equals(right);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
@@ -1595,4 +1640,7 @@ public struct FixedArray16<T> : IEquatable<FixedArray16<T>>
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
         return hashCode;
     }
+
+    public static bool operator ==(FixedArray16<T> left, FixedArray16<T> right) => left.Equals(right);
+    public static bool operator !=(FixedArray16<T> left, FixedArray16<T> right) => !left.Equals(right);
 }

@@ -111,7 +111,9 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
             timer => timer.FiredAt = clock.Now);
         await using (timerSet) {
             var tasks = Enumerable.Range(0, HardwareInfo.GetProcessorCountFactor())
+#pragma warning disable CA2025 // Ensure tasks using 'IDisposable' instances complete before the instances are disposed
                 .Select(_ => Task.Run(() => OneRandomTest(timerSet, 100_000, 5000, 1000)))
+#pragma warning restore CA2025
                 .ToArray();
             await Task.WhenAll(tasks);
             Out.WriteLine("ConcurrentTimerSet is disposing...");

@@ -50,10 +50,6 @@ public static class ClockExt
             }
         });
     }
-    public static IAsyncEnumerable<long> TimerAsync(this MomentClock clock, long delayInMilliseconds)
-        => clock.Timer(delayInMilliseconds).ToAsyncEnumerable();
-    public static IAsyncEnumerable<long> TimerAsync(this MomentClock clock, TimeSpan dueIn)
-        => clock.Timer(dueIn).ToAsyncEnumerable();
 
     // Interval
 
@@ -89,10 +85,4 @@ public static class ClockExt
             }
         });
     }
-    public static IAsyncEnumerable<long> IntervalAsync(this MomentClock clock, long intervalInMilliseconds)
-        => clock.Interval(intervalInMilliseconds).ToAsyncEnumerable();
-    public static IAsyncEnumerable<long> IntervalAsync(this MomentClock clock, TimeSpan interval)
-        => clock.Interval(interval).ToAsyncEnumerable();
-    public static IAsyncEnumerable<long> IntervalAsync(this MomentClock clock, IEnumerable<TimeSpan> intervals)
-        => clock.Interval(intervals).ToAsyncEnumerable();
 }

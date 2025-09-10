@@ -17,7 +17,7 @@ public class RenderModeHelper(CircuitHub circuitHub)
         if (currentMode is null)
             return "Loading...";
 
-        var actualMode = string.Equals(currentMode.Key, "a")
+        var actualMode = string.Equals(currentMode.Key, "a", StringComparison.Ordinal)
             ? OSInfo.IsWebAssembly
                 ? RenderModeDef.ByKey.GetValueOrDefault("w")
                 : RenderModeDef.ByKey.GetValueOrDefault("s")

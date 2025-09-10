@@ -12,44 +12,51 @@
   <!-- Constants -->
   <PropertyGroup>
     <!-- Core packages -->
-    <AspNetCoreVersion>[9.0.0,)</AspNetCoreVersion>
+    <AspNetCoreVersion>[10.0.0-rc.1.25451.107,)</AspNetCoreVersion>
+    <AspNetCoreVersion9>[9.0.0,)</AspNetCoreVersion9>
     <AspNetCoreVersion8>[8.0.4,)</AspNetCoreVersion8>
     <AspNetCoreVersion7>[7.0.0,)</AspNetCoreVersion7>
     <AspNetCoreVersion6>[6.0.0,)</AspNetCoreVersion6>
     <AspNetCoreVersion5>[5.0.0,)</AspNetCoreVersion5>
     <AspNetCoreVersion3>[3.1.3,)</AspNetCoreVersion3>
     <BlazorVersion>$(AspNetCoreVersion)</BlazorVersion>
+    <BlazorVersion9>$(AspNetCoreVersion9)</BlazorVersion9>
     <BlazorVersion8>$(AspNetCoreVersion8)</BlazorVersion8>
     <BlazorVersion7>$(AspNetCoreVersion7)</BlazorVersion7>
     <BlazorVersion6>$(AspNetCoreVersion6)</BlazorVersion6>
     <BlazorVersion5>$(AspNetCoreVersion5)</BlazorVersion5>
     <BlazorVersion3>$(AspNetCoreVersion3)</BlazorVersion3>
-    <MicrosoftExtensionsVersion>[9.0.0,)</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsVersion>[10.0.0-rc.1.25451.107,)</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsVersion9>[9.0.0,)</MicrosoftExtensionsVersion9>
     <MicrosoftExtensionsVersion8>[8.0.0,)</MicrosoftExtensionsVersion8>
     <MicrosoftExtensionsVersion7>[7.0.0,)</MicrosoftExtensionsVersion7>
     <MicrosoftExtensionsVersion6>[6.0.0,)</MicrosoftExtensionsVersion6>
     <MicrosoftExtensionsVersion5>[5.0.0,)</MicrosoftExtensionsVersion5>
     <CSharpVersion>4.4.0</CSharpVersion>
     <!-- EF Core -->
-    <EntityFrameworkCoreVersion>[9.0.0,)</EntityFrameworkCoreVersion>
+    <EntityFrameworkCoreVersion>[9.0.0,)</EntityFrameworkCoreVersion> <!-- MySqlConnector and Npgsql don't support .NET 10 RC1 yet -->
+    <EntityFrameworkCoreVersion8>[9.0.0,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion8>[8.0.0,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion7>[7.0.20,)</EntityFrameworkCoreVersion7>
     <EntityFrameworkCoreVersion6>[6.0.33,)</EntityFrameworkCoreVersion6>
     <EntityFrameworkCoreVersion5>[5.0.17,)</EntityFrameworkCoreVersion5>
     <EntityFrameworkCoreVersion3>[3.1.32,)</EntityFrameworkCoreVersion3>
     <EntityFrameworkCoreNpgsqlVersion>[9.0.0,)</EntityFrameworkCoreNpgsqlVersion>
+    <EntityFrameworkCoreNpgsqlVersion9>[9.0.0,)</EntityFrameworkCoreNpgsqlVersion9>
     <EntityFrameworkCoreNpgsqlVersion8>[8.0.0,)</EntityFrameworkCoreNpgsqlVersion8>
     <EntityFrameworkCoreNpgsqlVersion7>[7.0.18,)</EntityFrameworkCoreNpgsqlVersion7>
     <EntityFrameworkCoreNpgsqlVersion6>[6.0.29,)</EntityFrameworkCoreNpgsqlVersion6>
     <EntityFrameworkCoreNpgsqlVersion5>[5.0.10,)</EntityFrameworkCoreNpgsqlVersion5>
     <EntityFrameworkCoreNpgsqlVersion3>[3.1.18,)</EntityFrameworkCoreNpgsqlVersion3>
     <MySqlConnectorVersion>[2.4.0,)</MySqlConnectorVersion>
+    <MySqlConnectorVersion9>[2.4.0,)</MySqlConnectorVersion9>
     <MySqlConnectorVersion8>[2.3.7,)</MySqlConnectorVersion8>
     <MySqlConnectorVersion7>[2.2.7,)</MySqlConnectorVersion7>
     <MySqlConnectorVersion6>[2.2.7,)</MySqlConnectorVersion6>
     <MySqlConnectorVersion5>[2.2.7,)</MySqlConnectorVersion5>
     <MySqlConnectorVersion3>[0.69.10,)</MySqlConnectorVersion3>
-    <EntityFrameworkCoreMySqlVersion>[9.0.0-preview.2.efcore.9.0.0,)</EntityFrameworkCoreMySqlVersion>
+    <EntityFrameworkCoreMySqlVersion>[9.0.0,)</EntityFrameworkCoreMySqlVersion>
+    <EntityFrameworkCoreMySqlVersion9>[9.0.0,)</EntityFrameworkCoreMySqlVersion9>
     <EntityFrameworkCoreMySqlVersion8>[8.0.0,)</EntityFrameworkCoreMySqlVersion8>
     <EntityFrameworkCoreMySqlVersion7>[7.0.0,)</EntityFrameworkCoreMySqlVersion7>
     <EntityFrameworkCoreMySqlVersion6>[6.0.3,)</EntityFrameworkCoreMySqlVersion6>
@@ -61,7 +68,7 @@
     <MessagePackVersion>[3.1.3,)</MessagePackVersion>
     <MessagePackVersion2>[2.5.192,)</MessagePackVersion2>
     <!-- Other -->
-    <RedisVersion>[2.8.16,)</RedisVersion>
+    <RedisVersion>[2.9.11,)</RedisVersion>
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>
     <OpenTelemetryVersion>[1.8.1,)</OpenTelemetryVersion>
     <!-- Build & Samples -->

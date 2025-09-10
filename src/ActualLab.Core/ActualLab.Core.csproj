@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks Condition="$(UseMultitargeting)">net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net10.0;net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
     <RootNamespace>ActualLab</RootNamespace>
     <PackageTags>actual_chat actual_lab actual_lab_fusion core</PackageTags>
     <Description>ActualLab.Core is a collection of <!--
@@ -15,19 +15,21 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.HighPerformance" />
     <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="System.Reactive" />
     <PackageReference Include="Ulid" />
     <PackageReference Include="Ulid.MessagePack" />
     <PackageReference Include="ZString" />
   </ItemGroup>
 
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('net10'))">
+    <PackageReference Include="System.Linq.Async" />
+  </ItemGroup>
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
     <PackageReference Include="MemoryPack.Core" />
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">
     <PackageReference Include="MessagePack" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
@@ -35,9 +37,19 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
-    <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.IO.Hashing" />
-    <PackageReference Include="System.Threading.Channels" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
+    <PackageReference Include="MessagePack" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion9)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="$(MicrosoftExtensionsVersion9)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion9)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion9)" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" VersionOverride="$(MicrosoftExtensionsVersion9)" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" VersionOverride="$(MicrosoftExtensionsVersion9)" />
+    <PackageReference Include="System.Collections.Immutable" VersionOverride="$(MicrosoftExtensionsVersion9)" />
+    <PackageReference Include="System.IO.Hashing" VersionOverride="$(MicrosoftExtensionsVersion9)" />
+    <PackageReference Include="System.Threading.Channels" VersionOverride="$(MicrosoftExtensionsVersion9)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
     <PackageReference Include="MessagePack" />
@@ -63,7 +75,7 @@
     <PackageReference Include="System.IO.Hashing" VersionOverride="$(MicrosoftExtensionsVersion8)" /> <!-- Intended! -->
     <PackageReference Include="System.Threading.Channels" VersionOverride="$(MicrosoftExtensionsVersion7)" />
   </ItemGroup>
-  <ItemGroup Condition="!($(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
     <PackageReference Include="MessagePack" VersionOverride="$(MessagePackVersion2)" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" VersionOverride="$(MicrosoftExtensionsVersion6)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="$(MicrosoftExtensionsVersion6)" />

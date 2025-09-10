@@ -21,10 +21,7 @@
   </ItemGroup>
 
   <!-- Other packages -->
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <PackageReference Include="AspNet.Security.OAuth.GitHub" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
@@ -34,8 +31,20 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageReference Include="AspNet.Security.OAuth.GitHub" VersionOverride="$(AspNetCoreVersion9)" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" VersionOverride="$(AspNetCoreVersion9)" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" VersionOverride="$(AspNetCoreVersion9)" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" VersionOverride="$(AspNetCoreVersion9)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" VersionOverride="$(BlazorVersion9)" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion9)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="$(EntityFrameworkCoreVersion9)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" VersionOverride="$(EntityFrameworkCoreVersion9)" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" VersionOverride="$(EntityFrameworkCoreNpgsqlVersion9)" />
+  </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
     <PackageReference Include="AspNet.Security.OAuth.GitHub" VersionOverride="$(AspNetCoreVersion8)" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" VersionOverride="$(AspNetCoreVersion8)" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" VersionOverride="$(AspNetCoreVersion8)" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" VersionOverride="$(AspNetCoreVersion8)" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" VersionOverride="$(BlazorVersion8)" />
@@ -46,6 +55,7 @@
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net7.0'">
     <PackageReference Include="AspNet.Security.OAuth.GitHub" VersionOverride="$(AspNetCoreVersion7)" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" VersionOverride="$(AspNetCoreVersion7)" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" VersionOverride="$(AspNetCoreVersion7)" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" VersionOverride="$(AspNetCoreVersion7)" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" VersionOverride="$(BlazorVersion7)" />

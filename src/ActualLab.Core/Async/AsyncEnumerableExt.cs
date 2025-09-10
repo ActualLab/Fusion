@@ -81,7 +81,10 @@ public static partial class AsyncEnumerableExt
             bool hasMore;
             T item = default!;
             try {
-                hasMore = await enumerator.MoveNextAsync(cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+#pragma warning disable MA0040
+                hasMore = await enumerator.MoveNextAsync().ConfigureAwait(false);
+#pragma warning restore MA0040
                 if (hasMore)
                     item = enumerator.Current;
             }
@@ -107,7 +110,10 @@ public static partial class AsyncEnumerableExt
             bool hasMore;
             T item = default!;
             try {
-                hasMore = await enumerator.MoveNextAsync(cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+#pragma warning disable MA0040
+                hasMore = await enumerator.MoveNextAsync().ConfigureAwait(false);
+#pragma warning restore MA0040
                 if (hasMore)
                     item = enumerator.Current;
             }

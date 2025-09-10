@@ -23,9 +23,13 @@
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="$(EntityFrameworkCoreVersion9)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" VersionOverride="$(EntityFrameworkCoreVersion9)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
     <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="$(EntityFrameworkCoreVersion8)" />

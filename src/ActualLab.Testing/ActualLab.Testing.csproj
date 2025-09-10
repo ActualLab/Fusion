@@ -13,6 +13,16 @@
     <NoWarn>$(NoWarn);IL2026</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="Xunit.DependencyInjection.Logging" />
+  </ItemGroup>
+
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('net10'))">
+    <PackageReference Include="System.Net.Http" />
+  </ItemGroup>
   <ItemGroup Condition="!$(TargetFramework.StartsWith('netstandard2.0'))">
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
@@ -22,14 +32,6 @@
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <Compile Remove="ApplicationPartsLogger.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="AwesomeAssertions" />
-    <PackageReference Include="System.CommandLine" />
-    <PackageReference Include="System.Net.Http" />
-    <PackageReference Include="xunit" />
-    <PackageReference Include="Xunit.DependencyInjection.Logging" />
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">

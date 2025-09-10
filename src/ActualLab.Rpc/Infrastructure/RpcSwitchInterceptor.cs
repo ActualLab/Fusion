@@ -39,9 +39,11 @@ public class RpcSwitchInterceptor : RpcInterceptor
             Task resultTask;
             if (peer.Ref.CanBeRerouted) {
                 using var scope = RpcOutboundContext.UseOrActivateNew();
+#pragma warning disable CA2025
                 resultTask = InvokeWithRerouting(
                     rpcMethodDef, scope.Context, peer,
                     localCallAsyncInvoker, remoteCallAsyncInvoker, invocation);
+#pragma warning restore CA2025
             }
             else if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                 if (localCallAsyncInvoker is null)

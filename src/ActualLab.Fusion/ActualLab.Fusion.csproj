@@ -14,8 +14,13 @@
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">
+    <!-- Unnecessary, it's a part of .NET Runtime:
     <PackageReference Include="System.Text.Json" />
+    -->
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
+    <PackageReference Include="System.Text.Json" VersionOverride="$(MicrosoftExtensionsVersion9)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
     <PackageReference Include="System.Text.Json" VersionOverride="$(MicrosoftExtensionsVersion8)" />
@@ -23,7 +28,7 @@
   <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
     <PackageReference Include="System.Text.Json" VersionOverride="$(MicrosoftExtensionsVersion7)" />
   </ItemGroup>
-  <ItemGroup Condition="!($(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
     <PackageReference Include="System.Text.Json" VersionOverride="$(MicrosoftExtensionsVersion6)" />
   </ItemGroup>
 
