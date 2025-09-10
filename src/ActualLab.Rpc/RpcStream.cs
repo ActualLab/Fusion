@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.ExceptionServices;
 using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization.Internal;
@@ -12,6 +13,10 @@ namespace ActualLab.Rpc;
 [DataContract]
 public abstract partial class RpcStream : IRpcObject
 {
+#pragma warning disable CA2201
+    // We never throw this error, so it's fine to share its single instance here
+    protected static readonly Exception NoMoreItemsTag = new();
+#pragma warning restore CA2201
     protected static readonly ConcurrentDictionary<object, Unit> ActiveObjects = new();
     protected static readonly UnboundedChannelOptions RemoteChannelOptions = new() {
         SingleReader = true,
@@ -319,7 +324,6 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     {
         private readonly ChannelReader<T> _reader;
         private long _nextIndex;
-        private bool _isEnded;
         private Result<T> _current;
         private readonly RpcStream<T> _stream;
         private readonly CancellationToken _cancellationToken;
@@ -332,9 +336,16 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
             ActiveObjects.TryAdd(this, default);
         }
 
-        public T Current => _nextIndex != 0
-            ? _current.Value
-            : throw new InvalidOperationException($"{nameof(MoveNextAsync)} should be called first.");
+        public T Current {
+            get {
+                if (_nextIndex == 0)
+                    throw new InvalidOperationException($"{nameof(CompleteMoveNextAsync)} should be called first.");
+                if (_current.HasError)
+                    throw new InvalidOperationException($"Last {nameof(CompleteMoveNextAsync)} returned false or failed.");
+
+                return _current.ValueOrDefault!;
+            }
+        }
 
         public ValueTask DisposeAsync()
         {
@@ -347,49 +358,74 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 
         public ValueTask<bool> MoveNextAsync()
         {
-            if (_isEnded)
-                return default;
+            // This method shouldn't throw no matter what,
+            // but should return a faulted ValueTask<bool>
+            // when the stream terminates with an error.
 
-            var ackTask = _stream.MaybeSendAckFromLock(_nextIndex);
+            if (_current.Error is { } error)
+                return GetMoveNextValueTask(error);
+
             try {
-                if (_reader.TryRead(out var current))
-                    _current = current;
-                else
-                    return MoveNext(ackTask);
+                if (!_reader.TryRead(out var current))
+                    return CompleteMoveNextAsync(); // Never throws directly (i.e. only via ValueTask.Result)
+
+                _current = current;
             }
             catch (Exception e) {
                 _current = Result.NewError<T>(e);
-                _isEnded = true;
             }
 
-            _nextIndex++;
+            var ackTask = _stream.MaybeSendAckFromLock(_nextIndex++);
             return ackTask.IsCompleted
+                ? GetMoveNextValueTask(_current.Error)
+                : AwaitAndGetMoveNextValueTask(ackTask, _current.Error);
+        }
+
+        // Private methods
+
+        private static ValueTask<bool> GetMoveNextValueTask(Exception? error)
+            => error is null
                 ? ValueTaskExt.TrueTask
-                : new ValueTask<bool>(ackTask.ContinueWith(_ => true, TaskScheduler.Default));
+                : ReferenceEquals(error, NoMoreItemsTag)
+                    ? default
+                    : ValueTaskExt.FromException<bool>(error);
 
-            async ValueTask<bool> MoveNext(Task taskToAwait) {
-                if (!taskToAwait.IsCompleted)
-                    await taskToAwait.SilentAwait(false);
-                try {
-                    if (!await _reader.WaitToReadAsync(_cancellationToken).ConfigureAwait(false)) {
-                        _nextIndex++;
-                        _isEnded = true;
-                        return false;
-                    }
-                    if (!_reader.TryRead(out var current1))
-                        throw Errors.InternalError("Couldn't read after successful WaitToReadAsync call.");
+        private static async ValueTask<bool> AwaitAndGetMoveNextValueTask(Task taskToAwait, Exception? error)
+        {
+            await taskToAwait.SilentAwait(false);
+            if (error is null)
+                return true;
 
-                    await _stream.MaybeSendAckFromLock(_nextIndex).ConfigureAwait(false);
-                    _current = current1;
+            if (!ReferenceEquals(error, NoMoreItemsTag))
+                ExceptionDispatchInfo.Capture(error).Throw(); // Always throws
+            return false;
+        }
+
+        private async ValueTask<bool> CompleteMoveNextAsync()
+        {
+            try {
+                var ackTask = _stream.MaybeSendAckFromLock(_nextIndex);
+                if (!ackTask.IsCompleted)
+                    await ackTask.SilentAwait(false);
+
+                if (!await _reader.WaitToReadAsync(_cancellationToken).ConfigureAwait(false)) {
+                    _current = Result.NewError<T>(NoMoreItemsTag);
                     _nextIndex++;
-                    return true;
+                    return false;
                 }
-                catch (Exception e) {
-                    _current = Result.NewError<T>(e);
-                    _nextIndex++;
-                    _isEnded = true;
-                    return true;
-                }
+
+                if (!_reader.TryRead(out var current1))
+                    throw Errors.InternalError("Couldn't read after successful WaitToReadAsync call.");
+
+                // await _stream.MaybeSendAckFromLock(_nextIndex).ConfigureAwait(false);
+                _current = current1;
+                _nextIndex++;
+                return true;
+            }
+            catch (Exception e) {
+                _current = Result.NewError<T>(e);
+                _nextIndex++;
+                throw;
             }
         }
     }
