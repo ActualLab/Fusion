@@ -272,11 +272,15 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [InlineData("mempack2c")]
     [InlineData("mempack3")]
     [InlineData("mempack3c")]
+    [InlineData("mempack4")]
+    [InlineData("mempack4c")]
     [InlineData("msgpack1")]
     [InlineData("msgpack2")]
     [InlineData("msgpack2c")]
     [InlineData("msgpack3")]
     [InlineData("msgpack3c")]
+    [InlineData("msgpack4")]
+    [InlineData("msgpack4c")]
     public async Task StreamTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
