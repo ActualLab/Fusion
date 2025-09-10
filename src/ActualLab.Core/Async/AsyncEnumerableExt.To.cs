@@ -18,7 +18,6 @@ public static partial class AsyncEnumerableExt
         while (true) {
             var hasMore = false;
             try {
-                cancellationToken.ThrowIfCancellationRequested();
 #pragma warning disable MA0040
                 hasMore = await enumerator.MoveNextAsync().ConfigureAwait(false);
 #pragma warning restore MA0040

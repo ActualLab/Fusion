@@ -81,7 +81,6 @@ public static partial class AsyncEnumerableExt
             bool hasMore;
             T item = default!;
             try {
-                cancellationToken.ThrowIfCancellationRequested();
 #pragma warning disable MA0040
                 hasMore = await enumerator.MoveNextAsync().ConfigureAwait(false);
 #pragma warning restore MA0040
@@ -110,7 +109,6 @@ public static partial class AsyncEnumerableExt
             bool hasMore;
             T item = default!;
             try {
-                cancellationToken.ThrowIfCancellationRequested();
 #pragma warning disable MA0040
                 hasMore = await enumerator.MoveNextAsync().ConfigureAwait(false);
 #pragma warning restore MA0040
@@ -124,20 +122,6 @@ public static partial class AsyncEnumerableExt
                 yield return item;
             else
                 yield break;
-        }
-    }
-
-    public static async IAsyncEnumerable<T> EnforceCancellation<T>(
-        this IAsyncEnumerable<T> source,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        var enumerator = source.GetAsyncEnumerator(cancellationToken);
-        try {
-            while (await enumerator.MoveNextAsync().AsTask().WaitAsync(cancellationToken).ConfigureAwait(false))
-                yield return enumerator.Current;
-        }
-        finally {
-            await enumerator.DisposeAsync().SilentAwait(false);
         }
     }
 }
