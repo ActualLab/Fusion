@@ -284,17 +284,12 @@ public sealed class WebSocketChannel<T> : Channel<T>
     [MethodImpl(MethodImplOptions.NoInlining)]
     private async ValueTask FlushFrame()
     {
-        var segment = _writeBuffer.WrittenArraySegment;
-        if (segment.Count == 0) // We can't get here (see the calls to this method), but just in case...
+        var memory = _writeBuffer.WrittenMemory;
+        if (memory.Length == 0) // We can't get here (see the calls to this method), but just in case...
             return;
 
-        _meters.OutgoingFrameSizeHistogram.Record(segment.Count);
-        var sendTask = WebSocket.SendAsync(segment, MessageType, true, default);
-        var completedTask = await Task.WhenAny(sendTask, WhenClosing).ConfigureAwait(false);
-        if (!ReferenceEquals(completedTask, sendTask))
-            StopToken.ThrowIfCancellationRequested();
-        else if (!sendTask.IsCompletedSuccessfully)
-            await sendTask.ConfigureAwait(false);
+        await WebSocket.SendAsync(memory, MessageType, endOfMessage: true, StopToken).ConfigureAwait(false);
+        _meters.OutgoingFrameSizeHistogram.Record(memory.Length);
 
         if (MustRenewBuffer(ref _writeBufferResetCounter))
             _writeBuffer.Renew(Settings.MinWriteBufferSize, _retainedBufferSize);
