@@ -65,6 +65,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     public readonly bool RequiresItemSize;
     public readonly ILogger? Log;
     public readonly ILogger? ErrorLog;
+    public readonly Task WhenClosing; // Throws OperationCanceledException
     public readonly Task WhenReadCompleted;
     public readonly Task WhenWriteCompleted;
     public readonly Task WhenClosed;
@@ -112,6 +113,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         Writer = _writeChannel.Writer;
 
         using var _ = ExecutionContextExt.TrySuppressFlow();
+        WhenClosing = TaskExt.NeverEnding(StopToken);
         WhenReadCompleted = Task.Run(() => RunReader(StopToken), default);
         WhenWriteCompleted = Task.Run(() => RunWriter(StopToken), default);
         WhenClosed = Task.Run(async () => {
@@ -202,11 +204,11 @@ public sealed class WebSocketChannel<T> : Channel<T>
             while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false)) {
                 while (reader.TryRead(out var item)) {
                     if (trySerialize.Invoke(item, _writeBuffer) && _writeBuffer.WrittenCount >= _writeFrameSize)
-                        await FlushFrame(cancellationToken).ConfigureAwait(false);
+                        await FlushFrame().ConfigureAwait(false);
                 }
                 // Final flush before await
                 if (_writeBuffer.WrittenCount != 0)
-                    await FlushFrame(cancellationToken).ConfigureAwait(false);
+                    await FlushFrame().ConfigureAwait(false);
             }
         }
         finally {
@@ -230,7 +232,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                     // Flush is required right now.
                     // We aren't going to check WaitToReadAsync, coz most likely it's going to await.
                     if (_writeBuffer.WrittenCount != 0)
-                        await FlushFrame(cancellationToken).ConfigureAwait(false);
+                        await FlushFrame().ConfigureAwait(false);
                     whenMustFlush = null;
                 }
                 else {
@@ -261,7 +263,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
                     continue; // Nothing is written
 
                 if (_writeBuffer.WrittenCount >= _writeFrameSize) {
-                    await FlushFrame(cancellationToken).ConfigureAwait(false);
+                    await FlushFrame().ConfigureAwait(false);
                     // We just "crossed" _writeFrameSize boundary, so the flush we just made
                     // flushed everything except maybe the most recent item.
                     // We can safely "declare" that if any flush was expected before that moment,
@@ -276,20 +278,23 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
         // Final flush
         if (_writeBuffer.WrittenCount != 0)
-            await FlushFrame(cancellationToken).ConfigureAwait(false);
+            await FlushFrame().ConfigureAwait(false);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private async ValueTask FlushFrame(CancellationToken cancellationToken)
+    private async ValueTask FlushFrame()
     {
-        var memory = _writeBuffer.WrittenMemory;
-        if (memory.Length == 0) // We can't get here (see the calls to this method), but just in case...
+        var segment = _writeBuffer.WrittenArraySegment;
+        if (segment.Count == 0) // We can't get here (see the calls to this method), but just in case...
             return;
 
-        await WebSocket
-            .SendAsync(memory, MessageType, true, cancellationToken)
-            .ConfigureAwait(false);
-        _meters.OutgoingFrameSizeHistogram.Record(memory.Length);
+        _meters.OutgoingFrameSizeHistogram.Record(segment.Count);
+        var sendTask = WebSocket.SendAsync(segment, MessageType, true, default);
+        var completedTask = await Task.WhenAny(sendTask, WhenClosing).ConfigureAwait(false);
+        if (!ReferenceEquals(completedTask, sendTask))
+            StopToken.ThrowIfCancellationRequested();
+        else if (!sendTask.IsCompletedSuccessfully)
+            await sendTask.ConfigureAwait(false);
 
         if (MustRenewBuffer(ref _writeBufferResetCounter))
             _writeBuffer.Renew(Settings.MinWriteBufferSize, _retainedBufferSize);

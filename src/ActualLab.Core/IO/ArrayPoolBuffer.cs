@@ -45,6 +45,11 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
         get => _array.AsSpan(0, _position);
     }
 
+    public ArraySegment<T> WrittenArraySegment {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(_array, 0, _position);
+    }
+
     /// <inheritdoc/>
     public int WrittenCount {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
