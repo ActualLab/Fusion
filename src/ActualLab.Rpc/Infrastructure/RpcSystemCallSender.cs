@@ -83,7 +83,9 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
         RpcHeader[]? headers = null)
     {
         try {
+#pragma warning disable MA0100
             var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
+            using var _ = context.Activate();
             var call = context.PrepareCallForSendNoWait(OkMethodDef, ArgumentList.New(result))!;
             var inboundHash = inboundCall.Context.Message.Headers.TryGet(WellKnownRpcHeaders.Hash);
             if (inboundHash is null)
@@ -93,6 +95,7 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
             return string.Equals(hash, inboundHash, StringComparison.Ordinal)
                 ? Match(peer, inboundCall.Id, headers)
                 : call.SendNoWait(message);
+#pragma warning restore MA0100
         }
         catch (Exception error) {
             Log.LogError(error, "Failed to send Ok response for call #{CallId}", inboundCall.Id);
@@ -170,8 +173,8 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     {
         var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
         using var _ = context.Activate();
-        var call = context.PrepareCallForSendNoWait(ItemMethodDef, ArgumentList.New(index, item))!;
 #pragma warning disable MA0100
+        var call = context.PrepareCallForSendNoWait(ItemMethodDef, ArgumentList.New(index, item))!;
         return call.SendNoWait(true);
 #pragma warning restore MA0100
     }
@@ -180,12 +183,12 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     {
         var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
         using var _ = context.Activate();
+#pragma warning disable MA0100
         var itemType = typeof(TItem);
         var arguments = itemType.IsAbstract || itemType == typeof(object)
             ? ArgumentList.New(index, (object)items) // This ensures the serialization of this type will be polymorphic
             : ArgumentList.New(index, items);
         var call = context.PrepareCallForSendNoWait(BatchMethodDef, arguments)!;
-#pragma warning disable MA0100
         return call.SendNoWait(true);
 #pragma warning restore MA0100
     }
