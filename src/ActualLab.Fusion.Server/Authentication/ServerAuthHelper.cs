@@ -41,7 +41,9 @@ public class ServerAuthHelper : IHasServices
     public ILogger Log { get; }
     public Session Session => SessionResolver.Session;
 
+#pragma warning disable CA1721 // Confusing with GetSchemas
     protected string? Schemas {
+#pragma warning restore CA1721
         get;
         set => Interlocked.Exchange(ref field, value);
     }
