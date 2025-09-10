@@ -25,7 +25,13 @@ public readonly partial record struct CpuTimestamp(
 
     public static CpuTimestamp Now {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => new(Constants.QueryPerformanceCounter.Invoke());
+        get {
+#if NET9_0_OR_GREATER
+            return new CpuTimestamp(Stopwatch.GetTimestamp());
+#else
+            return new CpuTimestamp(Constants.GetTimestamp.Invoke());
+#endif
+        }
     }
 
     [IgnoreDataMember, IgnoreMember]
@@ -63,12 +69,16 @@ public readonly partial record struct CpuTimestamp(
         public static readonly long TickFrequency;
         // ReSharper disable once MemberHidesStaticFromOuterClass
         public static readonly double TickDuration;
-        public static readonly Func<long> QueryPerformanceCounter;
+#if !NET9_0_OR_GREATER
+        public static readonly Func<long> GetTimestamp;
+#endif
 
         static Constants()
         {
+#if NET9_0_OR_GREATER
+            TickFrequency = Stopwatch.Frequency;
+#else
             if (RuntimeCodegen.Mode != RuntimeCodegenMode.DynamicMethods) {
-                // AOT
                 TickFrequency = Stopwatch.Frequency;
                 QueryPerformanceCounter = Stopwatch.GetTimestamp;
             }
@@ -89,6 +99,7 @@ public readonly partial record struct CpuTimestamp(
                     QueryPerformanceCounter = Stopwatch.GetTimestamp;
                 }
             }
+#endif
             TickDuration = 1d / TickFrequency;
         }
     }
