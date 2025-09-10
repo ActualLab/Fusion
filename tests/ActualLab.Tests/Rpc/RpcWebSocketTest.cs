@@ -258,6 +258,7 @@ public class RpcWebSocketTest : RpcTestBase
 
         var stream3 = await client.StreamTuples(10, 5);
         (await stream3.Take(5).CountAsync()).Should().Be(5);
+
         var stream3f = await client.StreamTuples(10, 5);
         try {
             await stream3f.CountAsync();
