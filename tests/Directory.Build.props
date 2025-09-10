@@ -4,7 +4,7 @@
 
   <!-- Defaults for test projects -->
   <PropertyGroup>
-    <TargetFrameworks Condition="$(UseMultitargeting)">net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;net48;net471</TargetFrameworks>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net10.0;net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;net48;net471</TargetFrameworks>
     <!-- PolySharp -->
     <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
   </PropertyGroup>

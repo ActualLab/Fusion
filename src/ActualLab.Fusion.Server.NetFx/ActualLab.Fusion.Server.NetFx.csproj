@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks Condition="$(UseMultitargeting)">net9.0;net8.0;net7.0;net6.0;net5.0;net48;net471</TargetFrameworks>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net10.0;net9.0;net8.0;net7.0;net6.0;net5.0;net48;net471</TargetFrameworks>
     <RootNamespace>ActualLab.Fusion.Server</RootNamespace>
     <AssemblyName>ActualLab.Fusion.Server.NetFx</AssemblyName>
     <PackageTags>actual_chat actual_lab actual_lab_fusion server netfx</PackageTags>
