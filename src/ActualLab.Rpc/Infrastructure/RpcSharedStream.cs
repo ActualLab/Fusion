@@ -172,7 +172,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                     buffer.PushTail(item);
                 }
 
-                // 3.2. Add all buffered items to batcher
+                // 3.2. Add all buffered items to the batcher
                 while (index < maxIndex && bufferIndex < buffer.Count) {
                     item = buffer[bufferIndex++];
                     await _batcher.Add(index++, item).ConfigureAwait(false);
