@@ -26,7 +26,7 @@ public readonly partial record struct CpuTimestamp(
     public static CpuTimestamp Now {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
-#if NET5_0_OR_GREATER
+#if NET7_0_OR_GREATER
             return new CpuTimestamp(Stopwatch.GetTimestamp());
 #else
             return new CpuTimestamp(Constants.GetTimestamp.Invoke());
@@ -69,13 +69,13 @@ public readonly partial record struct CpuTimestamp(
         public static readonly long TickFrequency;
         // ReSharper disable once MemberHidesStaticFromOuterClass
         public static readonly double TickDuration;
-#if !NET5_0_OR_GREATER
+#if !NET7_0_OR_GREATER
         public static readonly Func<long> GetTimestamp;
 #endif
 
         static Constants()
         {
-#if NET5_0_OR_GREATER
+#if NET7_0_OR_GREATER
             TickFrequency = Stopwatch.Frequency;
 #else
             if (RuntimeCodegen.Mode != RuntimeCodegenMode.DynamicMethods) {
