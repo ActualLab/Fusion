@@ -63,16 +63,16 @@ public static class CommanderExt
 
     // Nested types
 
-    public sealed class TypedCallFactory<TResult> : GenericInstanceFactory, IGenericInstanceFactory<TResult>
+    public sealed class TypedCallFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
-        public static async Task<TResult> TypedCall(
+        public static async Task<T> TypedCall(
             ICommander commander,
             ICommand command,
             bool isOutermost,
             CancellationToken cancellationToken = default)
         {
             var context = await commander.Run(command, isOutermost, cancellationToken).ConfigureAwait(false);
-            var typedContext = (CommandContext<TResult>)context;
+            var typedContext = (CommandContext<T>)context;
             return await typedContext.ResultSource.Task.ConfigureAwait(false);
         }
 
