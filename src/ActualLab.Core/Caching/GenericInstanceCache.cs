@@ -51,8 +51,8 @@ public static class GenericInstanceCache
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume GenericInstanceFactory descendants' methods are preserved.")]
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume GenericInstanceFactory descendants' methods are preserved.")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume GenericInstanceFactory descendants' methods are preserved.")]
-    public static object? Get(Type factoryType, Type? argType1, Type? argType2) =>
-        Cache2.GetOrAdd((factoryType, argType1, argType2),
+    public static object? Get(Type factoryType, Type? argType1, Type? argType2)
+        => Cache2.GetOrAdd((factoryType, argType1, argType2),
             static key => {
                 var (factoryType, argType1, argType2) = key;
                 if (argType1 is null || argType1 == typeof(void))
