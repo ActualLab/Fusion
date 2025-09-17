@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Linq.Expressions;
 using ActualLab.Rpc.Trimming;
 
 namespace ActualLab.CommandR.Trimming;
@@ -24,5 +25,6 @@ public class CommanderProxyCodeKeeper : RpcProxyCodeKeeper
 
         Keep<CommandContext<TUnwrapped>>();
         Keep<CommanderExt.TypedCallFactory<TUnwrapped>>();
+        Keep<Expression<Func<ICommander, ICommand, bool, CommandContext<string>>>>();
     }
 }
