@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Collections.Fixed;
 
@@ -10,6 +10,11 @@ public struct FixedArray1<T> : IEquatable<FixedArray1<T>>
 {
 #if !NETSTANDARD2_0
     private T _item0;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -36,6 +41,11 @@ public struct FixedArray1<T> : IEquatable<FixedArray1<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -71,28 +81,31 @@ public struct FixedArray1<T> : IEquatable<FixedArray1<T>>
         => obj is FixedArray1<T> other && Equals(other);
 
     public bool Equals(FixedArray1<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -106,6 +119,15 @@ public struct FixedArray2<T> : IEquatable<FixedArray2<T>>
 #if !NETSTANDARD2_0
     private T _item0;
     private T _item1;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -132,6 +154,15 @@ public struct FixedArray2<T> : IEquatable<FixedArray2<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -167,28 +198,33 @@ public struct FixedArray2<T> : IEquatable<FixedArray2<T>>
         => obj is FixedArray2<T> other && Equals(other);
 
     public bool Equals(FixedArray2<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -203,6 +239,19 @@ public struct FixedArray3<T> : IEquatable<FixedArray3<T>>
     private T _item0;
     private T _item1;
     private T _item2;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -229,6 +278,19 @@ public struct FixedArray3<T> : IEquatable<FixedArray3<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -264,28 +326,35 @@ public struct FixedArray3<T> : IEquatable<FixedArray3<T>>
         => obj is FixedArray3<T> other && Equals(other);
 
     public bool Equals(FixedArray3<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -301,6 +370,23 @@ public struct FixedArray4<T> : IEquatable<FixedArray4<T>>
     private T _item1;
     private T _item2;
     private T _item3;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -327,6 +413,23 @@ public struct FixedArray4<T> : IEquatable<FixedArray4<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -362,28 +465,37 @@ public struct FixedArray4<T> : IEquatable<FixedArray4<T>>
         => obj is FixedArray4<T> other && Equals(other);
 
     public bool Equals(FixedArray4<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -400,6 +512,27 @@ public struct FixedArray5<T> : IEquatable<FixedArray5<T>>
     private T _item2;
     private T _item3;
     private T _item4;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -426,6 +559,27 @@ public struct FixedArray5<T> : IEquatable<FixedArray5<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -461,28 +615,39 @@ public struct FixedArray5<T> : IEquatable<FixedArray5<T>>
         => obj is FixedArray5<T> other && Equals(other);
 
     public bool Equals(FixedArray5<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -500,6 +665,31 @@ public struct FixedArray6<T> : IEquatable<FixedArray6<T>>
     private T _item3;
     private T _item4;
     private T _item5;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -526,6 +716,31 @@ public struct FixedArray6<T> : IEquatable<FixedArray6<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[5];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -561,28 +776,41 @@ public struct FixedArray6<T> : IEquatable<FixedArray6<T>>
         => obj is FixedArray6<T> other && Equals(other);
 
     public bool Equals(FixedArray6<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            && comparer.Equals(_item5, other._item5)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item5?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -601,6 +829,35 @@ public struct FixedArray7<T> : IEquatable<FixedArray7<T>>
     private T _item4;
     private T _item5;
     private T _item6;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -627,6 +884,35 @@ public struct FixedArray7<T> : IEquatable<FixedArray7<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[5];
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[6];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -662,28 +948,43 @@ public struct FixedArray7<T> : IEquatable<FixedArray7<T>>
         => obj is FixedArray7<T> other && Equals(other);
 
     public bool Equals(FixedArray7<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            && comparer.Equals(_item5, other._item5)
+            && comparer.Equals(_item6, other._item6)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item5?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item6?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -703,6 +1004,39 @@ public struct FixedArray8<T> : IEquatable<FixedArray8<T>>
     private T _item5;
     private T _item6;
     private T _item7;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -729,6 +1063,39 @@ public struct FixedArray8<T> : IEquatable<FixedArray8<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[5];
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[6];
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[7];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -764,28 +1131,45 @@ public struct FixedArray8<T> : IEquatable<FixedArray8<T>>
         => obj is FixedArray8<T> other && Equals(other);
 
     public bool Equals(FixedArray8<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            && comparer.Equals(_item5, other._item5)
+            && comparer.Equals(_item6, other._item6)
+            && comparer.Equals(_item7, other._item7)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item5?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item6?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item7?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -806,6 +1190,43 @@ public struct FixedArray9<T> : IEquatable<FixedArray9<T>>
     private T _item6;
     private T _item7;
     private T _item8;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -832,6 +1253,43 @@ public struct FixedArray9<T> : IEquatable<FixedArray9<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[5];
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[6];
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[7];
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[8];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -867,28 +1325,47 @@ public struct FixedArray9<T> : IEquatable<FixedArray9<T>>
         => obj is FixedArray9<T> other && Equals(other);
 
     public bool Equals(FixedArray9<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            && comparer.Equals(_item5, other._item5)
+            && comparer.Equals(_item6, other._item6)
+            && comparer.Equals(_item7, other._item7)
+            && comparer.Equals(_item8, other._item8)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item5?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item6?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item7?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item8?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -910,6 +1387,47 @@ public struct FixedArray10<T> : IEquatable<FixedArray10<T>>
     private T _item7;
     private T _item8;
     private T _item9;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item9;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -936,6 +1454,47 @@ public struct FixedArray10<T> : IEquatable<FixedArray10<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[5];
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[6];
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[7];
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[8];
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[9];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -971,28 +1530,49 @@ public struct FixedArray10<T> : IEquatable<FixedArray10<T>>
         => obj is FixedArray10<T> other && Equals(other);
 
     public bool Equals(FixedArray10<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            && comparer.Equals(_item5, other._item5)
+            && comparer.Equals(_item6, other._item6)
+            && comparer.Equals(_item7, other._item7)
+            && comparer.Equals(_item8, other._item8)
+            && comparer.Equals(_item9, other._item9)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item5?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item6?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item7?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item8?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item9?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -1015,6 +1595,51 @@ public struct FixedArray11<T> : IEquatable<FixedArray11<T>>
     private T _item8;
     private T _item9;
     private T _item10;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item9;
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item10;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1041,6 +1666,51 @@ public struct FixedArray11<T> : IEquatable<FixedArray11<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[5];
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[6];
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[7];
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[8];
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[9];
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[10];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1076,28 +1746,51 @@ public struct FixedArray11<T> : IEquatable<FixedArray11<T>>
         => obj is FixedArray11<T> other && Equals(other);
 
     public bool Equals(FixedArray11<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            && comparer.Equals(_item5, other._item5)
+            && comparer.Equals(_item6, other._item6)
+            && comparer.Equals(_item7, other._item7)
+            && comparer.Equals(_item8, other._item8)
+            && comparer.Equals(_item9, other._item9)
+            && comparer.Equals(_item10, other._item10)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item5?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item6?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item7?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item8?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item9?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item10?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -1121,6 +1814,55 @@ public struct FixedArray12<T> : IEquatable<FixedArray12<T>>
     private T _item9;
     private T _item10;
     private T _item11;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item9;
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item10;
+    }
+    public T Item11 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item11;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1147,6 +1889,55 @@ public struct FixedArray12<T> : IEquatable<FixedArray12<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[5];
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[6];
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[7];
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[8];
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[9];
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[10];
+    }
+    public T Item11 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[11];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1182,28 +1973,53 @@ public struct FixedArray12<T> : IEquatable<FixedArray12<T>>
         => obj is FixedArray12<T> other && Equals(other);
 
     public bool Equals(FixedArray12<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            && comparer.Equals(_item5, other._item5)
+            && comparer.Equals(_item6, other._item6)
+            && comparer.Equals(_item7, other._item7)
+            && comparer.Equals(_item8, other._item8)
+            && comparer.Equals(_item9, other._item9)
+            && comparer.Equals(_item10, other._item10)
+            && comparer.Equals(_item11, other._item11)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item5?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item6?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item7?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item8?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item9?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item10?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item11?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -1228,6 +2044,59 @@ public struct FixedArray13<T> : IEquatable<FixedArray13<T>>
     private T _item10;
     private T _item11;
     private T _item12;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item9;
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item10;
+    }
+    public T Item11 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item11;
+    }
+    public T Item12 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item12;
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1254,6 +2123,59 @@ public struct FixedArray13<T> : IEquatable<FixedArray13<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[5];
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[6];
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[7];
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[8];
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[9];
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[10];
+    }
+    public T Item11 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[11];
+    }
+    public T Item12 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[12];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1289,28 +2211,55 @@ public struct FixedArray13<T> : IEquatable<FixedArray13<T>>
         => obj is FixedArray13<T> other && Equals(other);
 
     public bool Equals(FixedArray13<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            && comparer.Equals(_item5, other._item5)
+            && comparer.Equals(_item6, other._item6)
+            && comparer.Equals(_item7, other._item7)
+            && comparer.Equals(_item8, other._item8)
+            && comparer.Equals(_item9, other._item9)
+            && comparer.Equals(_item10, other._item10)
+            && comparer.Equals(_item11, other._item11)
+            && comparer.Equals(_item12, other._item12)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item5?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item6?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item7?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item8?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item9?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item10?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item11?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item12?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -1337,6 +2286,63 @@ public struct FixedArray14<T> : IEquatable<FixedArray14<T>>
     private T _item12;
     private T _item13;
 
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item9;
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item10;
+    }
+    public T Item11 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item11;
+    }
+    public T Item12 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item12;
+    }
+    public T Item13 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item13;
+    }
+
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => MemoryMarshal.CreateSpan(ref _item0, 14);
@@ -1362,6 +2368,63 @@ public struct FixedArray14<T> : IEquatable<FixedArray14<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[5];
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[6];
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[7];
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[8];
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[9];
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[10];
+    }
+    public T Item11 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[11];
+    }
+    public T Item12 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[12];
+    }
+    public T Item13 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[13];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1397,28 +2460,57 @@ public struct FixedArray14<T> : IEquatable<FixedArray14<T>>
         => obj is FixedArray14<T> other && Equals(other);
 
     public bool Equals(FixedArray14<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            && comparer.Equals(_item5, other._item5)
+            && comparer.Equals(_item6, other._item6)
+            && comparer.Equals(_item7, other._item7)
+            && comparer.Equals(_item8, other._item8)
+            && comparer.Equals(_item9, other._item9)
+            && comparer.Equals(_item10, other._item10)
+            && comparer.Equals(_item11, other._item11)
+            && comparer.Equals(_item12, other._item12)
+            && comparer.Equals(_item13, other._item13)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item5?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item6?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item7?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item8?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item9?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item10?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item11?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item12?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item13?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -1446,6 +2538,67 @@ public struct FixedArray15<T> : IEquatable<FixedArray15<T>>
     private T _item13;
     private T _item14;
 
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item9;
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item10;
+    }
+    public T Item11 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item11;
+    }
+    public T Item12 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item12;
+    }
+    public T Item13 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item13;
+    }
+    public T Item14 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item14;
+    }
+
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => MemoryMarshal.CreateSpan(ref _item0, 15);
@@ -1471,6 +2624,67 @@ public struct FixedArray15<T> : IEquatable<FixedArray15<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[5];
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[6];
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[7];
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[8];
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[9];
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[10];
+    }
+    public T Item11 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[11];
+    }
+    public T Item12 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[12];
+    }
+    public T Item13 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[13];
+    }
+    public T Item14 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[14];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1506,28 +2720,59 @@ public struct FixedArray15<T> : IEquatable<FixedArray15<T>>
         => obj is FixedArray15<T> other && Equals(other);
 
     public bool Equals(FixedArray15<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            && comparer.Equals(_item5, other._item5)
+            && comparer.Equals(_item6, other._item6)
+            && comparer.Equals(_item7, other._item7)
+            && comparer.Equals(_item8, other._item8)
+            && comparer.Equals(_item9, other._item9)
+            && comparer.Equals(_item10, other._item10)
+            && comparer.Equals(_item11, other._item11)
+            && comparer.Equals(_item12, other._item12)
+            && comparer.Equals(_item13, other._item13)
+            && comparer.Equals(_item14, other._item14)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item5?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item6?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item7?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item8?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item9?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item10?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item11?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item12?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item13?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item14?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 
@@ -1556,6 +2801,71 @@ public struct FixedArray16<T> : IEquatable<FixedArray16<T>>
     private T _item14;
     private T _item15;
 
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item0;
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item1;
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item2;
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item3;
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item4;
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item5;
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item6;
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item7;
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item8;
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item9;
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item10;
+    }
+    public T Item11 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item11;
+    }
+    public T Item12 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item12;
+    }
+    public T Item13 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item13;
+    }
+    public T Item14 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item14;
+    }
+    public T Item15 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item15;
+    }
+
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => MemoryMarshal.CreateSpan(ref _item0, 16);
@@ -1581,6 +2891,71 @@ public struct FixedArray16<T> : IEquatable<FixedArray16<T>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+    public T Item0 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[0];
+    }
+    public T Item1 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[1];
+    }
+    public T Item2 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[2];
+    }
+    public T Item3 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[3];
+    }
+    public T Item4 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[4];
+    }
+    public T Item5 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[5];
+    }
+    public T Item6 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[6];
+    }
+    public T Item7 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[7];
+    }
+    public T Item8 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[8];
+    }
+    public T Item9 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[9];
+    }
+    public T Item10 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[10];
+    }
+    public T Item11 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[11];
+    }
+    public T Item12 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[12];
+    }
+    public T Item13 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[13];
+    }
+    public T Item14 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[14];
+    }
+    public T Item15 {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[15];
+    }
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1616,28 +2991,61 @@ public struct FixedArray16<T> : IEquatable<FixedArray16<T>>
         => obj is FixedArray16<T> other && Equals(other);
 
     public bool Equals(FixedArray16<T> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+            && comparer.Equals(_item1, other._item1)
+            && comparer.Equals(_item2, other._item2)
+            && comparer.Equals(_item3, other._item3)
+            && comparer.Equals(_item4, other._item4)
+            && comparer.Equals(_item5, other._item5)
+            && comparer.Equals(_item6, other._item6)
+            && comparer.Equals(_item7, other._item7)
+            && comparer.Equals(_item8, other._item8)
+            && comparer.Equals(_item9, other._item9)
+            && comparer.Equals(_item10, other._item10)
+            && comparer.Equals(_item11, other._item11)
+            && comparer.Equals(_item12, other._item12)
+            && comparer.Equals(_item13, other._item13)
+            && comparer.Equals(_item14, other._item14)
+            && comparer.Equals(_item15, other._item15)
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item1?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item2?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item3?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item4?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item5?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item6?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item7?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item8?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item9?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item10?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item11?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item12?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item13?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item14?.GetHashCode() ?? 0;
+        hashCode = (359 * hashCode) + _item15?.GetHashCode() ?? 0;
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 

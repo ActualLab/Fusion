@@ -49,6 +49,7 @@ using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection.Emit;
 using ActualLab.Internal;
+using ActualLab.Interception.Internal;
 using MessagePack;
 
 namespace ActualLab.Interception;
@@ -68,8 +69,7 @@ public abstract partial record ArgumentList
 #if NET5_0_OR_GREATER
 <# for (var itemCount = 1; itemCount <= maxItemCount; itemCount++) {
 #>
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(<#=SimpleTypeName(itemCount)#>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(<#=GenericTypeName(itemCount)#>))]
+    // [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(<#=SimpleTypeName(itemCount)#>))]
 <# } #>
 #endif
     public static readonly ImmutableArray<Type> SimpleTypes = ImmutableArray.Create(new [] {
@@ -78,12 +78,15 @@ public abstract partial record ArgumentList
         typeof(<#=SimpleTypeName(itemCount)#>),
 <# } #>
     });
-    public static readonly ImmutableArray<Type> GenericTypes = ImmutableArray.Create(new [] {
+    public static readonly ImmutableArray<Type> GenericTypes
+        = InterceptionFeatures.ArgumentListAllowGenerics
+            ? ImmutableArray.Create(new [] {
 <# for (var itemCount = 0; itemCount <= maxItemCount; itemCount++) {
 #>
-        typeof(<#=GenericTypeName(itemCount)#>),
+                typeof(<#=GenericTypeName(itemCount)#>),
 <# } #>
-    });
+            })
+            : ImmutableArray<Type>.Empty;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New() => Empty;
@@ -91,13 +94,14 @@ public abstract partial record ArgumentList
     var itemTypes = ItemList("T{0}", itemCount);
     var itemDefs = ItemList("T{0} item{0}", itemCount);
     var items = ItemList("item{0}", itemCount);
-    var argListDefPrefix = $"ArgumentListType.Get({ItemList("typeof(T{0})", itemCount)}), ";
+    var argListDefPrefixG = $"ArgumentListType.Get(true, {ItemList("typeof(T{0})", itemCount)}), ";
+    var argListDefPrefixS = $"ArgumentListType.Get(false, {ItemList("typeof(T{0})", itemCount)}), ";
 #>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New<<#=itemTypes#>>(<#=itemDefs#>)
-        => (UseGenerics && !DisableGenerics)
-            ? new <#=GenericTypeName(itemCount, true)#>(<#=itemCount > maxGenericItemCount ? argListDefPrefix : ""#><#=items#>)
-            : new <#=SimpleTypeName(itemCount)#>(<#=argListDefPrefix#><#=items#>);
+        => InterceptionFeatures.ArgumentListAllowGenerics && UseGenerics
+            ? new <#=GenericTypeName(itemCount, true)#>(<#=itemCount > maxGenericItemCount ? argListDefPrefixG : ""#><#=items#>)
+            : new <#=SimpleTypeName(itemCount)#>(<#=argListDefPrefixS#><#=items#>);
 <# } #>
 
 <#

@@ -29,24 +29,25 @@ public sealed class ArgumentListType
     public readonly object?[] DefaultValues;
     public readonly Func<ArgumentList> Factory;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentListType Get(params ReadOnlySpan<Type> itemTypes)
-    {
-        if (itemTypes.Length <= 3) // Primary scenario
-            return ArgumentList.UseGenerics || itemTypes.Length == 0
-                ? GDefCache3.GetOrAdd(FixedArray3<Type?>.New(itemTypes!), static key => new ArgumentListType(true, key.ReadOnlySpan))
-                : SDefCache3.GetOrAdd(FixedArray3<Type?>.New(itemTypes!), static key => new ArgumentListType(false, key.ReadOnlySpan));
-
-        return itemTypes.Length <= 6
-            ? Get6(ArgumentList.UseGenerics, itemTypes)
-            : GetN(ArgumentList.UseGenerics, itemTypes);
-    }
+        => Get(ArgumentList.UseGenerics, itemTypes);
 
     public static ArgumentListType Get(bool useGenerics, params ReadOnlySpan<Type> itemTypes)
     {
         if (itemTypes.Length <= 3) // Primary scenario
-            return useGenerics || itemTypes.Length == 0
-                ? GDefCache3.GetOrAdd(FixedArray3<Type?>.New(itemTypes!), static key => new ArgumentListType(true, key.ReadOnlySpan))
-                : SDefCache3.GetOrAdd(FixedArray3<Type?>.New(itemTypes!), static key => new ArgumentListType(false, key.ReadOnlySpan));
+            return useGenerics
+                ? GDefCache3.GetOrAdd(
+                    FixedArray3<Type?>.New(itemTypes!),
+                    static key => {
+                        var useGenerics = !ReferenceEquals(key.Item0, null);
+                        return useGenerics
+                            ? new ArgumentListType(useGenerics: true, key.ReadOnlySpan)
+                            : Get(useGenerics: false, key.ReadOnlySpan!); // ArgumentList0 is always non-generic
+                    })
+                : SDefCache3.GetOrAdd(
+                    FixedArray3<Type?>.New(itemTypes!),
+                    static key => new ArgumentListType(useGenerics: false, key.ReadOnlySpan));
 
         return itemTypes.Length <= 6
             ? Get6(useGenerics, itemTypes)
@@ -77,6 +78,9 @@ public sealed class ArgumentListType
         ItemTypes = itemTypes;
         ItemCount = itemTypes.Length;
         if (useGenerics) {
+            if (itemTypes.Length == 0)
+                throw new ArgumentOutOfRangeException(nameof(useGenerics));
+
             GenericItemCount = Math.Min(ItemCount, ArgumentList.MaxGenericItemCount);
             GenericItemTypes = GenericItemCount == ItemCount
                 ? ItemTypes
@@ -86,9 +90,6 @@ public sealed class ArgumentListType
                 ListType = ListType.MakeGenericType(GenericItemTypes);
         }
         else {
-            if (itemTypes.Length == 0)
-                throw new ArgumentOutOfRangeException(nameof(useGenerics));
-
             GenericItemCount = 0;
             // ReSharper disable once UseCollectionExpression
             GenericItemTypes = Array.Empty<Type>();

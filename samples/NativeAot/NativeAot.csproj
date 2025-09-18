@@ -15,13 +15,28 @@
 <!--    <TrimmerSingleWarn>false</TrimmerSingleWarn>-->
     <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>
     <IlcDisableReflection>false</IlcDisableReflection>
-    <NativeDebugSymbols>false</NativeDebugSymbols>
-    <StripSymbols>true</StripSymbols>
   </PropertyGroup>
 
+  <!-- Required by SizoScope tool -->
+  <PropertyGroup>
+    <IlcGenerateMstatFile>true</IlcGenerateMstatFile>
+    <IlcGenerateDgmlFile>true</IlcGenerateDgmlFile>
+  </PropertyGroup>
+
+  <!-- Debug symbols -->
+  <PropertyGroup>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>portable</DebugType>
+    <TrimmerRemoveSymbols>false</TrimmerRemoveSymbols>
+    <StripSymbols>false</StripSymbols>
+    <!--
+    <NativeDebugSymbols>true</NativeDebugSymbols>
+    -->
+  </PropertyGroup>
+
+  <!-- Ensures ArgumentList variants with generics are trimmed in Native AOT -->
   <ItemGroup>
-    <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
-    <RuntimeHostConfigurationOption Include="ArgumentList.DisableGenerics" Value="true" Trim="true" />
+    <RuntimeHostConfigurationOption Include="ArgumentList.AllowGenerics" Value="false" Trim="true" />
   </ItemGroup>
 
   <!-- Fusion packages -->

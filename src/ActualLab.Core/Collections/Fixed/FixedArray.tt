@@ -29,6 +29,17 @@ public struct <#= className #> : IEquatable<<#= className #>>
     }
 #>
 
+<#
+    for (var i = 0; i < itemCount; i++) {
+#>
+    public T Item<#= i #> {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _item<#= i #>;
+    }
+<#
+    }
+#>
+
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => MemoryMarshal.CreateSpan(ref _item0, <#= itemCount #>);
@@ -54,6 +65,17 @@ public struct <#= className #> : IEquatable<<#= className #>>
         => items.CopyTo(Span);
 #else
     private readonly T[] _items;
+
+<#
+    for (var i = 0; i < itemCount; i++) {
+#>
+    public T Item<#= i #> {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _items[<#= i #>];
+    }
+<#
+    }
+#>
 
     public Span<T> Span {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -89,28 +111,45 @@ public struct <#= className #> : IEquatable<<#= className #>>
         => obj is <#= className #> other && Equals(other);
 
     public bool Equals(<#= className #> other)
-#if NET6_0_OR_GREATER
-        => Span.SequenceEqual(other.Span);
-#else
     {
-        var span = Span;
-        var otherSpan = other.Span;
-        if (span.Length != otherSpan.Length)
-            return false;
-
-        for (var i = 0; i < span.Length; i++)
-            if (!EqualityComparer<T>.Default.Equals(span[i], otherSpan[i]))
+        var comparer = EqualityComparer<T>.Default;
+#if !NETSTANDARD2_0
+        return
+            comparer.Equals(_item0, other._item0)
+<#
+    for (var i = 1; i < itemCount; i++) {
+#>
+            && comparer.Equals(_item<#= i #>, other._item<#= i #>)
+<#
+    }
+#>
+            ;
+#else
+        var otherItems = other._items;
+        for (var i = 0; i < _items.Length; i++)
+            if (!comparer.Equals(_items[i], otherItems[i]))
                 return false;
 
         return true;
-    }
 #endif
+    }
 
     public override int GetHashCode()
     {
+#if !NETSTANDARD2_0
+        var hashCode = _item0?.GetHashCode() ?? 0;
+<#
+    for (var i = 1; i < itemCount; i++) {
+#>
+        hashCode = (359 * hashCode) + _item<#= i #>?.GetHashCode() ?? 0;
+<#
+    }
+#>
+#else
         var hashCode = 0;
-        foreach (var item in Span)
+        foreach (var item in _items)
             hashCode = (359 * hashCode) + item?.GetHashCode() ?? 0;
+#endif
         return hashCode;
     }
 

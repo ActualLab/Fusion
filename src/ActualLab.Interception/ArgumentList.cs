@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
+using ActualLab.Interception.Internal;
 using ActualLab.OS;
 
 namespace ActualLab.Interception;
@@ -15,16 +16,10 @@ public abstract partial record ArgumentList
         LazySlim<(ArgumentListType, MethodInfo), Func<object?, ArgumentList, object?>>> InvokerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
-#if NET9_0_OR_GREATER
-    [FeatureSwitchDefinition("ArgumentList.DisableGenerics")]
-    public static bool DisableGenerics { get; }
-        = AppContext.TryGetSwitch("ArgumentList.DisableGenerics", out bool value) && value;
-#else
-    public static bool DisableGenerics => false;
-#endif
-
     public static readonly bool UseGenerics
-        = !DisableGenerics && RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods && !OSInfo.IsAnyClient;
+        = InterceptionFeatures.ArgumentListAllowGenerics
+            && RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            && !OSInfo.IsAnyClient;
 
     public static readonly ArgumentList Empty = new ArgumentList0();
 

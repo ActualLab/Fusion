@@ -97,7 +97,7 @@
 
   <ItemGroup>
     <None Update="Collections\Fixed\FixedArray.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
+      <Generator>TextTemplatingFilePreprocessor</Generator>
       <LastGenOutput>FixedArray.cs</LastGenOutput>
     </None>
   </ItemGroup>
