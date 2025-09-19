@@ -6,7 +6,10 @@ public interface IRetryPolicy
 {
     public int? TryCount { get; init; }
     public RetryDelaySeq Delays { get; init; }
+    public TransiencyResolver TransiencyResolver { get; init; }
+    public ExceptionFilter RetryOn { get; init; }
 
+    public bool MustRetry(int failedTryCount);
     public bool MustRetry(Exception error, ref int failedTryCount, out Transiency transiency);
 
     public Task<T> Apply<T>(
@@ -36,6 +39,9 @@ public record RetryPolicy(
         : this(null, TryTimeout, Delays)
     { }
 
+    public virtual bool MustRetry(int failedTryCount)
+        => TryCount is not { } tryCount || failedTryCount < tryCount;
+
     public virtual bool MustRetry(Exception error, ref int failedTryCount, out Transiency transiency)
     {
         if (!RetryOn.Invoke(error, TransiencyResolver, out transiency))
@@ -44,7 +50,7 @@ public record RetryPolicy(
         if (transiency is not Transiency.SuperTransient)
             ++failedTryCount;
 
-        return this.HasMoreRetries(failedTryCount);
+        return MustRetry(failedTryCount);
     }
 
     public TimeSpan GetDelay(int failedTryCount)
@@ -78,7 +84,7 @@ public record RetryPolicy(
             }
             catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                 if (!MustRetry(e, ref failedTryCount, out var transiency)) {
-                    var reason = this.HasMoreRetries(failedTryCount)
+                    var reason = this.MustRetry(failedTryCount)
                         ? transiency is Transiency.Terminal
                             ? "terminal error"
                             : "non-retriable error"

@@ -4,11 +4,6 @@ namespace ActualLab.Resilience;
 
 public static class RetryPolicyExt
 {
-    // HasMoreRetries
-
-    public static bool HasMoreRetries(this IRetryPolicy policy, int failedTryCount)
-        => policy.TryCount is not { } tryCount || failedTryCount < tryCount;
-
     // MustRetry overloads
 
     public static bool MustRetry(this IRetryPolicy policy, Exception error)
