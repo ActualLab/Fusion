@@ -84,7 +84,7 @@ public record RetryPolicy(
             }
             catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                 if (!MustRetry(e, ref failedTryCount, out var transiency)) {
-                    var reason = this.MustRetry(failedTryCount)
+                    var reason = MustRetry(failedTryCount)
                         ? transiency is Transiency.Terminal
                             ? "terminal error"
                             : "non-retriable error"
