@@ -28,7 +28,13 @@ public abstract class StatefulComponentBase : CircuitHubComponentBase, IStateful
             if (State is IHasIsDisposed { IsDisposed: true })
                 return;
 
-            this.NotifyStateHasChanged();
+            // Same as ExecutionContextExt.TrySuppressFlow(), but a bit faster
+            if (ExecutionContext.IsFlowSuppressed())
+                this.NotifyStateHasChanged();
+            else {
+                using var _ = ExecutionContext.SuppressFlow();
+                this.NotifyStateHasChanged();
+            }
         };
     }
 
