@@ -26,7 +26,7 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
                 return shardPeerRef;
             }
 
-            sw.SpinOnce();
+            sw.SpinOnce(); // Safe for WASM
         }
     }
 

@@ -1,17 +1,12 @@
 namespace ActualLab.Pooling;
 
 [StructLayout(LayoutKind.Auto)]
-public readonly struct ResourceLease<T> : IResourceLease<T>, IEquatable<ResourceLease<T>>
+public readonly struct ResourceLease<T>(T resource, IResourceReleaser<T> releaser)
+    : IResourceLease<T>, IEquatable<ResourceLease<T>>
 {
-    private readonly IResourceReleaser<T> _releaser;
+    private readonly IResourceReleaser<T> _releaser = releaser;
 
-    public T Resource { get; }
-
-    public ResourceLease(T resource, IResourceReleaser<T> releaser)
-    {
-        Resource = resource;
-        _releaser = releaser;
-    }
+    public T Resource { get; } = resource;
 
     public void Dispose()
     {
