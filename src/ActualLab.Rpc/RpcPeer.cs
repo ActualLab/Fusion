@@ -210,24 +210,20 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         CancellationToken cancellationToken = default)
     {
         AsyncState<RpcPeerConnectionState> connectionState;
-        CancellationTokenSource? readerTokenSource;
-        ChannelWriter<RpcMessage>? sender;
         lock (Lock) {
             // We want to make sure ConnectionState doesn't change while this method runs
             // and no one else cancels ReaderTokenSource
             connectionState = _connectionState;
             if (expectedState is not null && !ReferenceEquals(expectedState, connectionState))
                 return Task.CompletedTask;
-            if (connectionState.IsFinal || !connectionState.Value.IsConnected())
+            if (connectionState.Value.Sender is null || connectionState.IsFinal)
                 return Task.CompletedTask;
-
-            sender = _sender;
-            readerTokenSource = connectionState.Value.ReaderTokenSource;
-            _sender = null;
         }
-        sender?.TryComplete(error);
-        readerTokenSource.CancelAndDisposeSilently();
-        // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+        connectionState.Value.Sender.TryComplete(error);
+        // NOTE(AY): It isn't critical to cancel the ReaderTokenSource:
+        // if we complete the Sender, the reader will inevitably fail as well.
+        // TODO(AY): Find out why the next line makes RpcReconnectionTest.ConcurrentTest hang on disconnects.
+        // connectionState.Value.ReaderTokenSource.CancelAndDisposeSilently();
         return connectionState.WhenDisconnected(cancellationToken);
     }
 
@@ -290,6 +286,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                                     ++handshakeIndex);
                                 await Hub.SystemCallSender
                                     .Handshake(this, sender, ownHandshake)
+                                    .WaitAsync(handshakeToken)
                                     .ConfigureAwait(false);
                                 var message = await reader.ReadAsync(handshakeToken).ConfigureAwait(false);
                                 var handshakeContext = ProcessMessage(message, handshakeToken, handshakeToken);
