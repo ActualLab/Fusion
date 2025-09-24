@@ -15,6 +15,9 @@ public class FileLock(FilePath path, IEnumerable<TimeSpan>? retryIntervals = nul
     public IEnumerable<TimeSpan> RetryIntervals { get; } = retryIntervals ?? DefaultRetryIntervals;
     public LockReentryMode ReentryMode => LockReentryMode.Unchecked;
 
+    public void Dispose()
+        => _fileStream?.Dispose();
+
     public static ValueTask<Releaser> Lock(FilePath path, CancellationToken cancellationToken = default)
         => Lock(path, null, cancellationToken);
     public static ValueTask<Releaser> Lock(FilePath path, IEnumerable<TimeSpan>? retryIntervals = null, CancellationToken cancellationToken = default)
@@ -68,7 +71,7 @@ public class FileLock(FilePath path, IEnumerable<TimeSpan>? retryIntervals = nul
 
     public readonly struct Releaser(FileLock fileLock) : IAsyncLockReleaser
     {
-        public void MarkLockedLocally()
+        public void MarkLockedLocally(bool unmarkOnRelease = true)
         { }
 
         public void Dispose()

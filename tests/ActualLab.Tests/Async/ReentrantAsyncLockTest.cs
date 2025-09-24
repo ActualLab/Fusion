@@ -60,6 +60,5 @@ public class ReentrantAsyncLockTest(ITestOutputHelper @out) : TestBase(@out)
             });
 #pragma warning restore MA0100
         }
-
     }
 }

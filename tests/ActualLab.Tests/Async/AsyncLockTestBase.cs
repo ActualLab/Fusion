@@ -1,3 +1,4 @@
+using ActualLab.Generators;
 using ActualLab.Locking;
 using ActualLab.OS;
 using ActualLab.Testing.Collections;
@@ -36,7 +37,7 @@ public abstract class AsyncLockTestBase(ITestOutputHelper @out) : TestBase(@out)
 
                 Out?.WriteLine($"{workerId}.{depth}: locking");
                 using var releaser = await Lock.Lock(cancellationToken).ConfigureAwait(false);
-                releaser.MarkLockedLocally();
+                releaser.MarkLockedLocally(RandomShared.Next() > 0.5);
                 Out?.WriteLine($"{workerId}.{depth}: locked");
 
                 var lockCount = Interlocked.Increment(ref _lockCount);
@@ -95,8 +96,8 @@ public abstract class AsyncLockTestBase(ITestOutputHelper @out) : TestBase(@out)
             Task.Run(() => r.Access(workerId++, 0, 2, 3, NoCancel, 0)),
         };
         await Task.WhenAll(tasks);
-        tasks.All(t => t.IsCompletedSuccessfully()).Should().BeTrue();
 
+        tasks.All(t => t.IsCompletedSuccessfully()).Should().BeTrue();
         AssertResourcesReleased();
     }
 
@@ -111,7 +112,6 @@ public abstract class AsyncLockTestBase(ITestOutputHelper @out) : TestBase(@out)
         r = new Resource(Out, CreateAsyncLock(LockReentryMode.CheckedPass));
         await Task.Run(() => r.Access(1, 0, 0, 3, NoCancel, 1))
             .AsAsyncFunc().Should().CompleteWithinAsync(TimeSpan.FromSeconds(1));
-
         AssertResourcesReleased();
     }
 
@@ -119,6 +119,8 @@ public abstract class AsyncLockTestBase(ITestOutputHelper @out) : TestBase(@out)
     public async Task ConcurrentTest()
     {
         var r = new Resource(null, CreateAsyncLock(LockReentryMode.CheckedPass));
+        AssertResourcesReleased();
+
         var rnd = new Random();
         var tasks = new List<Task>();
 
@@ -147,7 +149,6 @@ public abstract class AsyncLockTestBase(ITestOutputHelper @out) : TestBase(@out)
         Out.WriteLine($"Actual runtime:   {runtime.Seconds:f1}s");
 
         tasks.All(t => t.IsCompletedSuccessfully()).Should().BeTrue();
-
         AssertResourcesReleased();
     }
 }

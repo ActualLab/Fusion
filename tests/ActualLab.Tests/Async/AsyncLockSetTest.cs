@@ -20,6 +20,9 @@ public class AsyncLockSetTest(ITestOutputHelper @out) : AsyncLockTestBase(@out)
 
         public LockReentryMode ReentryMode => LockSet.ReentryMode;
 
+        public void Dispose()
+        { }
+
         async ValueTask<IAsyncLockReleaser> IAsyncLock.Lock(CancellationToken cancellationToken)
         {
             var releaser = await LockSet.Lock(Key, cancellationToken).ConfigureAwait(false);
@@ -36,11 +39,13 @@ public class AsyncLockSetTest(ITestOutputHelper @out) : AsyncLockTestBase(@out)
 
         public class Releaser(AsyncLockSet<TKey>.Releaser releaser) : IAsyncLockReleaser
         {
-            public void MarkLockedLocally()
-                => releaser.MarkLockedLocally();
+            private AsyncLockSet<TKey>.Releaser _releaser = releaser;
+
+            public void MarkLockedLocally(bool unmarkOnRelease = true)
+                => _releaser.MarkLockedLocally(unmarkOnRelease);
 
             public void Dispose()
-                => releaser.Dispose();
+                => _releaser.Dispose();
         }
     }
 

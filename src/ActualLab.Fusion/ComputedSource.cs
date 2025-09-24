@@ -137,7 +137,7 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
         if (ComputedImpl.TryUseExistingFromLock(computed, context))
             return computed!;
 
-        releaser.MarkLockedLocally();
+        releaser.MarkLockedLocally(unmarkOnRelease: false);
         computed = await ProduceComputedFromLock(cancellationToken).ConfigureAwait(false);
         ComputedImpl.UseNew(computed, context);
         return computed;

@@ -186,7 +186,7 @@ public abstract class State : ComputedInput, IState
         if (ComputedImpl.TryUseExistingFromLock(computed, context))
             return computed;
 
-        releaser.MarkLockedLocally();
+        releaser.MarkLockedLocally(unmarkOnRelease: false);
         OnUpdating(computed);
         computed = await ProduceComputedFromLock(cancellationToken).ConfigureAwait(false);
         ComputedImpl.UseNew(computed, context);
@@ -222,7 +222,7 @@ public abstract class State : ComputedInput, IState
         // It's super important to make "Computed = computed" assignment after "using" block -
         // otherwise all State events will be triggered while Computed.Current still points on
         // computed (which is already computed), so if any compute method runs inside
-        // the event handler, it will fail on attempt to add a dependency.
+        // the event handler, it will fail on an attempt to add a dependency.
         UntypedComputed = computed;
         return computed;
     }

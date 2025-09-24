@@ -16,7 +16,7 @@ public sealed class DefaultResultInterceptor : Interceptor
         MustInterceptAsyncCalls = true;
     }
 
-    protected override Func<Invocation, object?>? CreateTypedHandler<
+    protected internal override Func<Invocation, object?>? CreateTypedHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef)
     {

@@ -280,7 +280,7 @@ public abstract class RemoteComputeMethodFunction(
         if (!cachedComputed.IsConsistent())
             return; // Since the call was bound to cachedComputed, it's properly cancelled already
 
-        releaser.MarkLockedLocally();
+        releaser.MarkLockedLocally(unmarkOnRelease: false);
 
         // 7. Update cache
         RpcCacheEntry? cacheEntry;

@@ -1,6 +1,5 @@
-using ActualLab.Concurrency;
 using ActualLab.OS;
-using ActualLab.Pooling;
+using ActualLab.Internal;
 
 namespace ActualLab.Locking;
 
@@ -18,8 +17,6 @@ public class AsyncLockSet<TKey>(
 
     private readonly ConcurrentDictionary<TKey, Entry> _entries
         = new(concurrencyLevel, capacity, equalityComparer ?? EqualityComparer<TKey>.Default);
-    private readonly ConcurrentPool<AsyncLock> _lockPool
-        = new(() => new AsyncLock(reentryMode));
 
     public LockReentryMode ReentryMode { get; } = reentryMode;
     public int Count => _entries.Count;
@@ -27,113 +24,137 @@ public class AsyncLockSet<TKey>(
     public AsyncLockSet(LockReentryMode reentryMode = LockReentryMode.Unchecked)
         : this(reentryMode, DefaultConcurrencyLevel, DefaultCapacity) { }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public ValueTask<Releaser> Lock(TKey key, CancellationToken cancellationToken = default)
     {
-        // This has to be non-async method, otherwise AsyncLocals
-        // created inside it won't be available in caller's ExecutionContext.
-        var (asyncLock, entry) = PrepareLock(key);
-        try {
-            var task = asyncLock.Lock(cancellationToken);
-            return ToReleaserTask(entry, task);
-        }
-        catch {
-            entry.EndUse();
-            throw;
-        }
-    }
-
-    // Private methods
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private (AsyncLock, Entry) PrepareLock(TKey key)
-    {
+        // This has to be a non-async method, otherwise AsyncLocals
+        // created inside it won't be available in the caller's ExecutionContext.
+        Entry entry;
         var spinWait = new SpinWait();
         while (true) {
-            var entry = _entries.GetOrAdd(key, static (key1, self) => new Entry(self, key1), this);
-            var asyncLock = entry.TryBeginUse();
-            if (asyncLock is not null)
-                return (asyncLock, entry);
+            entry = _entries.GetOrAdd(key, static (key, self) => new Entry(self, key), this);
+            if (entry.TryBeginUse())
+                break;
 
             spinWait.SpinOnce(); // Safe for WASM
         }
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static async ValueTask<Releaser> ToReleaserTask(Entry entry, ValueTask<AsyncLock.Releaser> task)
-    {
         try {
-            var releaser = await task.ConfigureAwait(false);
-            return new Releaser(entry, releaser);
+            if (entry.IsLockedLocally)
+                return ReentryMode == LockReentryMode.CheckedFail
+                    ? throw Errors.AlreadyLocked()
+                    : new ValueTask<Releaser>(new Releaser(entry, isLocked: false));
+
+            var task = entry.Semaphore.WaitAsync(cancellationToken);
+            return task.IsCompletedSuccessfully()
+                ? new ValueTask<Releaser>(new Releaser(entry))
+                : CompleteAsync(task, entry);
         }
         catch {
             entry.EndUse();
             throw;
         }
-    }
 
-    // Nested types
-
-    private sealed class Entry
-    {
-        private readonly AsyncLockSet<TKey> _owner;
-        private readonly TKey _key;
-        private readonly ResourceLease<AsyncLock> _lease;
-        private volatile AsyncLock? _asyncLock;
-        private int _useCount;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Entry(AsyncLockSet<TKey> owner, TKey key)
-        {
-            _owner = owner;
-            _key = key;
-            _lease = owner._lockPool.Rent();
-            _asyncLock = _lease.Resource;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public AsyncLock? TryBeginUse()
-        {
-            lock (this) {
-                var asyncLock = _asyncLock;
-                if (asyncLock is not null)
-                    ++_useCount;
-                return asyncLock;
+        static async ValueTask<Releaser> CompleteAsync(Task task, Entry entry) {
+            try {
+                await task.ConfigureAwait(false);
+                return new Releaser(entry);
             }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EndUse()
-        {
-            var mustRelease = false;
-            lock (this) {
-                if (_asyncLock is not null && --_useCount == 0) {
-                    _asyncLock = null;
-                    mustRelease = true;
-                }
-            }
-            if (mustRelease) {
-                _owner._entries.TryRemove(_key, this);
-                _lease.Dispose();
+            catch {
+                entry.EndUse();
+                throw;
             }
         }
     }
 
     // Nested types
 
-    public readonly struct Releaser(object entry, AsyncLock.Releaser releaser) : IAsyncLockReleaser
+    public struct Releaser : IAsyncLockReleaser
     {
-        private readonly Entry? _entry = (Entry)entry;
+        private readonly Entry _entry;
+        private readonly bool _isLocked;
+        private bool _unmarkOnRelease;
+
+        internal Releaser(Entry entry)
+        {
+            _entry = entry;
+            _isLocked = true;
+        }
+
+        internal Releaser(Entry entry, bool isLocked)
+        {
+            _entry = entry;
+            _isLocked = isLocked;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void MarkLockedLocally()
-            => releaser.MarkLockedLocally();
+        public void MarkLockedLocally(bool unmarkOnRelease = true)
+        {
+            if (!_isLocked)
+                return;
+
+            _unmarkOnRelease |= unmarkOnRelease;
+            _entry.IsLockedLocally = true;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
         {
-            releaser.Dispose();
-            _entry?.EndUse();
+            try {
+                if (_isLocked) {
+                    if (_unmarkOnRelease)
+                        _entry.LockedLocallyTag?.Value = null;
+                    _entry.Semaphore.Release();
+                }
+            }
+            finally {
+                _entry.EndUse();
+            }
+        }
+    }
+
+    // Mimics IAsyncLock interface
+    internal sealed class Entry(AsyncLockSet<TKey> owner, TKey key)
+    {
+        private int _useCount;
+
+        public SemaphoreSlim Semaphore = null!;
+        public AsyncLocal<object?>? LockedLocallyTag;
+
+        public bool IsLockedLocally {
+            get => LockedLocallyTag?.Value is not null;
+            set => LockedLocallyTag?.Value = value ? AsyncLock.LockedLocallyTag.Instance : null;
+        }
+
+        public bool TryBeginUse()
+        {
+            lock (this) {
+                if (_useCount < 0)
+                    return false; // Already closed
+                if (_useCount++ != 0)
+                    return true; // Already initialized
+
+                Semaphore = new SemaphoreSlim(1, 1);
+                if (owner.ReentryMode != LockReentryMode.Unchecked)
+                    LockedLocallyTag = new AsyncLocal<object?>();
+            }
+            return true;
+        }
+
+        public void EndUse()
+        {
+            lock (this) {
+                if (_useCount <= 0) {
+                    if (_useCount == 0)
+                        throw Errors.InternalError("AsyncLockSet.Entry is in a broken state.");
+                    return; // Already closed
+                }
+                if (--_useCount != 0)
+                    return;
+
+                // Closing
+                _useCount = -1;
+            }
+            if (owner._entries.TryRemove(key, this))
+                Semaphore.Dispose();
         }
     }
 }

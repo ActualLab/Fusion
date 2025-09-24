@@ -8,7 +8,7 @@ public class TestInterceptor(TestInterceptor.Options settings, IServiceProvider 
 {
     public new sealed record Options : Interceptor.Options;
 
-    protected override Func<Invocation, object?>? CreateTypedHandler<
+    protected internal override Func<Invocation, object?>? CreateTypedHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef)
         => null;

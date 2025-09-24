@@ -6,6 +6,9 @@ public sealed class SimpleAsyncLock : IAsyncLock<SimpleAsyncLock.Releaser>
 
     public LockReentryMode ReentryMode => LockReentryMode.Unchecked;
 
+    public void Dispose()
+        => _semaphore.Dispose();
+
     async ValueTask<IAsyncLockReleaser> IAsyncLock.Lock(CancellationToken cancellationToken)
         => await Lock(cancellationToken).ConfigureAwait(false);
     public ValueTask<Releaser> Lock(CancellationToken cancellationToken = default)
@@ -31,7 +34,7 @@ public sealed class SimpleAsyncLock : IAsyncLock<SimpleAsyncLock.Releaser>
             }
         }
 
-        public void MarkLockedLocally()
+        public void MarkLockedLocally(bool markOnRelease = true)
         { }
 
         public void Dispose()

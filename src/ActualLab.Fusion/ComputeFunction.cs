@@ -60,7 +60,7 @@ public abstract class ComputeFunction(FusionHub hub, Type outputType) : ICompute
                 await TaskExt.NeverEnding(cancellationToken).ConfigureAwait(false);
             }
 
-            releaser.MarkLockedLocally();
+            releaser.MarkLockedLocally(unmarkOnRelease: false);
             computed = await ProduceComputedImpl(input, computed, cancellationToken).ConfigureAwait(false);
             ComputedImpl.UseNew(computed, context);
             return computed;
