@@ -31,8 +31,8 @@ public static class TestHelpers
     public static async Task<T[]> WhenAll<T>(Task<T>[] tasks, TimeSpan timeout, ITestOutputHelper @out)
     {
         var whenAll = Task.WhenAll(tasks).WaitAsync(timeout);
-        while (true) {
-            await Task.WhenAny(whenAll, Task.Delay(1000));
+        for (var i = 0;; i++) {
+            await Task.WhenAny(whenAll, Task.Delay(i == 0 ? 3000 : 1000));
             if (whenAll.IsCompleted)
                 break;
 

@@ -105,6 +105,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
             }
         }
         finally {
+            Write("stopping");
             disruptorCts.CancelAndDisposeSilently();
             await disruptorTask;
         }
@@ -112,6 +113,9 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
         await AssertNoCalls(connection.ClientPeer, Out);
         await AssertNoCalls(connection.ServerPeer, Out);
         return callCount;
+
+        void Write(string message)
+            => Out.WriteLine($"Worker #{workerId}: {message}");
     }
 
     [Fact(Timeout = 40_000)]

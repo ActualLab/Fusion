@@ -90,8 +90,8 @@ public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
             // Intended
         }
         Write("stopping");
-        await connection.Connect(CancellationToken.None);
-        await Delay(0.2); // Just in case
+        await connection.Connect(CancellationToken.None).ConfigureAwait(false);
+        await Delay(0.2).ConfigureAwait(false); // Just in case
         Write("stopped");
     }
 }
