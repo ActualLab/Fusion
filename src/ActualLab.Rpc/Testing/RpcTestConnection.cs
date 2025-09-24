@@ -59,8 +59,9 @@ public class RpcTestConnection
         var clientConnectionState = ClientPeer.ConnectionState;
         var serverConnectionState = ServerPeer.ConnectionState;
         Channels = channels;
-        await clientConnectionState.WhenConnected(cancellationToken).ConfigureAwait(false);
-        await serverConnectionState.WhenConnected(cancellationToken).ConfigureAwait(false);
+        var connectedTask1 = clientConnectionState.WhenConnected(cancellationToken);
+        var connectedTask2 = serverConnectionState.WhenConnected(cancellationToken);
+        await Task.WhenAll(connectedTask1, connectedTask2).ConfigureAwait(false);
     }
 
     public Task Disconnect(CancellationToken cancellationToken = default)
