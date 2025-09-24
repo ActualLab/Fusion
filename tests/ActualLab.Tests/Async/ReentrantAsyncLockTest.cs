@@ -23,7 +23,7 @@ public class ReentrantAsyncLockTest(ITestOutputHelper @out) : TestBase(@out)
             })).Should().BeTrue();
             l.GetType()
                 .GetProperty(nameof(l.IsLockedLocally))!
-                .GetSetMethod(true)
+                .GetSetMethod(true)!
                 .Invoke(l, [false]);
 #pragma warning disable MA0100
             return Task.Run(async () => {
@@ -56,7 +56,7 @@ public class ReentrantAsyncLockTest(ITestOutputHelper @out) : TestBase(@out)
             });
             l.GetType()
                 .GetProperty(nameof(l.IsLockedLocally))!
-                .GetSetMethod(true)
+                .GetSetMethod(true)!
                 .Invoke(l, [false]);
 #pragma warning disable MA0100
             return Task.Run(async () => {
