@@ -6,8 +6,8 @@ public class AsyncLocalFlowTests(ITestOutputHelper @out) : TestBase(@out)
     public async Task Test1()
     {
         var myLocal = new AsyncLocal<int>();
-        var whenT3Started = TaskCompletionSourceExt.New();
-        var signal = TaskCompletionSourceExt.New();
+        var whenT3Started = TaskCompletionSourceExt.New<Unit>();
+        var signal = TaskCompletionSourceExt.New<Unit>();
         var myLocalObservedInT3 = TaskCompletionSourceExt.New<int>();
 
         // Task 1
@@ -22,7 +22,7 @@ public class AsyncLocalFlowTests(ITestOutputHelper @out) : TestBase(@out)
 
                 // Task 3 (child of task2) – should see value 2
                 t3 = Task.Run(async () => {
-                    whenT3Started.TrySetResult();       // tell task1 that t3 exists
+                    whenT3Started.TrySetResult(default);       // tell task1 that t3 exists
 
                     await signal.Task;               // wait for task1 to signal
                     myLocalObservedInT3.TrySetResult(myLocal.Value); // capture myLocal seen in t3
@@ -36,7 +36,7 @@ public class AsyncLocalFlowTests(ITestOutputHelper @out) : TestBase(@out)
 
             // Change myLocal.value in task1 and then signal t3 to read its value
             myLocal.Value = 3;
-            signal.TrySetResult();
+            signal.TrySetResult(default);
 
             await t2;
         });

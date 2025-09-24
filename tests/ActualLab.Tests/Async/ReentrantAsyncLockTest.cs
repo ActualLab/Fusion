@@ -21,7 +21,10 @@ public class ReentrantAsyncLockTest(ITestOutputHelper @out) : TestBase(@out)
                 r3.MarkLockedLocally();
                 return true;
             })).Should().BeTrue();
-            l.IsLockedLocally = false;
+            l.GetType()
+                .GetProperty(nameof(l.IsLockedLocally))!
+                .GetSetMethod(true)
+                .Invoke(l, [false]);
 #pragma warning disable MA0100
             return Task.Run(async () => {
                 using var r4 = await l.Lock().ConfigureAwait(false);
@@ -51,7 +54,10 @@ public class ReentrantAsyncLockTest(ITestOutputHelper @out) : TestBase(@out)
                     return true;
                 });
             });
-            l.IsLockedLocally = false;
+            l.GetType()
+                .GetProperty(nameof(l.IsLockedLocally))!
+                .GetSetMethod(true)
+                .Invoke(l, [false]);
 #pragma warning disable MA0100
             return Task.Run(async () => {
                 using var r2 = await l.Lock().ConfigureAwait(false);

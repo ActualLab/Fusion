@@ -52,13 +52,6 @@
     <NoWarn Condition="$(TargetFramework.StartsWith('netcore'))">$(NoWarn);IL2046;IL2092;IL2095</NoWarn>
   </PropertyGroup>
 
-  <!--
-  <ItemGroup>
-    <InternalsVisibleTo Include="ActualLab.Tests" />
-    <InternalsVisibleTo Include="ActualLab.Fusion.Tests" />
-  </ItemGroup>
-  -->
-
   <!-- Polyfills -->
   <ItemGroup Condition="!($(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')))">
     <PackageReference Include="PolySharp" PrivateAssets="all" />
@@ -103,7 +96,7 @@
     <Using Include="Microsoft.Extensions.DependencyInjection" />
     <Using Include="Microsoft.Extensions.Logging" />
     <Using Include="Microsoft.Extensions.Logging.Abstractions" />
-    <InternalsVisibleTo Include="ActualLab.Tests" />
+    <!-- <InternalsVisibleTo Include="ActualLab.Tests" /> -->
   </ItemGroup>
 
   <!-- Extra global usings for CommandR projects -->
@@ -120,7 +113,7 @@
     <Using Include="ActualLab.CommandR" />
     <Using Include="ActualLab.CommandR.Configuration" />
     <Using Include="ActualLab.CommandR.Commands" />
-    <InternalsVisibleTo Include="ActualLab.Fusion.Tests" />
+    <!-- <InternalsVisibleTo Include="ActualLab.Fusion.Tests" /> -->
   </ItemGroup>
 
   <!-- Packaging & SourceLink -->
