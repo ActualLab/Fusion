@@ -83,10 +83,10 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
             UpdateCycleTask = computedStateOptions.FlowExecutionContext
                 ? UpdateCycle()
                 : ExecutionContextExt.Start(ExecutionContextExt.Default, UpdateCycle);
-        else if (computedStateOptions.FlowExecutionContext)
+        else if (computedStateOptions.FlowExecutionContext || ExecutionContext.IsFlowSuppressed())
             UpdateCycleTask = Task.Run(UpdateCycle, DisposeToken);
         else {
-            using var _ = ExecutionContextExt.TrySuppressFlow();
+            using var _ = ExecutionContext.SuppressFlow();
             UpdateCycleTask = Task.Run(UpdateCycle, DisposeToken);
         }
     }
