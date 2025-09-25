@@ -11,7 +11,7 @@ public class UserService(IServiceProvider services) : DbServiceBase<TestDbContex
         CancellationToken cancellationToken)
     {
         CommandContext.GetCurrent().Should().Be(context);
-        context.ExecutionState.Handlers.Length.Should().Be(6);
+        context.ExecutionState.Handlers.Length.Should().Be(7);
 
         var dbContext = await DbHub.CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
