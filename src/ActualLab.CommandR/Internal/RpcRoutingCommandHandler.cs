@@ -71,7 +71,7 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                     return null; // Not an RPC service
 
                 var mode = serviceBuilder.Mode;
-                if (!mode.IsAnyClient() && !mode.IsAnyDistributed())
+                if (!mode.IsAnyClient())
                     return null; // Not a client or distributed service
 
                 var serviceDef = self.RpcHub.ServiceRegistry[serviceType];
