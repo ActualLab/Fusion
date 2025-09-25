@@ -370,7 +370,7 @@ public readonly struct RpcBuilder
         //   - either TImplementation singleton,
         //   - or its internal TService client.
         // RPC:
-        // - TService configured as server resolving to TImplementation, so incoming calls won't be routed
+        // - TService configured as a server resolving to TImplementation, so incoming calls won't be routed
 
         AddLocalService(implementationType);
         Services.AddSingleton(serviceType, c => {

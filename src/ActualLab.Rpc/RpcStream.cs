@@ -84,7 +84,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     [DataMember(Order = 2), MemoryPackOrder(2)]
     public RpcObjectId SerializedId {
         get {
-            // This member must be never accessed directly - its only purpose is to be called on serialization
+            // This member must never be accessed directly - its only purpose is to be called on serialization
             this.RequireKind(RpcObjectKind.Local);
             lock (_lock) {
                 if (!Id.IsNone) // Already registered
