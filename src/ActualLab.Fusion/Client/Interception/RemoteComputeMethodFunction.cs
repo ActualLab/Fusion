@@ -59,14 +59,18 @@ public abstract class RemoteComputeMethodFunction(
         var startedAt = CpuTimestamp.Now;
         while (true) {
             try {
+                // We don't use RpcCallRouteOverride here, because this method is typically called from
+                // a post-async-lock block, so the original RpcCallRouteOverride.Peer won't be available
+                // at this point. And that's why there is also no need to reset it.
                 var peer = RpcSafeCallRouter.Invoke(RpcMethodDef, typedInput.Invocation.Arguments);
                 if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                     // Local computation / no RPC call scenario
                     var computed = NewReplicaComputed(typedInput);
                     using var _ = Computed.BeginCompute(computed);
-                    // LocalTarget is not null -> proxy is a DistributedPair service, and the Service.Method is invoked
                     if (LocalTarget is not null) {
+                        // LocalTarget is not null -> proxy is a DistributedPair service, and the Service.Method is invoked
                         try {
+                            // We're in the new async flow, so no RpcOutboundContext to deactivate
                             await MethodDef.TargetAsyncInvoker
                                 .Invoke(LocalTarget!, typedInput.Invocation.Arguments)
                                 .ConfigureAwait(false);
@@ -83,7 +87,10 @@ public abstract class RemoteComputeMethodFunction(
                     //   (there is no base.Method)
                     // - or a Distributed mode service, so its base.Method should be invoked
                     try {
-                        var result = await typedInput.InvokeInterceptedUntyped(cancellationToken).ConfigureAwait(false);
+                        ValueTask<object?> invokeInterceptedUntypedTask;
+                        using (RpcCallRouteOverride.Activate(peer)) // Force distributed service to preroute to local
+                            invokeInterceptedUntypedTask = typedInput.InvokeInterceptedUntyped(cancellationToken);
+                        var result = await invokeInterceptedUntypedTask.ConfigureAwait(false);
                         computed.TrySetValue(result);
                         return computed;
                     }

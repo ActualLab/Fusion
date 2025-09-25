@@ -43,14 +43,21 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         RelatedId = relatedId;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Scope UseOrActivateNew()
-        => _current is { } current
-            ? new Scope(current, current)
-            : new Scope(new(), null);
+        => UseOrActivateNew(_current);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static Scope UseOrActivateNew(RpcOutboundContext? current)
+        => new Scope(current ?? new(), current);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Scope Activate()
         => new(this);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Scope Deactivate()
+        => new(null!);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundCall? PrepareCall(RpcMethodDef methodDef, ArgumentList arguments)

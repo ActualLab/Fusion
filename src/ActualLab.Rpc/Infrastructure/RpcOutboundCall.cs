@@ -327,7 +327,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         return peer != methodDef.Hub.SafeCallRouter.Invoke(methodDef, Context.Arguments!);
     }
 
-    public void SetRerouteError()
+    public void SetMustRerouteError()
     {
         var error = RpcRerouteException.MustReroute();
         // This SetError call not only sets the error but also invalidates

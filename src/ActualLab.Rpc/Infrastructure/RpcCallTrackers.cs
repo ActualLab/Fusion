@@ -92,7 +92,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
         foreach (var call in this)
             if (call.IsPeerChanged())
-                call.SetRerouteError();
+                call.SetMustRerouteError();
     }
 
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)

@@ -8,6 +8,7 @@ public readonly record struct CommandExecutionState(
     public bool IsFinal => NextHandlerIndex >= Handlers.Length;
     public CommandHandler NextHandler => Handlers[NextHandlerIndex];
     public CommandExecutionState NextState => this with { NextHandlerIndex = NextHandlerIndex + 1 };
+    public CommandExecutionState PreFinalState => this with { NextHandlerIndex = Handlers.Length - 1 };
 
     public override string ToString()
         => $"{GetType().GetName()}({NextHandlerIndex}/{Handlers.Length})";

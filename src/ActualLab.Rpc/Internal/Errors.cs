@@ -54,6 +54,13 @@ public static class Errors
             $"Most likely the scope was disposed in async continuation / another thread, which should never happen - " +
             $"this scope should be used only in synchronous part of your code that happens " +
             $"right before the async method triggering the outgoing RPC call is invoked.");
+    public static Exception RpcCallRouteOverrideChanged()
+        => new InvalidOperationException(
+            $"The scope returned from {nameof(RpcCallRouteOverride)}.{nameof(RpcCallRouteOverride.Activate)} " +
+            $"detected Peer change on its disposal. " +
+            $"Most likely the scope was disposed in async continuation / another thread, which should never happen - " +
+            $"this scope should be used only in synchronous part of your code that happens " +
+            $"right before the async method triggering the outgoing RPC call is invoked.");
 
     public static Exception InvalidItemSize()
         => new SerializationException("Invalid item size. The remainder of the message will be dropped.");
