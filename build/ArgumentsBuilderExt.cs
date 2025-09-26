@@ -3,7 +3,7 @@ using CliWrap.Builders;
 
 namespace Build;
 
-public static class ArgumentsBuilderExt
+internal static class ArgumentsBuilderExt
 {
     public static ArgumentsBuilder MaybeAdd(this ArgumentsBuilder builder, string argument, bool mustAdd)
         => mustAdd ? builder.Add(argument) : builder;
