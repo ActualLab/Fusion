@@ -14,8 +14,13 @@ public static class StateExt
 
     public static Task<T> Use<T>(
         this IState<T> state, CancellationToken cancellationToken = default)
-        => (Task<T>)state.Computed.UseUntyped(cancellationToken);
+        => (Task<T>)state.Computed.UseUntyped(allowInconsistent: false, cancellationToken);
 
+    public static Task<T> Use<T>(
+        this IState<T> state, bool allowInconsistent, CancellationToken cancellationToken = default)
+        => (Task<T>)state.Computed.UseUntyped(allowInconsistent, cancellationToken);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Invalidate(this IState state, bool immediately = false)
         => state.Computed.Invalidate(immediately);
 

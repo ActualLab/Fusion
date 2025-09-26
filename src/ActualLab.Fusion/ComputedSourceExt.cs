@@ -15,8 +15,12 @@ public static class ComputedSourceExt
     }
 
     public static Task<T> Use<T>(this ComputedSource<T> source, CancellationToken cancellationToken = default)
-        => (Task<T>)source.Computed.UseUntyped(cancellationToken);
+        => (Task<T>)source.Computed.UseUntyped(allowInconsistent: false, cancellationToken);
 
+    public static Task<T> Use<T>(this ComputedSource<T> source, bool allowInconsistent, CancellationToken cancellationToken = default)
+        => (Task<T>)source.Computed.UseUntyped(allowInconsistent, cancellationToken);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Invalidate(this IComputedSource source, bool immediately = false)
         => source.Computed.Invalidate(immediately);
 

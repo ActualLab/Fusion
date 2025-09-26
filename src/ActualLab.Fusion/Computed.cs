@@ -20,6 +20,7 @@ public interface IComputed : IResult, IHasVersion<ulong>
     public Task GetValuePromise();
     public ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
     public Task UseUntyped(CancellationToken cancellationToken = default);
+    public Task UseUntyped(bool allowInconsistent, CancellationToken cancellationToken = default);
     public void Invalidate(bool immediately = false);
 }
 
@@ -158,14 +159,18 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         return computed!;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Task UseUntyped(CancellationToken cancellationToken = default)
+        => UseUntyped(allowInconsistent: false, cancellationToken);
+
+    public Task UseUntyped(bool allowInconsistent, CancellationToken cancellationToken = default)
     {
         var context = ComputeContext.Current;
         if ((context.CallOptions & CallOptions.GetExisting) != 0) // Neither GetExisting nor Invalidate can be used here
             throw Errors.InvalidContextCallOptions(context.CallOptions);
 
         // Slightly faster version of this.TryUseExistingFromLock(context)
-        if (this.IsConsistent()) {
+        if (allowInconsistent || this.IsConsistent()) {
             // It can become inconsistent here, but we don't care, since...
             ComputedImpl.UseNew(this, context);
             // it can also become inconsistent here & later, and UseNew handles this.

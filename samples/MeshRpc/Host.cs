@@ -3,6 +3,8 @@ using ActualLab.Fusion.Server;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Server;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
 using Pastel;
 using Samples.MeshRpc.Services;
 using static Samples.MeshRpc.HostFactorySettings;

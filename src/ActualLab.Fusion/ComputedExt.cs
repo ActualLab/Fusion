@@ -15,7 +15,10 @@ public static partial class ComputedExt
     }
 
     public static Task<T> Use<T>(this Computed<T> computed, CancellationToken cancellationToken = default)
-        => (Task<T>)computed.UseUntyped(cancellationToken);
+        => (Task<T>)computed.UseUntyped(allowInconsistent: false, cancellationToken);
+
+    public static Task<T> Use<T>(this Computed<T> computed, bool allowInconsistent, CancellationToken cancellationToken = default)
+        => (Task<T>)computed.UseUntyped(allowInconsistent, cancellationToken);
 
     // Invalidate
 

@@ -17,7 +17,7 @@ if (RuntimeCodegen.NativeMode != RuntimeCodegenMode.DynamicMethods)
     CodeKeeper.RunActions();
 
 WriteLine($"RuntimeCodegen.Mode: {RuntimeCodegen.Mode}");
-WriteLine($"InterceptionFeatures.ArgumentListAllowGenerics: {InterceptionFeatures.ArgumentListAllowGenerics}");
+WriteLine($"ArgumentList.UseGenerics: {ArgumentList.UseGenerics}");
 var l0 = ArgumentList.New();
 var l2 = ArgumentList.New(1, "s");
 var l10 = ArgumentList.New(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
