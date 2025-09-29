@@ -53,7 +53,7 @@ public abstract class MutableState : State, IMutableState
 
             var snapshot = Snapshot;
             NextOutput = result;
-            // We do this inside the lock by a few reasons:
+            // We do this inside the lock for a few reasons:
             // 1. Otherwise, the lock will be acquired twice -
             //    see OnInvalidated & Invoke overloads below.
             // 2. It's quite convenient if Set, while being
@@ -82,7 +82,7 @@ public abstract class MutableState : State, IMutableState
 
     protected override Task<Computed> ProduceComputed(ComputeContext context, CancellationToken cancellationToken = default)
     {
-        // The same logic as in base method, but relying on lock instead of AsyncLock
+        // The same logic as in the base method, but relying on lock instead of AsyncLock
         lock (Lock) {
             var computed = UntypedComputed;
             if (ComputedImpl.TryUseExistingFromLock(computed, context))
