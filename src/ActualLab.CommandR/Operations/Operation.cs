@@ -59,6 +59,9 @@ public class Operation : IHasUuid, IHasId<string>
         Scope = scope;
     }
 
+    public void MustCreate(bool mustCreate)
+        => Scope.Require().MustCreateOperation = mustCreate;
+
     public OperationEvent AddEvent(OperationEvent @event)
         => AddEvent(@event.Value!, @event.DelayUntil, @event.Uuid, @event.UuidConflictStrategy);
     public OperationEvent AddEvent(

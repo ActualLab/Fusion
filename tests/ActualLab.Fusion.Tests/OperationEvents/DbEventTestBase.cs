@@ -3,7 +3,7 @@ using ActualLab.Fusion.Testing;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Versioning;
 
-namespace ActualLab.Fusion.Tests;
+namespace ActualLab.Fusion.Tests.OperationEvents;
 
 public class SqliteEventTest : DbEventTestBase
 {

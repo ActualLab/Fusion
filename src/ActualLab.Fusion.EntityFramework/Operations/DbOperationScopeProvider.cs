@@ -47,7 +47,7 @@ public class DbOperationScopeProvider(IServiceProvider services)
             // It's a transient failure - let's tag it so that IOperationReprocessor retries on it
             operationReprocessor.MarkTransient(transientError, Transiency.Transient);
 
-            // But if retry still won't happen (too many retries?) - let's log error here
+            // But if retry still doesn't happen (too many retries?) - let's log the error here
             if (!operationReprocessor.WillRetry(allErrors, out _))
                 Log.LogError(error, "Operation failed: {Command}", command);
             else

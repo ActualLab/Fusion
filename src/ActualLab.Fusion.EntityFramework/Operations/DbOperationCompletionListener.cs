@@ -46,22 +46,28 @@ public class DbOperationCompletionListener<TDbContext>
 
         var shard = operationScope.Shard;
         _ = Settings.NotifyRetryPolicy.RunIsolated(
-            ct => Notify(shard, operation, operationScope, ct),
-            new RetryLogger(Log, $"{nameof(Notify)}[{shard}]"));
+            ct => OnLocalOperationCompleted(shard, operation, operationScope, ct),
+            new RetryLogger(Log, $"{nameof(OnLocalOperationCompleted)}[{shard}]"));
         return Task.CompletedTask;
     }
 
     // Protected methods
 
-    protected virtual Task Notify(
+    protected virtual Task OnLocalOperationCompleted(
         string shard, Operation operation, DbOperationScope<TDbContext> operationScope,
         CancellationToken cancellationToken)
     {
-        var notifyOperationLogTask = OperationLogWatcher.NotifyChanged(shard, cancellationToken);
-        if (!operationScope.HasEvents)
-            return notifyOperationLogTask;
+        var notifyTask1 = operationScope.CreatedOperation
+            ? OperationLogWatcher.NotifyChanged(shard, cancellationToken)
+            : null;
+        var notifyTask2 = operationScope.CreatedEvents
+            ? EventLogWatcher.NotifyChanged(shard, cancellationToken)
+            : null;
 
-        var notifyEventLogTask = EventLogWatcher.NotifyChanged(shard, cancellationToken);
-        return Task.WhenAll(notifyOperationLogTask, notifyEventLogTask);
+        if (notifyTask1 is null)
+            return notifyTask2 ?? Task.CompletedTask;
+        if (notifyTask2 is null)
+            return notifyTask1;
+        return Task.WhenAll(notifyTask1, notifyTask2);
     }
 }

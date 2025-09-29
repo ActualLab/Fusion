@@ -33,7 +33,9 @@ public abstract class DbOperationScope : IOperationScope
     public bool IsTransient => false;
     public bool IsUsed => MasterDbContext is not null;
     public bool? IsCommitted { get; protected set; }
-    public bool HasEvents { get; protected set; }
+    public bool MustCreateOperation { get; set; } = true;
+    public bool CreatedOperation { get; protected set; }
+    public bool CreatedEvents { get; protected set; }
 
     public DbContext? MasterDbContext { get; protected set; }
     public DbConnection? Connection { get; protected set; }
@@ -194,8 +196,10 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                 throw ActualLab.Internal.Errors.InternalError(
                     "MasterDbContext has some unsaved changes, which isn't expected here.");
 
-            // We'll manually add/update entities here
+            // We'll manually add/update entities here, so...
             dbContext.EnableChangeTracking(false);
+
+            // Creating events
             if (Operation.Events.Count != 0) {
                 var events = new Dictionary<string, OperationEvent>(StringComparer.Ordinal);
                 // We "clean up" the events first by getting rid of duplicates there
@@ -205,7 +209,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
                     events[e.Uuid] = e;
                 }
-                HasEvents = events.Count != 0;
+                CreatedEvents = events.Count != 0;
                 var orderedEvents = events.Values.OrderBy(x => x.Uuid, StringComparer.Ordinal);
                 var dbEvents = dbContext.Set<DbEvent>();
                 foreach (var e in orderedEvents) {
@@ -230,23 +234,35 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                     }
                 }
             }
-            var dbOperation = new DbOperation(Operation);
-            dbContext.Add(dbOperation);
 
-            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            if (!dbOperation.HasIndex)
-                throw Errors.DbOperationIndexWasNotAssigned();
+            // Creating operation
+            var dbOperation = (DbOperation?)null;
+            if (MustCreateOperation) {
+                CreatedOperation = true;
+                dbOperation = new DbOperation(Operation);
+                dbContext.Add(dbOperation);
+            }
+
+            // Saving changes
+            if (CreatedEvents || CreatedOperation) {
+                await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                if (dbOperation is not null && !dbOperation.HasIndex)
+                    throw Errors.DbOperationIndexWasNotAssigned();
+            }
 
             try {
                 if (DbHub.ChaosMaker.IsEnabled)
                     await DbHub.ChaosMaker.Act(this, cancellationToken).ConfigureAwait(false);
                 await Transaction!.CommitAsync(cancellationToken).ConfigureAwait(false);
-                Operation.Index = dbOperation.Index;
+                Operation.Index = dbOperation?.Index;
                 IsCommitted = true;
                 DebugLog?.LogDebug("Transaction #{TransactionId} @ shard '{Shard}': committed", TransactionId, Shard);
             }
             catch (Exception) {
                 // See https://docs.microsoft.com/en-us/ef/ef6/fundamentals/connection-resiliency/commit-failures
+                if (dbOperation is null)
+                    throw; // No operation was stored, so no way to verify the commit status
+
                 try {
                     // We need a new connection here, since the old one might be broken
                     var verifierDbContext = await ContextFactory.CreateDbContextAsync(Shard, cancellationToken).ConfigureAwait(false);

@@ -19,6 +19,9 @@ public sealed class InMemoryOperationScope : IOperationScope
     public bool IsTransient => true;
     public bool IsUsed => true;
     public bool? IsCommitted { get; private set; }
+    public bool MustCreateOperation { get; set; }
+    public bool CreatedOperation => false;
+    public bool CreatedEvents { get; private set; }
 
     public static InMemoryOperationScope? TryGet(CommandContext context)
         => context.TryGetOperation()?.Scope as InMemoryOperationScope;
@@ -59,6 +62,8 @@ public sealed class InMemoryOperationScope : IOperationScope
     public Task Commit(CancellationToken cancellationToken = default)
     {
         Close(true);
+        if (IsCommitted == true)
+            CreatedEvents = Operation.Events.Any(x => x.Value is not null);
         return Task.CompletedTask;
     }
 

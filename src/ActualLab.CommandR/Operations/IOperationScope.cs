@@ -7,6 +7,9 @@ public interface IOperationScope : IAsyncDisposable
     public bool IsTransient { get; }
     public bool IsUsed { get; }
     public bool? IsCommitted { get; }
+    public bool MustCreateOperation { get; set; }
+    public bool CreatedOperation { get; }
+    public bool CreatedEvents { get; }
 
     public Task Commit(CancellationToken cancellationToken = default);
 }
