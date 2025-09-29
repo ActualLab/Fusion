@@ -37,6 +37,20 @@ public sealed class DbEvent : IDbEventLogEntry
     public DbEvent(OperationEvent model, VersionGenerator<long>? versionGenerator = null)
         => UpdateFrom(model, versionGenerator);
 
+    // This constructor is used to create a fake DbEvent entry for an Operation.
+    // The entry is used to verify whether the commit succeeded in case of an error during the commit.
+    public DbEvent(Operation model, VersionGenerator<long>? versionGenerator = null)
+    {
+        if (model.Uuid.IsNullOrEmpty())
+            throw new ArgumentOutOfRangeException(nameof(model), "Uuid is empty.");
+
+        Uuid = string.Concat("~op~", model.Uuid);
+        if (versionGenerator is not null)
+            Version = versionGenerator.NextVersion(Version);
+        LoggedAt = model.LoggedAt;
+        State = LogEntryState.Processed;
+    }
+
     public OperationEvent ToModel()
     {
         var value = ValueJson.IsNullOrEmpty()

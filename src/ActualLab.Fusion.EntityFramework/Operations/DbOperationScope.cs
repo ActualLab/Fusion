@@ -198,6 +198,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
             // We'll manually add/update entities here, so...
             dbContext.EnableChangeTracking(false);
+            var versionGenerator = DbHub.VersionGenerator;
 
             // Creating events
             if (Operation.Events.Count != 0) {
@@ -213,7 +214,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                 var orderedEvents = events.Values.OrderBy(x => x.Uuid, StringComparer.Ordinal);
                 var dbEvents = dbContext.Set<DbEvent>();
                 foreach (var e in orderedEvents) {
-                    var dbEvent = new DbEvent(e, DbHub.VersionGenerator);
+                    var dbEvent = new DbEvent(e, versionGenerator);
                     var conflictStrategy = e.UuidConflictStrategy;
                     if (conflictStrategy == KeyConflictStrategy.Fail)
                         dbEvents.Add(dbEvent);
@@ -228,41 +229,35 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                                 throw KeyConflictResolver.Error<DbEvent>();
 
                             dbEvents.Attach(existingDbEvent);
-                            existingDbEvent.UpdateFrom(e, DbHub.VersionGenerator);
+                            existingDbEvent.UpdateFrom(e, versionGenerator);
                             dbEvents.Update(existingDbEvent);
                         }
                     }
                 }
             }
 
-            // Creating operation
-            var dbOperation = (DbOperation?)null;
-            if (MustCreateOperation) {
-                CreatedOperation = true;
-                dbOperation = new DbOperation(Operation);
-                dbContext.Add(dbOperation);
-            }
+            // Creating either a DbOperation or DbEvent
+            CreatedOperation = MustCreateOperation;
+            var dbCommitVerifier = MustCreateOperation
+                ? (object)new DbOperation(Operation)
+                : new DbEvent(Operation, versionGenerator);
+            dbContext.Add(dbCommitVerifier);
 
             // Saving changes
-            if (CreatedEvents || CreatedOperation) {
-                await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                if (dbOperation is not null && !dbOperation.HasIndex)
-                    throw Errors.DbOperationIndexWasNotAssigned();
-            }
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            if (dbCommitVerifier is DbOperation { HasIndex: false })
+                throw Errors.DbOperationIndexWasNotAssigned();
 
             try {
                 if (DbHub.ChaosMaker.IsEnabled)
                     await DbHub.ChaosMaker.Act(this, cancellationToken).ConfigureAwait(false);
                 await Transaction!.CommitAsync(cancellationToken).ConfigureAwait(false);
-                Operation.Index = dbOperation?.Index;
+                Operation.Index = (dbCommitVerifier as DbOperation)?.Index;
                 IsCommitted = true;
                 DebugLog?.LogDebug("Transaction #{TransactionId} @ shard '{Shard}': committed", TransactionId, Shard);
             }
             catch (Exception) {
                 // See https://docs.microsoft.com/en-us/ef/ef6/fundamentals/connection-resiliency/commit-failures
-                if (dbOperation is null)
-                    throw; // No operation was stored, so no way to verify the commit status
-
                 try {
                     // We need a new connection here, since the old one might be broken
                     var verifierDbContext = await ContextFactory.CreateDbContextAsync(Shard, cancellationToken).ConfigureAwait(false);
@@ -272,11 +267,26 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 #else
                     verifierDbContext.Database.AutoTransactionsEnabled = true;
 #endif
-                    var committedDbOperation = await verifierDbContext
-                        .FindAsync<DbOperation>(DbKey.Compose(dbOperation.Index), cancellationToken)
-                        .ConfigureAwait(false);
-                    if (committedDbOperation is not null)
-                        IsCommitted = true;
+                    switch (dbCommitVerifier) {
+                    case DbOperation dbo: {
+                        var dbEntry = await verifierDbContext
+                            .FindAsync<DbOperation>(DbKey.Compose(dbo.Index), cancellationToken)
+                            .ConfigureAwait(false);
+                        if (dbEntry is not null)
+                            IsCommitted = true;
+                        break;
+                    }
+                    case DbEvent dbe: {
+                        var dbEntry = await verifierDbContext
+                            .FindAsync<DbEvent>(DbKey.Compose(dbe.Uuid), cancellationToken)
+                            .ConfigureAwait(false);
+                        if (dbEntry is not null)
+                            IsCommitted = true;
+                        break;
+                    }
+                    default:
+                        throw;
+                    }
                 }
                 catch {
                     // Intended
