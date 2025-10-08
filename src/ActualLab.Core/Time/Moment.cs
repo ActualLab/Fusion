@@ -49,6 +49,15 @@ public readonly partial struct Moment(long epochOffsetTicks)
     public Moment(DateTimeOffset value)
         : this(value.ToUniversalTime() - DateTimeOffsetExt.UnixEpoch) { }
 
+    // ToString
+
+    public override string ToString()
+        => ToDateTimeClamped().ToString("o", CultureInfo.InvariantCulture);
+    public string ToString(string format)
+        => ToDateTimeClamped().ToString(format, CultureInfo.InvariantCulture);
+    public string ToString(string format, CultureInfo cultureInfo)
+        => ToDateTimeClamped().ToString(format, cultureInfo);
+
     // (Try)Parse
 
     public static Moment Parse(string source)
@@ -119,12 +128,22 @@ public readonly partial struct Moment(long epochOffsetTicks)
     public Moment Clamp(Moment min, Moment max)
         => new(Math.Max(min.EpochOffsetTicks, Math.Min(max.EpochOffsetTicks, EpochOffsetTicks)));
 
-    public override string ToString()
-        => ToDateTimeClamped().ToString("o", CultureInfo.InvariantCulture);
-    public string ToString(string format)
-        => ToDateTimeClamped().ToString(format, CultureInfo.InvariantCulture);
-    public string ToString(string format, CultureInfo cultureInfo)
-        => ToDateTimeClamped().ToString(format, cultureInfo);
+    public Moment Floor(TimeSpan interval, Moment offset = default)
+    {
+        var ticks = (this - offset).Ticks;
+        var moduloTicks = ticks.PositiveModulo(interval.Ticks);
+        return offset + TimeSpan.FromTicks(ticks - moduloTicks);
+    }
+
+    public Moment Ceiling(TimeSpan interval, Moment offset = default)
+    {
+        var ticks = (this - offset).Ticks;
+        var moduloTicks = ticks.PositiveModulo(interval.Ticks);
+        if (moduloTicks == 0)
+            return this;
+
+        return offset + TimeSpan.FromTicks(ticks - moduloTicks + interval.Ticks);
+    }
 
     // Equality
 

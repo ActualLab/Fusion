@@ -15,8 +15,6 @@ public sealed class CommanderHub(ICommander commander, IServiceProvider services
     [field: AllowNull, MaybeNull]
     public HostId HostId => field ??= Services.GetRequiredService<HostId>();
     [field: AllowNull, MaybeNull]
-    public UuidGenerator UuidGenerator => field ??= Services.GetRequiredService<UuidGenerator>();
-    [field: AllowNull, MaybeNull]
     public VersionGenerator<long> VersionGenerator => field ??= Services.VersionGenerator<long>();
     [field: AllowNull, MaybeNull]
     public CommandHandlerResolver HandlerResolver => field ??= Services.GetRequiredService<CommandHandlerResolver>();

@@ -8,5 +8,5 @@ public static class MomentExt
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Moment DefaultIfNull(this Moment? moment)
-        => moment is { } vMoment ? vMoment : default;
+        => moment ?? default;
 }

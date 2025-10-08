@@ -44,7 +44,7 @@ public sealed class DbEvent : IDbEventLogEntry
         if (model.Uuid.IsNullOrEmpty())
             throw new ArgumentOutOfRangeException(nameof(model), "Uuid is empty.");
 
-        Uuid = string.Concat("~op~", model.Uuid);
+        Uuid = string.Concat("~op-", model.Uuid);
         if (versionGenerator is not null)
             Version = versionGenerator.NextVersion(Version);
         LoggedAt = model.LoggedAt;
@@ -56,7 +56,13 @@ public sealed class DbEvent : IDbEventLogEntry
         var value = ValueJson.IsNullOrEmpty()
             ? null
             : Serializer.Read(ValueJson, typeof(object));
-        return new OperationEvent(Uuid, LoggedAt, DelayUntil, value, KeyConflictStrategy.Fail);
+
+        // We use "value: null" here to turn off DelayUntil detection logic in OperationEvent constructor
+        return new OperationEvent(Uuid, value: null) {
+            Value = value,
+            LoggedAt = LoggedAt,
+            DelayUntil = DelayUntil,
+        };
     }
 
     public DbEvent UpdateFrom(OperationEvent model, VersionGenerator<long>? versionGenerator = null)

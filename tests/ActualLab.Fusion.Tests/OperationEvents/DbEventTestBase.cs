@@ -148,10 +148,15 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
         => E(id, delayUntil, KeyConflictStrategy.Update);
 
     private OperationEvent E(string id, KeyConflictStrategy conflictStrategy = KeyConflictStrategy.Fail)
-        => new(GetUuid(id), new EventCatcher_Event(id), conflictStrategy);
+        => new(GetUuid(id), new EventCatcher_Event(id)) {
+            UuidConflictStrategy = conflictStrategy,
+        };
 
     private OperationEvent E(string id, Moment delayUntil, KeyConflictStrategy conflictStrategy = KeyConflictStrategy.Fail)
-        => new(GetUuid(id), delayUntil, new EventCatcher_Event(id), conflictStrategy);
+        => new(GetUuid(id), new EventCatcher_Event(id)) {
+            DelayUntil = delayUntil,
+            UuidConflictStrategy = conflictStrategy,
+        };
 
     private Task Enqueue(params OperationEvent[] events)
         => Services.Commander().Call(new EventQueue_Add(events));

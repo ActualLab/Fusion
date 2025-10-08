@@ -56,7 +56,6 @@ public readonly struct CommanderBuilder
         Handlers = services.AddInstance(new HashSet<CommandHandler>(), addInFront: true);
 
         // Core services
-        services.TryAddSingleton<UuidGenerator>(_ => new UlidUuidGenerator());
         services.TryAddSingleton<VersionGenerator<long>>(c => new ClockBasedVersionGenerator(c.Clocks().SystemClock));
         services.TryAddSingleton(_ => ChaosMaker.Default);
 

@@ -36,9 +36,9 @@ public class DbProductService(IServiceProvider services)
             ? $"Product removed: {productId}"
             : $"Product updated: {productId} with Price = {product.Price}";
         var logEvent = new LogMessageCommand(Ulid.NewUlid().ToString(), message);
-        context.Operation.AddEvent(logEvent, logEvent.Uuid);
+        context.Operation.AddEvent(logEvent);
         var randomEvent = LogMessageCommand.New();
-        context.Operation.AddEvent(randomEvent, randomEvent.Uuid);
+        context.Operation.AddEvent(randomEvent);
     }
 
     public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)
