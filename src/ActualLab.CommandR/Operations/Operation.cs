@@ -64,9 +64,9 @@ public class Operation : IHasUuid, IHasId<string>
     public void MustCreate(bool mustCreate)
         => Scope.Require().MustCreateOperation = mustCreate;
 
-    public OperationEvent AddEvent(object value)
+    public OperationEvent AddEvent(object? value)
         => AddEvent(new OperationEvent(value));
-    public OperationEvent AddEvent(string uuid, object value)
+    public OperationEvent AddEvent(string uuid, object? value)
         => AddEvent(new OperationEvent(uuid, value));
     public OperationEvent AddEvent(OperationEvent @event)
     {
@@ -76,10 +76,9 @@ public class Operation : IHasUuid, IHasId<string>
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
         @event.LoggedAt = scope.CommandContext.Commander.Hub.Clocks.SystemClock.Now;
-        lock (_lock) {
+        lock (_lock)
             Events = Events.Add(@event);
-            return @event;
-        }
+        return @event;
     }
 
     public bool RemoveEvent(OperationEvent @event)
