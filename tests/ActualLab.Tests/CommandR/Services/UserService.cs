@@ -1,3 +1,4 @@
+using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Tests.CommandR.Services;
@@ -33,8 +34,16 @@ public class UserService(IServiceProvider services) : DbServiceBase<TestDbContex
             .ConfigureAwait(false);
 
         var user = command.Users[0];
+        var mustFail = user.Id.IsNullOrEmpty();
+        context.Operation.AddCompletionHandler(scope => {
+            var hasFailed = !scope.IsCommitted!.Value;
+            Log.LogInformation("Completion handler: {Expected}, {Actual}", mustFail, hasFailed);
+            hasFailed.Should().Be(mustFail);
+            return Task.CompletedTask;
+        });
         if (user.Id.IsNullOrEmpty())
             throw new InvalidOperationException("User.Id must be set.");
+
         await dbContext.Users.AddAsync(user, cancellationToken).ConfigureAwait(false);
         await dbContext.SaveChangesAsync(cancellationToken);
     }

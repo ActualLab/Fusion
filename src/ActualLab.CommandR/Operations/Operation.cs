@@ -61,8 +61,10 @@ public class Operation : IHasUuid, IHasId<string>
         Scope = scope;
     }
 
-    public void MustCreate(bool mustCreate)
-        => Scope.Require().MustCreateOperation = mustCreate;
+    public void MustStore(bool mustStore)
+        => Scope.RequireActive().MustStoreOperation = mustStore;
+
+    // Add/Remove/ClearEvents
 
     public OperationEvent AddEvent(object? value)
         => AddEvent(new OperationEvent(value));
@@ -70,8 +72,7 @@ public class Operation : IHasUuid, IHasId<string>
         => AddEvent(new OperationEvent(uuid, value));
     public OperationEvent AddEvent(OperationEvent @event)
     {
-        if (Scope is not { IsUsed: true, IsCommitted: null } scope)
-            throw Errors.ActiveOperationRequired();
+        var scope = Scope.RequireActive();
         if (scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
@@ -85,8 +86,7 @@ public class Operation : IHasUuid, IHasId<string>
         => RemoveEvent(@event.Uuid);
     public bool RemoveEvent(string uuid)
     {
-        if (Scope is not { IsUsed: true, IsCommitted: null } scope)
-            throw Errors.ActiveOperationRequired();
+        var scope = Scope.RequireActive();
         if (scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
@@ -99,13 +99,26 @@ public class Operation : IHasUuid, IHasId<string>
 
     public void ClearEvents()
     {
-        if (Scope is not { IsUsed: true, IsCommitted: null } scope)
-            throw Errors.ActiveOperationRequired();
+        var scope = Scope.RequireActive();
         if (scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
         lock (_lock)
             Events = ImmutableList<OperationEvent>.Empty;
+    }
+
+    // Add/RemoveCompletionHandler
+
+    public void AddCompletionHandler(Func<IOperationScope, Task> handler)
+    {
+        var scope = Scope.RequireActive();
+        scope.CompletionHandlers = scope.CompletionHandlers.Add(handler);
+    }
+
+    public void RemoveCompletionHandler(Func<IOperationScope, Task> handler)
+    {
+        var scope = Scope.RequireActive();
+        scope.CompletionHandlers = scope.CompletionHandlers.Remove(handler);
     }
 
     public ClosedDisposable<(Operation, ImmutableList<NestedOperation>)> SuppressNestedOperationLogging()

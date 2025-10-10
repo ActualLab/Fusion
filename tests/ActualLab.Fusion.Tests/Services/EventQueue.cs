@@ -23,10 +23,10 @@ public class EventQueue(IServiceProvider services, ITestOutputHelper output)
         await using var _ = context.ConfigureAwait(false);
 
         var operation = CommandContext.GetCurrent().Operation;
-        var mustCreateOperation = RandomShared.NextDouble() < 0.5;
-        if (!mustCreateOperation) {
-            output.WriteLine($"MustCreateOperation: {mustCreateOperation}");
-            operation.MustCreate(mustCreateOperation);
+        var mustStoreOperation = RandomShared.NextDouble() < 0.5;
+        if (!mustStoreOperation) {
+            output.WriteLine($"MustStoreOperation: {mustStoreOperation}");
+            operation.MustStore(mustStoreOperation);
         }
         foreach (var @event in events)
             operation.AddEvent(@event);

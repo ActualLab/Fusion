@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
-using ActualLab.IO;
 using ActualLab.Tests.CommandR.Services;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
@@ -35,14 +34,12 @@ public class CommandRTestBase(ITestOutputHelper @out) : TestBase(@out)
             services.AddLogging(logging => {
                 var debugCategories = new List<string> {
                     "ActualLab.CommandR",
-                    "ActualLab.Tests.CommandR",
+                    "ActualLab.Tests",
                 };
 
                 bool LogFilter(string? category, LogLevel level)
-                {
-                    category ??= "";
-                    return debugCategories.Any(category.StartsWith) && level >= LogLevel.Debug;
-                }
+                    => debugCategories.Any(x => category?.StartsWith(x) ?? false)
+                        && level >= LogLevel.Debug;
 
                 logging.ClearProviders();
                 logging.SetMinimumLevel(LogLevel.Debug);

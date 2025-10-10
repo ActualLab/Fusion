@@ -19,9 +19,11 @@ public sealed class InMemoryOperationScope : IOperationScope
     public bool IsTransient => true;
     public bool IsUsed => true;
     public bool? IsCommitted { get; private set; }
-    public bool MustCreateOperation { get; set; }
-    public bool CreatedOperation => false;
-    public bool CreatedEvents { get; private set; }
+    public bool MustStoreOperation { get; set; }
+    public bool HasStoredOperation => false;
+    public bool HasStoredEvents { get; private set; }
+    public ImmutableList<Func<IOperationScope, Task>> CompletionHandlers { get; set; }
+        = ImmutableList<Func<IOperationScope, Task>>.Empty;
 
     public static InMemoryOperationScope? TryGet(CommandContext context)
         => context.TryGetOperation()?.Scope as InMemoryOperationScope;
@@ -56,14 +58,27 @@ public sealed class InMemoryOperationScope : IOperationScope
     public ValueTask DisposeAsync()
     {
         Close(false);
-        return default;
+        return CompletionHandlers.IsEmpty
+            ? default
+            : CompleteAsync();
+
+        async ValueTask CompleteAsync() {
+            foreach (var completionHandler in CompletionHandlers) {
+                try {
+                    await completionHandler.Invoke(this).ConfigureAwait(false);
+                }
+                catch (Exception e) {
+                    Log.LogError(e, "DisposeAsync: one of completion handlers failed");
+                }
+            }
+        }
     }
 
     public Task Commit(CancellationToken cancellationToken = default)
     {
         Close(true);
         if (IsCommitted == true)
-            CreatedEvents = Operation.Events.Any(x => x.Value is not null);
+            HasStoredEvents = Operation.Events.Any(x => x.Value is not null);
         return Task.CompletedTask;
     }
 

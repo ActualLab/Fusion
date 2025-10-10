@@ -33,9 +33,11 @@ public abstract class DbOperationScope : IOperationScope
     public bool IsTransient => false;
     public bool IsUsed => MasterDbContext is not null;
     public bool? IsCommitted { get; protected set; }
-    public bool MustCreateOperation { get; set; } = true;
-    public bool CreatedOperation { get; protected set; }
-    public bool CreatedEvents { get; protected set; }
+    public bool MustStoreOperation { get; set; } = true;
+    public bool HasStoredOperation { get; protected set; }
+    public bool HasStoredEvents { get; protected set; }
+    public ImmutableList<Func<IOperationScope, Task>> CompletionHandlers { get; set; }
+        = ImmutableList<Func<IOperationScope, Task>>.Empty;
 
     public DbContext? MasterDbContext { get; protected set; }
     public DbConnection? Connection { get; protected set; }
@@ -125,19 +127,27 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                 await Rollback().ConfigureAwait(false);
         }
         catch (Exception e) {
-            Log.LogWarning(e, "DisposeAsync: error on rollback");
+            Log.LogError(e, "DisposeAsync: error on rollback");
         }
-        finally {
-            IsCommitted ??= false;
-            await TryDetachExecutionStrategy().ConfigureAwait(false);
+
+        IsCommitted ??= false;
+        await TryDetachExecutionStrategy().ConfigureAwait(false);
+        try {
+            if (MasterDbContext is IAsyncDisposable ad)
+                await ad.DisposeAsync().ConfigureAwait(false);
+            else if (MasterDbContext is IDisposable d)
+                d.Dispose();
+        }
+        catch {
+            // Intended
+        }
+
+        foreach (var completionHandler in CompletionHandlers) {
             try {
-                if (MasterDbContext is IAsyncDisposable ad)
-                    await ad.DisposeAsync().ConfigureAwait(false);
-                else if (MasterDbContext is IDisposable d)
-                    d.Dispose();
+                await completionHandler.Invoke(this).ConfigureAwait(false);
             }
-            catch {
-                // Intended
+            catch (Exception e) {
+                Log.LogError(e, "DisposeAsync: one of completion handlers failed");
             }
         }
     }
@@ -210,7 +220,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
                     events[e.Uuid] = e;
                 }
-                CreatedEvents = events.Count != 0;
+                HasStoredEvents = events.Count != 0;
                 var orderedEvents = events.Values.OrderBy(x => x.Uuid, StringComparer.Ordinal);
                 var dbEvents = dbContext.Set<DbEvent>();
                 foreach (var e in orderedEvents) {
@@ -237,8 +247,8 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             }
 
             // Creating either a DbOperation or DbEvent
-            CreatedOperation = MustCreateOperation;
-            var dbCommitVerifier = MustCreateOperation
+            HasStoredOperation = MustStoreOperation;
+            var dbCommitVerifier = MustStoreOperation
                 ? (object)new DbOperation(Operation)
                 : new DbEvent(Operation, versionGenerator);
             dbContext.Add(dbCommitVerifier);

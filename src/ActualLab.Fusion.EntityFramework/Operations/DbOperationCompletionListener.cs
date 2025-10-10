@@ -57,10 +57,10 @@ public class DbOperationCompletionListener<TDbContext>
         string shard, Operation operation, DbOperationScope<TDbContext> operationScope,
         CancellationToken cancellationToken)
     {
-        var notifyTask1 = operationScope.CreatedOperation
+        var notifyTask1 = operationScope.HasStoredOperation
             ? OperationLogWatcher.NotifyChanged(shard, cancellationToken)
             : null;
-        var notifyTask2 = operationScope.CreatedEvents
+        var notifyTask2 = operationScope.HasStoredEvents
             ? EventLogWatcher.NotifyChanged(shard, cancellationToken)
             : null;
 
