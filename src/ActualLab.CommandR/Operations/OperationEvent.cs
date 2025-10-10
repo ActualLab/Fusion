@@ -48,7 +48,7 @@ public sealed class OperationEvent(string uuid, object? value) : IHasUuid, IHasI
         return this;
     }
 
-    public OperationEvent SetDelayBy(Moment delayUntil)
+    public OperationEvent SetDelayUntil(Moment delayUntil)
     {
         DelayUntil = delayUntil;
         return this;
