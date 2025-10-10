@@ -128,21 +128,24 @@ public readonly partial struct Moment(long epochOffsetTicks)
     public Moment Clamp(Moment min, Moment max)
         => new(Math.Max(min.EpochOffsetTicks, Math.Min(max.EpochOffsetTicks, EpochOffsetTicks)));
 
-    public Moment Floor(TimeSpan interval, Moment offset = default)
+    public Moment Floor(TimeSpan unit)
     {
-        var ticks = (this - offset).Ticks;
-        var moduloTicks = ticks.PositiveModulo(interval.Ticks);
-        return offset + TimeSpan.FromTicks(ticks - moduloTicks);
+        var mod = EpochOffsetTicks.PositiveModulo(unit.Ticks);
+        return new Moment(EpochOffsetTicks - mod);
     }
 
-    public Moment Ceiling(TimeSpan interval, Moment offset = default)
+    public Moment Ceiling(TimeSpan unit)
     {
-        var ticks = (this - offset).Ticks;
-        var moduloTicks = ticks.PositiveModulo(interval.Ticks);
-        if (moduloTicks == 0)
-            return this;
+        var mod = EpochOffsetTicks.PositiveModulo(unit.Ticks);
+        return mod == 0 ? this : new Moment(EpochOffsetTicks + unit.Ticks - mod);
+    }
 
-        return offset + TimeSpan.FromTicks(ticks - moduloTicks + interval.Ticks);
+    public Moment Round(TimeSpan unit)
+    {
+        var mod = EpochOffsetTicks.PositiveModulo(unit.Ticks);
+        return mod < (unit.Ticks >> 1)
+            ? new Moment(EpochOffsetTicks - mod)
+            : new Moment(EpochOffsetTicks + unit.Ticks - mod);
     }
 
     // Equality
