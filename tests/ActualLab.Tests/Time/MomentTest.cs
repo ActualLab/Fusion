@@ -1,5 +1,6 @@
 using System.Globalization;
 using ActualLab.Testing.Collections;
+using ActualLab.Time.Testing;
 
 namespace ActualLab.Tests.Time;
 
@@ -125,6 +126,35 @@ public class MomentTest(ITestOutputHelper @out) : TestBase(@out)
         // Edge cases: exact boundary and half-way point
         TestRound("2024-03-15T14:32:00.0000000Z", TimeSpan.Zero, TimeSpan.FromMinutes(1));
         TestRound("2024-03-15T14:33:00.0000000Z", TimeSpan.FromSeconds(-30), TimeSpan.FromMinutes(1)); // Exactly halfway rounds up
+    }
+
+    [Fact]
+    public void ConvertTest()
+    {
+        Test(TimeSpan.Zero);
+        Test(TimeSpan.FromHours(5));
+        Test(TimeSpan.FromHours(-5));
+        return;
+
+        void Test(TimeSpan testClockOffset) {
+            var systemClock = MomentClockSet.Default.SystemClock;
+            var testClock = new TestClock(testClockOffset);
+
+            // null input (should return null)
+            ((Moment?)null).Convert(systemClock, testClock).Should().BeNull();
+
+            // Get a reference moment from a system clock
+            var systemTime = systemClock.Now;
+            var expectedTime = systemTime + testClockOffset;
+            var testTime1 = systemTime.Convert(systemClock, testClock);
+            (testTime1 - expectedTime).Should().BeCloseTo(TimeSpan.Zero, TimeSpan.FromMilliseconds(1));
+            var testTime2 = ((Moment?)systemTime).Convert(systemClock, testClock)!.Value;
+            (testTime2 - expectedTime).Should().BeCloseTo(TimeSpan.Zero, TimeSpan.FromMilliseconds(1));
+
+            // Test conversion in the opposite direction
+            var convertedBack = testTime1.Convert(testClock, systemClock);
+            (convertedBack - systemTime).Should().BeCloseTo(TimeSpan.Zero, TimeSpan.FromMilliseconds(1));
+        }
     }
 
     // Private methods
