@@ -12,7 +12,7 @@ namespace ActualLab.CommandR.Commands;
 /// Delegating command handlers are guaranteed to:
 /// - Have no Operation Framework handlers in their pipeline -
 ///   they are filtered out, coz such commands can't make any changes directly.
-/// - <c>ComputeServiceCommandCompletionInvalidator</c> assumes
+/// - <c>InvalidatingCommandCompletionHandler</c> assumes
 ///   delegating commands don't require invalidation, so they aren't logged (even as the nested ones).
 /// - And thus they also don't need <c>if (Invalidation.IsActive) { ... }</c> blocks.
 /// </remarks>

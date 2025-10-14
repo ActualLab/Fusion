@@ -112,10 +112,10 @@ public readonly struct FusionBuilder
             typeof(CompletionProducer)));
 
         // Command completion handler performing invalidations
-        services.AddSingleton(_ => new ComputeServiceCommandCompletionInvalidator.Options());
-        services.AddSingleton(c => new ComputeServiceCommandCompletionInvalidator(
-            c.GetRequiredService<ComputeServiceCommandCompletionInvalidator.Options>(), c));
-        commander.AddHandlers<ComputeServiceCommandCompletionInvalidator>();
+        services.AddSingleton(_ => new InvalidatingCommandCompletionHandler.Options());
+        services.AddSingleton(c => new InvalidatingCommandCompletionHandler(
+            c.GetRequiredService<InvalidatingCommandCompletionHandler.Options>(), c));
+        commander.AddHandlers<InvalidatingCommandCompletionHandler>();
 
         // Completion terminator
         services.AddSingleton(_ => new CompletionTerminator());

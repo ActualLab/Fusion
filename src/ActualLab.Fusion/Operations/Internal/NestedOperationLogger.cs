@@ -12,8 +12,8 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
     protected IServiceProvider Services { get; } = services;
 
     [field: AllowNull, MaybeNull]
-    protected ComputeServiceCommandCompletionInvalidator ComputeServiceCommandCompletionInvalidator
-        => field ??= Services.GetRequiredService<ComputeServiceCommandCompletionInvalidator>();
+    protected InvalidatingCommandCompletionHandler InvalidatingCommandCompletionHandler
+        => field ??= Services.GetRequiredService<InvalidatingCommandCompletionHandler>();
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
@@ -22,7 +22,7 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
     {
         var mustBeUsed =
             context.OuterContext is not null // Should be a nested context
-            && ComputeServiceCommandCompletionInvalidator.IsRequired(command, out _)
+            && InvalidatingCommandCompletionHandler.IsRequired(command, out _)
             && !Invalidation.IsActive;
         if (!mustBeUsed) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);

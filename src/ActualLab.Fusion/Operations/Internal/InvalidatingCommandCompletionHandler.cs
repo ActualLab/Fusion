@@ -7,8 +7,8 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
 
-public class ComputeServiceCommandCompletionInvalidator(
-    ComputeServiceCommandCompletionInvalidator.Options settings,
+public class InvalidatingCommandCompletionHandler(
+    InvalidatingCommandCompletionHandler.Options settings,
     IServiceProvider services
     ) : ICommandHandler<ICompletion>
 {
@@ -25,11 +25,9 @@ public class ComputeServiceCommandCompletionInvalidator(
     [field: AllowNull, MaybeNull]
     protected RpcHub RpcHub => field ??= Services.GetRequiredService<RpcHub>();
     [field: AllowNull, MaybeNull]
-    protected RpcSafeCallRouter RpcSafeCallRouter => field ??= RpcHub.InternalServices.SafeCallRouter;
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
-    [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.ComputeServiceCommandCompletionInvalidator)]
+    [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.InvalidatingCommandCompletionHandler)]
     public async Task OnCommand(ICompletion completion, CommandContext context, CancellationToken cancellationToken)
     {
         var operation = completion.Operation;
