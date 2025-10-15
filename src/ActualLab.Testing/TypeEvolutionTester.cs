@@ -1,5 +1,5 @@
 using System.Text;
-using FluentAssertions;
+using AwesomeAssertions;
 using Newtonsoft.Json;
 using ActualLab.IO;
 using Xunit.Abstractions;

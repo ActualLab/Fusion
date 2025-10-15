@@ -1,7 +1,7 @@
 using System.CommandLine.IO;
 using System.Text;
-using FluentAssertions.Execution;
-using FluentAssertions.Primitives;
+using AwesomeAssertions.Execution;
+using AwesomeAssertions.Primitives;
 using Xunit.Abstractions;
 
 namespace ActualLab.Testing.Output;

@@ -133,7 +133,7 @@
 
     <!-- Testing-related global usings -->
     <Using Include="ActualLab.Tests.TestHelpers" Static="True" />
-    <Using Include="FluentAssertions" />
+    <Using Include="AwesomeAssertions" />
     <Using Include="ActualLab.Testing" />
     <Using Include="Moq" />
     <Using Include="Xunit" />

@@ -1,5 +1,5 @@
 using System.Reflection;
-using FluentAssertions.Execution;
+using AwesomeAssertions.Execution;
 using ActualLab.Reflection;
 
 namespace ActualLab.Tests.Reflection;
