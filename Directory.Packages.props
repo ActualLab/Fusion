@@ -85,7 +85,7 @@
     <PackageVersion Include="Blazorise.Icons.FontAwesome" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Sidebar" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Bullseye" Version="6.0.0" />
-    <PackageVersion Include="CliWrap" Version="3.9.1" />
+    <PackageVersion Include="CliWrap" Version="3.9.0" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
     <PackageVersion Include="DataAnnotationsValidatorNetStandard" Version="1.0.3" />
     <PackageVersion Include="MemoryPack" Version="$(MemoryPackVersion)" />
@@ -191,12 +191,12 @@
     <PackageVersion Include="AwesomeAssertions" Version="9.2.0" />
     <PackageVersion Include="ILogger.Moq" Version="2.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(AspNetCoreVersion)" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <!-- XunitTestOutputLoggerProvider is gone in Xunit.DependencyInjection.Logging 9.0.0, so we use the latest 8.x for now -->
     <PackageVersion Include="Xunit.DependencyInjection.Logging" Version="8.1.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
 
     <!-- Samples only -->
     <PackageVersion Include="ActualLab.Interception" Version="$(FusionVersion)" />

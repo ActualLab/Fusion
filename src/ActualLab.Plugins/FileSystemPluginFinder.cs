@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-#if !NETFRAMEWORK
+#if NETCOREAPP3_1_OR_GREATER
 using System.Runtime.Loader;
 #endif
 using ActualLab.Caching;
@@ -75,13 +75,13 @@ public class FileSystemPluginFinder : CachingPluginFinderBase
 #pragma warning restore 1998
     {
         var plugins = new HashSet<Type>();
-#if !NETFRAMEWORK
+#if NETCOREAPP3_1_OR_GREATER
         var context = GetAssemblyLoadContext();
 #endif
         foreach (var assemblyPath in GetPluginAssemblyNames()) {
             cancellationToken.ThrowIfCancellationRequested();
             try {
-#if NETFRAMEWORK
+#if !NETCOREAPP3_1_OR_GREATER
                 var assembly = Assembly.LoadFile(assemblyPath);
 #else
                 var assembly = context.LoadFromAssemblyPath(assemblyPath);
@@ -105,7 +105,7 @@ public class FileSystemPluginFinder : CachingPluginFinderBase
             Settings.DetectIndirectAssemblyDependencies);
     }
 
-#if !NETFRAMEWORK
+#if NETCOREAPP3_1_OR_GREATER
     protected virtual AssemblyLoadContext GetAssemblyLoadContext()
         => AssemblyLoadContext.Default;
 #endif

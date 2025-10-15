@@ -130,7 +130,7 @@ internal static class Program
         // Technically it should depend on "build" target, but such a setup fails
         // due to https://github.com/dotnet/orleans/issues/6073 ,
         // that's why we make "pack" to run "build" too here
-        Target("pack", DependsOn("clean", "restore"), async () => {
+        Target("pack", ["clean", "restore"], async () => {
             await Cli.Wrap(dotnetExePath).WithArguments(args => args
                     .Add("pack")
                     .Add("-noLogo")
@@ -144,7 +144,7 @@ internal static class Program
                 .ExecuteAsync(cancellationToken).ConfigureAwait(false);
         });
 
-        Target("publish", DependsOn("clean-nupkg", "pack"), async () => {
+        Target("publish", ["clean-nupkg", "pack"], async () => {
             const string feed = "https://api.nuget.org/v3/index.json";
             var nugetApiKey = Environment.GetEnvironmentVariable("ActualChat_NuGet_API_Key") ?? "";
             if (string.IsNullOrWhiteSpace(nugetApiKey))
@@ -171,7 +171,7 @@ internal static class Program
             }
         });
 
-        Target("coverage", DependsOn("build"), async () => {
+        Target("coverage", ["build"], async () => {
             CreateDir(testOutputPath);
             var cmd = await Cli.Wrap(dotnetExePath)
                 .WithArguments(args => args
@@ -198,7 +198,7 @@ internal static class Program
                 DeleteDir(path);
         });
 
-        Target("default", DependsOn("build"));
+        Target("default", ["build"]);
 
         try {
             // RunTargetsAndExitAsync hangs Target on Ctrl+C

@@ -4,7 +4,7 @@
 
   <!-- Defaults for test projects -->
   <PropertyGroup>
-    <TargetFrameworks Condition="$(UseMultitargeting)">net10.0;net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;net48;net471</TargetFrameworks>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net10.0;net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;net48;net472</TargetFrameworks>
     <!-- PolySharp -->
     <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
   </PropertyGroup>
@@ -67,12 +67,13 @@
     <!-- MA0051: Method is too long (41 lines; maximum allowed: 40)-->
     <!-- MA0074: Use an overload of 'Contains' that has a StringComparison parameter -->
     <NoWarn>$(NoWarn);MA0002;MA0004;MA0006;MA0011;MA0051;MA0074</NoWarn>
+    <!-- NU1510: PackageReference System.ValueTuple will not be pruned. -->
     <!-- NU1701: Package 'xunit.runner.visualstudio' was restored using .NETFramework,Version=v4.6.1 -->
     <!-- NETSDK1206: Found version-specific or distribution-specific runtime identifier(s): alpine-arm, alpine-arm64, alpine-x64. Affected libraries: SQLitePCLRaw.lib.e_sqlite3. In .NET 8.0 and higher, assets for version-specific and distribution-specific runtime identifiers will not be found by default. See https://aka.ms/dotnet/rid-usage for details. -->
     <!-- RCS1155: Use StringComparison when comparing strings. -->
     <!-- xUnit1030: .ConfigureAwait(false) in tests -->
     <!-- xUnit1031: .ConfigureAwait(false) in tests -->
-    <NoWarn>$(NoWarn);NU1701;NETSDK1206;RCS1155;xUnit1030;xUnit1031</NoWarn>
+    <NoWarn>$(NoWarn);NU1510;NU1701;NETSDK1206;RCS1155;xUnit1030;xUnit1031</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -90,6 +91,22 @@
   <ItemGroup Condition="!($(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')))">
     <PackageReference Include="PolySharp" PrivateAssets="all" />
   </ItemGroup>
+
+  <!-- Weird issue with System.ValueTuple assembly on .NET Framework -->
+  <PropertyGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <PackageReference Include="System.ValueTuple" VersionOverride="4.5.0" />
+  </ItemGroup>
+  <Target Name="CopySystemValueTuple" AfterTargets="Build" Condition="$(TargetFramework.StartsWith('net4'))">
+    <Copy SourceFiles="$(NuGetPackageRoot)\system.valuetuple\4.5.0\lib\net47\System.ValueTuple.dll"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(NuGetPackageRoot)\system.valuetuple\4.5.0\lib\net47\System.ValueTuple.xml"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
 
   <!-- Analyzers -->
   <ItemGroup>
