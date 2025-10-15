@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Rpc;
-using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
 
