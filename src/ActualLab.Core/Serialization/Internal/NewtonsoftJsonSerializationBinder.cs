@@ -4,6 +4,8 @@ using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace ActualLab.Serialization.Internal;
 
+#pragma warning disable IL2026
+
 public static class NewtonsoftJsonSerializationBinder
 {
 #if NET9_0_OR_GREATER

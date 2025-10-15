@@ -8,7 +8,8 @@ using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace ActualLab.Serialization;
 
-#pragma warning disable CA2326, CA2327, CA2328, IL2116
+#pragma warning disable CA2326, CA2327, CA2328
+#pragma warning disable IL2026, IL2116
 
 public class NewtonsoftJsonSerializer : TextSerializerBase
 {

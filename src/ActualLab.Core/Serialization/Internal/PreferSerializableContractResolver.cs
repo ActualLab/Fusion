@@ -2,6 +2,8 @@ using Newtonsoft.Json.Serialization;
 
 namespace ActualLab.Serialization.Internal;
 
+#pragma warning disable IL2026, IL2109
+
 public class PreferSerializableContractResolver : DefaultContractResolver
 {
     protected override JsonContract CreateContract(Type objectType)

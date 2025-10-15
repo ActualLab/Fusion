@@ -65,7 +65,7 @@ public abstract class BenchmarkTestBase(ITestOutputHelper @out) : TestBase(@out)
     }
 
     private long GetAllocatedBytesForCurrentThread()
-#if !NET471
+#if !NETFRAMEWORK
         => GC.GetAllocatedBytesForCurrentThread();
 #else
         => GC.GetTotalMemory(false);
