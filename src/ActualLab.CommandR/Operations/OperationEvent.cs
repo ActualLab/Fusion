@@ -13,7 +13,6 @@ public sealed class OperationEvent(string uuid, object? value) : IHasUuid, IHasI
     public object? Value { get; set; } = value;
     public Moment LoggedAt { get; set; }
     public Moment DelayUntil { get => Moment.Max(LoggedAt, field); set; }
-        = value is IHasDelayUntil hasDelayUntil ? hasDelayUntil.DelayUntil : default;
 
     // Non-persistent properties
     public KeyConflictStrategy UuidConflictStrategy { get; set; } = KeyConflictStrategy.Fail;
@@ -54,9 +53,12 @@ public sealed class OperationEvent(string uuid, object? value) : IHasUuid, IHasI
         return this;
     }
 
-    public OperationEvent SetDelayUntil(Moment delayUntil, TimeSpan quanta, string? uuidPrefix = null)
+    public OperationEvent SetDelayUntil(Moment delayUntil, TimeSpan delayQuanta, string? uuidPrefix = null)
     {
-        DelayUntil = delayUntil.Ceiling(quanta);
+        if (delayQuanta < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(delayQuanta));
+
+        DelayUntil = delayUntil.Ceiling(delayQuanta);
         Uuid = ProvideDelayBasedUuid(uuidPrefix);
         UuidConflictStrategy = KeyConflictStrategy.Skip;
         return this;
@@ -68,9 +70,12 @@ public sealed class OperationEvent(string uuid, object? value) : IHasUuid, IHasI
         return this;
     }
 
-    public OperationEvent SetDelayBy(TimeSpan delayBy, TimeSpan quanta, string? uuidPrefix = null)
+    public OperationEvent SetDelayBy(TimeSpan delayBy, TimeSpan delayQuanta, string? uuidPrefix = null)
     {
-        DelayUntil = (LoggedAt + delayBy).Ceiling(quanta);
+        if (delayQuanta < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(delayQuanta));
+
+        DelayUntil = (LoggedAt + delayBy).Ceiling(delayQuanta);
         Uuid = ProvideDelayBasedUuid(uuidPrefix);
         UuidConflictStrategy = KeyConflictStrategy.Skip;
         return this;
@@ -90,5 +95,8 @@ public sealed class OperationEvent(string uuid, object? value) : IHasUuid, IHasI
             : UuidGenerator.Next();
 
     private string ProvideDelayBasedUuid(string? uuidPrefix)
-        => $"{uuidPrefix ?? Uuid}-at-{DelayUntil.EpochOffsetTicks:x}";
+    {
+        uuidPrefix ??= Uuid;
+        return $"{uuidPrefix}-at-{DelayUntil.EpochOffsetTicks:x}";
+    }
 }

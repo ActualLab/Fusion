@@ -38,7 +38,7 @@ public class DbProductService(IServiceProvider services)
         var logEvent = new LogMessageCommand(Ulid.NewUlid().ToString(), message);
         context.Operation.AddEvent(logEvent);
         var randomEvent = LogMessageCommand.New();
-        context.Operation.AddEvent(randomEvent);
+        context.Operation.AddEvent(randomEvent).SetDelayUntil(randomEvent.DelayUntil);
     }
 
     public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)

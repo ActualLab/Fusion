@@ -57,9 +57,7 @@ public sealed class DbEvent : IDbEventLogEntry
             ? null
             : Serializer.Read(ValueJson, typeof(object));
 
-        // We use "value: null" here to turn off DelayUntil detection logic in OperationEvent constructor
-        return new OperationEvent(Uuid, value: null) {
-            Value = value,
+        return new OperationEvent(Uuid, value) {
             LoggedAt = LoggedAt,
             DelayUntil = DelayUntil,
         };

@@ -42,7 +42,7 @@ public partial record LogMessageCommand(
     [property: DataMember] string Uuid,
     [property: DataMember] string Message,
     [property: DataMember] Moment DelayUntil = default
-) : ILocalCommand<Unit>, IHasUuid, IHasDelayUntil
+) : ILocalCommand<Unit>, IHasUuid
 {
     private static long _nextIndex;
 
