@@ -8,7 +8,7 @@ namespace ActualLab.CommandR.Commands;
 /// <remarks>
 /// Delegating commands:
 /// - Always execute as the outermost ones.
-/// - Always execute other commands as the outermost ones.
+/// - Always execute nested commands as the outermost ones.
 /// Delegating command handlers are guaranteed to:
 /// - Have no Operation Framework handlers in their pipeline -
 ///   they are filtered out, coz such commands can't make any changes directly.
@@ -16,6 +16,6 @@ namespace ActualLab.CommandR.Commands;
 ///   delegating commands don't require invalidation, so they aren't logged (even as the nested ones).
 /// - And thus they also don't need <c>if (Invalidation.IsActive) { ... }</c> blocks.
 /// </remarks>
-public interface IDelegatingCommand : ICommand;
+public interface IDelegatingCommand : IOutermostCommand;
 
 public interface IDelegatingCommand<TResult> : ICommand<TResult>, IDelegatingCommand;
