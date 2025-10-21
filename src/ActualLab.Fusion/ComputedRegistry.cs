@@ -77,22 +77,19 @@ public sealed class ComputedRegistry
             return null;
 
         var target = handle.Target;
-        if (target is null) {
+        switch (target) {
+        case null:
             if (_storage.TryRemove(key, handle))
                 handle.Free();
             return null;
+        case Computed computed:
+            return computed;
+        default:
+            // Invalid GCHandle.Target, the best we can do is to remove it
+            _storage.TryRemove(key, handle);
+            LogInvalidGCHandleTargetSafely(target);
+            return null;
         }
-
-        if (target is Computed value)
-            return value;
-
-        // The handle doesn't point to Computed,
-        // which means there is an issue with GCHandle usage in the app
-        // (e.g. some other code somehow uses Fusion's GCHandles).
-        // The best we can do is to remove that handle.
-        _storage.TryRemove(key, handle);
-        Log.LogWarning("GCHandle.Target is of {Type} instead of Computed", target.GetType().FullName);
-        return null;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -109,15 +106,35 @@ public sealed class ComputedRegistry
         GCHandle? newHandle = null;
         while (computed.ConsistencyState != ConsistencyState.Invalidated) {
             if (_storage.TryGetValue(key, out var handle)) {
-                var target = (Computed?)handle.Target;
+                var target = handle.Target;
                 if (ReferenceEquals(target, computed)) {
                     newHandle?.Free();
                     return;
                 }
-                if (target is { ConsistencyState: not ConsistencyState.Invalidated }) {
-                    // This typically triggers Unregister - except for RemoteComputed
-                    target.Invalidate();
+
+                switch (target) {
+                case null:
+                    goto tryRemove;
+                case Computed cTarget:
+                    if (cTarget is { ConsistencyState: not ConsistencyState.Invalidated }) {
+                        try {
+                            // This typically triggers Unregister - except for RemoteComputed
+                            cTarget.Invalidate();
+                        }
+                        catch {
+                            newHandle?.Free();
+                            throw;
+                        }
+                    }
+                    goto tryRemove;
+                default:
+                    // Invalid GCHandle.Target, the best we can do is to remove it
+                    _storage.TryRemove(key, handle);
+                    LogInvalidGCHandleTargetSafely(target);
+                    continue;
                 }
+
+                tryRemove:
                 if (_storage.TryRemove(key, handle))
                     handle.Free();
             }
@@ -250,6 +267,20 @@ public sealed class ComputedRegistry
                 nextThreshold = int.MaxValue;
             nextThreshold = nextThreshold.Clamp(1024, int.MaxValue >> 1);
             _pruneOpCounterThreshold = nextThreshold;
+        }
+    }
+
+    // ReSharper disable once InconsistentNaming
+    private void LogInvalidGCHandleTargetSafely(object target)
+    {
+        // When this method is called, the handle points to a type other than Computed,
+        // which means there is an issue with GCHandle usage in the app.
+        // E.g., some other code uses Fusion's GCHandles.
+        try {
+            Log.LogWarning("GCHandle.Target is of {Type} instead of Computed", target.GetType().FullName);
+        }
+        catch {
+            // Intended
         }
     }
 
