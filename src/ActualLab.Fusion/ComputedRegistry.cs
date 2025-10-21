@@ -241,9 +241,22 @@ public sealed class ComputedRegistry
         var prunedKeyCount = 0L;
 
         foreach (var (key, handle) in _storage) {
-            if (ReferenceEquals(handle.Target, null) && _storage.TryRemove(key, handle)) {
-                handle.Free();
-                prunedKeyCount++;
+            var target = handle.Target;
+            switch (target) {
+            case null:
+                if (_storage.TryRemove(key, handle)) {
+                    handle.Free();
+                    prunedKeyCount++;
+                }
+                break;
+            case Computed:
+                break;
+            default:
+                // Invalid GCHandle.Target, the best we can do is to remove it
+                if (_storage.TryRemove(key, handle))
+                    prunedKeyCount++;
+                LogInvalidGCHandleTargetSafely(target);
+                break;
             }
         }
 
