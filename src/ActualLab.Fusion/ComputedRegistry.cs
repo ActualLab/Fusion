@@ -89,7 +89,7 @@ public sealed class ComputedRegistry
         // The handle doesn't point to Computed,
         // which means there is an issue with GCHandle usage in the app
         // (e.g. some other code somehow uses Fusion's GCHandles).
-        // The best we can do is to remove such a handle.
+        // The best we can do is to remove that handle.
         _storage.TryRemove(key, handle);
         Log.LogWarning("GCHandle.Target is of {Type} instead of Computed", target.GetType().FullName);
         return null;
