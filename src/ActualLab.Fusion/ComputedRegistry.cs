@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using ActualLab.Concurrency;
 using ActualLab.Fusion.Diagnostics;
@@ -31,6 +32,9 @@ public sealed class ComputedRegistry
     private ComputedGraphPruner? _graphPruner;
     private int _pruneOpCounterThreshold;
     private Task? _pruneTask;
+
+    [field: AllowNull, MaybeNull]
+    private ILogger Log => field ??= StaticLog.For<ComputedRegistry>();
 
     public IEnumerable<ComputedInput> Keys => _storage.Select(p => p.Key);
     public AsyncLockSet<ComputedInput> InputLocks { get; }
@@ -69,14 +73,25 @@ public sealed class ComputedRegistry
     {
         var random = key.HashCode + Environment.CurrentManagedThreadId;
         OnOperation(random);
-        if (_storage.TryGetValue(key, out var handle)) {
-            var value = (Computed?)handle.Target;
-            if (value is not null)
-                return value;
+        if (!_storage.TryGetValue(key, out var handle))
+            return null;
 
+        var target = handle.Target;
+        if (target is null) {
             if (_storage.TryRemove(key, handle))
                 handle.Free();
+            return null;
         }
+
+        if (target is Computed value)
+            return value;
+
+        // The handle doesn't point to Computed,
+        // which means there is an issue with GCHandle usage in the app
+        // (e.g. some other code somehow uses Fusion's GCHandles).
+        // The best we can do is to remove such a handle.
+        _storage.TryRemove(key, handle);
+        Log.LogWarning("GCHandle.Target is of {Type} instead of Computed", target.GetType().FullName);
         return null;
     }
 
@@ -130,6 +145,7 @@ public sealed class ComputedRegistry
 
         if (!_storage.TryGetValue(key, out var handle))
             return;
+
         var target = handle.Target;
         if (!(ReferenceEquals(target, computed) || ReferenceEquals(target, null)))
             return;
