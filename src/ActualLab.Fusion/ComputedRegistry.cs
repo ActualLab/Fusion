@@ -99,51 +99,56 @@ public sealed class ComputedRegistry
 
         var key = computed.Input;
         var random = key.HashCode + Environment.CurrentManagedThreadId;
-        OnRegister?.Invoke(computed);
+
+        try {
+            OnRegister?.Invoke(computed);
+        }
+        catch (Exception e) {
+            LogOnXxxErrorSafely(nameof(OnRegister), e);
+        }
         OnOperation(random);
 
         var spinWait = new SpinWait();
         GCHandle? newHandle = null;
-        while (computed.ConsistencyState != ConsistencyState.Invalidated) {
-            if (_storage.TryGetValue(key, out var handle)) {
-                var target = handle.Target;
-                if (ReferenceEquals(target, computed)) {
-                    newHandle?.Free();
-                    return;
-                }
+        var ownsNewHandle = true;
+        try {
+            while (computed.ConsistencyState != ConsistencyState.Invalidated) {
+                if (_storage.TryGetValue(key, out var handle)) {
+                    var target = handle.Target;
+                    if (ReferenceEquals(target, computed))
+                        return; // Already registered
 
-                switch (target) {
-                case null:
-                    goto tryRemove;
-                case Computed cTarget:
-                    if (cTarget is { ConsistencyState: not ConsistencyState.Invalidated }) {
-                        try {
-                            // This typically triggers Unregister - except for RemoteComputed
-                            cTarget.Invalidate();
-                        }
-                        catch {
-                            newHandle?.Free();
-                            throw;
-                        }
+                    switch (target) {
+                    case null:
+                        break;
+                    case Computed cTarget:
+                        if (cTarget is { ConsistencyState: not ConsistencyState.Invalidated })
+                            cTarget.Invalidate(); // This typically triggers Unregister - except for RemoteComputed
+                        break;
+                    default:
+                        // Invalid GCHandle.Target, the best we can do is to remove it
+                        _storage.TryRemove(key, handle);
+                        LogInvalidGCHandleTargetSafely(target);
+                        continue;
                     }
-                    goto tryRemove;
-                default:
-                    // Invalid GCHandle.Target, the best we can do is to remove it
-                    _storage.TryRemove(key, handle);
-                    LogInvalidGCHandleTargetSafely(target);
-                    continue;
-                }
 
-                tryRemove:
-                if (_storage.TryRemove(key, handle))
-                    handle.Free();
+                    // target is null or Computed -> remove the handle
+                    if (_storage.TryRemove(key, handle))
+                        handle.Free();
+                }
+                else {
+                    newHandle ??= GCHandle.Alloc(computed, GCHandleType.Weak);
+                    if (_storage.TryAdd(key, newHandle.GetValueOrDefault())) {
+                        ownsNewHandle = false; // Ownership is transferred to _storage now
+                        return;
+                    }
+                }
+                spinWait.SpinOnce(); // Safe for WASM
             }
-            else {
-                newHandle ??= GCHandle.Alloc(computed, GCHandleType.Weak);
-                if (_storage.TryAdd(key, newHandle.GetValueOrDefault()))
-                    return;
-            }
-            spinWait.SpinOnce(); // Safe for WASM
+        }
+        finally {
+            if (ownsNewHandle && newHandle is { } h)
+                h.Free();
         }
     }
 
@@ -157,7 +162,12 @@ public sealed class ComputedRegistry
 
         var key = computed.Input;
         var random = key.HashCode + Environment.CurrentManagedThreadId;
-        OnUnregister?.Invoke(computed);
+        try {
+            OnUnregister?.Invoke(computed);
+        }
+        catch (Exception e) {
+            LogOnXxxErrorSafely(nameof(OnUnregister), e);
+        }
         OnOperation(random);
 
         if (!_storage.TryGetValue(key, out var handle))
@@ -294,6 +304,16 @@ public sealed class ComputedRegistry
         }
         catch {
             // Intended
+        }
+    }
+
+    private void LogOnXxxErrorSafely(string eventName, Exception e)
+    {
+        try {
+            Log.LogError(e, "{EventName} event handler threw an exception", eventName);
+        }
+        catch {
+            // Intended: logging must not throw
         }
     }
 
