@@ -174,12 +174,12 @@ public abstract class ComputedState<T> : ComputedState, IState<T>
 
     // IState<T> implementation
     public new Computed<T> Computed {
-        get => (Computed<T>)UntypedComputed;
+        get => Unsafe.As<Computed<T>>(UntypedComputed);
         protected set => UntypedComputed = value;
     }
     public T? ValueOrDefault => Computed.ValueOrDefault;
     public new T Value => Computed.Value;
-    public new T LastNonErrorValue => ((Computed<T>)Snapshot.LastNonErrorComputed).Value;
+    public new T LastNonErrorValue => Unsafe.As<Computed<T>>(Snapshot.LastNonErrorComputed).Value;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     protected ComputedState(Options options, IServiceProvider services, bool initialize = true)
@@ -200,14 +200,14 @@ public abstract class ComputedState<T> : ComputedState, IState<T>
     public bool IsInitial(out T value)
     {
         var snapshot = Snapshot;
-        value = ((Computed<T>)snapshot.Computed).Value;
+        value = Unsafe.As<Computed<T>>(snapshot.Computed).Value;
         return snapshot.IsInitial;
     }
 
     public bool IsInitial(out T value, out Exception? error)
     {
         var snapshot = Snapshot;
-        (value, error) = (Computed<T>)snapshot.Computed;
+        (value, error) = Unsafe.As<Computed<T>>(snapshot.Computed);
         return snapshot.IsInitial;
     }
 

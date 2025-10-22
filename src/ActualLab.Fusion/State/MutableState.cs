@@ -111,12 +111,12 @@ public class MutableState<T> : MutableState, IMutableState<T>
 
     // IState<T> implementation
     public new Computed<T> Computed {
-        get => (Computed<T>)UntypedComputed;
+        get => Unsafe.As<Computed<T>>(UntypedComputed);
         protected set => UntypedComputed = value;
     }
 
     public T? ValueOrDefault => Computed.ValueOrDefault;
-    public new T LastNonErrorValue => ((Computed<T>)Snapshot.LastNonErrorComputed).Value;
+    public new T LastNonErrorValue => Unsafe.As<Computed<T>>(Snapshot.LastNonErrorComputed).Value;
 
     public new T Value {
         get => Computed.Value;
@@ -145,7 +145,7 @@ public class MutableState<T> : MutableState, IMutableState<T>
             var snapshot = Snapshot;
             Result<T> result;
             try {
-                result = updater.Invoke(((Computed<T>)snapshot.Computed).Output);
+                result = updater.Invoke(Unsafe.As<Computed<T>>(snapshot.Computed).Output);
             }
             catch (Exception e) when (!throwOnError) {
                 result = Result.NewError<T>(e);
@@ -161,7 +161,7 @@ public class MutableState<T> : MutableState, IMutableState<T>
             var snapshot = Snapshot;
             Result<T> result;
             try {
-                result = updater.Invoke(state, ((Computed<T>)snapshot.Computed).Output);
+                result = updater.Invoke(state, Unsafe.As<Computed<T>>(snapshot.Computed).Output);
             }
             catch (Exception e) when (!throwOnError) {
                 result = Result.NewError<T>(e);
@@ -176,14 +176,14 @@ public class MutableState<T> : MutableState, IMutableState<T>
     public bool IsInitial(out T value)
     {
         var snapshot = Snapshot;
-        value = ((Computed<T>)snapshot.LastNonErrorComputed).Value;
+        value = Unsafe.As<Computed<T>>(snapshot.LastNonErrorComputed).Value;
         return snapshot.IsInitial;
     }
 
     public bool IsInitial(out T value, out Exception? error)
     {
         var snapshot = Snapshot;
-        value = ((Computed<T>)snapshot.LastNonErrorComputed).Value;
+        value = Unsafe.As<Computed<T>>(snapshot.LastNonErrorComputed).Value;
         error = snapshot.Computed.Error;
         return snapshot.IsInitial;
     }
