@@ -51,7 +51,6 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
     private readonly MeterSet _meters = StaticMeters;
     private int _readBufferResetCounter;
     private int _writeBufferResetCounter;
-    private Task? _lastFlushFrameTask;
 
     public bool OwnsWebSocketOwner { get; init; } = true;
     public bool UseReadAllUnbuffered => _readChannel is null;
@@ -296,11 +295,9 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         if (memory.Length == 0) // We can't get here (see the calls to this method), but just in case...
             return;
 
-        if (_lastFlushFrameTask is not null)
-            await _lastFlushFrameTask.ConfigureAwait(false);
-        _lastFlushFrameTask = WebSocket
+        await WebSocket
             .SendAsync(memory, MessageType, endOfMessage: true, CancellationToken.None)
-            .AsTask();
+            .ConfigureAwait(false);
         _meters.OutgoingFrameSizeHistogram.Record(memory.Length);
 
         if (MustRenewBuffer(ref _writeBufferResetCounter))
