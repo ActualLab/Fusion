@@ -9,7 +9,7 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.WebSockets;
 
-public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffered<T>
+public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffered<T>, IAsyncDisposable
     where T : class
 {
     public record Options
@@ -139,17 +139,18 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         }, default);
     }
 
+    public ValueTask DisposeAsync()
+    {
+        var stopCts = Interlocked.Exchange(ref _stopCts, null);
+        stopCts.CancelAndDisposeSilently();
+        return WhenClosed.ToValueTask();
+
+    }
+
     public IAsyncEnumerable<T> ReadAllUnbuffered(CancellationToken cancellationToken = default)
         => ProjectingByteSerializer is not null
             ? ReadAllProjecting(cancellationToken)
             : ReadAll(cancellationToken);
-
-    public Task Close()
-    {
-        var stopCts = Interlocked.Exchange(ref _stopCts, null);
-        stopCts.CancelAndDisposeSilently();
-        return WhenClosed;
-    }
 
     // Private methods
 
@@ -184,7 +185,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         }
         finally {
             writer.TryComplete(); // We do this no matter what
-            _ = Close();
+            _ = DisposeAsync();
         }
     }
 
@@ -215,7 +216,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         }
         finally {
             _writeBuffer.Dispose();
-            _ = Close();
+            _ = DisposeAsync();
         }
     }
 
@@ -314,7 +315,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
 
         using var linkedCts = cancellationToken.LinkWith(StopToken);
         var linkedToken = linkedCts.Token;
-        using var linkedTokenRegistration = linkedToken.Register(() => _ = Close());
+        using var linkedTokenRegistration = linkedToken.Register(() => _ = DisposeAsync());
         try {
             while (true) {
                 var readMemory = readBuffer.GetMemory(minReadBufferSize);
@@ -352,7 +353,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         }
         finally {
             readBuffer.Dispose();
-            _ = Close();
+            _ = DisposeAsync();
         }
     }
 
@@ -366,7 +367,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
 
         using var linkedCts = cancellationToken.LinkWith(StopToken);
         var linkedToken = linkedCts.Token;
-        using var linkedTokenRegistration = linkedToken.Register(() => _ = Close());
+        using var linkedTokenRegistration = linkedToken.Register(() => _ = DisposeAsync());
         try {
             while (true) {
                 var readMemory = readBuffer.GetMemory(minReadBufferSize);
@@ -410,7 +411,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         }
         finally {
             readBuffer.Dispose();
-            _ = Close();
+            _ = DisposeAsync();
         }
     }
 

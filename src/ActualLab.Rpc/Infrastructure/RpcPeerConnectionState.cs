@@ -27,6 +27,11 @@ public sealed record RpcPeerConnectionState(
         => new(connection, handshake, null, 0, readerTokenSource);
 
     public RpcPeerConnectionState NextDisconnected(Exception? error = null)
-        => error is null ? Disconnected
+    {
+        if (Connection is { } connection)
+            _ = connection.DisposeAsync();
+        return error is null
+            ? Disconnected
             : new RpcPeerConnectionState(null, null, error, TryIndex + 1);
+    }
 }
