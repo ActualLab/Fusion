@@ -413,7 +413,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         try {
             StrategyOperationTaskSource?.TrySetResult(default);
             if (StrategyExecuteTask is { } strategyResultTask)
-                await strategyResultTask.SilentAwait();
+                await strategyResultTask.SilentAwait(false);
         }
         finally {
             StrategyExecuteTask = null;
