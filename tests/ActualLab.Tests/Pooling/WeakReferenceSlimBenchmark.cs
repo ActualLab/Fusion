@@ -22,7 +22,7 @@ public class WeakReferenceSlimBenchmark(ITestOutputHelper @out) : BenchmarkTestB
         });
 
         WeakReferenceSlim<string>[] slimWeakRefs = null!;
-        await Benchmark("WeakReferenceSlim<object>: (new, Dispose)*N", IterationCount, n => {
+        await Benchmark("WeakReferenceSlim: (new, Dispose)*N", IterationCount, n => {
             slimWeakRefs = new WeakReferenceSlim<string>[n];
             for (var i = 0; i < n; i++) {
                 var hr = new WeakReferenceSlim<string>(o);
@@ -32,7 +32,7 @@ public class WeakReferenceSlimBenchmark(ITestOutputHelper @out) : BenchmarkTestB
         });
 
         WeakReference<string>[] weakRefs = null!;
-        await Benchmark("WeakReference<object>: (new)*N", IterationCount, n => {
+        await Benchmark("WeakReference: (new)*N", IterationCount, n => {
             weakRefs = new WeakReference<string>[n];
             for (var i = 0; i < n; i++) {
                 var wr = new WeakReference<string>(o);
