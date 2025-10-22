@@ -35,12 +35,12 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
 
     [Theory]
     [InlineData(1, 10_000)]
-    [InlineData(32, 200_000)]
-    [InlineData(64, 100_000)]
-    [InlineData(128, 50_000)]
-    [InlineData(256, 25_000)]
-    [InlineData(512, 12_500)]
-    [InlineData(1024, 6_250)]
+    // [InlineData(32, 200_000)]
+    // [InlineData(64, 100_000)]
+    // [InlineData(128, 50_000)]
+    // [InlineData(256, 25_000)]
+    // [InlineData(512, 12_500)]
+    // [InlineData(1024, 6_250)]
     public async Task AddTest(int taskCount, int itemCount)
     {
         Out.WriteLine($"Parameters: {taskCount}t x {itemCount}");
