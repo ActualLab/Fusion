@@ -4,6 +4,7 @@ using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Serialization;
+using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc;
 
@@ -259,7 +260,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         try {
             while (true) {
                 var error = (Exception?)null;
-                var readerToken = CancellationToken.None;
+                var readerTokenSource = cancellationToken.CreateLinkedTokenSource();
+                var readerToken = readerTokenSource.Token;
+                var isHandshakeError = false;
                 try {
                     if (connectionState.IsFinal)
                         return;
@@ -271,7 +274,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     var connection = await GetConnection(connectionState.Value, cancellationToken).ConfigureAwait(false);
                     var channel = connection.Channel;
                     var sender = channel.Writer;
-                    var reader = channel.Reader;
+                    var readAllUnbufferedChannel = channel as IChannelWithReadAllUnbuffered<RpcMessage>;
+                    var reader = readAllUnbufferedChannel?.UseReadAllUnbuffered == true
+                        ? readAllUnbufferedChannel.ReadAllUnbuffered(readerToken).GetAsyncEnumerator(readerToken)
+                        : channel.Reader.ReadAllAsync(readerToken).GetAsyncEnumerator(readerToken);
 
                     // Sending Handshake call
                     using var handshakeCts = cancellationToken.CreateLinkedTokenSource(Hub.Limits.HandshakeTimeout);
@@ -288,7 +294,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                                     .Handshake(this, sender, ownHandshake)
                                     .WaitAsync(handshakeToken)
                                     .ConfigureAwait(false);
-                                var message = await reader.ReadAsync(handshakeToken).ConfigureAwait(false);
+                                var hasMore = await reader.MoveNextAsync().ConfigureAwait(false);
+                                if (!hasMore)
+                                    throw new ChannelClosedException(); // Mimicking channel behavior here
+                                var message = reader.Current;
                                 var handshakeContext = ProcessMessage(message, handshakeToken, handshakeToken);
                                 var remoteHandshake = handshakeContext?.Call.Arguments?.GetUntyped(0) as RpcHandshake;
                                 return remoteHandshake ?? throw Errors.HandshakeFailed();
@@ -298,8 +307,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         if (handshake.RemoteApiVersionSet is null)
                             handshake = handshake with { RemoteApiVersionSet = new() };
                     }
-                    catch (OperationCanceledException) {
-                        if (!cancellationToken.IsCancellationRequested && handshakeToken.IsCancellationRequested)
+                    catch (Exception e) {
+                        isHandshakeError = true;
+                        readerTokenSource.CancelAndDisposeSilently();
+                        if (e.IsCancellationOf(handshakeToken) && !cancellationToken.IsCancellationRequested)
                             throw Errors.HandshakeTimeout();
                         throw;
                     }
@@ -318,8 +329,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     }
 
                     // Only at this point: expose the new connection state
-                    var readerTokenSource = cancellationToken.CreateLinkedTokenSource();
-                    readerToken = readerTokenSource.Token;
                     var nextConnectionState = connectionState.Value.NextConnected(connection, handshake, readerTokenSource);
                     connectionState = SetConnectionState(nextConnectionState, connectionState).RequireNonFinal();
                     if (connectionState.Value.Connection != connection)
@@ -341,10 +350,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     RpcInboundContext.Current = null;
                     Activity.Current = null;
                     try {
-                        while (await reader.WaitToReadAsync(readerToken).ConfigureAwait(false)) {
-                            while (reader.TryRead(out var message))
-                                _ = ProcessMessage(message, peerChangedToken, readerToken);
-                        }
+                        while (await reader.MoveNextAsync().ConfigureAwait(false))
+                            _ = ProcessMessage(reader.Current, peerChangedToken, readerToken);
                     }
                     finally {
                         // Reset AsyncLocals that might be set by ProcessMessage
@@ -354,7 +361,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 }
                 catch (Exception e) {
                     var isReaderAbort = readerToken.IsCancellationRequested
-                        && !cancellationToken.IsCancellationRequested;
+                        && !cancellationToken.IsCancellationRequested
+                        && !isHandshakeError;
                     error = isReaderAbort ? null : e;
                 }
 

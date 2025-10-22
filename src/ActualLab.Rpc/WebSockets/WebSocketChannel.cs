@@ -9,7 +9,7 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.WebSockets;
 
-public sealed class WebSocketChannel<T> : Channel<T>
+public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffered<T>
     where T : class
 {
     public record Options
@@ -42,7 +42,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private const int MinWriteSpanSize = 64;
 
     private volatile CancellationTokenSource? _stopCts;
-    private readonly Channel<T> _readChannel;
+    private readonly Channel<T>? _readChannel;
     private readonly Channel<T> _writeChannel;
     private readonly ArrayPoolBuffer<byte> _writeBuffer;
     private readonly int _writeFrameSize;
@@ -51,8 +51,10 @@ public sealed class WebSocketChannel<T> : Channel<T>
     private readonly MeterSet _meters = StaticMeters;
     private int _readBufferResetCounter;
     private int _writeBufferResetCounter;
+    private Task? _lastFlushFrameTask;
 
     public bool OwnsWebSocketOwner { get; init; } = true;
+    public bool UseReadAllUnbuffered => _readChannel is null;
     public Options Settings { get; }
     public WebSocketOwner WebSocketOwner { get; }
     public WebSocket WebSocket { get; }
@@ -72,13 +74,15 @@ public sealed class WebSocketChannel<T> : Channel<T>
 
     public WebSocketChannel(
         WebSocketOwner webSocketOwner,
+        bool useReadAllUnbuffered,
         CancellationToken cancellationToken = default)
-        : this(Options.Default, webSocketOwner, cancellationToken)
+        : this(Options.Default, webSocketOwner, useReadAllUnbuffered, cancellationToken)
     { }
 
     public WebSocketChannel(
         Options settings,
         WebSocketOwner webSocketOwner,
+        bool useReadAllUnbuffered,
         CancellationToken cancellationToken = default)
     {
         Settings = settings;
@@ -107,9 +111,9 @@ public sealed class WebSocketChannel<T> : Channel<T>
         _bufferRenewPeriod = settings.BufferRenewPeriod;
         _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, false);
 
-        _readChannel = ChannelExt.Create<T>(settings.ReadChannelOptions);
+        _readChannel = useReadAllUnbuffered ? null : ChannelExt.Create<T>(settings.ReadChannelOptions);
         _writeChannel = ChannelExt.Create<T>(settings.WriteChannelOptions);
-        Reader = _readChannel.Reader;
+        Reader = _readChannel?.Reader!;
         Writer = _writeChannel.Writer;
 
         using var _ = ExecutionContextExt.TrySuppressFlow();
@@ -119,21 +123,20 @@ public sealed class WebSocketChannel<T> : Channel<T>
         WhenClosed = Task.Run(async () => {
             Interlocked.Increment(ref _meters.ChannelCount);
             try {
-                var completedTask = await Task.WhenAny(WhenReadCompleted, WhenWriteCompleted).ConfigureAwait(false);
-                if (completedTask != WhenWriteCompleted)
-                    await WhenWriteCompleted.SilentAwait(false);
-                else
+                await Task
+                    .WhenAny(WhenReadCompleted, WhenWriteCompleted)
+                    .WaitAsync(StopToken)
+                    .SilentAwait(false);
+                // We use CancellationToken.None SendAsync/ReceiveAsync calls,
+                // so the first thing to do here is to close the WebSocket
+                // to make sure all ongoing WebSocket operations are aborted.
+                await CloseWebSocket(null).SilentAwait(false);
+                if (!WhenReadCompleted.IsCompleted)
                     await WhenReadCompleted.SilentAwait(false);
-
-                try {
-                    await completedTask.ConfigureAwait(false);
-                }
-                catch (Exception error) {
-                    await CloseWebSocket(error).ConfigureAwait(false);
-                    throw;
-                }
-
-                await CloseWebSocket(null).ConfigureAwait(false);
+                if (!WhenWriteCompleted.IsCompleted)
+                    await WhenWriteCompleted.SilentAwait(false);
+                if (OwnsWebSocketOwner)
+                    await WebSocketOwner.DisposeAsync().ConfigureAwait(false);
             }
             finally {
                 Interlocked.Decrement(ref _meters.ChannelCount);
@@ -141,24 +144,31 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }, default);
     }
 
-    public async ValueTask Close()
+    public IAsyncEnumerable<T> ReadAllUnbuffered(CancellationToken cancellationToken = default)
+        => ProjectingByteSerializer is not null
+            ? ReadAllProjecting(cancellationToken)
+            : ReadAll(cancellationToken);
+
+    public Task Close()
     {
         var stopCts = Interlocked.Exchange(ref _stopCts, null);
         if (stopCts is null)
-            return;
+            return WhenClosed;
 
         stopCts.CancelAndDisposeSilently();
-        await WhenClosed.SilentAwait(false);
-        if (OwnsWebSocketOwner)
-            await WebSocketOwner.DisposeAsync().ConfigureAwait(false);
-        _writeBuffer.Dispose();
+        return WhenClosed;
     }
 
     // Private methods
 
     private async Task RunReader(CancellationToken cancellationToken)
     {
-        var writer = _readChannel.Writer;
+        var writer = _readChannel?.Writer;
+        if (writer is null) {
+            await TaskExt.NeverEnding(StopToken).SilentAwait(false);
+            return;
+        }
+
         try {
             var items = ProjectingByteSerializer is not null
                 ? ReadAllProjecting(cancellationToken)
@@ -212,6 +222,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
             }
         }
         finally {
+            _writeBuffer.Dispose();
             _ = Close();
         }
     }
@@ -288,7 +299,11 @@ public sealed class WebSocketChannel<T> : Channel<T>
         if (memory.Length == 0) // We can't get here (see the calls to this method), but just in case...
             return;
 
-        await WebSocket.SendAsync(memory, MessageType, endOfMessage: true, StopToken).ConfigureAwait(false);
+        if (_lastFlushFrameTask is not null)
+            await _lastFlushFrameTask.ConfigureAwait(false);
+        _lastFlushFrameTask = WebSocket
+            .SendAsync(memory, MessageType, endOfMessage: true, cancellationToken: default)
+            .AsTask();
         _meters.OutgoingFrameSizeHistogram.Record(memory.Length);
 
         if (MustRenewBuffer(ref _writeBufferResetCounter))
@@ -304,11 +319,23 @@ public sealed class WebSocketChannel<T> : Channel<T>
         TryDeserializeFunc tryDeserialize = DataFormat == DataFormat.Bytes
             ? (RequiresItemSize ? TryDeserializeBytesWithItemSize : TryDeserializeBytes)
             : TryDeserializeText;
+
+        using var linkedCts = cancellationToken.LinkWith(StopToken);
+        var linkedToken = linkedCts.Token;
+        using var linkedTokenRegistration = linkedToken.Register(() => _ = Close());
         try {
             while (true) {
                 var readMemory = readBuffer.GetMemory(minReadBufferSize);
                 var arraySegment = new ArraySegment<byte>(readBuffer.Array, readBuffer.WrittenCount, readMemory.Length);
-                var r = await WebSocket.ReceiveAsync(arraySegment, cancellationToken).ConfigureAwait(false);
+                WebSocketReceiveResult r;
+                try {
+                    r = await WebSocket.ReceiveAsync(arraySegment, cancellationToken: default).ConfigureAwait(false);
+                }
+                catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) {
+                    // This is a normal closure in most of the cases,
+                    // so we don't want to report it as an error
+                    r = new WebSocketReceiveResult(0, WebSocketMessageType.Close, true);
+                }
                 if (r.MessageType == WebSocketMessageType.Close)
                     yield break;
                 if (r.MessageType != MessageType)
@@ -333,6 +360,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
         finally {
             readBuffer.Dispose();
+            _ = Close();
         }
     }
 
@@ -343,11 +371,23 @@ public sealed class WebSocketChannel<T> : Channel<T>
         TryProjectingDeserializeFunc tryProjectingDeserialize = RequiresItemSize
             ? TryProjectingDeserializeBytesWithItemSize
             : TryProjectingDeserializeBytes;
+
+        using var linkedCts = cancellationToken.LinkWith(StopToken);
+        var linkedToken = linkedCts.Token;
+        using var linkedTokenRegistration = linkedToken.Register(() => _ = Close());
         try {
             while (true) {
                 var readMemory = readBuffer.GetMemory(minReadBufferSize);
                 var arraySegment = new ArraySegment<byte>(readBuffer.Array, readBuffer.WrittenCount, readMemory.Length);
-                var r = await WebSocket.ReceiveAsync(arraySegment, cancellationToken).ConfigureAwait(false);
+                WebSocketReceiveResult r;
+                try {
+                    r = await WebSocket.ReceiveAsync(arraySegment, cancellationToken: default).ConfigureAwait(false);
+                }
+                catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) {
+                    // This is a normal closure in most of the cases,
+                    // so we don't want to report it as an error
+                    r = new WebSocketReceiveResult(0, WebSocketMessageType.Close, true);
+                }
                 if (r.MessageType == WebSocketMessageType.Close)
                     yield break;
                 if (r.MessageType != MessageType)
@@ -378,6 +418,7 @@ public sealed class WebSocketChannel<T> : Channel<T>
         }
         finally {
             readBuffer.Dispose();
+            _ = Close();
         }
     }
 

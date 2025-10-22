@@ -128,7 +128,7 @@ public class RpcWebSocketClient(
             .KeylessSet(webSocketOwner)
             .KeylessSet(webSocketOwner.WebSocket);
         var webSocketChannelOptions = WebSocketChannelOptionsProvider.Invoke(clientPeer, properties);
-        var channel = new WebSocketChannel<RpcMessage>(webSocketChannelOptions, webSocketOwner);
+        var channel = new WebSocketChannel<RpcMessage>(webSocketChannelOptions, webSocketOwner, useReadAllUnbuffered: true);
         return new RpcConnection(channel, properties);
     }
 }
