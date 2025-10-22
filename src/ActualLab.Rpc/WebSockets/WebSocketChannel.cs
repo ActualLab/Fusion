@@ -123,18 +123,13 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         WhenClosed = Task.Run(async () => {
             Interlocked.Increment(ref _meters.ChannelCount);
             try {
-                await Task
-                    .WhenAny(WhenReadCompleted, WhenWriteCompleted)
-                    .WaitAsync(StopToken)
-                    .SilentAwait(false);
+                await Task.WhenAny(WhenReadCompleted, WhenWriteCompleted, WhenClosing).SilentAwait(false);
                 // We use CancellationToken.None SendAsync/ReceiveAsync calls,
                 // so the first thing to do here is to close the WebSocket
-                // to make sure all ongoing WebSocket operations are aborted.
+                // to abort all ongoing WebSocket operations.
                 await CloseWebSocket(null).SilentAwait(false);
-                if (!WhenReadCompleted.IsCompleted)
-                    await WhenReadCompleted.SilentAwait(false);
-                if (!WhenWriteCompleted.IsCompleted)
-                    await WhenWriteCompleted.SilentAwait(false);
+                await WhenReadCompleted.SilentAwait(false);
+                await WhenWriteCompleted.SilentAwait(false);
                 if (OwnsWebSocketOwner)
                     await WebSocketOwner.DisposeAsync().ConfigureAwait(false);
             }
@@ -152,9 +147,6 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
     public Task Close()
     {
         var stopCts = Interlocked.Exchange(ref _stopCts, null);
-        if (stopCts is null)
-            return WhenClosed;
-
         stopCts.CancelAndDisposeSilently();
         return WhenClosed;
     }
