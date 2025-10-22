@@ -15,39 +15,42 @@ public sealed class WeakReferenceSlim : IDisposable
     internal static extern ref nint AsIntPtr(ref GCHandle handle);
 #endif
 
-    private GCHandle _handle;
+    private volatile nint _handle;
 
     public object? Target {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             var handle = _handle;
-            return handle == default ? null : handle.Target;
+            return handle == 0 ? null : GCHandle.FromIntPtr(handle).Target;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        set => _handle.Target = value;
+        set {
+            var handle = GCHandle.FromIntPtr(_handle);
+            handle.Target = value;
+        }
     }
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public WeakReferenceSlim(object target)
-        => _handle = GCHandle.Alloc(target, GCHandleType.Weak);
+        => _handle = GCHandle.ToIntPtr(GCHandle.Alloc(target, GCHandleType.Weak));
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public WeakReferenceSlim(object target, GCHandleType handleType)
-        => _handle = GCHandle.Alloc(target, handleType);
+        => _handle = GCHandle.ToIntPtr(GCHandle.Alloc(target, handleType));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose()
     {
 #if USE_UNSAFE_ACCESSORS
         var handle = _handle;
-        if (Interlocked.CompareExchange(ref AsIntPtr(ref _handle), 0, GCHandle.ToIntPtr(handle)) != 0)
-            handle.Free();
+        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0)
+            GCHandle.FromIntPtr(handle).Free();
 #else
         lock (this) {
             var handle = _handle;
-            _handle = default;
-            if (handle != default)
-                handle.Free();
+            _handle = 0;
+            if (handle != 0)
+                GCHandle.FromIntPtr(handle).Free();
         }
 #endif
     }
@@ -61,39 +64,42 @@ public sealed class WeakReferenceSlim : IDisposable
 /// </summary>
 public sealed class WeakReferenceSlim<T> where T : class
 {
-    private GCHandle _handle;
+    private volatile nint _handle;
 
     public T? Target {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             var handle = _handle;
-            return handle == default ? null : Unsafe.As<T>(handle.Target);
+            return handle == 0 ? null : Unsafe.As<T>(GCHandle.FromIntPtr(handle).Target);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        set => _handle.Target = value;
+        set {
+            var handle = GCHandle.FromIntPtr(_handle);
+            handle.Target = value;
+        }
     }
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public WeakReferenceSlim(T target)
-        => _handle = GCHandle.Alloc(target, GCHandleType.Weak);
+        => _handle = GCHandle.ToIntPtr(GCHandle.Alloc(target, GCHandleType.Weak));
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public WeakReferenceSlim(T target, GCHandleType handleType)
-        => _handle = GCHandle.Alloc(target, handleType);
+        => _handle = GCHandle.ToIntPtr(GCHandle.Alloc(target, handleType));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose()
     {
 #if USE_UNSAFE_ACCESSORS
         var handle = _handle;
-        if (Interlocked.CompareExchange(ref WeakReferenceSlim.AsIntPtr(ref _handle), 0, GCHandle.ToIntPtr(handle)) != 0)
-            handle.Free();
+        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0)
+            GCHandle.FromIntPtr(handle).Free();
 #else
         lock (this) {
             var handle = _handle;
-            _handle = default;
-            if (handle != default)
-                handle.Free();
+            _handle = 0;
+            if (handle != 0)
+                GCHandle.FromIntPtr(handle).Free();
         }
 #endif
     }
