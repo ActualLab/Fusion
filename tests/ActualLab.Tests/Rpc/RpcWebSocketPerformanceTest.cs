@@ -10,6 +10,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     {
         ExposeBackend = true;
         RpcFrameDelayerFactory = null;
+        SerializationFormat = "msgpack4c";
     }
 
     protected override void ConfigureServices(IServiceCollection services, bool isClient)
@@ -33,27 +34,56 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     }
 
     [Theory]
+    [InlineData(1, 10_000)]
+    [InlineData(32, 200_000)]
+    [InlineData(64, 100_000)]
+    [InlineData(128, 50_000)]
+    [InlineData(256, 25_000)]
+    [InlineData(512, 12_500)]
+    [InlineData(1024, 6_250)]
+    public async Task AddTest(int taskCount, int itemCount)
+    {
+        Out.WriteLine($"Parameters: {taskCount}t x {itemCount}");
+        await using var _ = await WebHost.Serve();
+        var services = ClientServices;
+        var client = services.GetRequiredService<ITestRpcServiceClient>();
+
+        for (var p = 0; p < 2; p++) {
+            var passItemCount = p >= 1 ? itemCount : itemCount / 10;
+            var tasks = Enumerable.Range(0, taskCount).Select(_ => Task.Run(async () => {
+                for (var i = passItemCount; i > 0; i--) {
+                    var result = await client.Add(i, i).ConfigureAwait(false);
+                    result.Should().Be(i << 1);
+                }
+            }));
+            var startedAt = CpuTimestamp.Now;
+            await Task.WhenAll(tasks);
+            if (p >= 1)
+                Out.WriteLine($"Pass time: {startedAt.Elapsed.ToShortString()}");
+        }
+    }
+
+    [Theory]
     [InlineData(1, 1, 300)]
     [InlineData(1, 3, 100)]
     [InlineData(1, 3, 1_000)]
     [InlineData(1, 3, 10_000)]
-    public async Task GetBytesTest(int passCount, int threadCount, int itemCount)
+    public async Task GetBytesTest(int passCount, int taskCount, int itemCount)
     {
-        Out.WriteLine($"Thread count: {threadCount}");
-        Out.WriteLine($"Item count: {itemCount}");
+        Out.WriteLine($"Parameters: {passCount}p x {taskCount}t x {itemCount}");
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = services.GetRequiredService<ITestRpcServiceClient>();
 
         for (var p = 0; p < passCount; p++) {
-            var startedAt = CpuTimestamp.Now;
-            var tasks = Enumerable.Range(0, threadCount).Select(_ => Task.Run(async () => {
+            var tasks = Enumerable.Range(0, taskCount).Select(_ => Task.Run(async () => {
                 for (var i = 0; i < itemCount; i++) {
                     var size = Math.Min(20_000, i * 100);
                     var data = await client.GetBytes(size).ConfigureAwait(false);
                     data.Length.Should().Be(size);
                 }
             }));
+            var startedAt = CpuTimestamp.Now;
             await Task.WhenAll(tasks);
             Out.WriteLine($"Pass time: {startedAt.Elapsed.ToShortString()}");
         }
@@ -64,23 +94,22 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     [InlineData(1, 3, 100)]
     [InlineData(1, 3, 1_000)]
     [InlineData(1, 3, 10_000)]
-    public async Task GetMemoryTest(int passCount, int threadCount, int itemCount)
+    public async Task GetMemoryTest(int passCount, int taskCount, int itemCount)
     {
-        Out.WriteLine($"Thread count: {threadCount}");
-        Out.WriteLine($"Item count: {itemCount}");
+        Out.WriteLine($"Parameters: {passCount}p x {taskCount}t x {itemCount}");
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = services.GetRequiredService<ITestRpcServiceClient>();
 
         for (var p = 0; p < passCount; p++) {
-            var startedAt = CpuTimestamp.Now;
-            var tasks = Enumerable.Range(0, threadCount).Select(_ => Task.Run(async () => {
+            var tasks = Enumerable.Range(0, taskCount).Select(_ => Task.Run(async () => {
                 for (var i = 0; i < itemCount; i++) {
                     var size = Math.Min(20_000, i * 100);
                     var data = await client.GetMemory(size).ConfigureAwait(false);
                     data.Length.Should().Be(size);
                 }
             }));
+            var startedAt = CpuTimestamp.Now;
             await Task.WhenAll(tasks);
             Out.WriteLine($"Pass time: {startedAt.Elapsed.ToShortString()}");
         }
