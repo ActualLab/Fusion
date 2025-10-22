@@ -107,6 +107,6 @@ public abstract class StatefulComponentBase : CircuitHubComponentBase, IStateful
 public abstract class StatefulComponentBase<T> : StatefulComponentBase, IStatefulComponent<T>
 {
     protected State UntypedState => base.State;
-    protected new IState<T> State => (IState<T>)base.State;
-    IState<T> IStatefulComponent<T>.State => (IState<T>)base.State;
+    protected new IState<T> State => Unsafe.As<IState<T>>(base.State);
+    IState<T> IStatefulComponent<T>.State => Unsafe.As<IState<T>>(base.State);
 }
