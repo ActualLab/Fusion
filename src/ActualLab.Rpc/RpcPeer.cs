@@ -365,6 +365,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         && !isHandshakeError;
                     error = isReaderAbort ? null : e;
                 }
+                finally {
+                    readerTokenSource.CancelAndDisposeSilently();
+                }
 
                 if (cancellationToken.IsCancellationRequested) {
                     var isTerminal = error is not null && Hub.PeerTerminalErrorDetector.Invoke(error);
