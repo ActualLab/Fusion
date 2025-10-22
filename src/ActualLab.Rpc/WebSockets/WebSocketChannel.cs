@@ -24,17 +24,20 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         public RpcFrameDelayerFactory? FrameDelayerFactory { get; init; }
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public IByteSerializer<T> Serializer { get; init; } = ActualLab.Serialization.ByteSerializer.Default.ToTyped<T>();
+
+        // ActualLab.Rpc doesn't use ReadChannel / Reader.
+        // It uses IChannelWithReadAllUnbuffered.ReadAllUnbuffered(), which is a faster option.
         public ChannelOptions ReadChannelOptions { get; init; } = new BoundedChannelOptions(240) {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
             SingleWriter = true,
-            AllowSynchronousContinuations = true,
+            AllowSynchronousContinuations = false,
         };
         public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(240) {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
             SingleWriter = false,
-            AllowSynchronousContinuations = true,
+            AllowSynchronousContinuations = false,
         };
     }
 
