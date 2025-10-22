@@ -1,6 +1,6 @@
 using ActualLab.Tests.Caching.Alternative;
 
-namespace ActualLab.Tests.Caching;
+namespace ActualLab.Tests.Pooling;
 
 public class GCHandlePoolBenchmark(ITestOutputHelper @out) : BenchmarkTestBase(@out)
 {

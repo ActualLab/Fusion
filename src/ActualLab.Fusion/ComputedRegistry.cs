@@ -6,6 +6,7 @@ using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 using ActualLab.OS;
+using ActualLab.Pooling;
 using Errors = ActualLab.Fusion.Internal.Errors;
 
 namespace ActualLab.Fusion;
@@ -28,7 +29,7 @@ public sealed class ComputedRegistry
     private readonly object _lock = new();
 #endif
     private StochasticCounter _opCounter;
-    private readonly ConcurrentDictionary<ComputedInput, GCHandle> _storage;
+    private readonly ConcurrentDictionary<ComputedInput, WeakReferenceSlim<Computed>> _storage;
     private ComputedGraphPruner? _graphPruner;
     private int _pruneOpCounterThreshold;
     private Task? _pruneTask;
@@ -57,7 +58,7 @@ public sealed class ComputedRegistry
     public ComputedRegistry(Options settings)
     {
         _opCounter = new StochasticCounter(HardwareInfo.GetProcessorCountPo2Factor(4));
-        _storage = new ConcurrentDictionary<ComputedInput, GCHandle>(
+        _storage = new ConcurrentDictionary<ComputedInput, WeakReferenceSlim<Computed>>(
             settings.ConcurrencyLevel,
             settings.InitialCapacity,
             ComputedInput.EqualityComparer);
@@ -73,23 +74,15 @@ public sealed class ComputedRegistry
     {
         var random = key.HashCode + Environment.CurrentManagedThreadId;
         OnOperation(random);
-        if (!_storage.TryGetValue(key, out var handle))
+        if (!_storage.TryGetValue(key, out var weakRef))
             return null;
 
-        var target = handle.Target;
-        switch (target) {
-        case null:
-            if (_storage.TryRemove(key, handle))
-                handle.Free();
-            return null;
-        case Computed computed:
-            return computed;
-        default:
-            // Invalid GCHandle.Target, the best we can do is to remove it
-            _storage.TryRemove(key, handle);
-            LogInvalidGCHandleTargetSafely(target);
-            return null;
-        }
+        if (weakRef.Target is { } target)
+            return target;
+
+        if (_storage.TryRemove(key, weakRef))
+            weakRef.Dispose();
+        return null;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -109,46 +102,35 @@ public sealed class ComputedRegistry
         OnOperation(random);
 
         var spinWait = new SpinWait();
-        GCHandle? newHandle = null;
-        var ownsNewHandle = true;
+        WeakReferenceSlim<Computed>? newWeakRef = null;
+        var ownsNewWeakRef = true;
         try {
             while (computed.ConsistencyState != ConsistencyState.Invalidated) {
-                if (_storage.TryGetValue(key, out var handle)) {
-                    var target = handle.Target;
+                if (_storage.TryGetValue(key, out var weakRef)) {
+                    var target = weakRef.Target;
                     if (ReferenceEquals(target, computed))
                         return; // Already registered
 
-                    switch (target) {
-                    case null:
-                        break;
-                    case Computed cTarget:
-                        if (cTarget is { ConsistencyState: not ConsistencyState.Invalidated })
-                            cTarget.Invalidate(); // This typically triggers Unregister - except for RemoteComputed
-                        break;
-                    default:
-                        // Invalid GCHandle.Target, the best we can do is to remove it
-                        _storage.TryRemove(key, handle);
-                        LogInvalidGCHandleTargetSafely(target);
-                        continue;
-                    }
+                    if (target is { ConsistencyState: not ConsistencyState.Invalidated })
+                        target.Invalidate(); // This typically triggers Unregister - except for RemoteComputed
 
-                    // target is null or Computed -> remove the handle
-                    if (_storage.TryRemove(key, handle))
-                        handle.Free();
+                    if (_storage.TryRemove(key, weakRef))
+                        weakRef.Dispose();
                 }
                 else {
-                    newHandle ??= GCHandle.Alloc(computed, GCHandleType.Weak);
-                    if (_storage.TryAdd(key, newHandle.GetValueOrDefault())) {
-                        ownsNewHandle = false; // Ownership is transferred to _storage now
+                    newWeakRef ??= new WeakReferenceSlim<Computed>(computed);
+                    if (_storage.TryAdd(key, newWeakRef)) {
+                        ownsNewWeakRef = false; // Ownership is transferred to _storage now
                         return;
                     }
                 }
+
                 spinWait.SpinOnce(); // Safe for WASM
             }
         }
         finally {
-            if (ownsNewHandle && newHandle is { } h)
-                h.Free();
+            if (ownsNewWeakRef && newWeakRef != null)
+                newWeakRef.Dispose();
         }
     }
 
@@ -170,19 +152,17 @@ public sealed class ComputedRegistry
         }
         OnOperation(random);
 
-        if (!_storage.TryGetValue(key, out var handle))
+        if (!_storage.TryGetValue(key, out var weakRef))
             return;
 
-        var target = handle.Target;
+        var target = weakRef.Target;
         if (!(ReferenceEquals(target, computed) || ReferenceEquals(target, null)))
-            return;
+            return; // Points to some other computed
 
-        // handle.Target is null (is gone, i.e. to be pruned)
-        // or pointing to the right computation object
-        if (_storage.TryRemove(key, handle))
-            handle.Free();
-
-        // If another thread removed the entry, it also released the handle
+        // weakRef.Target is null (is gone, i.e. to be pruned)
+        // or pointing to the right computed
+        if (_storage.TryRemove(key, weakRef))
+            weakRef.Dispose();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -250,23 +230,13 @@ public sealed class ComputedRegistry
         // Debug.WriteLine(nameof(PruneInternal));
         var prunedKeyCount = 0L;
 
-        foreach (var (key, handle) in _storage) {
-            var target = handle.Target;
-            switch (target) {
-            case null:
-                if (_storage.TryRemove(key, handle)) {
-                    handle.Free();
-                    prunedKeyCount++;
-                }
-                break;
-            case Computed:
-                break;
-            default:
-                // Invalid GCHandle.Target, the best we can do is to remove it
-                if (_storage.TryRemove(key, handle))
-                    prunedKeyCount++;
-                LogInvalidGCHandleTargetSafely(target);
-                break;
+        foreach (var (key, weakRef) in _storage) {
+            if (weakRef.Target is not null)
+                continue; // Still alive
+
+            if (_storage.TryRemove(key, weakRef)) {
+                weakRef.Dispose();
+                prunedKeyCount++;
             }
         }
 
@@ -290,20 +260,6 @@ public sealed class ComputedRegistry
                 nextThreshold = int.MaxValue;
             nextThreshold = nextThreshold.Clamp(1024, int.MaxValue >> 1);
             _pruneOpCounterThreshold = nextThreshold;
-        }
-    }
-
-    // ReSharper disable once InconsistentNaming
-    private void LogInvalidGCHandleTargetSafely(object target)
-    {
-        // When this method is called, the handle points to a type other than Computed,
-        // which means there is an issue with GCHandle usage in the app.
-        // E.g., some other code uses Fusion's GCHandles.
-        try {
-            Log.LogWarning("GCHandle.Target is of {Type} instead of Computed", target.GetType().FullName);
-        }
-        catch {
-            // Intended
         }
     }
 

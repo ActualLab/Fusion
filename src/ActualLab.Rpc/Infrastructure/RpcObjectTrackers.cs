@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Concurrency;
 using ActualLab.Internal;
 using ActualLab.OS;
+using ActualLab.Pooling;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -29,66 +30,110 @@ public abstract class RpcObjectTracker
 
 public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 {
-    private readonly ConcurrentDictionary<long, GCHandle> _objects = new(HardwareInfo.ProcessorCountPo2, 17);
+    private readonly ConcurrentDictionary<long, WeakReferenceSlim<IRpcObject>> _storage
+        = new(HardwareInfo.ProcessorCountPo2, 17);
 
-    public override int Count => _objects.Count;
+    public override int Count => _storage.Count;
+
+#pragma warning disable MA0055
+    ~RpcRemoteObjectTracker()
+#pragma warning restore MA0055
+    {
+        // WeakReferenceSlim stores GCHandle, it has to be disposed to release it
+        foreach (var (_, weakRef) in _storage) {
+            try {
+                weakRef.Dispose();
+            }
+            catch {
+                // Intended
+            }
+        }
+    }
 
     public IRpcObject? Get(long localId)
-        => _objects.TryGetValue(localId, out var handle) && handle.Target is IRpcObject obj
-            ? obj
+        => _storage.TryGetValue(localId, out var weakRef) && weakRef.Target is { } target
+            ? target
             : null;
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public IEnumerator<IRpcObject> GetEnumerator()
     {
-        foreach (var (_, handle) in _objects) {
-            if (handle.Target is IRpcObject obj)
-                yield return obj;
+        foreach (var (_, weakRef) in _storage) {
+            if (weakRef.Target is { } target)
+                yield return target;
         }
     }
 
     public void Register(IRpcObject obj)
     {
+        // See ComputedRegistry.Register, it's the same logic here
+
         obj.RequireKind(RpcObjectKind.Remote);
         var id = obj.Id;
         if (id.IsNone)
             throw new ArgumentOutOfRangeException(nameof(obj));
 
-        while (true) {
-            GCHandle handle;
-            while (_objects.TryGetValue(id.LocalId, out handle) && handle.Target is IRpcObject existingObj) {
-                if (ReferenceEquals(obj, existingObj))
-                    return; // Already registered
 
-                // Another object with the same id.LocalId is registered,
-                // which means we switched to another peer instance (e.g. via LB),
-                // and got an object with the same LocalId as we already have.
-                // The only reasonable thing here is to remove the old one,
-                // which is already unusable at this point.
-                existingObj.Disconnect(); // This call must unregister it
+        var spinWait = new SpinWait();
+        WeakReferenceSlim<IRpcObject>? newWeakRef = null;
+        var ownsNewWeakRef = true;
+        try {
+            while (true) {
+                if (_storage.TryGetValue(id.LocalId, out var weakRef)) {
+                    var target = weakRef.Target;
+                    if (ReferenceEquals(obj, target))
+                        return; // Already registered
+
+                    if (target is not null) {
+                        // Another object with the same id.LocalId is registered,
+                        // which means we switched to another peer instance (e.g. via LB),
+                        // and got an object with the same LocalId as we already have.
+                        // The only reasonable thing here is to remove the old one,
+                        // which is already unusable at this point.
+                        target.Disconnect(); // This call must unregister it
+                    }
+
+                    if (_storage.TryRemove(id.LocalId, weakRef))
+                        weakRef.Dispose();
+                }
+                else {
+                    newWeakRef ??= new WeakReferenceSlim<IRpcObject>(obj);
+                    if (_storage.TryAdd(id.LocalId, newWeakRef)) {
+                        ownsNewWeakRef = false;
+                        return;
+                    }
+                }
+
+                spinWait.SpinOnce(); // Safe for WASM
             }
-
-            handle = GCHandle.Alloc(obj, GCHandleType.Weak);
-            if (_objects.TryAdd(id.LocalId, handle))
-                return;
+        }
+        finally {
+            if (ownsNewWeakRef && newWeakRef != null)
+                newWeakRef.Dispose();
         }
     }
 
     public bool Unregister(IRpcObject obj)
     {
+        // See ComputedRegistry.Unregister, it's the same logic here
+
         obj.RequireKind(RpcObjectKind.Remote);
         var localId = obj.Id.LocalId;
-        if (!_objects.TryGetValue(localId, out var handle))
+        if (!_storage.TryGetValue(localId, out var weakRef))
             return false; // Already unregistered or never was
-        if (handle.Target is not { } existingObj)
-            return false; // Handle target is dead - prob. it was pointing to another object, which died
-        if (!ReferenceEquals(obj, existingObj))
-            return false; // Another object is registered w/ the same LocalId already
-        if (!_objects.TryRemove(localId, handle))
-            return false; // Concurrent Unregister won
 
-        handle.Free();
+        var target = weakRef.Target;
+        if (!(ReferenceEquals(target, obj) || ReferenceEquals(target, null)))
+            return false; // Points to some other object
+
+        // weakRef.Target is null (is gone, i.e. to be pruned)
+        // or pointing to the right object
+        if (!_storage.TryRemove(localId, weakRef))
+            return false;
+
+        weakRef.Dispose();
         return true;
+
     }
 
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
@@ -96,12 +141,12 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
         try {
             var remotePeerId = handshake.RemotePeerId;
             var reconnectTasks = new List<Task>();
-            foreach (var (_, handle) in _objects)
-                if (handle.Target is IRpcObject obj) {
-                    if (obj.Id.HostId == remotePeerId)
-                        reconnectTasks.Add(obj.Reconnect(cancellationToken));
+            foreach (var (_, weakRef) in _storage)
+                if (weakRef.Target is { } target) {
+                    if (target.Id.HostId == remotePeerId)
+                        reconnectTasks.Add(target.Reconnect(cancellationToken));
                     else
-                        obj.Disconnect();
+                        target.Disconnect();
                 }
             await Task.WhenAll(reconnectTasks).ConfigureAwait(false);
 
@@ -128,8 +173,8 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 
     public void Abort()
     {
-        var objects = _objects.Values.Select(h => h.Target as IRpcObject).ToList();
-        _objects.Clear();
+        var objects = _storage.Values.Select(h => h.Target as IRpcObject).ToList();
+        _storage.Clear();
         foreach (var obj in objects)
             obj?.Disconnect();
     }
@@ -139,18 +184,18 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
     private long[] GetAliveLocalIdsAndReleaseDeadHandles()
     {
         var buffer = ArrayBuffer<long>.Lease(false);
-        var purgeBuffer = ArrayBuffer<(long, GCHandle)>.Lease(false);
+        var purgeBuffer = ArrayBuffer<(long, WeakReferenceSlim<IRpcObject>)>.Lease(false);
         try {
-            foreach (var (id, handle) in _objects) {
-                if (handle.Target is IRpcObject)
+            foreach (var (id, weakRef) in _storage) {
+                if (weakRef.Target is not null)
                     buffer.Add(id);
                 else
-                    purgeBuffer.Add((id, handle));
+                    purgeBuffer.Add((id, weakRef));
             }
 
-            foreach (var (id, handle) in purgeBuffer)
-                if (_objects.TryRemove(id, handle))
-                    handle.Free();
+            foreach (var (id, weakRef) in purgeBuffer)
+                if (_storage.TryRemove(id, weakRef))
+                    weakRef.Dispose();
             return buffer.ToArray();
         }
         finally {
