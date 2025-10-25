@@ -1,10 +1,8 @@
-using ActualLab.Pooling;
-
-namespace ActualLab.Tests.Pooling;
+namespace ActualLab.Tests.Internal;
 
 public class WeakReferenceSlimBenchmark(ITestOutputHelper @out) : BenchmarkTestBase(@out)
 {
-    private const int IterationCount = 10_000_000;
+    private const int IterationCount = 1_000_000;
 
     [Theory]
     [InlineData(false)]
@@ -13,47 +11,48 @@ public class WeakReferenceSlimBenchmark(ITestOutputHelper @out) : BenchmarkTestB
     {
         Out.WriteLine($"Run GC collect in each test: {runGCCollect}");
         var o = "test object";
+        var handles = new GCHandle[IterationCount];
+        var slimWeakRefs = new WeakReferenceSlim<string>[IterationCount];
+        var weakRefs = new WeakReference<string>[IterationCount];
 
-        GCHandle[] handles = null!;
         await Benchmark("GCHandle.Weak: (Alloc, Free)*N", IterationCount, n => {
-            handles = new GCHandle[n];
             for (var i = 0; i < n; i++) {
                 var h = GCHandle.Alloc(o, GCHandleType.Weak);
                 handles[i] = h;
-                h.Free();
             }
+            for (var i = 0; i < n; i++)
+                handles[i].Free();
 
             if (runGCCollect) {
-                handles = null!;
+                handles.AsSpan().Clear();
                 GC.Collect();
             }
         });
 
-        WeakReferenceSlim<string>[] slimWeakRefs = null!;
+        // await Timeouts.Generic5S.FireImmediately();
         await Benchmark("WeakReferenceSlim: (new only)*N", IterationCount, n => {
-            slimWeakRefs = new WeakReferenceSlim<string>[n];
             for (var i = 0; i < n; i++) {
-                var hr = new WeakReferenceSlim<string>(o);
-                slimWeakRefs[i] = hr;
-                hr.Dispose();
+                var wr = new WeakReferenceSlim<string>(o);
+                slimWeakRefs[i] = wr;
+                wr.Dispose();
             }
 
             if (runGCCollect) {
-                slimWeakRefs = null!;
+                // Timeouts.Generic5S.FireImmediately().Wait();
+                slimWeakRefs.AsSpan().Clear();
                 GC.Collect();
             }
         });
+        // await Timeouts.Generic5S.FireImmediately();
 
-        WeakReference<string>[] weakRefs = null!;
         await Benchmark("WeakReference: (new, destroy)*N", IterationCount, n => {
-            weakRefs = new WeakReference<string>[n];
             for (var i = 0; i < n; i++) {
                 var wr = new WeakReference<string>(o);
                 weakRefs[i] = wr;
             }
 
             if (runGCCollect) {
-                weakRefs = null!;
+                weakRefs.AsSpan().Clear();
                 GC.Collect();
             }
         });

@@ -2,6 +2,25 @@ namespace ActualLab.OS;
 
 public static class RuntimeInfo
 {
+#if NET9_0_OR_GREATER
+    private static readonly Lock StaticLock = new();
+#else
+    private static readonly object StaticLock = new();
+#endif
+
+    /// <summary>
+    /// Allows optimizing for server or client, typically for performance reasons.
+    /// This property must be changed as early as possible on startup,
+    /// otherwise its default value might be already used.
+    /// </summary>
+    public static bool IsServer {
+        get;
+        set {
+            lock (StaticLock)
+                field = value;
+        }
+    } = !OSInfo.IsAnyClient;
+
     public static class Process
     {
         public static readonly Guid Guid = Guid.NewGuid();

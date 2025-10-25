@@ -92,6 +92,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
                 // the delay is supposed to be short & we want to save on
                 // CancellationToken registration/de-registration.
                 await TickSource.WhenNextTick().ConfigureAwait(false);
+
             IReadOnlyDictionary<TTimer, long> minSet;
             lock (_lock) {
                 minSet = _timers.ExtractMinSet(_minPriority);

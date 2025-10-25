@@ -38,7 +38,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override Computed? GetExistingComputed()
-        => ComputedRegistry.Instance.Get(this);
+        => ComputedRegistry.Get(this);
 
     internal ValueTask<object?> InvokeInterceptedUntyped(CancellationToken cancellationToken)
     {

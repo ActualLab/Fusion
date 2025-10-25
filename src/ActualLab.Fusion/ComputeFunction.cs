@@ -19,7 +19,7 @@ public abstract class ComputeFunction(FusionHub hub, Type outputType) : ICompute
 {
     protected static AsyncLockSet<ComputedInput> InputLocks {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => ComputedRegistry.Instance.InputLocks;
+        get => ComputedRegistry.InputLocks;
     }
 
     private LazySlim<ILogger?>? _debugLog;
@@ -45,7 +45,7 @@ public abstract class ComputeFunction(FusionHub hub, Type outputType) : ICompute
     {
         var releaser = await InputLocks.Lock(input, cancellationToken).ConfigureAwait(false);
         try {
-            var computed = ComputedRegistry.Instance.Get(input); // = input.GetExistingComputed()
+            var computed = ComputedRegistry.Get(input); // = input.GetExistingComputed()
             if (ComputedImpl.TryUseExistingFromLock(computed, context))
                 return computed!;
 

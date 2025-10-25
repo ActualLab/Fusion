@@ -1,6 +1,4 @@
-using ActualLab.Pooling;
-
-namespace ActualLab.Tests.Pooling;
+namespace ActualLab.Tests.Internal;
 
 public class WeakReferenceSlimTest(ITestOutputHelper @out) : TestBase(@out)
 {

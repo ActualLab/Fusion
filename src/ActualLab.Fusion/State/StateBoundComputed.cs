@@ -13,7 +13,7 @@ public class StateBoundComputed<T> : Computed<T>, IStateBoundComputed
         : base(options, state)
     {
         State = state;
-        ComputedRegistry.Instance.PseudoRegister(this);
+        ComputedRegistry.PseudoRegister(this);
     }
 
     protected StateBoundComputed(ComputedOptions options, State state, Result output, bool isConsistent)
@@ -21,12 +21,12 @@ public class StateBoundComputed<T> : Computed<T>, IStateBoundComputed
     {
         State = state;
         if (isConsistent)
-            ComputedRegistry.Instance.PseudoRegister(this);
+            ComputedRegistry.PseudoRegister(this);
     }
 
     protected override void OnInvalidated()
     {
-        ComputedRegistry.Instance.PseudoUnregister(this);
+        ComputedRegistry.PseudoUnregister(this);
         CancelTimeouts();
         State.OnInvalidated(this);
     }

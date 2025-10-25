@@ -1,21 +1,19 @@
-namespace ActualLab.Pooling;
+namespace ActualLab.Tests.Internal;
 
 #pragma warning disable CA2002, RCS1059 // lock(this)
 
 /// <summary>
-/// A lightweight wrapper around <see cref="GCHandle"/> that implements atomic <see cref="GCHandle.Free"/>
-/// operation in its <see cref="Dispose"/> method.
+/// A lightweight wrapper around <see cref="GCHandle"/> that implements delayed
+/// <see cref="GCHandle.Free"/> operation in its <see cref="Dispose"/> method.
 /// This type isn't finalizable, so you HAVE TO manually dispose it, otherwise your code will be
 /// leaking <see cref="GCHandle"/> instances.
 /// </summary>
-public sealed class WeakReferenceSlim : IDisposable
+public sealed class WeakReferenceSlim : IDisposable, IGenericTimeoutHandler
 {
-#if USE_UNSAFE_ACCESSORS
-    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_handle")]
-    internal static extern ref nint AsIntPtr(ref GCHandle handle);
-#endif
+    public static readonly TimeSpan FreeDelay = TimeSpan.FromSeconds(3);
 
     private volatile nint _handle;
+    private volatile nint _handleToFree;
 
     public object? Target {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -41,30 +39,29 @@ public sealed class WeakReferenceSlim : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose()
     {
-#if USE_UNSAFE_ACCESSORS
         var handle = _handle;
-        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0)
-            GCHandle.FromIntPtr(handle).Free();
-#else
-        lock (this) {
-            var handle = _handle;
-            _handle = 0;
-            if (handle != 0)
-                GCHandle.FromIntPtr(handle).Free();
+        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0) {
+            Interlocked.Exchange(ref _handleToFree, handle);
+            // Timeouts.Generic5S.Add(this);
+            GCHandle.FromIntPtr(_handleToFree).Free();
         }
-#endif
     }
+
+    void IGenericTimeoutHandler.OnTimeout()
+        => GCHandle.FromIntPtr(_handleToFree).Free();
 }
 
 /// <summary>
-/// A lightweight wrapper around <see cref="GCHandle"/> that implements atomic <see cref="GCHandle.Free"/>
-/// operation in its <see cref="Dispose"/> method.
+/// A lightweight wrapper around <see cref="GCHandle"/> that implements delayed
+/// <see cref="GCHandle.Free"/> operation in its <see cref="Dispose"/> method.
 /// This type isn't finalizable, so you HAVE TO manually dispose it, otherwise your code will be
 /// leaking <see cref="GCHandle"/> instances.
 /// </summary>
-public sealed class WeakReferenceSlim<T> where T : class
+public sealed class WeakReferenceSlim<T> : IDisposable, IGenericTimeoutHandler
+    where T : class
 {
     private volatile nint _handle;
+    private volatile nint _handleToFree;
 
     public T? Target {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -87,20 +84,18 @@ public sealed class WeakReferenceSlim<T> where T : class
     public WeakReferenceSlim(T target, GCHandleType handleType)
         => _handle = GCHandle.ToIntPtr(GCHandle.Alloc(target, handleType));
 
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose()
     {
-#if USE_UNSAFE_ACCESSORS
         var handle = _handle;
-        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0)
-            GCHandle.FromIntPtr(handle).Free();
-#else
-        lock (this) {
-            var handle = _handle;
-            _handle = 0;
-            if (handle != 0)
-                GCHandle.FromIntPtr(handle).Free();
+        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0) {
+            Interlocked.Exchange(ref _handleToFree, handle);
+            // Timeouts.Generic5S.Add(this);
+            GCHandle.FromIntPtr(_handleToFree).Free();
         }
-#endif
     }
+
+    void IGenericTimeoutHandler.OnTimeout()
+        => GCHandle.FromIntPtr(_handleToFree).Free();
 }

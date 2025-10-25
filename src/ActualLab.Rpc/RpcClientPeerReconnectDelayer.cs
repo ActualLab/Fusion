@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Net;
+using ActualLab.OS;
 
 namespace ActualLab.Rpc;
 
@@ -16,9 +17,9 @@ public class RpcClientPeerReconnectDelayer : RetryDelayer, IHasServices
     {
         Services = services;
         ClockProvider = () => Hub.Clock; // Hub resolves this service in .ctor, so we can't resolve Hub here
-        Delays = RpcDefaults.Mode == RpcMode.Client
-            ? RetryDelaySeq.Exp(1, 60)
-            : RetryDelaySeq.Exp(0.5, 10);
+        Delays = RuntimeInfo.IsServer
+            ? RetryDelaySeq.Exp(0.5, 10)
+            : RetryDelaySeq.Exp(1, 60);
     }
 
     public virtual RetryDelay GetDelay(

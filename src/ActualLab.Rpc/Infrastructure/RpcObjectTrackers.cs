@@ -30,28 +30,13 @@ public abstract class RpcObjectTracker
 
 public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 {
-    private readonly ConcurrentDictionary<long, WeakReferenceSlim<IRpcObject>> _storage
+    private readonly ConcurrentDictionary<long, WeakReference<IRpcObject>> _storage
         = new(HardwareInfo.ProcessorCountPo2, 17);
 
     public override int Count => _storage.Count;
 
-#pragma warning disable MA0055
-    ~RpcRemoteObjectTracker()
-#pragma warning restore MA0055
-    {
-        // WeakReferenceSlim stores GCHandle, it has to be disposed to release it
-        foreach (var (_, weakRef) in _storage) {
-            try {
-                weakRef.Dispose();
-            }
-            catch {
-                // Intended
-            }
-        }
-    }
-
     public IRpcObject? Get(long localId)
-        => _storage.TryGetValue(localId, out var weakRef) && weakRef.Target is { } target
+        => _storage.TryGetValue(localId, out var weakRef) && weakRef.TryGetTarget(out var target)
             ? target
             : null;
 
@@ -59,7 +44,7 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
     public IEnumerator<IRpcObject> GetEnumerator()
     {
         foreach (var (_, weakRef) in _storage) {
-            if (weakRef.Target is { } target)
+            if (weakRef.TryGetTarget(out var target))
                 yield return target;
         }
     }
@@ -75,41 +60,31 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 
 
         var spinWait = new SpinWait();
-        WeakReferenceSlim<IRpcObject>? newWeakRef = null;
-        var ownsNewWeakRef = true;
-        try {
-            while (true) {
-                if (_storage.TryGetValue(id.LocalId, out var weakRef)) {
-                    var target = weakRef.Target;
-                    if (ReferenceEquals(obj, target))
-                        return; // Already registered
+        WeakReference<IRpcObject>? newWeakRef = null;
+        while (true) {
+            if (_storage.TryGetValue(id.LocalId, out var weakRef)) {
+                weakRef.TryGetTarget(out var target);
+                if (ReferenceEquals(obj, target))
+                    return; // Already registered
 
-                    if (target is not null) {
-                        // Another object with the same id.LocalId is registered,
-                        // which means we switched to another peer instance (e.g. via LB),
-                        // and got an object with the same LocalId as we already have.
-                        // The only reasonable thing here is to remove the old one,
-                        // which is already unusable at this point.
-                        target.Disconnect(); // This call must unregister it
-                    }
-
-                    if (_storage.TryRemove(id.LocalId, weakRef))
-                        weakRef.Dispose();
-                }
-                else {
-                    newWeakRef ??= new WeakReferenceSlim<IRpcObject>(obj);
-                    if (_storage.TryAdd(id.LocalId, newWeakRef)) {
-                        ownsNewWeakRef = false;
-                        return;
-                    }
+                if (target is not null) {
+                    // Another object with the same id.LocalId is registered,
+                    // which means we switched to another peer instance (e.g. via LB),
+                    // and got an object with the same LocalId as we already have.
+                    // The only reasonable thing here is to remove the old one,
+                    // which is already unusable at this point.
+                    target.Disconnect(); // This call must unregister it
                 }
 
-                spinWait.SpinOnce(); // Safe for WASM
+                _storage.TryRemove(id.LocalId, weakRef);
             }
-        }
-        finally {
-            if (ownsNewWeakRef && newWeakRef != null)
-                newWeakRef.Dispose();
+            else {
+                newWeakRef ??= new WeakReference<IRpcObject>(obj);
+                if (_storage.TryAdd(id.LocalId, newWeakRef))
+                    return;
+            }
+
+            spinWait.SpinOnce(); // Safe for WASM
         }
     }
 
@@ -122,18 +97,13 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
         if (!_storage.TryGetValue(localId, out var weakRef))
             return false; // Already unregistered or never was
 
-        var target = weakRef.Target;
+        weakRef.TryGetTarget(out var target);
         if (!(ReferenceEquals(target, obj) || ReferenceEquals(target, null)))
             return false; // Points to some other object
 
         // weakRef.Target is null (is gone, i.e. to be pruned)
         // or pointing to the right object
-        if (!_storage.TryRemove(localId, weakRef))
-            return false;
-
-        weakRef.Dispose();
-        return true;
-
+        return _storage.TryRemove(localId, weakRef);
     }
 
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
@@ -142,7 +112,7 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
             var remotePeerId = handshake.RemotePeerId;
             var reconnectTasks = new List<Task>();
             foreach (var (_, weakRef) in _storage)
-                if (weakRef.Target is { } target) {
+                if (weakRef.TryGetTarget(out var target)) {
                     if (target.Id.HostId == remotePeerId)
                         reconnectTasks.Add(target.Reconnect(cancellationToken));
                     else
@@ -173,7 +143,11 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 
     public void Abort()
     {
-        var objects = _storage.Values.Select(h => h.Target as IRpcObject).ToList();
+        var objects = _storage.Values
+            .Select(h => {
+                h.TryGetTarget(out var target);
+                return target;
+            }).ToList();
         _storage.Clear();
         foreach (var obj in objects)
             obj?.Disconnect();
@@ -184,18 +158,17 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
     private long[] GetAliveLocalIdsAndReleaseDeadHandles()
     {
         var buffer = ArrayBuffer<long>.Lease(false);
-        var purgeBuffer = ArrayBuffer<(long, WeakReferenceSlim<IRpcObject>)>.Lease(false);
+        var purgeBuffer = ArrayBuffer<(long, WeakReference<IRpcObject>)>.Lease(false);
         try {
             foreach (var (id, weakRef) in _storage) {
-                if (weakRef.Target is not null)
+                if (weakRef.TryGetTarget(out _))
                     buffer.Add(id);
                 else
                     purgeBuffer.Add((id, weakRef));
             }
 
             foreach (var (id, weakRef) in purgeBuffer)
-                if (_storage.TryRemove(id, weakRef))
-                    weakRef.Dispose();
+                _storage.TryRemove(id, weakRef);
             return buffer.ToArray();
         }
         finally {

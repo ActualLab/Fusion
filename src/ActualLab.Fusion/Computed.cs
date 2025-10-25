@@ -360,7 +360,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
                     Timeouts.KeepAlive.AddOrUpdateToLater(this, keepAliveSlot);
             }
         }
-        ComputedRegistry.Instance.ReportAccess(this, isNew);
+        ComputedRegistry.ReportAccess(this, isNew);
     }
 
     protected internal void CancelTimeouts()

@@ -1,5 +1,6 @@
 #if NET8_0_OR_GREATER
 using System.Collections.Frozen;
+using ActualLab.OS;
 #endif
 using ActualLab.Comparison;
 using ActualLab.Internal;
@@ -68,8 +69,8 @@ public sealed class RpcMethodResolver
         MethodByRef = methodByRef;
         MethodByHashCode = methodByHashCode;
 #if NET8_0_OR_GREATER
-        var useFrozenDictionary = RpcDefaults.Mode == RpcMode.Server;
-        if (useFrozenDictionary) {
+        if (RuntimeInfo.IsServer) {
+            // Uses FrozenDictionary for speed
             MethodByFullName = methodByFullName.ToFrozenDictionary();
             MethodByRef = methodByRef.ToFrozenDictionary();
             MethodByHashCode = methodByHashCode.ToFrozenDictionary();

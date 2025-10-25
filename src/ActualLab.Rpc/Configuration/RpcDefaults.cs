@@ -9,24 +9,10 @@ public static class RpcDefaults
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile RpcMode _mode;
     private static volatile VersionSet? _backendPeerVersions;
     private static volatile VersionSet? _apiPeerVersions;
 
-    public static RpcMode Mode {
-        get => _mode;
-        set {
-            if (value is not (RpcMode.Client or RpcMode.Server))
-                throw new ArgumentOutOfRangeException(nameof(value), value, null);
-
-            lock (StaticLock) {
-                _mode = value;
-                UseCallValidator = value != RpcMode.Client;
-            }
-        }
-    }
-
-    public static bool UseCallValidator { get; set; }
+    public static bool UseCallValidator { get; set; } = RuntimeInfo.IsServer;
     public static string ApiScope { get; set; } = "Api";
     public static string BackendScope { get; set; } = "Backend";
     public static Version ApiVersion { get; set; } = new(1, 0);
@@ -51,10 +37,6 @@ public static class RpcDefaults
             return _backendPeerVersions;
         }
     }
-
-    static RpcDefaults()
-        // This assignment has to run at last
-        => Mode = OSInfo.IsAnyClient ? RpcMode.Client : RpcMode.Server;
 
     public static VersionSet GetVersions(bool isBackend)
         => isBackend ? BackendPeerVersions : ApiPeerVersions;

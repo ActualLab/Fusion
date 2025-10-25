@@ -153,30 +153,6 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
     }
 
     [Fact]
-    public void KeepAliveSlotTest()
-    {
-        var q = Timeouts.KeepAliveQuanta;
-        q.TotalSeconds.Should().BeGreaterThan(0.2);
-        q.TotalSeconds.Should().BeLessThan(0.21);
-
-        Timeouts.GetKeepAliveSlot(Timeouts.StartedAt).Should().Be(0);
-        Timeouts.GetKeepAliveSlot(Timeouts.StartedAt + q).Should().Be(1);
-        Timeouts.GetKeepAliveSlot(Timeouts.StartedAt + q.MultiplyBy(2)).Should().Be(2);
-    }
-
-    [Fact]
-    public async Task KeepAliveTimeTest()
-    {
-        var users = Services.GetRequiredService<IUserService>();
-
-        var cUser0 = await Computed.Capture(() => users.Get(0));
-        var cCount = await Computed.Capture(() => users.Count());
-
-        cUser0!.Options.MinCacheDuration.Should().Be(TimeSpan.FromSeconds(60));
-        cCount!.Options.MinCacheDuration.Should().Be(TimeSpan.FromSeconds(60));
-    }
-
-    [Fact]
     public async Task MultiHostInvalidationTest()
     {
         var users = Services.GetRequiredService<IUserService>();

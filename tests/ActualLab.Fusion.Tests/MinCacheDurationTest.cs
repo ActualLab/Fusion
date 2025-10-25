@@ -29,9 +29,6 @@ public class MinCacheDurationTest(ITestOutputHelper @out) : TestBase(@out)
     public static IServiceProvider CreateProviderFor<TService>()
         where TService : class, IComputeService
     {
-        ComputedRegistry.Instance = new ComputedRegistry(new ComputedRegistry.Options() {
-            InitialCapacity = 16,
-        });
         var services = new ServiceCollection();
         services.AddFusion().AddService<TService>();
         return services.BuildServiceProvider();

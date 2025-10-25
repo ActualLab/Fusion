@@ -1,4 +1,4 @@
-namespace ActualLab.Fusion.Internal;
+namespace ActualLab.Time;
 
 public interface IGenericTimeoutHandler
 {

@@ -14,7 +14,7 @@ public sealed class ComputedSourceComputed<T> : Computed<T>, IComputedSourceComp
         : base(options, source)
     {
         Source = source;
-        ComputedRegistry.Instance.PseudoRegister(this);
+        ComputedRegistry.PseudoRegister(this);
     }
 
     public ComputedSourceComputed(
@@ -24,12 +24,12 @@ public sealed class ComputedSourceComputed<T> : Computed<T>, IComputedSourceComp
     {
         Source = source;
         if (isConsistent)
-            ComputedRegistry.Instance.PseudoRegister(this);
+            ComputedRegistry.PseudoRegister(this);
     }
 
     protected override void OnInvalidated()
     {
-        ComputedRegistry.Instance.PseudoUnregister(this);
+        ComputedRegistry.PseudoUnregister(this);
         CancelTimeouts();
         Source.OnInvalidated(this);
     }

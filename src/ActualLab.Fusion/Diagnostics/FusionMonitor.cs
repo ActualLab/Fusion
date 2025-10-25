@@ -119,18 +119,16 @@ public sealed class FusionMonitor : WorkerBase
     private void Attach()
     {
         GetAndResetStatistics();
-        var registry = ComputedRegistry.Instance;
-        registry.OnAccess += _onAccess;
-        registry.OnRegister += _onRegister;
-        registry.OnUnregister += _onUnregister;
+        ComputedRegistry.OnAccess += _onAccess;
+        ComputedRegistry.OnRegister += _onRegister;
+        ComputedRegistry.OnUnregister += _onUnregister;
     }
 
     private void Detach()
     {
-        var registry = ComputedRegistry.Instance;
-        registry.OnAccess -= _onAccess;
-        registry.OnRegister -= _onRegister;
-        registry.OnUnregister -= _onUnregister;
+        ComputedRegistry.OnAccess -= _onAccess;
+        ComputedRegistry.OnRegister -= _onRegister;
+        ComputedRegistry.OnUnregister -= _onUnregister;
     }
 
     private (Dictionary<string, (int, int)> Accesses, Dictionary<string, (int, int)> Registrations) GetAndResetStatistics()

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ActualLab.OS;
 
 namespace ActualLab.Rpc;
 
@@ -35,7 +36,7 @@ public record RpcLimits
     public RandomTimeSpan CallTimeoutCheckPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.2);
     // Outbound call summary logging
     public (int MinCount, TimeSpan Period) LogOutboundCallSummarySettings { get; init; }
-        = RpcDefaults.Mode == RpcMode.Client
-            ? (1, TimeSpan.FromMinutes(1))
-            : (1000, TimeSpan.FromMinutes(10));
+        = RuntimeInfo.IsServer
+            ? (1000, TimeSpan.FromMinutes(10))
+            : (1, TimeSpan.FromMinutes(1));
 }

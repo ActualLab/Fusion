@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Operations.Internal;
+using ActualLab.OS;
 using ActualLab.Resilience;
 using Errors = ActualLab.Internal.Errors;
 
@@ -33,7 +34,7 @@ public class OperationReprocessor : IOperationReprocessor
 
         public static bool DefaultFilter(ICommand command, CommandContext context)
         {
-            if (FusionDefaults.Mode != FusionMode.Server)
+            if (!RuntimeInfo.IsServer)
                 return false; // Only server can do the reprocessing
             if (command is IDelegatingCommand)
                 return false; // No reprocessing for IDelegatingCommand
