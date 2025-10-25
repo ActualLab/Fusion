@@ -76,7 +76,7 @@ public record RetryPolicy(
                     return await taskFactory.Invoke(timeoutCts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
-                    throw new RetryPolicyTimeoutExceededException();
+                    throw new RetryPolicyTimeoutException();
                 }
                 finally {
                     timeoutCts.Dispose();

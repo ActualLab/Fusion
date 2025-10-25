@@ -46,23 +46,23 @@ public static partial class TaskExt
         async Task WaitForCancellation() {
             using var dTask = cancellationToken.ToTask();
             var winnerTask = await Task.WhenAny(task, dTask.Resource).ConfigureAwait(false);
-            await winnerTask;
+            await winnerTask.ConfigureAwait(false);
         }
 
-        async Task WaitForTimeout()
-        {
-            using var cts = cancellationToken.CreateLinkedTokenSource();
+        async Task WaitForTimeout() {
+            var cts = cancellationToken.CreateLinkedTokenSource();
             try {
                 var timeoutTask = clock.Delay(timeout, cts.Token);
                 var winnerTask = await Task.WhenAny(task, timeoutTask).ConfigureAwait(false);
-                if (winnerTask != task) {
-                    await timeoutTask;
+                if (winnerTask == timeoutTask) {
+                    // It's a timeoutTask, and there are just two reasons it can be completed:
+                    cancellationToken.ThrowIfCancellationRequested();
                     throw new TimeoutException();
                 }
-                await task;
+                await task.ConfigureAwait(false);
             }
             finally {
-                cts.Cancel(); // Ensures delayTask is cancelled to avoid memory leak
+                cts.CancelAndDisposeSilently();
             }
         }
     }
@@ -104,27 +104,28 @@ public static partial class TaskExt
         async Task<T> WaitForCancellation() {
             using var dTask = cancellationToken.ToTask();
             var winnerTask = await Task.WhenAny(task, dTask.Resource).ConfigureAwait(false);
-            if (winnerTask != task) {
+            if (winnerTask == dTask.Resource) {
                 cancellationToken.ThrowIfCancellationRequested();
                 throw Errors.InternalError("This method can't get here.");
             }
-            return await task;
+            return await task.ConfigureAwait(false);
         }
 
         async Task<T> WaitForTimeout()
         {
-            using var cts = cancellationToken.CreateLinkedTokenSource();
+            var cts = cancellationToken.CreateLinkedTokenSource();
             try {
                 var timeoutTask = clock.Delay(timeout, cts.Token);
                 var winnerTask = await Task.WhenAny(task, timeoutTask).ConfigureAwait(false);
-                if (winnerTask != task) {
-                    await timeoutTask;
+                if (winnerTask == timeoutTask) {
+                    // It's a timeoutTask, and there are just two reasons it can be completed:
+                    cancellationToken.ThrowIfCancellationRequested();
                     throw new TimeoutException();
                 }
-                return await task;
+                return await task.ConfigureAwait(false);
             }
             finally {
-                cts.Cancel(); // Ensures delayTask is cancelled to avoid memory leak
+                cts.CancelAndDisposeSilently();
             }
         }
     }
@@ -171,19 +172,19 @@ public static partial class TaskExt
 
         async Task<Result<Unit>> WaitForTimeout()
         {
-            using var cts = cancellationToken.CreateLinkedTokenSource();
+            var cts = cancellationToken.CreateLinkedTokenSource();
             try {
                 var timeoutTask = clock.Delay(timeout, cts.Token);
                 var winnerTask = await Task.WhenAny(task, timeoutTask).ConfigureAwait(false);
-                if (winnerTask != task) {
-                    if (cancellationToken.IsCancellationRequested)
-                        return new Result<Unit>(default!, new OperationCanceledException(cancellationToken));
-                    return new Result<Unit>(default!, new TimeoutException());
-                }
+                if (winnerTask == timeoutTask)
+                    return cancellationToken.IsCancellationRequested
+                        // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+                        ? new Result<Unit>(default!, new OperationCanceledException(cancellationToken))
+                        : new Result<Unit>(default!, new TimeoutException());
                 return task.ToResultSynchronously();
             }
             finally {
-                cts.Cancel(); // Ensures delayTask is cancelled to avoid memory leak
+                cts.CancelAndDisposeSilently();
             }
         }
     }
@@ -223,26 +224,26 @@ public static partial class TaskExt
         async Task<Result<T>> WaitForCancellation() {
             using var dTask = cancellationToken.ToTask();
             var winnerTask = await Task.WhenAny(task, dTask.Resource).ConfigureAwait(false);
-            if (winnerTask != task)
-                return new Result<T>(default!, new OperationCanceledException(cancellationToken));
-            return task.ToResultSynchronously();
+            return winnerTask == task
+                ? task.ToResultSynchronously()
+                : new Result<T>(default!, new OperationCanceledException(cancellationToken));
         }
 
         async Task<Result<T>> WaitForTimeout()
         {
-            using var cts = cancellationToken.CreateLinkedTokenSource();
+            var cts = cancellationToken.CreateLinkedTokenSource();
             try {
                 var timeoutTask = clock.Delay(timeout, cts.Token);
                 var winnerTask = await Task.WhenAny(task, timeoutTask).ConfigureAwait(false);
-                if (winnerTask != task) {
-                    if (cancellationToken.IsCancellationRequested)
-                        return new Result<T>(default!, new OperationCanceledException(cancellationToken));
-                    return new Result<T>(default!, new TimeoutException());
-                }
+                if (winnerTask == timeoutTask)
+                    return cancellationToken.IsCancellationRequested
+                        // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+                        ? new Result<T>(default!, new OperationCanceledException(cancellationToken))
+                        : new Result<T>(default!, new TimeoutException());
                 return task.ToResultSynchronously();
             }
             finally {
-                cts.Cancel(); // Ensures delayTask is cancelled to avoid memory leak
+                cts.CancelAndDisposeSilently();
             }
         }
     }

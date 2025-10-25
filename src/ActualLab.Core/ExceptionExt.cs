@@ -11,6 +11,15 @@ public static class ExceptionExt
     public static bool IsCancellationOf(this Exception error, CancellationToken cancellationToken)
         => error is OperationCanceledException && cancellationToken.IsCancellationRequested;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsCancellationOfTimeoutToken(
+        this Exception error,
+        CancellationToken timeoutToken,
+        CancellationToken cancellationToken)
+        => error is OperationCanceledException
+            && timeoutToken.IsCancellationRequested
+            && !cancellationToken.IsCancellationRequested;
+
     // Flatten, Any, GetFirstInnerException
 
     public static IReadOnlyList<Exception> Flatten(this Exception? exception)

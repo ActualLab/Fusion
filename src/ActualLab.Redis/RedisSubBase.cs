@@ -4,7 +4,7 @@ namespace ActualLab.Redis;
 
 public abstract class RedisSubBase : ProcessorBase
 {
-    public static TimeSpan DefaultSubscribeTimeout { get; set; } = TimeSpan.FromSeconds(5);
+    public static TimeSpan DefaultSubscribeTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
     private readonly Action<RedisChannel, RedisValue> _onMessage;
 
@@ -65,22 +65,18 @@ public abstract class RedisSubBase : ProcessorBase
 
         lock (Lock) {
             WhenSubscribed ??= Task.Run(async () => {
-                using var timeoutCts = new CancellationTokenSource(SubscribeTimeout);
-                using var linkedCts = timeoutCts.Token.LinkWith(StopToken);
-                var cancellationToken = linkedCts.Token;
+                using var timeoutCts = StopToken.CreateLinkedTokenSource();
+                var timeoutToken = timeoutCts.Token;
+                timeoutCts.CancelAfter(SubscribeTimeout);
                 try {
-                    var subscriber = await Subscriber.Get(cancellationToken).ConfigureAwait(false);
+                    var subscriber = await Subscriber.Get(timeoutToken).ConfigureAwait(false);
                     await subscriber
                         .SubscribeAsync(RedisChannel, _onMessage)
-                        .WaitAsync(cancellationToken)
+                        .WaitAsync(timeoutToken)
                         .ConfigureAwait(false);
                 }
-                catch (OperationCanceledException) {
-                    if (WhenDisposed is not null)
-                        throw;
-                    if (timeoutCts.IsCancellationRequested)
-                        throw new TimeoutException();
-                    throw;
+                catch (Exception e) when (e.IsCancellationOfTimeoutToken(timeoutToken, StopToken)) {
+                    throw new TimeoutException($"Timeout while subscribing in {GetType().GetName()}.");
                 }
             }, default);
         }

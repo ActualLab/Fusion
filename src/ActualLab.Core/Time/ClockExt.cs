@@ -17,17 +17,6 @@ public static class ClockExt
         return clock.Delay(TimeSpan.FromMilliseconds(dueInMilliseconds), cancellationToken);
     }
 
-    // Timeout
-
-    public static ClockTimeout Timeout(this MomentClock clock, TimeSpan duration)
-        => new (clock, duration);
-    public static ClockTimeout Timeout(this MomentClock clock, double duration)
-        => new (clock, TimeSpan.FromSeconds(duration));
-    public static ClockTimeout Timeout(this MomentClockSet clocks, TimeSpan duration)
-        => new (clocks.CpuClock, duration);
-    public static ClockTimeout Timeout(this MomentClockSet clocks, double duration)
-        => new (clocks.CpuClock, TimeSpan.FromSeconds(duration));
-
     // Timer
 
     public static IObservable<long> Timer(this MomentClock clock, long delayInMilliseconds)

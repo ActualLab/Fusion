@@ -20,7 +20,7 @@ public static class TransiencyResolvers
             _ when e.IsServiceProviderDisposedException() => Transiency.Terminal,
             ISuperTransientException => Transiency.SuperTransient,
             ITransientException => Transiency.Transient,
-            RetryPolicyTimeoutExceededException => Transiency.NonTransient,
+            RetryPolicyTimeoutException => Transiency.NonTransient,
             TimeoutException => Transiency.Transient, // Must be transient
             _ => Transiency.Unknown,
         };

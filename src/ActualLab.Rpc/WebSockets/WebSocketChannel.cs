@@ -326,9 +326,8 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadMode<T>, I
             ? (RequiresItemSize ? TryDeserializeBytesWithItemSize : TryDeserializeBytes)
             : TryDeserializeText;
 
-        using var linkedCts = cancellationToken.LinkWith(StopToken);
-        var linkedToken = linkedCts.Token;
-        using var linkedTokenRegistration = linkedToken.Register(() => _ = DisposeAsync());
+        using var commonCts = cancellationToken.LinkWith(StopToken);
+        using var commonTokenRegistration = commonCts.Token.Register(() => _ = DisposeAsync());
         try {
             while (true) {
                 var readMemory = readBuffer.GetMemory(minReadBufferSize);
@@ -378,9 +377,8 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadMode<T>, I
             ? TryProjectingDeserializeBytesWithItemSize
             : TryProjectingDeserializeBytes;
 
-        using var linkedCts = cancellationToken.LinkWith(StopToken);
-        var linkedToken = linkedCts.Token;
-        using var linkedTokenRegistration = linkedToken.Register(() => _ = DisposeAsync());
+        using var commonCts = cancellationToken.LinkWith(StopToken);
+        using var commonTokenRegistration = commonCts.Token.Register(() => _ = DisposeAsync());
         try {
             while (true) {
                 var readMemory = readBuffer.GetMemory(minReadBufferSize);

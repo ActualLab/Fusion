@@ -48,7 +48,7 @@ public class TransiencyResolversTest
     {
         resolver.Invoke(new RetryRequiredException()).Should().Be(Transiency.SuperTransient);
         resolver.Invoke(new TransientException()).Should().Be(Transiency.Transient);
-        resolver.Invoke(new RetryPolicyTimeoutExceededException()).Should().Be(Transiency.NonTransient);
+        resolver.Invoke(new RetryPolicyTimeoutException()).Should().Be(Transiency.NonTransient);
         resolver.Invoke(new TimeoutException()).Should().Be(Transiency.Transient);
         resolver.Invoke(new TerminalException()).Should().Be(Transiency.Terminal);
         resolver.Invoke(new ObjectDisposedException("IServiceProvider")).Should().Be(Transiency.Terminal);

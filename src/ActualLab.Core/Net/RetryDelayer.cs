@@ -38,12 +38,12 @@ public class RetryDelayer : IRetryDelayer
         delay = TimeSpanExt.Max(TimeSpan.FromMilliseconds(1), delay);
         return (DelayImpl(), Clock.Now + delay);
 
-        async Task DelayImpl()
-        {
+        async Task DelayImpl() {
             var cancelDelaysToken = CancelDelaysToken;
-            using var cts = cancellationToken.LinkWith(cancelDelaysToken);
+            using var commonCts = cancellationToken.LinkWith(cancelDelaysToken);
+            var commonToken = commonCts.Token;
             try {
-                await Clock.Delay(delay, cts.Token).ConfigureAwait(false);
+                await Clock.Delay(delay, commonToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancelDelaysToken.IsCancellationRequested) {
                 // We complete normally in this case

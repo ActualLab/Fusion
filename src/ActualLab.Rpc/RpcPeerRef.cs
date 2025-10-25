@@ -87,8 +87,8 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
             : WhenRerouted();
 
         async Task WhenReroutedWithCancellationToken(CancellationToken cancellationToken1) {
-            using var tcs = RerouteToken.LinkWith(cancellationToken1);
-            await TaskExt.NeverEnding(tcs.Token).SilentAwait(false);
+            using var commonCts = RerouteToken.LinkWith(cancellationToken1);
+            await TaskExt.NeverEnding(commonCts.Token).SilentAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
         }
     }

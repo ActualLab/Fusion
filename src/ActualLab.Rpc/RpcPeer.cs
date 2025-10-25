@@ -193,10 +193,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             try {
                 return await peer.WhenConnected(timeoutToken).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (timeoutToken.IsCancellationRequested) {
-                if (cancellationToken1.IsCancellationRequested)
-                    throw; // Not a timeout
-
+            catch (Exception e) when (e.IsCancellationOfTimeoutToken(timeoutToken, cancellationToken1)) {
                 throw Errors.ConnectTimeout(peer.Ref);
             }
         }
@@ -309,7 +306,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     catch (Exception e) {
                         isHandshakeError = true;
                         readerTokenSource.CancelAndDisposeSilently();
-                        if (e.IsCancellationOf(handshakeToken) && !cancellationToken.IsCancellationRequested)
+                        if (e.IsCancellationOfTimeoutToken(handshakeToken, cancellationToken))
                             throw Errors.HandshakeTimeout();
                         throw;
                     }

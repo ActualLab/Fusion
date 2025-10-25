@@ -336,15 +336,16 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
                 var entities = new Dictionary<TKey, TDbEntity>();
                 if (Settings.Timeout is { } timeout) {
-                    using var cts = new CancellationTokenSource(timeout);
-                    using var linkedCts = cancellationToken.LinkWith(cts.Token);
+                    using var timeoutCts = cancellationToken.CreateLinkedTokenSource();
+                    var timeoutToken = timeoutCts.Token;
+                    timeoutCts.CancelAfter(timeout);
                     try {
                         var result = query.Invoke(dbContext, keys);
-                        await foreach (var e in result.WithCancellation(cancellationToken).ConfigureAwait(false))
+                        await foreach (var e in result.WithCancellation(timeoutToken).ConfigureAwait(false))
                             entities.Add(KeyExtractor.Invoke(e), e);
                     }
-                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
-                        throw new TimeoutException();
+                    catch (Exception e) when (e.IsCancellationOfTimeoutToken(timeoutToken, cancellationToken)) {
+                        throw new TimeoutException($"Timeout while processing batch in {GetType().GetName()}.");
                     }
                 }
                 else {
