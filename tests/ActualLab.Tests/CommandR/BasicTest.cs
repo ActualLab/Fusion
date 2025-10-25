@@ -51,7 +51,7 @@ public class BasicTest(ITestOutputHelper @out) : CommandRTestBase(@out)
         var command = new IncSetFailCommand() {
             SetValue = 2,
             IncrementBy = 1,
-            IncrementDelay = 200,
+            IncrementDelay = 500,
         };
         await services.Commander().Call(command);
         mathService.Value.Should().Be(3);
@@ -60,7 +60,7 @@ public class BasicTest(ITestOutputHelper @out) : CommandRTestBase(@out)
         command = new IncSetFailCommand() {
             SetValue = 2,
             IncrementBy = 1,
-            SetDelay = 200,
+            SetDelay = 500,
         };
         await services.Commander().Call(command);
         mathService.Value.Should().Be(2);
@@ -68,8 +68,8 @@ public class BasicTest(ITestOutputHelper @out) : CommandRTestBase(@out)
         // Fail early
         command = new IncSetFailCommand() {
             MustFail = true,
-            SetDelay = 200,
-            IncrementDelay = 200,
+            SetDelay = 500,
+            IncrementDelay = 500,
         };
         await Assert.ThrowsAsync<InvalidOperationException>(async () => {
             await services.Commander().Call(command);
@@ -78,7 +78,7 @@ public class BasicTest(ITestOutputHelper @out) : CommandRTestBase(@out)
         // Fail late
         command = new IncSetFailCommand() {
             MustFail = true,
-            FailDelay = 200,
+            FailDelay = 500,
         };
         await Assert.ThrowsAsync<InvalidOperationException>(async () => {
             await services.Commander().Call(command);
