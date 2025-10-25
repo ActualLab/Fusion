@@ -83,7 +83,7 @@ public class RpcWebSocketServer(
             var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
             var webSocketChannelOptions = WebSocketChannelOptionsProvider.Invoke(peer, properties);
             var channel = new WebSocketChannel<RpcMessage>(
-                webSocketChannelOptions, webSocketOwner, useReadAllUnbuffered: true, cancellationToken) {
+                webSocketChannelOptions, webSocketOwner, cancellationToken) {
                 OwnsWebSocketOwner = false,
             };
             connection = await ServerConnectionFactory

@@ -9,7 +9,7 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.WebSockets;
 
-public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffered<T>, IAsyncDisposable
+public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadMode<T>, IAsyncDisposable
     where T : class
 {
     public record Options
@@ -24,9 +24,9 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         public RpcFrameDelayerFactory? FrameDelayerFactory { get; init; }
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public IByteSerializer<T> Serializer { get; init; } = ActualLab.Serialization.ByteSerializer.Default.ToTyped<T>();
+        public ChannelReadMode ReadMode { get; init; } = ChannelReadMode.Unbuffered;
 
-        // ActualLab.Rpc doesn't use ReadChannel / Reader.
-        // It uses IChannelWithReadAllUnbuffered.ReadAllUnbuffered(), which is a faster option.
+        // ReadChannelOptions are unused when ReadMode == ChannelReadMode.Unbuffered
         public ChannelOptions ReadChannelOptions { get; init; } = new BoundedChannelOptions(240) {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
@@ -56,35 +56,33 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
     private int _writeBufferResetCounter;
 
     public bool OwnsWebSocketOwner { get; init; } = true;
-    public bool UseReadAllUnbuffered => _readChannel is null;
     public Options Settings { get; }
     public WebSocketOwner WebSocketOwner { get; }
     public WebSocket WebSocket { get; }
-    public readonly CancellationToken StopToken;
-    public readonly ITextSerializer<T>? TextSerializer;
-    public readonly IByteSerializer<T>? ByteSerializer;
-    public readonly IProjectingByteSerializer<T>? ProjectingByteSerializer;
-    public readonly DataFormat DataFormat;
-    public readonly WebSocketMessageType MessageType;
-    public readonly bool RequiresItemSize;
-    public readonly ILogger? Log;
-    public readonly ILogger? ErrorLog;
-    public readonly Task WhenClosing; // Throws OperationCanceledException
-    public readonly Task WhenReadCompleted;
-    public readonly Task WhenWriteCompleted;
-    public readonly Task WhenClosed;
+    public CancellationToken StopToken { get; }
+    public ITextSerializer<T>? TextSerializer { get; }
+    public IByteSerializer<T>? ByteSerializer { get; }
+    public IProjectingByteSerializer<T>? ProjectingByteSerializer { get; }
+    public ChannelReadMode ReadMode { get; }
+    public DataFormat DataFormat { get; }
+    public WebSocketMessageType MessageType { get; }
+    public bool RequiresItemSize { get; }
+    public ILogger? Log { get; }
+    public ILogger? ErrorLog { get; }
+    public Task WhenClosing { get; } // Throws OperationCanceledException
+    public Task WhenReadCompleted { get; }
+    public Task WhenWriteCompleted { get; }
+    public Task WhenClosed { get; }
 
     public WebSocketChannel(
         WebSocketOwner webSocketOwner,
-        bool useReadAllUnbuffered,
         CancellationToken cancellationToken = default)
-        : this(Options.Default, webSocketOwner, useReadAllUnbuffered, cancellationToken)
+        : this(Options.Default, webSocketOwner, cancellationToken)
     { }
 
     public WebSocketChannel(
         Options settings,
         WebSocketOwner webSocketOwner,
-        bool useReadAllUnbuffered,
         CancellationToken cancellationToken = default)
     {
         Settings = settings;
@@ -93,6 +91,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         _stopCts = cancellationToken.CreateLinkedTokenSource();
         StopToken = _stopCts.Token;
 
+        ReadMode = settings.ReadMode;
         TextSerializer = settings.Serializer as ITextSerializer<T>; // ITextSerializer<T> is also IByteSerializer<T>
         ByteSerializer = TextSerializer is null ? settings.Serializer : null;
         ProjectingByteSerializer = ByteSerializer as IProjectingByteSerializer<T>;
@@ -113,7 +112,9 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         _bufferRenewPeriod = settings.BufferRenewPeriod;
         _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, false);
 
-        _readChannel = useReadAllUnbuffered ? null : ChannelExt.Create<T>(settings.ReadChannelOptions);
+        _readChannel = ReadMode == ChannelReadMode.Buffered
+            ? ChannelExt.Create<T>(settings.ReadChannelOptions)
+            : null;
         _writeChannel = ChannelExt.Create<T>(settings.WriteChannelOptions);
         Reader = _readChannel?.Reader!;
         Writer = _writeChannel.Writer;
@@ -149,25 +150,33 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
 
     }
 
-    public IAsyncEnumerable<T> ReadAllUnbuffered(CancellationToken cancellationToken = default)
-        => ProjectingByteSerializer is not null
-            ? ReadAllProjecting(cancellationToken)
-            : ReadAll(cancellationToken);
+    public IAsyncEnumerable<T> ReadAllAsync(CancellationToken cancellationToken = default)
+    {
+        var reader = _readChannel?.Reader;
+        if (reader is not null) // ReadMode == ChannelReadMode.Buffered
+            return reader.ReadAllAsync(cancellationToken);
+
+        // ReadMode == ChannelReadMode.Unbuffered
+        return ProjectingByteSerializer is not null
+            ? ReadAllProjectingImpl(cancellationToken)
+            : ReadAllImpl(cancellationToken);
+    }
 
     // Private methods
 
     private async Task RunReader(CancellationToken cancellationToken)
     {
         var writer = _readChannel?.Writer;
-        if (writer is null) {
+        if (writer is null) { // ReadMode == ChannelReadMode.Unbuffered
             await TaskExt.NeverEnding(StopToken).SilentAwait(false);
             return;
         }
 
+        // ReadMode == ChannelReadMode.Buffered
         try {
             var items = ProjectingByteSerializer is not null
-                ? ReadAllProjecting(cancellationToken)
-                : ReadAll(cancellationToken);
+                ? ReadAllProjectingImpl(cancellationToken)
+                : ReadAllImpl(cancellationToken);
             // ReSharper disable once UseCancellationTokenForIAsyncEnumerable
             await foreach (var item in items.ConfigureAwait(false)) {
                 while (!writer.TryWrite(item))
@@ -309,7 +318,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
             _writeBuffer.Reset();
     }
 
-    private async IAsyncEnumerable<T> ReadAll([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    private async IAsyncEnumerable<T> ReadAllImpl([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var minReadBufferSize = Settings.MinReadBufferSize;
         var readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize, false);
@@ -361,7 +370,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadAllUnbuffe
         }
     }
 
-    private async IAsyncEnumerable<T> ReadAllProjecting([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    private async IAsyncEnumerable<T> ReadAllProjectingImpl([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var minReadBufferSize = Settings.MinReadBufferSize;
         var readBuffer = new ArrayPoolBuffer<byte>(minReadBufferSize, false);

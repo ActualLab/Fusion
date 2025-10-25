@@ -274,9 +274,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     var connection = await GetConnection(connectionState.Value, cancellationToken).ConfigureAwait(false);
                     var channel = connection.Channel;
                     var sender = channel.Writer;
-                    var readAllUnbufferedChannel = channel as IChannelWithReadAllUnbuffered<RpcMessage>;
-                    var reader = readAllUnbufferedChannel?.UseReadAllUnbuffered == true
-                        ? readAllUnbufferedChannel.ReadAllUnbuffered(readerToken).GetAsyncEnumerator(readerToken)
+                    var reader = channel is IChannelWithReadMode<RpcMessage> directReadChannel
+                        ? directReadChannel.ReadAllAsync(readerToken).GetAsyncEnumerator(readerToken)
                         : channel.Reader.ReadAllAsync(readerToken).GetAsyncEnumerator(readerToken);
 
                     // Sending Handshake call
