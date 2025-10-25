@@ -11,17 +11,18 @@ public class WeakReferenceSlimBenchmark(ITestOutputHelper @out) : BenchmarkTestB
     {
         Out.WriteLine($"Run GC collect in each test: {runGCCollect}");
         var o = "test object";
+        object? target = null;
         var handles = new GCHandle[IterationCount];
         var slimWeakRefs = new WeakReferenceSlim<string>[IterationCount];
         var weakRefs = new WeakReference<string>[IterationCount];
 
-        await Benchmark("GCHandle.Weak: (Alloc, Free)*N", IterationCount, n => {
+        await Benchmark("GCHandle.Weak: (Alloc, Target, Free)*N", IterationCount, n => {
             for (var i = 0; i < n; i++) {
                 var h = GCHandle.Alloc(o, GCHandleType.Weak);
                 handles[i] = h;
-            }
-            for (var i = 0; i < n; i++)
+                target = h.Target;
                 handles[i].Free();
+            }
 
             if (runGCCollect) {
                 handles.AsSpan().Clear();
@@ -29,25 +30,25 @@ public class WeakReferenceSlimBenchmark(ITestOutputHelper @out) : BenchmarkTestB
             }
         });
 
-        // await Timeouts.Generic5S.FireImmediately();
-        await Benchmark("WeakReferenceSlim: (new only)*N", IterationCount, n => {
+        await Benchmark("WeakReferenceSlim: (new, Target, Dispose)*N", IterationCount, n => {
             for (var i = 0; i < n; i++) {
                 var wr = new WeakReferenceSlim<string>(o);
                 slimWeakRefs[i] = wr;
+                target = wr.Target;
                 wr.Dispose();
             }
 
             if (runGCCollect) {
-                // Timeouts.Generic5S.FireImmediately().Wait();
                 slimWeakRefs.AsSpan().Clear();
                 GC.Collect();
             }
         });
-        // await Timeouts.Generic5S.FireImmediately();
 
-        await Benchmark("WeakReference: (new, destroy)*N", IterationCount, n => {
+        await Benchmark("WeakReference: (new, Target, maybe ~Finalize)*N", IterationCount, n => {
             for (var i = 0; i < n; i++) {
                 var wr = new WeakReference<string>(o);
+                wr.TryGetTarget(out var s);
+                target = s;
                 weakRefs[i] = wr;
             }
 
@@ -56,5 +57,8 @@ public class WeakReferenceSlimBenchmark(ITestOutputHelper @out) : BenchmarkTestB
                 GC.Collect();
             }
         });
+
+        // Just to use target
+        Out.WriteLine($"{target}"[..0]);
     }
 }

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ActualLab.Tests.Internal;
 
 #pragma warning disable CA2002, RCS1059 // lock(this)
@@ -8,24 +10,34 @@ namespace ActualLab.Tests.Internal;
 /// This type isn't finalizable, so you HAVE TO manually dispose it, otherwise your code will be
 /// leaking <see cref="GCHandle"/> instances.
 /// </summary>
-public sealed class WeakReferenceSlim : IDisposable, IGenericTimeoutHandler
+public sealed class WeakReferenceSlim : IDisposable
 {
     public static readonly TimeSpan FreeDelay = TimeSpan.FromSeconds(3);
 
-    private volatile nint _handle;
-    private volatile nint _handleToFree;
+    private nint _handle;
 
     public object? Target {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             var handle = _handle;
-            return handle == 0 ? null : GCHandle.FromIntPtr(handle).Target;
+            if (handle == 0)
+                return null;
+
+            try {
+                var target = GCHandle.FromIntPtr(handle).Target;
+                return Volatile.Read(ref _handle) == handle ? target : null;
+            }
+            catch (InvalidOperationException) {
+                return null;
+            }
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        set {
-            var handle = GCHandle.FromIntPtr(_handle);
-            handle.Target = value;
-        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryGetTarget([NotNullWhen(true)] out object? target)
+    {
+        target = Target;
+        return target != null;
     }
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -40,15 +52,9 @@ public sealed class WeakReferenceSlim : IDisposable, IGenericTimeoutHandler
     public void Dispose()
     {
         var handle = _handle;
-        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0) {
-            Interlocked.Exchange(ref _handleToFree, handle);
-            // Timeouts.Generic5S.Add(this);
-            GCHandle.FromIntPtr(_handleToFree).Free();
-        }
+        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0)
+            GCHandle.FromIntPtr(handle).Free();
     }
-
-    void IGenericTimeoutHandler.OnTimeout()
-        => GCHandle.FromIntPtr(_handleToFree).Free();
 }
 
 /// <summary>
@@ -57,23 +63,33 @@ public sealed class WeakReferenceSlim : IDisposable, IGenericTimeoutHandler
 /// This type isn't finalizable, so you HAVE TO manually dispose it, otherwise your code will be
 /// leaking <see cref="GCHandle"/> instances.
 /// </summary>
-public sealed class WeakReferenceSlim<T> : IDisposable, IGenericTimeoutHandler
+public sealed class WeakReferenceSlim<T> : IDisposable
     where T : class
 {
-    private volatile nint _handle;
-    private volatile nint _handleToFree;
+    private nint _handle;
 
     public T? Target {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             var handle = _handle;
-            return handle == 0 ? null : Unsafe.As<T>(GCHandle.FromIntPtr(handle).Target);
+            if (handle == 0)
+                return null;
+
+            try {
+                var target = GCHandle.FromIntPtr(handle).Target;
+                return Volatile.Read(ref _handle) == handle ? Unsafe.As<T>(target) : null;
+            }
+            catch (InvalidOperationException) {
+                return null;
+            }
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        set {
-            var handle = GCHandle.FromIntPtr(_handle);
-            handle.Target = value;
-        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryGetTarget([NotNullWhen(true)] out T? target)
+    {
+        target = Target;
+        return target != null;
     }
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -89,13 +105,7 @@ public sealed class WeakReferenceSlim<T> : IDisposable, IGenericTimeoutHandler
     public void Dispose()
     {
         var handle = _handle;
-        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0) {
-            Interlocked.Exchange(ref _handleToFree, handle);
-            // Timeouts.Generic5S.Add(this);
-            GCHandle.FromIntPtr(_handleToFree).Free();
-        }
+        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0)
+            GCHandle.FromIntPtr(handle).Free();
     }
-
-    void IGenericTimeoutHandler.OnTimeout()
-        => GCHandle.FromIntPtr(_handleToFree).Free();
 }
