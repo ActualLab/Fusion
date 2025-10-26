@@ -26,11 +26,13 @@ Release date: 2025-10-25
 
 ### Added
 - .NET 10 RC2 support
-- `allowInconsistent` flag support in `Computed/AnyState/ComputedSource.Use()` and
-  `UseUntyped()` methods
-- `bool Operation.MustStore` property allowing to disable operation log entry creation;
-  this useful when you know you don't need distributed invalidation for this operation
-  (e.g., you know that only the local machine is responsible for exposing modified data).
+- `allowInconsistent` flag in `Computed/AnyState/ComputedSource.Use()` and
+  `.UseUntyped()` methods. Get the value even if it's inconsistent; when called
+  inside a compute method, instantly invalidates the newly created computed
+  if an inconsistent dependency gets captured.
+- `bool Operation.MustStore` property allowing to disable the operation log entry creation;
+  this is useful when you're sure you don't need distributed invalidation for the current
+  operation - e.g., you know that only the local machine is responsible for exposing modified data.
   When `MustStore` is `false`, a `DbEvent` (in `Processed` state) is created instead of 
   an `DbOperation` entry to verify commit in case of commit failure.
 - `OperationScope.CompletionHandlers` allowing to register operation completion handler
@@ -41,7 +43,6 @@ Release date: 2025-10-25
   `Moment.Ceiling` is used to quantize delayed events.  
 
 ### Changed
-- Switched `ComputedRegistry` and `RpcObjectTracker` to use `WeakReference` instead of `GCHandle`-based approach
 - Moved command routing logic to `RpcRoutingCommandHandler`
 - Renamed `ComputeServiceCommandCompletionInvalidator` to `InvalidatingCommandCompletionHandler`
 - Improvements in `RetryPolicy` / `IRetryPolicy`, including exception filters
@@ -49,11 +50,12 @@ Release date: 2025-10-25
 
 ### Fixed
 - Native AOT support in .NET 10
-- A bug in `ComputeRegistry` that may cause `ComputedRegistry` 
+- A bug in `ComputeRegistry` that could cause `ComputedRegistry` 
   to expose a wrong `Computed` due to a race between `ComputedRegistry.Get` 
   and `ComputedRegistry.Register`. If `Get` gets paused between a moment it
   read a handle and resolved its `Target`, the handle with the same `IntPtr` value 
   might get re-allocated.
+  This is extremely rare, but nevertheless, we saw this happening in production.
 - The identical bug in `RpcObjectTracker` (it's used to track `RpcStream`-s).
 - `IDelegatingCommand` now "implements" `IOutermostCommand` (it was supposed to, but didn't)
 - `StatefulComponent.StateChanged` handler now suppresses `ExecutionContext` flow
@@ -82,7 +84,7 @@ Release date: 2025-10-25
 - Added `WeakReferenceSlim` (currently unused)
 - Added `TaskExt.NeverEnding(CancellationToken)` helper
 - Added `FixedTimerSet` and `ConcurrentFixedTimerSet`
-- Improved timeout handling code across the board
+- Improved `CancellationTokenSource`-based timeout handling code across the board
 - Improved tests.
 
 ### Documentation
