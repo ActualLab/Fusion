@@ -54,7 +54,7 @@ public sealed class WeakReferenceSlim
     public void Free()
     {
         var handle = _handle;
-        if (Interlocked.CompareExchange(ref _handle, default, handle) != 0)
+        if (Interlocked.CompareExchange(ref _handle, default, handle) != default)
             GCHandle.FromIntPtr(handle).Free();
     }
 }
@@ -109,7 +109,7 @@ public sealed class WeakReferenceSlim<T>
     public void Free()
     {
         var handle = _handle;
-        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0)
+        if (Interlocked.CompareExchange(ref _handle, default, handle) != default)
             GCHandle.FromIntPtr(handle).Free();
     }
 }
