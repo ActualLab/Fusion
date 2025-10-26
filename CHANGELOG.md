@@ -22,7 +22,7 @@ Release date: 2025-10-25
   indexing or AI processing
 - **Breaking**: `IHasDelayUntil` interface is removed, and thus its support in
   `OperationEvent` handling logic.
-- .NET Framework 4.7.1 target is replaced with .NET Framework 4.7.2
+- **Breaking**: .NET Framework 4.7.1 target is replaced with .NET Framework 4.7.2
 
 ### Added
 - .NET 10 RC2 support
