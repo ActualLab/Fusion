@@ -11,7 +11,7 @@ Release date: 2025-10-25
 
 ### Breaking Changes
 - **Breaking**: Removed `FusionDefaults` and `FusionMode` types.
-  Use `RuntimeInfo.IsServer`, `ComputedRegistry.Settings` and `Timeouts.Settings` instead.
+  Use `RuntimeInfo.IsServer`, `ComputedRegistry.Settings`, and `Timeouts.Settings` instead.
 - **Breaking**: Removed `RpcMode` type. Use `RuntimeInfo.IsServer` instead.
 - **Breaking**: `ComputedRegistry.Instance` is gone, the whole class is now static
 - **Breaking**: `Timeouts` and `IGenericTimeoutHandler` are moved to
