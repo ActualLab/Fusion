@@ -13,7 +13,6 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- [UnsafeAccessor(...)] currently causes AOT errors, so it's disabled for now -->
     <UseUnsafeAccessors>false</UseUnsafeAccessors>
     <UseUnsafeAccessors Condition="$(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8'))">true</UseUnsafeAccessors>
     <DefineConstants Condition="$(UseUnsafeAccessors)">$(DefineConstants);USE_UNSAFE_ACCESSORS</DefineConstants>
@@ -23,6 +22,11 @@
     <!-- UseDynamicMethods -->
     <UseDynamicMethods Condition="'$(UseDynamicMethods)' == ''">true</UseDynamicMethods>
     <DefineConstants Condition="$(UseDynamicMethods)">$(DefineConstants);USE_DYNAMIC_METHODS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <UseWeakReferenceSlim>false</UseWeakReferenceSlim>
+    <DefineConstants Condition="$(UseWeakReferenceSlim)">$(DefineConstants);USE_WEAK_REFERENCE_SLIM</DefineConstants>
   </PropertyGroup>
 
   <!-- Suppressed warnings -->

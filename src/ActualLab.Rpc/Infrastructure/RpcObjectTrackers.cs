@@ -2,7 +2,11 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Concurrency;
 using ActualLab.Internal;
 using ActualLab.OS;
-using ActualLab.Pooling;
+#if USE_WEAK_REFERENCE_SLIM
+using WeakRefAlias = ActualLab.Internal.WeakReferenceSlim<ActualLab.Rpc.Infrastructure.IRpcObject>;
+#else
+using WeakRefAlias = System.WeakReference<ActualLab.Rpc.Infrastructure.IRpcObject>;
+#endif
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -30,10 +34,21 @@ public abstract class RpcObjectTracker
 
 public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 {
-    private readonly ConcurrentDictionary<long, WeakReference<IRpcObject>> _storage
+    private readonly ConcurrentDictionary<long, WeakRefAlias> _storage
         = new(HardwareInfo.ProcessorCountPo2, 17);
 
     public override int Count => _storage.Count;
+
+#if USE_WEAK_REFERENCE_SLIM
+#pragma warning disable MA0055
+    ~RpcRemoteObjectTracker()
+    {
+        // WeakReferenceSlim stores GCHandle, it has to be disposed to release it
+        foreach (var (_, weakRef) in _storage)
+            weakRef.Free();
+    }
+#pragma warning restore MA0055
+#endif
 
     public IRpcObject? Get(long localId)
         => _storage.TryGetValue(localId, out var weakRef) && weakRef.TryGetTarget(out var target)
@@ -60,31 +75,40 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 
 
         var spinWait = new SpinWait();
-        WeakReference<IRpcObject>? newWeakRef = null;
-        while (true) {
-            if (_storage.TryGetValue(id.LocalId, out var weakRef)) {
-                weakRef.TryGetTarget(out var target);
-                if (ReferenceEquals(obj, target))
-                    return; // Already registered
+        var newWeakRef = (WeakRefAlias?)null;
+        try {
+            while (true) {
+                if (_storage.TryGetValue(id.LocalId, out var weakRef)) {
+                    weakRef.TryGetTarget(out var target);
+                    if (ReferenceEquals(obj, target))
+                        return; // Already registered
 
-                if (target is not null) {
-                    // Another object with the same id.LocalId is registered,
-                    // which means we switched to another peer instance (e.g. via LB),
-                    // and got an object with the same LocalId as we already have.
-                    // The only reasonable thing here is to remove the old one,
-                    // which is already unusable at this point.
-                    target.Disconnect(); // This call must unregister it
+                    if (target is not null) {
+                        // Another object with the same id.LocalId is registered,
+                        // which means we switched to another peer instance (e.g. via LB),
+                        // and got an object with the same LocalId as we already have.
+                        // The only reasonable thing here is to remove the old one,
+                        // which is already unusable at this point.
+                        target.Disconnect(); // This call must unregister it
+                    }
+
+                    if (_storage.TryRemove(id.LocalId, weakRef))
+                        Free(weakRef);
+                }
+                else {
+                    newWeakRef ??= new WeakRefAlias(obj);
+                    if (_storage.TryAdd(id.LocalId, newWeakRef)) {
+                        newWeakRef = null;
+                        return;
+                    }
                 }
 
-                _storage.TryRemove(id.LocalId, weakRef);
+                spinWait.SpinOnce(); // Safe for WASM
             }
-            else {
-                newWeakRef ??= new WeakReference<IRpcObject>(obj);
-                if (_storage.TryAdd(id.LocalId, newWeakRef))
-                    return;
-            }
-
-            spinWait.SpinOnce(); // Safe for WASM
+        }
+        finally {
+            if (newWeakRef is not null)
+                Free(newWeakRef);
         }
     }
 
@@ -103,7 +127,11 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 
         // weakRef.Target is null (is gone, i.e. to be pruned)
         // or pointing to the right object
-        return _storage.TryRemove(localId, weakRef);
+        if (!_storage.TryRemove(localId, weakRef))
+            return false;
+
+        Free(weakRef);
+        return true;
     }
 
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
@@ -158,7 +186,7 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
     private long[] GetAliveLocalIdsAndReleaseDeadHandles()
     {
         var buffer = ArrayBuffer<long>.Lease(false);
-        var purgeBuffer = ArrayBuffer<(long, WeakReference<IRpcObject>)>.Lease(false);
+        var purgeBuffer = ArrayBuffer<(long, WeakRefAlias)>.Lease(false);
         try {
             foreach (var (id, weakRef) in _storage) {
                 if (weakRef.TryGetTarget(out _))
@@ -167,14 +195,25 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
                     purgeBuffer.Add((id, weakRef));
             }
 
-            foreach (var (id, weakRef) in purgeBuffer)
-                _storage.TryRemove(id, weakRef);
+            foreach (var (id, weakRef) in purgeBuffer) {
+                if (_storage.TryRemove(id, weakRef))
+                    Free(weakRef);
+            }
             return buffer.ToArray();
         }
         finally {
             purgeBuffer.Release();
             buffer.Release();
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    // ReSharper disable once UnusedParameter.Local
+    private static void Free(WeakRefAlias weakRef)
+    {
+#if USE_WEAK_REFERENCE_SLIM
+        weakRef.Free();
+#endif
     }
 }
 
@@ -279,7 +318,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
     // Private methods
 
-    public static void TryDispose(IRpcSharedObject obj)
+    private static void TryDispose(IRpcSharedObject obj)
     {
         if (obj is IAsyncDisposable ad)
             _ = ad.DisposeAsync();

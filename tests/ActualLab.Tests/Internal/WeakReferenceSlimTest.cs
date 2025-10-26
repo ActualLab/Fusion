@@ -1,3 +1,5 @@
+using ActualLab.Internal;
+
 namespace ActualLab.Tests.Internal;
 
 public class WeakReferenceSlimTest(ITestOutputHelper @out) : TestBase(@out)
@@ -9,7 +11,7 @@ public class WeakReferenceSlimTest(ITestOutputHelper @out) : TestBase(@out)
         var o2 = new object();
         var wr = new WeakReferenceSlim(o1);
         wr.Target.Should().Be(o1);
-        wr.Dispose();
+        wr.Free();
         wr.Target.Should().BeNull();
     }
 
@@ -20,7 +22,7 @@ public class WeakReferenceSlimTest(ITestOutputHelper @out) : TestBase(@out)
         var o2 = new object();
         var wr = new WeakReferenceSlim<object>(o1);
         wr.Target.Should().Be(o1);
-        wr.Dispose();
+        wr.Free();
         wr.Target.Should().BeNull();
     }
 }

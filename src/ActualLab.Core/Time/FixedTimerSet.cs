@@ -87,7 +87,12 @@ public sealed class FixedTimerSet<TItem> : WorkerBase
             var now = Clock.Now;
             var resumeDelay = FireDelay;
             lock (_lock) {
+#if !NETSTANDARD2_0
                 while (_queue.TryPeek(out var entry)) {
+#else
+                while (_queue.Count != 0) {
+                    var entry = _queue.Peek();
+#endif
                     if (entry.DueAt > now) {
                         resumeDelay = entry.DueAt - now;
                         break;
@@ -97,7 +102,6 @@ public sealed class FixedTimerSet<TItem> : WorkerBase
                     (toFire ??= new()).Add(entry.Item);
                 }
             }
-
             // Fire timers
             if (_fireHandler is not null && toFire is not null) {
                 foreach (var item in toFire) {

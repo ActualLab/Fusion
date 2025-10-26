@@ -1,26 +1,28 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace ActualLab.Tests.Internal;
+namespace ActualLab.Internal;
 
 #pragma warning disable CA2002, RCS1059 // lock(this)
 
 /// <summary>
-/// A lightweight wrapper around <see cref="GCHandle"/> that implements delayed
-/// <see cref="GCHandle.Free"/> operation in its <see cref="Dispose"/> method.
-/// This type isn't finalizable, so you HAVE TO manually dispose it, otherwise your code will be
-/// leaking <see cref="GCHandle"/> instances.
+/// A lightweight wrapper around <see cref="GCHandle"/> that implements atomic
+/// <see cref="Free"/> method and <see cref="Target"/> read operation that
+/// doesn't suffer from concurrent race condition
+/// (free-and-reallocate in between getting a <see cref="GCHandle"/> and resolving it).
+/// This type isn't finalizable, so you HAVE TO manually call its <see cref="Free"/> method,
+/// otherwise your code will be leaking <see cref="GCHandle"/> instances.
 /// </summary>
-public sealed class WeakReferenceSlim : IDisposable
+public sealed class WeakReferenceSlim
 {
     public static readonly TimeSpan FreeDelay = TimeSpan.FromSeconds(3);
 
-    private nint _handle;
+    private IntPtr _handle;
 
     public object? Target {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             var handle = _handle;
-            if (handle == 0)
+            if (handle == default)
                 return null;
 
             try {
@@ -49,30 +51,32 @@ public sealed class WeakReferenceSlim : IDisposable
         => _handle = GCHandle.ToIntPtr(GCHandle.Alloc(target, handleType));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose()
+    public void Free()
     {
         var handle = _handle;
-        if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0)
+        if (Interlocked.CompareExchange(ref _handle, default, handle) != 0)
             GCHandle.FromIntPtr(handle).Free();
     }
 }
 
 /// <summary>
-/// A lightweight wrapper around <see cref="GCHandle"/> that implements delayed
-/// <see cref="GCHandle.Free"/> operation in its <see cref="Dispose"/> method.
-/// This type isn't finalizable, so you HAVE TO manually dispose it, otherwise your code will be
-/// leaking <see cref="GCHandle"/> instances.
+/// A lightweight wrapper around <see cref="GCHandle"/> that implements atomic
+/// <see cref="Free"/> method and <see cref="Target"/> read operation that
+/// doesn't suffer from concurrent race condition
+/// (free-and-reallocate in between getting a <see cref="GCHandle"/> and resolving it).
+/// This type isn't finalizable, so you HAVE TO manually call its <see cref="Free"/> method,
+/// otherwise your code will be leaking <see cref="GCHandle"/> instances.
 /// </summary>
-public sealed class WeakReferenceSlim<T> : IDisposable
+public sealed class WeakReferenceSlim<T>
     where T : class
 {
-    private nint _handle;
+    private IntPtr _handle;
 
     public T? Target {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             var handle = _handle;
-            if (handle == 0)
+            if (handle == default)
                 return null;
 
             try {
@@ -102,7 +106,7 @@ public sealed class WeakReferenceSlim<T> : IDisposable
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose()
+    public void Free()
     {
         var handle = _handle;
         if (Interlocked.CompareExchange(ref _handle, 0, handle) != 0)

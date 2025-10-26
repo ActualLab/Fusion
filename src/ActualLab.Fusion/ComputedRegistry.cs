@@ -4,10 +4,15 @@ using ActualLab.Concurrency;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
-using ActualLab.Internal;
 using ActualLab.Locking;
 using ActualLab.OS;
 using Errors = ActualLab.Fusion.Internal.Errors;
+#if USE_WEAK_REFERENCE_SLIM
+using WeakRefAlias = ActualLab.Internal.WeakReferenceSlim<ActualLab.Fusion.Computed>;
+#else
+using WeakRefAlias = System.WeakReference<ActualLab.Fusion.Computed>;
+using ActualLab.Internal;
+#endif
 
 namespace ActualLab.Fusion;
 
@@ -39,7 +44,8 @@ public sealed class ComputedRegistry
     private static readonly object StaticLock = new();
 #endif
     private static StochasticCounter _opCounter;
-    private static readonly ConcurrentDictionary<ComputedInput, WeakReference<Computed>> _storage;
+    // ReSharper disable once InconsistentNaming
+    private static readonly ConcurrentDictionary<ComputedInput, WeakRefAlias> _storage;
     private static ComputedGraphPruner? _graphPruner;
     private static int _pruneOpCounterThreshold;
     private static Task? _pruneTask;
@@ -59,7 +65,7 @@ public sealed class ComputedRegistry
     {
         Metrics = new();
         _opCounter = new StochasticCounter(HardwareInfo.GetProcessorCountPo2Factor(4));
-        _storage = new ConcurrentDictionary<ComputedInput, WeakReference<Computed>>(
+        _storage = new ConcurrentDictionary<ComputedInput, WeakRefAlias>(
             Settings.ConcurrencyLevel,
             Settings.InitialCapacity,
             ComputedInput.EqualityComparer);
@@ -82,7 +88,8 @@ public sealed class ComputedRegistry
         if (weakRef.TryGetTarget(out var target))
             return target;
 
-        _storage.TryRemove(key, weakRef);
+        if (_storage.TryRemove(key, weakRef))
+            Free(weakRef);
         return null;
     }
 
@@ -103,25 +110,34 @@ public sealed class ComputedRegistry
         OnOperation(random);
 
         var spinWait = new SpinWait();
-        WeakReference<Computed>? newWeakRef = null;
-        while (computed.ConsistencyState != ConsistencyState.Invalidated) {
-            if (_storage.TryGetValue(key, out var weakRef)) {
-                weakRef.TryGetTarget(out var target);
-                if (ReferenceEquals(target, computed))
-                    return; // Already registered
+        var newWeakRef = (WeakRefAlias?)null;
+        try {
+            while (computed.ConsistencyState != ConsistencyState.Invalidated) {
+                if (_storage.TryGetValue(key, out var weakRef)) {
+                    weakRef.TryGetTarget(out var target);
+                    if (ReferenceEquals(target, computed))
+                        return; // Already registered
 
-                if (target is { ConsistencyState: not ConsistencyState.Invalidated })
-                    target.Invalidate(); // This typically triggers Unregister - except for RemoteComputed
+                    if (target is { ConsistencyState: not ConsistencyState.Invalidated })
+                        target.Invalidate(); // This typically triggers Unregister - except for RemoteComputed
 
-                _storage.TryRemove(key, weakRef);
+                    if (_storage.TryRemove(key, weakRef))
+                        Free(weakRef);
+                }
+                else {
+                    newWeakRef ??= new WeakRefAlias(computed);
+                    if (_storage.TryAdd(key, newWeakRef)) {
+                        newWeakRef = null;
+                        return;
+                    }
+                }
+
+                spinWait.SpinOnce(); // Safe for WASM
             }
-            else {
-                newWeakRef ??= new WeakReference<Computed>(computed);
-                if (_storage.TryAdd(key, newWeakRef))
-                    return;
-            }
-
-            spinWait.SpinOnce(); // Safe for WASM
+        }
+        finally {
+            if (newWeakRef is not null)
+                Free(newWeakRef);
         }
     }
 
@@ -152,7 +168,8 @@ public sealed class ComputedRegistry
 
         // weakRef.Target is null (is gone, i.e. to be pruned)
         // or pointing to the right computed
-        _storage.TryRemove(key, weakRef);
+        if (_storage.TryRemove(key, weakRef))
+            Free(weakRef);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -226,8 +243,10 @@ public sealed class ComputedRegistry
             if (weakRef.TryGetTarget(out _))
                 continue; // Still alive
 
-            if (_storage.TryRemove(key, weakRef))
+            if (_storage.TryRemove(key, weakRef)) {
+                Free(weakRef);
                 prunedKeyCount++;
+            }
         }
 
         int keyCount;
@@ -261,6 +280,15 @@ public sealed class ComputedRegistry
         catch {
             // Intended: logging must not throw
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    // ReSharper disable once UnusedParameter.Local
+    private static void Free(WeakRefAlias weakRef)
+    {
+#if USE_WEAK_REFERENCE_SLIM
+        weakRef.Free();
+#endif
     }
 
     // Nested types

@@ -1,3 +1,5 @@
+using ActualLab.Internal;
+
 namespace ActualLab.Tests.Internal;
 
 public class WeakReferenceSlimBenchmark(ITestOutputHelper @out) : BenchmarkTestBase(@out)
@@ -30,12 +32,12 @@ public class WeakReferenceSlimBenchmark(ITestOutputHelper @out) : BenchmarkTestB
             }
         });
 
-        await Benchmark("WeakReferenceSlim: (new, Target, Dispose)*N", IterationCount, n => {
+        await Benchmark("WeakReferenceSlim: (new, Target, Free)*N", IterationCount, n => {
             for (var i = 0; i < n; i++) {
                 var wr = new WeakReferenceSlim<string>(o);
                 slimWeakRefs[i] = wr;
                 target = wr.Target;
-                wr.Dispose();
+                wr.Free();
             }
 
             if (runGCCollect) {
