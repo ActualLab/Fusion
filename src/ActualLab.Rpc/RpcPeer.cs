@@ -4,7 +4,6 @@ using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Serialization;
-using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc;
 
@@ -271,8 +270,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     var connection = await GetConnection(connectionState.Value, cancellationToken).ConfigureAwait(false);
                     var channel = connection.Channel;
                     var sender = channel.Writer;
-                    var reader = channel is IChannelWithReadMode<RpcMessage> directReadChannel
-                        ? directReadChannel.ReadAllAsync(readerToken).GetAsyncEnumerator(readerToken)
+                    // WebSocketChannel is IAsyncEnumerable<RpcMessage>, its GetAsyncEnumerator honors ReadMode
+                    var reader = channel is IAsyncEnumerable<RpcMessage> asyncEnumerable
+                        ? asyncEnumerable.GetAsyncEnumerator(readerToken)
                         : channel.Reader.ReadAllAsync(readerToken).GetAsyncEnumerator(readerToken);
 
                     // Sending Handshake call

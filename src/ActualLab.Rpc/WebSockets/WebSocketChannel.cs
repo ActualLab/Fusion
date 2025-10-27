@@ -9,7 +9,7 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.WebSockets;
 
-public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadMode<T>, IAsyncDisposable
+public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyncDisposable
     where T : class
 {
     public record Options
@@ -24,16 +24,16 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadMode<T>, I
         public RpcFrameDelayerFactory? FrameDelayerFactory { get; init; }
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public IByteSerializer<T> Serializer { get; init; } = ActualLab.Serialization.ByteSerializer.Default.ToTyped<T>();
-        public ChannelReadMode ReadMode { get; init; } = ChannelReadMode.Unbuffered;
+        public WebSocketChannelReadMode ReadMode { get; init; } = WebSocketChannelReadMode.Unbuffered;
 
         // ReadChannelOptions are unused when ReadMode == ChannelReadMode.Unbuffered
-        public ChannelOptions ReadChannelOptions { get; init; } = new BoundedChannelOptions(240) {
+        public ChannelOptions ReadChannelOptions { get; init; } = new BoundedChannelOptions(120) {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
             SingleWriter = true,
             AllowSynchronousContinuations = false,
         };
-        public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(240) {
+        public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(120) {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
             SingleWriter = false,
@@ -54,6 +54,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadMode<T>, I
     private readonly MeterSet _meters = StaticMeters;
     private int _readBufferResetCounter;
     private int _writeBufferResetCounter;
+    private int _getAsyncEnumeratorCounter;
 
     public bool OwnsWebSocketOwner { get; init; } = true;
     public Options Settings { get; }
@@ -63,7 +64,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadMode<T>, I
     public ITextSerializer<T>? TextSerializer { get; }
     public IByteSerializer<T>? ByteSerializer { get; }
     public IProjectingByteSerializer<T>? ProjectingByteSerializer { get; }
-    public ChannelReadMode ReadMode { get; }
+    public WebSocketChannelReadMode ReadMode { get; }
     public DataFormat DataFormat { get; }
     public WebSocketMessageType MessageType { get; }
     public bool RequiresItemSize { get; }
@@ -112,7 +113,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadMode<T>, I
         _bufferRenewPeriod = settings.BufferRenewPeriod;
         _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, false);
 
-        _readChannel = ReadMode == ChannelReadMode.Buffered
+        _readChannel = ReadMode == WebSocketChannelReadMode.Buffered
             ? ChannelExt.Create<T>(settings.ReadChannelOptions)
             : null;
         _writeChannel = ChannelExt.Create<T>(settings.WriteChannelOptions);
@@ -150,16 +151,19 @@ public sealed class WebSocketChannel<T> : Channel<T>, IChannelWithReadMode<T>, I
 
     }
 
-    public IAsyncEnumerable<T> ReadAllAsync(CancellationToken cancellationToken = default)
+    public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
     {
+        if (Interlocked.Increment(ref _getAsyncEnumeratorCounter) != 1)
+            throw ActualLab.Internal.Errors.AlreadyInvoked($"{GetType().GetName()}.GetAsyncEnumerator");
+
         var reader = _readChannel?.Reader;
         if (reader is not null) // ReadMode == ChannelReadMode.Buffered
-            return reader.ReadAllAsync(cancellationToken);
+            return reader.ReadAllAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
 
         // ReadMode == ChannelReadMode.Unbuffered
         return ProjectingByteSerializer is not null
-            ? ReadAllProjectingImpl(cancellationToken)
-            : ReadAllImpl(cancellationToken);
+            ? ReadAllProjectingImpl(cancellationToken).GetAsyncEnumerator(cancellationToken)
+            : ReadAllImpl(cancellationToken).GetAsyncEnumerator(cancellationToken);
     }
 
     // Private methods
