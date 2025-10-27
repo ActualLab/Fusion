@@ -15,7 +15,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{35F39E26-0FDB-44
 		Directory.Packages.props = Directory.Packages.props
 		global.json = global.json
 		docker-compose.yml = docker-compose.yml
-		.instructions.md = .instructions.md
 		AGENTS.md = AGENTS.md
 	EndProjectSection
 EndProject

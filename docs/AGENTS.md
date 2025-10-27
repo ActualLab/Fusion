@@ -1,10 +1,29 @@
-# Build instructions for ActualLab.Fusion Documentation
+# Agent instructions for ActualLab.Fusion Documentation
 
 ## Scope
 
 This file applies to all documentation files in the `docs/` directory and its subdirectories.
 
-IMPORTANT: Read `../README.md` to learn what Fusion is.
+`../AGENTS.md` (located in the root folder) describes agent instructions for the entire project. 
+
+Before you proceed further, you ABSOLUTELY need to read the following files:
+- `README.md` (located in `docs/` folder)
+- `../README.md` (located in the root folder)
+- `../AGENTS.md` (located in the root folder)
+
+## General Instructions  
+
+We are migrating the old Fusion documentation located
+in `docs/tutorial/` folder into the new `Part*.md` and `Part*.cs`
+files in `docs/` folder. Our goal is to make it better: 
+easier to read, cleaner, and factually correct - 
+based on the most current source code.
+
+For your reference, `docs/Part01.*` files were generated
+as a request to merge and update `docs/tutorial/Part01.md`-`Part03.md` 
+from the old Fusion documentation.
+YOU MUST ABSOLUTELY SEE THESE FILES before starting to work 
+on a similar task.
 
 ## Documentation Structure
 
@@ -27,7 +46,7 @@ Code snippet format:
 The source block in `.cs` file:
 ```cs
 #region PartXX_SnippetId
-// This snippet is referenced from .instructions.md
+// This snippet is referenced from AGENTS.md
 #endregion
 ```
 
@@ -35,7 +54,7 @@ The reference / embedding block in `.md` file:
 ```md
 <!-- snippet: PartXX_SnippetId -->
 ```cs
-// This snippet is referenced from .instructions.md
+// This snippet is referenced from AGENTS.md
 ```
 <!-- endSnippet -->
 ```
@@ -71,7 +90,3 @@ All the tools & scripts listed below must be started from `docs/` folder. So if 
 - Ensure code examples are accurate and up-to-date
 - When adding new documentation, follow the existing structure
 - Update the documentation index if adding new pages.
-
-## Additional Notes
-
-.instructions.md in other folders may extend and override instructions provided here.
