@@ -5,9 +5,12 @@ All notable changes to **ActualLab.Fusion** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 10.6.15
+`+HexNumber` after version number is the commit hash of this version.
+It isn't included into the NuGet package version.
 
-Release date: 2025-10-27, commit hash: 7a61208f5161047b15be70886c71014950f45329
+## 10.6.16+d0431715b7
+
+Release date: 2025-10-27
 
 ### Changed
 - Renamed `ChannelReadMode` to `WebSocketChannelReadMode`
