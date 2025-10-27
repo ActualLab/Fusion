@@ -15,6 +15,7 @@
   <PropertyGroup>
     <UseUnsafeAccessors>false</UseUnsafeAccessors>
     <UseUnsafeAccessors Condition="$(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8'))">true</UseUnsafeAccessors>
+    <UseUnsafeAccessors>false</UseUnsafeAccessors>
     <DefineConstants Condition="$(UseUnsafeAccessors)">$(DefineConstants);USE_UNSAFE_ACCESSORS</DefineConstants>
   </PropertyGroup>
 

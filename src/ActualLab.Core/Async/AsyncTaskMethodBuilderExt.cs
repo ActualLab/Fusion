@@ -2,6 +2,19 @@ namespace ActualLab.Async;
 
 public static partial class AsyncTaskMethodBuilderExt
 {
+#if USE_UNSAFE_ACCESSORS
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_task")]
+    private static extern ref Task<T>? TaskGetter<T>(ref AsyncTaskMethodBuilder<T> builder);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AsyncTaskMethodBuilder<T> FromTask<T>(Task<T> task)
+    {
+        AsyncTaskMethodBuilder<T> builder = default;
+        TaskGetter(ref builder) = task;
+        return builder;
+    }
+#endif
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static AsyncTaskMethodBuilder<T> New<T>()
     {
