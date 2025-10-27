@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 10.6.18+af2a52320f
+
+Release date: 2025-10-27
+
+### Fixed
+- ActualLab.Generators now add #if-s suppressing [UnconditionalSuppressMessage] and [ModuleInitializer] for .NET Framework 4.7.2 and .NET Standard 2.0.
+
 ## 10.6.16+d0431715b7
 
 Release date: 2025-10-27
