@@ -5,6 +5,21 @@ All notable changes to **ActualLab.Fusion** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 10.6.13
+
+Release date: 2025-10-27, commit hash: 155356259a4a7ebc63a0b86ad44474a22b72e05e
+
+### Changed
+- Renamed `ChannelReadMode` to `WebSocketChannelReadMode`
+- Removed `IChannelWithReadMode`, updated `WebSocketChannel` to implement `IAsyncEnumerable` directly.
+
+### Infrastructure
+- Added `UnbufferedPushSequence<T>` for unbuffered async data streaming
+- Added `[UnsafeAccessor]`-based helpers for `AsyncTaskMethodBuilder<T>` in `AsyncTaskMethodBuilderExt`.
+
+### Documentation
+- Replaced `.instructions.md` with updated `AGENTS.md` and `CODING_STYLE.md`
+
 ## 10.6.4
 
 Release date: 2025-10-25
