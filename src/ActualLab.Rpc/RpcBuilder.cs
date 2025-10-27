@@ -377,7 +377,7 @@ public readonly struct RpcBuilder
             var hub = c.RpcHub();
             var localTarget = c.GetRequiredService(implementationType);
             var remoteTarget = hub.InternalServices.NewNonRoutingInterceptor(serviceType);
-            return c.RpcHub().InternalServices.NewSwitchProxy(serviceType, serviceType, localTarget, remoteTarget);
+            return hub.InternalServices.NewSwitchProxy(serviceType, serviceType, localTarget, remoteTarget);
         });
         Service(serviceType).HasName(name).IsDistributedPair(implementationType);
         return this;
