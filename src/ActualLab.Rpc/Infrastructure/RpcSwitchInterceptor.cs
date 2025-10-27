@@ -79,9 +79,8 @@ public class RpcSwitchInterceptor : RpcInterceptor
             peer ??= SafeCallRouter.Invoke(methodDef, invocation.Arguments); // We already took care of the override
             try {
                 Task resultTask;
-                if (peer.ConnectionKind == RpcPeerConnectionKind.Local) {
+                if (peer.ConnectionKind is RpcPeerConnectionKind.Local)
                     resultTask = localCallAsyncInvoker.Invoke(invocation);
-                }
                 else {
                     context.Peer = peer;
                     using (tryIndex != 0 ? context.Activate() : default) // .Activate() is needed only after "await"

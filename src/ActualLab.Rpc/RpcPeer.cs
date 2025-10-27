@@ -238,7 +238,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     protected override async Task OnRun(CancellationToken cancellationToken)
     {
-        if (ConnectionKind == RpcPeerConnectionKind.Local) {
+        if (ConnectionKind is RpcPeerConnectionKind.Local) {
             // It's a fake RpcPeer that exists solely to be "available"
             await TaskExt.NeverEnding(cancellationToken).ConfigureAwait(false);
             return;

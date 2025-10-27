@@ -59,7 +59,7 @@ public sealed class RpcHelpers(IServiceProvider services) : RpcServiceBase(servi
             RpcShardPeerRef shardPeerRef => shardPeerRef.HostId,
             _ => null
         };
-        if (hostId is null || connectionKind != RpcPeerConnectionKind.Remote)
+        if (hostId is null || connectionKind is not RpcPeerConnectionKind.Remote)
             return connectionKind;
 
         return hostId == OwnHost.Id
