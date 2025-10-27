@@ -5,13 +5,17 @@ All notable changes to **ActualLab.Fusion** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 10.6.13
+## 10.6.15
 
-Release date: 2025-10-27, commit hash: 155356259a4a7ebc63a0b86ad44474a22b72e05e
+Release date: 2025-10-27, commit hash: 7a61208f5161047b15be70886c71014950f45329
 
 ### Changed
 - Renamed `ChannelReadMode` to `WebSocketChannelReadMode`
 - Removed `IChannelWithReadMode`, updated `WebSocketChannel` to implement `IAsyncEnumerable` directly.
+
+### Performance
+- Adjusted `BoundedChannelOptions` for `ReadChannel` (120→100) and `WriteChannel` (120→500)
+  in `WebSocketChannel` to optimize buffering behavior
 
 ### Infrastructure
 - Added `UnbufferedPushSequence<T>` for unbuffered async data streaming
@@ -19,6 +23,7 @@ Release date: 2025-10-27, commit hash: 155356259a4a7ebc63a0b86ad44474a22b72e05e
 
 ### Documentation
 - Replaced `.instructions.md` with updated `AGENTS.md` and `CODING_STYLE.md`
+
 
 ## 10.6.4
 
