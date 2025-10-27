@@ -27,13 +27,13 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
         public WebSocketChannelReadMode ReadMode { get; init; } = WebSocketChannelReadMode.Unbuffered;
 
         // ReadChannelOptions are unused when ReadMode == ChannelReadMode.Unbuffered
-        public ChannelOptions ReadChannelOptions { get; init; } = new BoundedChannelOptions(120) {
+        public ChannelOptions ReadChannelOptions { get; init; } = new BoundedChannelOptions(100) {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
             SingleWriter = true,
             AllowSynchronousContinuations = false,
         };
-        public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(120) {
+        public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(500) {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
             SingleWriter = false,
