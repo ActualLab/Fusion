@@ -45,6 +45,7 @@ public class ProxyTypeGenerator
                             Literal("Proxy code")))
                         .WithNameEquals(NameEquals(IdentifierName("Justification")))
                     })))))
+        .SuppressForForNet472()
     ).ToArray();
 
     private SourceProductionContext Context { get; }
@@ -378,9 +379,12 @@ public class ProxyTypeGenerator
                 PredefinedType(Token(SyntaxKind.VoidKeyword)),
                 Identifier(KeepCodeMethodName.Identifier.Text));
         if (!IsGenericType)
-            method = method.WithAttributeLists(SingletonList(
-                AttributeList(SingletonSeparatedList(
-                    Attribute(ModuleInitializerAttributeName)))));
+            method = method.WithAttributeLists(
+                SingletonList(
+                    AttributeList(
+                        SingletonSeparatedList(
+                            Attribute(ModuleInitializerAttributeName)))
+                    .SuppressForForNet472()));
         method = method
             .WithModifiers(
                 TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.StaticKeyword)))

@@ -148,6 +148,22 @@ public static class GenerationExt
     public static bool IsObject(this TypeSyntax typeSyntax)
         => typeSyntax is PredefinedTypeSyntax pts && pts.Keyword.IsKind(SyntaxKind.ObjectKeyword);
 
+    public static AttributeListSyntax SuppressForForNet472(this AttributeListSyntax attributeList)
+        => attributeList
+            .WithLeadingTrivia(
+                Trivia(IfDirectiveTrivia(
+                    BinaryExpression(
+                        SyntaxKind.LogicalAndExpression,
+                        PrefixUnaryExpression(
+                            SyntaxKind.LogicalNotExpression,
+                            IdentifierName("NETSTANDARD2_0")),
+                        PrefixUnaryExpression(
+                            SyntaxKind.LogicalNotExpression,
+                            IdentifierName("NET472"))),
+                    true, true, true)))
+            .WithTrailingTrivia(
+                Trivia(EndIfDirectiveTrivia(isActive: true)));
+
     // Helpers
 
     private static string Simplify(string shortName, string fullName)
