@@ -20,16 +20,6 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
             fusion.AddClient<ITimeService>();
     }
 
-    private TimeSpan GetEpsilon()
-    {
-#if NETCOREAPP
-        var epsilon = TimeSpan.FromSeconds(0.5);
-#else
-        var epsilon = TimeSpan.FromSeconds(0.7);
-#endif
-        return epsilon;
-    }
-
     [Fact]
     public async Task Test1()
     {
@@ -118,5 +108,17 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
         await Assert.ThrowsAsync<RpcException>(async () => {
             await service.GetTimeNoMethod();
         });
+    }
+
+    // Private methods
+
+    private TimeSpan GetEpsilon()
+    {
+#if NETCOREAPP
+        var epsilon = TimeSpan.FromSeconds(0.5);
+#else
+        var epsilon = TimeSpan.FromSeconds(0.7);
+#endif
+        return epsilon;
     }
 }
