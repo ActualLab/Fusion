@@ -18,24 +18,17 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
 
     public readonly RpcServiceDef RpcServiceDef;
     public readonly RpcInterceptor RpcRoutingInterceptor;
-    public readonly RpcInterceptor RpcForwardingInterceptor;
     public readonly object? LocalTarget;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public RemoteComputeServiceInterceptor(Options settings,
         FusionHub hub,
         RpcInterceptor rpcRoutingInterceptor,
-        RpcInterceptor rpcForwardingInterceptor,
         object? localTarget
         ) : base(settings, hub)
     {
         RpcServiceDef = rpcRoutingInterceptor.ServiceDef;
-        if (!ReferenceEquals(RpcServiceDef, rpcForwardingInterceptor.ServiceDef))
-            throw new ArgumentOutOfRangeException(nameof(rpcForwardingInterceptor),
-                $"{nameof(rpcForwardingInterceptor)}.ServiceDef != {nameof(rpcRoutingInterceptor)}.ServiceDef.");
-
         RpcRoutingInterceptor = rpcRoutingInterceptor;
-        RpcForwardingInterceptor = rpcForwardingInterceptor;
         LocalTarget = localTarget;
     }
 

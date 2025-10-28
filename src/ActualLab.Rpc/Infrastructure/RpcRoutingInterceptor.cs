@@ -49,24 +49,20 @@ public class RpcRoutingInterceptor : RpcInterceptor
         Invocation invocation)
     {
         var cancellationToken = context.CallCancelToken;
-        for (var tryIndex = 0;; tryIndex++) {
+        while (true) {
             try {
-                if (call is null) {
-                    if (localCallAsyncInvoker is null)
-                        throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
+                if (call is not null)
+                    return await call.Invoke().ConfigureAwait(false);
 
-                    Task untypedResultTask;
-                    using (RpcOutboundContext.Deactivate())
-                        untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
-                    return await methodDef.TaskToUntypedValueTaskConverter
-                        .Invoke(untypedResultTask)
-                        .ConfigureAwait(false);
-                }
+                if (localCallAsyncInvoker is null)
+                    throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
-                Task<object?> resultTask;
-                using (tryIndex != 0 ? context.Activate() : default) // .Activate() is needed only after "await"
-                    resultTask = call.Invoke();
-                return await resultTask.ConfigureAwait(false);
+                Task untypedResultTask;
+                using (RpcOutboundContext.Deactivate()) // No RPC expected -> hide RpcOutboundContext
+                    untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
+                return await methodDef.TaskToUntypedValueTaskConverter
+                    .Invoke(untypedResultTask)
+                    .ConfigureAwait(false);
             }
             catch (RpcRerouteException e) {
                 if (call is null && localCallAsyncInvoker is null)

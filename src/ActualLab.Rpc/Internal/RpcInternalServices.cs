@@ -39,22 +39,6 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
 
     // NewXxx
 
-    public IProxy NewForwardingProxy(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,
-        object? localTarget = null,
-        bool initialize = true)
-    {
-        var interceptor = NewForwardingInterceptor(serviceType, localTarget);
-        return Services.ActivateProxy(proxyBaseType, interceptor, null, initialize);
-    }
-
-    public RpcForwardingInterceptor NewForwardingInterceptor(Type serviceType, object? localTarget = null)
-    {
-        var serviceDef = Hub.ServiceRegistry[serviceType];
-        return new RpcForwardingInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget);
-    }
-
     public IProxy NewRoutingProxy(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,

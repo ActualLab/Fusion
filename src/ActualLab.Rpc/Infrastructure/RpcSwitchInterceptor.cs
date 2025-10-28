@@ -52,11 +52,11 @@ public class RpcSwitchInterceptor : RpcInterceptor
                 if (localCallAsyncInvoker is null)
                     throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
-                using var _ = RpcOutboundContext.Deactivate();
+                using var _ = RpcOutboundContext.Deactivate(); // No RPC expected -> hide RpcOutboundContext
                 resultTask = localCallAsyncInvoker.Invoke(invocation);
             }
             else {
-                scope.Context.Peer = peer; // Suppress the downstream routing
+                using var _ = RpcCallOptions.Activate(peer); // Suppress downstream rerouting
                 resultTask = remoteCallAsyncInvoker.Invoke(invocation);
             }
             return rpcMethodDef.UniversalAsyncResultWrapper.Invoke(resultTask);
@@ -71,16 +71,19 @@ public class RpcSwitchInterceptor : RpcInterceptor
         Func<Invocation, Task> remoteCallAsyncInvoker,
         Invocation invocation)
     {
-        for (var tryIndex = 0;; tryIndex++) {
+        while (true) {
             try {
                 peer ??= SafeCallRouter.Invoke(methodDef, invocation.Arguments); // We already took care of the override
                 peer.ThrowIfRerouted();
+
                 Task resultTask;
-                if (peer.ConnectionKind is RpcPeerConnectionKind.Local)
-                    resultTask = localCallAsyncInvoker.Invoke(invocation);
+                if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
+                    using (RpcOutboundContext.Deactivate()) // No RPC expected -> hide RpcOutboundContext
+                        resultTask = localCallAsyncInvoker.Invoke(invocation);
+                }
                 else {
-                    context.Peer = peer;
-                    using (tryIndex != 0 ? context.Activate() : default) // .Activate() is needed only after "await"
+                    using (RpcCallOptions.Activate(peer)) // Suppress downstream rerouting
+                    using (context.Activate()) // Provide call context
                         resultTask = remoteCallAsyncInvoker.Invoke(invocation);
                 }
                 return await methodDef.TaskToUntypedValueTaskConverter.Invoke(resultTask).ConfigureAwait(false);
