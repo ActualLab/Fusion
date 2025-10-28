@@ -117,8 +117,9 @@ More restrictive than default:
   The `=>` arrow for one-line methods should be on the same line as return expression,
   and it's preferred to move it to the dedicated line for class method bodies,
   but not for property accessors.
-- **Braces for single statements**: optional/not required (set to `suggestion` instead of `warning`),
-  typically they're used only if the statement is prefixed with a comment.
+- **Braces for single statements** are not required,
+  typically they're used only if the statement is prefixed with a comment,
+  or when it significantly improves the readability.
 
 ### Using Directives
 

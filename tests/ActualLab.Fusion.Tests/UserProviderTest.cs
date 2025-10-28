@@ -1,4 +1,3 @@
-using ActualLab.Fusion.Internal;
 using ActualLab.Fusion.Tests.Model;
 using ActualLab.Fusion.Tests.Services;
 
@@ -6,6 +5,20 @@ namespace ActualLab.Fusion.Tests;
 
 public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        if (!isClient) {
+            fusion.AddService<ITimeService, TimeService>();
+            fusion.AddService<IUserService, UserService>();
+        }
+        else {
+            fusion.AddClient<ITimeService>();
+            fusion.AddClient<IUserService>();
+        }
+    }
+
     [Fact]
     public async Task InvalidateEverythingTest()
     {

@@ -5,6 +5,16 @@ namespace ActualLab.Fusion.Tests;
 
 public class ScreenshotServiceClientTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        if (!isClient)
+            fusion.AddService<IScreenshotService, ScreenshotService>();
+        else
+            fusion.AddClient<IScreenshotService>();
+    }
+
     [Fact]
     public async Task BasicTest()
     {

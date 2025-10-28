@@ -4,6 +4,14 @@ namespace ActualLab.Fusion.Tests;
 
 public class ComputedInterceptorTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        if (!isClient)
+            fusion.AddService<ITimeService, TimeService>();
+    }
+
     [Fact]
     public async Task AutoRecomputeTest()
     {

@@ -40,6 +40,16 @@ public class InMemoryEventTest : DbEventTestBase
 
 public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        if (!isClient) {
+            fusion.AddService<EventQueue>();
+            fusion.AddService<EventCatcher>();
+        }
+    }
+
     [Fact]
     public async Task FailStrategyTest()
     {

@@ -5,6 +5,13 @@ namespace ActualLab.Fusion.Tests;
 
 public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        fusion.AddService<ISimplestProvider, SimplestProvider>(ServiceLifetime.Scoped);
+    }
+
     [Fact]
     public async Task BasicTest()
     {

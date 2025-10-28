@@ -4,6 +4,16 @@ namespace ActualLab.Fusion.Tests;
 
 public class TimerTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        if (!isClient)
+            fusion.AddService<ITimeService, TimeService>();
+        else
+            fusion.AddClient<ITimeService>();
+    }
+
     [Fact]
     public async Task BasicTest()
     {

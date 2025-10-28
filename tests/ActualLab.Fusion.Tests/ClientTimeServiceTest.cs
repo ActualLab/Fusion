@@ -5,6 +5,21 @@ namespace ActualLab.Fusion.Tests;
 
 public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        var rpc = fusion.Rpc;
+        if (!isClient) {
+            fusion.AddService<ITimeService, TimeService>();
+            // Just to trigger invocation of a few methods:
+            rpc.Service<ITimeService>().Remove();
+            rpc.Service<ITimeServer>().IsServer<ITimeService>().HasName(nameof(ITimeService));
+        }
+        else
+            fusion.AddClient<ITimeService>();
+    }
+
     private TimeSpan GetEpsilon()
     {
 #if NETCOREAPP

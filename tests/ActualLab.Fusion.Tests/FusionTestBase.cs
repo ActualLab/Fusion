@@ -101,42 +101,21 @@ public abstract class FusionTestBase : RpcTestBase
 
     protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
     {
-        var fusion = services.AddFusion();
-        var rpc = fusion.Rpc;
-        if (!isClient) {
-            fusion.AddService<ITimeService, TimeService>();
-            // Just to trigger invocation of a few methods:
-            rpc.Service<ITimeService>().Remove();
-            rpc.Service<ITimeServer>().IsServer<ITimeService>().HasName(nameof(ITimeService));
-            fusion.AddService<IUserService, UserService>();
-            fusion.AddService<IScreenshotService, ScreenshotService>();
-            fusion.AddService<IEdgeCaseService, EdgeCaseService>();
-            fusion.AddService<IKeyValueService<string>, KeyValueService<string>>();
-            fusion.AddService<EventQueue>();
-            fusion.AddService<EventCatcher>();
-        } else {
-            services.AddSingleton<RpcPeerFactory>(_ => (hub, peerRef)
-                => peerRef.IsServer
-                    ? new RpcServerPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
-                    : new RpcClientPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel });
-            if (UseRemoteComputedCache)
-                services.AddSingleton(c => {
-                    lock (_lock) {
-                        return _remoteComputedCache ??=
-                            new InMemoryRemoteComputedCache(InMemoryRemoteComputedCache.Options.Default, c);
-                    }
-                });
-            fusion.AddClient<ITimeService>();
-            fusion.AddClient<IUserService>();
-            fusion.AddClient<IScreenshotService>();
-            fusion.AddClient<IEdgeCaseService>();
-            fusion.AddClient<IKeyValueService<string>>();
-        }
-        services.AddSingleton<UserService>();
-        services.AddSingleton<ComputedState<ServerTimeModel1>, ServerTimeModel1State>();
-        services.AddSingleton<ComputedState<KeyValueModel<string>>, StringKeyValueModelState>();
-        fusion.AddService<ISimplestProvider, SimplestProvider>(ServiceLifetime.Scoped);
-        fusion.AddService<NestedOperationLoggerTester>();
+        if (!isClient)
+            return;
+
+        // Common client services that should remain in base class
+        services.AddSingleton<RpcPeerFactory>(_ => (hub, peerRef)
+            => peerRef.IsServer
+                ? new RpcServerPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
+                : new RpcClientPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel });
+        if (UseRemoteComputedCache)
+            services.AddSingleton(c => {
+                lock (_lock) {
+                    return _remoteComputedCache ??=
+                        new InMemoryRemoteComputedCache(InMemoryRemoteComputedCache.Options.Default, c);
+                }
+            });
     }
 
     protected override void ConfigureServices(IServiceCollection services, bool isClient)
@@ -225,15 +204,6 @@ public abstract class FusionTestBase : RpcTestBase
         }
         else {
             fusion.AddAuthClient();
-
-            // Custom computed state
-            services.AddSingleton(c => c.StateFactory().NewComputed<ServerTimeModel2>(
-                new() { InitialValue = new(default) },
-                async (_, cancellationToken) => {
-                    var client = c.GetRequiredService<ITimeService>();
-                    var time = await client.GetTime(cancellationToken).ConfigureAwait(false);
-                    return new ServerTimeModel2(time);
-                }));
         }
     }
 

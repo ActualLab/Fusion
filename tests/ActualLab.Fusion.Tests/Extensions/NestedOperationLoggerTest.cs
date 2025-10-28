@@ -8,6 +8,13 @@ public class NestedOperationLoggerTest : FusionTestBase
     public NestedOperationLoggerTest(ITestOutputHelper @out) : base(@out)
         => UseTestClock = true;
 
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        fusion.AddService<NestedOperationLoggerTester>();
+    }
+
     [Fact]
     public async Task BasicTest()
     {

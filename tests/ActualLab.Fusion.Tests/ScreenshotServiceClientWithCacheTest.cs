@@ -1,6 +1,5 @@
 using ActualLab.Fusion.Client;
 using ActualLab.Fusion.Client.Caching;
-using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.OS;
 
@@ -10,6 +9,16 @@ public class ScreenshotServiceClientWithCacheTest : FusionTestBase
 {
     public ScreenshotServiceClientWithCacheTest(ITestOutputHelper @out) : base(@out)
         => UseRemoteComputedCache = true;
+
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        if (!isClient)
+            fusion.AddService<IScreenshotService, ScreenshotService>();
+        else
+            fusion.AddClient<IScreenshotService>();
+    }
 
     [Fact]
     public async Task GetScreenshotTest()

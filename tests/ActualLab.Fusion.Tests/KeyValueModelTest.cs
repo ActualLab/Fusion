@@ -5,6 +5,17 @@ namespace ActualLab.Fusion.Tests;
 
 public class KeyValueModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        if (!isClient)
+            fusion.AddService<IKeyValueService<string>, KeyValueService<string>>();
+        else
+            fusion.AddClient<IKeyValueService<string>>();
+        services.AddSingleton<ComputedState<KeyValueModel<string>>, StringKeyValueModelState>();
+    }
+
     [Fact]
     public async Task BasicTest()
     {

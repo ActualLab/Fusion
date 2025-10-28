@@ -5,6 +5,16 @@ namespace ActualLab.Fusion.Tests;
 
 public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        if (!isClient)
+            fusion.AddService<IEdgeCaseService, EdgeCaseService>();
+        else
+            fusion.AddClient<IEdgeCaseService>();
+    }
+
     [Fact(Timeout = 30_000)]
     public async Task TestService()
     {

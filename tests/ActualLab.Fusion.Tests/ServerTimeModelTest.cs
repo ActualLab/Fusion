@@ -1,9 +1,35 @@
+using ActualLab.Fusion.Tests.Services;
 using ActualLab.Fusion.Tests.UIModels;
 
 namespace ActualLab.Fusion.Tests;
 
 public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        if (!isClient)
+            fusion.AddService<ITimeService, TimeService>();
+        else
+            fusion.AddClient<ITimeService>();
+        services.AddSingleton<ComputedState<ServerTimeModel1>, ServerTimeModel1State>();
+    }
+
+    protected override void ConfigureServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureServices(services, isClient);
+        if (isClient) {
+            services.AddSingleton(c => c.StateFactory().NewComputed<ServerTimeModel2>(
+                new() { InitialValue = new(default) },
+                async (_, cancellationToken) => {
+                    var client = c.GetRequiredService<ITimeService>();
+                    var time = await client.GetTime(cancellationToken).ConfigureAwait(false);
+                    return new ServerTimeModel2(time);
+                }));
+        }
+    }
+
     [Fact]
     public async Task ServerTimeModelTest1()
     {

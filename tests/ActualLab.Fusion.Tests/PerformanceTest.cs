@@ -46,6 +46,15 @@ public abstract class PerformanceTestBase : FusionTestBase
     protected PerformanceTestBase(ITestOutputHelper @out) : base(@out)
         => UseLogging = false;
 
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        if (!isClient)
+            fusion.AddService<IUserService, UserService>();
+        services.AddSingleton<UserService>();
+    }
+
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync().ConfigureAwait(false);
