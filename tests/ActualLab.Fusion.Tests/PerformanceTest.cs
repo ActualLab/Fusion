@@ -1,6 +1,6 @@
 using System.Text;
 using System.Text.Json;
-using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.DbModel;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.OS;
 
@@ -61,7 +61,7 @@ public abstract class PerformanceTestBase : FusionTestBase
         var commander = Services.Commander();
         var tasks = new List<Task>();
         for (var i = 0; i < UserCount; i++)
-            tasks.Add(commander.Call(new UserService_Add(new User() {
+            tasks.Add(commander.Call(new UserService_Add(new DbUser() {
                 Id = i,
                 Name = $"User_{i}",
             }, true)));
@@ -90,8 +90,8 @@ public abstract class PerformanceTestBase : FusionTestBase
         var nonFusionIterationCount = nonFusionOpCountPerCore / nonFusionReadersPerCore;
         var nonFusionReaderCount = HardwareInfo.GetProcessorCountFactor(nonFusionReadersPerCore);
 
-        var withoutSerialization = (Action<User>?)null;
-        var withSerialization = (Action<User>?)(u => JsonSerializer.Serialize(u)); // STJ serializer
+        var withoutSerialization = (Action<DbUser>?)null;
+        var withSerialization = (Action<DbUser>?)(u => JsonSerializer.Serialize(u)); // STJ serializer
         var enableSerialization = false;
 
         Out.WriteLine($"Database: {DbType}" + (UseEntityResolver ? " (with DbEntityResolver)" : ""));
@@ -116,7 +116,7 @@ public abstract class PerformanceTestBase : FusionTestBase
     }
 
     private async Task Test(string title,
-        IUserService users, Action<User>? extraAction, bool enableMutations,
+        IUserService users, Action<DbUser>? extraAction, bool enableMutations,
         int threadCount, int iterationCount, bool isWarmup = false)
     {
         if (!isWarmup)

@@ -1,25 +1,23 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using MessagePack;
 using Microsoft.EntityFrameworkCore;
 
-namespace ActualLab.Fusion.Tests.Model;
+namespace ActualLab.Fusion.Tests.DbModel;
 
-[Table("TestUsers")]
-[Index(nameof(Name))]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 #if NET8_0_OR_GREATER
 [MessagePackObject(true, SuppressSourceGeneration = true)]
 #else
 [MessagePackObject(true)]
 #endif
-public partial record User : LongKeyedEntity
+[Index(nameof(Title))]
+public partial record DbChat : DbEntityWithInt64Key
 {
     [Required, MaxLength(120)]
     [DataMember, MemoryPackOrder(1)]
-    public string Name { get; init; } = "";
+    public string Title { get; init; } = "";
 
-    [Required, MaxLength(250)]
+    [Required]
     [DataMember, MemoryPackOrder(2)]
-    public string Email { get; init; } = "";
+    public DbUser Author { get; init; } = null!;
 }

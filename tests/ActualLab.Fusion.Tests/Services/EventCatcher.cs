@@ -1,5 +1,5 @@
 using ActualLab.Fusion.EntityFramework;
-using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.DbModel;
 using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Services;

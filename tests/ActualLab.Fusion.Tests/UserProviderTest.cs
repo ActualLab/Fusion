@@ -1,4 +1,4 @@
-using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.DbModel;
 using ActualLab.Fusion.Tests.Services;
 
 namespace ActualLab.Fusion.Tests;
@@ -25,7 +25,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var commander = Services.Commander();
         var users = Services.GetRequiredService<IUserService>();
         // We need at least 1 user to see count invalidation messages
-        await commander.Call(new UserService_Add(new User() {
+        await commander.Call(new UserService_Add(new DbUser() {
             Id = int.MaxValue,
             Name = "Chuck Norris",
         }));
@@ -52,13 +52,13 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var commander = Services.Commander();
         var users = Services.GetRequiredService<IUserService>();
         // We need at least 1 user to see count invalidation messages
-        await commander.Call(new UserService_Add(new User() {
+        await commander.Call(new UserService_Add(new DbUser() {
             Id = int.MaxValue,
             Name = "Chuck Norris",
         }));
         var userCount = await users.Count();
 
-        var u = new User() {
+        var u = new DbUser() {
             Id = 1000,
             Name = "Bruce Lee"
         };
@@ -98,7 +98,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var users = Services.GetRequiredService<IUserService>();
         var time = Services.GetRequiredService<ITimeService>();
 
-        var u = new User() {
+        var u = new DbUser() {
             Id = int.MaxValue,
             Name = "Chuck Norris",
         };
@@ -173,7 +173,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var webUsers = WebServices.GetRequiredService<IUserService>();
         var syncTimeout = TimeSpan.FromSeconds(1);
 
-        async Task PingPong(IUserService users1, IUserService users2, User user)
+        async Task PingPong(IUserService users1, IUserService users2, DbUser user)
         {
             var count0 = await users1.Count();
             var cCount = await Computed.Capture(() => users2.Count());
@@ -197,9 +197,9 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
             var id1 = i * 2;
             var id2 = id1 + 1;
             Out.WriteLine($"{i}: ping...");
-            await PingPong(users, webUsers, new User() { Id = id1, Name = id1.ToString()});
+            await PingPong(users, webUsers, new DbUser() { Id = id1, Name = id1.ToString()});
             Out.WriteLine($"{i}: pong...");
-            await PingPong(webUsers, users, new User() { Id = id2, Name = id2.ToString()});
+            await PingPong(webUsers, users, new DbUser() { Id = id2, Name = id2.ToString()});
             // await PingPong(webUsers, users, new User() { Id = id2, Name = id2.ToString()});
         }
     }

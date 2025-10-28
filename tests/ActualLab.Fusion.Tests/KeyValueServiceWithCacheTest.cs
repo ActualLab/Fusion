@@ -9,6 +9,16 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
     public KeyValueServiceWithCacheTest(ITestOutputHelper @out) : base(@out)
         => UseRemoteComputedCache = true;
 
+    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
+    {
+        base.ConfigureTestServices(services, isClient);
+        var fusion = services.AddFusion();
+        if (!isClient)
+            fusion.AddService<IKeyValueService<string>, KeyValueService<string>>();
+        else
+            fusion.AddClient<IKeyValueService<string>>();
+    }
+
     [Fact]
     public async Task BasicTest()
     {

@@ -1,20 +1,22 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Fusion.Extensions.Services;
 
-namespace ActualLab.Fusion.Tests.Model;
+namespace ActualLab.Fusion.Tests.DbModel;
 
+[Table("AuthUsers")]
 public class DbAuthUser : DbUser<long>;
 
 public class DbAuthSessionInfo : DbSessionInfo<long>;
 
 public class TestDbContext : DbContextBase
 {
-    public DbSet<User> Users { get; protected set; } = null!;
-    public DbSet<Message> Messages { get; protected set; } = null!;
-    public DbSet<Chat> Chats { get; protected set; } = null!;
+    public DbSet<DbUser> Users { get; protected set; } = null!;
+    public DbSet<DbMessage> Messages { get; protected set; } = null!;
+    public DbSet<DbChat> Chats { get; protected set; } = null!;
 
     // ActualLab.Fusion.EntityFramework tables
     public DbSet<DbAuthUser> AuthUsers { get; protected set; } = null!;
@@ -31,7 +33,7 @@ public class TestDbContext : DbContextBase
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Message>().HasOne(m => m.Author).WithMany()
+        modelBuilder.Entity<DbMessage>().HasOne(m => m.Author).WithMany()
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

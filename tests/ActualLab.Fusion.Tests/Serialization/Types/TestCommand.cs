@@ -1,6 +1,6 @@
 using MessagePack;
 
-namespace ActualLab.Fusion.Tests.Model;
+namespace ActualLab.Fusion.Tests.Serialization.Types;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 public partial record TestCommand<TValue>(

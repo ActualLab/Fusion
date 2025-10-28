@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using MessagePack;
 using Microsoft.EntityFrameworkCore;
 
-namespace ActualLab.Fusion.Tests.Model;
+namespace ActualLab.Fusion.Tests.DbModel;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 #if NET8_0_OR_GREATER
@@ -11,7 +11,7 @@ namespace ActualLab.Fusion.Tests.Model;
 [MessagePackObject(true)]
 #endif
 [Index(nameof(Date))]
-public partial record Message : LongKeyedEntity
+public partial record DbMessage : DbEntityWithInt64Key
 {
     [DataMember, MemoryPackOrder(1), MessagePack.Key(1)]
     public DateTime Date { get; init; }
@@ -22,9 +22,9 @@ public partial record Message : LongKeyedEntity
 
     [Required]
     [DataMember, MemoryPackOrder(3), MessagePack.Key(3)]
-    public User Author { get; init; } = null!;
+    public DbUser Author { get; init; } = null!;
 
     [Required]
     [DataMember, MemoryPackOrder(4), MessagePack.Key(4)]
-    public Chat Chat { get; init; } = null!;
+    public DbChat Chat { get; init; } = null!;
 }

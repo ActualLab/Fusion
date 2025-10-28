@@ -1,6 +1,6 @@
 using System.Reflection;
 using ActualLab.Fusion.Authentication;
-using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.DbModel;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Generators;
 using ActualLab.Testing.Collections;
@@ -41,23 +41,23 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         StringAsSymbolMemoryPackFormatterAttribute.IsEnabled = true;
         try {
             // Old to new
-            var oldUser = new OldUser("b", "bob");
-            var newUser = oldUser.AssertPassesThroughMemoryPackSerializer<OldUser, User>(AssertEqual, Out);
+            var oldUser = new Types.OldUser("b", "bob");
+            var newUser = oldUser.AssertPassesThroughMemoryPackSerializer<Types.OldUser, User>(AssertEqual, Out);
             newUser.Claims.Count.Should().Be(0);
             newUser.Identities.Count.Should().Be(0);
 
-            oldUser = new OldUser("b", "bob") { Version = 3 }
+            oldUser = new Types.OldUser("b", "bob") { Version = 3 }
                 .WithClaim("email1", "bob1@bob.bom")
                 .WithClaim("email2", "bob2@bob.bom")
                 .WithIdentity("google/1", "s")
                 .WithIdentity("google/2", "q");
-            newUser = oldUser.AssertPassesThroughMemoryPackSerializer<OldUser, User>(AssertEqual, Out);
+            newUser = oldUser.AssertPassesThroughMemoryPackSerializer<Types.OldUser, User>(AssertEqual, Out);
             newUser.Claims.Count.Should().Be(2);
             newUser.Identities.Count.Should().Be(2);
 
             // New to old
             newUser = new User("b", "bob");
-            oldUser = newUser.AssertPassesThroughMemoryPackSerializer<User, OldUser>(AssertEqual, Out);
+            oldUser = newUser.AssertPassesThroughMemoryPackSerializer<User, Types.OldUser>(AssertEqual, Out);
             oldUser.Claims.Count.Should().Be(0);
             oldUser.Identities.Count.Should().Be(0);
 
@@ -66,7 +66,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
                 .WithClaim("email2", "bob2@bob.bom")
                 .WithIdentity("google/1", "s")
                 .WithIdentity("google/2", "q");
-            oldUser = newUser.AssertPassesThroughMemoryPackSerializer<User, OldUser>(AssertEqual, Out);
+            oldUser = newUser.AssertPassesThroughMemoryPackSerializer<User, Types.OldUser>(AssertEqual, Out);
             oldUser.Claims.Count.Should().Be(2);
             oldUser.Identities.Count.Should().Be(2);
         }
@@ -78,7 +78,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void TestCommandSerialization()
     {
-        var c = new TestCommand<HasStringId>("1", new("2")).PassThroughAllSerializers();
+        var c = new Types.TestCommand<HasStringId>("1", new("2")).PassThroughAllSerializers();
         c.Id.Should().Be("1");
         c.Value!.Id.Should().Be("2");
     }
@@ -176,7 +176,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
 
     // Private methods
 
-    private static User ToNewUser(OldUser user)
+    private static User ToNewUser(Types.OldUser user)
         => new(user.Id, user.Name, user.Version, user.Claims.ToApiMap(), user.JsonCompatibleIdentities.ToApiMap());
 
     private static void AssertEqual(ImmutableOptionSet a, ImmutableOptionSet b)
@@ -195,9 +195,9 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         some.Identities.Should().BeEquivalentTo(expected.Identities);
     }
 
-    private static void AssertEqual(User user, OldUser expected)
+    private static void AssertEqual(User user, Types.OldUser expected)
         => AssertEqual(user, ToNewUser(expected));
 
-    private static void AssertEqual(OldUser user, User expected)
+    private static void AssertEqual(Types.OldUser user, User expected)
         => AssertEqual(ToNewUser(user), expected);
 }

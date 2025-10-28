@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
-using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.DbModel;
 using ActualLab.Reflection;
 using MessagePack;
 
@@ -16,7 +16,7 @@ public interface IUserService : IComputeService
     public Task<bool> Delete(UserService_Delete command, CancellationToken cancellationToken = default);
 
     [ComputeMethod(MinCacheDuration = 60)]
-    public Task<User?> Get(long userId, CancellationToken cancellationToken = default);
+    public Task<DbUser?> Get(long userId, CancellationToken cancellationToken = default);
     [ComputeMethod(MinCacheDuration = 60)]
     public Task<long> Count(CancellationToken cancellationToken = default);
 
@@ -28,25 +28,25 @@ public interface IUserService : IComputeService
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record UserService_Add(
-    [property: DataMember, MemoryPackOrder(0), Key(0)] User User,
+    [property: DataMember, MemoryPackOrder(0), Key(0)] DbUser User,
     [property: DataMember, MemoryPackOrder(1), Key(1)] bool OrUpdate = false
 ) : ICommand<Unit>;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record UserService_Update(
-    [property: DataMember, MemoryPackOrder(0), Key(0)] User User
+    [property: DataMember, MemoryPackOrder(0), Key(0)] DbUser User
 ) : ICommand<Unit>;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record UserService_Delete(
-    [property: DataMember, MemoryPackOrder(0), Key(0)] User User
+    [property: DataMember, MemoryPackOrder(0), Key(0)] DbUser User
 ) : ICommand<bool>;
 
 public class UserService : DbServiceBase<TestDbContext>, IUserService
 {
-    private readonly IDbEntityResolver<long, User> _userResolver;
+    private readonly IDbEntityResolver<long, DbUser> _userResolver;
 
     public bool IsProxy { get; }
     public bool UseEntityResolver { get; set; }
@@ -55,18 +55,18 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
     {
         var type = GetType();
         IsProxy = type != type.NonProxyType();
-        _userResolver = services.GetRequiredService<IDbEntityResolver<long, User>>();
+        _userResolver = services.GetRequiredService<IDbEntityResolver<long, DbUser>>();
     }
 
     // [CommandHandler]
     public virtual async Task Create(UserService_Add command, CancellationToken cancellationToken = default)
     {
         var (user, orUpdate) = command;
-        var existingUser = (User?) null;
+        var existingUser = (DbUser?) null;
         var context = CommandContext.GetCurrent();
         if (Invalidation.IsActive) {
             _ = Get(user.Id, default).AssertCompleted();
-            existingUser = context.Operation.Items.KeylessGet<User>();
+            existingUser = context.Operation.Items.KeylessGet<DbUser>();
             if (existingUser is null)
                 _ = Count(default).AssertCompleted();
             return;
@@ -145,7 +145,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         }
     }
 
-    public virtual async Task<User?> Get(long userId, CancellationToken cancellationToken = default)
+    public virtual async Task<DbUser?> Get(long userId, CancellationToken cancellationToken = default)
     {
         // Debug.WriteLine($"Get {userId}");
         await Everything().ConfigureAwait(false);

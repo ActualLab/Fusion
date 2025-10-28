@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.DbModel;
 
 namespace ActualLab.Fusion.Tests;
 
@@ -12,18 +12,18 @@ public class DbContextTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var count = await dbContext1.Users.AsQueryable().CountAsync();
         count.Should().Be(0);
 
-        var u1 = new User() {
+        var u1 = new DbUser() {
             Id = 1,
             Name = "realDonaldTrump"
         };
 
-        var c1 = new Chat() {
+        var c1 = new DbChat() {
             Id = 2,
             Author = u1,
             Title = "Chinese Corona"
         };
 
-        var m1 = new Message() {
+        var m1 = new DbMessage() {
             Id = 3,
             Text = "Covfefe",
             Author = u1,

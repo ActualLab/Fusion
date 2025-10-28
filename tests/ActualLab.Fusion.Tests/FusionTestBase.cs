@@ -8,15 +8,11 @@ using ActualLab.Fusion.EntityFramework.Npgsql;
 using ActualLab.Fusion.EntityFramework.Redis;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Server;
-using ActualLab.Fusion.Tests.Extensions;
-using ActualLab.Fusion.Tests.Model;
-using ActualLab.Fusion.Tests.Services;
-using ActualLab.Fusion.Tests.UIModels;
+using ActualLab.Fusion.Tests.DbModel;
 using ActualLab.Locking;
 using ActualLab.Rpc;
 using ActualLab.Testing.Collections;
 using ActualLab.Tests;
-using User = ActualLab.Fusion.Tests.Model.User;
 
 namespace ActualLab.Fusion.Tests;
 
@@ -199,7 +195,7 @@ public abstract class FusionTestBase : RpcTestBase
                     else
                         operations.AddFileSystemOperationLogWatcher();
                 });
-                db.AddEntityResolver<long, User>();
+                db.AddEntityResolver<long, DbUser>();
             });
         }
         else {

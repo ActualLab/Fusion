@@ -1,5 +1,5 @@
 using ActualLab.Fusion.Authentication.Services;
-using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.DbModel;
 using ActualLab.Interception;
 using ActualLab.Tests;
 

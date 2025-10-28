@@ -7,7 +7,7 @@ using ActualLab.Requirements;
 using ActualLab.Versioning;
 using MessagePack;
 
-namespace ActualLab.Fusion.Tests.Serialization;
+namespace ActualLab.Fusion.Tests.Serialization.Types;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]

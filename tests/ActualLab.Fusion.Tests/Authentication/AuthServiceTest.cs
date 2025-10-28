@@ -2,7 +2,7 @@ using System.Security;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.EntityFramework;
-using ActualLab.Fusion.Tests.Model;
+using ActualLab.Fusion.Tests.DbModel;
 using ActualLab.Generators;
 using ActualLab.Reflection;
 using User = ActualLab.Fusion.Authentication.User;
