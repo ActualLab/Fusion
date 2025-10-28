@@ -40,14 +40,14 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                 try {
                     var arguments = ArgumentList.New(command, cancellationToken);
                     var peer = SafeCallRouter.Invoke(rpcMethodDef, arguments);
+                    peer.ThrowIfRerouted();
 
-                    context.Items.KeylessSet(peer); // Let CommandServiceInterceptor to use it
                     context.ExecutionState = peer.ConnectionKind is RpcPeerConnectionKind.Local
                         ? baseExecutionState // Local call -> continue the pipeline
                         : preFinalExecutionState; // Remote call -> trigger just RPC call by invoking the final handler only
 
                     Task invokeRemainingHandlersTask;
-                    using (RpcCallRouteOverride.Activate(peer))
+                    using (RpcCallOptions.Activate(peer))
                         invokeRemainingHandlersTask = context.InvokeRemainingHandlers(cancellationToken);
                     await invokeRemainingHandlersTask.ConfigureAwait(false);
                     return;

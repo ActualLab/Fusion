@@ -28,16 +28,17 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception e) {
-            if (activity is null || !ActivityExt.IsError(e))
-                throw;
+        catch (Exception e) when (activity is not null) {
+            if (!ActivityExt.IsError(e))
+                throw; // Don't log non-error
 
             activity.Finalize(e, cancellationToken);
             var message = context.IsOutermost ?
                 "Outermost command failed: {Command}" :
                 "Nested command failed: {Command}";
+            var level = activity.Status is ActivityStatusCode.Error ? LogLevel.Error : LogLevel.Warning;
             // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-            Log.IfEnabled(LogLevel.Error)?.Log(ErrorLogLevel, e, message, command);
+            Log.IfEnabled(level)?.Log(level, e, message, command);
             throw;
         }
     }

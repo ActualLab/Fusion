@@ -63,7 +63,7 @@ public sealed class ComputeContext
             return;
 
         // The logic below always "overwrites" captured computed - we assume that:
-        // - ComputedHelpers.TryUseExisting & UseNew are the only methods capturing the computed,
+        // - ComputedHelpers.TryUseExisting & Use are the only methods capturing the computed,
         //   and they're called at the end of computation, i.e. when we effectively know the
         //   exact IComputed we want to capture. They're never called for temporary computed instances.
         // - Computed.BeginCompute(computed) wraps any Computed computation, and it is responsible

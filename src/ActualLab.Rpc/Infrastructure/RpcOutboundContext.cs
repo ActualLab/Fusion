@@ -21,6 +21,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public RpcOutboundCall? Call;
     public RpcPeer? Peer;
     public long RelatedId;
+    public bool AssumeConnected;
     public int SizeHint;
     public RpcCacheInfoCapture? CacheInfoCapture;
     public RpcOutboundCallTrace? Trace;
@@ -119,11 +120,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         // Peer & Call
         var hub = MethodDef.Hub;
         var oldPeer = Peer;
-        // Local calls are special: they are never rerouted.
-        // That's because any call router must route command method calls to local peers
-        // when Invalidation.IsActive, and if it happened for a given call,
-        // it has to run locally no matter what.
-        if (oldPeer is null || oldPeer.Ref != RpcPeerRef.Local)
+        if (oldPeer is null || oldPeer.Ref.CanBeRerouted)
             Peer = hub.SafeCallRouter.Invoke(MethodDef, Arguments);
         Call = RpcOutboundCall.New(this);
         if (Call is not null) {

@@ -36,7 +36,8 @@ public class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaComputed
     {
         var dependencies = GetDependencies();
         if (dependencies is not [Computed<T> original])
-            throw Errors.InternalError($"{nameof(IReplicaComputed)} must have a single dependency.");
+            throw Errors.InternalError(
+                $"{nameof(IReplicaComputed)} dependency count != 1: [{dependencies.ToDelimitedString()}].");
 
         lock (Lock)
             _original = original;

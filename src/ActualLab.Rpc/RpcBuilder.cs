@@ -30,7 +30,7 @@ public readonly struct RpcBuilder
 
             // Interceptors
             CodeKeeper.Keep<RpcProxyCodeKeeper>();
-            CodeKeeper.Keep<RpcNonRoutingInterceptor>();
+            CodeKeeper.Keep<RpcForwardingInterceptor>();
             CodeKeeper.Keep<RpcRoutingInterceptor>();
             CodeKeeper.Keep<RpcSwitchInterceptor>();
 
@@ -376,7 +376,7 @@ public readonly struct RpcBuilder
         Services.AddSingleton(serviceType, c => {
             var hub = c.RpcHub();
             var localTarget = c.GetRequiredService(implementationType);
-            var remoteTarget = hub.InternalServices.NewNonRoutingInterceptor(serviceType);
+            var remoteTarget = hub.InternalServices.NewForwardingInterceptor(serviceType);
             return hub.InternalServices.NewSwitchProxy(serviceType, serviceType, localTarget, remoteTarget);
         });
         Service(serviceType).HasName(name).IsDistributedPair(implementationType);

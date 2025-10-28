@@ -12,8 +12,8 @@ public class RpcRerouteException : OperationCanceledException, ITransientExcepti
 
     public static RpcRerouteException MustRerouteToLocal() => new(RerouteToLocalMessage);
     public static RpcRerouteException MustReroute() => new(DefaultMessage);
-    public static RpcRerouteException MustReroute(RpcPeerRef peerRef)
-        => new($"'{peerRef}' is already gone. {DefaultMessage}");
+    public static RpcRerouteException MustReroute(object peer)
+        => new($"'{peer}' is already gone. {DefaultMessage}");
 
     public RpcRerouteException() : base(DefaultMessage) { }
     public RpcRerouteException(string? message) : base(message ?? DefaultMessage) { }

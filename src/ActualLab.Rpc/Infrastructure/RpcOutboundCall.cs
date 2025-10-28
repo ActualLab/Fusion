@@ -83,7 +83,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         return result;
     }
 
-    public Task<object?> Invoke(bool assumeConnected)
+    public Task<object?> Invoke()
     {
         if (CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly) {
             RegisterCacheKeyOnly();
@@ -98,7 +98,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         Register();
         var sender = (ChannelWriter<RpcMessage>?)null;
-        if (assumeConnected || Peer.IsConnected(out _, out sender)) {
+        if (Context.AssumeConnected || Peer.IsConnected(out _, out sender)) {
             _ = SendRegistered(true, sender); // Fast path
             return ResultTask;
         }
@@ -106,6 +106,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         async Task<object?> CompleteAsync() {
             try {
+                // WhenConnected throws RpcRerouteException in case Peer.Ref.IsRerouted is true
                 var (_, sender1) = await Peer
                     .WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CallCancelToken)
                     .ConfigureAwait(false);

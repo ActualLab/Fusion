@@ -5,19 +5,14 @@ namespace ActualLab.Rpc.Infrastructure;
 public class RpcRoutingInterceptor : RpcInterceptor
 {
     public readonly object? LocalTarget;
-    public readonly bool AssumeConnected;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public RpcRoutingInterceptor(
         RpcInterceptorOptions settings, IServiceProvider services,
         RpcServiceDef serviceDef,
-        object? localTarget,
-        bool assumeConnected = false
-    ) : base(settings, services, serviceDef)
-    {
-        LocalTarget = localTarget;
-        AssumeConnected = assumeConnected;
-    }
+        object? localTarget
+        ) : base(settings, services, serviceDef)
+        => LocalTarget = localTarget;
 
     protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)
     {
@@ -27,10 +22,11 @@ public class RpcRoutingInterceptor : RpcInterceptor
             Task resultTask;
             using var scope = RpcOutboundContext.UseOrActivateNew();
             var context = scope.Context;
-            var overridePeer = RpcCallRouteOverride.ApplyAndReset(context);
+            RpcCallOptions.Use(context, out var allowRerouting);
             var call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
             var peer = context.Peer!;
-            if (overridePeer is null && peer.Ref.CanBeRerouted)
+
+            if (allowRerouting && peer.Ref.CanBeRerouted)
                 resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation);
             else if (call is null) { // Local call
                 if (localCallAsyncInvoker is null)
@@ -40,7 +36,7 @@ public class RpcRoutingInterceptor : RpcInterceptor
                 resultTask = localCallAsyncInvoker.Invoke(invocation);
             }
             else
-                resultTask = call.Invoke(AssumeConnected);
+                resultTask = call.Invoke();
             return rpcMethodDef.UniversalAsyncResultWrapper.Invoke(resultTask);
         };
     }
@@ -57,7 +53,7 @@ public class RpcRoutingInterceptor : RpcInterceptor
             try {
                 if (call is null) {
                     if (localCallAsyncInvoker is null)
-                        throw RpcRerouteException.MustRerouteToLocal();
+                        throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
                     Task untypedResultTask;
                     using (RpcOutboundContext.Deactivate())
@@ -69,7 +65,7 @@ public class RpcRoutingInterceptor : RpcInterceptor
 
                 Task<object?> resultTask;
                 using (tryIndex != 0 ? context.Activate() : default) // .Activate() is needed only after "await"
-                    resultTask = call.Invoke(AssumeConnected);
+                    resultTask = call.Invoke();
                 return await resultTask.ConfigureAwait(false);
             }
             catch (RpcRerouteException e) {

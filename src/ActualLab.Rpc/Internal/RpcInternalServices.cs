@@ -39,20 +39,20 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
 
     // NewXxx
 
-    public IProxy NewNonRoutingProxy(
+    public IProxy NewForwardingProxy(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,
         object? localTarget = null,
         bool initialize = true)
     {
-        var interceptor = NewNonRoutingInterceptor(serviceType, localTarget);
+        var interceptor = NewForwardingInterceptor(serviceType, localTarget);
         return Services.ActivateProxy(proxyBaseType, interceptor, null, initialize);
     }
 
-    public RpcNonRoutingInterceptor NewNonRoutingInterceptor(Type serviceType, object? localTarget = null, bool assumeConnected = false)
+    public RpcForwardingInterceptor NewForwardingInterceptor(Type serviceType, object? localTarget = null)
     {
         var serviceDef = Hub.ServiceRegistry[serviceType];
-        return new RpcNonRoutingInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget, assumeConnected);
+        return new RpcForwardingInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget);
     }
 
     public IProxy NewRoutingProxy(
@@ -67,11 +67,10 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
 
     public RpcRoutingInterceptor NewRoutingInterceptor(
         Type serviceType,
-        object? localTarget = null,
-        bool assumeConnected = false)
+        object? localTarget = null)
     {
         var serviceDef = Hub.ServiceRegistry[serviceType];
-        return new RpcRoutingInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget, assumeConnected);
+        return new RpcRoutingInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget);
     }
 
     public IProxy NewSwitchProxy(

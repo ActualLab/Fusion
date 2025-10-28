@@ -63,6 +63,8 @@ public abstract class RemoteComputeMethodFunction(
                 // a post-async-lock block, so the original RpcCallRouteOverride.Peer won't be available
                 // at this point. And that's why there is also no need to reset it.
                 var peer = RpcSafeCallRouter.Invoke(RpcMethodDef, typedInput.Invocation.Arguments);
+                peer.ThrowIfRerouted();
+
                 if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                     // Local computation / no RPC call scenario
                     var computed = NewReplicaComputed(typedInput);
@@ -88,8 +90,11 @@ public abstract class RemoteComputeMethodFunction(
                     // - or a Distributed mode service, so its base.Method should be invoked
                     try {
                         ValueTask<object?> invokeInterceptedUntypedTask;
-                        using (RpcCallRouteOverride.Activate(peer)) // Force distributed service to preroute to local
+                        // Force distributed service to route to local
+                        using (RpcCallOptions.Activate(peer)) {
+                            // No "await" inside this block!
                             invokeInterceptedUntypedTask = typedInput.InvokeInterceptedUntyped(cancellationToken);
+                        }
                         var result = await invokeInterceptedUntypedTask.ConfigureAwait(false);
                         computed.TrySetValue(result);
                         return computed;
@@ -128,7 +133,7 @@ public abstract class RemoteComputeMethodFunction(
             }
             catch (RpcRerouteException) {
                 Log.LogWarning("Rerouting: {Input}", typedInput);
-                await RpcMethodDef.Hub.InternalServices.RerouteDelayer.Invoke(cancellationToken).ConfigureAwait(false);
+                await RpcHub.InternalServices.RerouteDelayer.Invoke(cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -319,7 +324,7 @@ public abstract class RemoteComputeMethodFunction(
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;
         var remoteComputeServiceInterceptor = (RemoteComputeServiceInterceptor)proxy.Interceptor;
-        var computeCallRpcInterceptor = remoteComputeServiceInterceptor.ComputeCallRpcInterceptor;
+        var rpcRoutingInterceptor = remoteComputeServiceInterceptor.RpcRoutingInterceptor;
 
         var ctIndex = input.MethodDef.CancellationTokenIndex;
         if (ctIndex >= 0 && invocation.Arguments.GetCancellationToken(ctIndex) != cancellationToken) {
@@ -335,8 +340,15 @@ public abstract class RemoteComputeMethodFunction(
                 Peer = peer,
                 CacheInfoCapture = cacheInfoCapture,
             };
-            using (context.Activate()) // No "await" inside this block!
-                _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(computeCallRpcInterceptor, invocation);
+            var callOptions = new RpcCallOptions() {
+                AllowRerouting = false,
+                AssumeConnected = false,
+            };
+            using (RpcCallOptions.Activate(callOptions))
+            using (context.Activate()) {
+                // No "await" inside this block!
+                _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(rpcRoutingInterceptor, invocation);
+            }
             call = context.Call as RpcOutboundComputeCall;
             if (call is null) {
                 Log.LogWarning(
@@ -528,7 +540,8 @@ public sealed class RemoteComputeMethodFunction<T>(
             computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
         }
 
-        // Note that until this moment UseNew(...) wasn't called - we were using ComputeContext.None!
+        // Note that until this moment Use(...) wasn't called,
+        // coz we were using ComputeContext.None in ProduceComputed call.
         ComputedImpl.UseNew(computed, context);
         return ((Computed<T>)computed).Value;
     }

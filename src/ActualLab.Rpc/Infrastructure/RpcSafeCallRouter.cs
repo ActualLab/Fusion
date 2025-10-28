@@ -16,10 +16,11 @@ public sealed class RpcSafeCallRouter(IServiceProvider services) : RpcServiceBas
         while (true) {
             try {
                 var peerRef = CallRouter.Invoke(methodDef, arguments);
-                return Hub.GetPeer(peerRef); // May throw RpcRerouteException
+                return Hub.GetPeer(peerRef);
             }
             catch (RpcRerouteException e) {
-                Log.LogWarning(e, "Rerouted once routed: {Method}{Arguments}", methodDef, arguments);
+                // This should never happen, but just in case...
+                Log.LogWarning(e, "Rerouted while routing: {Method}{Arguments}", methodDef, arguments);
             }
         }
     }

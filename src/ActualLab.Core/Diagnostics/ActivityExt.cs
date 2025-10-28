@@ -1,11 +1,13 @@
 using System.Diagnostics;
+using ActualLab.Rpc;
 
 namespace ActualLab.Diagnostics;
 
 public static class ActivityExt
 {
     // ReSharper disable once SuspiciousTypeConversion.Global
-    public static Func<Exception, bool> IsError { get; set; } = static e => e is not INotAnError;
+    public static Func<Exception, bool> IsError { get; set; }
+        = static e => e is not INotAnError;
 
     // Finalize
 
@@ -40,6 +42,10 @@ public static class ActivityExt
         if (error is null || !IsError.Invoke(error))
             return activity;
 
+        if (error is RpcRerouteException) {
+            activity.SetStatus(ActivityStatusCode.Ok, "Rerouted");
+            return activity;
+        }
         if (error.IsCancellationOf(cancellationToken)) {
             activity.SetStatus(ActivityStatusCode.Ok, "Cancelled");
             return activity;
@@ -55,6 +61,10 @@ public static class ActivityExt
         if (error is null || !IsError.Invoke(error))
             return activity;
 
+        if (error is RpcRerouteException) {
+            activity.SetStatus(ActivityStatusCode.Ok, "Rerouted");
+            return activity;
+        }
         if (detectCancellation && error is OperationCanceledException) {
             activity.SetStatus(ActivityStatusCode.Ok, "Cancelled");
             return activity;

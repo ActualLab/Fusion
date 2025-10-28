@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Client;
-using ActualLab.Interception;
 using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Internal;
@@ -27,9 +26,10 @@ public static partial class ComputedImpl
         if (existing is not { ConsistencyState: ConsistencyState.Consistent })
             return false;
 
-        // Inlined existing.UseNew(context, usedBy)
+        // Inlined UseExisting(existing, context), but w/o TryCapture (since context.CallOptions == 0)
         context.Computed?.AddDependency(existing);
         existing.RenewTimeouts(false);
+        // context.TryCapture(computed);
         return true;
     }
 
@@ -63,7 +63,7 @@ public static partial class ComputedImpl
         if (!existing.IsConsistent())
             return false;
 
-        UseNew(existing, context);
+        UseExisting(existing, context);
         return true;
     }
 
@@ -77,7 +77,7 @@ public static partial class ComputedImpl
         if (existing is null || !existing.IsConsistent())
             return false;
 
-        UseNew(existing, context);
+        UseExisting(existing, context);
         return true;
     }
 
@@ -85,6 +85,13 @@ public static partial class ComputedImpl
     {
         context.Computed?.AddDependency(computed);
         computed.RenewTimeouts(true);
+        context.TryCapture(computed);
+    }
+
+    public static void UseExisting(Computed computed, ComputeContext context)
+    {
+        context.Computed?.AddDependency(computed);
+        computed.RenewTimeouts(false);
         context.TryCapture(computed);
     }
 
@@ -166,6 +173,6 @@ public static partial class ComputedImpl
         // Cancellation
         computed.Invalidate(true); // Instant invalidation on cancellation
         computed.TrySetError(error);
-        return !(cancellationToken.IsCancellationRequested || error is RpcRerouteException);
+        return !cancellationToken.IsCancellationRequested && error is not RpcRerouteException;
     }
 }

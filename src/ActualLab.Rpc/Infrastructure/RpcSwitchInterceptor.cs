@@ -3,6 +3,8 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+#pragma warning disable CA2025 // Dispose objects before losing scope
+
 public class RpcSwitchInterceptor : RpcInterceptor
 {
     public readonly RpcSafeCallRouter SafeCallRouter;
@@ -35,31 +37,25 @@ public class RpcSwitchInterceptor : RpcInterceptor
         var remoteCallAsyncInvoker = methodDef.SelectAsyncInvokerUntyped(proxy, RemoteTarget)
             ?? throw Errors.NoRemoteCallInvoker();
         return invocation => {
-            var context = RpcOutboundContext.Current;
-            var overridePeer = RpcCallRouteOverride.ApplyAndReset(context);
-            var peer = overridePeer ?? SafeCallRouter.Invoke(rpcMethodDef, invocation.Arguments);
+            using var scope = RpcOutboundContext.UseOrActivateNew();
+            var context = scope.Context;
+            RpcCallOptions.Use(context, out bool allowRerouting);
+            var peer = context.Peer ?? SafeCallRouter.Invoke(rpcMethodDef, invocation.Arguments);
+
             Task resultTask;
-            if (overridePeer is null && peer.Ref.CanBeRerouted) {
-                using var scope = RpcOutboundContext.UseOrActivateNew(context);
-#pragma warning disable CA2025
+            if (allowRerouting && peer.Ref.CanBeRerouted) {
                 resultTask = InvokeWithRerouting(
                     rpcMethodDef, scope.Context, peer,
                     localCallAsyncInvoker, remoteCallAsyncInvoker, invocation);
-#pragma warning restore CA2025
             }
             else if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                 if (localCallAsyncInvoker is null)
                     throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
-                if (context is null)
-                    resultTask = localCallAsyncInvoker.Invoke(invocation);
-                else {
-                    using var _ = RpcOutboundContext.Deactivate();
-                    resultTask = localCallAsyncInvoker.Invoke(invocation);
-                }
+                using var _ = RpcOutboundContext.Deactivate();
+                resultTask = localCallAsyncInvoker.Invoke(invocation);
             }
             else {
-                using var scope = RpcOutboundContext.UseOrActivateNew(context);
                 scope.Context.Peer = peer; // Suppress the downstream routing
                 resultTask = remoteCallAsyncInvoker.Invoke(invocation);
             }
@@ -76,8 +72,9 @@ public class RpcSwitchInterceptor : RpcInterceptor
         Invocation invocation)
     {
         for (var tryIndex = 0;; tryIndex++) {
-            peer ??= SafeCallRouter.Invoke(methodDef, invocation.Arguments); // We already took care of the override
             try {
+                peer ??= SafeCallRouter.Invoke(methodDef, invocation.Arguments); // We already took care of the override
+                peer.ThrowIfRerouted();
                 Task resultTask;
                 if (peer.ConnectionKind is RpcPeerConnectionKind.Local)
                     resultTask = localCallAsyncInvoker.Invoke(invocation);

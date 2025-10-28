@@ -230,6 +230,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             _resetTryIndex = true;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void ThrowIfRerouted()
+        => Ref.ThrowIfRerouted();
+
     // Protected methods
 
     protected abstract Task<RpcConnection> GetConnection(
@@ -238,15 +242,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     protected override async Task OnRun(CancellationToken cancellationToken)
     {
-        if (ConnectionKind is RpcPeerConnectionKind.Local) {
-            // It's a fake RpcPeer that exists solely to be "available"
-            await TaskExt.NeverEnding(cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
         Log.LogInformation("'{PeerRef}': Started", Ref);
         foreach (var peerTracker in Hub.PeerTrackers)
             peerTracker.Invoke(this);
+
+        // ReSharper disable once UseAwaitUsing
+        using var rerouteTokenRegistration = Ref.RerouteToken.Register(() => Task.Run(DisposeAsync, CancellationToken.None));
 
         var handshakeIndex = 0;
         var connectionState = ConnectionState;
@@ -254,6 +255,13 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         var peerChangedCts = cancellationToken.CreateLinkedTokenSource();
         var peerChangedToken = peerChangedCts.Token;
         try {
+            if (ConnectionKind is RpcPeerConnectionKind.Local) {
+                // It's a fake RpcPeer that exists solely to be "available"
+                // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+                await TaskExt.NeverEnding(cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
             while (true) {
                 var error = (Exception?)null;
                 var readerTokenSource = cancellationToken.CreateLinkedTokenSource();
@@ -270,6 +278,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     var connection = await GetConnection(connectionState.Value, cancellationToken).ConfigureAwait(false);
                     var channel = connection.Channel;
                     var sender = channel.Writer;
+
                     // WebSocketChannel is IAsyncEnumerable<RpcMessage>, its GetAsyncEnumerator honors ReadMode
                     var reader = channel is IAsyncEnumerable<RpcMessage> asyncEnumerable
                         ? asyncEnumerable.GetAsyncEnumerator(readerToken)
@@ -378,7 +387,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
         finally {
             Log.LogInformation("'{PeerRef}': Stopping", Ref);
-            Hub.Peers.TryRemove(Ref, this);
+            _ = Task.Run(async () => {
+                await Hub.Clock.Delay(Hub.PeerRemoveDelay, CancellationToken.None).ConfigureAwait(false);
+                Hub.RemovePeer(this);
+            }, CancellationToken.None);
 
             // Make sure the sequence of ConnectionStates terminates
             Exception? error;

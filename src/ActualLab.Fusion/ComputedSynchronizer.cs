@@ -70,10 +70,10 @@ public abstract class ComputedSynchronizer
             static async Task WhenUpdatedAndSynchronized(
                 ComputedSynchronizer self,
                 StateSnapshot snapshot,
-                CancellationToken cancellationToken1)
+                CancellationToken cancellationToken)
             {
-                await snapshot.WhenUpdated().WaitAsync(cancellationToken1).ConfigureAwait(false);
-                await self.WhenSynchronized(snapshot.State.Computed, cancellationToken1).ConfigureAwait(false);
+                await snapshot.WhenUpdated().WaitAsync(cancellationToken).ConfigureAwait(false);
+                await self.WhenSynchronized(snapshot.State.Computed, cancellationToken).ConfigureAwait(false);
             }
         }
 

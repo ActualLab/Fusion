@@ -1,4 +1,5 @@
 using System.Runtime.ExceptionServices;
+using ActualLab.Rpc;
 
 namespace ActualLab;
 
@@ -7,18 +8,19 @@ namespace ActualLab;
 /// </summary>
 public static class ExceptionExt
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsCancellationOf(this Exception error, CancellationToken cancellationToken)
-        => error is OperationCanceledException && cancellationToken.IsCancellationRequested;
+    {
+        if (!cancellationToken.IsCancellationRequested)
+            return false;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        return error is OperationCanceledException and not RpcRerouteException;
+    }
+
     public static bool IsCancellationOfTimeoutToken(
         this Exception error,
         CancellationToken timeoutToken,
         CancellationToken cancellationToken)
-        => error is OperationCanceledException
-            && timeoutToken.IsCancellationRequested
-            && !cancellationToken.IsCancellationRequested;
+        => !cancellationToken.IsCancellationRequested && error.IsCancellationOf(timeoutToken);
 
     // Flatten, Any, GetFirstInnerException
 

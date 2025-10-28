@@ -93,6 +93,13 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void ThrowIfRerouted()
+    {
+        if (IsRerouted)
+            throw RpcRerouteException.MustReroute();
+    }
+
 #pragma warning disable MA0001
 
     // Equality: UseReferentialEquality determines whether it is referential or based on Address.
