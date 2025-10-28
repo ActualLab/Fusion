@@ -1,5 +1,6 @@
 using System.Security;
 using ActualLab.Fusion.Authentication;
+using ActualLab.Tests;
 
 namespace ActualLab.Fusion.Tests;
 

@@ -4,7 +4,7 @@ using ActualLab.Rpc;
 using ActualLab.Rpc.Testing;
 using ActualLab.Testing.Collections;
 
-namespace ActualLab.Fusion.Tests;
+namespace ActualLab.Fusion.Tests.Rpc;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)

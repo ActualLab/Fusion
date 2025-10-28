@@ -1,4 +1,5 @@
 using ActualLab.Testing.Collections;
+using ActualLab.Tests;
 
 namespace ActualLab.Fusion.Tests;
 

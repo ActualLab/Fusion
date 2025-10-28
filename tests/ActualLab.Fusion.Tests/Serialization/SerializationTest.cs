@@ -4,6 +4,7 @@ using ActualLab.Fusion.Tests.Model;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Generators;
 using ActualLab.Testing.Collections;
+using ActualLab.Tests;
 using User = ActualLab.Fusion.Authentication.User;
 
 namespace ActualLab.Fusion.Tests.Serialization;

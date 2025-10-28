@@ -1,11 +1,10 @@
-using System.Numerics;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.OS;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Testing;
 using ActualLab.Testing.Collections;
 
-namespace ActualLab.Fusion.Tests;
+namespace ActualLab.Fusion.Tests.Rpc;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)

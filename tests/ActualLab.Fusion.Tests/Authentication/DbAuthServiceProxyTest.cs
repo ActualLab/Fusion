@@ -1,6 +1,7 @@
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.Tests.Model;
 using ActualLab.Interception;
+using ActualLab.Tests;
 
 namespace ActualLab.Fusion.Tests.Authentication;
 

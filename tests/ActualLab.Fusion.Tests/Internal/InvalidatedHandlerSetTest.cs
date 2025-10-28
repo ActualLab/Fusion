@@ -1,5 +1,6 @@
 using ActualLab.Diagnostics;
 using ActualLab.Fusion.Internal;
+using ActualLab.Tests;
 
 namespace ActualLab.Fusion.Tests.Internal;
 

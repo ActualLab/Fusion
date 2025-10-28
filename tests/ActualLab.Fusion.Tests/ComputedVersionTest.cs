@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using ActualLab.OS;
+using ActualLab.Tests;
 
 namespace ActualLab.Fusion.Tests;
 

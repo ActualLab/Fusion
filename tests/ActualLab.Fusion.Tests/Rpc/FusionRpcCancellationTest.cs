@@ -3,7 +3,7 @@ using ActualLab.Generators;
 using ActualLab.Rpc;
 using ActualLab.Testing.Collections;
 
-namespace ActualLab.Fusion.Tests;
+namespace ActualLab.Fusion.Tests.Rpc;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
