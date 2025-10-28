@@ -22,7 +22,7 @@ public static class HostFactorySettings
 public static class TestSettings
 {
     public static readonly int CounterCount = 20;
-    public static readonly int MaxRetryCount = 3;
+    public static readonly int MaxRetryCount = 5;
     public static readonly Sampler UseFusionSampler = Sampler.RandomShared(0.75);
     public static readonly Sampler IncrementSampler = Sampler.RandomShared(0.25);
     public static readonly bool MustRunOnClientHost = true;

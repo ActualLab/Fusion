@@ -105,7 +105,7 @@ public class TestRunner(IServiceProvider services) : WorkerBase
 
                 if (!isCorrect) {
                     var recency = counter.Counter.UpdatedAt.Elapsed;
-                    message = $"{message} - {counter.Counter.Value} < {trueCounter.Value}, read {recency.ToShortString()} ago"
+                    message = $"{message}: {counter.Counter.Value} < {trueCounter.Value}, read {recency.ToShortString()} ago"
                         .PastelBg(ConsoleColor.DarkRed);
                 }
                 Console.WriteLine(message);
