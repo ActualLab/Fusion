@@ -190,15 +190,12 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
         async Task<List<RpcOutboundCall>> TryReconnect(List<RpcOutboundCall> calls) {
             try {
-                var completedStages = (
-                    from call in calls
-                    let reconnectStage = call.GetReconnectStage(false)
-                    where reconnectStage.HasValue
-                    group call.Id by reconnectStage.GetValueOrDefault()
-                    into g
-                    orderby g.Key
-                    select g
-                ).ToDictionary(x => x.Key, IncreasingSeqCompressor.Serialize);
+                var completedStages = calls
+                    .Select(call => (Call: call, ReconnectStage: call.GetReconnectStage(isPeerChanged: false)))
+                    .Where(x => x.ReconnectStage.HasValue)
+                    .GroupBy(x => x.ReconnectStage.GetValueOrDefault(), x => x.Call.Id)
+                    .OrderBy(g => g.Key)
+                    .ToDictionary(g => g.Key, g => IncreasingSeqCompressor.Serialize(g.OrderBy(x => x)));
                 if (completedStages.Count == 0)
                     return calls;
 
