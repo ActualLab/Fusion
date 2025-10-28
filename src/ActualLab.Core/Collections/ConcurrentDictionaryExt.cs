@@ -9,36 +9,82 @@ public static class ConcurrentDictionaryExt
         this ConcurrentDictionary<TKey, LazySlim<TKey, TValue>> dictionary,
         TKey key, Func<TKey, TValue> factory)
         where TKey : notnull
-        => dictionary.TryGetValue(key, out var value)
-            ? value.Value
-            : dictionary.GetOrAdd(key, LazySlim.New(key, factory)).Value;
+        => dictionary.GetOrAdd(key,
+            static (key, factory) => new LazySlim<TKey, TValue>(key, factory),
+            factory)
+            .Value;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TValue GetOrAdd<TKey, TState, TValue>(
         this ConcurrentDictionary<TKey, LazySlim<TKey, TState, TValue>> dictionary,
         TKey key, Func<TKey, TState, TValue> factory, TState state)
         where TKey : notnull
-        => dictionary.TryGetValue(key, out var value)
-            ? value.Value
-            : dictionary.GetOrAdd(key, LazySlim.New(key, state, factory)).Value;
+        => dictionary.GetOrAdd(key,
+            static (key, s) => new LazySlim<TKey, TState, TValue>(key, s.state, s.factory),
+            (state, factory))
+            .Value;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TValue GetOrAdd<TKey, TValue>(
         this ConcurrentDictionary<TKey, LazySlim<TValue>> dictionary,
         TKey key, Func<TValue> factory)
         where TKey : notnull
-        => dictionary.TryGetValue(key, out var value)
-            ? value.Value
-            : dictionary.GetOrAdd(key, LazySlim.New(factory)).Value;
+        => dictionary.GetOrAdd(key,
+            static (_, factory) => new LazySlim<TValue>(factory),
+            factory)
+            .Value;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TValue GetOrAdd<TKey, TState, TValue>(
         this ConcurrentDictionary<TKey, LazySlim<TState, TValue>> dictionary,
         TKey key, Func<TState, TValue> factory, TState state)
         where TKey : notnull
-        => dictionary.TryGetValue(key, out var value)
-            ? value.Value
-            : dictionary.GetOrAdd(key, LazySlim.New(state, factory)).Value;
+        => dictionary.GetOrAdd(key,
+            static (_, s) => new LazySlim<TState, TValue>(s.state, s.factory),
+            (state, factory))
+            .Value;
+
+    // GetOrAdd overloads accepting factories that take LazySlim
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TValue GetOrAdd<TKey, TValue>(
+        this ConcurrentDictionary<TKey, LazySlim<TKey, TValue>> dictionary,
+        TKey key, Func<TKey, LazySlim<TKey, TValue>, TValue> factory)
+        where TKey : notnull
+        => dictionary.GetOrAdd(key,
+            static (key, factory) => new LazySlim<TKey, TValue>(key, factory),
+            factory)
+            .Value;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TValue GetOrAdd<TKey, TState, TValue>(
+        this ConcurrentDictionary<TKey, LazySlim<TKey, TState, TValue>> dictionary,
+        TKey key, Func<TKey, TState, LazySlim<TKey, TState, TValue>, TValue> factory, TState state)
+        where TKey : notnull
+        => dictionary.GetOrAdd(key,
+            static (key, s) => new LazySlim<TKey, TState, TValue>(key, s.state, s.factory),
+            (state, factory))
+            .Value;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TValue GetOrAdd<TKey, TValue>(
+        this ConcurrentDictionary<TKey, LazySlim<TValue>> dictionary,
+        TKey key, Func<LazySlim<TValue>, TValue> factory)
+        where TKey : notnull
+        => dictionary.GetOrAdd(key,
+            static (_, factory) => new LazySlim<TValue>(factory),
+            factory)
+            .Value;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TValue GetOrAdd<TKey, TState, TValue>(
+        this ConcurrentDictionary<TKey, LazySlim<TState, TValue>> dictionary,
+        TKey key, Func<TState, LazySlim<TState, TValue>, TValue> factory, TState state)
+        where TKey : notnull
+        => dictionary.GetOrAdd(key,
+            static (_, s) => new LazySlim<TState, TValue>(s.state, s.factory),
+            (state, factory))
+            .Value;
 
     // Increment & Decrement
 
