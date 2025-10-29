@@ -4,6 +4,7 @@ namespace ActualLab;
 
 public interface ILazySlim<out TValue>
 {
+    public bool HasValue { get; }
     public TValue Value { get; }
 }
 
@@ -41,6 +42,8 @@ public static class LazySlim
 public sealed class LazySlim<TValue> : ILazySlim<TValue>
 {
     private Delegate? _factory;
+
+    public bool HasValue => _factory is null;
 
     public TValue Value {
         get {
@@ -91,6 +94,8 @@ public sealed class LazySlim<TArg0, TValue> : ILazySlim<TValue>
 {
     private Delegate? _factory;
     private TArg0 _arg0;
+
+    public bool HasValue => _factory is null;
 
     public TValue Value {
         get {
@@ -146,6 +151,8 @@ public sealed class LazySlim<TArg0, TArg1, TValue> : ILazySlim<TValue>
     private Delegate? _factory;
     private TArg0 _arg0;
     private TArg1 _arg1;
+
+    public bool HasValue => _factory is null;
 
     public TValue Value {
         get {
