@@ -25,12 +25,11 @@ public sealed class SimpleAsyncLock : IAsyncLock<SimpleAsyncLock.Releaser>
         {
             return task.IsCompletedSuccessfully()
                 ? ValueTaskExt.FromResult(new Releaser(asyncLock))
-                : CompleteAsynchronously(task, asyncLock);
+                : CompleteAsync(task, asyncLock);
 
-            static async ValueTask<Releaser> CompleteAsynchronously(Task task1, SimpleAsyncLock asyncLock1)
-            {
-                await task1.ConfigureAwait(false);
-                return new Releaser(asyncLock1);
+            static async ValueTask<Releaser> CompleteAsync(Task task, SimpleAsyncLock asyncLock) {
+                await task.ConfigureAwait(false);
+                return new Releaser(asyncLock);
             }
         }
 

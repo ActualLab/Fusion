@@ -39,8 +39,7 @@ public class RedisConnector
         var state = State.Last;
         return state.Value?.WaitAsync(cancellationToken) ?? CompleteAsync(cancellationToken);
 
-        async Task<Temporary<IConnectionMultiplexer>> CompleteAsync(CancellationToken ct)
-        {
+        async Task<Temporary<IConnectionMultiplexer>> CompleteAsync(CancellationToken ct) {
             var current = state.Last;
             while (current.Value is null)
                 current = await current.WhenNext(ct).ConfigureAwait(false);

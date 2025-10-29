@@ -9,11 +9,10 @@ public static class SemaphoreSlimExt
         var task = semaphore.WaitAsync(cancellationToken);
         return task.IsCompletedSuccessfully()
             ? ValueTaskExt.FromResult(new ClosedDisposable<SemaphoreSlim>(semaphore, static x => x.Release()))
-            : CompleteAsynchronously(task, semaphore);
+            : CompleteAsync(task, semaphore);
 
-        static async ValueTask<ClosedDisposable<SemaphoreSlim>> CompleteAsynchronously(Task task1, SemaphoreSlim semaphore)
-        {
-            await task1.ConfigureAwait(false);
+        static async ValueTask<ClosedDisposable<SemaphoreSlim>> CompleteAsync(Task task, SemaphoreSlim semaphore) {
+            await task.ConfigureAwait(false);
             return new ClosedDisposable<SemaphoreSlim>(semaphore, static x => x.Release());
         }
     }
