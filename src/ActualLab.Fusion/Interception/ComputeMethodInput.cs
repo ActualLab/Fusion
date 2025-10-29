@@ -11,7 +11,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     public readonly Invocation Invocation;
 
     public override bool IsDisposed
-        => MethodDef.IsDisposable && Invocation.Proxy is IHasIsDisposed { IsDisposed: true };
+        => MethodDef.IsOfHasDisposableStatusType && Invocation.Proxy is IHasDisposeStatus { IsDisposed: true };
 
     public ComputeMethodInput(IComputeFunction function, ComputeMethodDef methodDef, Invocation invocation)
     {

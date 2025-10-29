@@ -4,7 +4,7 @@ namespace ActualLab.Fusion;
 
 #pragma warning disable CA1721
 
-public abstract class ComputedInput : IEquatable<ComputedInput>, IHasIsDisposed
+public abstract class ComputedInput : IEquatable<ComputedInput>, IHasDisposeStatus
 {
     public static IEqualityComparer<ComputedInput> EqualityComparer { get; } = new EqualityComparerImpl();
 

@@ -6,7 +6,7 @@ namespace ActualLab.Fusion.Interception;
 public sealed class ComputeMethodDef : MethodDef
 {
     public ComputedOptions ComputedOptions { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = ComputedOptions.Default;
-    public readonly bool IsDisposable;
+    public readonly bool IsOfHasDisposableStatusType;
 
     public ComputeMethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
@@ -25,7 +25,7 @@ public sealed class ComputeMethodDef : MethodDef
             return;
         }
 
-        IsDisposable = typeof(IHasIsDisposed).IsAssignableFrom(type);
+        IsOfHasDisposableStatusType = typeof(IHasDisposeStatus).IsAssignableFrom(type);
         ComputedOptions = computedOptions;
     }
 }

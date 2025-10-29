@@ -1,11 +1,11 @@
 namespace ActualLab.DependencyInjection;
 
-public interface IHasIsDisposed
+public interface IHasDisposeStatus
 {
     public bool IsDisposed { get; }
 }
 
-public interface IHasWhenDisposed : IHasIsDisposed
+public interface IHasWhenDisposed : IHasDisposeStatus
 {
     public Task? WhenDisposed { get; }
 }

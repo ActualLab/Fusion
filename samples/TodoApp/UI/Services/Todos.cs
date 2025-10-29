@@ -4,7 +4,7 @@ using Samples.TodoApp.Abstractions;
 
 namespace Samples.TodoApp.UI.Services;
 
-public class Todos(Session session, ITodoApi todoApi) : IComputeService, IDisposable, IHasIsDisposed
+public class Todos(Session session, ITodoApi todoApi) : IComputeService, IDisposable, IHasDisposeStatus
 {
     private static readonly ActivitySource ActivitySource = AppInstruments.ActivitySource;
     private volatile int _isDisposed;

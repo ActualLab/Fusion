@@ -39,7 +39,7 @@ public interface ISimplestProvider : IComputeService
     public Task SetValue(SetValueCommand command, CancellationToken cancellationToken = default);
 }
 
-public class SimplestProvider : ISimplestProvider, ISimpleProviderImpl, IHasId<Type>, IHasIsDisposed
+public class SimplestProvider : ISimplestProvider, ISimpleProviderImpl, IHasId<Type>, IHasDisposeStatus
 {
     private static volatile string? _value;
     private readonly bool _isCaching;

@@ -303,8 +303,8 @@ public readonly struct FusionBuilder
             throw Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
         if (!implementationType.IsClass)
             throw Errors.MustBeClass(implementationType, nameof(implementationType));
-        if (lifetime != ServiceLifetime.Singleton && !typeof(IHasIsDisposed).IsAssignableFrom(implementationType))
-            throw Errors.MustImplement<IHasIsDisposed>(implementationType, nameof(implementationType));
+        if (lifetime != ServiceLifetime.Singleton && !typeof(IHasDisposeStatus).IsAssignableFrom(implementationType))
+            throw Errors.MustImplement<IHasDisposeStatus>(implementationType, nameof(implementationType));
 
         var descriptor = new ServiceDescriptor(serviceType,
             c => c.FusionHub().NewComputeServiceProxy(c, implementationType),

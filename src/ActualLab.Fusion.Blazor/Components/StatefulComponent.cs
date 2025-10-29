@@ -25,7 +25,7 @@ public abstract class StatefulComponentBase : CircuitHubComponentBase, IStateful
     {
         MustRenderAfterEvent = false; // Typically these components render only after State change
         StateChanged = (_, _) => {
-            if (State is IHasIsDisposed { IsDisposed: true })
+            if (State is IHasDisposeStatus { IsDisposed: true })
                 return;
 
             // Same as ExecutionContextExt.TrySuppressFlow(), but a bit faster
