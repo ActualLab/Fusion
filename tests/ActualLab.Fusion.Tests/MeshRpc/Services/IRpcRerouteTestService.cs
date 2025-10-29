@@ -22,5 +22,6 @@ public sealed partial record ValueWithHostId(
 public sealed partial record RpcRerouteTestService_SetValue(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] int ShardKey,
     [property: DataMember(Order = 1), MemoryPackOrder(1)] string Key,
-    [property: DataMember(Order = 2), MemoryPackOrder(2)] string Value
+    [property: DataMember(Order = 2), MemoryPackOrder(2)] string Value,
+    [property: DataMember(Order = 3), MemoryPackOrder(3)] int ExtraCount = 1
 ) : ICommand<ValueWithHostId>, IHasShardKey;

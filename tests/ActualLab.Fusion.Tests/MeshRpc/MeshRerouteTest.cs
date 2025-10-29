@@ -1,10 +1,8 @@
 using ActualLab.Fusion.Testing;
 using ActualLab.Rpc;
-using ActualLab.Testing.Collections;
 
 namespace ActualLab.Fusion.Tests.MeshRpc;
 
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
     [Theory]
@@ -22,11 +20,12 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
         Out.WriteLine($"Created hosts: {host0.Id}, {host1.Id} (mode: {serviceMode})");
         Out.WriteLine($"Created client: {client.Id}");
 
-        // Get the service from the client
-        var service = client.Services.GetRequiredService<IRpcRerouteTestService>();
+        // Get tested services from the client
+        var commander = client.Commander();
+        var service = client.GetRequiredService<IRpcRerouteTestService>();
 
         // Initially set a value on host0
-        var initialResult = await service.SetValue(
+        var initialResult = await commander.Call(
             new RpcRerouteTestService_SetValue(0, "test-key", "value-from-host0"));
         initialResult.HostId.Should().Be(host0.Id);
         Out.WriteLine($"Set value on {initialResult.HostId}");
@@ -80,26 +79,29 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
         Out.WriteLine($"Direct call after second swap: {directResult.HostId} = {directResult.Value}");
     }
 
-    [Fact]
-    public async Task RerouteWithValueChangeTest()
+    [Theory]
+    [InlineData(RpcServiceMode.Distributed)]
+    [InlineData(RpcServiceMode.DistributedPair)]
+    public async Task RerouteWithValueChangeTest(RpcServiceMode serviceMode)
     {
         await using var testHosts = NewTestHosts();
 
         // Create 2 hosts and 1 client
-        var host0 = testHosts.NewHost(RpcServiceMode.DistributedPair);
-        var host1 = testHosts.NewHost(RpcServiceMode.DistributedPair);
+        var host0 = testHosts.NewHost(serviceMode);
+        var host1 = testHosts.NewHost(serviceMode);
         var client = testHosts.ClientHost;
         await Task.WhenAll(host0.WhenStarted, host1.WhenStarted, client.WhenStarted);
-        Out.WriteLine($"Created hosts: {host0.Id}, {host1.Id}");
+        Out.WriteLine($"Created hosts: {host0.Id}, {host1.Id} (mode: {serviceMode})");
 
-        var service = client.Services.GetRequiredService<IRpcRerouteTestService>();
+        var commander = client.Commander();
+        var service = client.GetRequiredService<IRpcRerouteTestService>();
 
-        // Set initial value on host0
-        await service.SetValue(
+        // Set the initial value on host0
+        await commander.Call(
             new RpcRerouteTestService_SetValue(0, "key1", "host0-value"));
 
         // Set a different value on host1 for the same key
-        await service.SetValue(
+        await commander.Call(
             new RpcRerouteTestService_SetValue(1, "key1", "host1-value"));
 
         // Capture computed from host0
