@@ -32,7 +32,10 @@ public sealed class MeshMap(StateFactory stateFactory)
             State.Set(x => x.Value.Remove(host));
     }
 
-    public void Reset(params ImmutableList<MeshHost> hosts)
+    public void Reset(params MeshHost[] hosts)
+        => State.Set(_ => hosts.ToImmutableList());
+
+    public void Reset(ImmutableList<MeshHost> hosts)
         => State.Set(_ => hosts);
 
     public void Swap(int index1, int index2)
