@@ -4,8 +4,7 @@ namespace ActualLab.Fusion.Tests.MeshRpc;
 
 public sealed class MeshMap(StateFactory stateFactory)
 {
-    private const int RouteKeyModulo = 2*3*4*5; // Won't break the modulo for up to 5 hosts
-    private readonly ConcurrentDictionary<int, LazySlim<int, MeshMap, MeshPeerRef>> _peerRefs = new();
+    private readonly ConcurrentDictionary<int, LazySlim<int, MeshMap, ShardPeerRef>> _peerRefs = new();
 
     public MutableState<ImmutableList<MeshHost>> State { get; }
         = stateFactory.NewMutable(ImmutableList<MeshHost>.Empty);
@@ -42,21 +41,22 @@ public sealed class MeshMap(StateFactory stateFactory)
             if (hosts.Count < 1)
                 return hosts;
 
-            var h1 = hosts.GetHostByRouteKey(index1)!;
-            var h2 = hosts.GetHostByRouteKey(index2)!;
+            var h1 = hosts.GetHostByShardIndex(index1)!;
+            var h2 = hosts.GetHostByShardIndex(index2)!;
             return h1 == h2
                 ? hosts
                 : hosts.SetItem(index1, h2).SetItem(index2, h1);
         });
 
-    // Get/RemovePeerRef
+    // Get/RemoveShardPeerRef
 
-    public MeshPeerRef GetPeerRef(int routeKey)
+    public ShardPeerRef GetShardPeerRef(int shardKey)
     {
         var sw = new SpinWait();
         while (true) {
-            var peerRef = _peerRefs.GetOrAdd(routeKey.PositiveModulo(RouteKeyModulo),
-                static (routeKey, self, lazy) => new(self, routeKey, lazy),
+            var shardIndex = shardKey.PositiveModulo(ShardPeerRef.ShardCount);
+            var peerRef = _peerRefs.GetOrAdd(shardIndex,
+                static (shardKey, self, holder) => new(self, shardKey, holder),
                 this);
             if (!peerRef.IsRerouted)
                 return peerRef;
@@ -65,6 +65,6 @@ public sealed class MeshMap(StateFactory stateFactory)
         }
     }
 
-    internal void RemovePeerRef(int routeKey, LazySlim<int, MeshMap, MeshPeerRef> lazy)
-        => _peerRefs.TryRemove(routeKey, lazy);
+    internal void RemoveShardPeerRef(int shardIndex, LazySlim<int, MeshMap, ShardPeerRef> entry)
+        => _peerRefs.TryRemove(shardIndex, entry);
 }

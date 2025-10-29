@@ -92,17 +92,17 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
             return RpcPeerRef.Local;
 
         var arg0 = arguments.Get0Untyped();
-        var routeKey = arg0 switch {
+        var shardKey = arg0 switch {
             int i => i,
-            IHasRouteKey hrk => hrk.RouteKey,
+            IHasShardKey hrk => hrk.ShardKey,
             _ => arg0?.GetHashCode() ?? 0
         };
-        return MeshMap.GetPeerRef(routeKey);
+        return MeshMap.GetShardPeerRef(shardKey);
     }
 
     private RpcPeerConnectionKind GetPeerConnectionKind(RpcHub hub, RpcPeerRef peerRef)
     {
-        if (peerRef is not MeshPeerRef testPeerRef)
+        if (peerRef is not ShardPeerRef testPeerRef)
             return peerRef.ConnectionKind;
 
         return AllowLocalRpcConnectionKind && testPeerRef.Host == this
@@ -111,7 +111,7 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
     }
 
     private string GetClientPeerHostUrl(RpcWebSocketClient client, RpcClientPeer peer)
-        => peer.Ref is MeshPeerRef testPeerRef
+        => peer.Ref is ShardPeerRef testPeerRef
             ? testPeerRef.Host?.Url ?? ""
             : throw new ArgumentOutOfRangeException(nameof(peer));
 }

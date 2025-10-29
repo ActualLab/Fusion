@@ -2,22 +2,24 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Tests.MeshRpc;
 
-public sealed class MeshPeerRef : RpcPeerRef
+public sealed class ShardPeerRef : RpcPeerRef
 {
+    public const int ShardCount = 2 * 3 * 4 * 5;
+
     private static long _version = 0;
 
     public MeshMap MeshMap { get; }
-    public int RouteKey { get; }
+    public int ShardIndex { get; }
     public MeshHost? Host { get; }
     public override CancellationToken RerouteToken { get; }
 
-    internal MeshPeerRef(MeshMap meshMap, int routeKey, LazySlim<int, MeshMap, MeshPeerRef> lazy)
+    internal ShardPeerRef(MeshMap meshMap, int shardIndex, LazySlim<int, MeshMap, ShardPeerRef> entry)
     {
         MeshMap = meshMap;
-        RouteKey = routeKey;
+        ShardIndex = shardIndex;
         var hostMapComputed = meshMap.State.Computed;
-        Host = hostMapComputed.Value.GetHostByRouteKey(routeKey);
-        HostInfo = $"#{routeKey}-{Host?.Id ?? "null"}-v{Interlocked.Increment(ref _version)}";
+        Host = hostMapComputed.Value.GetHostByShardIndex(shardIndex);
+        HostInfo = $"#{shardIndex}-{Host?.Id ?? "null"}-v{Interlocked.Increment(ref _version)}";
         Address = Host?.Url ?? "";
         UseReferentialEquality = true;
 
@@ -25,10 +27,10 @@ public sealed class MeshPeerRef : RpcPeerRef
         RerouteToken = rerouteTokenSource.Token;
         _ = Task.Run(async () => {
             await hostMapComputed
-                .When(x => x.GetHostByRouteKey(RouteKey) != Host)
+                .When(x => x.GetHostByShardIndex(ShardIndex) != Host)
                 .ConfigureAwait(false);
             rerouteTokenSource.Cancel();
-            meshMap.RemovePeerRef(routeKey, lazy);
+            meshMap.RemoveShardPeerRef(shardIndex, entry);
         }, CancellationToken.None);
         Initialize();
     }

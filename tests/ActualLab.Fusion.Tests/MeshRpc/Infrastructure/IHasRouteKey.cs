@@ -1,6 +1,6 @@
 namespace ActualLab.Fusion.Tests.MeshRpc;
 
-public interface IHasRouteKey
+public interface IHasShardKey
 {
-    public int RouteKey { get; }
+    public int ShardKey { get; }
 }
