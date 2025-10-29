@@ -4,14 +4,14 @@
 > in a single document. If you find it doesn't do its
 > job well, please don't hesitate to reach Alex Y. on
 > [Fusion Place](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo)
-> and tell him *everything* 😈
+> and tell him _everything_ 😈
 
 The content below implies you can browse, build, and run
 [HelloCart Sample], so before you start reading further,
 it's highly recommended to:
 
 1. Clone [https://github.com/ActualLab/Fusion.Samples](https://github.com/ActualLab/Fusion.Samples)
-2. Open `Samples.sln` in your favorite IDE.
+2. Open `HelloCart/HelloCart.csproj` in your favorite IDE.
 
 ## What is HelloCart sample?
 
@@ -141,7 +141,7 @@ described above:
    This might be fine in some countries, but... Most of
    these countries are still living in pre-internet age,
    so it's a fictional scenario even there.
-   
+
    But even taking ethics and security aside,
    retransmitting every command to every client means
    you'll see `O(ClientCount^2)` packet rate on server,
@@ -153,7 +153,7 @@ described above:
    Let's add an extra logic to `Edit<Product>` handler
    that finds every cart this product is added to
    and notifies every customer watching these carts.
-   
+
    Here you realize you need a pub-sub to implement
    this - i.e. your clients will have to subscribe to and
    unsubscribe from topics like `"cart-[cartId]"` to
@@ -172,7 +172,7 @@ described above:
 
 4. Most of real-time messaging APIs
    [don't provide strong guarantees for message ordering](https://github.com/dotnet/aspnetcore/issues/9240) - especially for messages
-   sent to different topics / channels, and any *real* real-time
+   sent to different topics / channels, and any _real_ real-time
    app uses a number of such channels. Moreover, if you send requests
    via regular HTTP API to the same server, the order of
    these responses and the order of messages you get via SignalR
@@ -268,7 +268,7 @@ public async Task WatchCartTotal(string cartId, CancellationToken cancellationTo
 {
     var cartService = WatchServices.GetRequiredService<ICartService>();
     var computed = await Computed.Capture(
-        ct => cartService.GetTotal(cartId, ct), 
+        ct => cartService.GetTotal(cartId, ct),
         cancellationToken);
     while (true) {
         WriteLine($"  {cartId}: total = {computed.Value}");
@@ -416,18 +416,18 @@ The proxy "decorates" every method marked by
 
 4. If all of this didn't help to find the cached "answer",
    the base method (i.e. your original one) is called
-   to *compute* it. But before the *computation* part start,
+   to _compute_ it. But before the _computation_ part start,
    the `IComputed` instance that's going to store its
    outcome gets temporarily exposed via `Computed.GetCurrent()`
    for the duration of the computation.
-   
+
    Why? Well, it wasn't mentioned, but once an `IComputed`
    gets "stripped" on step #2, #3, and even later on #4,
    it's also registered as a dependency of any
    other `IComputed` that's currently exposed via
    `Computed.GetCurrent()`. **And this is how `IComputed`
    instances "learn" all the components they're "built" from.**
-   
+
    When the computation completes, the newly created
    `IComputed` gets registered in `ComputedRegistry`
    and "stripped" the same way to return its `Value`
@@ -461,7 +461,7 @@ beginning?
 
 ```cs
 // Computed.Capture pulls the `IComputed` storing the
-// result of a call to the first [ComputeMethod] made from 
+// result of a call to the first [ComputeMethod] made from
 // the delegate it gets, i.e. the result of
 // cartService.GetTotal(cartId, ct) in this case
 var computed = await Computed.Capture(
@@ -469,11 +469,11 @@ var computed = await Computed.Capture(
 while (true) {
     WriteLine($"  {cartId}: total = {computed.Value}");
     // IComputed.WhenInvalidated awaits for the invalidation.
-    // It returns immediately if 
+    // It returns immediately if
     // (computed.State == ConsistencyState.Invalidated)
     await computed.WhenInvalidated(cancellationToken);
     // Finally, this is how you update IComputed instances.
-    // As you might notice, they're almost immutable, 
+    // As you might notice, they're almost immutable,
     // so "update" always means creation of a new instance.
     computed = await computed.Update(false, cancellationToken);
 }
@@ -547,7 +547,7 @@ if (Invalidation.IsActive) {
 }
 ```
 
-So now you have *almost* the full picture:
+So now you have _almost_ the full picture:
 
 - Low-level methods (the ones that don't have any
   dependencies) are invalidated explicitly &ndash;
@@ -560,7 +560,7 @@ So now you have *almost* the full picture:
   any of invalidation blocks.
 
 What's missing is how it happens that when you call `Edit`,
-***both** `if (Invalidation.IsActive) { ... }` and the code
+**\*both** `if (Invalidation.IsActive) { ... }` and the code
 outside of this block runs, assuming this block contains `return`
 statement?
 
@@ -673,13 +673,13 @@ services.AddDbContextFactory<AppDbContext>(db => {
 });
 
 // AddDbContextServices is just a convenience builder allowing
-// to omit DbContext type in misc. normal and extension methods 
+// to omit DbContext type in misc. normal and extension methods
 // it has
 services.AddDbContextServices<AppDbContext>(db => {
-    // Uncomment if you'll be using AddRedisOperationLogChangeTracking 
+    // Uncomment if you'll be using AddRedisOperationLogChangeTracking
     // db.AddRedisDb("localhost", "Fusion.Tutorial.Part10");
 
-    // This call enabled Operations Framework (OF) for AppDbContext. 
+    // This call enabled Operations Framework (OF) for AppDbContext.
     db.AddOperations(operations => {
         operations.ConfigureOperationLogReader(_ => new() {
             // We use FileBasedDbOperationLogChangeTracking, so unconditional wake up period
@@ -697,10 +697,10 @@ services.AddDbContextServices<AppDbContext>(db => {
         // multi-host invalidation on a single host by running
         // multiple processes there.
         operations.AddFileBasedOperationLogChangeTracking();
-        
+
         // Or, if you use PostgreSQL, use this instead of above line
         // operations.AddNpgsqlOperationLogChangeTracking();
-        
+
         // Or, if you use Redis, use this instead of above line
         // operations.AddRedisOperationLogChangeTracking();
     });
@@ -727,28 +727,28 @@ reads/writes the DB:
 
 2. One of these methods is `CreateDbContext` - you may see it's typically
    used like this:
-   
+
    ```cs
    await using var dbContext = CreateDbContext();
    // ... code using dbContext
    ```
-   
+
    By default, `CreateDbContext` returns **a read-only `DbContext` with
    change tracking disabled**.
    As you might guess, this method of getting `DbContext` is supposed
    to be used in `[ComputeMethod]`-s, i.e. query-style methods that
    aren't supposed to change anything or rely on change tracking.
-   
+
    "Read-only" means this `DbContext` "throws" on attempt to call
    `SaveChangesAsync`.
 
 3. And another one is `CreateOperationDbContext`, which is used like this:
-   
+
    ```cs
    await using var dbContext = await CreateOperationDbContext(cancellationToken);
    // ... code using dbContext
    ```
-   
+
    Contrary to the previous method, this method is used to create
    `DbContext` inside command handlers, and once it's called,
    it also starts the transaction associated with the current command
@@ -757,7 +757,7 @@ reads/writes the DB:
    (i.e. w/o an exception), moreover, the operation log entry
    describing the current command will be persisted as part of this
    transaction.
-   
+
    As you might guess, the `DbContext` provided by this method is
    **read-write and with enabled change tracking**. Moreover,
    if you call it multiple times, you'll get different `DbContext`-s,
@@ -935,10 +935,10 @@ let's see what do we need to publish Compute Service first.
 We'll start from `Host` container configuration:
 
 ```cs
-services.AddFusion(fusion => {
-    fusion.AddServer<IProductService, DbProductService>(); // Notice we use "AddServer" here instead of "AddService" 
-    fusion.AddServer<ICartService, DbCartService>(); // Same here
-    fusion.AddWebServer(); // This is the only new line. 
+services.AddFusion(RpcServiceMode.Server, fusion => {
+    fusion.AddWebServer();
+    fusion.AddService<IProductService, DbProductServiceUsingEntityResolver>();
+    fusion.AddService<ICartService, DbCartServiceUsingEntityResolver>();
 });
 ```
 
@@ -960,12 +960,13 @@ the following configuration:
 ```cs
 services.AddFusion(fusion => {
     fusion.Rpc.AddWebSocketClient(baseUri);
-    fusion.AddClient<IProductService>(); // Notice we use "AddClient" here instead of "AddService" 
-    fusion.AddClient<ICartService>(); // Same here
+    fusion.AddClient<IProductService>();
+    fusion.AddClient<ICartService>();
 });
 ```
 
 Where can you use such clients? Actually, everywhere!
+
 - In Blazor WebAssembly - obvously
 - In console or MAUI apps
 - Finally, even on the server-side - nothing prevents you to e.g.
@@ -1002,7 +1003,7 @@ public class AppV5 : AppV4
         ExtraHost = BuildHost(extraHostUri);
         ClientServices = BuildClientServices(extraHostUri);
     }
-    
+
     // + InitializeAsync and DisposeAsync, but there are
     // absolutely straightforward adjustments
 }
@@ -1026,15 +1027,15 @@ And they really do!
 And congrats - this is the end of this part, and now you know almost everything!
 The parts we didn't touch at all are:
 
-* [Part 3: State: IState&lt;T&gt; and Its Flavors](./Part03.md).
+- [Part 3: State: IState&lt;T&gt; and Its Flavors](./Part03.md).
   The key abstraction it describes is `ComputedState<T>` -
   the type that implements "wait for change, make a delay, recompute"
   loop similar to the one we manually coded here, but in more robust
   and convenient way.
-* [Part 6: Real-time UI in Blazor Apps](./Part06.md) -
+- [Part 6: Real-time UI in Blazor Apps](./Part06.md) -
   you'll learn how `ComputedState<T>` is used by
   `LiveComponent<T>` to power real-time updates in Blazor.
-* [Part 5: Fusion on Server-Side Only](./Part05.md) -
+- [Part 5: Fusion on Server-Side Only](./Part05.md) -
   read it to fully understand how Fusion actually caches `IComputed`
   instances, and what are the levers you can use to tweak its
   caching behavior.
