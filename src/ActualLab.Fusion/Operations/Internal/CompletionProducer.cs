@@ -27,7 +27,7 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
             var isLocal = commandContext is not null;
             var operationType = isLocal ? "Local" : "External";
             try {
-                await Commander.Call(CompleteAsync.New(operation), true).ConfigureAwait(false);
+                await Commander.Call(Completion.New(operation), true).ConfigureAwait(false);
                 if (command is not INotLogged || Settings.IgnoreNotLogged)
                     Log.IfEnabled(Settings.LogLevel)?.Log(Settings.LogLevel,
                         "{OperationType} operation completion succeeded. Host: {HostId}, Command: {Command}",

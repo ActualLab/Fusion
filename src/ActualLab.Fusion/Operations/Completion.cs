@@ -14,7 +14,7 @@ public interface ICompletion<TCommand> : ICompletion
 public record Completion<TCommand>(Operation Operation) : ICompletion<TCommand>
     where TCommand : class, ICommand;
 
-public static class CompleteAsync
+public static class Completion
 {
     // This is just to ensure the constructor accepting ICommand is "used",
     // because it is really used inside New, but via reflection.
