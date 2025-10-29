@@ -1,32 +1,34 @@
-import { defineConfig } from 'vitepress'
+import { defineConfig } from "vitepress";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  lang: 'en-US',
+  lang: "en-US",
   title: "ActualLab.Fusion Documentation",
-  description: "Fusion is a reactive framework for building scalable, real-time applications. This site hosts Fusion documentation.",
+  description:
+    "Fusion is a reactive framework for building scalable, real-time applications. This site hosts Fusion documentation.",
+  head: [["link", { rel: "icon", href: "/img/fusion-docs-icon.png" }]],
   srcExclude: [
-    'mdsource',
-    'node-modules',
-    'outdated', 
-    'performance-test-results', 
-    'tables', 
-    'to-be-used', 
-    'tutorial', 
+    "mdsource",
+    "node-modules",
+    "outdated",
+    "performance-test-results",
+    "tables",
+    "to-be-used",
+    "tutorial",
   ],
   ignoreDeadLinks: false,
   themeConfig: {
     nav: [
-      { text: 'Home', link: '/' },
-      { text: 'Documentation', link: '/README' }
+      { text: "Home", link: "/" },
+      { text: "Documentation", link: "/README" },
     ],
     sidebar: [
       {
-        text: 'Documentation',
+        text: "Documentation",
         items: [
-          { text: 'QuickStart', link: '/QuickStart' },
-          { text: 'Part 0: NuGet packages', link: '/Part00' },
-          { text: 'Part 1: Core Concepts', link: '/Part01' },
+          { text: "QuickStart", link: "/QuickStart" },
+          { text: "Part 0: NuGet packages", link: "/Part00" },
+          { text: "Part 1: Core Concepts", link: "/Part01" },
           /*
           { text: 'Part 3: State: IState<T> and Its Flavors', link: '/Part03' },
           { text: 'Part 4: Compute Service Clients', link: '/Part04' },
@@ -40,14 +42,14 @@ export default defineConfig({
           { text: 'Part 12: ActualLab.Rpc in Fusion 6.1+', link: '/Part12' },
           { text: 'Part 13: Migration to Fusion 6.1+', link: '/Part13' },
           */
-        ]
-      }
+        ],
+      },
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/ActualLab/Fusion' }
+      { icon: "github", link: "https://github.com/ActualLab/Fusion" },
     ],
 
-    outline: [2, 3]
-  }
-})
+    outline: [2, 3],
+  },
+});
