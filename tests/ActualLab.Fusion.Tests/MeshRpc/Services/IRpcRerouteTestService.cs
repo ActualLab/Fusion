@@ -5,6 +5,8 @@ public interface IRpcRerouteTestService : IComputeService
     [ComputeMethod]
     public Task<ValueWithHostId> GetValue(int shardKey, string key, CancellationToken cancellationToken = default);
 
+    public Task<ValueWithHostId> GetValueDirect(int shardKey, string key, CancellationToken cancellationToken = default);
+
     [CommandHandler]
     public Task<ValueWithHostId> SetValue(RpcRerouteTestService_SetValue command, CancellationToken cancellationToken = default);
 }

@@ -13,6 +13,12 @@ public class RpcRerouteTestService(MeshHost ownHost) : IRpcRerouteTestService
         return Task.FromResult(new ValueWithHostId(value, ownHost.Id));
     }
 
+    public virtual Task<ValueWithHostId> GetValueDirect(int shardKey, string key, CancellationToken cancellationToken = default)
+    {
+        var value = _storage.GetValueOrDefault(key, "");
+        return Task.FromResult(new ValueWithHostId(value, ownHost.Id));
+    }
+
     public virtual Task<ValueWithHostId> SetValue(RpcRerouteTestService_SetValue command, CancellationToken cancellationToken = default)
     {
         var value = command.Value;
