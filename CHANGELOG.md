@@ -8,9 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
-## 10.6.18+af2a52320f
+## 10.6.38+254f4ef775
 
-Release date: 2025-10-27
+Release date: 2025-10-28
+
+### Changed
+- **Breaking**: Replaced `RpcCallRouteOverride` with `RpcCallOptions`, 
+  expect more changes in this area
+- Removed `RpcNonRoutingInterceptor` and related infrastructure;
+  `RpcRoutingInterceptor` does a bit more and equally fast
+- Updated CODING_STYLE.md
+
+### Fixed
+- `RpcCallTracker.TryReconnect` - `IncreasingSeqCompressor.Serialize` was getting 
+  a potentially misordered sequence making fast (stateful) reconnect impossible,
+  though stateless reconnect still worked in these cases  
+- Renamed `CompleteAsync` class to `Completion` to correct a previous wrong rename
+- `RpcRoutingInterceptor` now properly reroutes local calls as well
+
+### Tests
+- Added new MeshRpc tests; will be extending them in the near future
+- Refactored `FusionTestBase` descendants to move DI of test-specific services to specific tests
+- Reorganized DB model classes under `DbModel` namespace in tests
+
+
+## 10.6.18+af2a52320f
 
 ### Fixed
 - ActualLab.Generators now add #if-s suppressing [UnconditionalSuppressMessage] and [ModuleInitializer] for .NET Framework 4.7.2 and .NET Standard 2.0.
