@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Interception;
+using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Interception;
 
@@ -87,11 +88,12 @@ public sealed class ComputeMethodDef : MethodDef
             .CreateInstance(hub, this);
     }
 
-    public RemoteComputeMethodFunction CreateRemoteComputeMethodFunction(FusionHub hub)
+    public RemoteComputeMethodFunction CreateRemoteComputeMethodFunction(
+        FusionHub hub, RpcMethodDef rpcMethodDef, object? localTarget)
     {
         var functionType = typeof(RemoteComputeMethodFunction<>);
         return (RemoteComputeMethodFunction)functionType
             .MakeGenericType(UnwrappedReturnType)
-            .CreateInstance(hub, this);
+            .CreateInstance(hub, this, rpcMethodDef, localTarget);
     }
 }

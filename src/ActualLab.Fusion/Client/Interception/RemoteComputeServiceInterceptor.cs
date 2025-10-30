@@ -47,7 +47,7 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
             return function.ComputeServiceInterceptorHandler;
         }
         else {
-            var function = computeMethodDef.CreateRemoteComputeMethodFunction(Hub);
+            var function = computeMethodDef.CreateRemoteComputeMethodFunction(Hub, rpcMethodDef, LocalTarget);
             return function.RemoteComputeServiceInterceptorHandler;
         }
     }
