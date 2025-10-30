@@ -5,19 +5,17 @@ namespace ActualLab.Fusion.Tests.MeshRpc;
 
 public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
-    [Theory]
-    [InlineData(RpcServiceMode.Distributed)]
-    [InlineData(RpcServiceMode.DistributedPair)]
-    public async Task BasicRerouteTest(RpcServiceMode serviceMode)
+    [Fact]
+    public async Task BasicRerouteTest()
     {
         await using var testHosts = NewTestHosts();
 
         // Create 2 hosts and 1 client
-        var host0 = testHosts.NewHost(serviceMode);
-        var host1 = testHosts.NewHost(serviceMode);
+        var host0 = testHosts.NewHost();
+        var host1 = testHosts.NewHost();
         var client = testHosts.ClientHost;
         await Task.WhenAll(host0.WhenStarted, host1.WhenStarted, client.WhenStarted);
-        Out.WriteLine($"Created hosts: {host0.Id}, {host1.Id} (mode: {serviceMode})");
+        Out.WriteLine($"Created hosts: {host0.Id}, {host1.Id}");
         Out.WriteLine($"Created client: {client.Id}");
 
         // Get tested services from the client
@@ -79,19 +77,17 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
         Out.WriteLine($"Direct call after second swap: {directResult.HostId} = {directResult.Value}");
     }
 
-    [Theory]
-    [InlineData(RpcServiceMode.Distributed)]
-    [InlineData(RpcServiceMode.DistributedPair)]
-    public async Task RerouteWithValueChangeTest(RpcServiceMode serviceMode)
+    [Fact]
+    public async Task RerouteWithValueChangeTest()
     {
         await using var testHosts = NewTestHosts();
 
         // Create 2 hosts and 1 client
-        var host0 = testHosts.NewHost(serviceMode);
-        var host1 = testHosts.NewHost(serviceMode);
+        var host0 = testHosts.NewHost();
+        var host1 = testHosts.NewHost();
         var client = testHosts.ClientHost;
         await Task.WhenAll(host0.WhenStarted, host1.WhenStarted, client.WhenStarted);
-        Out.WriteLine($"Created hosts: {host0.Id}, {host1.Id} (mode: {serviceMode})");
+        Out.WriteLine($"Created hosts: {host0.Id}, {host1.Id}");
 
         var commander = client.Commander();
         var service = client.GetRequiredService<IRpcRerouteTestService>();

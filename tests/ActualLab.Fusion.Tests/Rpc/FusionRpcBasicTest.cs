@@ -9,19 +9,16 @@ namespace ActualLab.Fusion.Tests.Rpc;
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
 {
-    protected RpcServiceMode ServiceMode { get; set; } = RpcServiceMode.DistributedPair;
-
     protected override void ConfigureServices(ServiceCollection services)
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddService<ICounterService, CounterService>(ServiceMode);
+        fusion.AddService<ICounterService, CounterService>(RpcServiceMode.Distributed);
     }
 
     [Fact]
     public async Task DistributedTest()
     {
-        ServiceMode = RpcServiceMode.Distributed;
         var services = CreateServices();
         var testClient = services.GetRequiredService<RpcTestClient>();
         var clientPeer = testClient.Connections.First().Value.ClientPeer;
@@ -39,29 +36,6 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
             await Computed.Capture(() => counters.Get("a"));
         });
-    }
-
-    [Fact]
-    public async Task DistributedPairTest()
-    {
-        var services = CreateServices();
-        var counters = services.GetRequiredService<ICounterService>();
-
-        var c = Computed.GetExisting(() => counters.Get("a"));
-        c.Should().BeNull();
-
-        c = await Computed.Capture(() => counters.Get("a"));
-        c.Value.Should().Be(0);
-        var c1 = Computed.GetExisting(() => counters.Get("a"));
-        c1.Should().BeSameAs(c);
-
-        await counters.Increment("a");
-        await TestExt.When(
-            () => c.IsConsistent().Should().BeFalse(),
-            TimeSpan.FromSeconds(1));
-
-        c1 = Computed.GetExisting(() => counters.Get("a"));
-        c1?.IsConsistent().Should().BeFalse();
     }
 
     [Fact]

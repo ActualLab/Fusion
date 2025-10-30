@@ -50,6 +50,14 @@ public static class Errors
             : new ArgumentOutOfRangeException(argumentName, message);
     }
 
+    public static Exception MustDiffer(Type type1, Type type2, string argumentName2)
+    {
+        var message = $"'{type2}' must differ from '{type1}'.";
+        return argumentName2.IsNullOrEmpty()
+            ? new InvalidOperationException(message)
+            : new ArgumentOutOfRangeException(argumentName2, message);
+    }
+
     public static Exception ImplementationNotFound(Type type)
         => new InvalidOperationException($"No implementation is found for type '{type}'.");
 

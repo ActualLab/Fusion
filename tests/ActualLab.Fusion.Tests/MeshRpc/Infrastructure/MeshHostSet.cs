@@ -33,7 +33,7 @@ public sealed class MeshHostSet : IAsyncDisposable
     }
 
     public MeshHost NewHost(
-        RpcServiceMode serviceMode,
+        RpcServiceMode serviceMode = RpcServiceMode.Distributed,
         bool allowLocalRpcConnectionKind = true,
         bool addToHostMap = true)
     {

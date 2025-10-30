@@ -168,7 +168,7 @@ public abstract class RpcInboundCall : RpcCall
     protected virtual Task InvokeTarget()
     {
         var methodDef = MethodDef;
-        var server = methodDef.Service.Server;
+        var server = methodDef.Service.Server!;
         return methodDef.TargetAsyncInvoker.Invoke(server, Arguments!);
     }
 

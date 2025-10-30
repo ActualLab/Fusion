@@ -12,6 +12,8 @@ public sealed class RpcServiceDef
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private Dictionary<MethodInfo, RpcMethodDef> _methods = null!;
     private Dictionary<string, RpcMethodDef> _methodByName = null!;
+    private readonly Lazy<object?> _serverLazy;
+    private readonly Lazy<object?> _clientLazy;
     private string? _toStringCached;
 
     internal Dictionary<string, RpcMethodDef> MethodByName => _methodByName;
@@ -19,13 +21,15 @@ public sealed class RpcServiceDef
     public RpcHub Hub { get; }
     public Type Type { get; }
     public ServiceResolver? ServerResolver { get; init; }
+    public Type? ServerType { get; }
+    public Type? ClientType { get; }
     public string Name { get; init; }
     public RpcServiceMode Mode { get; init; }
     public bool IsSystem { get; init; }
     public bool IsBackend { get; init; }
     public bool HasServer => ServerResolver is not null;
-    [field: AllowNull, MaybeNull]
-    public object Server => field ??= ServerResolver.Resolve(Hub.Services);
+    public object? Server => _serverLazy.Value;
+    public object? Client => _clientLazy.Value;
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
     public string Scope { get; init; }
     public LegacyNames LegacyNames { get; init; }
@@ -45,6 +49,8 @@ public sealed class RpcServiceDef
         Mode = service.Mode;
         Type = service.Type;
         ServerResolver = service.ServerResolver;
+        ServerType = ServerResolver?.Type;
+        ClientType = service.ClientType;
         IsSystem = typeof(IRpcSystemService).IsAssignableFrom(Type);
         IsBackend = hub.BackendServiceDetector.Invoke(service.Type);
         Scope = hub.ServiceScopeResolver.Invoke(this);
@@ -52,6 +58,8 @@ public sealed class RpcServiceDef
             .GetCustomAttributes<LegacyNameAttribute>(false)
             .Select(x => LegacyName.New(x)));
 
+        _serverLazy = new Lazy<object?>(() => ServerResolver?.Resolve(Hub.Services));
+        _clientLazy = new Lazy<object?>(() => ClientType is null ? null : Hub.Services.GetRequiredService(ClientType));
     }
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]

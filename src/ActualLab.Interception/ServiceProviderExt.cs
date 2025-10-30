@@ -7,22 +7,24 @@ public static class ServiceProviderExt
 {
     // ActivateProxy
 
-    public static TBaseType ActivateProxy<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TBaseType>(
+    public static IProxy ActivateProxy(
         this IServiceProvider services,
-        Interceptor interceptor, TBaseType? proxyTarget = null, bool initialize = true)
-        where TBaseType : class, IRequiresAsyncProxy
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type baseType,
+        Interceptor interceptor,
+        bool initialize = true)
     {
-        var proxyType = Proxies.GetProxyType<TBaseType>();
-        var proxy = (TBaseType)services.CreateInstance(proxyType);
-        interceptor.BindTo(proxy, proxyTarget, initialize);
+        var proxyType = Proxies.GetProxyType(baseType);
+        var proxy = (IProxy)services.CreateInstance(proxyType);
+        interceptor.BindTo(proxy, proxyTarget: null, initialize);
         return proxy;
     }
 
     public static IProxy ActivateProxy(
         this IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type baseType,
-        Interceptor interceptor, object? proxyTarget = null, bool initialize = true)
+        Interceptor interceptor,
+        object? proxyTarget,
+        bool initialize = true)
     {
         var proxyType = Proxies.GetProxyType(baseType);
         var proxy = (IProxy)services.CreateInstance(proxyType);

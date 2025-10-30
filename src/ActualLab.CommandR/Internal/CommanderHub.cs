@@ -33,6 +33,6 @@ public sealed class CommanderHub(ICommander commander, IServiceProvider services
     {
         var interceptor = Interceptor;
         interceptor.ValidateType(implementationType);
-        return services.ActivateProxy(implementationType, interceptor, null, initialize);
+        return services.ActivateProxy(implementationType, interceptor, initialize);
     }
 }

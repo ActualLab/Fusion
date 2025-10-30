@@ -44,9 +44,7 @@ public sealed class Host : WorkerBase
     {
         ServiceMode = portSlot < 0
             ? RpcServiceMode.Client
-            : UseDistributedServiceSampler.Next()
-                ? RpcServiceMode.Distributed
-                : RpcServiceMode.DistributedPair;
+            : RpcServiceMode.Distributed;
         UseRemoteComputedCache = ServiceMode == RpcServiceMode.Client
             || UseRemoteComputedCacheSampler.Next();
 

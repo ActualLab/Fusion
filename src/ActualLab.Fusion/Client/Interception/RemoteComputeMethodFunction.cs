@@ -16,9 +16,8 @@ namespace ActualLab.Fusion.Client.Interception;
 public sealed class RemoteComputeMethodFunction<T>(
     FusionHub hub,
     ComputeMethodDef methodDef,
-    RpcMethodDef rpcMethodDef,
-    object? localTarget
-    ) : RemoteComputeMethodFunction(hub, methodDef, rpcMethodDef, localTarget)
+    RpcMethodDef rpcMethodDef
+    ) : RemoteComputeMethodFunction(hub, methodDef, rpcMethodDef)
 {
     protected override Computed NewComputed(ComputeMethodInput input)
         => throw ActualLab.Internal.Errors.InternalError($"This method should never be called in {GetType().GetName()}.");
@@ -28,57 +27,12 @@ public sealed class RemoteComputeMethodFunction<T>(
 
     protected override Computed NewRemoteComputed(ComputedOptions options, ComputeMethodInput input, Result output, RpcCacheEntry? cacheEntry, RpcOutboundComputeCall? call = null)
         => new RemoteComputed<T>(options, input, output, cacheEntry, call);
-
-#if NET5_0_OR_GREATER
-    protected override async Task<T> ProduceValuePromise(
-        ComputedInput input,
-        ComputeContext context,
-        ComputedSynchronizer synchronizer,
-        CancellationToken cancellationToken)
-#else
-    protected override Task ProduceValuePromise(
-        ComputedInput input,
-        ComputeContext context,
-        ComputedSynchronizer synchronizer,
-        CancellationToken cancellationToken)
-        => ProduceValuePromiseImpl(input, context, synchronizer, cancellationToken);
-
-    private async Task<T> ProduceValuePromiseImpl(
-        ComputedInput input,
-        ComputeContext context,
-        ComputedSynchronizer synchronizer,
-        CancellationToken cancellationToken)
-#endif
-    {
-        // If we're here, (context.CallOptions & CallOptions.GetExisting) == 0,
-        // which means that only CallOptions.Capture can be used.
-
-        var computed = input.GetExistingComputed();
-        if (computed is null || !computed.IsConsistent())
-            computed = await ProduceComputed(input, ComputeContext.None, cancellationToken).ConfigureAwait(false);
-
-        for (var updateCount = 0;; updateCount++) {
-            var whenSynchronized = synchronizer.WhenSynchronized(computed, cancellationToken);
-            if (!whenSynchronized.IsCompleted)
-                await whenSynchronized.ConfigureAwait(false);
-            if (computed.IsConsistent() || updateCount >= synchronizer.MaxUpdateCountOnSynchronize)
-                break;
-
-            computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
-        }
-
-        // Note that until this moment Use(...) wasn't called,
-        // coz we were using ComputeContext.None in ProduceComputed call.
-        ComputedImpl.UseNew(computed, context);
-        return ((Computed<T>)computed).Value;
-    }
 }
 
 public abstract class RemoteComputeMethodFunction(
     FusionHub hub,
     ComputeMethodDef methodDef,
-    RpcMethodDef rpcMethodDef,
-    object? localTarget
+    RpcMethodDef rpcMethodDef
     ) : ComputeMethodFunction(hub, methodDef)
 {
     private string? _toString;
@@ -91,7 +45,6 @@ public abstract class RemoteComputeMethodFunction(
     public readonly RpcMethodDef RpcMethodDef = rpcMethodDef;
     public readonly RpcSafeCallRouter RpcSafeCallRouter = hub.RpcHub.InternalServices.SafeCallRouter;
     public readonly IRemoteComputedCache? RemoteComputedCache = hub.RemoteComputedCache;
-    public readonly object? LocalTarget = localTarget;
 
     public override string ToString()
         => _toString ??= "*" + base.ToString();
@@ -128,27 +81,12 @@ public abstract class RemoteComputeMethodFunction(
 
                 if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                     // Local computation / no RPC call scenario
-                    var computed = NewReplicaComputed(typedInput);
-                    using var _ = Computed.BeginCompute(computed);
-                    if (LocalTarget is not null) {
-                        // LocalTarget is not null -> proxy is a DistributedPair service, and the Service.Method is invoked
-                        try {
-                            // We're in the new async flow, so no RpcOutboundContext to deactivate
-                            await MethodDef.TargetAsyncInvoker
-                                .Invoke(LocalTarget!, typedInput.Invocation.Arguments)
-                                .ConfigureAwait(false);
-                            ((IReplicaComputed)computed).CaptureOriginal();
-                            return computed;
-                        }
-                        catch (Exception e) when (ComputedImpl.FinalizeAndTryReturnComputed(computed, e, cancellationToken)) {
-                            return computed;
-                        }
-                    }
-
-                    // LocalTarget is null -> proxy is either:
+                    // Proxy is either:
                     // - a pure client (interface proxy), so InvokeIntercepted will fail for it
                     //   (there is no base.Method)
                     // - or a Distributed mode service, so its base.Method should be invoked
+                    var computed = NewReplicaComputed(typedInput);
+                    using var _ = Computed.BeginCompute(computed);
                     try {
                         ValueTask<object?> invokeInterceptedUntypedTask;
                         // Force distributed service to route to local
@@ -539,10 +477,4 @@ public abstract class RemoteComputeMethodFunction(
         Result output,
         RpcCacheEntry? cacheEntry,
         RpcOutboundComputeCall? call = null);
-
-    protected abstract Task ProduceValuePromise(
-        ComputedInput input,
-        ComputeContext context,
-        ComputedSynchronizer synchronizer,
-        CancellationToken cancellationToken);
 }

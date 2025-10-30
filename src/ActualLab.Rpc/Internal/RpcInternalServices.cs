@@ -46,7 +46,7 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
         bool initialize = true)
     {
         var interceptor = NewRoutingInterceptor(serviceType, localTarget);
-        return Services.ActivateProxy(proxyBaseType, interceptor, proxyTarget: null, initialize);
+        return Services.ActivateProxy(proxyBaseType, interceptor, initialize);
     }
 
     public RpcRoutingInterceptor NewRoutingInterceptor(
@@ -65,7 +65,7 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
         bool initialize = true)
     {
         var interceptor = NewSwitchInterceptor(serviceType, localTarget, remoteTarget);
-        return Services.ActivateProxy(proxyBaseType, interceptor, null, initialize);
+        return Services.ActivateProxy(proxyBaseType, interceptor, initialize);
     }
 
     public RpcSwitchInterceptor NewSwitchInterceptor(Type serviceType, object? localTarget, object? remoteTarget)

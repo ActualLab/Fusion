@@ -1,5 +1,7 @@
 namespace ActualLab.Rpc;
 
+#pragma warning disable RCS1130
+
 public enum RpcServiceMode
 {
     /// <summary>
@@ -9,39 +11,37 @@ public enum RpcServiceMode
     Default = 0,
 
     /// <summary>
-    /// The service is a singleton.
-    /// <c>IService</c> is unexposed via RPC (i.e., it cannot be called by remote peers).
+    /// The service isn't going to be added to the <see cref="RpcServiceRegistry"/>.
+    /// This mode can be used only during the registration.
+    /// You can't see a service with this mode in the <see cref="RpcServiceRegistry"/>,
+    /// i.e. <see cref="RpcServiceDef.Mode"/> can't be <see cref="RpcServiceMode.Local"/>.
     /// </summary>
     Local = 0x1,
 
     /// <summary>
-    /// <c>IService</c> is an alias of <c>Service</c>.
-    /// <c>IService</c> is exposed via RPC (i.e., it can be called by remote peers).
+    /// The service is exposed via RPC, so it can be called by remote peers.
     /// </summary>
     Server = 0x2,
 
     /// <summary>
-    /// <c>IService</c> is an RPC client.
-    /// <c>IService</c> is unexposed via RPC (i.e., it cannot be called by remote peers).
+    /// The service isn't exposed via RPC but is known to be an RPC client.
     /// </summary>
     Client = 0x4,
 
     /// <summary>
-    /// <c>IService</c> is a routing proxy extending <c>Service</c> that routes to either base method call or RPC client.
-    /// <c>IService</c> is exposed via RPC (i.e., it can be called by remote peers).
+    /// <c>Service</c> is a singleton routing proxy extending the implementation;
+    /// it routes calls to either the implementation (base method) or to the RPC client.
+    /// It is exposed via RPC as <c>IService</c>, so it can be called both locally or remotely,
+    /// and in all these cases the calls are going to be properly (re)routed.
     /// </summary>
     Distributed = Server | Client | 0x10,
-    /// <summary>
-    /// <c>IService</c> is a routing proxy that routes to either <c>Service</c> or RPC client.
-    /// <c>IService</c> is exposed via RPC (i.e., it can be called by remote peers).
-    /// </summary>
-    DistributedPair = Distributed | 0x20,
 
     /// <summary>
-    /// <c>IService</c> is an RPC client.
-    /// <c>Service</c> is exposed via RPC as <c>IService</c> (i.e., it cannot be called by remote peers).
+    /// The service is exposed via RPC, so it can be called by remote peers,
+    /// and there is also an RPC client for this service.
+    /// You shouldn't use this mode (maybe except in tests).
     /// </summary>
-    ClientAndServer = Server | Client | 0x40,
+    ServerAndClient = Server | Client,
 }
 
 public static class RpcServiceModeExt
@@ -56,8 +56,4 @@ public static class RpcServiceModeExt
     public static bool IsAnyServer(this RpcServiceMode mode)
         // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
         => (mode & RpcServiceMode.Server) != 0;
-
-    public static bool IsAnyDistributed(this RpcServiceMode mode)
-        // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-        => (mode & RpcServiceMode.Distributed) != 0;
 }

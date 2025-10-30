@@ -28,8 +28,16 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         if (isClient)
             throw new InvalidOperationException("Client shouldn't be used in this test.");
 
-        rpc.AddClientAndServer<ITestRpcService, TestRpcService>();
-        rpc.AddClientAndServer<ITestRpcBackend, TestRpcBackend>();
+        if (ConnectionKind == RpcPeerConnectionKind.Local) {
+            rpc.AddDistributedService<ITestRpcService, TestRpcService>();
+            rpc.AddDistributedService<ITestRpcBackend, TestRpcBackend>();
+        }
+        else {
+            rpc.AddClient<ITestRpcService, ITestRpcServiceClient>();
+            rpc.AddServer<ITestRpcService, TestRpcService>();
+            rpc.AddClient<ITestRpcBackend, ITestRpcBackendClient>();
+            rpc.AddServer<ITestRpcBackend, TestRpcBackend>();
+        }
         commander.AddHandlers<TestRpcService>();
         commander.AddHandlers<TestRpcBackend>();
     }
@@ -38,7 +46,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
     public async Task BasicTest()
     {
         await using var _ = await WebHost.Serve();
-        var client = WebHost.Services.GetRequiredService<ITestRpcService>();
+        var client = GetClient();
         (await client.Div(6, 2)).Should().Be(3);
         (await client.Div(6, 2)).Should().Be(3);
         (await client.Div(10, 2)).Should().Be(5);
@@ -51,8 +59,8 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
     public async Task PolymorphTest()
     {
         await using var _ = await WebHost.Serve();
-        var client = WebHost.Services.GetRequiredService<ITestRpcService>();
-        var backendClient = WebHost.Services.GetRequiredService<ITestRpcBackend>();
+        var client = GetClient();
+        var backendClient = GetBackendClient();
 
         var t = new Tuple<int>(1);
         var t1 = await backendClient.Polymorph(t);
@@ -73,7 +81,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
             iterationCount = 100;
 
         await using var _ = await WebHost.Serve();
-        var client = WebHost.Services.GetRequiredService<ITestRpcService>();
+        var client = GetClient();
 
         var threadCount = Math.Max(1, HardwareInfo.ProcessorCount / 4);
         var tasks = new Task[threadCount];
@@ -113,7 +121,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
             itemCount = 100;
 
         await using var _ = await WebHost.Serve();
-        var client = WebHost.Services.GetRequiredService<ITestRpcService>();
+        var client = GetClient();
 
         var threadCount = Math.Max(1, HardwareInfo.ProcessorCount / 2);
         var tasks = new Task[threadCount];
@@ -137,4 +145,16 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
             return elapsed = startedAt.Elapsed;
         }
     }
+
+    // Private methods
+
+    private ITestRpcService GetClient()
+        => ConnectionKind == RpcPeerConnectionKind.Local
+            ? WebHost.Services.GetRequiredService<ITestRpcService>()
+            : WebHost.Services.GetRequiredService<ITestRpcServiceClient>();
+
+    private ITestRpcBackend GetBackendClient()
+        => ConnectionKind == RpcPeerConnectionKind.Local
+            ? WebHost.Services.GetRequiredService<ITestRpcBackend>()
+            : WebHost.Services.GetRequiredService<ITestRpcBackendClient>();
 }

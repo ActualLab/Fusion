@@ -8,7 +8,7 @@ namespace ActualLab.Fusion.Client;
 /// A computed that clones the <see cref="Original"/> and invalidates it on its own invalidation.
 /// If the <see cref="Original"/> isn't captured, it behaves like a regular <see cref="Computed"/>.
 /// Used to expose a copy of the original computed (returned by the implementation)
-/// while executing local calls on a compute service working in <c>DistributedPair</c> mode.
+/// while executing local calls on a compute service working in <c>Distributed</c> mode.
 /// </summary>
 public interface IReplicaComputed : IInvalidationProxyComputed
 {
@@ -21,7 +21,7 @@ public interface IReplicaComputed : IInvalidationProxyComputed
 /// A computed that clones the <see cref="Original"/> and invalidates it on its own invalidation.
 /// If the <see cref="Original"/> isn't captured, it behaves like a regular <see cref="Computed"/>.
 /// Used to expose a copy of the original computed (returned by the implementation)
-/// while executing local calls on a compute service working in <c>DistributedPair</c> mode.
+/// while executing local calls on a compute service working in <c>Distributed</c> mode.
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Result"/>.</typeparam>
 public sealed class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaComputed
