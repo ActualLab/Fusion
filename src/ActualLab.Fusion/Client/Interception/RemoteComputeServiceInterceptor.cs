@@ -18,18 +18,13 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
 
     public readonly RpcServiceDef RpcServiceDef;
     public readonly RpcInterceptor RpcRoutingInterceptor;
-    public readonly object? LocalTarget;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public RemoteComputeServiceInterceptor(Options settings,
-        FusionHub hub,
-        RpcInterceptor rpcRoutingInterceptor,
-        object? localTarget
-        ) : base(settings, hub)
+    public RemoteComputeServiceInterceptor(Options settings, FusionHub hub, RpcInterceptor rpcRoutingInterceptor)
+        : base(settings, hub)
     {
         RpcServiceDef = rpcRoutingInterceptor.ServiceDef;
         RpcRoutingInterceptor = rpcRoutingInterceptor;
-        LocalTarget = localTarget;
     }
 
     public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
@@ -47,7 +42,7 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
             return function.ComputeServiceInterceptorHandler;
         }
         else {
-            var function = computeMethodDef.CreateRemoteComputeMethodFunction(Hub, rpcMethodDef, LocalTarget);
+            var function = computeMethodDef.CreateRemoteComputeMethodFunction(Hub, rpcMethodDef);
             return function.RemoteComputeServiceInterceptorHandler;
         }
     }

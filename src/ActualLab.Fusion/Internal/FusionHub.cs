@@ -34,32 +34,28 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
         => field ??= Services.GetRequiredService<ComputeServiceInterceptor>();
 
     public IProxy NewComputeServiceProxy(
-        IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         bool initialize = true)
     {
         var interceptor = ComputeServiceInterceptor;
         interceptor.ValidateType(serviceType);
-        return services.ActivateProxy(serviceType, interceptor, null, initialize);
+        return Services.ActivateProxy(serviceType, interceptor, initialize);
     }
 
     public IProxy NewRemoteComputeServiceProxy(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,
-        object? localTarget,
         bool initialize = true)
     {
-        var interceptor = NewRemoteComputeServiceInterceptor(serviceType, localTarget);
+        var interceptor = NewRemoteComputeServiceInterceptor(serviceType);
         interceptor.ValidateType(serviceType);
-        return Services.ActivateProxy(proxyBaseType, interceptor, localTarget, initialize);
+        return Services.ActivateProxy(proxyBaseType, interceptor, initialize);
     }
 
-    public RemoteComputeServiceInterceptor NewRemoteComputeServiceInterceptor(Type serviceType, object? localTarget)
+    public RemoteComputeServiceInterceptor NewRemoteComputeServiceInterceptor(Type serviceType)
     {
         var rpcInternalServices = RpcHub.InternalServices;
         var rpcRoutingInterceptor = rpcInternalServices.NewRoutingInterceptor(serviceType, CommanderHub.Interceptor);
-        return new(RemoteComputeServiceInterceptorOptions, this,
-            rpcRoutingInterceptor,
-            localTarget);
+        return new(RemoteComputeServiceInterceptorOptions, this, rpcRoutingInterceptor);
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using ActualLab.Fusion.Trimming;
 using ActualLab.Interception;
-using ActualLab.Interception.Internal;
 using ActualLab.Interception.Trimming;
 using ActualLab.Rpc;
 using ActualLab.Trimming;
@@ -37,15 +36,13 @@ var services = new ServiceCollection()
         rpc.AddWebSocketClient();
     })
     .AddFusion(fusion => {
-        // We could use .AddDistributedServicePair, but Loopback connection = infinite call loop there
-        fusion.AddClient<ITestService>(addCommandHandlers: false);
-        fusion.AddComputeService<TestService>();
-        fusion.Rpc.Service<ITestService>().IsClientAndServer<TestService>();
+        // We could use .AddDistributedService, but Loopback connection = infinite call loop there
+        fusion.AddServerAndClient<ITestService, ITestServiceClient, TestService>();
     })
     .AddSingleton<RpcCallRouter>(_ => (method, args) => RpcPeerRef.Loopback)
     .BuildServiceProvider();
 
-var client = services.GetRequiredService<ITestService>();
+var client = services.GetRequiredService<ITestServiceClient>();
 for (var i = 0; i < 5; i++) {
     Out.WriteLine("Calling GetTime()...");
     var now = await client.GetTime();
@@ -82,6 +79,8 @@ public interface ITestService : IComputeService
     [CommandHandler]
     public Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default);
 }
+
+public interface ITestServiceClient : ITestService;
 
 [MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public sealed partial record SayHelloCommand(

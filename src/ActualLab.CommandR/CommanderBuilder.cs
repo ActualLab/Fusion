@@ -106,9 +106,6 @@ public readonly struct CommanderBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         double? priorityOverride = null)
     {
-        if (!serviceType.IsAssignableFrom(implementationType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
-
         var interfaceMethods = new HashSet<MethodInfo>();
 
         // ICommandHandler<TCommand> interfaces
@@ -187,10 +184,10 @@ public readonly struct CommanderBuilder
         ServiceLifetime lifetime = ServiceLifetime.Singleton,
         double? priorityOverride = null)
     {
-        if (!serviceType.IsAssignableFrom(implementationType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
         if (!typeof(ICommandService).IsAssignableFrom(implementationType))
             throw ActualLab.Internal.Errors.MustImplement<ICommandService>(implementationType, nameof(implementationType));
+        if (!serviceType.IsAssignableFrom(implementationType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
 
         var descriptor = new ServiceDescriptor(serviceType,
             c => c.CommanderHub().NewProxy(c, implementationType),

@@ -9,7 +9,6 @@ public static class MeshSettings
 
 public static class HostFactorySettings
 {
-    public static readonly Sampler UseDistributedServiceSampler = Sampler.RandomShared(0.5);
     public static readonly Sampler UseRemoteComputedCacheSampler = Sampler.RandomShared(0.5);
     public static readonly double MinHostCount = 0;
     public static readonly double MaxHostCount = 8;

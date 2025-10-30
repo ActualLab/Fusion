@@ -49,10 +49,6 @@ public static class Errors
             "(same service instance, same arguments, so the same ComputedInput). " +
             "You must fix RpcCallRouter logic to make sure it never returns " +
             "an RpcPeerRef resolving to the localhost for such calls.");
-    public static Exception UnsupportedTargetRpcPeerRef(RpcMethodDef methodDef, RpcPeerRef peerRef)
-        => new InvalidOperationException(
-            $"Outgoing RPC compute service call to {methodDef} was routed to {peerRef}, " +
-            "which is unsupported for remote compute service.");
 
     // Session-related
 

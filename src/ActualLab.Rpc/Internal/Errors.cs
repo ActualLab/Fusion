@@ -10,10 +10,12 @@ public static class Errors
 
     public static Exception UnspecifiedServiceMode(Type serviceType)
         => new InvalidOperationException($"Service '{serviceType.GetName()}' requires Mode to be specified.");
-    public static Exception UnspecifiedServerResolver(Type serviceType, RpcServiceMode mode)
-        => new InvalidOperationException($"Service '{serviceType.GetName()}' is registered as {mode} and requires ServerResolver to be specified.");
-    public static Exception UnexpectedServerResolver(Type serviceType, RpcServiceMode mode)
-        => new InvalidOperationException($"Service '{serviceType.GetName()}' is registered as {mode} and requires ServerResolver to be null.");
+    public static Exception ServiceModeAndServerResolverMismatch(Type serviceType, RpcServiceMode mode)
+        => new InvalidOperationException(
+            $"Service '{serviceType.GetName()}' is registered as {mode}, and its ServerResolver value doesn't correspond to that mode.");
+    public static Exception ServiceModeAndClientTypeMismatch(Type serviceType, RpcServiceMode mode)
+        => new InvalidOperationException(
+            $"Service '{serviceType.GetName()}' is registered as {mode}, and its ClientType value doesn't correspond to that mode.");
 
     public static Exception ServiceTypeConflict(Type serviceType)
         => new InvalidOperationException($"Service '{serviceType.GetName()}' is already registered.");

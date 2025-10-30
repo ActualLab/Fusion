@@ -84,12 +84,11 @@ public sealed class ComputeMethodDef : MethodDef
             .CreateInstance(hub, this);
     }
 
-    public RemoteComputeMethodFunction CreateRemoteComputeMethodFunction(
-        FusionHub hub, RpcMethodDef rpcMethodDef, object? localTarget)
+    public RemoteComputeMethodFunction CreateRemoteComputeMethodFunction(FusionHub hub, RpcMethodDef rpcMethodDef)
     {
         var functionType = typeof(RemoteComputeMethodFunction<>);
         return (RemoteComputeMethodFunction)functionType
             .MakeGenericType(UnwrappedReturnType)
-            .CreateInstance(hub, this, rpcMethodDef, localTarget);
+            .CreateInstance(hub, this, rpcMethodDef);
     }
 }
