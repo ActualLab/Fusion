@@ -7,7 +7,7 @@ namespace ActualLab.Fusion.Client;
 
 #pragma warning disable VSTHRD104, MA0055
 
-public interface IRemoteComputed : IComputed, IDisposable
+public interface IRemoteComputed : IInvalidationProxyComputed, IDisposable
 {
     public AsyncTaskMethodBuilder<RpcOutboundComputeCall?> CallSource { get; }
     public AsyncTaskMethodBuilder SynchronizedSource { get; }
@@ -24,6 +24,9 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
     public Task<RpcOutboundComputeCall?> WhenCallBound => CallSource.Task;
     public RpcCacheEntry? CacheEntry { get; }
     public Task WhenSynchronized => SynchronizedSource.Task;
+
+    // IInvalidationProxyComputed
+    Computed? IInvalidationProxyComputed.InvalidationTarget => null;
 
     // Called when computed is populated after RPC call
     public RemoteComputed(

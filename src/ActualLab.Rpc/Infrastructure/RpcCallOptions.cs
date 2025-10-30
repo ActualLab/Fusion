@@ -63,7 +63,7 @@ public sealed class RpcCallOptions(RpcPeer? peerOverride = null)
 
             var value = RpcCallOptions.Value;
             if (value is not null && !ReferenceEquals(Value, value))
-                throw Errors.RpcCallRouteOverrideChanged();
+                throw Errors.RpcCallOptionsChanged();
 
             RpcCallOptions.Value = _oldValue;
         }

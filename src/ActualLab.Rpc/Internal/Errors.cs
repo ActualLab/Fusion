@@ -54,7 +54,7 @@ public static class Errors
             $"Most likely the scope was disposed in async continuation / another thread, which should never happen - " +
             $"this scope should be used only in synchronous part of your code that happens " +
             $"right before the async method triggering the outgoing RPC call is invoked.");
-    public static Exception RpcCallRouteOverrideChanged()
+    public static Exception RpcCallOptionsChanged()
         => new InvalidOperationException(
             $"The scope returned from {nameof(RpcCallOptions)}.{nameof(RpcCallOptions.Activate)} " +
             $"detected Peer change on its disposal. " +

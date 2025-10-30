@@ -7,11 +7,11 @@ public abstract class Computed<T> : Computed, IResult<T>
 {
     public static readonly Result DefaultResult = new(default(T));
 
-    public new Result<T> Output => base.Output.ToTypedResult<T>();
-    public new T Value => (T)base.Output.Value!;
+    public new Result<T> Output => UntypedOutput.ToTypedResult<T>();
+    public new T Value => (T)UntypedOutput.Value!;
     public T? ValueOrDefault {
         get {
-            var output = base.Output.GetUntypedValueOrErrorBox();
+            var output = UntypedOutput.GetUntypedValueOrErrorBox();
             return output is ErrorBox ? default : (T)output!;
         }
     }
@@ -46,7 +46,7 @@ public abstract class Computed<T> : Computed, IResult<T>
 
     protected override Task CreateValuePromise()
     {
-        var (value, error) = base.Output;
+        var (value, error) = UntypedOutput;
         return error is null
             ? Task.FromResult((T)value!)
             : Task.FromException<T>(error);

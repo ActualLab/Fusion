@@ -13,6 +13,70 @@ namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD103
 
+public sealed class RemoteComputeMethodFunction<T> : RemoteComputeMethodFunction
+{
+    public RemoteComputeMethodFunction(
+        FusionHub hub, ComputeMethodDef methodDef, RpcMethodDef rpcMethodDef, object? localTarget)
+        : base(hub, methodDef, rpcMethodDef, localTarget)
+    {
+        if (methodDef.ComputedOptions.IsConsolidating)
+            throw new ArgumentOutOfRangeException(nameof(methodDef));
+    }
+
+    protected override Computed NewComputed(ComputeMethodInput input)
+        => throw ActualLab.Internal.Errors.InternalError($"This method should never be called in {GetType().GetName()}.");
+
+    protected override Computed NewReplicaComputed(ComputeMethodInput input)
+        => new ReplicaComputed<T>(ComputedOptions, input);
+
+    protected override Computed NewRemoteComputed(ComputedOptions options, ComputeMethodInput input, Result output, RpcCacheEntry? cacheEntry, RpcOutboundComputeCall? call = null)
+        => new RemoteComputed<T>(options, input, output, cacheEntry, call);
+
+#if NET5_0_OR_GREATER
+    protected override async Task<T> ProduceValuePromise(
+        ComputedInput input,
+        ComputeContext context,
+        ComputedSynchronizer synchronizer,
+        CancellationToken cancellationToken)
+#else
+    protected override Task ProduceValuePromise(
+        ComputedInput input,
+        ComputeContext context,
+        ComputedSynchronizer synchronizer,
+        CancellationToken cancellationToken)
+        => ProduceValuePromiseImpl(input, context, synchronizer, cancellationToken);
+
+    private async Task<T> ProduceValuePromiseImpl(
+        ComputedInput input,
+        ComputeContext context,
+        ComputedSynchronizer synchronizer,
+        CancellationToken cancellationToken)
+#endif
+    {
+        // If we're here, (context.CallOptions & CallOptions.GetExisting) == 0,
+        // which means that only CallOptions.Capture can be used.
+
+        var computed = input.GetExistingComputed();
+        if (computed is null || !computed.IsConsistent())
+            computed = await ProduceComputed(input, ComputeContext.None, cancellationToken).ConfigureAwait(false);
+
+        for (var updateCount = 0;; updateCount++) {
+            var whenSynchronized = synchronizer.WhenSynchronized(computed, cancellationToken);
+            if (!whenSynchronized.IsCompleted)
+                await whenSynchronized.ConfigureAwait(false);
+            if (computed.IsConsistent() || updateCount >= synchronizer.MaxUpdateCountOnSynchronize)
+                break;
+
+            computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
+        }
+
+        // Note that until this moment Use(...) wasn't called,
+        // coz we were using ComputeContext.None in ProduceComputed call.
+        ComputedImpl.UseNew(computed, context);
+        return ((Computed<T>)computed).Value;
+    }
+}
+
 public abstract class RemoteComputeMethodFunction(
     FusionHub hub,
     ComputeMethodDef methodDef,
@@ -22,8 +86,8 @@ public abstract class RemoteComputeMethodFunction(
 {
     private string? _toString;
 
-    protected readonly (LogLevel LogLevel, int MaxDataLength) LogCacheEntryUpdateSettings =
-        hub.RemoteComputeServiceInterceptorOptions.LogCacheEntryUpdateSettings;
+    protected readonly (LogLevel LogLevel, int MaxDataLength) LogCacheEntryUpdateSettings
+        = hub.RemoteComputeServiceInterceptorOptions.LogCacheEntryUpdateSettings;
     protected ILogger CacheLog => Hub.RemoteComputedCacheLog;
 
     public readonly RpcHub RpcHub = hub.RpcHub;
@@ -51,7 +115,7 @@ public abstract class RemoteComputeMethodFunction(
         }
     }
 
-    protected override async ValueTask<Computed> ProduceComputedImpl(
+    protected internal override async ValueTask<Computed> ProduceComputedImpl(
         ComputedInput input, Computed? existing, CancellationToken cancellationToken)
     {
         var typedInput = (ComputeMethodInput)input;
@@ -59,8 +123,8 @@ public abstract class RemoteComputeMethodFunction(
         var startedAt = CpuTimestamp.Now;
         while (true) {
             try {
-                // We don't use RpcCallRouteOverride here, because this method is typically called from
-                // a post-async-lock block, so the original RpcCallRouteOverride.Peer won't be available
+                // We don't use RpcCallOptions here, because this method is typically called from
+                // a post-async-lock block, so the original RpcCallOptions.Peer won't be available
                 // at this point. And that's why there is also no need to reset it.
                 var peer = RpcSafeCallRouter.Invoke(RpcMethodDef, typedInput.Invocation.Arguments);
                 peer.ThrowIfRerouted();
@@ -484,65 +548,4 @@ public abstract class RemoteComputeMethodFunction(
         ComputeContext context,
         ComputedSynchronizer synchronizer,
         CancellationToken cancellationToken);
-}
-
-public sealed class RemoteComputeMethodFunction<T>(
-    FusionHub hub,
-    ComputeMethodDef methodDef,
-    RpcMethodDef rpcMethodDef,
-    object? localTarget
-) : RemoteComputeMethodFunction(hub, methodDef, rpcMethodDef, localTarget)
-{
-    protected override Computed NewComputed(ComputeMethodInput input)
-        => throw ActualLab.Internal.Errors.InternalError($"This method should never be called in {GetType().GetName()}.");
-
-    protected override Computed NewReplicaComputed(ComputeMethodInput input)
-        => new ReplicaComputed<T>(ComputedOptions, input);
-
-    protected override Computed NewRemoteComputed(ComputedOptions options, ComputeMethodInput input, Result output, RpcCacheEntry? cacheEntry, RpcOutboundComputeCall? call = null)
-        => new RemoteComputed<T>(options, input, output, cacheEntry, call);
-
-#if NET5_0_OR_GREATER
-    protected override async Task<T> ProduceValuePromise(
-        ComputedInput input,
-        ComputeContext context,
-        ComputedSynchronizer synchronizer,
-        CancellationToken cancellationToken)
-#else
-    protected override Task ProduceValuePromise(
-        ComputedInput input,
-        ComputeContext context,
-        ComputedSynchronizer synchronizer,
-        CancellationToken cancellationToken)
-        => ProduceValuePromiseImpl(input, context, synchronizer, cancellationToken);
-
-    private async Task<T> ProduceValuePromiseImpl(
-        ComputedInput input,
-        ComputeContext context,
-        ComputedSynchronizer synchronizer,
-        CancellationToken cancellationToken)
-#endif
-    {
-        // If we're here, (context.CallOptions & CallOptions.GetExisting) == 0,
-        // which means that only CallOptions.Capture can be used.
-
-        var computed = input.GetExistingComputed();
-        if (computed is null || !computed.IsConsistent())
-            computed = await ProduceComputed(input, ComputeContext.None, cancellationToken).ConfigureAwait(false);
-
-        for (var updateCount = 0;; updateCount++) {
-            var whenSynchronized = synchronizer.WhenSynchronized(computed, cancellationToken);
-            if (!whenSynchronized.IsCompleted)
-                await whenSynchronized.ConfigureAwait(false);
-            if (computed.IsConsistent() || updateCount >= synchronizer.MaxUpdateCountOnSynchronize)
-                break;
-
-            computed = await computed.UpdateUntyped(cancellationToken).ConfigureAwait(false);
-        }
-
-        // Note that until this moment Use(...) wasn't called,
-        // coz we were using ComputeContext.None in ProduceComputed call.
-        ComputedImpl.UseNew(computed, context);
-        return ((Computed<T>)computed).Value;
-    }
 }

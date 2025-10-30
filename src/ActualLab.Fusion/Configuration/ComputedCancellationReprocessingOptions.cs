@@ -7,6 +7,9 @@ public sealed record ComputedCancellationReprocessingOptions
         MaxTryCount = 3,
         MaxDuration = TimeSpan.FromSeconds(5),
     };
+    public static ComputedCancellationReprocessingOptions None { get; } = new() {
+        MaxTryCount = 1,
+    };
 
     public int MaxTryCount { get; init; } = 10;
     public TimeSpan MaxDuration { get; init; } = TimeSpan.FromSeconds(2);

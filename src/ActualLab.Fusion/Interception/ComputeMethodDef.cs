@@ -9,14 +9,14 @@ public sealed class ComputeMethodDef : MethodDef
 {
     public ComputedOptions ComputedOptions { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = ComputedOptions.Default;
     public readonly bool IsOfHasDisposableStatusType;
-    public readonly ComputeMethodDef? ConsolidationTargetMethod;
-    public readonly ComputeMethodDef? ConsolidationSourceMethod;
+    public readonly ComputeMethodDef? ConsolidationSourceMethodDef;
+    public readonly ComputeMethodDef? ConsolidationTargetMethodDef;
 
     public ComputeMethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
         MethodInfo method,
         ComputeServiceInterceptor interceptor,
-        ComputeMethodDef? consolidationTargetMethod = null
+        ComputeMethodDef? consolidationTargetMethodDef = null
         ) : base(type, method)
     {
         if (!IsAsyncMethod) {
@@ -30,13 +30,39 @@ public sealed class ComputeMethodDef : MethodDef
             return;
         }
         if (computedOptions.IsConsolidating) {
-            if (consolidationTargetMethod is null)
-                ConsolidationSourceMethod = new ComputeMethodDef(type, method, interceptor, this);
-            else
-                ConsolidationTargetMethod = consolidationTargetMethod;
+            if (consolidationTargetMethodDef is null) {
+                // We are the consolidation target, the twin we create is going to be the consolidation source
+                ConsolidationSourceMethodDef = new ComputeMethodDef(type, method, interceptor, this);
+                ConsolidationTargetMethodDef = null;
+                computedOptions = computedOptions with {
+                    // All invalidation delays are disabled for the consolidation target
+                    AutoInvalidationDelay = TimeSpan.MaxValue,
+                    TransientErrorInvalidationDelay = TimeSpan.MaxValue,
+                    InvalidationDelay = TimeSpan.MaxValue,
+                    // Cancellation reprocessing should happen only for the consolidation source
+                    CancellationReprocessing = ComputedCancellationReprocessingOptions.None,
+                    // Remote computed instances don't support consolidation at all, so...
+                    RemoteComputedCacheMode = RemoteComputedCacheMode.NoCache,
+                };
+            }
+            else { // We are the consolidation source
+                ConsolidationSourceMethodDef = null;
+                ConsolidationTargetMethodDef = consolidationTargetMethodDef;
+                computedOptions = computedOptions with {
+                    // Consolidation delay is disabled for the consolidation source
+                    ConsolidationDelay = TimeSpan.MaxValue,
+                    // Min cache duration is applied to the consolidation target -
+                    // it references the consolidation source.
+                    // Moreover, the source is updated more frequently than the target,
+                    // so it's reasonable to make source's updates cheaper.
+                    MinCacheDuration = TimeSpan.Zero,
+                    // Remote computed instances don't support consolidation at all, so...
+                    RemoteComputedCacheMode = RemoteComputedCacheMode.NoCache,
+                };
+            }
         }
-        else if (consolidationTargetMethod is not null)
-            throw new ArgumentOutOfRangeException(nameof(consolidationTargetMethod));
+        else if (consolidationTargetMethodDef is not null)
+            throw new ArgumentOutOfRangeException(nameof(consolidationTargetMethodDef));
 
         IsOfHasDisposableStatusType = typeof(IHasDisposeStatus).IsAssignableFrom(type);
         ComputedOptions = computedOptions;
@@ -46,8 +72,7 @@ public sealed class ComputeMethodDef : MethodDef
         => _toStringCached ??= string.Concat(
             GetType().Name,
             "(",
-            ConsolidationTargetMethod is not null ? "<c-source>" : "",
-            ConsolidationSourceMethod is not null ? "<c-target>" : "",
+            ConsolidationSourceMethodDef is not null ? "<consolidating>" : "",
             FullName,
             ")",
             IsValid ? "" : " - invalid");

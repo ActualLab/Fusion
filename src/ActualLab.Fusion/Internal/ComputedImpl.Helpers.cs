@@ -45,7 +45,9 @@ public static partial class ComputedImpl
             // CallOptions.Invalidate is:
             // - always paired with CallOptions.GetExisting
             // - never paired with CallOptions.Capture
-            if (existing is not IRemoteComputed)
+            if (existing is IInvalidationProxyComputed invalidationProxyComputed)
+                invalidationProxyComputed.InvalidationTarget?.Invalidate();
+            else
                 existing.Invalidate();
             return true;
         }

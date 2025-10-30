@@ -20,6 +20,13 @@ public static partial class ComputedExt
     public static Task<T> Use<T>(this Computed<T> computed, bool allowInconsistent, CancellationToken cancellationToken = default)
         => (Task<T>)computed.UseUntyped(allowInconsistent, cancellationToken);
 
+    // GetInvalidationTarget
+
+    public static Computed? GetInvalidationTarget(this Computed computed)
+        => computed is IInvalidationProxyComputed proxyComputed
+            ? proxyComputed.InvalidationTarget
+            : computed;
+
     // Invalidate
 
     public static void Invalidate(this Computed computed, TimeSpan delay, bool? usePreciseTimer = null)

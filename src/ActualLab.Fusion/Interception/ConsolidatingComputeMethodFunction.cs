@@ -1,45 +1,45 @@
 using ActualLab.Fusion.Internal;
+using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Interception;
 
 public sealed class ConsolidatingComputeMethodFunction<T>(FusionHub hub, ComputeMethodDef methodDef)
-    : ConsolidatingComputeMethodFunction(hub, methodDef)
+    : ConsolidatingComputeMethodFunction(
+        hub, methodDef,
+        methodDef.ConsolidationSourceMethodDef ?? throw new ArgumentOutOfRangeException(nameof(methodDef)),
+        new ComputeMethodFunction<T>(hub, methodDef.ConsolidationSourceMethodDef!))
 {
     protected override Computed NewComputed(ComputeMethodInput input)
-        => new ComputeMethodComputed<T>(ComputedOptions, input);
+        => throw Errors.InternalError($"This method should never be called in {GetType().GetName()}.");
 
-    protected override Computed NewConsolidatingComputed(ComputeMethodInput input, Computed original)
-        => new ConsolidatingComputed<T>(ComputedOptions, input, (Computed<T>)original);
+    protected override Computed NewConsolidatingComputed(ComputeMethodInput input, Computed source)
+        => new ConsolidatingComputed<T>(ComputedOptions, input, (Computed<T>)source);
 }
 
-public abstract class ConsolidatingComputeMethodFunction : ComputeMethodFunction
+public abstract class ConsolidatingComputeMethodFunction(
+    FusionHub hub,
+    ComputeMethodDef methodDef,
+    ComputeMethodDef consolidationSourceMethodDef,
+    ComputeMethodFunction consolidationSourceFunction
+    ) : ComputeMethodFunction(hub, methodDef)
 {
-    protected ConsolidatingComputeMethodFunction(FusionHub hub, ComputeMethodDef methodDef) : base(hub, methodDef)
-    {
-        if (!methodDef.ComputedOptions.IsConsolidating)
-            throw new ArgumentOutOfRangeException(nameof(methodDef));
-    }
+    public readonly ComputeMethodDef ConsolidationSourceMethodDef = consolidationSourceMethodDef;
+    public readonly ComputeMethodFunction ConsolidationSourceFunction = consolidationSourceFunction;
 
-    protected override ValueTask<Computed> ProduceComputedImpl(
+    protected internal override async ValueTask<Computed> ProduceComputedImpl(
         ComputedInput input, Computed? existing, CancellationToken cancellationToken)
     {
         var typedInput = (ComputeMethodInput)input;
-        return typedInput.MethodDef.ConsolidationTargetMethod is { } consolidationTargetMethod
-            ? ProduceConsolidatingComputedImpl(typedInput, consolidationTargetMethod, cancellationToken)
-            : base.ProduceComputedImpl(input, existing, cancellationToken);
-    }
-
-    private async ValueTask<Computed> ProduceConsolidatingComputedImpl(
-        ComputeMethodInput input, ComputeMethodDef consolidationTargetMethod, CancellationToken cancellationToken)
-    {
         using var _ = Computed.BeginIsolation();
-        var consolidationTargetInput = new ComputeMethodInput(
-            input.Function, consolidationTargetMethod, input.Invocation);
-        var computed = await consolidationTargetInput
+        var consolidationSourceInput = new ComputeMethodInput(
+            ConsolidationSourceFunction,
+            ConsolidationSourceMethodDef,
+            typedInput.Invocation);
+        var computed = await consolidationSourceInput
             .GetOrProduceComputed(ComputeContext.None, cancellationToken)
             .ConfigureAwait(false);
-        return NewConsolidatingComputed(input, computed!);
+        return NewConsolidatingComputed(typedInput, computed!);
     }
 
-    protected abstract Computed NewConsolidatingComputed(ComputeMethodInput input, Computed original);
+    protected abstract Computed NewConsolidatingComputed(ComputeMethodInput input, Computed source);
 }

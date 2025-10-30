@@ -74,6 +74,7 @@ public readonly struct FusionBuilder
         services.TryAddSingleton(_ => TransiencyResolvers.PreferTransient.ForContext<Computed>());
         services.AddSingleton(c => new FusionHub(c));
         services.AddSingleton(c => new ComputedOptionsProvider(c));
+        services.AddSingleton(_ => FusionDefaultDelegates.ComputedOutputEqualityComparer);
 
         // Interceptors
         services.AddSingleton(_ => ComputeServiceInterceptor.Options.Default);
@@ -127,7 +128,7 @@ public readonly struct FusionBuilder
 
         // RPC:
         // 1. Replace RpcCallRouter
-        services.AddSingleton(_ => FusionRpcDefaultDelegates.CallRouter);
+        services.AddSingleton(_ => FusionDefaultDelegates.CallRouter);
         // 2. Register IRpcComputeSystemCalls service and RpcComputeCallType
         Rpc.AddSystemService<IRpcComputeSystemCalls, RpcComputeSystemCalls>(RpcComputeSystemCalls.Name);
         services.AddSingleton(c => new RpcComputeSystemCallSender(c));

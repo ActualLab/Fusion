@@ -54,7 +54,7 @@ public static class ComputeFunctionExt
                 var resultTask = computedTask.ContinueWith(
                     static t => {
                         var computed = t.GetAwaiter().GetResult();
-                        return (T)computed.Output.Value!;
+                        return (T)computed.UntypedOutput.Value!;
                     },
                     CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                 return resultTask;
@@ -69,7 +69,7 @@ public static class ComputeFunctionExt
                 var resultTask = computedSynchronizer.Synchronize(computedTask, cancellationToken).ContinueWith(
                     static t => {
                         var computed = t.GetAwaiter().GetResult();
-                        return (T)computed.Output.Value!;
+                        return (T)computed.UntypedOutput.Value!;
                     },
                     CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                 return resultTask;

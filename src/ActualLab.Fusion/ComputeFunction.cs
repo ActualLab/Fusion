@@ -72,6 +72,6 @@ public abstract class ComputeFunction(FusionHub hub, Type outputType) : ICompute
 
     // Protected & private
 
-    protected abstract ValueTask<Computed> ProduceComputedImpl(
+    protected internal abstract ValueTask<Computed> ProduceComputedImpl(
         ComputedInput input, Computed? existing, CancellationToken cancellationToken);
 }

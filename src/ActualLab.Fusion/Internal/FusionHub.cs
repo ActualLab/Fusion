@@ -27,6 +27,8 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
     public ILogger RemoteComputedCacheLog => field ??= Services.LogFor<IRemoteComputedCache>();
     public ComputedOptionsProvider ComputedOptionsProvider { get; }
         = services.GetRequiredService<ComputedOptionsProvider>();
+    public ComputedOutputEqualityComparer ComputedOutputEqualityComparer { get; }
+        = services.GetRequiredService<ComputedOutputEqualityComparer>();
     [field: AllowNull, MaybeNull]
     public ComputeServiceInterceptor ComputeServiceInterceptor
         => field ??= Services.GetRequiredService<ComputeServiceInterceptor>();

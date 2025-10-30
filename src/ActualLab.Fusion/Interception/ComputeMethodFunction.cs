@@ -3,28 +3,24 @@ using ActualLab.Interception;
 
 namespace ActualLab.Fusion.Interception;
 
-public sealed class ComputeMethodFunction<T>(FusionHub hub, ComputeMethodDef methodDef)
-    : ComputeMethodFunction(hub, methodDef)
+public sealed class ComputeMethodFunction<T> : ComputeMethodFunction
 {
+    public ComputeMethodFunction(FusionHub hub, ComputeMethodDef methodDef) : base(hub, methodDef)
+    {
+        if (methodDef.ComputedOptions.IsConsolidating)
+            throw new ArgumentOutOfRangeException(nameof(methodDef));
+    }
+
     protected override Computed NewComputed(ComputeMethodInput input)
         => new ComputeMethodComputed<T>(ComputedOptions, input);
 }
 
-public abstract class ComputeMethodFunction : ComputeFunction
+public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef methodDef)
+    : ComputeFunction(hub, methodDef.UnwrappedReturnType)
 {
-    public readonly ComputeMethodDef MethodDef;
-    public readonly ComputedOptions ComputedOptions;
-    public readonly int CancellationTokenIndex;
-
-    protected ComputeMethodFunction(FusionHub hub, ComputeMethodDef methodDef) : base(hub, methodDef.UnwrappedReturnType)
-    {
-        if (methodDef.ComputedOptions.IsConsolidating)
-            throw new ArgumentOutOfRangeException(nameof(methodDef));
-
-        MethodDef = methodDef;
-        ComputedOptions = methodDef.ComputedOptions;
-        CancellationTokenIndex = methodDef.CancellationTokenIndex;
-    }
+    public readonly ComputeMethodDef MethodDef = methodDef;
+    public readonly ComputedOptions ComputedOptions = methodDef.ComputedOptions;
+    public readonly int CancellationTokenIndex = methodDef.CancellationTokenIndex;
 
     public override string ToString()
         => MethodDef.FullName;
@@ -45,7 +41,7 @@ public abstract class ComputeMethodFunction : ComputeFunction
         }
     }
 
-    protected override async ValueTask<Computed> ProduceComputedImpl(
+    protected internal override async ValueTask<Computed> ProduceComputedImpl(
         ComputedInput input, Computed? existing, CancellationToken cancellationToken)
     {
         var typedInput = (ComputeMethodInput)input;

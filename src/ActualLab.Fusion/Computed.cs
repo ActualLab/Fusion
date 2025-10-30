@@ -48,6 +48,14 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         set => _flags = value;
     }
 
+    protected internal Result UntypedOutput {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get {
+            this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
+            return _output;
+        }
+    }
+
     public readonly ComputedOptions Options = options;
     public readonly ComputedInput Input = input;
     public readonly ulong Version = ComputedVersion.Next();
@@ -103,22 +111,22 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     public object? Value {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Output.Value;
+        get => UntypedOutput.Value;
     }
 
     public Exception? Error {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Output.Error;
+        get => UntypedOutput.Error;
     }
 
     public bool HasValue {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Output.HasValue;
+        get => UntypedOutput.HasValue;
     }
 
     public bool HasError {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Output.HasError;
+        get => UntypedOutput.HasError;
     }
 
     void IResult.Deconstruct(out object? untypedValue, out Exception? error)

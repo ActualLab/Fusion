@@ -1,13 +1,16 @@
 using ActualLab.Fusion.Interception;
-using ActualLab.Internal;
+using ActualLab.Fusion.Internal;
+using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Client;
 
 /// <summary>
 /// A computed that clones the <see cref="Original"/> and invalidates it on its own invalidation.
 /// If the <see cref="Original"/> isn't captured, it behaves like a regular <see cref="Computed"/>.
+/// Used to expose a copy of the original computed (returned by the implementation)
+/// while executing local calls on a compute service working in <c>DistributedPair</c> mode.
 /// </summary>
-public interface IReplicaComputed : IComputed
+public interface IReplicaComputed : IInvalidationProxyComputed
 {
     public Computed? Original { get; }
 
@@ -17,6 +20,8 @@ public interface IReplicaComputed : IComputed
 /// <summary>
 /// A computed that clones the <see cref="Original"/> and invalidates it on its own invalidation.
 /// If the <see cref="Original"/> isn't captured, it behaves like a regular <see cref="Computed"/>.
+/// Used to expose a copy of the original computed (returned by the implementation)
+/// while executing local calls on a compute service working in <c>DistributedPair</c> mode.
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Result"/>.</typeparam>
 public sealed class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaComputed
@@ -24,6 +29,9 @@ public sealed class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaCompu
     private volatile Computed? _original;
 
     public Computed? Original => _original;
+
+    // IInvalidationProxyComputed
+    Computed? IInvalidationProxyComputed.InvalidationTarget => _original;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public ReplicaComputed(ComputedOptions options, ComputeMethodInput input)
@@ -40,7 +48,7 @@ public sealed class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaCompu
         lock (Lock)
             _original = original;
 
-        TrySetOutput(((Computed)original).Output);
+        TrySetOutput(original.UntypedOutput);
     }
 
     protected override void OnInvalidated()
