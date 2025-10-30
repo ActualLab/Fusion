@@ -46,7 +46,13 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
         init;
     }
 
-    public ComputedOptions ComputedOptions { get; init; }
+    public ComputedOptions ComputedOptions {
+        get;
+        init => field = value.IsConsolidating
+            ? throw new ArgumentOutOfRangeException(nameof(value))
+            : value;
+    }
+
     public abstract Type OutputType { get; }
 
     public Func<ComputedSource, CancellationToken, Task> Computer

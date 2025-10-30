@@ -77,6 +77,9 @@ public abstract class ComputedSynchronizer
             }
         }
 
+        if (computed is IConsolidatingComputed consolidatingComputed)
+            return WhenSynchronized(consolidatingComputed.Original, cancellationToken);
+
         // Computed is a regular computed instance
         var usedBuffer = ArrayBuffer<Computed>.Lease(false);
         var taskBuffer = ArrayBuffer<Task>.Lease(false);

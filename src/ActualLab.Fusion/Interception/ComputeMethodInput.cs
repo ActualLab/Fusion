@@ -40,25 +40,6 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
     public override Computed? GetExistingComputed()
         => ComputedRegistry.Get(this);
 
-    internal ValueTask<object?> InvokeInterceptedUntyped(CancellationToken cancellationToken)
-    {
-        var ctIndex = MethodDef.CancellationTokenIndex;
-        ValueTask<object?> resultTask;
-
-        if (ctIndex < 0)
-            resultTask = MethodDef.InterceptedObjectAsyncInvoker.Invoke(Invocation);
-        else {
-            Invocation.Arguments.SetCancellationToken(ctIndex, cancellationToken);
-            try {
-                resultTask = MethodDef.InterceptedObjectAsyncInvoker.Invoke(Invocation);
-            }
-            finally {
-                Invocation.Arguments.SetCancellationToken(ctIndex, default); // Otherwise it may cause memory leak
-            }
-        }
-        return resultTask;
-    }
-
     // Equality
 
     public bool Equals(ComputeMethodInput? other)
@@ -76,4 +57,25 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
         => obj is ComputeMethodInput other && Equals(other);
     public override bool Equals(object? obj)
         => obj is ComputeMethodInput other && Equals(other);
+
+    // Internal helpers
+
+    internal ValueTask<object?> InvokeInterceptedUntyped(CancellationToken cancellationToken)
+    {
+        var ctIndex = MethodDef.CancellationTokenIndex;
+        ValueTask<object?> resultTask;
+
+        if (ctIndex < 0)
+            resultTask = MethodDef.InterceptedObjectAsyncInvoker.Invoke(Invocation);
+        else {
+            Invocation.Arguments.SetCancellationToken(ctIndex, cancellationToken);
+            try {
+                resultTask = MethodDef.InterceptedObjectAsyncInvoker.Invoke(Invocation);
+            }
+            finally {
+                Invocation.Arguments.SetCancellationToken(ctIndex, default); // Otherwise it may cause a memory leak
+            }
+        }
+        return resultTask;
+    }
 }

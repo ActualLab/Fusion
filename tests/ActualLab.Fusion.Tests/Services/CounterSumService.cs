@@ -20,6 +20,14 @@ public class CounterSumService : IComputeService
     public virtual async Task<int> Get1(int counterIndex, CancellationToken cancellationToken = default)
         => await this[counterIndex].Use(cancellationToken);
 
+    [ComputeMethod(ConsolidationDelay = 0)]
+    public virtual async Task<int> GetC0(int counterIndex, CancellationToken cancellationToken = default)
+        => await this[counterIndex].Use(cancellationToken);
+
+    [ComputeMethod(ConsolidationDelay = 0.2)]
+    public virtual async Task<int> GetC2(int counterIndex, CancellationToken cancellationToken = default)
+        => await this[counterIndex].Use(cancellationToken);
+
     [ComputeMethod]
     public virtual async Task<int> Sum(
         int counterIndex1,

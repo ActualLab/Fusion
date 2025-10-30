@@ -18,6 +18,7 @@ public class FusionProxyCodeKeeper : ProxyCodeKeeper
     private readonly CommanderProxyCodeKeeper _commanderProxyCodeKeeper = Get<CommanderProxyCodeKeeper>();
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComputeMethodFunction<>))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ConsolidatingComputeMethodFunction<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundComputeCall<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcOutboundComputeCall<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RemoteComputeMethodFunction<>))]
@@ -39,6 +40,7 @@ public class FusionProxyCodeKeeper : ProxyCodeKeeper
             return;
 
         Keep<ComputeMethodFunction<TUnwrapped>>();
+        Keep<ConsolidatingComputeMethodFunction<TUnwrapped>>();
         Keep<RemoteComputeMethodFunction<TUnwrapped>>();
         Keep<ComputeFunctionExt.CompleteProduceValuePromiseFactory<TUnwrapped>>();
         Keep<ComputeFunctionExt.CompleteProduceValuePromiseWithSynchronizerFactory<TUnwrapped>>();

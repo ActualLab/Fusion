@@ -16,14 +16,25 @@ public record ComputedOptions
     };
 
     public TimeSpan MinCacheDuration { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
-    public TimeSpan TransientErrorInvalidationDelay { get; init; } = TimeSpan.FromSeconds(1);
+        = default; // No min. cache duration = don't add newly produced instances to Timeouts.KeepAlive
+    public TimeSpan TransientErrorInvalidationDelay { get; init; }
+        = TimeSpan.FromSeconds(1); // Should be positive
     public TimeSpan AutoInvalidationDelay { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
         = TimeSpan.MaxValue; // No auto invalidation
     public TimeSpan InvalidationDelay { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
+        = default; // No invalidation delay
+    public TimeSpan ConsolidationDelay { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
+        = TimeSpan.MaxValue; // No consolidation
     public RemoteComputedCacheMode RemoteComputedCacheMode { get; init; }
         = RemoteComputedCacheMode.NoCache;
     public ComputedCancellationReprocessingOptions CancellationReprocessing { get; init; }
         = ComputedCancellationReprocessingOptions.Default;
+
+    public bool HasMinCacheDuration => MinCacheDuration != TimeSpan.Zero;
+    public bool HasInvalidationDelay => InvalidationDelay != TimeSpan.Zero;
+    public bool HasTransientErrorInvalidationDelay => TransientErrorInvalidationDelay != TimeSpan.Zero;
+    public bool IsAutoInvalidating => AutoInvalidationDelay != TimeSpan.MaxValue;
+    public bool IsConsolidating => ConsolidationDelay != TimeSpan.MaxValue;
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume attributes on compute methods are fully preserved")]
     public static ComputedOptions? Get(
@@ -47,6 +58,11 @@ public record ComputedOptions
         var invalidationDelay = isClientServiceMethod
             ? rma?.InvalidationDelay ?? double.NaN
             : a.InvalidationDelay;
+        if (rma is not null && rma.ConsolidationDelay is not double.NaN)
+            throw new InvalidOperationException(
+                $"{nameof(ConsolidationDelay)} is unsupported in {nameof(RemoteComputeMethodAttribute)}.");
+        var consolidationDelay = a.ConsolidationDelay;
+
         // Default cache behavior must be changed to null to let it "inherit" defaultOptions.ClientCacheMode
         var rmaCacheMode = rma?.CacheMode;
         if (rmaCacheMode == RemoteComputedCacheMode.Default)
@@ -57,6 +73,7 @@ public record ComputedOptions
             TransientErrorInvalidationDelay = ToTimeSpan(a.TransientErrorInvalidationDelay) ?? defaultOptions.TransientErrorInvalidationDelay,
             AutoInvalidationDelay = ToTimeSpan(autoInvalidationDelay) ?? defaultOptions.AutoInvalidationDelay,
             InvalidationDelay = ToTimeSpan(invalidationDelay) ?? defaultOptions.InvalidationDelay,
+            ConsolidationDelay = ToTimeSpan(consolidationDelay) ?? defaultOptions.ConsolidationDelay,
             RemoteComputedCacheMode = rmaCacheMode ?? defaultOptions.RemoteComputedCacheMode,
         };
         // We don't want to multiply instances of ComputedOptions here unless they differ from the default ones

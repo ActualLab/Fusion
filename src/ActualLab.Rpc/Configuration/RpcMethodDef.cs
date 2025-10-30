@@ -17,8 +17,6 @@ public sealed class RpcMethodDef : MethodDef
     private static readonly ConcurrentDictionary<Type, (bool, bool)> IsCommandTypeCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
-    private string? _toStringCached;
-
     public RpcHub Hub { get; }
     public RpcServiceDef Service { get; }
 

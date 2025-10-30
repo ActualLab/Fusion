@@ -1,4 +1,3 @@
-using ActualLab.Caching;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;

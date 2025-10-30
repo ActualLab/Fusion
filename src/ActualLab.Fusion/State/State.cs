@@ -132,6 +132,9 @@ public abstract class State : ComputedInput, IState
 
     protected State(IStateOptions options, IServiceProvider services, bool initialize = true)
     {
+        if (options.ComputedOptions.IsConsolidating)
+            throw new ArgumentOutOfRangeException(nameof(options));
+
         Services = services;
         Initialize(this, RuntimeHelpers.GetHashCode(this)); // ComputedInput.Initialize
 

@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Caching;
 using ActualLab.Interception.Internal;
 using ActualLab.Trimming;
-using InvalidCastException = System.InvalidCastException;
 
 namespace ActualLab.Interception;
 
@@ -15,6 +14,8 @@ public partial class MethodDef
 
     private readonly LazySlim<MethodDef, object?> _defaultResultLazy;
     private readonly LazySlim<MethodDef, object?> _defaultUnwrappedResultLazy;
+    // ReSharper disable once InconsistentNaming
+    protected string? _toStringCached;
 
     public readonly Type Type;
     public readonly MethodInfo Method;
@@ -119,7 +120,12 @@ public partial class MethodDef
     }
 
     public override string ToString()
-        => $"{GetType().Name}({FullName}){(IsValid ? "" : " - invalid")}";
+        => _toStringCached ??= string.Concat(
+            GetType().Name,
+            "(",
+            FullName,
+            ")",
+            IsValid ? "" : "-invalid");
 
     public sealed override int GetHashCode()
         => Id;

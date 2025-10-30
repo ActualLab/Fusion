@@ -43,15 +43,11 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
         var rpcMethodDef = RpcServiceDef.GetOrFindMethod(initialInvocation.Method);
         if (rpcMethodDef is null) {
             // Proxy is a Distributed service, and a non-RPC method is called (i.e., the local compute method)
-            var function = (ComputeMethodFunction)typeof(ComputeMethodFunction<>)
-                .MakeGenericType(computeMethodDef.UnwrappedReturnType)
-                .CreateInstance(Hub, computeMethodDef);
+            var function = computeMethodDef.CreateComputeMethodFunction(Hub);
             return function.ComputeServiceInterceptorHandler;
         }
         else {
-            var function = (RemoteComputeMethodFunction)typeof(RemoteComputeMethodFunction<>)
-                .MakeGenericType(computeMethodDef.UnwrappedReturnType)
-                .CreateInstance(Hub, computeMethodDef, rpcMethodDef, LocalTarget);
+            var function = computeMethodDef.CreateRemoteComputeMethodFunction(Hub);
             return function.RemoteComputeServiceInterceptorHandler;
         }
     }
