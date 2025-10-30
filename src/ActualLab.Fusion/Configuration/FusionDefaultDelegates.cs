@@ -16,6 +16,7 @@ public static class FusionDefaultDelegates
                 if (y.Error is null)
                     return false;
 
+                // Errors are identical when they have the same type and message
                 return x.Error.GetType() == y.Error.GetType()
                     && string.Equals(x.Error.Message, y.Error.Message, StringComparison.Ordinal);
             }
