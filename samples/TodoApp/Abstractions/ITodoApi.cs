@@ -18,7 +18,7 @@ public interface ITodoApi : IComputeService
     public Task<TodoItem?> Get(Session session, Ulid id, CancellationToken cancellationToken = default);
     [ComputeMethod]
     public Task<Ulid[]> ListIds(Session session, int count, CancellationToken cancellationToken = default);
-    [ComputeMethod(InvalidationDelay = 0.5)]
+    [ComputeMethod(ConsolidationDelay = 0.5)]
     public Task<TodoSummary> GetSummary(Session session, CancellationToken cancellationToken = default);
 }
 
