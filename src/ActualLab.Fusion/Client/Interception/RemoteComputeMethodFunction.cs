@@ -13,16 +13,13 @@ namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD103
 
-public sealed class RemoteComputeMethodFunction<T> : RemoteComputeMethodFunction
+public sealed class RemoteComputeMethodFunction<T>(
+    FusionHub hub,
+    ComputeMethodDef methodDef,
+    RpcMethodDef rpcMethodDef,
+    object? localTarget
+    ) : RemoteComputeMethodFunction(hub, methodDef, rpcMethodDef, localTarget)
 {
-    public RemoteComputeMethodFunction(
-        FusionHub hub, ComputeMethodDef methodDef, RpcMethodDef rpcMethodDef, object? localTarget)
-        : base(hub, methodDef, rpcMethodDef, localTarget)
-    {
-        if (methodDef.ComputedOptions.IsConsolidating)
-            throw new ArgumentOutOfRangeException(nameof(methodDef));
-    }
-
     protected override Computed NewComputed(ComputeMethodInput input)
         => throw ActualLab.Internal.Errors.InternalError($"This method should never be called in {GetType().GetName()}.");
 

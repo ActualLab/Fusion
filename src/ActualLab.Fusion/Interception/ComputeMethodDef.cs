@@ -42,8 +42,6 @@ public sealed class ComputeMethodDef : MethodDef
                     TransientErrorInvalidationDelay = TimeSpan.MaxValue,
                     // Cancellation reprocessing should happen only for the consolidation source
                     CancellationReprocessing = ComputedCancellationReprocessingOptions.None,
-                    // Remote computed instances don't support consolidation at all, so...
-                    RemoteComputedCacheMode = RemoteComputedCacheMode.NoCache,
                 };
             }
             else { // We are the consolidation source
@@ -57,8 +55,6 @@ public sealed class ComputeMethodDef : MethodDef
                     // Moreover, the source is updated more frequently than the target,
                     // so it's reasonable to make source's updates cheaper.
                     MinCacheDuration = TimeSpan.Zero,
-                    // Remote computed instances don't support consolidation at all, so...
-                    RemoteComputedCacheMode = RemoteComputedCacheMode.NoCache,
                 };
             }
         }
