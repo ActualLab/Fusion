@@ -36,9 +36,9 @@ public sealed class ComputeMethodDef : MethodDef
                 ConsolidationTargetMethodDef = null;
                 computedOptions = computedOptions with {
                     // All invalidation delays are disabled for the consolidation target
+                    InvalidationDelay = TimeSpan.Zero,
                     AutoInvalidationDelay = TimeSpan.MaxValue,
                     TransientErrorInvalidationDelay = TimeSpan.MaxValue,
-                    InvalidationDelay = TimeSpan.MaxValue,
                     // Cancellation reprocessing should happen only for the consolidation source
                     CancellationReprocessing = ComputedCancellationReprocessingOptions.None,
                     // Remote computed instances don't support consolidation at all, so...
