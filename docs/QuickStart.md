@@ -10,7 +10,7 @@ The content below implies you can browse, build, and run
 [HelloCart Sample], so before you start reading further,
 it's highly recommended to:
 
-1. Clone [https://github.com/ActualLab/Fusion.Samples](https://github.com/ActualLab/Fusion.Samples)
+1. Clone [github.com/ActualLab/Fusion.Samples](https://github.com/ActualLab/Fusion.Samples)
 2. Open `HelloCart/HelloCart.csproj` in your favorite IDE.
 
 ## What is HelloCart sample?
@@ -223,10 +223,9 @@ But first, let's launch `HelloCart` and see what it does. And make sure `UseAuto
 ![](./img/Samples-HelloCart.gif)
 
 Once you select the API implementation, the sample uses it
-to create 3 products and 2 carts:
+to create 3 products and 2 carts, [AppBase.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppBase.cs):
 
 ```cs
-// Code from AppBase.cs
 public virtual async Task InitializeAsync(IServiceProvider services, bool startHostedServices)
 {
     var pApple = new Product("apple", 2);
@@ -291,7 +290,7 @@ public async Task WatchProduct(
 Let's postpone the discussion of above code for now.
 The only remark I want to make at this point is that
 `Watch` is started in fire-and-forgot fashion
-in [`Program.cs`, line ~50](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/Program.cs#L52).
+in [Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/Program.cs#L52).
 
 Finally, the looped section in `Program.cs` starts to
 ask you to enter `[productId]=[price]` expression, parses it,
@@ -337,7 +336,7 @@ Code: [src/HelloCart/v1](https://github.com/ActualLab/Fusion.Samples/tree/master
 > of this document, because it explains nearly all key abstractions.
 > Please be patient and read it carefully 🙏
 
-First, check out `InMemoryProductService` there.
+First, check out [`InMemoryProductService`](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v1/InMemoryProductService.cs) there.
 You might notice just a few unusual things there:
 
 1. All of its API methods (declared in `IProductService`) are
@@ -366,7 +365,7 @@ The same is equally applicable to `InMemoryCartService`:
    ```
 
 Finally, let's look at the code that registers these
-services in IoC container:
+services in IoC container, [AppV1.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v1/AppV1.cs):
 
 ```cs
 public class AppV1 : AppBase
@@ -390,7 +389,7 @@ to depict it in symbols: 🧝=🥣+🦄
 
 Seriously, so how does it work?
 
-`AddService` registers so-called [Compute Service](Part01.md) -
+`AddService` registers so-called [Compute Service](Part01.md#_1-compute-services-and-compute-methods) -
 a singleton, which proxy type is generated in the runtime,
 but derives from the type you provide, i.e.
 `InMemoryProductService` / `InMemoryCartService` in above case.
@@ -461,7 +460,7 @@ instances, there are APIs allowing you to:
   `IComputed` - either a cached or a newly computed one.
 
 Do you remember the code "watching" for cart changes in the
-beginning?
+beginning? [AppBase.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppBase.cs):
 
 ```cs
 // Computed.Capture pulls the `IComputed` storing the
@@ -484,7 +483,7 @@ while (true) {
 ```
 
 Now, how these dependencies get created? Let's look at
-`InMemoryCartService.GetTotal` again:
+[`InMemoryCartService.GetTotal`](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v1/InMemoryCartService.cs) again:
 
 ```cs
 public virtual async Task<decimal> GetTotal(
@@ -518,7 +517,7 @@ dependent on:
 Now it's time to demystify how `Get(productId)` call result gets
 invalidated once a product with `productId` gets changed.
 
-Again, remember this code?
+Again, remember this code? [InMemoryProductService.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v1/InMemoryProductService.cs):
 
 ```cs
 public virtual Task Edit(EditCommand<Product> command, CancellationToken cancellationToken = default)
@@ -543,7 +542,7 @@ public virtual Task Edit(EditCommand<Product> command, CancellationToken cancell
 }
 ```
 
-And if you look into similar `Edit` for in `InMemoryCartService`,
+And if you look into similar `Edit` for in [InMemoryCartService.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v1/InMemoryCartService.cs),
 you'll find a very similar block there:
 
 ```cs
@@ -660,7 +659,7 @@ Code: [src/HelloCart/v2](https://github.com/ActualLab/Fusion.Samples/tree/master
 > ☝ We will move WAY FASTER now - this and every following version
 > will require just about 5 minutes of your time.
 
-Here is the actual code inside `AppV2` constructor ([AppV2.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v2/AppV2.cs)):
+Here is the actual code inside [AppV2](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v2/AppV2.cs) constructor:
 
 ```cs
 // This is exactly the same Compute Service registration code you saw earlier
@@ -714,13 +713,12 @@ if (AppSettings.Db.UseOperationReprocessor)
     services.AddFusion().AddOperationReprocessor();
 ```
 
-`AppV2.InitializeAsync` ([AppBase.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppBase.cs)) simply re-created the DB:
+`AppV2.InitializeAsync` from ([AppBase.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppBase.cs)) simply re-created the DB:
 
 ```cs
 await using var dbContext = ServerServices.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
 await dbContext.Database.EnsureDeletedAsync();
 await dbContext.Database.EnsureCreatedAsync();
-await base.InitializeAsync();
 ```
 
 Now, if you look at `DbProductService` and `DbCartService`, you'll notice
@@ -785,11 +783,11 @@ And that's it. So to use Fusion with EF, you must:
 Code: [src/HelloCart/v3](https://github.com/ActualLab/Fusion.Samples/tree/master/src/HelloCart/v3)
 
 The `v2` code is actually already good enough, but one small improvement
-can make it way better:
+can make it way better, [AppDb.cs](https://github.com/ActualLab/Fusion.Samples/tree/master/src/HelloCart/AppDb.cs):
 
 ```cs
-b.AddEntityResolver<string, DbProduct>();
-b.AddEntityResolver<string, DbCart>((_, options) => {
+db.AddEntityResolver<string, DbProduct>();
+db.AddEntityResolver<string, DbCart>((_, options) => {
     // Cart is always loaded together with items
     options.QueryTransformer = carts => carts.Include(c => c.Items);
 });
@@ -815,7 +813,7 @@ while (NotDisposed()) {
 }
 ```
 
-Here is an example of how to use such resolvers:
+Here is an example of how to use such resolvers, [DbProductServiceUsingEntityResolver.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v3/DbProductServiceUsingEntityResolver.cs):
 
 ```cs
 public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)
@@ -827,7 +825,7 @@ public virtual async Task<Product?> Get(string id, CancellationToken cancellatio
 }
 ```
 
-Guess why this important? Look at the production-grade `GetTotal` code:
+Guess why this important? Look at the production-grade `GetTotal` code, [DbCartServiceUsingEntityResolver.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v3/DbCartServiceUsingEntityResolver.cs):
 
 ```cs
 public virtual async Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default)
@@ -882,7 +880,7 @@ So far we've learned how to build a version of our API
 that works locally. What does it take to convert it to
 a remotely callable one?
 
-Actually, almost nothing! Here is `AppV4` constructor:
+Actually, almost nothing! Here is [AppV4](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v4/AppV4.cs) constructor:
 
 ```cs
 var uri = "http://localhost:7005";
@@ -944,7 +942,7 @@ They are Compute Services too - you can even cast them to
 
 This is a very basic description of how it works. So
 let's see what do we need to publish Compute Service first.
-We'll start from `Host` container configuration:
+We'll start from `Host` container configuration of [AppV4.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v4/AppV4.cs):
 
 ```cs
 services.AddFusion(RpcServiceMode.Server, fusion => {
@@ -995,7 +993,7 @@ You already know that Fusion is capable to "propagate" the
 invalidations to every host sharing the same data.
 
 Let's see what's necessary to make it work.
-This is our full `AppV5` - there is nothing else:
+This is our full [AppV5](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v5/AppV5.cs) - there is nothing else:
 
 ```cs
 public class AppV5 : AppV4
