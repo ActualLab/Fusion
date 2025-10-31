@@ -127,7 +127,7 @@ public readonly struct FusionBuilder
         // 1. Replace RpcCallRouter
         services.AddSingleton(_ => FusionDefaultDelegates.CallRouter);
         // 2. Register IRpcComputeSystemCalls service and RpcComputeCallType
-        Rpc.AddServerAndClient<IRpcComputeSystemCalls, RpcComputeSystemCalls>(RpcComputeSystemCalls.Name);
+        Rpc.AddServerAndClient(typeof(IRpcComputeSystemCalls), typeof(RpcComputeSystemCalls), RpcComputeSystemCalls.Name);
         services.AddSingleton(c => new RpcComputeSystemCallSender(c));
         RpcComputeCallType.Register();
 
@@ -163,57 +163,57 @@ public readonly struct FusionBuilder
     public FusionBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>(
         RpcServiceMode mode = RpcServiceMode.Default,
-        bool addCommandHandlers = true)
+        bool hasCommandHandlers = true)
         where TService : class, IComputeService
-        => AddService(typeof(TService), typeof(TService), ServiceLifetime.Singleton, mode, addCommandHandlers);
+        => AddService(typeof(TService), typeof(TService), ServiceLifetime.Singleton, mode, hasCommandHandlers);
     public FusionBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>(
         RpcServiceMode mode = RpcServiceMode.Default,
-        bool addCommandHandlers = true)
+        bool hasCommandHandlers = true)
         where TService : class
         where TImplementation : class, TService, IComputeService
-        => AddService(typeof(TService), typeof(TImplementation), ServiceLifetime.Singleton, mode, addCommandHandlers);
+        => AddService(typeof(TService), typeof(TImplementation), ServiceLifetime.Singleton, mode, hasCommandHandlers);
     public FusionBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>(
         ServiceLifetime lifetime,
         RpcServiceMode mode = RpcServiceMode.Default,
-        bool addCommandHandlers = true)
+        bool hasCommandHandlers = true)
         where TService : class, IComputeService
-        => AddService(typeof(TService), typeof(TService), lifetime, mode, addCommandHandlers);
+        => AddService(typeof(TService), typeof(TService), lifetime, mode, hasCommandHandlers);
     public FusionBuilder AddService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>(
         ServiceLifetime lifetime,
         RpcServiceMode mode = RpcServiceMode.Default,
-        bool addCommandHandlers = true)
+        bool hasCommandHandlers = true)
         where TService : class
         where TImplementation : class, TService, IComputeService
-        => AddService(typeof(TService), typeof(TImplementation), lifetime, mode, addCommandHandlers);
+        => AddService(typeof(TService), typeof(TImplementation), lifetime, mode, hasCommandHandlers);
 
     public FusionBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         RpcServiceMode mode = RpcServiceMode.Default,
-        bool addCommandHandlers = true)
-        => AddService(serviceType, serviceType, ServiceLifetime.Singleton, mode, addCommandHandlers);
+        bool hasCommandHandlers = true)
+        => AddService(serviceType, serviceType, ServiceLifetime.Singleton, mode, hasCommandHandlers);
     public FusionBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         RpcServiceMode mode = RpcServiceMode.Default,
-        bool addCommandHandlers = true)
-        => AddService(serviceType, implementationType, ServiceLifetime.Singleton, mode, addCommandHandlers);
+        bool hasCommandHandlers = true)
+        => AddService(serviceType, implementationType, ServiceLifetime.Singleton, mode, hasCommandHandlers);
     public FusionBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         ServiceLifetime lifetime,
         RpcServiceMode mode = RpcServiceMode.Default,
-        bool addCommandHandlers = true)
-        => AddService(serviceType, serviceType, lifetime, mode, addCommandHandlers);
+        bool hasCommandHandlers = true)
+        => AddService(serviceType, serviceType, lifetime, mode, hasCommandHandlers);
     public FusionBuilder AddService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         ServiceLifetime lifetime,
         RpcServiceMode mode = RpcServiceMode.Default,
-        bool addCommandHandlers = true)
+        bool hasCommandHandlers = true)
     {
         if (lifetime != ServiceLifetime.Singleton) {
             var scopedServiceMode = mode.Or(RpcServiceMode.Local);
@@ -225,98 +225,85 @@ public readonly struct FusionBuilder
 
         mode = mode.Or(DefaultServiceMode);
         return mode switch {
-            RpcServiceMode.Local => AddComputeService(serviceType, implementationType, addCommandHandlers),
-            RpcServiceMode.Client => AddClient(serviceType, "", addCommandHandlers),
-            RpcServiceMode.Server => AddServer(serviceType, implementationType, "", addCommandHandlers),
-            RpcServiceMode.Distributed => AddDistributedService(serviceType, implementationType, "", addCommandHandlers),
-            RpcServiceMode.ServerAndClient => AddServerAndClient(serviceType, implementationType, "", addCommandHandlers),
+            RpcServiceMode.Local => AddComputeService(serviceType, implementationType, hasCommandHandlers),
+            RpcServiceMode.Client => AddClient(serviceType, "", hasCommandHandlers),
+            RpcServiceMode.Server => AddServer(serviceType, implementationType, "", hasCommandHandlers),
+            RpcServiceMode.Distributed => AddDistributedService(serviceType, implementationType, "", hasCommandHandlers),
+            RpcServiceMode.ServerAndClient => AddServerAndClient(serviceType, implementationType, "", hasCommandHandlers),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
     }
 
     public FusionBuilder AddClient<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
-        (string name = "", bool addCommandHandlers = true)
+        (string name = "", bool hasCommandHandlers = true)
         where TService : class, IComputeService
-        => AddClient(typeof(TService), typeof(TService), name, addCommandHandlers);
-    public FusionBuilder AddClient<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TClient>
-        (string name = "", bool addCommandHandlers = true)
-        where TClient : class, TService
-        where TService : class, IComputeService
-        => AddClient(typeof(TService), typeof(TClient), name, addCommandHandlers);
+        => AddClient(typeof(TService), name, hasCommandHandlers);
     public FusionBuilder AddClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        string name = "", bool addCommandHandlers = true)
-        => AddClient(serviceType, serviceType, name, addCommandHandlers);
-    public FusionBuilder AddClient(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type clientType,
-        string name = "", bool addCommandHandlers = true)
+        string name = "", bool hasCommandHandlers = true)
     {
-        if (!typeof(IComputeService).IsAssignableFrom(serviceType))
-            throw Errors.MustImplement<IComputeService>(serviceType, nameof(serviceType));
-        if (!serviceType.IsAssignableFrom(clientType))
-            throw Errors.MustBeAssignableTo(clientType, serviceType, nameof(clientType));
+        // ~ RpcBuilder.AddClient, but for Compute Service
 
-        object CreateClient(IServiceProvider c)
-            => c.FusionHub().NewRemoteComputeServiceProxy(serviceType, clientType);
-
-        Services.AddSingleton(clientType, CreateClient);
-        if (addCommandHandlers)
-            Commander.AddHandlers(clientType, serviceType);
-        if (serviceType != clientType)
-            Services.AddAlias(serviceType, clientType);
-
-        Rpc.Service(serviceType).HasName(name).IsClient(clientType);
+        RpcService(serviceType)
+            .IsClient()
+            .HasCommandHandlers(hasCommandHandlers)
+            .Inject();
         return this;
     }
 
     public FusionBuilder AddComputeService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
-        (bool addCommandHandlers = true)
+        (bool hasCommandHandlers = true)
         where TService : class, IComputeService
-        => AddComputeService(typeof(TService), typeof(TService), ServiceLifetime.Singleton, addCommandHandlers);
+        => AddComputeService(typeof(TService), typeof(TService), ServiceLifetime.Singleton, hasCommandHandlers);
     public FusionBuilder AddComputeService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService>
-        (ServiceLifetime lifetime, bool addCommandHandlers = true)
+        (ServiceLifetime lifetime, bool hasCommandHandlers = true)
         where TService : class, IComputeService
-        => AddComputeService(typeof(TService), typeof(TService), lifetime, addCommandHandlers);
+        => AddComputeService(typeof(TService), typeof(TService), lifetime, hasCommandHandlers);
     public FusionBuilder AddComputeService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (bool addCommandHandlers = true)
+        (bool hasCommandHandlers = true)
         where TService : class, IComputeService
         where TImplementation : class, TService
-        => AddComputeService(typeof(TService), typeof(TImplementation), ServiceLifetime.Singleton, addCommandHandlers);
+        => AddComputeService(typeof(TService), typeof(TImplementation), ServiceLifetime.Singleton, hasCommandHandlers);
     public FusionBuilder AddComputeService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (ServiceLifetime lifetime, bool addCommandHandlers = true)
+        (ServiceLifetime lifetime, bool hasCommandHandlers = true)
         where TService : class, IComputeService
         where TImplementation : class, TService
-        => AddComputeService(typeof(TService), typeof(TImplementation), lifetime, addCommandHandlers);
+        => AddComputeService(typeof(TService), typeof(TImplementation), lifetime, hasCommandHandlers);
 
     public FusionBuilder AddComputeService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        bool addCommandHandlers = true)
-        => AddComputeService(serviceType, serviceType, ServiceLifetime.Singleton, addCommandHandlers);
+        bool hasCommandHandlers = true)
+        => AddComputeService(serviceType, serviceType, ServiceLifetime.Singleton, hasCommandHandlers);
     public FusionBuilder AddComputeService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        ServiceLifetime lifetime, bool addCommandHandlers = true)
-        => AddComputeService(serviceType, serviceType, lifetime, addCommandHandlers);
-    public FusionBuilder AddComputeService(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        bool addCommandHandlers = true)
-        => AddComputeService(serviceType, implementationType, ServiceLifetime.Singleton, addCommandHandlers);
+        ServiceLifetime lifetime, bool hasCommandHandlers = true)
+        => AddComputeService(serviceType, serviceType, lifetime, hasCommandHandlers);
     public FusionBuilder AddComputeService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        ServiceLifetime lifetime, bool addCommandHandlers = true)
+        bool hasCommandHandlers = true)
+        => AddComputeService(serviceType, implementationType, ServiceLifetime.Singleton, hasCommandHandlers);
+    public FusionBuilder AddComputeService(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
+        ServiceLifetime lifetime, bool hasCommandHandlers = true)
     {
         // ~ RpcBuilder.AddLocalService, but for Compute Service
+
+        if (lifetime is ServiceLifetime.Singleton) {
+            RpcService(serviceType)
+                .IsLocal(implementationType)
+                .HasCommandHandlers(hasCommandHandlers)
+                .Inject();
+            return this;
+        }
 
         if (!typeof(IComputeService).IsAssignableFrom(implementationType))
             throw Errors.MustImplement<IComputeService>(implementationType, nameof(serviceType));
@@ -324,14 +311,14 @@ public readonly struct FusionBuilder
             throw Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
         if (!implementationType.IsClass)
             throw Errors.MustBeClass(implementationType, nameof(implementationType));
-        if (lifetime != ServiceLifetime.Singleton && !typeof(IHasDisposeStatus).IsAssignableFrom(implementationType))
+        if (!typeof(IHasDisposeStatus).IsAssignableFrom(implementationType))
             throw Errors.MustImplement<IHasDisposeStatus>(implementationType, nameof(implementationType));
 
         object CreateComputeService(IServiceProvider c)
             => c.FusionHub().NewComputeServiceProxy(implementationType);
 
         Services.Add(new ServiceDescriptor(serviceType, CreateComputeService, lifetime));
-        if (addCommandHandlers)
+        if (hasCommandHandlers)
             Commander.AddHandlers(serviceType, implementationType);
         return this;
 
@@ -340,123 +327,83 @@ public readonly struct FusionBuilder
     public FusionBuilder AddServer<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (string name = "", bool addCommandHandlers = true)
+        (string name = "", bool hasCommandHandlers = true)
         where TService : class, IComputeService
         where TImplementation : class, TService
-        => AddServer(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
+        => AddServer(typeof(TService), typeof(TImplementation), name, hasCommandHandlers);
     public FusionBuilder AddServer(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        string name = "", bool addCommandHandlers = true)
+        string name = "", bool hasCommandHandlers = true)
     {
         // ~ RpcBuilder.AddServer, but for Compute Service
 
-        if (!typeof(IComputeService).IsAssignableFrom(implementationType))
-            throw Errors.MustImplement<IComputeService>(implementationType, nameof(serviceType));
-        if (!serviceType.IsAssignableFrom(implementationType))
-            throw Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
-        if (!implementationType.IsClass)
-            throw Errors.MustBeClass(implementationType, nameof(implementationType));
-
-        object CreateServer(IServiceProvider c)
-            => c.FusionHub().NewComputeServiceProxy(implementationType);
-
-        Services.AddSingleton(implementationType, CreateServer);
-        if (addCommandHandlers)
-            Commander.AddHandlers(implementationType, serviceType);
-        if (serviceType != implementationType)
-            Services.AddAlias(serviceType, implementationType);
-
-        Rpc.Service(serviceType).HasName(name).IsServer(implementationType);
+        RpcService(serviceType)
+            .IsServer(implementationType)
+            .HasCommandHandlers(hasCommandHandlers)
+            .Inject();
         return this;
     }
 
     public FusionBuilder AddDistributedService<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (string name = "", bool addCommandHandlers = true)
+        (string name = "", bool hasCommandHandlers = true)
         where TService : class, IComputeService
         where TImplementation : class, TService
-        => AddDistributedService(typeof(TService), typeof(TImplementation), name, addCommandHandlers);
+        => AddDistributedService(typeof(TService), typeof(TImplementation), name, hasCommandHandlers);
     public FusionBuilder AddDistributedService(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        string name = "", bool addCommandHandlers = true)
+        string name = "", bool hasCommandHandlers = true)
     {
         // ~ RpcBuilder.AddDistributedService, but for Compute Service
 
-        if (!typeof(IComputeService).IsAssignableFrom(implementationType))
-            throw Errors.MustImplement<IComputeService>(implementationType, nameof(serviceType));
-        if (!serviceType.IsAssignableFrom(implementationType))
-            throw Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
-        if (!implementationType.IsClass)
-            throw Errors.MustBeClass(implementationType, nameof(implementationType));
-
-        object CreateDistributedService(IServiceProvider c)
-            => c.FusionHub().NewRemoteComputeServiceProxy(serviceType, implementationType);
-
-        Services.AddSingleton(implementationType, CreateDistributedService);
-        if (addCommandHandlers)
-            Commander.AddHandlers(implementationType, serviceType);
-        if (serviceType != implementationType)
-            Services.AddAlias(serviceType, implementationType);
-
-        Rpc.Service(serviceType).HasName(name).IsDistributed(implementationType);
+        RpcService(serviceType)
+            .IsDistributed(implementationType)
+            .HasCommandHandlers(hasCommandHandlers)
+            .Inject();
         return this;
     }
 
     public FusionBuilder AddServerAndClient<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (string name = "", bool addCommandHandlers = true)
+        (string name = "", bool hasCommandHandlers = true)
         where TService : class, IComputeService
         where TImplementation : class, TService
-        => AddServerAndClient(typeof(TService), typeof(TService), typeof(TImplementation), name, addCommandHandlers);
-    public FusionBuilder AddServerAndClient<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TClient,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TImplementation>
-        (string name = "", bool addCommandHandlers = true)
-        where TService : class, IComputeService
-        where TClient : class, TService
-        where TImplementation : class, TService
-        => AddServerAndClient(typeof(TService), typeof(TClient), typeof(TImplementation), name, addCommandHandlers);
+        => AddServerAndClient(typeof(TService), typeof(TImplementation), name, hasCommandHandlers);
     public FusionBuilder AddServerAndClient(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        string name = "", bool addCommandHandlers = true)
-        => AddServerAndClient(serviceType, serviceType, implementationType, name, addCommandHandlers);
-    public FusionBuilder AddServerAndClient(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type clientType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
-        string name = "", bool addCommandHandlers = true)
+        string name = "", bool hasCommandHandlers = true)
     {
         // ~ RpcBuilder.AddDistributedService, but for Compute Service
 
-        if (!typeof(IComputeService).IsAssignableFrom(serviceType))
-            throw Errors.MustImplement<IRpcService>(serviceType, nameof(serviceType));
-        if (!serviceType.IsAssignableFrom(implementationType))
-            throw Errors.MustBeAssignableTo(implementationType, serviceType, nameof(implementationType));
-        if (!serviceType.IsAssignableFrom(clientType))
-            throw Errors.MustBeAssignableTo(clientType, serviceType, nameof(clientType));
-        if (!implementationType.IsClass)
-            throw Errors.MustBeClass(implementationType, nameof(implementationType));
-
-        object CreateClient(IServiceProvider c)
-            => c.FusionHub().NewRemoteComputeServiceProxy(serviceType, clientType);
-        object CreateServer(IServiceProvider c)
-            => c.FusionHub().NewComputeServiceProxy(implementationType);
-
-        Services.AddSingleton(clientType, CreateClient);
-        Services.AddSingleton(implementationType, CreateServer);
-        if (addCommandHandlers)
-            Commander.AddHandlers(implementationType, serviceType);
-        if (serviceType != implementationType)
-            Services.AddAlias(serviceType, implementationType);
-
-        Rpc.Service(serviceType).HasName(name).IsServer(implementationType).HasClient(clientType);
+        RpcService(serviceType)
+            .IsServer(implementationType)
+            .HasClient()
+            .HasCommandHandlers(hasCommandHandlers)
+            .Inject();
         return this;
+    }
+
+    // More low-level configuration options stuff
+
+    public FusionRpcServiceBuilder RpcService<TService>(bool tryGetExisting = false)
+        => RpcService(typeof(TService), tryGetExisting);
+
+    public FusionRpcServiceBuilder RpcService(Type serviceType, bool tryGetExisting = false)
+    {
+        var rpcServices = Rpc.Configuration.Services;
+        if (tryGetExisting
+            && rpcServices.TryGetValue(serviceType, out var rpcService)
+            && rpcService is FusionRpcServiceBuilder fusionRpcService)
+            return fusionRpcService;
+
+        fusionRpcService = new FusionRpcServiceBuilder(this, serviceType);
+        rpcServices[serviceType] = fusionRpcService;
+        return fusionRpcService;
     }
 
     // AddOperationReprocessor

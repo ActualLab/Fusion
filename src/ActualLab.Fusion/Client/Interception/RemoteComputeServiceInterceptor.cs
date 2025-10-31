@@ -17,19 +17,19 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
     }
 
     public readonly RpcServiceDef RpcServiceDef;
-    public readonly RpcInterceptor RpcRoutingInterceptor;
+    public readonly RpcServiceInterceptor RpcServiceInterceptor;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public RemoteComputeServiceInterceptor(Options settings, FusionHub hub, RpcInterceptor rpcRoutingInterceptor)
+    public RemoteComputeServiceInterceptor(Options settings, FusionHub hub, RpcServiceInterceptor rpcServiceInterceptor)
         : base(settings, hub)
     {
-        RpcServiceDef = rpcRoutingInterceptor.ServiceDef;
-        RpcRoutingInterceptor = rpcRoutingInterceptor;
+        RpcServiceDef = rpcServiceInterceptor.ServiceDef;
+        RpcServiceInterceptor = rpcServiceInterceptor;
     }
 
     public override Func<Invocation, object?>? SelectHandler(in Invocation invocation)
         => GetHandler(invocation) // Compute service method
-            ?? RpcRoutingInterceptor.SelectHandler(invocation); // Regular or command service method
+            ?? RpcServiceInterceptor.SelectHandler(invocation); // Regular or command service method
 
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]
     protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)

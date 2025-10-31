@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Interception;
 using ActualLab.Interception.Internal;
 using ActualLab.OS;
 using ActualLab.Rpc.Infrastructure;
@@ -27,9 +28,10 @@ public sealed class RpcServiceDef
     public RpcServiceMode Mode { get; init; }
     public bool IsSystem { get; init; }
     public bool IsBackend { get; init; }
-    public bool HasServer => ServerResolver is not null;
     public object? Server => _serverLazy.Value;
     public object? Client => _clientLazy.Value;
+    public bool HasClient => ClientType is not null;
+    public bool HasServer => ServerResolver is not null;
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
     public string Scope { get; init; }
     public LegacyNames LegacyNames { get; init; }

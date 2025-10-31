@@ -19,11 +19,10 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
         var rpc = services.AddRpc();
         var commander = services.AddCommander();
         if (isClient) {
-            rpc.AddClient<ITestRpcServiceClient>();
-            rpc.Service<ITestRpcServiceClient>().HasName(nameof(ITestRpcService));
-            commander.AddService<ITestRpcServiceClient>();
-            rpc.AddClient<ITestRpcBackend, ITestRpcBackendClient>();
-            commander.AddService<ITestRpcBackendClient>();
+            rpc.AddClient<ITestRpcService>();
+            commander.AddService<ITestRpcService>();
+            rpc.AddClient<ITestRpcBackend>();
+            commander.AddService<ITestRpcBackend>();
         }
         else {
             rpc.AddServer<ITestRpcService, TestRpcService>();
@@ -46,7 +45,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
         Out.WriteLine($"Parameters: {taskCount}t x {itemCount}");
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
 
         for (var p = 0; p < 2; p++) {
             var passItemCount = p >= 1 ? itemCount : itemCount / 10;
@@ -73,7 +72,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
         Out.WriteLine($"Parameters: {passCount}p x {taskCount}t x {itemCount}");
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
 
         for (var p = 0; p < passCount; p++) {
             var tasks = Enumerable.Range(0, taskCount).Select(_ => Task.Run(async () => {
@@ -99,7 +98,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
         Out.WriteLine($"Parameters: {passCount}p x {taskCount}t x {itemCount}");
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
 
         for (var p = 0; p < passCount; p++) {
             var tasks = Enumerable.Range(0, taskCount).Select(_ => Task.Run(async () => {

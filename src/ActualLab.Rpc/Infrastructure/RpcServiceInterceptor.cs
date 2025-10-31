@@ -3,19 +3,17 @@ using ActualLab.Interception;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public abstract class RpcInterceptor : Interceptor
+public abstract class RpcServiceInterceptor : Interceptor
 {
     public readonly RpcHub Hub;
     public readonly RpcServiceDef ServiceDef;
-    public readonly RpcInterceptorOptions Settings;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected RpcInterceptor(RpcInterceptorOptions settings, IServiceProvider services, RpcServiceDef serviceDef)
-        : base(settings, services)
+    protected RpcServiceInterceptor(Options settings, RpcHub hub, RpcServiceDef serviceDef)
+        : base(settings, hub.Services)
     {
-        Hub = services.RpcHub();
+        Hub = hub;
         ServiceDef = serviceDef;
-        Settings = settings;
         UsesUntypedHandlers = true;
     }
 

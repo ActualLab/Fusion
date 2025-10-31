@@ -168,13 +168,13 @@ void ConfigureServices()
     if (hostKind == HostKind.ApiServer) {
         fusion.AddClient<IAuth>(); // IAuth = a client of backend's IAuth
         fusion.AddClient<IAuthBackend>(); // IAuthBackend = a client of backend's IAuthBackend
-        fusion.Rpc.Service<IAuth>().IsClientAndServer(); // Expose IAuth (a client) via RPC
+        fusion.Rpc.Service<IAuth>().IsServer(typeof(IAuth)).HasClient(); // Expose IAuth (a client) via RPC
     }
     else { // SingleServer or BackendServer
         fusion.AddOperationReprocessor();
         fusion.AddDbAuthService<AppDbContext, string>();
         if (hostKind == HostKind.BackendServer)
-            fusion.Rpc.Service<IAuthBackend>().IsClientAndServer(); // Expose IAuthBackend via RPC
+            fusion.Rpc.Service<IAuthBackend>().IsServer(typeof(IAuthBackend)); // Expose IAuthBackend via RPC
     }
 
     if (hostSettings.UseTenants) {

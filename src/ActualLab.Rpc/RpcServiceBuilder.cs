@@ -1,98 +1,99 @@
+using System.Diagnostics.CodeAnalysis;
+using ActualLab.Interception;
 using ActualLab.Internal;
 
 namespace ActualLab.Rpc;
 
-public sealed class RpcServiceBuilder
+public class RpcServiceBuilder
 {
     public RpcBuilder Rpc { get; }
+    public IServiceCollection Services => Rpc.Services;
     public Type Type { get; }
     public string Name { get; private set; }
     public RpcServiceMode Mode { get; private set; }
     public ServiceResolver? ServerResolver { get; private set; }
-    public Type? ClientType { get; private set; }
 
-    public RpcServiceBuilder(RpcBuilder rpc, Type type, string name = "")
+    public Type? ClientType => Mode switch {
+        RpcServiceMode.Client => Type,
+        RpcServiceMode.Distributed => Type,
+        RpcServiceMode.ServerAndClient => Proxies.GetProxyType(Type),
+        _ => null,
+    };
+
+    public RpcServiceBuilder(RpcBuilder rpc, Type type)
+        : this(rpc, typeof(IRpcService), type)
+    { }
+
+    protected RpcServiceBuilder(RpcBuilder rpc, Type rootType, Type type)
     {
         if (type.IsValueType)
             throw Errors.MustBeClass(type, nameof(type));
+        if (!rootType.IsAssignableFrom(type))
+            throw Errors.MustBeAssignableTo(type, rootType, nameof(type));
 
         Rpc = rpc;
         Type = type;
-        Name = name;
+        Name = "";
     }
 
-    public void Validate()
-    {
-        if (Mode is RpcServiceMode.Default or RpcServiceMode.Local)
-            throw Internal.Errors.UnspecifiedServiceMode(Type);
-
-        if (Mode.IsAnyServer() != ServerResolver is not null)
-            throw Internal.Errors.ServiceModeAndServerResolverMismatch(Type, Mode);
-        if (Mode.IsAnyClient() != ClientType is not null)
-            throw Internal.Errors.ServiceModeAndClientTypeMismatch(Type, Mode);
-
-        // There is no way to set just ClientType w/o adding Mode.IsAnyClient(), see HasClient()
-        if (ClientType is not null && !Type.IsAssignableFrom(ClientType))
-            throw Errors.MustBeAssignableTo(ClientType, Type);
-    }
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcServiceBuilder HasName(string name)
     {
         Name = name;
         return  this;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcServiceBuilder ResetMode()
     {
         Mode = RpcServiceMode.Default;
         ServerResolver = null;
-        ClientType = null;
         return this;
     }
 
     // IsXxx (= ResetMode().HasXxx(...))
 
-    public RpcServiceBuilder IsClient<TClient>()
-        where TClient : class, IRpcService
-        => IsClient(typeof(TClient));
-    public RpcServiceBuilder IsClient(Type? clientType = null)
-        => ResetMode().HasClient(clientType);
+    public RpcServiceBuilder IsClient()
+        => ResetMode().HasClient();
 
-    public RpcServiceBuilder IsServer<TImplementation>()
-        where TImplementation : class, IRpcService
-        => IsServer(typeof(TImplementation));
-    public RpcServiceBuilder IsServer(Type? implementationType = null)
-        => ResetMode().HasServer(implementationType ?? Type);
+    public RpcServiceBuilder IsLocal(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType)
+        => ResetMode().HasServer(implementationType, RpcServiceMode.Local);
 
-    public RpcServiceBuilder IsDistributed<TImplementation>()
-        where TImplementation : class, IRpcService
-        => IsDistributed(typeof(TImplementation));
-    public RpcServiceBuilder IsDistributed(Type? implementationType = null)
+    public RpcServiceBuilder IsLocal(ServiceResolver serverResolver)
+        => ResetMode().HasServer(serverResolver, RpcServiceMode.Local);
+
+    public RpcServiceBuilder IsServer(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType)
+        => ResetMode().HasServer(implementationType);
+
+    public RpcServiceBuilder IsServer(ServiceResolver serverResolver)
+        => ResetMode().HasServer(serverResolver);
+
+    public RpcServiceBuilder IsDistributed(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType)
+        => ResetMode().HasServer(implementationType, RpcServiceMode.Distributed).HasClient();
+
+    public RpcServiceBuilder HasClient()
     {
-        implementationType ??= Type;
-        return ResetMode().HasServer(implementationType, RpcServiceMode.Distributed).HasClient(implementationType);
-    }
-
-    // HasXxx
-
-    public RpcServiceBuilder HasClient(Type? clientType = null)
-    {
-        if (clientType is not null && !Type.IsAssignableFrom(clientType))
-            throw Errors.MustBeAssignableTo(clientType, Type);
+        if (Mode is RpcServiceMode.Local)
+            throw new InvalidOperationException("Cannot add Client mode to Local service.");
 
         // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
         Mode |= RpcServiceMode.Client;
-        ClientType = clientType ?? Type;
         return this;
     }
 
-    public RpcServiceBuilder HasServer<TImplementation>(RpcServiceMode mode = RpcServiceMode.Server)
-        => HasServer(ServiceResolver.New(typeof(TImplementation)), mode);
-    public RpcServiceBuilder HasServer(Type implementationType, RpcServiceMode mode = RpcServiceMode.Server)
+    public RpcServiceBuilder HasServer(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
+        RpcServiceMode mode = RpcServiceMode.Server)
         => HasServer(ServiceResolver.New(implementationType), mode);
-    public RpcServiceBuilder HasServer(ServiceResolver serverResolver, RpcServiceMode mode = RpcServiceMode.Server)
+
+    public RpcServiceBuilder HasServer(
+        ServiceResolver serverResolver,
+        RpcServiceMode mode = RpcServiceMode.Server)
     {
-        if (!mode.IsAnyServer())
+        if (mode is not RpcServiceMode.Local && !mode.IsAnyServer())
             throw new ArgumentOutOfRangeException(nameof(mode));
         if (!Type.IsAssignableFrom(serverResolver.Type))
             throw Errors.MustBeAssignableTo(serverResolver.Type, Type, nameof(serverResolver));
@@ -107,5 +108,47 @@ public sealed class RpcServiceBuilder
     {
         Rpc.Configuration.Services.Remove(Type);
         return Rpc;
+    }
+
+    // Inject
+
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
+    public virtual void Inject()
+    {
+        var serviceType = Type;
+        if (Mode is RpcServiceMode.Client) {
+            Services.AddSingleton(serviceType, CreateClient);
+            return;
+        }
+
+        // Any server
+        var implementationType = ServerResolver?.Type!;
+        switch (Mode) {
+            case RpcServiceMode.Local:
+                // Local services are skipped during RpcServiceRegistry construction
+                Services.AddSingleton(serviceType, implementationType);
+                return; // No alias is needed here
+            case RpcServiceMode.Server:
+                Services.AddSingleton(implementationType);
+                break;
+            case RpcServiceMode.ServerAndClient:
+                Services.AddSingleton(implementationType);
+                Services.AddSingleton(Proxies.GetProxyType(serviceType), CreateClient);
+                break;
+            case RpcServiceMode.Distributed:
+                Services.AddSingleton(implementationType, CreateDistributedService);
+                break;
+            default:
+                throw Internal.Errors.UnspecifiedServiceMode(serviceType, Mode);
+        }
+        if (serviceType != implementationType)
+            Services.AddAlias(serviceType, implementationType);
+        return;
+
+        object CreateClient(IServiceProvider c)
+            => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, serviceType);
+
+        object CreateDistributedService(IServiceProvider c)
+            => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, implementationType);
     }
 }

@@ -34,8 +34,8 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcClient Client => Hub.Client;
     public ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers => Hub.Peers;
 
-    public readonly RpcInterceptorOptions InterceptorOptions
-        = hub.Services.GetRequiredService<RpcInterceptorOptions>();
+    public readonly RpcRoutingInterceptor.Options RoutingInterceptorOptions
+        = hub.Services.GetRequiredService<RpcRoutingInterceptor.Options>();
 
     // NewXxx
 
@@ -54,23 +54,6 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
         object? localTarget = null)
     {
         var serviceDef = Hub.ServiceRegistry[serviceType];
-        return new RpcRoutingInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget);
-    }
-
-    public IProxy NewSwitchProxy(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyBaseType,
-        object? localTarget,
-        object? remoteTarget,
-        bool initialize = true)
-    {
-        var interceptor = NewSwitchInterceptor(serviceType, localTarget, remoteTarget);
-        return Services.ActivateProxy(proxyBaseType, interceptor, initialize);
-    }
-
-    public RpcSwitchInterceptor NewSwitchInterceptor(Type serviceType, object? localTarget, object? remoteTarget)
-    {
-        var serviceDef = Hub.ServiceRegistry[serviceType];
-        return new RpcSwitchInterceptor(InterceptorOptions, Hub.Services, serviceDef, localTarget, remoteTarget);
+        return new RpcRoutingInterceptor(RoutingInterceptorOptions, Hub, serviceDef, localTarget);
     }
 }

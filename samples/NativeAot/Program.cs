@@ -37,12 +37,12 @@ var services = new ServiceCollection()
     })
     .AddFusion(fusion => {
         // We could use .AddDistributedService, but Loopback connection = infinite call loop there
-        fusion.AddServerAndClient<ITestService, ITestServiceClient, TestService>();
+        fusion.AddServerAndClient<ITestService, TestService>();
     })
     .AddSingleton<RpcCallRouter>(_ => (method, args) => RpcPeerRef.Loopback)
     .BuildServiceProvider();
 
-var client = services.GetRequiredService<ITestServiceClient>();
+var client = services.RpcHub().GetClient<ITestService>();
 for (var i = 0; i < 5; i++) {
     Out.WriteLine("Calling GetTime()...");
     var now = await client.GetTime();
@@ -79,8 +79,6 @@ public interface ITestService : IComputeService
     [CommandHandler]
     public Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default);
 }
-
-public interface ITestServiceClient : ITestService;
 
 [MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public sealed partial record SayHelloCommand(

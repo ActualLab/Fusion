@@ -12,11 +12,10 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
     {
         base.ConfigureServices(services);
         var commander = services.AddCommander();
-        commander.AddService<TestRpcService>();
-
         var rpc = services.AddRpc();
-        rpc.AddClient<ITestRpcService, ITestRpcServiceClient>();
-        rpc.AddServer<ITestRpcService, TestRpcService>();
+
+        rpc.AddServerAndClient<ITestRpcService, TestRpcService>();
+        commander.AddHandlers<TestRpcService>();
     }
 
     [Fact]
@@ -25,7 +24,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
         var clientPeer = connection.ClientPeer;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
         await client.Add(1, 1); // Warm-up
 
         var delay = TimeSpan.FromMilliseconds(100);
@@ -43,7 +42,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
     {
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
 
         var stream = await client.StreamInt32(100, -1, new RandomTimeSpan(0.02, 1));
         var countTask = stream.CountAsync();
@@ -84,7 +83,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
     {
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
         await client.Add(1, 1); // Warm-up
 
         var rnd = new Random();
@@ -125,7 +124,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
         UseLogging = false;
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
 
         var workerCount = 2;
         if (TestRunnerInfo.IsBuildAgent())

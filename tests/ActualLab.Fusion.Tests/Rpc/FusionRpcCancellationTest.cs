@@ -12,22 +12,22 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddService<ICounterService, CounterService>(RpcServiceMode.Distributed);
+        fusion.AddServerAndClient<ICounterService, CounterService>();
     }
 
     [Fact]
     public async Task CancelTest()
     {
         var services = CreateServices();
-        var counters = services.GetRequiredService<ICounterService>();
+        var client = services.RpcHub().GetClient<ICounterService>();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async ()
-            => await Computed.Capture(() => counters.Get("cancel")));
+            => await Computed.Capture(() => client.Get("cancel")));
 
         using var cts = new CancellationTokenSource(100);
         // ReSharper disable once MethodSupportsCancellation
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async ()
-            => await Computed.Capture(() => counters.Get("wait", cts.Token)));
+            => await Computed.Capture(() => client.Get("wait", cts.Token)));
     }
 
     [Theory(Timeout = 120_000)]
@@ -36,8 +36,10 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
     public async Task ConcurrentCancelTest(bool useClient)
     {
         var services = CreateServices();
-        var serverCounters = services.GetRequiredService<CounterService>();
-        var counters = useClient ? services.GetRequiredService<ICounterService>() : serverCounters;
+        var server = services.RpcHub().GetServer<ICounterService>();
+        var counters = useClient
+            ? services.RpcHub().GetClient<ICounterService>()
+            : server;
         var waitSuffix = "-wait250";
         var cancellationDelay = TimeSpan.FromMilliseconds(50);
         var cancellationDelayThreshold = cancellationDelay + TimeSpan.FromMilliseconds(25);
@@ -61,7 +63,7 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
                     Out.WriteLine($"{index}: {c} in {callStartedAt.Elapsed.ToShortString()}");
                     for (var j = 0; j < 100; j++)
                         await Task.Yield();
-                    _ = serverCounters.Increment(key);
+                    _ = server.Increment(key);
                     return default;
                 }
                 catch (TimeoutException) {
@@ -94,17 +96,17 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
     public async Task ReprocessCancelTest()
     {
         var services = CreateServices();
-        var counters = services.GetRequiredService<ICounterService>();
+        var client = services.RpcHub().GetClient<ICounterService>();
         var key = "cancel50";
         var timeout = TimeSpan.FromSeconds(1);
 
         // ReSharper disable once MethodSupportsCancellation
-        var c = await Computed.Capture(() => counters.Get(key));
+        var c = await Computed.Capture(() => client.Get(key));
         c.Value.Should().Be(0);
 
         // Test w/o CancellationToken
         await Test(CancellationToken.None);
-        await counters.Set(key, 0); // Post-test reset
+        await client.Set(key, 0); // Post-test reset
         await Task.Delay(500);
 
         // Test with CancellationToken
@@ -112,10 +114,10 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
         await Test(cts.Token);
 
         async Task Test(CancellationToken cancellationToken) {
-            c = await Computed.Capture(() => counters.Get(key, cancellationToken))
+            c = await Computed.Capture(() => client.Get(key, cancellationToken))
                 .AsTask().WaitAsync(timeout);
             for (var i = 1; i <= 10; i++) {
-                await counters.Increment(key, cancellationToken);
+                await client.Increment(key, cancellationToken);
                 await c.WhenInvalidated(cancellationToken).WaitAsync(timeout);
                 c = await c.Update(cancellationToken);
                 Out.WriteLine(c.ToString());

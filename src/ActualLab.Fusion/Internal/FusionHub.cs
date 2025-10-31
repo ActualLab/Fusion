@@ -55,7 +55,7 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
     public RemoteComputeServiceInterceptor NewRemoteComputeServiceInterceptor(Type serviceType)
     {
         var rpcInternalServices = RpcHub.InternalServices;
-        var rpcRoutingInterceptor = rpcInternalServices.NewRoutingInterceptor(serviceType, CommanderHub.Interceptor);
-        return new(RemoteComputeServiceInterceptorOptions, this, rpcRoutingInterceptor);
+        var rpcServiceInterceptor = rpcInternalServices.NewRoutingInterceptor(serviceType, CommanderHub.Interceptor);
+        return new(RemoteComputeServiceInterceptorOptions, this, rpcServiceInterceptor);
     }
 }

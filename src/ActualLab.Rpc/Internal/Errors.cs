@@ -8,14 +8,10 @@ public static class Errors
     public static Exception UnknownCallType(byte callTypeId)
         => new KeyNotFoundException($"Unknown CallTypeId: {callTypeId}.");
 
-    public static Exception UnspecifiedServiceMode(Type serviceType)
-        => new InvalidOperationException($"Service '{serviceType.GetName()}' requires Mode to be specified.");
-    public static Exception ServiceModeAndServerResolverMismatch(Type serviceType, RpcServiceMode mode)
+    public static Exception UnspecifiedServiceMode(Type serviceType, RpcServiceMode mode)
         => new InvalidOperationException(
-            $"Service '{serviceType.GetName()}' is registered as {mode}, and its ServerResolver value doesn't correspond to that mode.");
-    public static Exception ServiceModeAndClientTypeMismatch(Type serviceType, RpcServiceMode mode)
-        => new InvalidOperationException(
-            $"Service '{serviceType.GetName()}' is registered as {mode}, and its ClientType value doesn't correspond to that mode.");
+            $"Service '{serviceType.GetName()}' got {nameof(RpcServiceMode)}.{mode:G}, "
+            + "although it must be configured for a specific service mode at this point.");
 
     public static Exception ServiceTypeConflict(Type serviceType)
         => new InvalidOperationException($"Service '{serviceType.GetName()}' is already registered.");
@@ -28,6 +24,10 @@ public static class Errors
         => new KeyNotFoundException($"Can't resolve service by type: '{serviceType.GetName()}'.");
     public static Exception NoService(string serviceName)
         => new KeyNotFoundException($"Can't resolve service by name: '{serviceName}'.");
+    public static Exception NoClient(RpcServiceDef service)
+        => new KeyNotFoundException($"RPC service has no client: {service}.");
+    public static Exception NoServer(RpcServiceDef service)
+        => new KeyNotFoundException($"RPC service has no server: {service}.");
 
     public static Exception NoMethod(Type serviceType, MethodInfo method)
         => new KeyNotFoundException($"Can't resolve method '{method.Name}' (by MethodInfo) of '{serviceType.GetName()}'.");
@@ -127,14 +127,6 @@ public static class Errors
 
     public static Exception InvalidWebSocketMessageType(WebSocketMessageType type, WebSocketMessageType expectedType)
         => new InvalidOperationException($"Invalid WebSocket message type: got {type:G}, but expected {expectedType:G}.");
-
-    public static Exception NoLocalCallInvoker()
-        => new InvalidOperationException(
-            $"{nameof(RpcSwitchInterceptor)} is misconfigured: it can't route local calls.");
-
-    public static Exception NoRemoteCallInvoker()
-        => new InvalidOperationException(
-            $"{nameof(RpcSwitchInterceptor)} is misconfigured: it can't route remote calls.");
 
     public static Exception GotRpcRerouteExceptionFromRemotePeer()
         => new InvalidOperationException(

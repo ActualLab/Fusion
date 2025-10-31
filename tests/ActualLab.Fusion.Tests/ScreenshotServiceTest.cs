@@ -1,5 +1,6 @@
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.OS;
+using ActualLab.Rpc;
 using ActualLab.Rpc.Testing;
 using ActualLab.Testing.Collections;
 
@@ -12,7 +13,7 @@ public class ScreenshotServiceTest(ITestOutputHelper @out) : SimpleFusionTestBas
     {
         base.ConfigureServices(services);
         var fusion = services.AddFusion();
-        fusion.AddDistributedService<IScreenshotService, ScreenshotService>();
+        fusion.AddServerAndClient<IScreenshotService, ScreenshotService>();
     }
 
     [Fact]
@@ -23,9 +24,9 @@ public class ScreenshotServiceTest(ITestOutputHelper @out) : SimpleFusionTestBas
             return;
 
         await using var services = CreateServices();
-        var screenshots = services.GetRequiredService<IScreenshotService>();
+        var client = services.RpcHub().GetClient<IScreenshotService>();
 
-        var c = await GetScreenshotComputed(screenshots);
+        var c = await GetScreenshotComputed(client);
         for (var i = 0; i < 10; i++) {
             c.Value.Image.Length.Should().BeGreaterThan(0);
             await TestExt.When(
@@ -44,9 +45,9 @@ public class ScreenshotServiceTest(ITestOutputHelper @out) : SimpleFusionTestBas
 
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
-        var screenshots = services.GetRequiredService<IScreenshotService>();
+        var client = services.RpcHub().GetClient<IScreenshotService>();
 
-        var c = await GetScreenshotComputed(screenshots);
+        var c = await GetScreenshotComputed(client);
         for (var i = 0; i < 50; i++) {
             c.Value.Image.Length.Should().BeGreaterThan(0);
             await TestExt.When(

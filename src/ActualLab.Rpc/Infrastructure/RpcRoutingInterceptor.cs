@@ -2,16 +2,22 @@ using ActualLab.Interception;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public class RpcRoutingInterceptor : RpcInterceptor
+public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
 {
+    public new sealed record Options : Interceptor.Options
+    {
+        public static Options Default { get; set; } = new();
+    }
+
     public readonly object? LocalTarget;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public RpcRoutingInterceptor(
-        RpcInterceptorOptions settings, IServiceProvider services,
+        Options settings,
+        RpcHub hub,
         RpcServiceDef serviceDef,
         object? localTarget
-        ) : base(settings, services, serviceDef)
+        ) : base(settings, hub, serviceDef)
         => LocalTarget = localTarget;
 
     protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)
@@ -41,7 +47,7 @@ public class RpcRoutingInterceptor : RpcInterceptor
         };
     }
 
-    protected async Task<object?> InvokeWithRerouting(
+    private async Task<object?> InvokeWithRerouting(
         RpcMethodDef methodDef,
         RpcOutboundContext context,
         RpcOutboundCall? call,
