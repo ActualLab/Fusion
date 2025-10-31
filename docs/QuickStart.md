@@ -27,15 +27,16 @@ The API it implements is defined in
 There are two immutable model types:
 
 ```cs
-public record Product : IHasId<string>
-{
-    public string Id { get; init; } = "";
-    public decimal Price { get; init; } = 0;
-}
+public partial record Product(
+    [property: DataMember] string Id,
+    [property: DataMember] decimal Price
+) : IHasId<string>;
 
-public record Cart : IHasId<string>
+public partial record Cart(
+    [property: DataMember] string Id
+) : IHasId<string>
 {
-    public string Id { get; init; } = "";
+    [DataMember]
     public ImmutableDictionary<string, decimal> Items { get; init; } = ImmutableDictionary<string, decimal>.Empty;
 }
 ```
@@ -48,22 +49,22 @@ totally optional.
 We're also going to implement two services:
 
 ```cs
-public interface IProductService
+public interface IProductService: IComputeService
 {
-    [CommandHandler]
-    Task Edit(EditCommand<Product> command, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<Product?> Get(string id, CancellationToken cancellationToken = default);
+    public Task<Product?> Get(string id, CancellationToken cancellationToken = default);
+    [CommandHandler]
+    public Task Edit(EditCommand<Product> command, CancellationToken cancellationToken = default);
 }
 
-public interface ICartService
+public interface ICartService: IComputeService
 {
+    [ComputeMethod]
+    public Task<Cart?> Get(string id, CancellationToken cancellationToken = default);
+    [ComputeMethod]
+    public Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task Edit(EditCommand<Cart> command, CancellationToken cancellationToken = default);
-    [ComputeMethod]
-    Task<Cart?> Get(string id, CancellationToken cancellationToken = default);
-    [ComputeMethod]
-    Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default);
+    public Task Edit(EditCommand<Cart> command, CancellationToken cancellationToken = default);
 }
 ```
 
@@ -74,12 +75,13 @@ is used to implement creation, update, and deletion
 mainly to save some amount of code):
 
 ```cs
-public record EditCommand<TValue>(string Id, TValue? Value = null) : ICommand<Unit>
+public partial record EditCommand<TValue>(
+    [property: DataMember] string Id,
+    [property: DataMember] TValue? Item
+) : ICommand<Unit>
     where TValue : class, IHasId<string>
 {
     public EditCommand(TValue value) : this(value.Id, value) { }
-    // Newtonsoft.Json needs this constructor to deserialize this record
-    public EditCommand() : this("") { }
 }
 ```
 
@@ -216,7 +218,7 @@ check out my other post covering another similar scenario:
 ## Can we do better than that?
 
 Yes, and that's exactly what I'm going to talk about further.
-But first, let's launch `HelloCart` and see what it does:
+But first, let's launch `HelloCart` and see what it does. And make sure `UseAutoRunner` is disabled in [AppSettings.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppSettings.cs).
 
 ![](./img/Samples-HelloCart.gif)
 
@@ -225,28 +227,30 @@ to create 3 products and 2 carts:
 
 ```cs
 // Code from AppBase.cs
-public virtual async Task InitializeAsync()
+public virtual async Task InitializeAsync(IServiceProvider services, bool startHostedServices)
 {
-    var pApple = new Product { Id = "apple", Price = 2M };
-    var pBanana = new Product { Id = "banana", Price = 0.5M };
-    var pCarrot = new Product { Id = "carrot", Price = 1M };
-    ExistingProducts = new [] { pApple, pBanana, pCarrot };
-    foreach (var product in ExistingProducts)
-        await HostProductService.Edit(new EditCommand<Product>(product));
-
-    var cart1 = new Cart() { Id = "cart:apple=1,banana=2",
+    var pApple = new Product("apple", 2);
+    var pBanana = new Product("banana", 0.5M);
+    var pCarrot = new Product("carrot", 1);
+    var cart1 = new Cart("cart1(apple=1,banana=2)") {
         Items = ImmutableDictionary<string, decimal>.Empty
             .Add(pApple.Id, 1)
             .Add(pBanana.Id, 2)
     };
-    var cart2 = new Cart() { Id = "cart:banana=1,carrot=1",
+    var cart2 = new Cart("cart2(banana=1,carrot=1)") {
         Items = ImmutableDictionary<string, decimal>.Empty
             .Add(pBanana.Id, 1)
             .Add(pCarrot.Id, 1)
     };
-    ExistingCarts = new [] { cart1, cart2 };
-    foreach (var cart in ExistingCarts)
-        await HostCartService.Edit(new EditCommand<Cart>(cart));
+    var extraProducts = Enumerable.Range(0, ExtraProductCount)
+        .Select(i => new Product($"product{i + 1}", i));
+    ExistingProducts = [pApple, pBanana, pCarrot, ..extraProducts];
+    ExistingCarts = [cart1, cart2];
+
+    // if (MustRecreateDb) ...
+
+    if (startHostedServices)
+        await services.HostedServices().Start();
 }
 ```
 
@@ -254,32 +258,32 @@ Then it creates a set of background tasks **watching for changes
 made to every one of them**:
 
 ```cs
-public Task Watch(CancellationToken cancellationToken = default)
+public Task Watch(IServiceProvider services, CancellationToken cancellationToken = default)
 {
     var tasks = new List<Task>();
     foreach (var product in ExistingProducts)
-        tasks.Add(WatchProduct(product.Id, cancellationToken));
+        tasks.Add(WatchProduct(services, product.Id, cancellationToken));
     foreach (var cart in ExistingCarts)
-        tasks.Add(WatchCartTotal(cart.Id, cancellationToken));
+        tasks.Add(WatchCartTotal(services, cart.Id, cancellationToken));
     return Task.WhenAll(tasks);
 }
 
-public async Task WatchCartTotal(string cartId, CancellationToken cancellationToken = default)
+public async Task WatchCartTotal(
+    IServiceProvider services, string cartId, CancellationToken cancellationToken = default)
 {
-    var cartService = WatchServices.GetRequiredService<ICartService>();
-    var computed = await Computed.Capture(
-        ct => cartService.GetTotal(cartId, ct),
-        cancellationToken);
+    var cartService = services.GetRequiredService<ICartService>();
+    var computed = await Computed.Capture(() => cartService.GetTotal(cartId, cancellationToken), cancellationToken);
     while (true) {
         WriteLine($"  {cartId}: total = {computed.Value}");
         await computed.WhenInvalidated(cancellationToken);
-        computed = await computed.Update(false, cancellationToken);
+        computed = await computed.Update(cancellationToken);
     }
 }
 
-public async Task WatchProduct(string productId, CancellationToken cancellationToken = default)
+public async Task WatchProduct(
+    IServiceProvider services, string productId, CancellationToken cancellationToken = default)
 {
-    var productService = WatchServices.GetRequiredService<IProductService>();
+    var productService = services.GetRequiredService<IProductService>();
     // The rest is similar to the same code in WatchCartTotal
 }
 ```
@@ -290,14 +294,12 @@ The only remark I want to make at this point is that
 in [`Program.cs`, line ~50](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/Program.cs#L52).
 
 Finally, the looped section in `Program.cs` starts to
-as you to enter `[productId]=[price]` expression, parses it,
+ask you to enter `[productId]=[price]` expression, parses it,
 and sends the following command:
 
 ```cs
 var command = new EditCommand<Product>(product with { Price = price });
-await app.ClientProductService.Edit(command);
-// You can run absolutely identical action with:
-// await app.ClientServices.Commander().Call(command);
+await app.ClientServices.Commander().Call(command);
 ```
 
 As you see, this call triggers not only the "watcher" task
@@ -342,10 +344,11 @@ You might notice just a few unusual things there:
    marked as `virtual`
 2. `Edit` contains a bit unusual piece of code:
    ```cs
-    if (Invalidation.IsActive) {
-        _ = Get(productId, default);
-        return Task.CompletedTask;
-    }
+   if (Invalidation.IsActive) {
+       // Invalidation logic
+       _ = Get(productId, default);
+       return Task.CompletedTask;
+   }
    ```
 
 Everything else looks absolutely normal.
@@ -356,10 +359,10 @@ The same is equally applicable to `InMemoryCartService`:
    marked as `virtual`
 2. `Edit` contains a bit unusual piece of code:
    ```cs
-    if (Invalidation.IsActive) {
-        _ = Get(cartId, default);
-        return Task.CompletedTask;
-    }
+   if (Invalidation.IsActive) {
+       _ = Get(cartId, default);
+       return Task.CompletedTask;
+   }
    ```
 
 Finally, let's look at the code that registers these
@@ -371,11 +374,12 @@ public class AppV1 : AppBase
     public AppV1()
     {
         var services = new ServiceCollection();
+        AppLogging.Configure(services);
         services.AddFusion(fusion => {
             fusion.AddService<IProductService, InMemoryProductService>();
             fusion.AddService<ICartService, InMemoryCartService>();
         });
-        ClientServices = HostServices = services.BuildServiceProvider();
+        ClientServices = ServerServices = services.BuildServiceProvider();
     }
 }
 ```
@@ -490,6 +494,7 @@ public virtual async Task<decimal> GetTotal(
     var cart = await Get(id, cancellationToken);
     if (cart is null)
         return 0;
+
     var total = 0M;
     foreach (var (productId, quantity) in cart.Items) {
         // Dependency: _products.Get(productId)!
@@ -521,6 +526,7 @@ public virtual Task Edit(EditCommand<Product> command, CancellationToken cancell
     var (productId, product) = command;
     if (string.IsNullOrEmpty(productId))
         throw new ArgumentOutOfRangeException(nameof(command));
+
     if (Invalidation.IsActive) {
         // This is the invalidation block.
         // Every [ComputeMethod] result you "touch" here
@@ -668,7 +674,9 @@ services.AddFusion(fusion => {
 var appTempDir = PathEx.GetApplicationTempDirectory("", true);
 var dbPath = appTempDir & "HelloCart_v1.db";
 services.AddDbContextFactory<AppDbContext>(db => {
-    db.UseSqlite($"Data Source={dbPath}");
+    if (AppSettings.Db.UsePostgreSql) { /* PostgreSQL setup */ }
+    else { /* SQLite setup */ }
+
     db.EnableSensitiveDataLogging();
 });
 
@@ -676,42 +684,36 @@ services.AddDbContextFactory<AppDbContext>(db => {
 // to omit DbContext type in misc. normal and extension methods
 // it has
 services.AddDbContextServices<AppDbContext>(db => {
-    // Uncomment if you'll be using AddRedisOperationLogChangeTracking
-    // db.AddRedisDb("localhost", "Fusion.Tutorial.Part10");
-
-    // This call enabled Operations Framework (OF) for AppDbContext.
     db.AddOperations(operations => {
-        operations.ConfigureOperationLogReader(_ => new() {
-            // We use FileBasedDbOperationLogChangeTracking, so unconditional wake up period
-            // can be arbitrary long - all depends on the reliability of Notifier-Monitor chain.
-            // See what .ToRandom does - most of timeouts in Fusion settings are RandomTimeSpan-s,
-            // but you can provide a normal one too - there is an implicit conversion from it.
-            UnconditionalCheckPeriod = TimeSpan.FromSeconds(Env.IsDevelopment() ? 60 : 5).ToRandom(0.05),
-        });
-        // And this call tells that hosts will use a shared file
-        // to "message" each other that operation log was updated.
-        // In fact, they'll just be "touching" this file once
-        // this happens and watch for change of its modify date.
-        // You shouldn't use this mechanism in real multi-host
-        // scenario, but it works well if you just want to test
-        // multi-host invalidation on a single host by running
-        // multiple processes there.
-        operations.AddFileBasedOperationLogChangeTracking();
+        if (!AppSettings.Db.UseOperationLogWatchers)
+            return;
 
-        // Or, if you use PostgreSQL, use this instead of above line
-        // operations.AddNpgsqlOperationLogChangeTracking();
-
-        // Or, if you use Redis, use this instead of above line
-        // operations.AddRedisOperationLogChangeTracking();
+        if (AppSettings.Db.UseRedisOperationLogWatchers) {
+            db.AddRedisDb("localhost", "Fusion.Samples.HelloCart");
+            operations.AddRedisOperationLogWatcher();
+        }
+        else if (AppSettings.Db.UsePostgreSql)
+            operations.AddNpgsqlOperationLogWatcher();
+        else
+            operations.AddFileSystemOperationLogWatcher();
+    });
+    db.AddEntityResolver<string, DbProduct>();
+    db.AddEntityResolver<string, DbCart>((_, options) => {
+        // Cart is always loaded together with items
+        options.QueryTransformer = carts => carts.Include(c => c.Items);
     });
 });
-ClientServices = HostServices = services.BuildServiceProvider();
+
+// Operation reprocessor
+if (AppSettings.Db.UseOperationReprocessor)
+    services.AddFusion().AddOperationReprocessor();
+ClientServices = ServerServices = services.BuildServiceProvider();
 ```
 
 `AppV2.InitializeAsync` simply re-created the DB:
 
 ```cs
-await using var dbContext = HostServices.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
+await using var dbContext = ServerServices.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
 await dbContext.Database.EnsureDeletedAsync();
 await dbContext.Database.EnsureCreatedAsync();
 await base.InitializeAsync();
@@ -729,7 +731,7 @@ reads/writes the DB:
    used like this:
 
    ```cs
-   await using var dbContext = CreateDbContext();
+   await using var dbContext = await DbHub.CreateDbContext(cancellationToken);
    // ... code using dbContext
    ```
 
@@ -745,7 +747,7 @@ reads/writes the DB:
 3. And another one is `CreateOperationDbContext`, which is used like this:
 
    ```cs
-   await using var dbContext = await CreateOperationDbContext(cancellationToken);
+   await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
    // ... code using dbContext
    ```
 
@@ -814,10 +816,10 @@ Here is an example of how to use such resolvers:
 ```cs
 public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)
 {
-    var dbProduct = await _productResolver.Get(id, cancellationToken);
-    if (dbProduct is null)
-        return null;
-    return new Product() { Id = dbProduct.Id, Price = dbProduct.Price };
+    var dbProduct = await ProductResolver.Get(id, cancellationToken);
+    return dbProduct is null
+        ? null
+        : new Product(dbProduct.Id, dbProduct.Price);
 }
 ```
 
@@ -829,10 +831,12 @@ public virtual async Task<decimal> GetTotal(string id, CancellationToken cancell
     var cart = await Get(id, cancellationToken);
     if (cart is null)
         return 0;
+
     var itemTotals = await Task.WhenAll(cart.Items.Select(async item => {
-        var product = await _products.Get(item.Key, cancellationToken);
+        var product = await Products.Get(item.Key, cancellationToken);
         return item.Value * (product?.Price ?? 0M);
     }));
+
     return itemTotals.Sum();
 }
 ```
@@ -877,10 +881,14 @@ a remotely callable one?
 Actually, almost nothing! Here is `AppV4` constructor:
 
 ```cs
-var baseUri = new Uri("http://localhost:7005");
-Host = BuildHost(baseUri);
-HostServices = Host.Services;
-ClientServices = BuildClientServices(baseUri);
+var uri = "http://localhost:7005";
+
+// Create server
+App = CreateWebApp(uri);
+ServerServices = App.Services;
+
+// Create client
+ClientServices = BuildClientServices(uri);
 ```
 
 So this version of app:
@@ -945,13 +953,12 @@ services.AddFusion(RpcServiceMode.Server, fusion => {
 Let's look at web app configuration now:
 
 ```cs
-app.UseWebSockets(new WebSocketOptions() { // We obviously need this
-    KeepAliveInterval = TimeSpan.FromSeconds(30), // Just in case
+app.Urls.Add(baseUri);
+app.UseFusionSession();
+app.UseWebSockets(new WebSocketOptions() {
+    KeepAliveInterval = TimeSpan.FromSeconds(30),
 });
-app.UseRouting();
-app.UseEndpoints(endpoints => {
-    endpoints.MapRpcWebSocketServer(); // Straightforward, right?
-});
+app.MapRpcWebSocketServer();
 ```
 
 Let's switch to the client side code now. The client-side container uses
@@ -989,23 +996,45 @@ This is our full `AppV5` - there is nothing else:
 ```cs
 public class AppV5 : AppV4
 {
-    public IHost ExtraHost { get; protected set; }
-    // We'll watch the data on Host:
-    public override IServiceProvider WatchServices => HostServices;
+    public WebApplication ExtraApp { get; }
+    // We'll modify the data on AppHost & watch it changes on App
+    public override IServiceProvider WatchedServices => ServerServices;
 
     public AppV5()
     {
-        var hostUri = new Uri("http://localhost:7005");
-        Host = BuildHost(hostUri); // Yes, it uses inherited BuildHost from v4!
-        HostServices = Host.Services;
+        // Server 1
+        App = CreateWebApp("http://localhost:7005");
+        ServerServices = App.Services;
 
-        var extraHostUri = new Uri("http://localhost:7006");
-        ExtraHost = BuildHost(extraHostUri);
-        ClientServices = BuildClientServices(extraHostUri);
+        // Server 2
+        var extraAppUri = "http://localhost:7006";
+        ExtraApp = CreateWebApp(extraAppUri);
+
+        // Client
+        ClientServices = BuildClientServices(extraAppUri);
     }
 
-    // + InitializeAsync and DisposeAsync, but there are
-    // absolutely straightforward adjustments
+    public override async Task InitializeAsync(IServiceProvider services, bool startHostedServices)
+    {
+        await base.InitializeAsync(services, false);
+        if (startHostedServices) {
+            await App.StartAsync();
+            await ExtraApp.StartAsync();
+            await Task.Delay(100);
+        }
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (ClientServices is IAsyncDisposable csd)
+            await csd.DisposeAsync();
+
+        await ExtraApp.StopAsync();
+        await ExtraApp.DisposeAsync();
+
+        await App.StopAsync();
+        await App.DisposeAsync();
+    }
 }
 ```
 
