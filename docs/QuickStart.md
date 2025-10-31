@@ -660,7 +660,7 @@ Code: [src/HelloCart/v2](https://github.com/ActualLab/Fusion.Samples/tree/master
 > ☝ We will move WAY FASTER now - this and every following version
 > will require just about 5 minutes of your time.
 
-Here is what code inside `AppV2` constructor does:
+Here is the actual code inside `AppV2` constructor ([AppV2.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v2/AppV2.cs)):
 
 ```cs
 // This is exactly the same Compute Service registration code you saw earlier
@@ -668,21 +668,23 @@ services.AddFusion(fusion => {
     fusion.AddService<IProductService, DbProductService>();
     fusion.AddService<ICartService, DbCartService>();
 });
+```
 
-// This also a usual way to add a pooled IDbContextFactory -
-// a preferable way of accessing DbContexts nowadays
-var appTempDir = PathEx.GetApplicationTempDirectory("", true);
-var dbPath = appTempDir & "HelloCart_v1.db";
-services.AddDbContextFactory<AppDbContext>(db => {
+The `AppDb.Configure` ([AppDb.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppDb.cs)) method sets up the database-related services. Here's what it does.
+
+Adds a pooled `IDbContextFactory<AppDbContext>` for efficient database access.
+
+```cs
+services.AddPooledDbContextFactory<AppDbContext>(db => {
     if (AppSettings.Db.UsePostgreSql) { /* PostgreSQL setup */ }
     else { /* SQLite setup */ }
-
     db.EnableSensitiveDataLogging();
 });
+```
 
-// AddDbContextServices is just a convenience builder allowing
-// to omit DbContext type in misc. normal and extension methods
-// it has
+Configures additional services for Entity Framework integration, including operations framework for multi-host invalidation.
+
+```cs
 services.AddDbContextServices<AppDbContext>(db => {
     db.AddOperations(operations => {
         if (!AppSettings.Db.UseOperationLogWatchers)
@@ -698,19 +700,21 @@ services.AddDbContextServices<AppDbContext>(db => {
             operations.AddFileSystemOperationLogWatcher();
     });
     db.AddEntityResolver<string, DbProduct>();
-    db.AddEntityResolver<string, DbCart>((_, options) => {
+    db.AddEntityResolver<string, DbCart>(_ => new() {
         // Cart is always loaded together with items
-        options.QueryTransformer = carts => carts.Include(c => c.Items);
+        QueryTransformer = carts => carts.Include(c => c.Items),
     });
 });
-
-// Operation reprocessor
-if (AppSettings.Db.UseOperationReprocessor)
-    services.AddFusion().AddOperationReprocessor();
-ClientServices = ServerServices = services.BuildServiceProvider();
 ```
 
-`AppV2.InitializeAsync` simply re-created the DB:
+Operation Reprocessor is optional, it enables reprocessing of operations for reliability.
+
+```cs
+if (AppSettings.Db.UseOperationReprocessor)
+    services.AddFusion().AddOperationReprocessor();
+```
+
+`AppV2.InitializeAsync` ([AppBase.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppBase.cs)) simply re-created the DB:
 
 ```cs
 await using var dbContext = ServerServices.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
