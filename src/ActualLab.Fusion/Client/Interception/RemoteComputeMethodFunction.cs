@@ -323,7 +323,7 @@ public abstract class RemoteComputeMethodFunction(
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;
         var remoteComputeServiceInterceptor = (RemoteComputeServiceInterceptor)proxy.Interceptor;
-        var rpcRoutingInterceptor = remoteComputeServiceInterceptor.RpcRoutingInterceptor;
+        var rpcRoutingInterceptor = remoteComputeServiceInterceptor.RpcServiceInterceptor;
 
         var ctIndex = input.MethodDef.CancellationTokenIndex;
         if (ctIndex >= 0 && invocation.Arguments.GetCancellationToken(ctIndex) != cancellationToken) {

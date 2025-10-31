@@ -1,6 +1,5 @@
 using ActualLab.Rpc;
 using ActualLab.Rpc.Diagnostics;
-using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Testing;
 using ActualLab.Testing.Collections;
 
@@ -17,10 +16,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         commander.AddService<TestRpcBackend>();
 
         var rpc = services.AddRpc();
-        rpc.AddClient<ITestRpcService, ITestRpcServiceClient>();
-        rpc.AddServer<ITestRpcService, TestRpcService>();
-        rpc.AddClient<ITestRpcBackend, ITestRpcBackendClient>();
-        rpc.AddServer<ITestRpcBackend, TestRpcBackend>();
+        rpc.AddServerAndClient<ITestRpcService, TestRpcService>();
+        rpc.AddServerAndClient<ITestRpcBackend, TestRpcBackend>();
         services.AddSingleton<RpcPeerFactory>(_ => static (hub, peerRef) => {
             return peerRef.IsServer
                 ? new RpcServerPeer(hub, peerRef) {
@@ -71,7 +68,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
             s.AddSingleton<RpcCallTracerFactory>(method => new TestRpcCallTracer(method));
         });
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
 
         var divMethod = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
         var divTracer = (TestRpcCallTracer)divMethod.Tracer!;
@@ -94,7 +91,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     {
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
 
         var divMethod = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
         var divTracer = (RpcDefaultCallTracer)divMethod.Tracer!;
@@ -128,7 +125,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         SerializationFormat = serializationFormat;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+
         (await client.Div(6, 2)).Should().Be(3);
         (await client.Div(6, 2)).Should().Be(3);
         (await client.Div(10, 2)).Should().Be(5);
@@ -144,7 +142,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
         var clientPeer = connection.ClientPeer;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
 
         (await client.OnHello(new HelloCommand("X"))).Should().Be("Hello, X!");
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
@@ -174,7 +172,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     {
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
 
         // We need to make sure the connection is there before the next call
         await client.Add(1, 1);
@@ -199,7 +197,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     {
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
         await client.Add(1, 1); // Warm-up
 
         var startedAt = CpuTimestamp.Now;
@@ -231,8 +229,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     {
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
-        var backendClient = services.GetRequiredService<ITestRpcBackendClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+        var backendClient = services.RpcHub().GetClient<ITestRpcBackend>();
 
         await Assert.ThrowsAnyAsync<Exception>(
             () => backendClient.Polymorph(null!)); // Should fail on deserialization
@@ -251,7 +249,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     {
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
 
         // This test may fail due to other tests, so we retry it for up to 5s
         await TestExt.When(async () => {
@@ -288,7 +286,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         SerializationFormat = serializationFormat;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
 
         var expected1 = Enumerable.Range(0, 5).ToList();
         var stream1 = await client.StreamInt32(expected1.Count);
@@ -317,7 +315,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         UseLogging = false;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
         await client.Div(1, 1);
         await AssertNoCalls(clientPeer, Out);
 
@@ -343,7 +341,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
         UseLogging = false;
         await using var services = CreateServices();
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
         var stream = await client.StreamInt32(200);
         await stream.CountAsync();
 

@@ -17,9 +17,8 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         var rpc = services.AddRpc();
         var commander = services.AddCommander();
         if (isClient) {
-            rpc.AddClient<ITestRpcServiceClient>();
-            rpc.Service<ITestRpcServiceClient>().HasName(nameof(ITestRpcService));
-            commander.AddService<ITestRpcServiceClient>();
+            rpc.AddClient<ITestRpcService>();
+            commander.AddService<ITestRpcService>();
             services.AddSingleton<RpcPeerFactory>(_ =>
                 (hub, peerRef) => new RpcClientPeer(hub, peerRef, ClientPeerVersions));
         }
@@ -37,7 +36,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         await using var _ = await WebHost.Serve();
 
         var services = ClientServices;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.GetRequiredService<ITestRpcService>();
         (await client.Add(1, 1)).Should().Be(2);
         var version = await client.GetVersion();
         var serverMethodResolver = WebHost.Services.RpcHub().InternalServices.Peers.First().Value.ServerMethodResolver;
@@ -53,7 +52,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         ClientPeerVersions = new(RpcDefaults.ApiScope, "0.5");
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.GetRequiredService<ITestRpcService>();
         (await client.Add(1, 1)).Should().Be(2);
         var version = await client.GetVersion();
         var serverMethodResolver = WebHost.Services.RpcHub().InternalServices.Peers.First().Value.ServerMethodResolver;
@@ -68,7 +67,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
     {
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.GetRequiredService<ITestRpcService>();
         (await client.Add(1, 1)).Should().Be(2);
         var version = await client.GetVersion();
         var serverMethodResolver = WebHost.Services.RpcHub().InternalServices.Peers.First().Value.ServerMethodResolver;

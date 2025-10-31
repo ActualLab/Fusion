@@ -33,10 +33,8 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
             rpc.AddDistributedService<ITestRpcBackend, TestRpcBackend>();
         }
         else {
-            rpc.AddClient<ITestRpcService, ITestRpcServiceClient>();
-            rpc.AddServer<ITestRpcService, TestRpcService>();
-            rpc.AddClient<ITestRpcBackend, ITestRpcBackendClient>();
-            rpc.AddServer<ITestRpcBackend, TestRpcBackend>();
+            rpc.AddServerAndClient<ITestRpcService, TestRpcService>();
+            rpc.AddServerAndClient<ITestRpcBackend, TestRpcBackend>();
         }
         commander.AddHandlers<TestRpcService>();
         commander.AddHandlers<TestRpcBackend>();
@@ -149,12 +147,8 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
     // Private methods
 
     private ITestRpcService GetClient()
-        => ConnectionKind == RpcPeerConnectionKind.Local
-            ? WebHost.Services.GetRequiredService<ITestRpcService>()
-            : WebHost.Services.GetRequiredService<ITestRpcServiceClient>();
+        => WebHost.Services.RpcHub().GetClient<ITestRpcService>();
 
     private ITestRpcBackend GetBackendClient()
-        => ConnectionKind == RpcPeerConnectionKind.Local
-            ? WebHost.Services.GetRequiredService<ITestRpcBackend>()
-            : WebHost.Services.GetRequiredService<ITestRpcBackendClient>();
+        => WebHost.Services.RpcHub().GetClient<ITestRpcBackend>();
 }

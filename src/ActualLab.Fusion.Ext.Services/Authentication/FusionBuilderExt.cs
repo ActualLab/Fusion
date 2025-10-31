@@ -63,7 +63,7 @@ public static class FusionBuilderExt
         if (!tAuthBackend.IsAssignableFrom(implementationType))
             throw Errors.MustImplement(implementationType, tAuthBackend, nameof(implementationType));
 
-        fusion.AddService(typeof(IAuth), implementationType, addCommandHandlers: false);
+        fusion.AddService(typeof(IAuth), implementationType, hasCommandHandlers: false);
         services.AddSingleton(c => (IAuthBackend)c.GetRequiredService<IAuth>());
         fusion.Commander.AddHandlers(typeof(IAuth));
         fusion.Commander.AddHandlers(typeof(IAuthBackend));

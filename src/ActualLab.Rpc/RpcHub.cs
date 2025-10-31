@@ -105,6 +105,38 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         return Task.WhenAll(disposeTasks);
     }
 
+    // GetClient
+
+    public TService GetClient<TService>()
+        => (TService)GetClient(typeof(TService));
+
+    public object GetClient(Type serviceType)
+    {
+        var serviceDef = ServiceRegistry.Get(serviceType);
+        if (serviceDef is null)
+            throw ActualLab.Rpc.Internal.Errors.NoService(serviceType);
+
+        var client = serviceDef.Client;
+        return client ?? throw ActualLab.Rpc.Internal.Errors.NoClient(serviceDef);
+    }
+
+    // GetServer
+
+    public TService GetServer<TService>()
+        => (TService)GetServer(typeof(TService));
+
+    public object GetServer(Type serviceType)
+    {
+        var serviceDef = ServiceRegistry.Get(serviceType);
+        if (serviceDef is null)
+            throw ActualLab.Rpc.Internal.Errors.NoService(serviceType);
+
+        var client = serviceDef.Server;
+        return client ?? throw ActualLab.Rpc.Internal.Errors.NoServer(serviceDef);
+    }
+
+    // Peer management
+
     public RpcPeer GetPeer(RpcPeerRef peerRef)
     {
         if (Peers.TryGetValue(peerRef, out var peer))

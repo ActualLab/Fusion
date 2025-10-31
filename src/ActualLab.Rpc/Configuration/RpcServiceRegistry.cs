@@ -29,7 +29,11 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     {
         var hub = Hub!; // The implicit RpcHub resolution here freezes RpcConfiguration
         foreach (var (_, service) in hub.Configuration.Services) {
-            service.Validate();
+            if (service.Mode == RpcServiceMode.Local)
+                continue; // Skip all local services
+            if (service.Mode == RpcServiceMode.Default)
+                throw Errors.UnspecifiedServiceMode(service.Type, service.Mode);
+
             var serviceDef = hub.ServiceDefBuilder.Invoke(hub, service);
             if (_serviceByName.TryGetValue(serviceDef.Name, out var existingServiceDef))
                 throw Errors.ServiceNameConflict(serviceDef.Type, existingServiceDef.Type, serviceDef.Name);

@@ -16,11 +16,10 @@ public class RpcWebSocketTest : RpcTestBase
         var rpc = services.AddRpc();
         var commander = services.AddCommander();
         if (isClient) {
-            rpc.AddClient<ITestRpcServiceClient>();
-            rpc.Service<ITestRpcServiceClient>().HasName(nameof(ITestRpcService));
+            rpc.AddClient<ITestRpcServiceClient>(nameof(ITestRpcService));
             commander.AddService<ITestRpcServiceClient>();
-            rpc.AddClient<ITestRpcBackend, ITestRpcBackendClient>();
-            commander.AddService<ITestRpcBackendClient>();
+            rpc.AddClient<ITestRpcBackend>();
+            commander.AddService<ITestRpcBackend>();
         }
         else {
             rpc.AddServer<ITestRpcService, TestRpcService>();
@@ -56,7 +55,8 @@ public class RpcWebSocketTest : RpcTestBase
         SerializationFormat = serializationFormat;
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
+
         (await client.Div(6, 2)).Should().Be(3);
         (await client.Div(6, 2)).Should().Be(3);
         (await client.Div(10, 2)).Should().Be(5);
@@ -73,7 +73,7 @@ public class RpcWebSocketTest : RpcTestBase
     {
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
 
         var tasks = new Task<int?>[100];
         for (var i = 0; i < tasks.Length; i++)
@@ -106,7 +106,7 @@ public class RpcWebSocketTest : RpcTestBase
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
 
         // We need to make sure the connection is there before the next call
         await client.Add(1, 1);
@@ -132,7 +132,8 @@ public class RpcWebSocketTest : RpcTestBase
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
+
         var startedAt = CpuTimestamp.Now;
         await client.Delay(TimeSpan.FromMilliseconds(200));
         startedAt.Elapsed.TotalMilliseconds.Should().BeInRange(100, 500);
@@ -179,8 +180,8 @@ public class RpcWebSocketTest : RpcTestBase
         SerializationFormat = serializationFormat;
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
-        var client = ClientServices.GetRequiredService<ITestRpcServiceClient>();
-        var backendClient = ClientServices.GetRequiredService<ITestRpcBackendClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
+        var backendClient = services.RpcHub().GetClient<ITestRpcBackend>();
         var clientPeer = services.RpcHub().GetClientPeer(ClientPeerRef);
         var backendClientPeer = services.RpcHub().GetClientPeer(BackendClientPeerRef);
 
@@ -202,7 +203,7 @@ public class RpcWebSocketTest : RpcTestBase
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
 
         try {
             await client.NoSuchMethod(1, 2, 3, 4);
@@ -240,7 +241,7 @@ public class RpcWebSocketTest : RpcTestBase
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
 
         var expected1 = Enumerable.Range(0, 500).ToList();
         var stream1 = await client.StreamInt32(expected1.Count);
@@ -297,7 +298,7 @@ public class RpcWebSocketTest : RpcTestBase
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
 
         using var cts = new CancellationTokenSource();
         for (var length = 0; length < 100; length++) {
@@ -313,7 +314,7 @@ public class RpcWebSocketTest : RpcTestBase
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
         var systemClock = services.Clocks().SystemClock;
 
         (await client.Div(6, 2)).Should().Be(3); // To make sure everything is set up
@@ -345,7 +346,7 @@ public class RpcWebSocketTest : RpcTestBase
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
 
         var tasks = new Task<List<int>>[3];
         for (var i = 0; i < tasks.Length; i++) {
@@ -397,7 +398,7 @@ public class RpcWebSocketTest : RpcTestBase
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
 
         var threadCount = Math.Max(1, HardwareInfo.ProcessorCount / 2);
         var tasks = new Task[threadCount];
@@ -439,7 +440,7 @@ public class RpcWebSocketTest : RpcTestBase
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.GetRequiredService<ITestRpcServiceClient>();
+        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
 
         var threadCount = Math.Max(1, HardwareInfo.ProcessorCount / 2);
         var tasks = new Task[threadCount];
