@@ -3,7 +3,7 @@ import { defineConfig } from "vitepress";
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   lang: "en-US",
-  title: "ActualLab.Fusion Documentation",
+  title: "ActualLab.Fusion",
   description:
     "Fusion is a reactive framework for building scalable, real-time applications. This site hosts Fusion documentation.",
   head: [["link", { rel: "icon", href: "/img/fusion-docs-icon.png" }]],
