@@ -114,12 +114,12 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
 #endif
             if (!methodDef.IsValid) // attr.IsEnabled == false
                 ValidationLog?.Log(ValidationLogLevel,
-                    "- {Method}: has [{Attribute}(false)]", method.ToString(), attributeName);
+                    "- {Method}: has [{Attribute}(false)]", method.ToShortString(), attributeName);
             else
                 ValidationLog?.Log(ValidationLogLevel,
                     "+ {Method}: [{Attribute}(" +
                     "Priority = {Priority}" +
-                    ")]", method.ToString(), attributeName, attr.Priority);
+                    ")]", method.ToShortString(), attributeName, attr.Priority);
         }
     }
 }

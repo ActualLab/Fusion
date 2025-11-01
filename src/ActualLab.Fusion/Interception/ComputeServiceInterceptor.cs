@@ -91,7 +91,7 @@ public class ComputeServiceInterceptor : Interceptor
                 throw Errors.ComputeMethodAttributeOnAsyncMethodReturningRpcNoWait(method);
 
             Log.IfEnabled(ValidationLogLevel)?.Log(ValidationLogLevel,
-                "+ {Method}: {Options}", method.ToString(), options);
+                "+ {Method}: {Options}", method.ToShortString(), options);
         }
     }
 }

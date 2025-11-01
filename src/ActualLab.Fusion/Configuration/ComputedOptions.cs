@@ -1,4 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Text;
 using ActualLab.Interception.Internal;
 
 namespace ActualLab.Fusion;
@@ -78,6 +80,43 @@ public record ComputedOptions
         };
         // We don't want to multiply instances of ComputedOptions here unless they differ from the default ones
         return options == defaultOptions ? defaultOptions : options;
+    }
+
+    protected virtual bool PrintMembers(StringBuilder sb)
+    {
+        var ic = CultureInfo.InvariantCulture;
+        var initialLength = sb.Length;
+        var t = MinCacheDuration;
+        if (t != default)
+            sb.Append(nameof(MinCacheDuration)).Append(": ").Append(t.ToShortString()).Append(", ");
+
+        t = TransientErrorInvalidationDelay;
+        if (t != TimeSpan.MaxValue)
+            sb.Append(nameof(TransientErrorInvalidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
+
+        t = AutoInvalidationDelay;
+        if (t != TimeSpan.MaxValue)
+            sb.Append(nameof(AutoInvalidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
+
+        t = InvalidationDelay;
+        if (t != TimeSpan.MaxValue)
+            sb.Append(nameof(InvalidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
+
+        t = ConsolidationDelay;
+        if (t != TimeSpan.MaxValue)
+            sb.Append(nameof(ConsolidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
+
+        var m = RemoteComputedCacheMode;
+        if (m != default)
+            sb.AppendFormat(ic, "{0}: {1:G}, ", nameof(RemoteComputedCacheMode), m);
+
+        // We intentionally don't print CancellationReprocessing here
+
+        if (sb.Length == initialLength)
+            return false;
+
+        sb.Length -= 2; // Remove the last comma
+        return true;
     }
 
     // Private methods
