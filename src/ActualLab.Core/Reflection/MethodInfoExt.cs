@@ -60,6 +60,32 @@ public static class MethodInfoExt
     }
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
+    public static string ToShortString(this MethodInfo method,
+        bool addReflectedType = false,
+        bool addReturnType = false)
+    {
+        var sb = StringBuilderExt.Acquire();
+        if (addReflectedType && method.ReflectedType is { } reflectedType)
+            sb.Append(reflectedType.GetName()).Append('.');
+        sb.Append(method.Name).Append('(');
+        var mustAddComma = false;
+        foreach (var parameter in method.GetParameters()) {
+            if (mustAddComma)
+                sb.Append(", ");
+            else
+                mustAddComma = true;
+            sb.Append(parameter.ParameterType.GetName());
+        }
+        sb.Append(')');
+        if (addReturnType)
+            sb.Append(" -> ").Append(method.ReturnType.GetName());
+        return sb.ToStringAndRelease();
+    }
+
+
+    // Private methods
+
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     private static TAttr? GetAttributeInternal<TAttr>(MethodInfo method, MethodInfo methodDef, bool inheritFromInterfaces, bool inheritFromBaseTypes)
         where TAttr : Attribute
     {
