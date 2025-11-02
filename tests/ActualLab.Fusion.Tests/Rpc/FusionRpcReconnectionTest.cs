@@ -71,6 +71,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var startedAt = CpuTimestamp.Now;
         await computed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1 * waitMultiplier));
+        Out.WriteLine(computed.ToString(InvalidationSourceFormat.WholeChain));
         var elapsed = CpuTimestamp.Now - startedAt;
         if (!TestRunnerInfo.IsBuildAgent())
             elapsed.TotalSeconds.Should().BeGreaterThan(0.1);

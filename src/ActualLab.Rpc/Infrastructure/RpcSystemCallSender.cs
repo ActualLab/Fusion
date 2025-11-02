@@ -4,13 +4,11 @@ using ActualLab.Resilience;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public sealed class RpcSystemCallSender(IServiceProvider services)
-    : RpcServiceBase(services)
+public sealed class RpcSystemCallSender : RpcServiceBase
 {
-    [field: AllowNull, MaybeNull]
-    public IRpcSystemCalls Client => field ??= Services.GetRequiredService<IRpcSystemCalls>();
-    [field: AllowNull, MaybeNull]
-    public RpcServiceDef ServiceDef => field ??= Hub.ServiceRegistry.Get<IRpcSystemCalls>()!;
+    public readonly IRpcSystemCalls Client;
+    public readonly RpcServiceDef ServiceDef;
+
     [field: AllowNull, MaybeNull]
     public RpcMethodDef HandshakeMethodDef => field
         ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Handshake)));
@@ -51,6 +49,13 @@ public sealed class RpcSystemCallSender(IServiceProvider services)
     [field: AllowNull, MaybeNull]
     public RpcMethodDef EndMethodDef => field
         ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.End)));
+
+    public RpcSystemCallSender(IServiceProvider services)
+        : base(services)
+    {
+        Client = services.GetRequiredService<IRpcSystemCalls>();
+        ServiceDef = Hub.ServiceRegistry.Get<IRpcSystemCalls>()!;
+    }
 
     // Handshake
 

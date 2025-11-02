@@ -11,8 +11,8 @@ public sealed class RpcCallOptions(RpcPeer? peerOverride = null)
     public bool AllowRerouting { get; init; }
     public bool AssumeConnected { get; init; }
 
-    public static Scope Activate(RpcCallOptions value)
-        => new(value);
+    public Scope Activate()
+        => new(this);
 
     public static Scope Activate(RpcPeer peerOverride, bool allowRerouting = false, bool assumeConnected = false)
         => new(new(peerOverride) { AllowRerouting = false, AssumeConnected = assumeConnected});

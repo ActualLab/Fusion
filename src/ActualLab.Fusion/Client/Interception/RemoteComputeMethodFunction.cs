@@ -355,7 +355,7 @@ public abstract class RemoteComputeMethodFunction(
                 AllowRerouting = false,
                 AssumeConnected = false,
             };
-            using (RpcCallOptions.Activate(callOptions))
+            using (callOptions.Activate())
             using (context.Activate()) {
                 // No "await" inside this block!
                 _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(rpcRoutingInterceptor, invocation);

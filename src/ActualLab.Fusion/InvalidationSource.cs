@@ -2,6 +2,12 @@ using System.Text;
 
 namespace ActualLab.Fusion;
 
+public enum InvalidationSourceFormat
+{
+    Default = 0,
+    Origin,
+    WholeChain,
+}
 
 public readonly struct InvalidationSource :
     ICanBeNone<InvalidationSource>,
@@ -75,26 +81,29 @@ public readonly struct InvalidationSource :
     // ToString and related methods
 
     public override string ToString()
-        => Value?.ToString() ?? "<None>";
+        => Value?.ToString() ?? "";
 
-    public string ToString(bool wholeChain)
+    public string ToString(InvalidationSourceFormat format)
     {
-        if (!wholeChain)
-            return ToString();
+        return format switch {
+            InvalidationSourceFormat.Default => ToString(),
+            InvalidationSourceFormat.Origin => Origin.ToString(),
+            InvalidationSourceFormat.WholeChain => ToChainString(this),
+            _ => throw new ArgumentOutOfRangeException(nameof(format)),
+        };
 
-        var sb = StringBuilderExt.Acquire();
-        AppendChain(sb);
-        return sb.ToStringAndRelease();
-    }
+        static string ToChainString(InvalidationSource source) {
+            if (source.IsNone)
+                return "";
 
-    public void AppendChain(StringBuilder sb)
-    {
-        var source = this;
-        sb.Append(this);
-        source = source.Source;
-        while (!source.IsNone) {
-            sb.Append(" <- ").Append(this);
+            var sb = StringBuilderExt.Acquire();
+            sb.Append(source.ToString());
             source = source.Source;
+            while (!source.IsNone) {
+                sb.Append(" <- ").Append(source.ToString());
+                source = source.Source;
+            }
+            return sb.ToStringAndRelease();
         }
     }
 

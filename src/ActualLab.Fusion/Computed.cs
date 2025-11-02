@@ -18,6 +18,8 @@ public interface IComputed : IResult, IHasVersion<ulong>
     public InvalidationSource InvalidationSource { get; }
     public event Action<Computed> Invalidated;
 
+    public string ToString(InvalidationSourceFormat invalidationSourceFormat);
+
     public Task GetValuePromise();
     public ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
     public Task UseUntyped(CancellationToken cancellationToken = default);
@@ -170,6 +172,15 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 
     public override string ToString()
         => $"{GetType().GetName()}({Input} v.{Version.FormatVersion()}, State: {ConsistencyState})";
+
+    public string ToString(InvalidationSourceFormat invalidationSourceFormat)
+    {
+        var baseFormat = ToString();
+        var invalidationSource = InvalidationSource;
+        return invalidationSource.IsNone
+            ? baseFormat
+            : $"{baseFormat}, invalidated by: {invalidationSource.ToString(invalidationSourceFormat)}";
+    }
 
     public override int GetHashCode()
         => unchecked((int)Version);
