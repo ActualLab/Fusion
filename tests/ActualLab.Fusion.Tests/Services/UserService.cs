@@ -25,6 +25,8 @@ public interface IUserService : IComputeService
     public Task Invalidate();
 }
 
+public interface IPlainUserService : IUserService;
+
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 // ReSharper disable once InconsistentNaming
 public partial record UserService_Add(
@@ -44,17 +46,17 @@ public partial record UserService_Delete(
     [property: DataMember, MemoryPackOrder(0), Key(0)] DbUser User
 ) : ICommand<bool>;
 
-public class UserService : DbServiceBase<TestDbContext>, IUserService
+public class UserService : DbServiceBase<TestDbContext>, IPlainUserService
 {
     private readonly IDbEntityResolver<long, DbUser> _userResolver;
 
-    public bool IsProxy { get; }
+    public bool IsComputeService { get; }
     public bool UseEntityResolver { get; set; }
 
     public UserService(IServiceProvider services) : base(services)
     {
         var type = GetType();
-        IsProxy = type != type.NonProxyType();
+        IsComputeService = type != type.NonProxyType();
         _userResolver = services.GetRequiredService<IDbEntityResolver<long, DbUser>>();
     }
 
@@ -79,7 +81,8 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
         var userId = user.Id;
         if (orUpdate) {
             existingUser = await dbContext.Users.FindAsync(DbKey.Compose(userId), cancellationToken);
-            context.Operation.Items.KeylessSet(existingUser);
+            if (IsComputeService)
+                context.Operation.Items.KeylessSet(existingUser);
             if (existingUser is not null)
                 dbContext.Users.Update(user);
         }
@@ -178,7 +181,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
 
     public virtual Task Invalidate()
     {
-        if (!IsProxy)
+        if (!IsComputeService)
             return Task.CompletedTask;
 
         using (Invalidation.Begin())
@@ -193,7 +196,7 @@ public class UserService : DbServiceBase<TestDbContext>, IUserService
     protected virtual Task<Unit> Everything() => TaskExt.UnitTask;
 
     private ValueTask<TestDbContext> CreateOperationDbContext(CancellationToken cancellationToken = default)
-        => IsProxy
+        => IsComputeService
             ? DbHub.CreateOperationDbContext(cancellationToken)
             : DbHub.CreateDbContext(readWrite: true, cancellationToken);
 }

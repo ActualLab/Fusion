@@ -50,9 +50,8 @@ public abstract class PerformanceTestBase : FusionTestBase
     {
         base.ConfigureTestServices(services, isClient);
         var fusion = services.AddFusion();
-        if (!isClient)
-            fusion.AddService<IUserService, UserService>();
-        services.AddSingleton<UserService>();
+        fusion.AddService<IUserService, UserService>();
+        services.AddSingleton<IPlainUserService, UserService>();
     }
 
     public override async Task InitializeAsync()
@@ -75,9 +74,9 @@ public abstract class PerformanceTestBase : FusionTestBase
         if (TestRunnerInfo.IsBuildAgent())
             return; // Shouldn't run this test on build agents
 
-        var users = Services.GetRequiredService<IUserService>();
-        ((UserService)users).UseEntityResolver = UseEntityResolver;
-        var plainUsers = Services.GetRequiredService<UserService>();
+        var users = (UserService)Services.GetRequiredService<IUserService>();
+        users.UseEntityResolver = UseEntityResolver;
+        var plainUsers = (UserService)Services.GetRequiredService<IPlainUserService>();
         plainUsers.UseEntityResolver = UseEntityResolver;
 
         var fusionOpCountPerCore = 16_000_000;
@@ -90,28 +89,18 @@ public abstract class PerformanceTestBase : FusionTestBase
         var nonFusionIterationCount = nonFusionOpCountPerCore / nonFusionReadersPerCore;
         var nonFusionReaderCount = HardwareInfo.GetProcessorCountFactor(nonFusionReadersPerCore);
 
-        var withoutSerialization = (Action<DbUser>?)null;
-        var withSerialization = (Action<DbUser>?)(u => JsonSerializer.Serialize(u)); // STJ serializer
-        var enableSerialization = false;
-
         Out.WriteLine($"Database: {DbType}" + (UseEntityResolver ? " (with DbEntityResolver)" : ""));
         Out.WriteLine("With ActualLab.Fusion:");
-        if (enableSerialization)
-            await Test("Multiple readers + serialization, 1 mutator", users, withSerialization, true,
-                fusionReaderCount, fusionIterationCount / 2);
-        await Test("Multiple readers, 1 mutator", users, withoutSerialization, true,
+        await Test("Multiple readers, 1 mutator", users, null, true,
             fusionReaderCount, fusionIterationCount);
-        await Test("Single reader, no mutators", users, withoutSerialization, false,
+        await Test("Single reader, no mutators", users, null, false,
             1, fusionOpCountPerCore);
         return;
 
         Out.WriteLine("Without ActualLab.Fusion:");
-        if (enableSerialization)
-            await Test("Multiple readers + serialization, 1 mutator", plainUsers, withSerialization, true,
-                nonFusionReaderCount, nonFusionIterationCount);
-        await Test("Multiple readers, 1 mutator", plainUsers, withoutSerialization, true,
+        await Test("Multiple readers, 1 mutator", plainUsers, null, true,
             nonFusionReaderCount, nonFusionIterationCount);
-        await Test("Single reader, no mutators", plainUsers, withoutSerialization, false,
+        await Test("Single reader, no mutators", plainUsers, null, false,
             1, nonFusionOpCountPerCore);
     }
 
