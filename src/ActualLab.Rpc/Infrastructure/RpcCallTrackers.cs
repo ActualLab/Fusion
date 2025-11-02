@@ -183,15 +183,17 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         async Task Resend(List<RpcOutboundCall> calls) {
             foreach (var call in calls) {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (call.GetReconnectStage(true) is not null)
-                    await call.SendRegistered(false).ConfigureAwait(false);
+                if (call.GetReconnectStage(isPeerChanged: true) is not null)
+                    await call.SendRegistered(isFirstAttempt: false).ConfigureAwait(false);
             }
         }
 
         async Task<List<RpcOutboundCall>> TryReconnect(List<RpcOutboundCall> calls) {
             try {
                 var completedStages = calls
-                    .Select(call => (Call: call, ReconnectStage: call.GetReconnectStage(isPeerChanged: false)))
+                    .Select(call => (
+                        Call: call,
+                        ReconnectStage: call.GetReconnectStage(isPeerChanged: false)))
                     .Where(x => x.ReconnectStage.HasValue)
                     .GroupBy(x => x.ReconnectStage.GetValueOrDefault(), x => x.Call.Id)
                     .OrderBy(g => g.Key)
