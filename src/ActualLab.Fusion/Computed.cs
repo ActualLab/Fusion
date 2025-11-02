@@ -84,7 +84,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
     public InvalidationSource InvalidationSource {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => ConsistencyState is ConsistencyState.Invalidated
-            ? new(_invalidationSource ?? InvalidationSource.Unknown.Value)
+            ? new InvalidationSource(_invalidationSource)
             : default;
     }
 
@@ -232,7 +232,11 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
     // Invalidate
 
     void IGenericTimeoutHandler.OnTimeout(object? invalidationSource)
-        => Invalidate(immediately: true, new InvalidationSource(invalidationSource).OrUnknown());
+    {
+        var source = new InvalidationSource(
+            invalidationSource ?? InvalidationSource.ComputedOnTimeoutNoInvalidationSource.Value);
+        Invalidate(immediately: true, source);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Invalidate(bool immediately = false,
@@ -296,10 +300,11 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
                 // Any code called here may not throw
                 _dependencies.Apply(this, (self, c) => c.RemoveDependant(self));
                 _dependencies.Clear();
-                _dependants.Apply(new InvalidationSource(this), static (invalidationSource, usedByEntry) => {
+                var nextSource = new InvalidationSource(this);
+                _dependants.Apply(nextSource, static (source, usedByEntry) => {
                     var c = usedByEntry.Input.GetExistingComputed();
                     if (c is not null && c.Version == usedByEntry.Version)
-                        c.Invalidate(immediately: false, invalidationSource); // Invalidate doesn't throw - ever
+                        c.Invalidate(immediately: false, source); // Invalidate doesn't throw - ever
                 });
                 _dependants.Clear();
             }
@@ -348,7 +353,8 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
         if ((state & (int)InvalidationFlags.InvalidateOnSetOutput) != 0) {
             Invalidate(
                 immediately: (state & (int)InvalidationFlags.InvalidateOnSetOutputImmediately) != 0,
-                source: new InvalidationSource(_invalidationSource ?? InvalidationSource.ComputedTrySetOutputNoInvalidationSource.Value));
+                source: new InvalidationSource(
+                    _invalidationSource ?? InvalidationSource.ComputedTrySetOutputNoInvalidationSource.Value));
             return true;
         }
 
