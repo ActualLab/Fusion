@@ -199,10 +199,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     .OrderBy(g => g.Key)
                     .ToDictionary(g => g.Key, g => IncreasingSeqCompressor.Serialize(g.OrderBy(x => x)));
                 if (completedStages.Count == 0)
-                    return calls;
+                    return calls; // All calls have to be re-sent
 
                 Task<byte[]> reconnectTask;
-                using (new RpcOutboundContext(Peer).Activate()) // No "await" inside this block!
+                using (new RpcCallOptions(Peer).Activate()) // No "await" inside this block!
                     reconnectTask = Peer.Hub.SystemCallSender.Client
                         .Reconnect(handshake.Index, completedStages, cancellationToken);
                 var failedCallData = await reconnectTask.ConfigureAwait(false);
@@ -210,7 +210,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 return calls.Where(x => failedCallIds.Contains(x.Id)).ToList();
             }
             catch {
-                // If something fails, we fall back to Resend for every call
+                // If something fails, we re-send every call
                 return calls;
             }
         }

@@ -6,55 +6,55 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public sealed class RpcSystemCallSender : RpcServiceBase
 {
-    public readonly IRpcSystemCalls Client;
     public readonly RpcServiceDef ServiceDef;
+    public readonly IRpcSystemCalls Client;
 
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef HandshakeMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Handshake)));
+    public RpcMethodDef HandshakeMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Handshake)));
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef OkMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Ok)));
+    public RpcMethodDef OkMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Ok)));
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef ErrorMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Error)));
+    public RpcMethodDef ErrorMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Error)));
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef CancelMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Cancel)));
+    public RpcMethodDef CancelMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Cancel)));
 
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef MatchMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.M)));
+    public RpcMethodDef MatchMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.M)));
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef NotFoundMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.NotFound)));
+    public RpcMethodDef NotFoundMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.NotFound)));
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef KeepAliveMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.KeepAlive)));
+    public RpcMethodDef KeepAliveMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.KeepAlive)));
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef DisconnectMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Disconnect)));
+    public RpcMethodDef DisconnectMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Disconnect)));
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef AckMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Ack)));
+    public RpcMethodDef AckMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.Ack)));
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef AckEndMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.AckEnd)));
+    public RpcMethodDef AckEndMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.AckEnd)));
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef ItemMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.I)));
+    public RpcMethodDef ItemMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.I)));
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef BatchMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.B)));
+    public RpcMethodDef BatchMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.B)));
     [field: AllowNull, MaybeNull]
-    public RpcMethodDef EndMethodDef => field
-        ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.End)));
+    public RpcMethodDef EndMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcSystemCalls.End)));
 
     public RpcSystemCallSender(IServiceProvider services)
         : base(services)
     {
-        Client = services.GetRequiredService<IRpcSystemCalls>();
         ServiceDef = Hub.ServiceRegistry.Get<IRpcSystemCalls>()!;
+        Client = Hub.GetClient<IRpcSystemCalls>();
     }
 
     // Handshake
