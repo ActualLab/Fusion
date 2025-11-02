@@ -1,21 +1,10 @@
-using System.Text;
-
 namespace ActualLab.Fusion;
-
-public enum InvalidationSourceFormat
-{
-    Default = 0,
-    Origin,
-    WholeChain,
-}
 
 public readonly struct InvalidationSource :
     ICanBeNone<InvalidationSource>,
     IEnumerable<InvalidationSource>,
     IEquatable<InvalidationSource>
 {
-    public static bool IsEnabled { get; set; } = true;
-
     public static InvalidationSource None {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => default;
@@ -24,7 +13,8 @@ public readonly struct InvalidationSource :
     public static readonly InvalidationSource Unknown = new("<Unknown>");
     public static readonly InvalidationSource Cancellation = new("<Cancellation>");
     public static readonly InvalidationSource InitialState = new("<InitialState>");
-    public static readonly InvalidationSource ComputedTrySetOutputNoInvalidationSource = new("Computed.TrySetOutput: missing InvalidationSource");
+    public static readonly InvalidationSource ComputedOnTimeoutNoInvalidationSource = new("Computed.OnTimeout: no InvalidationSource");
+    public static readonly InvalidationSource ComputedTrySetOutputNoInvalidationSource = new("Computed.TrySetOutput: no InvalidationSource");
     public static readonly InvalidationSource ComputedStartAutoInvalidationCancellationError = new("Computed.StartAutoInvalidation: Error is OperationCancelledException");
     public static readonly InvalidationSource ComputedRegistryRegister = new("ComputedRegistry.Register: replacement");
     public static readonly InvalidationSource StateProduce = new("State.ProduceComputed");
@@ -69,14 +59,21 @@ public readonly struct InvalidationSource :
 
     // ReSharper disable once ConvertToPrimaryConstructor
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public InvalidationSource(Computed value)
+        => Value = Invalidation.TrackingMode is InvalidationTrackingMode.WholeChain
+            ? value
+            : value.InvalidationSource.Value;
+
+    // ReSharper disable once ConvertToPrimaryConstructor
+    [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public InvalidationSource(string value)
         => Value = value;
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public InvalidationSource(string? file, string? member, int line = 0)
-        => Value = IsEnabled
-            ? CodeLocation.Format(file, member, line)
-            : Unknown;
+        => Value = Invalidation.TrackingMode is InvalidationTrackingMode.None
+            ? Unknown // CodeLocation.Format is a ConcurrentDictionary lookup, so we want to save on that
+            : CodeLocation.Format(file, member, line);
 
     // ToString and related methods
 
@@ -106,16 +103,6 @@ public readonly struct InvalidationSource :
             return sb.ToStringAndRelease();
         }
     }
-
-    // Helpers
-
-    [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public InvalidationSource Or(InvalidationSource noneReplacement)
-        => new(Value ?? noneReplacement.Value);
-
-    [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public InvalidationSource OrUnknown()
-        => new(Value ?? Unknown.Value);
 
     // IEnumerable implementation
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

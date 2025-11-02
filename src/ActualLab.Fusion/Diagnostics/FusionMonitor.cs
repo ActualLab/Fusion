@@ -112,11 +112,11 @@ public sealed class FusionMonitor : WorkerBase
                     foreach (var (key, value) in invalidationPaths.OrderByDescending(kv => kv.Value)) {
                         valueSum += value;
                         var format = key.Category is null
-                            ? "\r\n- {1} by {2}: +{3:F1}"
-                            : "\r\n- {0} <- {1} by {2}: +{3:F1}";
+                            ? "\r\n- {1} by {2}: {3:F1}"
+                            : "\r\n- {0} <- {1} by {2}: {3:F1}";
                         sb.AppendFormat(fp, format, key.Category, key.OriginCategory, key.OriginSource.ToString(), value * m);
                     }
-                    sb.AppendFormat(fp, "\r\nTotal: +{0:F1}", valueSum * m);
+                    sb.AppendFormat(fp, "\r\nTotal: {0:F1}", valueSum * m);
                     // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
                     Log.LogInformation(sb.ToString());
                     sb.Clear();
@@ -210,18 +210,20 @@ public sealed class FusionMonitor : WorkerBase
             else
                 registrations[category] = (0, 0);
 
-            var origin = computed.GetInvalidationOrigin();
-            var atOrigin = ReferenceEquals(computed, origin);
-            var key = (
-                atOrigin ? null : category,
-                origin.Input.Category,
-                origin.InvalidationSource);
-            if (!MustIgnore(atOrigin, key.InvalidationSource)) {
-                var invalidationPaths = _statistics.InvalidationPaths;
-                if (invalidationPaths.TryGetValue(key, out var count))
-                    invalidationPaths[key] = count + 1;
-                else
-                    invalidationPaths[key] = 1;
+            if (Invalidation.TrackingMode is not InvalidationTrackingMode.None) {
+                var origin = computed.GetInvalidationOrigin();
+                var atOrigin = ReferenceEquals(computed, origin);
+                var key = (
+                    atOrigin ? null : category,
+                    origin.Input.Category,
+                    origin.InvalidationSource);
+                if (!MustIgnore(atOrigin, key.InvalidationSource)) {
+                    var invalidationPaths = _statistics.InvalidationPaths;
+                    if (invalidationPaths.TryGetValue(key, out var count))
+                        invalidationPaths[key] = count + 1;
+                    else
+                        invalidationPaths[key] = 1;
+                }
             }
         }
 
