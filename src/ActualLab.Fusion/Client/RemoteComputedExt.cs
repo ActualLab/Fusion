@@ -37,12 +37,16 @@ public static class RemoteComputedExt
         if (whenInvalidated.IsCompleted) {
             // No call (call prepare error - e.g. if there is no such RPC service),
             // or the call result is already invalidated
-            computed.Invalidate(true, new InvalidationSource(whenInvalidated.GetAwaiter().GetResult()));
+            var invalidationSource = new InvalidationSource(whenInvalidated.GetAwaiter().GetResult());
+            computed.Invalidate(immediately: true, invalidationSource);
             return;
         }
 
         _ = whenInvalidated.ContinueWith(
-            _ => computed.Invalidate(true, new InvalidationSource(whenInvalidated.GetAwaiter().GetResult())),
+            t => {
+                var invalidationSource = new InvalidationSource(t.GetAwaiter().GetResult());
+                computed.Invalidate(immediately: true, invalidationSource);
+            },
             CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 }

@@ -118,12 +118,12 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
         var clock = SystemClock.Instance;
         for (var round = 0; round < 3; round++) {
             Out.WriteLine($"Round {round}:");
-            c.Events.Value = ImmutableList<string>.Empty;
+            c.Events.Set(ImmutableList<string>.Empty);
             var when = clock.Now + TimeSpan.FromSeconds(3);
             var lastId = "";
             for (var count = 1; count <= 3; count++) {
                 Out.WriteLine($"- Count {count}...");
-                c.Events.Value = ImmutableList<string>.Empty;
+                c.Events.Set(ImmutableList<string>.Empty);
                 var updateEvents = Enumerable.Range(0, count).Select(i => EU($"a{round}.{i}", when)).ToArray();
                 var skipEvents = Enumerable.Range(0, count).Select(i => ES($"a{round}.{i}s", when)).ToArray();
                 await Enqueue(skipEvents);

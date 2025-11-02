@@ -73,22 +73,6 @@ public abstract class State : ComputedInput, IState
     protected Computed UntypedComputed {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _snapshot!.Computed;
-        set {
-            value.AssertConsistencyStateIsNot(ConsistencyState.Computing);
-            lock (Lock) {
-                var prevSnapshot = _snapshot;
-                if (prevSnapshot is not null) {
-                    if (prevSnapshot.Computed == value)
-                        return;
-
-                    prevSnapshot.Computed.Invalidate();
-                    _snapshot = new StateSnapshot(this, prevSnapshot, value);
-                }
-                else
-                    _snapshot = new StateSnapshot(this, null, value);
-                OnSetSnapshot(_snapshot, prevSnapshot);
-            }
-        }
     }
 
     public StateSnapshot Snapshot {
@@ -146,7 +130,6 @@ public abstract class State : ComputedInput, IState
     }
 
     // IResult implementation
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Deconstruct(out object? untypedValue, out Exception? error)
         => ((IResult)UntypedComputed).Deconstruct(out untypedValue, out error);
@@ -154,7 +137,6 @@ public abstract class State : ComputedInput, IState
         => UntypedComputed.GetUntypedValueOrErrorBox();
 
     // Equality
-
     public override bool Equals(ComputedInput? other)
         => ReferenceEquals(this, other);
     public override bool Equals(object? obj)
@@ -222,11 +204,11 @@ public abstract class State : ComputedInput, IState
             }
         }
 
-        // It's super important to make "Computed = computed" assignment after "using" block -
+        // It's super important to make SetComputed after "using" block -
         // otherwise all State events will be triggered while Computed.Current still points on
         // computed (which is already computed), so if any compute method runs inside
         // the event handler, it will fail on an attempt to add a dependency.
-        UntypedComputed = computed;
+        SetComputed(computed, InvalidationSource.StateProduce);
         return computed;
     }
 
@@ -246,8 +228,26 @@ public abstract class State : ComputedInput, IState
             return; // CreateComputed sets Computed, if overriden (e.g. in MutableState)
 
         computed.TrySetOutput(options.InitialOutput);
-        UntypedComputed = computed;
-        computed.Invalidate();
+        SetComputed(computed, InvalidationSource.StateInitialize);
+        computed.Invalidate(immediately: true, InvalidationSource.InitialState);
+    }
+
+    protected void SetComputed(Computed computed, InvalidationSource source)
+    {
+        computed.AssertConsistencyStateIsNot(ConsistencyState.Computing);
+        lock (Lock) {
+            var prevSnapshot = _snapshot;
+            if (prevSnapshot is not null) {
+                if (prevSnapshot.Computed == computed)
+                    return;
+
+                prevSnapshot.Computed.Invalidate(immediately: true, source);
+                _snapshot = new StateSnapshot(this, prevSnapshot, computed);
+            }
+            else
+                _snapshot = new StateSnapshot(this, null, computed);
+            OnSetSnapshot(_snapshot, prevSnapshot);
+        }
     }
 
     protected internal virtual void OnInvalidated(Computed computed)

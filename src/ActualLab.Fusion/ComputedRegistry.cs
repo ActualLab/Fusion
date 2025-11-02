@@ -119,7 +119,8 @@ public sealed class ComputedRegistry
                         return; // Already registered
 
                     if (target is { ConsistencyState: not ConsistencyState.Invalidated })
-                        target.Invalidate(); // This typically triggers Unregister - except for RemoteComputed
+                        // This typically triggers Unregister - except for RemoteComputed
+                        target.Invalidate(immediately: true, InvalidationSource.ComputedRegistryRegister);
 
                     if (_storage.TryRemove(key, weakRef))
                         Free(weakRef);
@@ -183,8 +184,9 @@ public sealed class ComputedRegistry
     public static void InvalidateEverything()
     {
         var keys = _storage.Keys.ToList();
+        var invalidationSource = InvalidationSource.ForCurrentLocation();
         foreach (var key in keys)
-            Get(key)?.Invalidate();
+            Get(key)?.Invalidate(immediately: true, invalidationSource);
     }
 
     public static Task Prune()

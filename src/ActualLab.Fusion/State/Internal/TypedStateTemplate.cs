@@ -7,10 +7,7 @@ internal abstract class TypedStateTemplate<T> : State, IResult<T>
     public override Type OutputType => typeof(T);
 
     // IState<T> implementation
-    public new Computed<T> Computed {
-        get => (Computed<T>)UntypedComputed;
-        protected set => UntypedComputed = value;
-    }
+    public new Computed<T> Computed => (Computed<T>)UntypedComputed;
     public T? ValueOrDefault => Computed.ValueOrDefault;
     public new T Value => Computed.Value;
     public new T LastNonErrorValue => ((Computed<T>)Snapshot.LastNonErrorComputed).Value;

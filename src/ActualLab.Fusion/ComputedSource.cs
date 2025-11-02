@@ -61,17 +61,6 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
     public Computed Computed {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _computed;
-        private set {
-            lock (Lock) {
-                var computed = _computed;
-                if (computed == value)
-                    return;
-
-                computed.Invalidate();
-                _computed = value;
-                Updated?.Invoke(value);
-            }
-        }
     }
 
     public event Action<Computed>? Invalidated;
@@ -133,6 +122,19 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
 
     protected abstract Computed CreateComputed(Result? initialOutput = null);
 
+    private void SetComputed(Computed computed, InvalidationSource source)
+    {
+        lock (Lock) {
+            var oldComputed = _computed;
+            if (oldComputed == computed)
+                return;
+
+            oldComputed.Invalidate(immediately: true, source);
+            _computed = computed;
+            Updated?.Invoke(computed);
+        }
+    }
+
     protected async Task<Computed> ProduceComputed(
         ComputeContext context,
         CancellationToken cancellationToken)
@@ -155,7 +157,7 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
         var tryIndex = 0;
         var startedAt = CpuTimestamp.Now;
         while (true) {
-            Computed = computed = CreateComputed();
+            SetComputed(computed = CreateComputed(), InvalidationSource.ComputedSourceProduce);
             try {
                 using var _ = Computed.BeginCompute(computed);
                 var computeTask = Computer.Invoke(this, cancellationToken);

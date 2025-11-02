@@ -22,6 +22,11 @@ public interface IComputed : IResult, IHasVersion<ulong>
     public ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
     public Task UseUntyped(CancellationToken cancellationToken = default);
     public Task UseUntyped(bool allowInconsistent, CancellationToken cancellationToken = default);
+
+    public void Invalidate(bool immediately = false,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0);
     public void Invalidate(bool immediately, InvalidationSource source);
 }
 
@@ -76,7 +81,9 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 
     public InvalidationSource InvalidationSource {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => new(_invalidationSource);
+        get => ConsistencyState is ConsistencyState.Invalidated
+            ? new(_invalidationSource ?? InvalidationSource.Unknown.Value)
+            : default;
     }
 
     // IComputed implementation
@@ -214,7 +221,14 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
     // Invalidate
 
     void IGenericTimeoutHandler.OnTimeout(object? invalidationSource)
-        => Invalidate(true, new InvalidationSource(invalidationSource).OrUnknown());
+        => Invalidate(immediately: true, new InvalidationSource(invalidationSource).OrUnknown());
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Invalidate(bool immediately = false,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => Invalidate(immediately, new InvalidationSource(file, member, line));
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void Invalidate(bool immediately, InvalidationSource source)
@@ -225,9 +239,9 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
         lock (Lock) {
             // The original _invalidationReason always takes precedence over the current one
             if (_invalidationSource is null)
-                _invalidationSource = source;
+                _invalidationSource = source.Value;
             else
-                source = new(_invalidationSource);
+                source = new InvalidationSource(_invalidationSource);
 
             switch (_state & ConsistencyStateMask) {
             case (int)ConsistencyState.Invalidated:
@@ -321,9 +335,9 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
         }
 
         if ((state & (int)InvalidationFlags.InvalidateOnSetOutput) != 0) {
-            const string reason =
-                $"{nameof(Computed)}.{nameof(TrySetOutput)}: {nameof(InvalidationFlags.InvalidateOnSetOutput)} (no {nameof(InvalidationSource)})";
-            Invalidate((state & (int)InvalidationFlags.InvalidateOnSetOutputImmediately) != 0, new InvalidationSource(reason));
+            Invalidate(
+                immediately: (state & (int)InvalidationFlags.InvalidateOnSetOutputImmediately) != 0,
+                source: new InvalidationSource(_invalidationSource ?? InvalidationSource.ComputedTrySetOutputNoInvalidationSource.Value));
             return true;
         }
 
@@ -348,9 +362,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 
         if (error is OperationCanceledException) {
             // This error requires instant invalidation
-            const string reason =
-                $"{nameof(Computed)}.{nameof(StartAutoInvalidation)}: {nameof(Error)} is {nameof(OperationCanceledException)}";
-            Invalidate(immediately: true, new InvalidationSource(reason));
+            Invalidate(immediately: true, InvalidationSource.ComputedStartAutoInvalidationCancellationError);
             return;
         }
 
@@ -438,7 +450,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
             case ConsistencyState.Computing:
                 throw Errors.WrongComputedState(ConsistencyState);
             case ConsistencyState.Invalidated:
-                dependant.Invalidate();
+                dependant.Invalidate(immediately: false, new InvalidationSource(dependant));
                 return false;
             }
 

@@ -3,9 +3,15 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
-public abstract class MixedStateComponent<TState, TMutableState> : ComputedStateComponent<TState>
+public abstract class MixedStateComponent<T, TMutableState> : ComputedStateComponent<T>
 {
     protected MutableState<TMutableState> MutableState { get; private set; } = null!;
+
+    // Convenient for binding
+    protected TMutableState MutableValue {
+        get => MutableState.Value;
+        set => MutableState.Set(value);
+    }
 
     public override Task SetParametersAsync(ParameterView parameters)
     {

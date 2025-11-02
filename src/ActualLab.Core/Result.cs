@@ -53,19 +53,16 @@ public interface IResult
 public interface IMutableResult : IResult
 {
     /// <summary>
-    /// <see cref="Object"/>-typed version of <see cref="IMutableResult{T}.Value"/>.
-    /// </summary>
-    public new object? Value { get; set; }
-    /// <summary>
-    /// Retrieves or sets mutable result's error.
-    /// </summary>
-    public new Exception? Error { get; set; }
-
-    /// <summary>
     /// Sets mutable result's value and error from the provided <paramref name="result"/>.
     /// </summary>
     /// <param name="result">The result to set value and error from.</param>
     public void Set(Result result);
+
+    /// <summary>
+    /// Sets a mutable result to be an error.
+    /// </summary>
+    /// <param name="error">The error.</param>
+    public void SetError(Exception error);
 }
 
 /// <summary>
@@ -98,11 +95,6 @@ public interface IResult<T> : IResult, IConvertibleTo<T>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 public interface IMutableResult<T> : IResult<T>, IMutableResult
 {
-    /// <summary>
-    /// Retrieves or sets mutable result's value. Throws an <see cref="Error"/> when <see cref="IResult.HasError"/>.
-    /// </summary>
-    public new T Value { get; set; }
-
     /// <summary>
     /// Sets mutable result's value and error from the provided <paramref name="result"/>.
     /// </summary>
@@ -141,8 +133,10 @@ public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> New<T>(T value, Exception? error = null) => new(value, error);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> NewError<T>(Exception error) => new(default!, error);
+
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume ErrorInternal method is preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ErrorInternal method is preserved")]
     public static IResult NewError(Type resultType, Exception error)
@@ -154,9 +148,13 @@ public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
         ).Invoke(error);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result NewUntyped(object? untypedValueOrErrorBox) => new(untypedValueOrErrorBox);
+    public static Result NewUntyped(object? untypedValueOrErrorBox)
+        => new(untypedValueOrErrorBox);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Result NewUntyped(object? untypedValue, Exception? error) => new(untypedValue, error);
+    public static Result NewUntyped(object? untypedValue, Exception? error)
+        => new(untypedValue, error);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result NewUntypedError(Exception error) => new(new ErrorBox(error));
 

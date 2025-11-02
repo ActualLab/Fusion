@@ -23,7 +23,7 @@ public class EdgeCaseService(StateFactory stateFactory) : IEdgeCaseService
 
     public Task SetSuffix(string suffix, CancellationToken cancellationToken = default)
     {
-        SuffixState.Value = suffix;
+        SuffixState.Set(suffix);
         return Task.CompletedTask;
     }
 
