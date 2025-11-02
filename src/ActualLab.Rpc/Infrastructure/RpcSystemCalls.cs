@@ -47,7 +47,8 @@ public sealed class RpcSystemCalls(IServiceProvider services)
         Dictionary<int, byte[]> completedStagesData,
         CancellationToken cancellationToken)
     {
-        var peer = RpcOutboundContext.Current?.Peer ?? RpcInboundContext.GetCurrent().Peer;
+        var context = RpcInboundContext.GetCurrent();
+        var peer = context.Peer;
         var connectionState = peer.ConnectionState.Value;
         if (connectionState.Handshake is not { } handshake || handshake.Index != handshakeIndex)
             throw Errors.TooLateToReconnect();

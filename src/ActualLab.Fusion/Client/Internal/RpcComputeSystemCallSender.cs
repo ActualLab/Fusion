@@ -5,18 +5,21 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Client.Internal;
 
-public sealed class RpcComputeSystemCallSender(IServiceProvider services)
-    : RpcServiceBase(services)
+public sealed class RpcComputeSystemCallSender : RpcServiceBase
 {
+    public readonly RpcServiceDef ServiceDef;
+    public readonly IRpcComputeSystemCalls Client;
+
     [field: AllowNull, MaybeNull]
-    private IRpcComputeSystemCalls Client => field
-        ??= Services.GetRequiredService<IRpcComputeSystemCalls>();
-    [field: AllowNull, MaybeNull]
-    private RpcServiceDef ComputeSystemCallsServiceDef => field
-        ??= Hub.ServiceRegistry.Get<IRpcComputeSystemCalls>()!;
-    [field: AllowNull, MaybeNull]
-    private RpcMethodDef InvalidateMethodDef => field
-        ??= ComputeSystemCallsServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcComputeSystemCalls.Invalidate)));
+    public RpcMethodDef InvalidateMethodDef
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcComputeSystemCalls.Invalidate)));
+
+    public RpcComputeSystemCallSender(IServiceProvider services)
+        : base(services)
+    {
+        ServiceDef = Hub.ServiceRegistry.Get<IRpcComputeSystemCalls>()!;
+        Client = Hub.GetClient<IRpcComputeSystemCalls>();
+    }
 
     public Task Invalidate(RpcPeer peer, long callId, RpcHeader[]? headers = null)
     {
