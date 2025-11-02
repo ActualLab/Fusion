@@ -15,7 +15,7 @@ public class ComputedStaticTest(ITestOutputHelper @out) : TestBase(@out)
         _ = Task.Run(async () => {
             for (var i = 0; i < 3; i++) {
                 await Task.Delay(1000).ConfigureAwait(false);
-                testState.Value += "x";
+                testState.Set(x => x + "x");
             }
         });
 

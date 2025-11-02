@@ -14,7 +14,7 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     {
         var services = CreateServices();
         var counterSum = services.GetRequiredService<CounterSumService>();
-        counterSum[0].Value = 0;
+        counterSum[0].Set(0);
 
         var c0 = (ConsolidatingComputed<int>)await Computed.Capture(() => counterSum.GetC0(0));
         c0.Value.Should().Be(0);
@@ -27,7 +27,7 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         c0.Source.Options.ConsolidationDelay.Should().Be(TimeSpan.MaxValue);
         c0.Source.Options.TransientErrorInvalidationDelay.Should().Be(TimeSpan.FromSeconds(1));
 
-        counterSum[0].Value = 1;
+        counterSum[0].Set(1);
         await (c0.WhenConsolidated ?? Task.CompletedTask);
         c0.IsConsistent().Should().BeFalse();
 
@@ -53,7 +53,7 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     {
         var services = CreateServices();
         var counterSum = services.GetRequiredService<CounterSumService>();
-        counterSum[0].Value = 0;
+        counterSum[0].Set(0);
 
         var c0 = (ConsolidatingComputed<int>)await Computed.Capture(() => counterSum.GetC2(0));
         c0.Value.Should().Be(0);
@@ -66,13 +66,13 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         c0.Source.Options.ConsolidationDelay.Should().Be(TimeSpan.MaxValue);
         c0.Source.Options.TransientErrorInvalidationDelay.Should().Be(TimeSpan.FromSeconds(1));
 
-        counterSum[0].Value = 1; // Change 1
+        counterSum[0].Set(1); // Change 1
         var whenConsolidated = c0.WhenConsolidated;
         whenConsolidated.Should().NotBeNull();
         await Task.Delay(MinDelay);
         c0.IsConsistent().Should().BeTrue();
 
-        counterSum[0].Value = 2; // Change 2, within the consolidation window
+        counterSum[0].Set(2); // Change 2, within the consolidation window
         await whenConsolidated.WaitAsync(OneSecond);
         c0.IsConsistent().Should().BeFalse();
         c0.WhenConsolidated.Should().BeSameAs(whenConsolidated);
@@ -105,18 +105,18 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     {
         var services = CreateServices();
         var counterSum = services.GetRequiredService<CounterSumService>();
-        counterSum[0].Value = 0;
+        counterSum[0].Set(0);
 
         var c0 = (ConsolidatingComputed<int>)await Computed.Capture(() => counterSum.GetC2(0));
         c0.Value.Should().Be(0);
         c0.WhenConsolidated.Should().BeNull();
 
-        counterSum[0].Value = 1; // Change 1
+        counterSum[0].Set(1); // Change 1
         var whenConsolidated = c0.WhenConsolidated;
         whenConsolidated.Should().NotBeNull();
 
         await Task.Delay(MinDelay);
-        counterSum[0].Value = 0; // Change 2: revert Change 1 within the consolidation window
+        counterSum[0].Set(0); // Change 2: revert Change 1 within the consolidation window
         c0.WhenConsolidated.Should().BeSameAs(whenConsolidated);
 
         await whenConsolidated.WaitAsync(OneSecond);

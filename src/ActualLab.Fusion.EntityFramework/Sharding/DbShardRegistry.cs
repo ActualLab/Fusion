@@ -76,7 +76,7 @@ public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
             if (_shards.Value == shards)
                 return false;
 
-            _shards.Value = shards;
+            _shards.Set(shards);
             return true;
         }
     }
@@ -91,8 +91,8 @@ public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
             if (_shards.Value == shards)
                 return false;
 
-            _shards.Value = shards;
-            _usedShards.Value = _usedShards.Value.Remove(shard);
+            _shards.Set(shards);
+            _usedShards.Set(_usedShards.Value.Remove(shard));
             return true;
         }
     }
@@ -132,7 +132,7 @@ public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
             if (!CanUse(shard))
                 return false;
 
-            _usedShards.Value = usedShards.Add(shard);
+            _usedShards.Set(usedShards.Add(shard));
         }
         return true;
     }

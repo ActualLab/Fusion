@@ -37,15 +37,16 @@ public class InvalidatingCommandCompletionHandler(
             return;
         }
 
+        var commandType = command.GetType().GetName();
         Log.IfEnabled(Settings.LogLevel)
-            ?.Log(Settings.LogLevel, "Invalidating: {CommandType}", command.GetType());
+            ?.Log(Settings.LogLevel, "Invalidating: {CommandType}", commandType);
 
         // "Finally" block disposes everything here
         var activity = StartActivity(command);
         var operationItems = operation.Items;
         var oldOperation = context.TryGetOperation();
         context.ChangeOperation(operation);
-        var invalidateScope = Invalidation.Begin();
+        var invalidateScope = Invalidation.Begin(new InvalidationSource($"{commandType}'s invalidation pass"));
         try {
             // If we care only about the eventual consistency, the invalidation order
             // doesn't matter:

@@ -102,19 +102,19 @@ public class RpcPeerStateMonitor : WorkerBase
                     var nextConnectionStateTask = connectionState.WhenNext(peerCancellationToken);
 
                     if (isConnected) {
-                        _rawState.Value = _rawState.Value.ToConnected(Now);
+                        _rawState.Set(_rawState.Value.ToConnected(Now));
                         await nextConnectionStateTask.ConfigureAwait(false);
                     }
                     else {
                         var state = _rawState.Value.ToDisconnected(Now, peer.ReconnectsAt.Value, connectionState.Value);
-                        _rawState.Value = state;
+                        _rawState.Set(state);
                         // Disconnected -> update ReconnectsAt value until the nextConnectionStateTask completes
                         var stateChangedToken = CancellationTokenExt.FromTask(nextConnectionStateTask, CancellationToken.None);
                         try {
                             var reconnectAtChanges = peer.ReconnectsAt.Changes(stateChangedToken);
                             await foreach (var reconnectsAt in reconnectAtChanges.ConfigureAwait(false)) {
                                 if (state.ReconnectsAt != reconnectsAt)
-                                    _rawState.Value = state = state with { ReconnectsAt = reconnectsAt };
+                                    _rawState.Set(state = state with { ReconnectsAt = reconnectsAt });
                             }
                         }
                         catch (OperationCanceledException) when (stateChangedToken.IsCancellationRequested) {
@@ -124,6 +124,7 @@ public class RpcPeerStateMonitor : WorkerBase
                 }
             }
             catch (Exception e) {
+                // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                 if (e.IsCancellationOf(cancellationToken)) {
                     Log.LogInformation("`{PeerRef}`: monitor stopped", peerRef);
                     return;
@@ -136,7 +137,7 @@ public class RpcPeerStateMonitor : WorkerBase
                     Log.LogError(e, "`{PeerRef}`: monitor failed, will restart", peerRef);
             }
             finally {
-                _rawState.Value = _rawState.Value.ToDisconnected(Now, default, error);
+                _rawState.Set(_rawState.Value.ToDisconnected(Now, default, error));
                 peerCts.CancelAndDisposeSilently();
             }
         }
@@ -149,7 +150,7 @@ public class RpcPeerStateMonitor : WorkerBase
         reconnectDelayer.CancelDelaysToken.Register(static c => {
             // It makes sense to wait a bit after the cancellation to let RpcPeer do some work
             _ = Task.Delay(50, CancellationToken.None).ContinueWith(
-                _ => (c as Computed)?.Invalidate(),
+                _ => (c as Computed)?.Invalidate(immediately: true),
                 TaskScheduler.Default);
         }, computed);
         return Task.FromResult(Now);

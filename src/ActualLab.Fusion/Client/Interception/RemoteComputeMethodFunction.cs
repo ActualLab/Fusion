@@ -469,14 +469,14 @@ public abstract class RemoteComputeMethodFunction(
     protected void InvalidateToProduceError(Computed computed, Exception? error, string source)
     {
         Log.LogWarning(error, "Invalidating to produce error: {Input}", computed.Input);
-        computed.Invalidate(true, source);
+        computed.Invalidate(immediately: true, new InvalidationSource(source));
     }
 
     protected async Task InvalidateToReroute(Computed computed, Exception? error, string source)
     {
         Log.LogWarning(error, "Invalidating to reroute: {Input}", computed.Input);
         await RpcMethodDef.Hub.InternalServices.RerouteDelayer.Invoke(default).ConfigureAwait(false);
-        computed.Invalidate(true, source);
+        computed.Invalidate(immediately: true, new InvalidationSource(source));
     }
 
     // Abstract methods

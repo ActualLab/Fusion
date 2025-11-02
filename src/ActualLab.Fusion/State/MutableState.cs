@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
 using Errors = ActualLab.Internal.Errors;
@@ -8,33 +7,62 @@ namespace ActualLab.Fusion;
 // Interfaces
 
 public interface IMutableStateOptions : IStateOptions;
-public interface IMutableState : IState, IMutableResult;
-public interface IMutableState<T> : IState<T>, IMutableResult<T>, IMutableState;
+
+public interface IMutableState : IState
+{
+    // Set(...) from IMutableResult, but with InvalidationSource argument
+
+    public void Set(Result result,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0);
+
+    public void Set(Result result, InvalidationSource source);
+
+    // SetError(...) from IMutableResult, but with InvalidationSource argument
+
+    public void SetError(Exception error,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0);
+
+    public void SetError(Exception error, InvalidationSource source);
+}
+
+public interface IMutableState<T> : IState<T>, IMutableState
+{
+    // Set(...) from IMutableResult<T>, but with InvalidationSource argument
+
+    public void Set(Result<T> result,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0);
+
+    public void Set(Result<T> result, InvalidationSource source);
+
+    public void Set(Func<Result<T>, Result<T>> updater, bool throwOnError = false,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0);
+
+    public void Set(Func<Result<T>, Result<T>> updater, bool throwOnError, InvalidationSource source);
+
+    public void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater, bool throwOnError = false,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0);
+
+    public void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater, bool throwOnError, InvalidationSource source);
+}
 
 // Classes
 
-public abstract class MutableState : State, IMutableState
+public abstract class MutableState : State, IMutableState, IMutableResult
 {
     protected Result NextOutput;
 
-    public new object? Value {
-        get => base.Value;
-        set => Set(Result.NewUntyped(value));
-    }
-
-    public new Exception? Error {
-        get => base.Error;
-        [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all used constructors are preserved")]
-        set {
-            var result = value is null
-                ? Result.NewUntyped(OutputType.GetDefaultValue(), null)
-                : Result.NewUntypedError(value!);
-            Set(result);
-        }
-    }
-
     protected MutableState(IMutableStateOptions options, IServiceProvider services, bool initialize = true)
-        : base(options, services, false)
+        : base(options, services, initialize: false)
     {
         NextOutput = options.InitialOutput;
 
@@ -43,9 +71,22 @@ public abstract class MutableState : State, IMutableState
             Initialize(options);
     }
 
+    // IMutableResult implementation
+    void IMutableResult.Set(Result result)
+        => Set(result, InvalidationSource.ForCurrentLocation());
+    void IMutableResult.SetError(Exception error)
+        => Set(new Result(null, error), InvalidationSource.ForCurrentLocation());
+
     // Set overloads
 
-    public void Set(Result result)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Set(Result result,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => Set(result, new InvalidationSource(file, member, line));
+
+    public void Set(Result result, InvalidationSource source)
     {
         lock (Lock) {
             if (NextOutput == result)
@@ -62,9 +103,20 @@ public abstract class MutableState : State, IMutableState
             // 3. If all the updates are synchronous, we don't
             //    need async lock that's used by regular
             //    IComputed instances.
-            snapshot.Computed.Invalidate();
+            snapshot.Computed.Invalidate(source);
         }
     }
+
+    // SetError overloads
+
+    public void SetError(Exception error,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => Set(new Result(null, error), new InvalidationSource(file, member, line));
+
+    public void SetError(Exception error, InvalidationSource source)
+        => Set(new Result(null, error), source);
 
     // Protected methods
 
@@ -99,7 +151,7 @@ public abstract class MutableState : State, IMutableState
         => throw Errors.InternalError("This method should never be called.");
 }
 
-public class MutableState<T> : MutableState, IMutableState<T>
+public class MutableState<T> : MutableState, IMutableState<T>, IMutableResult<T>
 {
     public record Options : StateOptions<T>, IMutableStateOptions
     {
@@ -110,18 +162,11 @@ public class MutableState<T> : MutableState, IMutableState<T>
     public override Type OutputType => typeof(T);
 
     // IState<T> implementation
-    public new Computed<T> Computed {
-        get => Unsafe.As<Computed<T>>(UntypedComputed);
-        protected set => UntypedComputed = value;
-    }
+    public new Computed<T> Computed => Unsafe.As<Computed<T>>(UntypedComputed);
 
     public T? ValueOrDefault => Computed.ValueOrDefault;
     public new T LastNonErrorValue => Unsafe.As<Computed<T>>(Snapshot.LastNonErrorComputed).Value;
-
-    public new T Value {
-        get => Computed.Value;
-        set => Set(Result.NewUntyped(value));
-    }
+    public new T Value => Computed.Value;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public MutableState(Options options, IServiceProvider services, bool initialize = true)
@@ -134,12 +179,35 @@ public class MutableState<T> : MutableState, IMutableState<T>
         => Computed.Deconstruct(out value, out error);
     T IConvertibleTo<T>.Convert() => Value;
 
-    // Set overloads
+    // IMutableResult<T> implementation
+    void IMutableResult<T>.Set(Result<T> result)
+        => Set(result.ToUntypedResult(), InvalidationSource.ForCurrentLocation());
+    void IMutableResult<T>.Set(Func<Result<T>, Result<T>> updater, bool throwOnError)
+        => Set(updater, throwOnError, InvalidationSource.ForCurrentLocation());
+    void IMutableResult<T>.Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater, bool throwOnError)
+        => Set(state, updater, throwOnError, InvalidationSource.ForCurrentLocation());
 
-    public void Set(Result<T> result)
-        => Set(result.ToUntypedResult());
+    // Set(...) overloads
 
-    public void Set(Func<Result<T>, Result<T>> updater, bool throwOnError = false)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Set(Result<T> result,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => Set(result.ToUntypedResult(), new InvalidationSource(file, member, line));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Set(Result<T> result, InvalidationSource source)
+        => Set(result.ToUntypedResult(), source);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Set(Func<Result<T>, Result<T>> updater, bool throwOnError = false,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => Set(updater, throwOnError, new InvalidationSource(file, member, line));
+
+    public void Set(Func<Result<T>, Result<T>> updater, bool throwOnError, InvalidationSource source)
     {
         lock (Lock) {
             var snapshot = Snapshot;
@@ -151,11 +219,18 @@ public class MutableState<T> : MutableState, IMutableState<T>
                 result = Result.NewError<T>(e);
             }
             NextOutput = result.ToUntypedResult();
-            snapshot.Computed.Invalidate();
+            snapshot.Computed.Invalidate(source);
         }
     }
 
-    public void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater, bool throwOnError = false)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater, bool throwOnError = false,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => Set(state, updater, throwOnError, new InvalidationSource(file, member, line));
+
+    public void Set<TState>(TState state, Func<TState, Result<T>, Result<T>> updater, bool throwOnError, InvalidationSource source)
     {
         lock (Lock) {
             var snapshot = Snapshot;
@@ -167,7 +242,7 @@ public class MutableState<T> : MutableState, IMutableState<T>
                 result = Result.NewError<T>(e);
             }
             NextOutput = result.ToUntypedResult();
-            snapshot.Computed.Invalidate();
+            snapshot.Computed.Invalidate(source);
         }
     }
 
@@ -194,7 +269,7 @@ public class MutableState<T> : MutableState, IMutableState<T>
     {
         var computed = new StateBoundComputed<T>(ComputedOptions, this);
         computed.TrySetOutput(NextOutput);
-        UntypedComputed = computed;
+        SetComputed(computed, InvalidationSource.MutableStateCreateComputed);
         return computed;
     }
 }

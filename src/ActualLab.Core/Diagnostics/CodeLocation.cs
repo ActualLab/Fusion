@@ -1,28 +1,32 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace ActualLab.Diagnostics;
 
-public static class CodeLocation
+public static partial class CodeLocation
 {
+    // We use a regex to extract the file name, coz e.g. on WASM Path.FileName() doesn't properly parse Windows paths
+#if NET7_0_OR_GREATER
+    [GeneratedRegex(@"[^\\/]+$")]
+    private static partial Regex FileNameRe();
+#else
+    private static readonly Regex FileNameRe = new(@"[^\\/]+$", RegexOptions.Compiled);
+#endif
     private const string UnknownFile = "<UnknownFile>";
     private const string UnknownMember = "<UnknownMember>";
 
     private static readonly ConcurrentDictionary<string, string> Cache1 = new(StringComparer.Ordinal);
     private static readonly ConcurrentDictionary<(string? File, string? Member, int Line), string> Cache3 = new();
 
+
     public static string Format(string? file)
     {
         if (file.IsNullOrEmpty())
             return UnknownFile;
         return Cache1.GetOrAdd(file,
-            static x => {
-                try {
-                    return Path.GetFileName(x) ?? UnknownFile;
-                }
-                catch (Exception) {
-                    return UnknownFile;
-                }
-            });
+            static x => FileNameRe().Match(x) is { Success: true } match
+                ? match.Value
+                : UnknownFile);
     }
 
     public static string Format(string? file, string? member, int line = 0)

@@ -45,9 +45,9 @@ public static partial class ComputedImpl
             // - always paired with CallOptions.GetExisting
             // - never paired with CallOptions.Capture
             if (existing is IHasInvalidationTarget invalidationProxyComputed)
-                invalidationProxyComputed.InvalidationTarget?.Invalidate(context.InvalidationSource);
+                invalidationProxyComputed.InvalidationTarget?.Invalidate(immediately: false, context.InvalidationSource);
             else
-                existing.Invalidate();
+                existing.Invalidate(immediately: false, context.InvalidationSource);
             return true;
         }
 
@@ -131,7 +131,7 @@ public static partial class ComputedImpl
 
         if (cancellationToken.IsCancellationRequested || error is RpcRerouteException) {
             // !!! Cancellation of our own token & RpcRerouteException always passes through
-            computed.Invalidate(true); // Instant invalidation on cancellation
+            computed.Invalidate(immediately: true, InvalidationSource.Cancellation); // Instant invalidation on cancellation
             computed.TrySetError(error);
             return SpecialTasks.MustThrow;
         }
@@ -148,7 +148,7 @@ public static partial class ComputedImpl
         // - it's an internal cancellation (via CT other than cancellationToken)
         // - we must reprocess it w/ a delay.
 
-        computed.Invalidate(true); // Instant invalidation on cancellation
+        computed.Invalidate(immediately: true, InvalidationSource.Cancellation); // Instant invalidation on cancellation
         computed.TrySetError(error);
         var delay = cancellationReprocessingOptions.RetryDelays[tryIndex];
         log.LogWarning(error,
@@ -172,7 +172,7 @@ public static partial class ComputedImpl
         }
 
         // Cancellation
-        computed.Invalidate(true); // Instant invalidation on cancellation
+        computed.Invalidate(immediately: true, InvalidationSource.Cancellation); // Instant invalidation on cancellation
         computed.TrySetError(error);
         return !cancellationToken.IsCancellationRequested && error is not RpcRerouteException;
     }

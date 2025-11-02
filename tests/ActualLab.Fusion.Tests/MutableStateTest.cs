@@ -28,17 +28,17 @@ public class MutableStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
         c = await c.Update();
         c.Value.Should().Be("AB");
 
-        ms1.Value = "X";
+        ms1.Set("X");
         ms1.Value.Should().Be("X");
         c = await c.Update();
         c.Value.Should().Be("XB");
 
-        ms2.Value = "Y";
+        ms2.Set("Y");
         ms2.Value.Should().Be("Y");
         c = await c.Update();
         c.Value.Should().Be("XY");
 
-        ms1.Error = new NullReferenceException();
+        ms1.SetError(new NullReferenceException());
         ms1.HasError.Should().BeTrue();
         ms1.HasValue.Should().BeFalse();
         ms1.Error.Should().BeOfType<NullReferenceException>();
@@ -62,7 +62,7 @@ public class MutableStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
         Out.WriteLine($"Computed: {c0}");
         c0.Value.Should().Be(null);
 
-        s.Value = o1;
+        s.Set(o1);
         s.Value.Should().Be(o1);
         await s.Update();
         var c1 = s.Computed;
@@ -70,7 +70,7 @@ public class MutableStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
         c1.Value.Should().Be(o1);
         c1.Should().NotBe(c0);
 
-        s.Value = o2;
+        s.Set(o2);
         s.Value.Should().Be(o2);
         await s.Update();
         var c2 = s.Computed;

@@ -23,50 +23,18 @@ public static partial class ComputedExt
     // Invalidate(...source) overloads
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Invalidate(this Computed computed,
-        [CallerFilePath] string? file = null,
-        // ReSharper disable once MethodOverloadWithOptionalParameter
-        [CallerMemberName] string? member = null,
-        [CallerLineNumber] int line = 0)
-        => computed.Invalidate(false, new(file, member, line));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Invalidate(this Computed computed, string source)
-        => computed.Invalidate(false, new InvalidationSource(source));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Invalidate(this Computed computed, InvalidationSource source)
-        => computed.Invalidate(false, source);
+        => computed.Invalidate(immediately: false, source);
 
-    // Invalidate(immediately, ...source) overloads
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Invalidate(this Computed computed,
-        bool immediately,
-        [CallerFilePath] string? file = null,
-        // ReSharper disable once MethodOverloadWithOptionalParameter
-        [CallerMemberName] string? member = null,
-        [CallerLineNumber] int line = 0)
-        => computed.Invalidate(immediately, new(file, member, line));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Invalidate(this Computed computed, bool immediately, string source)
-        => computed.Invalidate(immediately, new InvalidationSource(source));
-
-    // Invalidate(delay, ...source) overloads
+   // Invalidate(delay, ...source) overloads
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Invalidate(this Computed computed,
         TimeSpan delay,
         [CallerFilePath] string? file = null,
-        // ReSharper disable once MethodOverloadWithOptionalParameter
         [CallerMemberName] string? member = null,
         [CallerLineNumber] int line = 0)
         => computed.Invalidate(delay, delay <= Computed.UsePreciseInvalidationTimerThreshold, new InvalidationSource(file, member, line));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Invalidate(this Computed computed, TimeSpan delay, string source)
-        => computed.Invalidate(delay, delay <= Computed.UsePreciseInvalidationTimerThreshold, new InvalidationSource(source));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Invalidate(this Computed computed, TimeSpan delay, InvalidationSource source)
@@ -79,14 +47,9 @@ public static partial class ComputedExt
         TimeSpan delay,
         bool usePreciseTimer,
         [CallerFilePath] string? file = null,
-        // ReSharper disable once MethodOverloadWithOptionalParameter
         [CallerMemberName] string? member = null,
         [CallerLineNumber] int line = 0)
         => computed.Invalidate(delay, usePreciseTimer, new InvalidationSource(file, member, line));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Invalidate(this Computed computed, TimeSpan delay, bool usePreciseTimer, string source)
-        => computed.Invalidate(delay, usePreciseTimer, new InvalidationSource(source));
 
     public static void Invalidate(this Computed computed, TimeSpan delay, bool usePreciseTimer, InvalidationSource source)
     {
@@ -94,7 +57,7 @@ public static partial class ComputedExt
             return;
 
         if (delay <= TimeSpan.Zero) { // Instant invalidation
-            computed.Invalidate();
+            computed.Invalidate(immediately: true, source);
             return;
         }
 
@@ -132,6 +95,15 @@ public static partial class ComputedExt
                 cts.Dispose();
             }
         };
+    }
+
+    // GetInvalidationOriginComputed
+
+    public static Computed GetInvalidationOrigin(this Computed computed)
+    {
+        while (computed.InvalidationSource.Value is Computed next)
+            computed = next;
+        return computed;
     }
 
     // WhenInvalidated

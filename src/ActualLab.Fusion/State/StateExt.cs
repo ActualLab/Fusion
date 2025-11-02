@@ -21,12 +21,19 @@ public static class StateExt
         => (Task<T>)state.Computed.UseUntyped(allowInconsistent, cancellationToken);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Invalidate(this IState state, bool immediately = false)
-        => state.Computed.Invalidate(immediately);
+    public static void Invalidate(this IState state, bool immediately = false,
+        [CallerFilePath] string? file = null,
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => state.Computed.Invalidate(immediately, new InvalidationSource(file, member, line));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Invalidate(this IState state, bool immediately, InvalidationSource source)
+        => state.Computed.Invalidate(immediately, source);
 
     public static ValueTask Recompute(this IState state, CancellationToken cancellationToken = default)
     {
-        state.Computed.Invalidate(true);
+        state.Computed.Invalidate(immediately: true, InvalidationSource.StateExtRecompute);
         return state.Update(cancellationToken);
     }
 

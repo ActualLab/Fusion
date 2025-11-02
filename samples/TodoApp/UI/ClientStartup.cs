@@ -133,10 +133,8 @@ public static class ClientStartup
         services.AddHostedService(c => {
             var isWasm = OSInfo.IsWebAssembly;
             return new FusionMonitor(c) {
-                SleepPeriod = isWasm
-                    ? TimeSpan.Zero
-                    : TimeSpan.FromMinutes(1).ToRandom(0.25),
-                CollectPeriod = TimeSpan.FromSeconds(isWasm ? 3 : 60),
+                SleepPeriod = TimeSpan.FromSeconds(isWasm ? 0 : 15),
+                CollectPeriod = TimeSpan.FromSeconds(isWasm ? 5 : 15),
                 AccessFilter = isWasm
                     ? static computed => computed.Input.Function is RemoteComputeMethodFunction
                     : static _ => true,

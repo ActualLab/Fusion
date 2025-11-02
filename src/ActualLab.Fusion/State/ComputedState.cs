@@ -56,7 +56,7 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
     public override bool IsDisposed => _whenDisposed is not null;
 
     protected ComputedState(IComputedStateOptions options, IServiceProvider services, bool initialize = true)
-        : base(options, services, false)
+        : base(options, services, initialize: false)
     {
         DisposeTokenSource = new CancellationTokenSource();
         DisposeToken = DisposeTokenSource.Token;
@@ -176,10 +176,7 @@ public abstract class ComputedState<T> : ComputedState, IState<T>
     public override Type OutputType => typeof(T);
 
     // IState<T> implementation
-    public new Computed<T> Computed {
-        get => Unsafe.As<Computed<T>>(UntypedComputed);
-        protected set => UntypedComputed = value;
-    }
+    public new Computed<T> Computed => Unsafe.As<Computed<T>>(UntypedComputed);
     public T? ValueOrDefault => Computed.ValueOrDefault;
     public new T Value => Computed.Value;
     public new T LastNonErrorValue => Unsafe.As<Computed<T>>(Snapshot.LastNonErrorComputed).Value;

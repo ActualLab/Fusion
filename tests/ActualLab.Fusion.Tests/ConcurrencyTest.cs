@@ -47,13 +47,13 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
 
             async Task Mutator(MutableState<int> ms) {
                 for (var i = 1; i <= iterationCount; i++) {
-                    ms.Value = i;
+                    ms.Set(i);
                     if (i % delayFrequency == 0)
                         await Task.Delay(1).ConfigureAwait(false);
                 }
             }
 
-            ms1.Value = iterationCount;
+            ms1.Set(iterationCount);
             await Task.Run(() => Mutator(ms2));
             ms1.Value.Should().Be(iterationCount);
             ms2.Value.Should().Be(iterationCount);
@@ -122,13 +122,13 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
 
             async Task Mutator(MutableState<int> ms) {
                 for (var i = 1; i <= iterationCount; i++) {
-                    ms.Value = i;
+                    ms.Set(i);
                     if (i % delayFrequency == 0)
                         await Task.Delay(1).ConfigureAwait(false);
                 }
             }
 
-            ms1.Value = iterationCount;
+            ms1.Set(iterationCount);
             await Task.Run(() => Mutator(ms2));
             ms1.Value.Should().Be(iterationCount);
             ms2.Value.Should().Be(iterationCount);
@@ -197,7 +197,7 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
 
             async Task Mutator(MutableState<int> ms) {
                 for (var i = 1; i <= iterationCount; i++) {
-                    ms.Value = i;
+                    ms.Set(i);
                     if (i % delayFrequency == 0)
                         await Task.Delay(1).ConfigureAwait(false);
                 }
@@ -206,11 +206,11 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
             const int counterCount = 2;
             for (var usedCounterIndex = 0; usedCounterIndex < counterCount; usedCounterIndex++) {
                 for (var i = 0; i < counterCount; i++) {
-                    counterSum[i].Value = iterationCount;
+                    counterSum[i].Set(iterationCount);
                     counterSum[0].Value.Should().Be(iterationCount);
                 }
 
-                counterSum[usedCounterIndex].Value = 0;
+                counterSum[usedCounterIndex].Set(0);
                 counterSum[usedCounterIndex].Value.Should().Be(0);
                 await Task.Run(() => Mutator(counterSum[usedCounterIndex]));
                 counterSum[usedCounterIndex].Value.Should().Be(iterationCount);

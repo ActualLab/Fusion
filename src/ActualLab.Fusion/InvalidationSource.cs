@@ -8,12 +8,25 @@ public readonly struct InvalidationSource :
     IEnumerable<InvalidationSource>,
     IEquatable<InvalidationSource>
 {
+    public static bool IsEnabled { get; set; } = true;
+
     public static InvalidationSource None {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => default;
     }
 
     public static readonly InvalidationSource Unknown = new("<Unknown>");
+    public static readonly InvalidationSource Cancellation = new("<Cancellation>");
+    public static readonly InvalidationSource InitialState = new("<InitialState>");
+    public static readonly InvalidationSource ComputedTrySetOutputNoInvalidationSource = new("Computed.TrySetOutput: missing InvalidationSource");
+    public static readonly InvalidationSource ComputedStartAutoInvalidationCancellationError = new("Computed.StartAutoInvalidation: Error is OperationCancelledException");
+    public static readonly InvalidationSource ComputedRegistryRegister = new("ComputedRegistry.Register: replacement");
+    public static readonly InvalidationSource StateProduce = new("State.ProduceComputed");
+    public static readonly InvalidationSource StateInitialize = new("State.Initialize");
+    public static readonly InvalidationSource MutableStateCreateComputed = new("MutableState.CreateComputed");
+    public static readonly InvalidationSource ComputedSourceProduce = new("ComputedSource.ProduceComputed");
+    public static readonly InvalidationSource StateExtRecompute = new("StateExt.Recompute");
+    public static readonly InvalidationSource ComputedSourceExtRecompute = new("ComputedSourceExt.Recompute");
 
     public object? Value { get; }
     public bool IsNone => Value is null;
@@ -28,19 +41,6 @@ public readonly struct InvalidationSource :
                     return source;
 
                 source = next;
-            }
-        }
-    }
-
-    public InvalidationSource OriginPreferComputed {
-        get {
-            var source = this;
-            while (true) {
-                var next = source.Source.Value as Computed;
-                if (next is null)
-                    return source;
-
-                source = new(next);
             }
         }
     }
@@ -61,9 +61,16 @@ public readonly struct InvalidationSource :
     public InvalidationSource(object? value)
         => Value = value;
 
+    // ReSharper disable once ConvertToPrimaryConstructor
+    [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public InvalidationSource(string value)
+        => Value = value;
+
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public InvalidationSource(string? file, string? member, int line = 0)
-        => Value = CodeLocation.Format(file, member, line);
+        => Value = IsEnabled
+            ? CodeLocation.Format(file, member, line)
+            : Unknown;
 
     // ToString and related methods
 
@@ -91,7 +98,7 @@ public readonly struct InvalidationSource :
         }
     }
 
-    // OrXxx
+    // Helpers
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public InvalidationSource Or(InvalidationSource noneReplacement)
@@ -114,8 +121,11 @@ public readonly struct InvalidationSource :
 
     // Equality
     public override bool Equals(object? obj) => obj is InvalidationSource other && Equals(other);
-    public bool Equals(InvalidationSource other) => Equals(Value, other.Value);
     public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Equals(InvalidationSource other) => Equals(Value, other.Value);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(InvalidationSource left, InvalidationSource right) => left.Equals(right);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator !=(InvalidationSource left, InvalidationSource right) => !left.Equals(right);
 }
