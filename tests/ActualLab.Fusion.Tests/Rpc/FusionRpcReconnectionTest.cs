@@ -62,9 +62,6 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
             .Capture(() => client.Delay(delay, invDelay))
             .AsTask().WaitAsync(TimeSpan.FromSeconds(0.1)); // Should be instant
         computed.IsConsistent().Should().BeTrue();
-        computed.Invalidated += _ => {
-            Out.WriteLine("Invalidated: {0}", new StackTrace());
-        };
 
         await connection.Reconnect();
         // Recovery is expected to trigger result update and/or invalidation
@@ -72,6 +69,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         var startedAt = CpuTimestamp.Now;
         await computed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1 * waitMultiplier));
         Out.WriteLine(computed.ToString(InvalidationSourceFormat.WholeChain));
+
         var elapsed = CpuTimestamp.Now - startedAt;
         if (!TestRunnerInfo.IsBuildAgent())
             elapsed.TotalSeconds.Should().BeGreaterThan(0.1);
@@ -106,6 +104,8 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var startedAt = CpuTimestamp.Now;
         await computed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1 * waitMultiplier));
+        Out.WriteLine(computed.ToString(InvalidationSourceFormat.WholeChain));
+
         var elapsed = CpuTimestamp.Now - startedAt;
         if (!TestRunnerInfo.IsBuildAgent())
             elapsed.TotalSeconds.Should().BeGreaterThan(0.1);
