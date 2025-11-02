@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Fusion.Client;
 using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Internal;
@@ -45,8 +44,8 @@ public static partial class ComputedImpl
             // CallOptions.Invalidate is:
             // - always paired with CallOptions.GetExisting
             // - never paired with CallOptions.Capture
-            if (existing is IInvalidationProxyComputed invalidationProxyComputed)
-                invalidationProxyComputed.InvalidationTarget?.Invalidate();
+            if (existing is IHasInvalidationTarget invalidationProxyComputed)
+                invalidationProxyComputed.InvalidationTarget?.Invalidate(context.InvalidationSource);
             else
                 existing.Invalidate();
             return true;

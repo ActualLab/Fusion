@@ -10,7 +10,7 @@ namespace ActualLab.Fusion.Client;
 /// Used to expose a copy of the original computed (returned by the implementation)
 /// while executing local calls on a compute service working in <c>Distributed</c> mode.
 /// </summary>
-public interface IReplicaComputed : IInvalidationProxyComputed
+public interface IReplicaComputed : IHasInvalidationTarget, IHasSynchronizationTarget
 {
     public Computed? Original { get; }
 
@@ -30,8 +30,10 @@ public sealed class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaCompu
 
     public Computed? Original => _original;
 
-    // IInvalidationProxyComputed
-    Computed? IInvalidationProxyComputed.InvalidationTarget => _original;
+    // IHasInvalidationTarget
+    Computed? IHasInvalidationTarget.InvalidationTarget => _original;
+    // IHasSynchronizationTarget
+    Computed? IHasSynchronizationTarget.SynchronizationTarget => _original;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public ReplicaComputed(ComputedOptions options, ComputeMethodInput input)
@@ -61,6 +63,6 @@ public sealed class ReplicaComputed<T> : ComputeMethodComputed<T>, IReplicaCompu
         // In the second case, when IService.Method(...) is called rather than Service.Method(...) inside the
         // Invalidation.Begin() block, the replica of the original computed will be fetched from cache instead of
         // the original computed, and we need to invalidate it to handle this scenario.
-        Original?.Invalidate();
+        Original?.Invalidate(immediately: true, new InvalidationSource(this));
     }
 }

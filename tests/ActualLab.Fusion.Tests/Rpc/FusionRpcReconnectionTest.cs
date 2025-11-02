@@ -62,6 +62,9 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
             .Capture(() => client.Delay(delay, invDelay))
             .AsTask().WaitAsync(TimeSpan.FromSeconds(0.1)); // Should be instant
         computed.IsConsistent().Should().BeTrue();
+        computed.Invalidated += _ => {
+            Out.WriteLine("Invalidated: {0}", new StackTrace());
+        };
 
         await connection.Reconnect();
         // Recovery is expected to trigger result update and/or invalidation

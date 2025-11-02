@@ -20,16 +20,75 @@ public static partial class ComputedExt
     public static Task<T> Use<T>(this Computed<T> computed, bool allowInconsistent, CancellationToken cancellationToken = default)
         => (Task<T>)computed.UseUntyped(allowInconsistent, cancellationToken);
 
-    // GetInvalidationTarget
+    // Invalidate(...source) overloads
 
-    public static Computed? GetInvalidationTarget(this Computed computed)
-        => computed is IInvalidationProxyComputed proxyComputed
-            ? proxyComputed.InvalidationTarget
-            : computed;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Invalidate(this Computed computed,
+        [CallerFilePath] string? file = null,
+        // ReSharper disable once MethodOverloadWithOptionalParameter
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => computed.Invalidate(false, new(file, member, line));
 
-    // Invalidate
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Invalidate(this Computed computed, string source)
+        => computed.Invalidate(false, new InvalidationSource(source));
 
-    public static void Invalidate(this Computed computed, TimeSpan delay, bool? usePreciseTimer = null)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Invalidate(this Computed computed, InvalidationSource source)
+        => computed.Invalidate(false, source);
+
+    // Invalidate(immediately, ...source) overloads
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Invalidate(this Computed computed,
+        bool immediately,
+        [CallerFilePath] string? file = null,
+        // ReSharper disable once MethodOverloadWithOptionalParameter
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => computed.Invalidate(immediately, new(file, member, line));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Invalidate(this Computed computed, bool immediately, string source)
+        => computed.Invalidate(immediately, new InvalidationSource(source));
+
+    // Invalidate(delay, ...source) overloads
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Invalidate(this Computed computed,
+        TimeSpan delay,
+        [CallerFilePath] string? file = null,
+        // ReSharper disable once MethodOverloadWithOptionalParameter
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => computed.Invalidate(delay, delay <= Computed.UsePreciseInvalidationTimerThreshold, new InvalidationSource(file, member, line));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Invalidate(this Computed computed, TimeSpan delay, string source)
+        => computed.Invalidate(delay, delay <= Computed.UsePreciseInvalidationTimerThreshold, new InvalidationSource(source));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Invalidate(this Computed computed, TimeSpan delay, InvalidationSource source)
+        => computed.Invalidate(delay, delay <= Computed.UsePreciseInvalidationTimerThreshold, source);
+
+    // Invalidate(delay, usePreciseTimer, ...source) overloads
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Invalidate(this Computed computed,
+        TimeSpan delay,
+        bool usePreciseTimer,
+        [CallerFilePath] string? file = null,
+        // ReSharper disable once MethodOverloadWithOptionalParameter
+        [CallerMemberName] string? member = null,
+        [CallerLineNumber] int line = 0)
+        => computed.Invalidate(delay, usePreciseTimer, new InvalidationSource(file, member, line));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Invalidate(this Computed computed, TimeSpan delay, bool usePreciseTimer, string source)
+        => computed.Invalidate(delay, usePreciseTimer, new InvalidationSource(source));
+
+    public static void Invalidate(this Computed computed, TimeSpan delay, bool usePreciseTimer, InvalidationSource source)
     {
         if (delay == TimeSpan.MaxValue) // No invalidation
             return;
@@ -39,10 +98,11 @@ public static partial class ComputedExt
             return;
         }
 
-        var bPrecise = usePreciseTimer ?? delay <= Computed.PreciseInvalidationDelayThreshold;
-        if (!bPrecise) {
-            Timeouts.Generic.AddOrUpdateToEarlier(computed, Timeouts.Clock.Now + delay);
-            computed.Invalidated += static c => Timeouts.Generic.Remove(c);
+        if (!usePreciseTimer) {
+            Timeouts.Generic.AddOrUpdateToEarlier(
+                new GenericTimeoutSlot(computed, source),
+                Timeouts.Clock.Now + delay);
+            computed.Invalidated += static c => Timeouts.Generic.Remove(new GenericTimeoutSlot(c, null));
             return;
         }
 
@@ -56,7 +116,7 @@ public static partial class ComputedExt
             // so Invalidate() call will do nothing & return immediately,
             // or it's invoked via one of timer threads, i.e. where it's
             // totally fine to invoke Invalidate directly as well.
-            computed.Invalidate(true);
+            computed.Invalidate(immediately: true, source);
             cts.Dispose();
         });
         computed.Invalidated += _ => {

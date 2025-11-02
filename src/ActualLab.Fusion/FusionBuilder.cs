@@ -315,7 +315,7 @@ public readonly struct FusionBuilder
             throw Errors.MustImplement<IHasDisposeStatus>(implementationType, nameof(implementationType));
 
         object CreateComputeService(IServiceProvider c)
-            => c.FusionHub().NewComputeServiceProxy(implementationType);
+            => c.FusionHub().NewComputeServiceProxy(c, implementationType);
 
         Services.Add(new ServiceDescriptor(serviceType, CreateComputeService, lifetime));
         if (hasCommandHandlers)

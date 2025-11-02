@@ -100,7 +100,7 @@ public class ScopedInterceptorTest(ITestOutputHelper @out) : TestBase(@out)
             .BuildServiceProvider();
 
         var serviceDef = services.RpcHub().ServiceRegistry.Get<IScopedServiceTestService>()!;
-        var service = (IScopedServiceTestService)serviceDef.Server;
+        var service = (IScopedServiceTestService)serviceDef.Server!;
 
         // Actual test
         service.IntMethod().Should().Be(1);

@@ -59,7 +59,6 @@ public static class MethodInfoExt
         return result;
     }
 
-    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static string ToShortString(this MethodInfo method,
         bool addReflectedType = false,
         bool addReturnType = false)

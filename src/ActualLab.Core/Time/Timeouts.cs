@@ -1,4 +1,5 @@
 using ActualLab.OS;
+using ActualLab.Time.Internal;
 
 namespace ActualLab.Time;
 
@@ -22,7 +23,7 @@ public static class Timeouts
     public static readonly CpuClock Clock;
     public static readonly TickSource TickSource;
     public static readonly ConcurrentTimerSet<object> KeepAlive;
-    public static readonly ConcurrentTimerSet<IGenericTimeoutHandler> Generic;
+    public static readonly ConcurrentTimerSet<GenericTimeoutSlot> Generic;
     // public static readonly ConcurrentFixedTimerSet<IGenericTimeoutHandler> Generic5S;
     public static readonly Moment StartedAt;
 
@@ -37,22 +38,22 @@ public static class Timeouts
                 TickSource = TickSource,
                 ConcurrencyLevel = Settings.ConcurrencyLevel,
             }, null, StartedAt);
-        Generic = new ConcurrentTimerSet<IGenericTimeoutHandler>(
+        Generic = new ConcurrentTimerSet<GenericTimeoutSlot>(
             new() {
                 Clock = Clock,
                 TickSource = TickSource,
                 ConcurrencyLevel = Settings.ConcurrencyLevel,
             },
-            t => t.OnTimeout(), StartedAt);
+            x => x.Handler.OnTimeout(x.Argument), StartedAt);
         /*
-        Generic5S = new ConcurrentFixedTimerSet<IGenericTimeoutHandler>(
+        Generic5S = new ConcurrentFixedTimerSet<GenericTimeoutHandler>(
             new() {
                 Clock = Clock,
                 TickSource = TickSource,
                 FireDelay = TimeSpan.FromSeconds(5),
                 ConcurrencyLevel = Settings.ConcurrencyLevel,
             },
-            t => t.OnTimeout());
+            x => x.Handler.OnTimeout(x.Argument));
         */
     }
 

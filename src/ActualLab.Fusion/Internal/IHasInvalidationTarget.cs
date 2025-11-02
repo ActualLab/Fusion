@@ -1,6 +1,6 @@
 namespace ActualLab.Fusion.Internal;
 
-public interface IInvalidationProxyComputed : IComputed
+public interface IHasInvalidationTarget : IComputed
 {
     public Computed? InvalidationTarget { get; }
 }

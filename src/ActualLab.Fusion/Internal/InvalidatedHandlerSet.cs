@@ -53,7 +53,8 @@ public struct InvalidatedHandlerSet
                 return;
 
             default:
-                throw ActualLab.Internal.Errors.InternalError($"{GetType().GetName()} structure is corrupted.");
+                throw ActualLab.Internal.Errors.InternalError(
+                    $"{nameof(InvalidatedHandlerSet)} structure is corrupted.");
         }
     }
 
@@ -90,7 +91,8 @@ public struct InvalidatedHandlerSet
                 return;
 
             default:
-                throw ActualLab.Internal.Errors.InternalError($"{GetType().GetName()} structure is corrupted.");
+                throw ActualLab.Internal.Errors.InternalError(
+                    $"{nameof(InvalidatedHandlerSet)} structure is corrupted.");
         }
     }
 
@@ -122,7 +124,8 @@ public struct InvalidatedHandlerSet
                 return;
 
             default:
-                throw ActualLab.Internal.Errors.InternalError($"{GetType().GetName()} structure is corrupted.");
+                throw ActualLab.Internal.Errors.InternalError(
+                    $"{nameof(InvalidatedHandlerSet)} structure is corrupted.");
         }
     }
 }

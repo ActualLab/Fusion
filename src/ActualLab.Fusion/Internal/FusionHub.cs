@@ -34,12 +34,14 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
         => field ??= Services.GetRequiredService<ComputeServiceInterceptor>();
 
     public IProxy NewComputeServiceProxy(
+        IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         bool initialize = true)
     {
         var interceptor = ComputeServiceInterceptor;
         interceptor.ValidateType(serviceType);
-        return Services.ActivateProxy(serviceType, interceptor, initialize);
+        // FusionHub.Services always points to the root service provider, and compute services can be Scoped
+        return services.ActivateProxy(serviceType, interceptor, initialize);
     }
 
     public IProxy NewRemoteComputeServiceProxy(

@@ -19,7 +19,7 @@ public class RpcComputeSystemCalls(IServiceProvider services)
         var peer = context.Peer;
         var outboundCallId = context.Message.RelatedId;
         if (peer.OutboundCalls.Get(outboundCallId) is RpcOutboundComputeCall outboundCall)
-            outboundCall.SetInvalidated(context);
+            outboundCall.SetInvalidated(context, "Remote source is invalidated");
         return RpcNoWait.Tasks.Completed;
     }
 }
