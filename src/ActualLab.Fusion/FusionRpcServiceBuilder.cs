@@ -71,7 +71,7 @@ public class FusionRpcServiceBuilder : RpcServiceBuilder
         return;
 
         object CreateComputeService(IServiceProvider c)
-            => c.FusionHub().NewComputeServiceProxy(implementationType);
+            => c.FusionHub().NewComputeServiceProxy(c, implementationType);
 
         object CreateClient(IServiceProvider c)
             => c.FusionHub().NewRemoteComputeServiceProxy(serviceType, serviceType);

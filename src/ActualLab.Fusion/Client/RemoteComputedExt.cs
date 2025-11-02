@@ -7,26 +7,28 @@ public static class RemoteComputedExt
     // We don't want the methods below to be declared in generic RemoteComputed<T> class (AOT perf issue),
     // that's why they are extension methods.
 
-    public static bool BindToCall(this IRemoteComputed computed, RpcOutboundComputeCall? call)
+    public static bool BindToCall(this IRemoteComputed computed, RpcOutboundComputeCall call)
     {
-        if (!computed.CallSource.TrySetResult(call)) {
-            // Another call is already bound
-            if (call is null) {
-                // Call from OnInvalidated - we need to cancel the old call
-                var boundCall = computed.WhenCallBound.GetAwaiter().GetResult();
-                boundCall?.SetInvalidated(true);
-            }
-            else {
-                // Normal BindToCall, we cancel the call to ensure its invalidation sub. is gone
-                call.SetInvalidated(true);
-            }
-            return false;
-        }
-        // If we're here, the computed is bound to the specified call
-
-        if (call is not null) // Otherwise the null call originates from OnInvalidated
+        if (computed.CallSource.TrySetResult(call)) {
             computed.BindWhenInvalidatedToCall(call);
-        return true;
+            return true;
+        }
+
+        const string reason = $"{nameof(RemoteComputedExt)}.{nameof(BindToCall)}: call is already bound";
+        call.SetInvalidated(true, reason);
+        return false;
+    }
+
+    public static bool BindToCallFromOnInvalidated(this IRemoteComputed computed)
+    {
+        if (computed.CallSource.TrySetResult(null))
+            return true;
+
+        var boundCall = computed.WhenCallBound.GetAwaiter().GetResult();
+        const string reason =
+            $"{nameof(RemoteComputedExt)}.{nameof(BindToCall)}: associated {nameof(IRemoteComputed)} is invalidated";
+        boundCall?.SetInvalidated(true, reason);
+        return false;
     }
 
     public static void BindWhenInvalidatedToCall(this IRemoteComputed computed, RpcOutboundComputeCall call)
@@ -35,12 +37,12 @@ public static class RemoteComputedExt
         if (whenInvalidated.IsCompleted) {
             // No call (call prepare error - e.g. if there is no such RPC service),
             // or the call result is already invalidated
-            computed.Invalidate(true);
+            computed.Invalidate(true, new InvalidationSource(whenInvalidated.GetAwaiter().GetResult()));
             return;
         }
 
         _ = whenInvalidated.ContinueWith(
-            _ => computed.Invalidate(true),
+            _ => computed.Invalidate(true, new InvalidationSource(whenInvalidated.GetAwaiter().GetResult())),
             CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 }

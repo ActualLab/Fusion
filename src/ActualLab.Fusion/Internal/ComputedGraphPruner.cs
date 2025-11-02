@@ -65,6 +65,7 @@ public sealed class ComputedGraphPruner : WorkerBase
         var disposedCount = 0L;
         var remainingBatchCapacity = batchSize;
         var batchCount = 0;
+        var invalidationSource = InvalidationSource.ForCurrentLocation();
         while (keyEnumerator.MoveNext()) {
             if (--remainingBatchCapacity <= 0) {
                 var pausedAt = CpuTimestamp.Now;
@@ -77,7 +78,7 @@ public sealed class ComputedGraphPruner : WorkerBase
             var computedInput = keyEnumerator.Current!;
             if (ComputedRegistry.Get(computedInput) is { } c && c.IsConsistent() && computedInput.IsDisposed) {
                 disposedCount++;
-                c.Invalidate(disposedComputedInvalidationDelay);
+                c.Invalidate(disposedComputedInvalidationDelay, invalidationSource);
             }
         }
         if (disposedCount == 0)

@@ -243,7 +243,9 @@ public abstract class RemoteComputeMethodFunction(
                 await whenConnected.ConfigureAwait(false);
             }
             catch (Exception whenConnectedError) {
-                await InvalidateOnError(cachedComputed, whenConnectedError).ConfigureAwait(false);
+                const string reason =
+                    $"{nameof(RemoteComputeMethodFunction)}.{nameof(ApplyRpcUpdate)}: {nameof(WhenConnectedChecked)} failed";
+                await InvalidateOnError(cachedComputed, whenConnectedError, reason).ConfigureAwait(false);
                 return;
             }
         }
@@ -254,8 +256,16 @@ public abstract class RemoteComputeMethodFunction(
         var cacheInfoCapture = new RpcCacheInfoCapture(existingCacheEntry ?? RpcCacheEntry.RequestHash);
         var (result, call) = await SendRpcCall(input, peer, cacheInfoCapture, default).ConfigureAwait(false);
         var (value, error) = result;
-        if (call is null || error is RpcRerouteException) {
-            await InvalidateToReroute(cachedComputed, result.Error).ConfigureAwait(false);
+        if (call is null) {
+            const string reason =
+                $"{nameof(RemoteComputeMethodFunction)}.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} returned null call";
+            await InvalidateToReroute(cachedComputed, result.Error, reason).ConfigureAwait(false);
+            return;
+        }
+        if (error is RpcRerouteException) {
+            const string reason =
+                $"{nameof(RemoteComputeMethodFunction)}.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} threw {nameof(RpcRerouteException)}";
+            await InvalidateToReroute(cachedComputed, result.Error, reason).ConfigureAwait(false);
             return;
         }
 
@@ -278,7 +288,9 @@ public abstract class RemoteComputeMethodFunction(
                 "ApplyRpcUpdate was cancelled on the server side for {Category}, will invalidate IComputed in {Delay}",
                 input.Category, delay.ToShortString());
             await Task.Delay(delay).ConfigureAwait(false);
-            call.SetInvalidated(true);
+            const string reason =
+                $"{nameof(RemoteComputeMethodFunction)}.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} returned a result with OperationCanceledException";
+            call.SetInvalidated(true, reason);
             return;
         }
 
@@ -445,26 +457,26 @@ public abstract class RemoteComputeMethodFunction(
 
     // InvalidateXxx
 
-    protected Task InvalidateOnError(Computed computed, Exception? error)
+    protected Task InvalidateOnError(Computed computed, Exception? error, string source)
     {
         if (error is RpcRerouteException)
-            return InvalidateToReroute(computed, error);
+            return InvalidateToReroute(computed, error, source);
 
-        InvalidateToProduceError(computed, error);
+        InvalidateToProduceError(computed, error, source);
         return Task.CompletedTask;
     }
 
-    protected void InvalidateToProduceError(Computed computed, Exception? error)
+    protected void InvalidateToProduceError(Computed computed, Exception? error, string source)
     {
         Log.LogWarning(error, "Invalidating to produce error: {Input}", computed.Input);
-        computed.Invalidate(true);
+        computed.Invalidate(true, source);
     }
 
-    protected async Task InvalidateToReroute(Computed computed, Exception? error)
+    protected async Task InvalidateToReroute(Computed computed, Exception? error, string source)
     {
         Log.LogWarning(error, "Invalidating to reroute: {Input}", computed.Input);
         await RpcMethodDef.Hub.InternalServices.RerouteDelayer.Invoke(default).ConfigureAwait(false);
-        computed.Invalidate(true);
+        computed.Invalidate(true, source);
     }
 
     // Abstract methods

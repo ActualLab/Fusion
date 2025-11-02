@@ -16,9 +16,7 @@ public sealed class FusionMonitor : WorkerBase
     private readonly Action<Computed> _onRegister;
     private readonly Action<Computed> _onUnregister;
 
-    // Stats
-    private Dictionary<string, (int, int)> _accesses = null!;
-    private Dictionary<string, (int, int)> _registrations = null!;
+    private Statistics _statistics;
 
     // Services
     private IServiceProvider Services { get; }
@@ -38,9 +36,10 @@ public sealed class FusionMonitor : WorkerBase
     {
         Services = services;
         Log = services.LogFor(GetType());
+        _statistics = new();
         _onAccess = OnAccess;
-        _onRegister = input => OnRegistration(input, true);
-        _onUnregister = input => OnRegistration(input, false);
+        _onRegister = OnRegistration;
+        _onUnregister = OnUnregistration;
     }
 
     protected override async Task OnRun(CancellationToken cancellationToken)
@@ -63,7 +62,7 @@ public sealed class FusionMonitor : WorkerBase
 
                 Log.LogInformation("Collecting for {CollectPeriod}...", CollectPeriod);
                 await Task.Delay(CollectPeriod, cancellationToken).ConfigureAwait(false);
-                var (accesses, registrations) = GetAndResetStatistics();
+                var (accesses, registrations, invalidationSources) = GetAndResetStatistics();
                 AccessStatisticsPreprocessor?.Invoke(accesses);
                 RegistrationStatisticsPreprocessor?.Invoke(registrations);
 
@@ -106,6 +105,23 @@ public sealed class FusionMonitor : WorkerBase
                     Log.LogInformation(sb.ToString());
                     sb.Clear();
                 }
+
+                // Invalidation sources
+                if (invalidationSources.Count != 0) {
+                    var m = RegistrationSampler.InverseProbability;
+                    sb.AppendFormat(fp, "Invalidation sources, sampled with {0}:", RegistrationSampler);
+                    var valueSum = 0;
+                    foreach (var (key, value) in invalidationSources.OrderByDescending(kv => kv.Value)) {
+                        valueSum += value;
+                        sb.Append("\r\n- ");
+                        sb.Append(key);
+                        sb.AppendFormat(fp, ": +{0:F1}", value * m);
+                    }
+                    sb.AppendFormat(fp, "\r\nTotal: +{0:F1}", valueSum * m);
+                    // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                    Log.LogInformation(sb.ToString());
+                    sb.Clear();
+                }
             }
         }
         finally {
@@ -131,14 +147,11 @@ public sealed class FusionMonitor : WorkerBase
         ComputedRegistry.OnUnregister -= _onUnregister;
     }
 
-    private (Dictionary<string, (int, int)> Accesses, Dictionary<string, (int, int)> Registrations) GetAndResetStatistics()
+    private Statistics GetAndResetStatistics()
     {
         lock (_lock) {
-            var gets = _accesses;
-            var registrations = _registrations;
-            _accesses = new(StringComparer.Ordinal);
-            _registrations = new(StringComparer.Ordinal);
-            return (gets, registrations);
+            (var statistics, _statistics) = (_statistics, new());
+            return statistics;
         }
     }
 
@@ -156,31 +169,70 @@ public sealed class FusionMonitor : WorkerBase
         var dHit = isNew ? 0 : 1;
         var dMiss = 1 - dHit;
         lock (_lock) {
-            if (_accesses.TryGetValue(category, out var counts))
-                _accesses[category] = (counts.Item1 + dHit, counts.Item2 + dMiss);
+            var accesses = _statistics.Accesses;
+            if (accesses.TryGetValue(category, out var counts))
+                accesses[category] = (counts.Item1 + dHit, counts.Item2 + dMiss);
             else
-                _accesses[category] = (dHit, dMiss);
+                accesses[category] = (dHit, dMiss);
         }
     }
 
-    private void OnRegistration(Computed computed, bool isRegistration)
+    private void OnRegistration(Computed computed)
     {
         if (RegistrationSampler.Next())
             return;
 
         var input = computed.Input;
         var category = input.Category;
-        var dAdd = isRegistration ? 1 : 0;
-        var dRemove = 1 - dAdd;
         lock (_lock) {
-            if (_registrations.TryGetValue(category, out var counts))
-                _registrations[category] = (counts.Item1 + dAdd, counts.Item2 + dRemove);
+            var registrations = _statistics.Registrations;
+            if (registrations.TryGetValue(category, out var counts))
+                registrations[category] = (counts.Item1 + 1, counts.Item2);
             else
-                _registrations[category] = (dAdd, dRemove);
+                registrations[category] = (1, 0);
         }
 
         if (RegistrationLogSampler.Next())
             // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-            Log.LogDebug((isRegistration ? "+ " : "- ") + input);
+            Log.LogDebug("+ " + input);
+    }
+
+    private void OnUnregistration(Computed computed)
+    {
+        if (RegistrationSampler.Next())
+            return;
+
+        var input = computed.Input;
+        var category = input.Category;
+        lock (_lock) {
+            var registrations = _statistics.Registrations;
+            if (registrations.TryGetValue(category, out var counts))
+                registrations[category] = (counts.Item1, counts.Item2 + 1);
+            else
+                registrations[category] = (0, 0);
+
+            var invalidationSource = computed.InvalidationSource.Origin;
+            var invalidationSources = _statistics.InvalidationSources;
+            if (invalidationSources.TryGetValue(invalidationSource, out var count))
+                invalidationSources[invalidationSource] = count + 1;
+            else
+                invalidationSources[invalidationSource] = 1;
+        }
+
+        if (RegistrationLogSampler.Next())
+            // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+            Log.LogDebug("- " + input);
+    }
+
+    // Nested types
+
+    private sealed record Statistics(
+        Dictionary<string, (int, int)> Accesses,
+        Dictionary<string, (int, int)> Registrations,
+        Dictionary<InvalidationSource, int> InvalidationSources)
+    {
+        public Statistics()
+            : this(new(StringComparer.Ordinal), new(StringComparer.Ordinal), new())
+        { }
     }
 }

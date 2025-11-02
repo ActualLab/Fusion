@@ -4,11 +4,12 @@ namespace ActualLab.Fusion;
 
 public sealed class ComputeContext
 {
-    private static readonly AsyncLocal<ComputeContext?> CurrentLocal = new();
-    private volatile Computed? _captured;
-
     public static readonly ComputeContext None = new(default(CallOptions));
-    public static readonly ComputeContext Invalidating = new(CallOptions.Invalidate);
+
+    private static readonly AsyncLocal<ComputeContext?> CurrentLocal = new();
+
+    private volatile Computed? _captured;
+    public readonly InvalidationSource InvalidationSource;
 
     public static ComputeContext Current {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -24,6 +25,13 @@ public sealed class ComputeContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ComputeContext(CallOptions callOptions)
         => CallOptions = callOptions;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ComputeContext(InvalidationSource invalidationSource)
+    {
+        CallOptions = CallOptions.Invalidate;
+        InvalidationSource = invalidationSource;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ComputeContext(Computed computed)

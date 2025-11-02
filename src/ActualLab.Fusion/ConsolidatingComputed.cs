@@ -11,7 +11,7 @@ namespace ActualLab.Fusion;
 /// and invalidates itself after seeing the <see cref="Source"/>'s invalidation,
 /// but only in case when a newly computed <see cref="Computed.Output"/> differs from its own one.
 /// </remarks>
-public interface IConsolidatingComputed : IInvalidationProxyComputed
+public interface IConsolidatingComputed : IHasInvalidationTarget, IHasSynchronizationTarget
 {
     public Computed Source { get; }
     public Task? WhenConsolidated { get; }
@@ -35,8 +35,10 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
     public Computed<T> Source => _source;
     public Task? WhenConsolidated => _whenConsolidated;
 
-    // IInvalidationProxyComputed
-    Computed IInvalidationProxyComputed.InvalidationTarget => _source;
+    // IHasInvalidationTarget
+    Computed? IHasInvalidationTarget.InvalidationTarget => _source;
+    // IHasSynchronizationTarget
+    Computed? IHasSynchronizationTarget.SynchronizationTarget => _source;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public ConsolidatingComputed(ComputedOptions options, ComputeMethodInput input, Computed<T> source)
@@ -76,7 +78,7 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
             finally {
                 if (nextSource is null) {
                     // No next source -> we're invalidating ourselves
-                    Invalidate(immediately: true);
+                    Invalidate(immediately: true, new InvalidationSource(_source));
                 }
                 else {
                     // 1. Re-enable the consolidation

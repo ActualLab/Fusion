@@ -2,5 +2,5 @@ namespace ActualLab.Time;
 
 public interface IGenericTimeoutHandler
 {
-    public void OnTimeout();
+    public void OnTimeout(object? argument);
 }

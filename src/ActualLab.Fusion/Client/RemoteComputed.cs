@@ -7,7 +7,7 @@ namespace ActualLab.Fusion.Client;
 
 #pragma warning disable VSTHRD104, MA0055
 
-public interface IRemoteComputed : IInvalidationProxyComputed, IDisposable
+public interface IRemoteComputed : IHasInvalidationTarget, IHasSynchronizationTarget, IDisposable
 {
     public AsyncTaskMethodBuilder<RpcOutboundComputeCall?> CallSource { get; }
     public AsyncTaskMethodBuilder SynchronizedSource { get; }
@@ -25,8 +25,10 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
     public RpcCacheEntry? CacheEntry { get; }
     public Task WhenSynchronized => SynchronizedSource.Task;
 
-    // IInvalidationProxyComputed
-    Computed? IInvalidationProxyComputed.InvalidationTarget => null;
+    // IHasInvalidationTarget
+    Computed? IHasInvalidationTarget.InvalidationTarget => null;
+    // IHasSynchronizationTarget
+    Computed? IHasSynchronizationTarget.SynchronizationTarget => null;
 
     // Called when computed is populated after RPC call
     public RemoteComputed(
@@ -69,7 +71,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
 
     protected override void OnInvalidated()
     {
-        this.BindToCall(null);
+        this.BindToCallFromOnInvalidated();
 
         // PseudoUnregister triggers the Unregistered event in ComputedRegistry w/o actual unregistration.
         // We have to keep this computed in the registry even after the invalidation,

@@ -35,6 +35,7 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
         public static TimeSpan GracefulDisposeDelay { get; set; } = TimeSpan.FromSeconds(10);
     }
 
+    private const string GenericTimeoutReason = nameof(ComputedState) + "." + nameof(Dispose);
     private volatile Task? _whenDisposed;
     private volatile IUpdateDelayer _updateDelayer = null!;
 
@@ -108,11 +109,13 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
         GC.SuppressFinalize(this);
         DisposeTokenSource.CancelAndDisposeSilently();
         if (!ReferenceEquals(GracefulDisposeTokenSource, DisposeTokenSource))
-            Timeouts.Generic.AddOrUpdateToEarlier(this, Timeouts.Clock.Now + GracefulDisposeDelay);
+            Timeouts.Generic.AddOrUpdateToEarlier(
+                new GenericTimeoutSlot(this, GenericTimeoutReason),
+                Timeouts.Clock.Now + GracefulDisposeDelay);
     }
 
     // Handles the rest of Dispose
-    void IGenericTimeoutHandler.OnTimeout()
+    void IGenericTimeoutHandler.OnTimeout(object? reason)
         => GracefulDisposeTokenSource.CancelAndDisposeSilently();
 
     protected virtual async Task UpdateCycle()

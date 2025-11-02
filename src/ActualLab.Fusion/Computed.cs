@@ -15,37 +15,33 @@ public interface IComputed : IResult, IHasVersion<ulong>
     public Type OutputType { get; }
     public ConsistencyState ConsistencyState { get; }
     public Result Output { get; }
+    public InvalidationSource InvalidationSource { get; }
     public event Action<Computed> Invalidated;
 
     public Task GetValuePromise();
     public ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default);
     public Task UseUntyped(CancellationToken cancellationToken = default);
     public Task UseUntyped(bool allowInconsistent, CancellationToken cancellationToken = default);
-    public void Invalidate(bool immediately = false);
+    public void Invalidate(bool immediately, InvalidationSource source);
 }
 
-public abstract partial class Computed(ComputedOptions options, ComputedInput input, Result output)
-    : IComputed, IGenericTimeoutHandler
+public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 {
-    private volatile int _state;
-    private volatile ComputedFlags _flags;
-    private volatile int _lastKeepAliveSlot;
-    private Result _output = output;
+    protected const int ConsistencyStateMask = 0xFF;
+
+    // ReSharper disable once InconsistentNaming
+    private int _state;
+    private int _lastKeepAliveSlot;
+    private Result _output;
     private RefHashSetSlim3<Computed> _dependencies;
     private HashSetSlim3<(ComputedInput Input, ulong Version)> _dependants;
     // ReSharper disable once InconsistentNaming
     private InvalidatedHandlerSet _invalidated;
+    private object? _invalidationSource; // Object type makes atomic updates and volatile reads possible
 
     protected object Lock {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this;
-    }
-
-    protected ComputedFlags Flags {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _flags;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        set => _flags = value;
     }
 
     protected internal Result UntypedOutput {
@@ -56,8 +52,8 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         }
     }
 
-    public readonly ComputedOptions Options = options;
-    public readonly ComputedInput Input = input;
+    public readonly ComputedOptions Options;
+    public readonly ComputedInput Input;
     public readonly ulong Version = ComputedVersion.Next();
     private Task? _untypedValuePromise;
 
@@ -66,8 +62,8 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
     public Type OutputType => Input.Function.OutputType;
 
     public ConsistencyState ConsistencyState {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (ConsistencyState)_state;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] internal set => _state = (int)value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => (ConsistencyState)(_state & ConsistencyStateMask);
     }
 
     public Result Output {
@@ -76,6 +72,11 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
             this.AssertConsistencyStateIsNot(ConsistencyState.Computing);
             return _output;
         }
+    }
+
+    public InvalidationSource InvalidationSource {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(_invalidationSource);
     }
 
     // IComputed implementation
@@ -92,16 +93,16 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
             }
             lock (Lock) {
                 if (ConsistencyState == ConsistencyState.Invalidated) {
-                    value(this);
+                    value.Invoke(this);
                     return;
                 }
                 _invalidated.Add(value);
             }
         }
         remove {
+            if (ConsistencyState == ConsistencyState.Invalidated) return;
             lock (Lock) {
-                if (ConsistencyState == ConsistencyState.Invalidated)
-                    return;
+                if (ConsistencyState == ConsistencyState.Invalidated) return;
                 _invalidated.Remove(value);
             }
         }
@@ -129,6 +130,26 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         get => UntypedOutput.HasError;
     }
 
+    // Constructors
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected Computed(ComputedOptions options, ComputedInput input, Result output)
+    {
+        _output = output;
+        Options = options;
+        Input = input;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected Computed(ComputedOptions options, ComputedInput input, Result output, bool isConsistent)
+    {
+        _output = output;
+        Options = options;
+        Input = input;
+        _state = isConsistent ? (int)ConsistencyState.Consistent : (int)ConsistencyState.Invalidated;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void IResult.Deconstruct(out object? untypedValue, out Exception? error)
     {
         untypedValue = Value;
@@ -192,45 +213,48 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
     // Invalidate
 
-    void IGenericTimeoutHandler.OnTimeout()
-        => Invalidate(true);
+    void IGenericTimeoutHandler.OnTimeout(object? invalidationSource)
+        => Invalidate(true, new InvalidationSource(invalidationSource).OrUnknown());
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public void Invalidate(bool immediately = false)
+    public void Invalidate(bool immediately, InvalidationSource source)
     {
         if (ConsistencyState == ConsistencyState.Invalidated)
             return;
 
-        // Debug.WriteLine($"{nameof(Invalidate)}: {this}");
         lock (Lock) {
-            var flags = _flags;
-            switch (ConsistencyState) {
-            case ConsistencyState.Invalidated:
+            // The original _invalidationReason always takes precedence over the current one
+            if (_invalidationSource is null)
+                _invalidationSource = source;
+            else
+                source = new(_invalidationSource);
+
+            switch (_state & ConsistencyStateMask) {
+            case (int)ConsistencyState.Invalidated:
                 return;
-            case ConsistencyState.Computing:
-                flags |= ComputedFlags.InvalidateOnSetOutput;
+            case (int)ConsistencyState.Computing:
+                _state |= (int)InvalidationFlags.InvalidateOnSetOutput;
                 if (immediately)
-                    flags |= ComputedFlags.InvalidateOnSetOutputImmediately;
-                _flags = flags;
+                    _state |= (int)InvalidationFlags.InvalidateOnSetOutputImmediately;
                 return;
             default: // == ConsistencyState.Computed
                 immediately |= Options.InvalidationDelay <= TimeSpan.Zero;
                 if (immediately) {
-                    ConsistencyState = ConsistencyState.Invalidated;
+                    _state = (int)ConsistencyState.Invalidated;
                     break;
                 }
 
-                if ((flags & ComputedFlags.DelayedInvalidationStarted) != 0)
+                if ((_state & (int)InvalidationFlags.DelayedInvalidationStarted) != 0)
                     return; // Already started
 
-                _flags = flags | ComputedFlags.DelayedInvalidationStarted;
+                _state |= (int)InvalidationFlags.DelayedInvalidationStarted;
                 break;
             }
         }
 
         if (!immediately) {
             // Delayed invalidation
-            this.Invalidate(Options.InvalidationDelay);
+            this.Invalidate(Options.InvalidationDelay, source);
             return;
         }
 
@@ -247,10 +271,10 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
                 // Any code called here may not throw
                 _dependencies.Apply(this, (self, c) => c.RemoveDependant(self));
                 _dependencies.Clear();
-                _dependants.Apply(default(Unit), static (_, usedByEntry) => {
+                _dependants.Apply(new InvalidationSource(this), static (invalidationSource, usedByEntry) => {
                     var c = usedByEntry.Input.GetExistingComputed();
                     if (c is not null && c.Version == usedByEntry.Version)
-                        c.Invalidate(); // Invalidate doesn't throw - ever
+                        c.Invalidate(immediately: false, invalidationSource); // Invalidate doesn't throw - ever
                 });
                 _dependants.Clear();
             }
@@ -259,7 +283,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
             // We should never throw errors during the invalidation
             try {
                 var log = Input.Function.Services.LogFor(GetType());
-                log.LogError(e, "Error while invalidating {Category}", Input.Category);
+                log.LogError(e, "Error while invalidating {Category} by {Source}", Input.Category, source);
             }
             catch {
                 // Intended: Invalidate doesn't throw!
@@ -287,18 +311,19 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
     [MethodImpl(MethodImplOptions.NoInlining)]
     protected internal bool TrySetOutput(Result output)
     {
-        ComputedFlags flags;
+        int state;
         lock (Lock) {
-            if (ConsistencyState != ConsistencyState.Computing)
+            if ((_state & ConsistencyStateMask) != 0) // != ComputedState.Computing
                 return false;
 
-            ConsistencyState = ConsistencyState.Consistent;
+            state = _state |= (int)ConsistencyState.Consistent; // Fine to do that, this part of the state was 0
             _output = output;
-            flags = Flags;
         }
 
-        if ((flags & ComputedFlags.InvalidateOnSetOutput) != 0) {
-            Invalidate((flags & ComputedFlags.InvalidateOnSetOutputImmediately) != 0);
+        if ((state & (int)InvalidationFlags.InvalidateOnSetOutput) != 0) {
+            const string reason =
+                $"{nameof(Computed)}.{nameof(TrySetOutput)}: {nameof(InvalidationFlags.InvalidateOnSetOutput)} (no {nameof(InvalidationSource)})";
+            Invalidate((state & (int)InvalidationFlags.InvalidateOnSetOutputImmediately) != 0, new InvalidationSource(reason));
             return true;
         }
 
@@ -323,7 +348,9 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
 
         if (error is OperationCanceledException) {
             // This error requires instant invalidation
-            Invalidate(true);
+            const string reason =
+                $"{nameof(Computed)}.{nameof(StartAutoInvalidation)}: {nameof(Error)} is {nameof(OperationCanceledException)}";
+            Invalidate(immediately: true, new InvalidationSource(reason));
             return;
         }
 
@@ -363,7 +390,7 @@ public abstract partial class Computed(ComputedOptions options, ComputedInput in
         var minCacheDuration = Options.MinCacheDuration;
         if (minCacheDuration != default) {
             var keepAliveSlot = Timeouts.GetKeepAliveSlot(Timeouts.Clock.Now + minCacheDuration);
-            if (_lastKeepAliveSlot != keepAliveSlot) { // Fast check
+            if (Volatile.Read(ref _lastKeepAliveSlot) != keepAliveSlot) { // Fast check
                 if (Interlocked.Exchange(ref _lastKeepAliveSlot, keepAliveSlot) != keepAliveSlot) // Slow check
                     Timeouts.KeepAlive.AddOrUpdateToLater(this, keepAliveSlot);
             }

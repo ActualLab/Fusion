@@ -1,5 +1,4 @@
 using ActualLab.Rpc;
-using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 
@@ -7,7 +6,8 @@ namespace ActualLab.Fusion.Client.Internal;
 
 public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOutboundCall(context)
 {
-    protected readonly AsyncTaskMethodBuilder WhenInvalidatedSource = AsyncTaskMethodBuilderExt.New(); // Must not allow synchronous continuations!
+    protected readonly AsyncTaskMethodBuilder<string> WhenInvalidatedSource
+        = AsyncTaskMethodBuilderExt.New<string>(); // Must not allow synchronous continuations!
 
     public override string DebugTypeName => "=>";
     public override int CompletedStage
@@ -18,7 +18,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
             : 0;
 
     // ReSharper disable once InconsistentlySynchronizedField
-    public Task WhenInvalidated => WhenInvalidatedSource.Task;
+    public Task<string> WhenInvalidated => WhenInvalidatedSource.Task;
 
     public override int? GetReconnectStage(bool isPeerChanged)
     {
@@ -30,7 +30,9 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
             if (isPeerChanged && completedStage != 0) {
                 // ResultTask is already set, but it originates from another peer.
                 // The best we can do is to invalidate it.
-                SetInvalidated(false);
+                const string reason =
+                    $"{nameof(RpcOutboundCall)}.{nameof(GetReconnectStage)}: peer change for an already started call";
+                SetInvalidated(false, reason);
                 return null;
             }
 
@@ -116,8 +118,11 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
                 CompleteKeepRegistered();
                 Context.CacheInfoCapture?.CaptureErrorFromLock(oce is not null, error, cancellationToken);
             }
-            if (context is null) // Non-peer set
-                SetInvalidatedUnsafe(!assumeCancelled);
+            if (context is null) {
+                // Non-peer set
+                const string reason = $"{nameof(RpcOutboundCall)}.{nameof(SetError)}: non-peer error";
+                SetInvalidatedUnsafe(!assumeCancelled, reason);
+            }
         }
     }
 
@@ -128,20 +133,20 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
             var isResultSet = ResultSource.TrySetCanceled(cancellationToken);
             if (isResultSet)
                 Context.CacheInfoCapture?.CaptureCancellationFromLock(cancellationToken);
-            WhenInvalidatedSource.TrySetResult();
+            WhenInvalidatedSource.TrySetResult($"{nameof(RpcOutboundCall)} got cancelled");
             CompleteAndUnregister(notifyCancelled: true);
             return isResultSet;
         }
     }
 
-    public void SetInvalidated(RpcInboundContext? context)
+    public void SetInvalidated(RpcInboundContext? context, string reason)
         // Let's be pessimistic here and ignore version check here
-        => SetInvalidated(false);
+        => SetInvalidated(false, reason);
 
-    public void SetInvalidated(bool notifyCancelled)
+    public void SetInvalidated(bool notifyCancelled, string reason)
     {
         lock (Lock) {
-            if (!SetInvalidatedUnsafe(notifyCancelled))
+            if (!SetInvalidatedUnsafe(notifyCancelled, reason))
                 return;
 
             if (ResultSource.TrySetCanceled(CancellationTokenExt.Canceled))
@@ -151,9 +156,9 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
 
     // Private methods
 
-    private bool SetInvalidatedUnsafe(bool notifyCancelled)
+    private bool SetInvalidatedUnsafe(bool notifyCancelled, string reason)
     {
-        if (!WhenInvalidatedSource.TrySetResult())
+        if (!WhenInvalidatedSource.TrySetResult(reason))
             return false;
 
         CompleteAndUnregister(notifyCancelled);

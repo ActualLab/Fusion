@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="latest" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
   <!-- Central package management -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
@@ -8,7 +7,6 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
     <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
   </PropertyGroup>
-
   <!-- Constants -->
   <PropertyGroup>
     <!-- Core packages -->
@@ -34,7 +32,8 @@
     <MicrosoftExtensionsVersion5>[5.0.0,)</MicrosoftExtensionsVersion5>
     <CSharpVersion>4.4.0</CSharpVersion>
     <!-- EF Core -->
-    <EntityFrameworkCoreVersion>[9.0.0,)</EntityFrameworkCoreVersion> <!-- MySqlConnector and Npgsql don't support .NET 10 RC1 yet -->
+    <EntityFrameworkCoreVersion>[9.0.0,)</EntityFrameworkCoreVersion>
+    <!-- MySqlConnector and Npgsql don't support .NET 10 RC1 yet -->
     <EntityFrameworkCoreVersion8>[9.0.0,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion8>[8.0.0,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion7>[7.0.20,)</EntityFrameworkCoreVersion7>
@@ -75,7 +74,6 @@
     <BlazoriseVersion>[1.8.5,)</BlazoriseVersion>
     <FusionVersion>[10.5.52,)</FusionVersion>
   </PropertyGroup>
-
   <!-- Dependencies -->
   <ItemGroup>
     <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="9.4.1" />
@@ -88,6 +86,7 @@
     <PackageVersion Include="CliWrap" Version="3.9.0" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
     <PackageVersion Include="DataAnnotationsValidatorNetStandard" Version="1.0.3" />
+    <PackageVersion Include="JetBrains.Annotations" Version="2025.2.2" />
     <PackageVersion Include="MemoryPack" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="MemoryPack.Core" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="MessagePack" Version="$(MessagePackVersion)" />
@@ -131,7 +130,6 @@
     <PackageVersion Include="Ulid" Version="1.4.1" />
     <PackageVersion Include="Ulid.MessagePack" Version="1.4.1" />
     <PackageVersion Include="ZString" Version="2.6.0" />
-
     <!-- Microsoft.Extensions.* -->
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
@@ -151,14 +149,13 @@
     <!-- Looks like MS internally updates these packages together w/ extensions -->
     <PackageVersion Include="System.Collections.Immutable" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Configuration.ConfigurationManager" Version="$(MicrosoftExtensionsVersion)" />
-    <PackageVersion Include="System.IO.Hashing" Version="$(MicrosoftExtensionsVersion)"/>
+    <PackageVersion Include="System.IO.Hashing" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Net.Http.Json" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Runtime.Numerics" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Text.Json" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Threading.Channels" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Diagnostics.Common" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="System.Drawing.Common" Version="$(MicrosoftExtensionsVersion)" />
-
     <!-- OpenTelemetry -->
     <PackageVersion Include="OpenTelemetry.Api" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
@@ -167,13 +164,12 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="$(OpenTelemetryVersion)" />
-    <PackageVersion Include="Npgsql.OpenTelemetry" Version="8.0.3" /> <!-- Used only in TodoApp sample -->
-
+    <PackageVersion Include="Npgsql.OpenTelemetry" Version="8.0.3" />
+    <!-- Used only in TodoApp sample -->
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.1" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.5.1" />
-
     <!-- Legacy support only -->
     <PackageVersion Include="IndexRange" Version="1.0.3" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
@@ -183,7 +179,6 @@
     <PackageVersion Include="Microsoft.Owin" Version="4.2.3" />
     <PackageVersion Include="Owin" Version="1.0.0" />
     <PackageVersion Include="System.Reflection.Emit.Lightweight" Version="4.7.0" />
-
     <!-- Test time only -->
     <PackageVersion Include="Castle.Core" Version="5.2.1" />
     <PackageVersion Include="AutoFixture.AutoMoq" Version="4.18.1" />
@@ -197,7 +192,6 @@
     <!-- XunitTestOutputLoggerProvider is gone in Xunit.DependencyInjection.Logging 9.0.0, so we use the latest 8.x for now -->
     <PackageVersion Include="Xunit.DependencyInjection.Logging" Version="8.1.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
-
     <!-- Samples only -->
     <PackageVersion Include="ActualLab.Interception" Version="$(FusionVersion)" />
     <PackageVersion Include="ActualLab.Generators" Version="$(FusionVersion)" />
@@ -210,7 +204,6 @@
     <PackageVersion Include="ActualLab.Fusion.Ext.Services" Version="$(FusionVersion)" />
     <PackageVersion Include="Blazored.LocalStorage" Version="4.5.0" />
     <PackageVersion Include="UAParser" Version="3.1.47" />
-
     <!-- Build time only -->
     <PackageVersion Include="ActualLab.Core" Version="$(FusionVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Build" Version="$(BlazorVersion)" />
@@ -220,18 +213,15 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EntityFrameworkCoreVersion)" />
     <PackageVersion Include="Nerdbank.GitVersioning" Version="3.8.118" />
     <PackageVersion Include="PolySharp" Version="1.15.0" />
-
     <!-- Analyzers -->
     <PackageVersion Include="Moq.Analyzers" Version="0.3.0" />
     <PackageVersion Include="xunit.analyzers" Version="1.24.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.14.1" />
     <PackageVersion Include="Meziantou.Analyzer" Version="2.0.226" />
-
     <!-- Generators -->
     <PackageVersion Include="MemoryPack.Generator" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(CSharpVersion)" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" />
   </ItemGroup>
-
 </Project>

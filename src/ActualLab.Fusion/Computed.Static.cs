@@ -10,7 +10,7 @@ public partial class Computed
     private static LazySlim<IServiceProvider> _defaultServices = new(
         () => new ServiceCollection().AddFusion().AddFusionTime().Services.BuildServiceProvider());
 
-    public static TimeSpan PreciseInvalidationDelayThreshold { get; set; } = TimeSpan.FromSeconds(1);
+    public static TimeSpan UsePreciseInvalidationTimerThreshold { get; set; } = TimeSpan.FromSeconds(1);
 
     public static IServiceProvider DefaultServices {
         get => _defaultServices.Value;

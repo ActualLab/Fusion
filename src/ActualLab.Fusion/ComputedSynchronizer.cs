@@ -37,8 +37,8 @@ public abstract class ComputedSynchronizer
                 return false;
         }
 
-        if (computed is IInvalidationProxyComputed { InvalidationTarget: { } targetComputed })
-            return IsSynchronized(targetComputed);
+        if (computed is IHasSynchronizationTarget { SynchronizationTarget: { } target })
+            return IsSynchronized(target);
 
         // Computed is a regular computed instance
         var usedBuffer = ArrayBuffer<Computed>.Lease(false);
@@ -80,8 +80,8 @@ public abstract class ComputedSynchronizer
             }
         }
 
-        if (computed is IInvalidationProxyComputed { InvalidationTarget: { } targetComputed })
-            return WhenSynchronized(targetComputed, cancellationToken);
+        if (computed is IHasSynchronizationTarget { SynchronizationTarget: { } target })
+            return WhenSynchronized(target, cancellationToken);
 
         // Computed is a regular computed instance
         var usedBuffer = ArrayBuffer<Computed>.Lease(false);
