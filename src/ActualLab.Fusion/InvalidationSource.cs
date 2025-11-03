@@ -16,7 +16,7 @@ public readonly struct InvalidationSource :
     public static readonly InvalidationSource ComputedOnTimeoutNoInvalidationSource = new("Computed.OnTimeout: no InvalidationSource");
     public static readonly InvalidationSource ComputedTrySetOutputNoInvalidationSource = new("Computed.TrySetOutput: no InvalidationSource");
     public static readonly InvalidationSource ComputedStartAutoInvalidationCancellationError = new("Computed.StartAutoInvalidation: Error is OperationCancelledException");
-    public static readonly InvalidationSource ComputedRegistryRegister = new("ComputedRegistry.Register: replacement");
+    public static readonly InvalidationSource ComputedRegistryRegister = new("ComputedRegistry.Register: invalidation on replacement");
     public static readonly InvalidationSource StateProduce = new("State.ProduceComputed");
     public static readonly InvalidationSource StateInitialize = new("State.Initialize");
     public static readonly InvalidationSource MutableStateCreateComputed = new("MutableState.CreateComputed");

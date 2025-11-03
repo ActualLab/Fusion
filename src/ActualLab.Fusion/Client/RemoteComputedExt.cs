@@ -14,7 +14,8 @@ public static class RemoteComputedExt
             return true;
         }
 
-        const string reason = $"{nameof(RemoteComputedExt)}.{nameof(BindToCall)}: call is already bound";
+        const string reason =
+            $"<FusionRPC>.{nameof(BindToCall)}: {nameof(RpcOutboundComputeCall)} is already bound";
         call.SetInvalidated(true, reason);
         return false;
     }
@@ -26,7 +27,7 @@ public static class RemoteComputedExt
 
         var boundCall = computed.WhenCallBound.GetAwaiter().GetResult();
         const string reason =
-            $"{nameof(RemoteComputedExt)}.{nameof(BindToCall)}: associated {nameof(IRemoteComputed)} is invalidated";
+            $"<FusionRPC>.{nameof(BindToCall)}: associated {nameof(IRemoteComputed)} is already invalidated";
         boundCall?.SetInvalidated(true, reason);
         return false;
     }

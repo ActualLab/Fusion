@@ -31,7 +31,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
                 // ResultTask is already set, but it originates from another peer.
                 // The best we can do is to invalidate it.
                 const string reason =
-                    $"{nameof(RpcOutboundCall)}.{nameof(GetReconnectStage)}: peer change for an already started call";
+                    $"<FusionRPC>.{nameof(GetReconnectStage)}: peer change for an already started call";
                 SetInvalidated(false, reason);
                 return null;
             }
@@ -120,7 +120,8 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
             }
             if (context is null) {
                 // Non-peer set
-                const string reason = $"{nameof(RpcOutboundCall)}.{nameof(SetError)}: non-peer error";
+                const string reason =
+                    $"<FusionRPC>.{nameof(SetError)}: non-peer error";
                 SetInvalidatedUnsafe(!assumeCancelled, reason);
             }
         }

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using ActualLab.Fusion.Diagnostics.Internal;
 
 namespace ActualLab.Fusion.Diagnostics;
 
@@ -76,11 +77,11 @@ public sealed class FusionMonitor : WorkerBase
                         hitSum += hits;
                         missSum += misses;
                         var reads = hits + misses;
-                        sb.AppendFormat(fp, "\r\n- {0}: {1:F1} reads -> {2:P2} hits",
+                        sb.AppendFormat(fp, "\r\n- {0}: {1:0.#} reads -> {2:P2} hits",
                             key, reads * m, (double)hits / reads);
                     }
                     var readSum = hitSum + missSum;
-                    sb.AppendFormat(fp, "\r\nTotal: {0:F1} reads -> {1:P2} hits",
+                    sb.AppendFormat(fp, "\r\nTotal: {0:0.#} reads -> {1:P2} hits",
                         readSum * m, (double)hitSum / readSum);
                     // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
                     Log.LogInformation(sb.ToString());
@@ -96,27 +97,20 @@ public sealed class FusionMonitor : WorkerBase
                     foreach (var (key, (adds, subs)) in registrations.OrderByDescending(kv => kv.Value.Item1)) {
                         addSum += adds;
                         subSum += subs;
-                        sb.AppendFormat(fp, "\r\n- {0}: +{1:F1} -{2:F1}", key, adds * m, subs * m);
+                        sb.AppendFormat(fp, "\r\n- {0}: +{1:0.#} -{2:0.#}", key, adds * m, subs * m);
                     }
-                    sb.AppendFormat(fp, "\r\nTotal: +{0:F1} -{1:F1}", addSum * m, subSum * m);
+                    sb.AppendFormat(fp, "\r\nTotal: +{0:0.#} -{1:0.#}", addSum * m, subSum * m);
                     // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
                     Log.LogInformation(sb.ToString());
                     sb.Clear();
                 }
 
                 // Invalidation origins
-                if (invalidationPaths.Count != 0) {
+                if (invalidationPaths.TotalCount != 0) {
                     var m = RegistrationSampler.InverseProbability;
                     sb.AppendFormat(fp, "Invalidation paths, sampled with {0}:", RegistrationSampler);
-                    var valueSum = 0;
-                    foreach (var (key, value) in invalidationPaths.OrderByDescending(kv => kv.Value)) {
-                        valueSum += value;
-                        var format = key.Category is null
-                            ? "\r\n- {1} by {2}: {3:F1}"
-                            : "\r\n- {0} <- {1} by {2}: {3:F1}";
-                        sb.AppendFormat(fp, format, key.Category, key.OriginCategory, key.OriginSource.ToString(), value * m);
-                    }
-                    sb.AppendFormat(fp, "\r\nTotal: {0:F1}", valueSum * m);
+                    invalidationPaths.AppendTo(sb, fp, m);
+                    sb.AppendFormat(fp, "\r\nTotal: {0:0.#}", invalidationPaths.TotalCount * m);
                     // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
                     Log.LogInformation(sb.ToString());
                     sb.Clear();
@@ -213,17 +207,14 @@ public sealed class FusionMonitor : WorkerBase
             if (Invalidation.TrackingMode is not InvalidationTrackingMode.None) {
                 var origin = computed.GetInvalidationOrigin();
                 var atOrigin = ReferenceEquals(computed, origin);
-                var key = (
-                    atOrigin ? null : category,
-                    origin.Input.Category,
-                    origin.InvalidationSource);
-                if (!MustIgnore(atOrigin, key.InvalidationSource)) {
-                    var invalidationPaths = _statistics.InvalidationPaths;
-                    if (invalidationPaths.TryGetValue(key, out var count))
-                        invalidationPaths[key] = count + 1;
-                    else
-                        invalidationPaths[key] = 1;
+                var originSource = origin.InvalidationSource;
+                if (atOrigin) {
+                    // No logging for initial state invalidation (it adds some noise)
+                    if (!originSource.Equals(InvalidationSource.InitialState))
+                        _statistics.InvalidationPaths.Increment(originSource.ToString(), origin.Input.Category);
                 }
+                else
+                    _statistics.InvalidationPaths.Increment(originSource.ToString(), origin.Input.Category, category);
             }
         }
 
@@ -232,19 +223,15 @@ public sealed class FusionMonitor : WorkerBase
             Log.LogDebug("- " + input);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool MustIgnore(bool atOrigin, InvalidationSource source)
-        => atOrigin && (source.IsNone || source.Equals(InvalidationSource.InitialState));
-
     // Nested types
 
     private sealed record Statistics(
         Dictionary<string, (int, int)> Accesses,
         Dictionary<string, (int, int)> Registrations,
-        Dictionary<(string? Category, string OriginCategory, InvalidationSource OriginSource), int> InvalidationPaths)
+        InvalidationPathCounter InvalidationPaths)
     {
         public Statistics()
-            : this(new(StringComparer.Ordinal), new(StringComparer.Ordinal), new())
+            : this(new(StringComparer.Ordinal), new(StringComparer.Ordinal), new InvalidationPathCounter())
         { }
     }
 }
