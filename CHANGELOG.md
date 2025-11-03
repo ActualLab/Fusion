@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 11.0.1+153582f34c
+
+Release date: 2025-11-02
+
+### Breaking Changes
+- Revamped `RpcServiceBuilder` API. Its new `Inject` method "injects" a service described by `RpcServiceBuilder` into `IServiceCollection` 
+- `RpcBuilder` and `FusionBuilder`'s `AddXxx` methods now rely on `RpcServiceBuilder.Inject`
+- Renamed `IHasIsDisposed` to `IHasDisposeStatus`
+- Removed `RpcServiceMode.DistributedPair` mode and related logic (`Distributed` mode offers more anyway)
+- Removed `RpcSwitchInterceptor`;
+
+### Added
+- Quite useful `ComputedOptions.ConsolidationDelay` and related APIs (see Releases chat on https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo for details) 
+- Invalidation path tracking: `InvalidationSource`, `Invalidation.TrackingMode`, and other changes
+- `Computed.ToString(InvalidationSourceFormat)` is `Computed.ToString()`, but with invalidation path info
+- `FusionMonitor` is now capable of gathering invalidation path statistics. 
+
+### Changed
+- More readable output of `MethodInfo.ToShortString()` is now used to dump compute service methods
+
+### Fixed
+- Another issue in `RpcCallTracker.TryReconnect` that may block stateful reconnect
+- A couple places in Fusion RPC stack where `Computed.Invalidate(immediately: false)` was used instead of `Computed.Invalidate(immediately: true)`.  
+
+
 ## 10.6.38+254f4ef775
 
 Release date: 2025-10-28
