@@ -4,7 +4,7 @@ namespace ActualLab.Fusion;
 
 public static class Invalidation
 {
-    public static InvalidationTrackingMode TrackingMode { get; set; } = InvalidationTrackingMode.WholeChain;
+    public static InvalidationTrackingMode TrackingMode { get; set; } = InvalidationTrackingMode.OriginOnly;
 
     public static bool IsActive
         => (ComputeContext.Current.CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
