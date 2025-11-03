@@ -25,6 +25,7 @@ Release date: 2025-10-28
   though stateless reconnect still worked in these cases  
 - Renamed `CompleteAsync` class to `Completion` to correct a previous wrong rename
 - `RpcRoutingInterceptor` now properly reroutes local calls as well
+- Incorrect sampler use in `FusionMonitor`: missing "not" was making it to sample where it had to skip, and vice versa :( That's why statistics was typically 7x exaggerated there (the probability of logging `EveryNth(8)` is 7/8, i.e. close to 1, but it was reporting it as 1/8).
 
 ### Tests
 - Added new MeshRpc tests; will be extending them in the near future
