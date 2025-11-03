@@ -130,6 +130,12 @@ public static class ClientStartup
         // Diagnostics
         if (hostKind == HostKind.Client)
             RpcPeer.DefaultCallLogLevel = LogLevel.Debug;
+
+        // The default invalidation tracking mode is OriginOnly, which is typically enough,
+        // WholeChain use may lead to excessive memory usage. See its description.
+#if false
+        Invalidation.TrackingMode = InvalidationTrackingMode.WholeChain;
+#endif
         services.AddHostedService(c => {
             var isWasm = OSInfo.IsWebAssembly;
             return new FusionMonitor(c) {
