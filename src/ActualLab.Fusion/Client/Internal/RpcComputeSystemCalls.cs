@@ -18,8 +18,11 @@ public class RpcComputeSystemCalls(IServiceProvider services)
         var context = RpcInboundContext.GetCurrent();
         var peer = context.Peer;
         var outboundCallId = context.Message.RelatedId;
-        if (peer.OutboundCalls.Get(outboundCallId) is RpcOutboundComputeCall outboundCall)
-            outboundCall.SetInvalidated(context, "RPC");
+        if (peer.OutboundCalls.Get(outboundCallId) is RpcOutboundComputeCall outboundCall) {
+            const string reason =
+                $"<FusionRPC>.{nameof(Invalidate)}";
+            outboundCall.SetInvalidated(context, reason);
+        }
         return RpcNoWait.Tasks.Completed;
     }
 }

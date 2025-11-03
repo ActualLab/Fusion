@@ -244,7 +244,7 @@ public abstract class RemoteComputeMethodFunction(
             }
             catch (Exception whenConnectedError) {
                 const string reason =
-                    $"{nameof(RemoteComputeMethodFunction)}.{nameof(ApplyRpcUpdate)}: {nameof(WhenConnectedChecked)} failed";
+                    $"<FusionRPC>.{nameof(ApplyRpcUpdate)}: {nameof(WhenConnectedChecked)} failure";
                 await InvalidateOnError(cachedComputed, whenConnectedError, reason).ConfigureAwait(false);
                 return;
             }
@@ -258,13 +258,13 @@ public abstract class RemoteComputeMethodFunction(
         var (value, error) = result;
         if (call is null) {
             const string reason =
-                $"{nameof(RemoteComputeMethodFunction)}.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} returned null call";
+                $"<FusionRPC>.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} requested rerouting (call is null)";
             await InvalidateToReroute(cachedComputed, result.Error, reason).ConfigureAwait(false);
             return;
         }
         if (error is RpcRerouteException) {
             const string reason =
-                $"{nameof(RemoteComputeMethodFunction)}.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} threw {nameof(RpcRerouteException)}";
+                $"<FusionRPC>.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} requested rerouting ({nameof(RpcRerouteException)})";
             await InvalidateToReroute(cachedComputed, result.Error, reason).ConfigureAwait(false);
             return;
         }
@@ -289,7 +289,7 @@ public abstract class RemoteComputeMethodFunction(
                 input.Category, delay.ToShortString());
             await Task.Delay(delay).ConfigureAwait(false);
             const string reason =
-                $"{nameof(RemoteComputeMethodFunction)}.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} returned a result with OperationCanceledException";
+                $"<FusionRPC>.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} got server-side cancellation";
             call.SetInvalidated(true, reason);
             return;
         }
