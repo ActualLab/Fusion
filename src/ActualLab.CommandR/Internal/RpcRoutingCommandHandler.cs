@@ -67,14 +67,10 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
         => _rpcMethodCache.GetOrAdd((serviceType, method),
             static (key, self) => {
                 var (serviceType, method) = key;
-                if (!self.RpcHub.Configuration.Services.TryGetValue(serviceType, out var serviceBuilder))
-                    return null; // Not an RPC service
+                var serviceDef = self.RpcHub.ServiceRegistry.Get(serviceType);
+                if (serviceDef is null || !serviceDef.Mode.IsAnyClient())
+                    return null; // Not a client or distributed RPC service
 
-                var mode = serviceBuilder.Mode;
-                if (!mode.IsAnyClient())
-                    return null; // Not a client or distributed service
-
-                var serviceDef = self.RpcHub.ServiceRegistry[serviceType];
                 var methodDef = serviceDef.GetOrFindMethod(method);
                 if (methodDef is null)
                     return null; // The handling method isn't exposed via RPC
