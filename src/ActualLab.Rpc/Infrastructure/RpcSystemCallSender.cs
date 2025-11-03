@@ -53,8 +53,8 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     public RpcSystemCallSender(IServiceProvider services)
         : base(services)
     {
-        ServiceDef = Hub.ServiceRegistry.Get<IRpcSystemCalls>()!;
-        Client = Hub.GetClient<IRpcSystemCalls>();
+        ServiceDef = Hub!.ServiceRegistry.Get<IRpcSystemCalls>()!;
+        Client = Hub!.GetClient<IRpcSystemCalls>();
     }
 
     // Handshake

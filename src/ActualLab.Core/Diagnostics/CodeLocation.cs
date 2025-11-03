@@ -8,7 +8,8 @@ public static partial class CodeLocation
     // We use a regex to extract the file name, coz e.g. on WASM Path.FileName() doesn't properly parse Windows paths
 #if NET7_0_OR_GREATER
     [GeneratedRegex(@"[^\\/]+$")]
-    private static partial Regex FileNameRe();
+    private static partial Regex FileNameReFactory();
+    private static readonly Regex FileNameRe = FileNameReFactory();
 #else
     private static readonly Regex FileNameRe = new(@"[^\\/]+$", RegexOptions.Compiled);
 #endif
@@ -24,7 +25,7 @@ public static partial class CodeLocation
         if (file.IsNullOrEmpty())
             return UnknownFile;
         return Cache1.GetOrAdd(file,
-            static x => FileNameRe().Match(x) is { Success: true } match
+            static x => FileNameRe.Match(x) is { Success: true } match
                 ? match.Value
                 : UnknownFile);
     }
