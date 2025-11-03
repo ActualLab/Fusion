@@ -152,7 +152,7 @@ public sealed class FusionMonitor : WorkerBase
 
     private void OnAccess(Computed computed, bool isNew)
     {
-        if (AccessSampler.Next())
+        if (!AccessSampler.Next())
             return;
         if (!AccessFilter.Invoke(computed))
             return;
@@ -172,7 +172,7 @@ public sealed class FusionMonitor : WorkerBase
 
     private void OnRegistration(Computed computed)
     {
-        if (RegistrationSampler.Next())
+        if (!RegistrationSampler.Next())
             return;
 
         var input = computed.Input;
@@ -192,7 +192,7 @@ public sealed class FusionMonitor : WorkerBase
 
     private void OnUnregistration(Computed computed)
     {
-        if (RegistrationSampler.Next())
+        if (!RegistrationSampler.Next())
             return;
 
         var input = computed.Input;
