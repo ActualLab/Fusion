@@ -11,7 +11,7 @@ public class RpcServiceBuilder
     public Type Type { get; }
     public string Name { get; private set; }
     public RpcServiceMode Mode { get; private set; }
-    public ServiceResolver? ServerResolver { get; private set; }
+    public ServiceResolver? ImplementationResolver { get; private set; }
 
     public Type? ClientType => Mode switch {
         RpcServiceMode.Client => Type,
@@ -47,7 +47,7 @@ public class RpcServiceBuilder
     public RpcServiceBuilder ResetMode()
     {
         Mode = RpcServiceMode.Default;
-        ServerResolver = null;
+        ImplementationResolver = null;
         return this;
     }
 
@@ -100,7 +100,7 @@ public class RpcServiceBuilder
 
         // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
         Mode |= mode;
-        ServerResolver = serverResolver;
+        ImplementationResolver = serverResolver;
         return this;
     }
 
@@ -122,7 +122,7 @@ public class RpcServiceBuilder
         }
 
         // Any server
-        var implementationType = ServerResolver?.Type!;
+        var implementationType = ImplementationResolver?.Type!;
         switch (Mode) {
             case RpcServiceMode.Local:
                 // Local services are skipped during RpcServiceRegistry construction

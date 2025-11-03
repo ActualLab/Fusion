@@ -50,7 +50,7 @@ public sealed class RpcServiceDef
         Name = name;
         Mode = service.Mode;
         Type = service.Type;
-        ServerResolver = service.ServerResolver;
+        ServerResolver = service.ImplementationResolver;
         ServerType = ServerResolver?.Type;
         ClientType = service.ClientType;
         IsSystem = typeof(IRpcSystemService).IsAssignableFrom(Type);
