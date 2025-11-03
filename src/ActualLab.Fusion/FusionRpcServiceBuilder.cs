@@ -43,7 +43,7 @@ public class FusionRpcServiceBuilder : RpcServiceBuilder
         }
 
         // Any server
-        var implementationType = ServerResolver?.Type!;
+        var implementationType = ImplementationResolver?.Type!;
         switch (Mode) {
             case RpcServiceMode.Local:
                 // Local services are skipped during RpcServiceRegistry construction
