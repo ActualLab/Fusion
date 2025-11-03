@@ -1,0 +1,13 @@
+.aside nav {
+  --nav-item-margin: 6px;
+
+  .outline-link.outline-link {
+    white-space: normal;
+    line-height: 20px;
+    margin-block: calc(var(--nav-item-margin) * 2);
+  }
+
+  .outline-marker.outline-marker {
+    margin-top: var(--nav-item-margin);
+  }
+}
