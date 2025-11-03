@@ -15,6 +15,7 @@ Release date: 2025-11-02
 ### Breaking Changes
 - Revamped `RpcServiceBuilder` API. Its new `Inject` method "injects" a service described by `RpcServiceBuilder` into `IServiceCollection` 
 - `RpcBuilder` and `FusionBuilder`'s `AddXxx` methods now rely on `RpcServiceBuilder.Inject`
+- `IMutableState` and `MutableState` lost `Value` setter; use `Set(...)` methods to set it. Invalidation path tracking is the reason of this change: new `.Set(...)` overloads use `[CallerFilePath]`, `[CallerMemberName]`, and `[CallerLineNumber]` to propagate the origin of change to the invalidation logic, and there is no way to achieve the same with `.Value` property. I may end up returning it with `[Obsolete]` attribute though.
 - Renamed `IHasIsDisposed` to `IHasDisposeStatus`
 - Removed `RpcServiceMode.DistributedPair` mode and related logic (`Distributed` mode offers more anyway)
 - Removed `RpcSwitchInterceptor`;
