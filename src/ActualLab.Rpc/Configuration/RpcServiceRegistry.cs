@@ -101,18 +101,6 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     public RpcServiceDef? Get(string serviceName)
         => _serviceByName.GetValueOrDefault(serviceName);
 
-    public bool IsAnyServer(Type serviceType)
-    {
-        var serviceDef = Get(serviceType.NonProxyType());
-        return serviceDef is not null && serviceDef.ServerType == serviceType;
-    }
-
-    public bool IsAnyClient(Type serviceType)
-    {
-        var serviceDef = Get(serviceType.NonProxyType());
-        return serviceDef is not null && serviceDef.ClientType == serviceType;
-    }
-
     public RpcMethodResolver GetServerMethodResolver(VersionSet? versions)
     {
         if (versions is null)
