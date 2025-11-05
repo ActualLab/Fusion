@@ -17,6 +17,7 @@ using ActualLab.OS;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using ActualLab.Rpc.Testing;
+using AspNet.Security.OAuth.GitHub;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using Microsoft.AspNetCore.Builder;
@@ -186,7 +187,7 @@ void ConfigureServices()
         });
     }
     fusionServer.ConfigureAuthEndpoint(_ => new() {
-        DefaultSignInScheme = MicrosoftAccountDefaults.AuthenticationScheme,
+        DefaultSignInScheme = GitHubAuthenticationDefaults.AuthenticationScheme,
         SignInPropertiesBuilder = (_, properties) => {
             properties.IsPersistent = true;
         }

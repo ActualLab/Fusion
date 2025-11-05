@@ -12,6 +12,9 @@ var services = CreateServiceProvider();
 var todoApi = services.GetRequiredService<ITodoApi>();
 await ObserveTodos();
 // await ObserveSummary();
+return;
+
+#pragma warning disable CS8321 // Local function is declared but never used
 
 async Task ObserveTodos()
 {
