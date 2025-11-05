@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
+using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
@@ -152,8 +153,9 @@ public static class RpcDefaultDelegates
     // Call tracing and logging
 
     public static RpcCallTracerFactory CallTracerFactory { get; set; } =
-        static method => new RpcDefaultCallTracer(method, traceOutbound: method.IsBackend);
-        // static method => null; // To completely disable tracing and meters in RPC
+        RuntimeInfo.IsServer
+            ? static method => new RpcDefaultCallTracer(method)
+            : static method => null; // To completely disable tracing and meters in RPC
 
     public static RpcCallLoggerFactory CallLoggerFactory { get; set; } =
         static (peer, filter, log, logLevel) => new RpcCallLogger(peer, filter, log, logLevel);
