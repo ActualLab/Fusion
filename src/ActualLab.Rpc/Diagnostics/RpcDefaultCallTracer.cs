@@ -6,8 +6,8 @@ namespace ActualLab.Rpc.Diagnostics;
 
 public class RpcDefaultCallTracer : RpcCallTracer
 {
-    public readonly bool TraceInbound;
-    public readonly bool TraceOutbound;
+    public readonly bool MustTraceInbound;
+    public readonly bool MustTraceOutbound;
     public readonly string InboundCallName;
     public readonly string OutboundCallName;
     public readonly ActivitySource ActivitySource;
@@ -21,11 +21,11 @@ public class RpcDefaultCallTracer : RpcCallTracer
         get => InboundDurationHistogram.Enabled;
     }
 
-    public RpcDefaultCallTracer(RpcMethodDef method, bool traceInbound = true, bool traceOutbound = true)
+    public RpcDefaultCallTracer(RpcMethodDef method, bool mustTraceInbound = true, bool mustTraceOutbound = true)
         : base(method)
     {
-        TraceInbound = traceInbound;
-        TraceOutbound = traceOutbound;
+        MustTraceInbound = mustTraceInbound;
+        MustTraceOutbound = mustTraceOutbound;
         var fullMethodName = DiagnosticsExt.FixName($"{method.Service.Name}/{method.Name}");
         InboundCallName = "in." + fullMethodName;
         OutboundCallName = "out." + fullMethodName;
@@ -47,7 +47,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
 
     public override RpcInboundCallTrace? StartInboundTrace(RpcInboundCall call)
     {
-        if (!TraceInbound)
+        if (!MustTraceInbound)
             return null;
 
         Activity.Current = null; // No current activity for any inbound call
@@ -62,7 +62,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
 
     public override RpcOutboundCallTrace? StartOutboundTrace(RpcOutboundCall call)
     {
-        if (!TraceOutbound)
+        if (!MustTraceOutbound)
             return null;
 
         // Activity should never become Current
