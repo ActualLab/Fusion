@@ -71,6 +71,7 @@
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>
     <OpenTelemetryVersion>[1.12.0,)</OpenTelemetryVersion>
     <!-- Build & Samples -->
+    <AspireSdkVersion>9.5.2</AspireSdkVersion>
     <BlazoriseVersion>[1.8.5,)</BlazoriseVersion>
     <FusionVersion>[10.5.52,)</FusionVersion>
   </PropertyGroup>
@@ -167,7 +168,7 @@
     <PackageVersion Include="Npgsql.OpenTelemetry" Version="8.0.3" />
     <!-- Used only in TodoApp sample -->
     <!-- Aspire -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.1" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireSdkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.5.1" />
     <!-- Legacy support only -->
