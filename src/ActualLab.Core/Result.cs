@@ -17,6 +17,7 @@ public interface IResult
     /// Retrieves the result's value. Throws an <see cref="Error"/> when <see cref="HasError"/>.
     /// </summary>
     public object? Value { get; }
+
     /// <summary>
     /// Retrieves result's error (if any).
     /// </summary>
@@ -53,6 +54,11 @@ public interface IResult
 public interface IMutableResult : IResult
 {
     /// <summary>
+    /// Gets or sets the result's value. Throws an <see cref="Error"/> when <see cref="HasError"/>.
+    /// </summary>
+    public new object? Value { get; set; }
+
+    /// <summary>
     /// Sets mutable result's value and error from the provided <paramref name="result"/>.
     /// </summary>
     /// <param name="result">The result to set value and error from.</param>
@@ -76,6 +82,7 @@ public interface IResult<T> : IResult, IConvertibleTo<T>
     /// Retrieves result's value. Returns <code>default</code> when <see cref="IResult.HasError"/>.
     /// </summary>
     public T? ValueOrDefault { get; }
+
     /// <summary>
     /// Retrieves result's value. Throws an <see cref="Error"/> when <see cref="IResult.HasError"/>.
     /// </summary>
@@ -95,6 +102,11 @@ public interface IResult<T> : IResult, IConvertibleTo<T>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
 public interface IMutableResult<T> : IResult<T>, IMutableResult
 {
+    /// <summary>
+    /// Gets or sets the result's value. Throws an <see cref="Error"/> when <see cref="HasError"/>.
+    /// </summary>
+    public new T Value { get; set; }
+
     /// <summary>
     /// Sets mutable result's value and error from the provided <paramref name="result"/>.
     /// </summary>

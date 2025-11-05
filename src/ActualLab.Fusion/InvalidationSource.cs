@@ -19,7 +19,9 @@ public readonly struct InvalidationSource :
     public static readonly InvalidationSource ComputedRegistryRegister = new("ComputedRegistry.Register: invalidation on replacement");
     public static readonly InvalidationSource StateProduce = new("State.ProduceComputed");
     public static readonly InvalidationSource StateInitialize = new("State.Initialize");
+    public static readonly InvalidationSource MutableStateValueSetter = new("MutableState<T>.Value = ...");
     public static readonly InvalidationSource MutableStateCreateComputed = new("MutableState.CreateComputed");
+    public static readonly InvalidationSource UntypedMutableStateValueSetter = new("MutableState.Value = ...");
     public static readonly InvalidationSource ComputedSourceProduce = new("ComputedSource.ProduceComputed");
     public static readonly InvalidationSource StateExtRecompute = new("StateExt.Recompute");
     public static readonly InvalidationSource ComputedSourceExtRecompute = new("ComputedSourceExt.Recompute");

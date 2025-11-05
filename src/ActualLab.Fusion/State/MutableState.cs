@@ -10,6 +10,8 @@ public interface IMutableStateOptions : IStateOptions;
 
 public interface IMutableState : IState
 {
+    public new object? Value { get; set; }
+
     // Set(...) from IMutableResult, but with InvalidationSource argument
 
     public void Set(Result result,
@@ -31,6 +33,8 @@ public interface IMutableState : IState
 
 public interface IMutableState<T> : IState<T>, IMutableState
 {
+    public new T Value { get; set; }
+
     // Set(...) from IMutableResult<T>, but with InvalidationSource argument
 
     public void Set(Result<T> result,
@@ -60,6 +64,11 @@ public interface IMutableState<T> : IState<T>, IMutableState
 public abstract class MutableState : State, IMutableState, IMutableResult
 {
     protected Result NextOutput;
+
+    public new object? Value {
+        get => base.Value;
+        set => Set(new Result(value, null), InvalidationSource.UntypedMutableStateValueSetter);
+    }
 
     protected MutableState(IMutableStateOptions options, IServiceProvider services, bool initialize = true)
         : base(options, services, initialize: false)
@@ -164,9 +173,13 @@ public class MutableState<T> : MutableState, IMutableState<T>, IMutableResult<T>
     // IState<T> implementation
     public new Computed<T> Computed => Unsafe.As<Computed<T>>(UntypedComputed);
 
+    public new T Value {
+        get => Computed.Value;
+        set => Set(new Result(value, null), InvalidationSource.MutableStateValueSetter);
+    }
+
     public T? ValueOrDefault => Computed.ValueOrDefault;
     public new T LastNonErrorValue => Unsafe.As<Computed<T>>(Snapshot.LastNonErrorComputed).Value;
-    public new T Value => Computed.Value;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public MutableState(Options options, IServiceProvider services, bool initialize = true)

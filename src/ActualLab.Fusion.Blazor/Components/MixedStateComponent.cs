@@ -7,12 +7,6 @@ public abstract class MixedStateComponent<T, TMutableState> : ComputedStateCompo
 {
     protected MutableState<TMutableState> MutableState { get; private set; } = null!;
 
-    // Convenient for binding
-    protected TMutableState MutableValue {
-        get => MutableState.Value;
-        set => MutableState.Set(value);
-    }
-
     public override Task SetParametersAsync(ParameterView parameters)
     {
         if (ReferenceEquals(MutableState, null))
