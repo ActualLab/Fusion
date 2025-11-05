@@ -229,6 +229,7 @@ void ConfigureServices()
             ctx.CookieOptions.Expires = DateTimeOffset.UtcNow.AddDays(28);
             return Task.CompletedTask;
         };
+#if false // Disabled for now, MicrosoftAccountClientXxx settings have to be updated
     }).AddMicrosoftAccount(options => {
         options.ClientId = hostSettings.MicrosoftAccountClientId;
         options.ClientSecret = hostSettings.MicrosoftAccountClientSecret;
@@ -236,6 +237,7 @@ void ConfigureServices()
         options.AuthorizationEndpoint = "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize";
         options.TokenEndpoint = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token";
         options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+#endif
     }).AddGitHub(options => {
         options.ClientId = hostSettings.GitHubClientId;
         options.ClientSecret = hostSettings.GitHubClientSecret;
