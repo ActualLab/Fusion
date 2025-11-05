@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 11.0.15+ec823882
+
+Release date: 2025-11-05
+
+### Changed
+- Returned back `IMutableState.Value` setters (they were removed in v11.0.8)
+- Added "Must" prefix to `RpcDefaultCallTracer.TraceInbound` and `TraceOutbound` flags for consistency with bool field naming rules.
+
+### Fixed
+- Adjusted RpcDefaultDelegates.CallTracerFactory to enable full tracing for server (RuntimeInfo.IsServer), and no tracing for the client.
+
+### Changed in Samples
+- TodoApp: Updated Aspire SDK to version 9.5.2 and centralized its version configuration
+- TodoApp: Temporarily disabled Microsoft Account authentication (the current credentials are expired).
+
+
 ## 11.0.8+1fd1d61afb
 
 Release date: 2025-11-02
