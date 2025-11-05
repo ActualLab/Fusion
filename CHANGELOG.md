@@ -17,7 +17,7 @@ Release date: 2025-11-05
 - Added "Must" prefix to `RpcDefaultCallTracer.TraceInbound` and `TraceOutbound` flags for consistency with bool field naming rules.
 
 ### Fixed
-- Adjusted RpcDefaultDelegates.CallTracerFactory to enable full tracing for server (RuntimeInfo.IsServer), and no tracing for the client.
+- Adjusted `RpcDefaultDelegates.CallTracerFactory` to enable full tracing for server (`RuntimeInfo.IsServer`), and no tracing for the client.
 
 ### Changed in Samples
 - TodoApp: Updated Aspire SDK to version 9.5.2 and centralized its version configuration
